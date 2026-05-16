@@ -62,6 +62,13 @@ function listExtensionDirs(root, predicate = () => true) {
     .sort((left, right) => left.localeCompare(right));
 }
 
+function listSourceExtensionDirs() {
+  return [
+    ...listExtensionDirs(join(repoRoot, 'extensions'), (name) => name.startsWith('system-')),
+    ...listExtensionDirs(join(repoRoot, 'experimental-extensions', 'extensions')),
+  ];
+}
+
 function listPackagedExtensionDirs() {
   return [...listExtensionDirs(extensionsRoot, (name) => name.startsWith('system-')), ...listExtensionDirs(experimentalExtensionsRoot)];
 }
@@ -206,9 +213,49 @@ function frontendEntryPath(extensionDir, manifest) {
   return entry ? join(extensionDir, entry) : undefined;
 }
 
+function requiredBuiltEntries(manifest) {
+  const entries = [];
+  if (typeof manifest.frontend?.entry === 'string' && manifest.frontend.entry.trim().length > 0) {
+    entries.push(manifest.frontend.entry);
+  }
+  for (const styleEntry of manifest.frontend?.styles ?? []) {
+    if (typeof styleEntry === 'string' && styleEntry.trim().length > 0) entries.push(styleEntry);
+  }
+  if (typeof manifest.backend?.entry === 'string' && manifest.backend.entry.trim().length > 0) {
+    entries.push(manifest.backend.entry.startsWith('src/') ? 'dist/backend.mjs' : manifest.backend.entry);
+  }
+  if (entries.length > 0) entries.push('dist/build-manifest.json');
+  return [...new Set(entries)];
+}
+
 function sourceEntryPath(extensionDir, relativePath) {
   if (!relativePath || !relativePath.startsWith('src/')) return undefined;
   return join(extensionDir, relativePath);
+}
+
+function assertPackagedAppContainsEveryExtensionBundle() {
+  if (!packagedAppResourcesRoot) return;
+
+  const packagedById = new Map();
+  for (const extensionDir of listPackagedExtensionDirs()) {
+    const manifest = readJson(join(extensionDir, 'extension.json'));
+    const id = manifest.id ?? extensionDir;
+    packagedById.set(id, extensionDir);
+  }
+
+  for (const sourceDir of listSourceExtensionDirs()) {
+    const sourceManifest = readJson(join(sourceDir, 'extension.json'));
+    const id = sourceManifest.id ?? sourceDir;
+    const packagedDir = packagedById.get(id);
+    if (!packagedDir) {
+      failures.push(`${id}: extension exists in source tree but is missing from packaged app resources`);
+      continue;
+    }
+    for (const entry of requiredBuiltEntries(sourceManifest)) {
+      const packagedEntry = join(packagedDir, entry);
+      if (!existsSync(packagedEntry)) failures.push(`${id}: packaged app is missing required prebuilt bundle ${entry}`);
+    }
+  }
 }
 
 function isBuildManifestStale(buildManifestPath, sourcePaths) {
@@ -328,6 +375,8 @@ await init;
 
 const failures = [];
 const rows = [];
+
+assertPackagedAppContainsEveryExtensionBundle();
 
 for (const extensionDir of listPackagedExtensionDirs()) {
   const manifestPath = join(extensionDir, 'extension.json');
