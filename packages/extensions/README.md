@@ -569,6 +569,17 @@ Pick the smallest surface that matches the product shape. Do not use the right r
 | Status bar item        | Label in the status bar below the composer                             | Interactive controls             |
 | Theme                  | Color theme via CSS variable tokens                                    | Layout or UI changes             |
 
+### Composer host boundary
+
+Composer APIs are intent APIs. Extensions may request host actions such as `insertText(text)`, `addFiles(files)`, or `openFilePicker()`, but the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
+
+Rules:
+
+- Extensions must not query or mutate host DOM to affect the composer.
+- Host code must not directly mutate controlled composer input values; text changes flow through React state/helpers.
+- Imperative DOM is acceptable only for browser-owned UI state: focus, caret/selection, scroll, measurement, and the hidden file input reset that lets users pick the same file twice.
+- If a new composer action needs state changes, add a host-owned intent method instead of passing refs or DOM handles across the extension boundary.
+
 Right-rail views may point at a paired workbench detail view with `detailView`:
 
 ```json

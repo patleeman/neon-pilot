@@ -16,8 +16,11 @@ export interface ComposerControlContext {
   streamIsStreaming: boolean;
   composerHasContent: boolean;
   renderMode: ComposerControlRenderMode;
+  /** Request the host-owned file picker. Extensions must not query or mutate host DOM. */
   openFilePicker: () => void;
+  /** Request host-owned composer attachment ingestion. */
   addFiles: (files: File[]) => void;
+  /** Request host-owned text insertion. The host owns composer state, selection, and caret restore. */
   insertText: (text: string) => void;
   models: ComposerModelInfo[];
   currentModel: string;

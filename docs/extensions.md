@@ -589,6 +589,17 @@ Add labels in the status bar below the composer. Action-based — no frontend en
 **`alignment`**: `"left"` or `"right"`. **`priority`**: sort order (higher = closer to edge).
 Items without an `action` are static labels. Items with an `action` are clickable.
 
+### Composer host boundary
+
+Composer contribution contexts expose intent methods such as `insertText(text)`, `addFiles(files)`, and `openFilePicker()`. Extensions request these actions; the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
+
+Rules:
+
+- Extensions must not query or mutate host DOM to affect the composer.
+- Host code must not directly mutate controlled composer input values; text changes flow through React state/helpers.
+- Imperative DOM is acceptable only for browser-owned UI state: focus, caret/selection, scroll, measurement, and the hidden file input reset that lets users pick the same file twice.
+- If a new composer action needs state changes, add a host-owned intent method instead of passing refs or DOM handles across the extension boundary.
+
 ### Protocol entrypoints (`backend.protocolEntrypoints`)
 
 Extensions can expose host-launched stdio protocols such as ACP. The host resolves these by protocol id and wires stdin/stdout/stderr into the backend handler.
