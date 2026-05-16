@@ -29,6 +29,7 @@ Created -> Queued -> Running -> Completed
 - Keep `scheduled_task` separate for persistent automations.
 - `background_command` is shell-only; it lists/inspects background commands and rejects subagent IDs with a hint to use `subagent`.
 - Use `deferred_resume` for “wait, then continue this conversation” requests. Do not use foreground `bash` with `sleep` as a timer.
+- Do not pair `deliverResultToConversation: true` background work with a wakeup that only polls the same run. Completion delivery already resumes the conversation; use a wakeup only for a distinct time-based action.
 - Use this extension's legacy `run` tool only for compatibility and low-level inspection (`list`, `get`, `logs`, `rerun`, `follow_up`, `cancel`).
 
 ## UI

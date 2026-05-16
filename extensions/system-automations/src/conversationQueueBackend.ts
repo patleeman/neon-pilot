@@ -15,6 +15,7 @@ import {
   type QueuedPromptPreview,
   scheduleDeferredResumeForSessionFile,
 } from '@personal-agent/extensions/backend/automations';
+import { getDurableRun } from '@personal-agent/extensions/backend/runs';
 
 const DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 type DeliverAs = (typeof DELIVER_AS_VALUES)[number];
@@ -31,6 +32,7 @@ export interface QueueFollowupInput {
   at?: string;
   deliverAs?: DeliverAs;
   title?: string;
+  reason?: string;
 }
 
 export interface QueueFollowupContext {
@@ -179,6 +181,41 @@ function summarizeAutomationTitle(prompt: string, title?: string): string {
   return readOptionalString(title) ?? prompt.split('\n')[0]?.trim().slice(0, 80) ?? 'Queued continuation';
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractRunIds(text: string): string[] {
+  return Array.from(new Set(text.match(/run-[A-Za-z0-9._:-]+/gu) ?? []));
+}
+
+function readRunStatus(run: Record<string, unknown>): string | undefined {
+  const status = run.status;
+  if (typeof status === 'string') return status;
+  return isRecord(status) && typeof status.status === 'string' ? status.status : undefined;
+}
+
+function runDeliversResultToConversation(run: Record<string, unknown>): boolean {
+  const manifest = isRecord(run.manifest) ? run.manifest : undefined;
+  const spec = isRecord(manifest?.spec) ? manifest.spec : undefined;
+  const metadata = isRecord(spec?.metadata) ? spec.metadata : undefined;
+  return isRecord(metadata?.callbackConversation) && (metadata.resumeParentOnExit === true || isRecord(metadata.callbackConversation));
+}
+
+async function assertNotRedundantBackgroundRunPoll(prompt: string, reason?: string): Promise<void> {
+  if (readOptionalString(reason)) return;
+  for (const runId of extractRunIds(prompt)) {
+    const result = (await getDurableRun(runId)) as { run?: unknown } | null | undefined;
+    const run = isRecord(result?.run) ? result.run : undefined;
+    if (!run) continue;
+    if (readRunStatus(run) === 'running' && runDeliversResultToConversation(run)) {
+      throw new Error(
+        `Background run ${runId} already delivers completion/failure to this conversation. Do not schedule a wakeup just to check it; use a wakeup only for a distinct time-based action.`,
+      );
+    }
+  }
+}
+
 async function resolveScheduledAt(input: {
   delay?: string;
   at?: string;
@@ -228,6 +265,7 @@ export async function deferredResume(input: QueueFollowupInput, ctx: QueueFollow
         };
       }
       if (!sessionFile || !sessionId) throw new Error('Time-based queue entries require a persisted conversation.');
+      await assertNotRedundantBackgroundRunPoll(prompt, input.reason);
       const delay = trigger === 'delay' ? readRequiredString(input.delay, 'delay') : undefined;
       const at = trigger === 'at' ? readRequiredString(input.at, 'at') : undefined;
       const scheduled = await resolveScheduledAt({ delay, at });

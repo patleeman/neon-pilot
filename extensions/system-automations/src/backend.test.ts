@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   parseFutureDateTime: vi.fn(),
   parseDeferredResumeDelayMs: vi.fn(),
   invalidateTopics: vi.fn(),
+  getDurableRun: vi.fn(),
 }));
 
 const backendAutomationMock = vi.hoisted(() => ({
@@ -41,6 +42,9 @@ const backendAutomationMock = vi.hoisted(() => ({
 
 vi.mock('@personal-agent/extensions/backend', () => backendAutomationMock);
 vi.mock('@personal-agent/extensions/backend/automations', () => backendAutomationMock);
+vi.mock('@personal-agent/extensions/backend/runs', () => ({
+  getDurableRun: (...args: unknown[]) => mocks.getDurableRun(...args),
+}));
 
 import { deferredResume } from './conversationQueueBackend.js';
 import { scheduledTask } from './scheduledTaskBackend.js';
@@ -146,6 +150,66 @@ describe('system-automations backend', () => {
         }),
       );
       expect(invalidate).toHaveBeenCalledWith(['sessions', 'runs']);
+    });
+
+    it('rejects polling wakeups for running background runs that already deliver results', async () => {
+      mocks.getDurableRun.mockResolvedValue({
+        run: {
+          runId: 'run-123',
+          status: { status: 'running' },
+          manifest: { spec: { metadata: { resumeParentOnExit: true, callbackConversation: { conversationId: 'sess-1' } } } },
+        },
+      });
+      mocks.parseDeferredResumeDelayMs.mockReturnValue(5 * 60 * 1000);
+
+      await expect(
+        deferredResume(
+          { action: 'add', trigger: 'delay', delay: '5m', prompt: 'Check background command run-123 for completion.' },
+          createCtx(),
+        ),
+      ).rejects.toThrow('already delivers completion/failure');
+      expect(mocks.scheduleDeferredResume).not.toHaveBeenCalled();
+    });
+
+    it('allows explicitly justified wakeups for running delivered background runs', async () => {
+      mocks.getDurableRun.mockResolvedValue({
+        run: {
+          runId: 'run-123',
+          status: { status: 'running' },
+          manifest: { spec: { metadata: { resumeParentOnExit: true, callbackConversation: { conversationId: 'sess-1' } } } },
+        },
+      });
+      mocks.parseDeferredResumeDelayMs.mockReturnValue(30 * 60 * 1000);
+      mocks.scheduleDeferredResume.mockResolvedValue({ id: 'resume-1', dueAt: '2025-01-01T00:30:00.000Z', prompt: 'Escalate run-123' });
+
+      const result = await deferredResume(
+        {
+          action: 'add',
+          trigger: 'delay',
+          delay: '30m',
+          prompt: 'Escalate run-123 if signing is still not done',
+          reason: 'Escalate if the external signing window is still blocked after 30 minutes.',
+        },
+        createCtx(),
+      );
+
+      expect(result.id).toBe('resume-1');
+    });
+
+    it('allows wakeups that reference completed background runs', async () => {
+      mocks.getDurableRun.mockResolvedValue({
+        run: {
+          runId: 'run-123',
+          status: { status: 'completed' },
+          manifest: { spec: { metadata: { resumeParentOnExit: true, callbackConversation: { conversationId: 'sess-1' } } } },
+        },
+      });
+      mocks.parseDeferredResumeDelayMs.mockReturnValue(5 * 60 * 1000);
+      mocks.scheduleDeferredResume.mockResolvedValue({ id: 'resume-1', dueAt: '2025-01-01T00:05:00.000Z', prompt: 'Audit run-123' });
+
+      const result = await deferredResume({ action: 'add', trigger: 'delay', delay: '5m', prompt: 'Audit run-123' }, createCtx());
+
+      expect(result.id).toBe('resume-1');
     });
 
     it('does not fail scheduling when UI invalidation is unavailable', async () => {

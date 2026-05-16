@@ -144,6 +144,10 @@
             },
             "title": {
               "type": "string"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
             }
           },
           "required": ["action"],
