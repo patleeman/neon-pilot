@@ -10,6 +10,28 @@ interface CaffeinateToggleProps {
   pa: NativeExtensionClient;
 }
 
+function CoffeeCupIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`h-4 w-4 transition-all ${active ? 'drop-shadow-[0_0_7px_rgba(245,158,11,0.95)]' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 8h9v5.5A3.5 3.5 0 0 1 11.5 17h-2A3.5 3.5 0 0 1 6 13.5V8Z" />
+      <path d="M15 10h1.5a2 2 0 0 1 0 4H15" />
+      <path d="M5 20h12" />
+      <path d="M8 4.5c-.45-.55-.45-1.1 0-1.65" />
+      <path d="M11 4.5c-.45-.55-.45-1.1 0-1.65" />
+      <path d="M14 4.5c-.45-.55-.45-1.1 0-1.65" />
+    </svg>
+  );
+}
+
 export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   const [running, setRunning] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,16 +69,14 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   return (
     <button
       type="button"
-      className={`ui-toolbar-button ui-desktop-top-bar__icon-button relative transition-all ${
-        running ? 'text-warning ring-1 ring-warning/60 shadow-[0_0_18px_rgba(245,158,11,0.55)]' : 'text-secondary'
-      }`}
+      className={`ui-toolbar-button ui-desktop-top-bar__icon-button relative transition-colors ${running ? 'text-warning' : 'text-secondary'}`}
       aria-label={running ? 'Stop caffeinate' : 'Start caffeinate'}
       aria-pressed={running}
       title={running ? 'Caffeinate is on — click to stop' : 'Caffeinate is off — click to start'}
       disabled={busy}
       onClick={() => void toggle()}
     >
-      ☕
+      <CoffeeCupIcon active={running} />
     </button>
   );
 }
