@@ -1,12 +1,14 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { chdir } from 'node:process';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 
 const originalResourcesPath = process.resourcesPath;
+const originalCwd = process.cwd();
 
 function writeExtension(root: string, id: string) {
   const packageRoot = join(root, id);
@@ -17,6 +19,7 @@ function writeExtension(root: string, id: string) {
 
 describe('extension package paths', () => {
   afterEach(() => {
+    chdir(originalCwd);
     Object.defineProperty(process, 'resourcesPath', {
       value: originalResourcesPath,
       configurable: true,
@@ -38,6 +41,31 @@ describe('extension package paths', () => {
       expect(listExtensionPackagePaths()).toEqual(
         expect.arrayContaining([expect.objectContaining({ packageRoot, source: 'experimental' })]),
       );
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('prefers unpacked packaged extensions over asar-adjacent source paths', () => {
+    const tempRoot = join(tmpdir(), `pa-extension-paths-${process.pid}-${Date.now()}`);
+    const resourcesRoot = join(tempRoot, 'Resources');
+    const unpackedRoot = join(resourcesRoot, 'experimental-extensions', 'extensions');
+    const asarAppRoot = join(resourcesRoot, 'app.asar', 'server', 'dist', 'app');
+    const asarRoot = join(asarAppRoot, 'experimental-extensions', 'extensions');
+    const unpackedPackageRoot = writeExtension(unpackedRoot, 'system-images');
+    const asarPackageRoot = writeExtension(asarRoot, 'system-images');
+
+    Object.defineProperty(process, 'resourcesPath', {
+      value: resourcesRoot,
+      configurable: true,
+    });
+
+    try {
+      mkdirSync(asarAppRoot, { recursive: true });
+      chdir(asarAppRoot);
+      const paths = listExtensionPackagePaths().filter((entry) => entry.packageRoot.endsWith('/system-images'));
+      expect(paths[0]).toMatchObject({ packageRoot: unpackedPackageRoot, source: 'experimental' });
+      expect(paths[1]).toMatchObject({ packageRoot: realpathSync(asarPackageRoot), source: 'experimental' });
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
