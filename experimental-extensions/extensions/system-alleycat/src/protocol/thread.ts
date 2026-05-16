@@ -342,8 +342,21 @@ export const thread = {
     return { data: filtered.slice(0, limit), nextCursor: null, backwardsCursor: null };
   }) as MethodHandler,
 
-  /** `thread/loaded/list` — list PA threads currently open/live in the desktop runtime */
+  /** `thread/loaded/list` — list PA threads currently open in the shared conversation workspace */
   loadedList: (async (_params, ctx) => {
+    const workspace = await ctx.conversations.getWorkspace?.().catch(() => null);
+    if (workspace && typeof workspace === 'object') {
+      const openConversationIds = (workspace as Record<string, unknown>).openConversationIds;
+      const pinnedConversationIds = (workspace as Record<string, unknown>).pinnedConversationIds;
+      const loaded = [
+        ...(Array.isArray(pinnedConversationIds) ? pinnedConversationIds : []),
+        ...(Array.isArray(openConversationIds) ? openConversationIds : []),
+      ]
+        .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        .filter((id, index, ids) => ids.indexOf(id) === index);
+      return { data: loaded, nextCursor: null };
+    }
+
     const sessions = await ctx.conversations.list();
     const loaded = Array.isArray(sessions)
       ? sessions
@@ -355,6 +368,41 @@ export const thread = {
           .filter(Boolean)
       : [];
     return { data: loaded, nextCursor: null };
+  }) as MethodHandler,
+
+  /** `thread/open` — add a thread to the shared PA workspace without resuming it */
+  open: (async (params, ctx) => {
+    const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
+    if (!threadId) throw new Error('threadId is required');
+
+    if (!ctx.conversations.updateWorkspace) throw new Error('Conversation workspace is unavailable.');
+    const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
+    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds) ? workspace.pinnedConversationIds : [];
+    const openConversationIds = Array.isArray(workspace?.openConversationIds) ? workspace.openConversationIds : [];
+    if (pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId)) {
+      return { ok: true, workspace };
+    }
+
+    const nextWorkspace = await ctx.conversations.updateWorkspace({
+      openConversationIds: [...openConversationIds.filter((id): id is string => typeof id === 'string'), threadId],
+    });
+    return { ok: true, workspace: nextWorkspace };
+  }) as MethodHandler,
+
+  /** `thread/close` — remove a thread from the shared PA workspace without archiving it */
+  close: (async (params, ctx) => {
+    const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
+    if (!threadId) throw new Error('threadId is required');
+
+    if (!ctx.conversations.updateWorkspace) throw new Error('Conversation workspace is unavailable.');
+    const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
+    const openConversationIds = Array.isArray(workspace?.openConversationIds) ? workspace.openConversationIds : [];
+    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds) ? workspace.pinnedConversationIds : [];
+    const nextWorkspace = await ctx.conversations.updateWorkspace({
+      openConversationIds: openConversationIds.filter((id) => id !== threadId),
+      pinnedConversationIds: pinnedConversationIds.filter((id) => id !== threadId),
+    });
+    return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
 
   /** `thread/read` */

@@ -184,6 +184,16 @@ export function replaceConversationLayout(layout: ConversationLayoutInput): Conv
   return writeConversationLayout(next);
 }
 
+export function applyRemoteConversationLayout(layout: ConversationLayoutInput): ConversationLayout {
+  const current = readConversationLayout();
+  const next = normalizeConversationLayout(layout);
+  if (sameConversationLayout(current, next)) {
+    return current;
+  }
+
+  return writeConversationLayout(next);
+}
+
 export function ensureConversationTabOpen(sessionId: string | null | undefined): string[] {
   const normalizedSessionId = normalizeSessionId(sessionId);
   const layout = readConversationLayout();

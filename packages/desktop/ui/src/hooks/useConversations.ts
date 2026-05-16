@@ -16,6 +16,7 @@ import { api } from '../client/api';
 import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from '../conversation/conversationTitle';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import {
+  applyRemoteConversationLayout,
   closeConversationTab,
   CONVERSATION_LAYOUT_CHANGED_EVENT,
   type ConversationLayout,
@@ -79,6 +80,7 @@ export function useConversations() {
   const { sessions, tasks, setSessions } = useAppData();
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
+  const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
 
   useEffect(() => {
     function handleConversationLayoutChanged() {
@@ -121,7 +123,7 @@ export function useConversations() {
           return;
         }
 
-        const nextLayout = replaceConversationLayout({ sessionIds, pinnedSessionIds, archivedSessionIds });
+        const nextLayout = applyRemoteConversationLayout({ sessionIds, pinnedSessionIds, archivedSessionIds });
         applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds });
         setLayoutHydrating(false);
       })
@@ -142,6 +144,41 @@ export function useConversations() {
     setSessions(next);
     return next;
   }, [setSessions]);
+
+  useEffect(() => {
+    if (!hasSyncedRemoteLayoutAfterSessionChangeRef.current) {
+      hasSyncedRemoteLayoutAfterSessionChangeRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+
+    void api
+      .openConversationTabs()
+      .then(({ sessionIds, pinnedSessionIds, archivedSessionIds }) => {
+        if (cancelled) {
+          return;
+        }
+        const currentLayout = readConversationLayout();
+        if (
+          currentLayout.sessionIds.join('\0') === sessionIds.join('\0') &&
+          currentLayout.pinnedSessionIds.join('\0') === pinnedSessionIds.join('\0') &&
+          currentLayout.archivedSessionIds.join('\0') === archivedSessionIds.join('\0')
+        ) {
+          return;
+        }
+
+        const nextLayout = applyRemoteConversationLayout({ sessionIds, pinnedSessionIds, archivedSessionIds });
+        applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds });
+      })
+      .catch(() => {
+        // Ignore workspace sync failures and keep the browser-local fallback.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessions]);
 
   useEffect(() => {
     if (tasks === null) {

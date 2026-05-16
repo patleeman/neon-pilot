@@ -864,6 +864,13 @@ export interface ExtensionBackendContext {
     get(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;
     getBlocks(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;
     searchIndex(sessionIds: string[]): Promise<unknown>;
+    getWorkspace(): Promise<unknown>;
+    updateWorkspace(input: {
+      openConversationIds?: string[] | null;
+      pinnedConversationIds?: string[] | null;
+      archivedConversationIds?: string[] | null;
+      workspacePaths?: string[] | null;
+    }): Promise<unknown>;
     sendMessage(conversationId: string, text: string, options?: { steer?: boolean }): Promise<unknown>;
     setTitle(conversationId: string, title: string): Promise<unknown>;
     compact(conversationId: string): Promise<unknown>;

@@ -11,6 +11,7 @@ vi.mock('../client/api', () => ({
 
 import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
 import {
+  applyRemoteConversationLayout,
   closeConversationTab,
   ensureConversationTabOpen,
   moveConversationTab,
@@ -91,6 +92,15 @@ describe('sessionTabs', () => {
     expect(readOpenSessionIds()).toEqual(['session-1', 'session-3']);
     expect(readPinnedSessionIds()).toEqual(['session-2', 'session-4']);
     expect(readArchivedSessionIds()).toEqual(['session-5']);
+  });
+
+  it('applies remote conversation layout exactly without archiving closed tabs', () => {
+    replaceConversationLayout({ sessionIds: ['session-1', 'session-2'], pinnedSessionIds: ['session-3'], archivedSessionIds: [] });
+
+    const layout = applyRemoteConversationLayout({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [] });
+
+    expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [] });
+    expect(readArchivedSessionIds()).toEqual([]);
   });
 
   it('opens a conversation tab once even when asked repeatedly', () => {

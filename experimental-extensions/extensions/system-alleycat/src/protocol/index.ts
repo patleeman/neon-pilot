@@ -49,6 +49,8 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
   'thread/fork': thread.fork,
   'thread/list': thread.list,
   'thread/loaded/list': thread.loadedList,
+  'thread/open': thread.open,
+  'thread/close': thread.close,
   'thread/read': thread.read,
   'thread/archive': thread.archive,
   'thread/unarchive': thread.unarchive,

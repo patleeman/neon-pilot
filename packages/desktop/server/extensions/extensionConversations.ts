@@ -57,7 +57,7 @@ export interface ExtensionConversationSubscriptionOptions {
  * Write operations require the session to be live (in the in-memory registry).
  * Read-only meta operations work against persisted session data.
  */
-export function createExtensionConversationsCapability(serverContext?: Pick<ServerRouteContext, 'getCurrentProfile'>) {
+export function createExtensionConversationsCapability(serverContext?: Pick<ServerRouteContext, 'getCurrentProfile' | 'getSettingsFile'>) {
   const findLiveEntry = (conversationId: string) => {
     const entry = liveSessionRegistry.get(conversationId);
     if (!entry) throw new Error(`Conversation "${conversationId}" is not live.`);
@@ -122,7 +122,69 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
       return readConversationSessionSearchIndexCapability({ sessionIds });
     },
 
+    async getWorkspace(): Promise<unknown> {
+      if (!serverContext?.getSettingsFile) {
+        throw new Error('Conversation workspace is unavailable.');
+      }
+      const { readSavedUiPreferences } = await import('../ui/uiPreferences.js');
+      const saved = readSavedUiPreferences(serverContext.getSettingsFile());
+      return {
+        openConversationIds: saved.openConversationIds,
+        pinnedConversationIds: saved.pinnedConversationIds,
+        archivedConversationIds: saved.archivedConversationIds,
+        workspacePaths: saved.workspacePaths,
+      };
+    },
+
     // ── Write operations ─────────────────────────────────────────────────
+
+    async updateWorkspace(input: {
+      openConversationIds?: string[] | null;
+      pinnedConversationIds?: string[] | null;
+      archivedConversationIds?: string[] | null;
+      workspacePaths?: string[] | null;
+    }): Promise<unknown> {
+      if (!serverContext?.getSettingsFile) {
+        throw new Error('Conversation workspace is unavailable.');
+      }
+      const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../ui/uiPreferences.js');
+      const { persistSettingsWrite } = await import('../ui/settingsPersistence.js');
+      const before = readSavedUiPreferences(serverContext.getSettingsFile());
+      const saved = persistSettingsWrite(
+        (settingsFile) =>
+          writeSavedUiPreferences(
+            {
+              openConversationIds: input.openConversationIds,
+              pinnedConversationIds: input.pinnedConversationIds,
+              archivedConversationIds: input.archivedConversationIds,
+              workspacePaths: input.workspacePaths,
+            },
+            settingsFile,
+          ),
+        { runtimeSettingsFile: serverContext.getSettingsFile() },
+      );
+
+      if (
+        input.openConversationIds !== undefined ||
+        input.pinnedConversationIds !== undefined ||
+        input.archivedConversationIds !== undefined ||
+        before.openConversationIds.join('\0') !== saved.openConversationIds.join('\0') ||
+        before.pinnedConversationIds.join('\0') !== saved.pinnedConversationIds.join('\0') ||
+        before.archivedConversationIds.join('\0') !== saved.archivedConversationIds.join('\0')
+      ) {
+        invalidateAppTopics('sessions');
+      }
+      if (input.workspacePaths !== undefined || before.workspacePaths.join('\0') !== saved.workspacePaths.join('\0')) {
+        invalidateAppTopics('workspace');
+      }
+
+      return {
+        openConversationIds: saved.openConversationIds,
+        pinnedConversationIds: saved.pinnedConversationIds,
+        archivedConversationIds: saved.archivedConversationIds,
+        workspacePaths: saved.workspacePaths,
+      };
+    },
 
     /**
      * Create a new conversation (live session).

@@ -111,12 +111,13 @@ describe('system-alleycat thread protocol', () => {
     expect(result.data[0].path).toBe('/repo/b');
   });
 
-  it('treats Kitty mobile /root cwd as global and reports live loaded threads only', async () => {
+  it('treats Kitty mobile /root cwd as global and reports workspace-open loaded threads', async () => {
     const ctx = makeContext({
       list: vi.fn().mockResolvedValue([
         { id: 'a', title: 'Alpha', cwd: '/repo/a', updatedAt: 10, isLive: true },
         { id: 'b', title: 'Beta', cwd: '/repo/b', updatedAt: 30 },
       ]),
+      getWorkspace: vi.fn().mockResolvedValue({ pinnedConversationIds: ['b'], openConversationIds: ['a', 'b'] }),
     });
     const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
 
@@ -124,6 +125,38 @@ describe('system-alleycat thread protocol', () => {
     expect(listed.data.map((item) => item.id)).toEqual(['b', 'a']);
 
     const loaded = (await thread.loadedList({}, ctx as never, conn, vi.fn())) as { data: string[] };
+    expect(loaded.data).toEqual(['b', 'a']);
+  });
+
+  it('falls back to live loaded threads when workspace state is unavailable', async () => {
+    const ctx = makeContext({
+      list: vi.fn().mockResolvedValue([
+        { id: 'a', title: 'Alpha', cwd: '/repo/a', updatedAt: 10, isLive: true },
+        { id: 'b', title: 'Beta', cwd: '/repo/b', updatedAt: 30 },
+      ]),
+      getWorkspace: vi.fn().mockRejectedValue(new Error('no workspace')),
+    });
+    const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
+
+    const loaded = (await thread.loadedList({}, ctx as never, conn, vi.fn())) as { data: string[] };
     expect(loaded.data).toEqual(['a']);
+  });
+
+  it('opens and closes threads in the shared workspace without archiving', async () => {
+    const updateWorkspace = vi
+      .fn()
+      .mockResolvedValueOnce({ openConversationIds: ['a', 'b'], pinnedConversationIds: [] })
+      .mockResolvedValueOnce({ openConversationIds: ['a'], pinnedConversationIds: [] });
+    const ctx = makeContext({
+      getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['a'], pinnedConversationIds: [] }),
+      updateWorkspace,
+    });
+    const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
+
+    await thread.open({ threadId: 'b' }, ctx as never, conn, vi.fn());
+    expect(updateWorkspace).toHaveBeenCalledWith({ openConversationIds: ['a', 'b'] });
+
+    await thread.close({ threadId: 'b' }, ctx as never, conn, vi.fn());
+    expect(updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['a'], pinnedConversationIds: [] });
   });
 });
