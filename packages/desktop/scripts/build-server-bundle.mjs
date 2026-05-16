@@ -62,6 +62,7 @@ const backendApiLazyModuleEntries = [
   ['automation/scheduledTasks.js', 'server/automation/scheduledTasks.ts'],
   ['automation/scheduledTaskThreads.js', 'server/automation/scheduledTaskThreads.ts'],
   ['automation/store.js', 'server/automation/store.ts'],
+  ['routes/gateways.js', 'server/routes/gateways.ts'],
   ['routes/vaultShareImport.js', 'server/routes/vaultShareImport.ts'],
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
   ['traces/tracePersistence.js', 'server/traces/tracePersistence.ts'],
