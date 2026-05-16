@@ -1590,8 +1590,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const ensureConversationCanControl = useCallback((_action: string): boolean => {
     return true;
   }, []);
+  const latestInputRef = useRef(input);
+  latestInputRef.current = input;
+
   const setInput = useCallback(
     (next: string) => {
+      latestInputRef.current = next;
       if (draft) {
         persistDraftConversationComposer(next);
       } else if (id) {
@@ -2912,7 +2916,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           }
         : composerSelectionRef.current;
       const insertion = insertTextAtComposerSelection({
-        currentInput: el?.value ?? input,
+        currentInput: el?.value ?? latestInputRef.current,
         selection,
         text,
       });
@@ -2937,7 +2941,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         scheduleComposerResize();
       });
     },
-    [input, scheduleComposerResize, setInput],
+    [scheduleComposerResize, setInput],
   );
 
   useEffect(() => {
