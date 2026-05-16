@@ -408,6 +408,29 @@ export const thread = {
     return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
 
+  /** `thread/turns/list` */
+  turnsList: (async (params, ctx) => {
+    const p = params as Record<string, unknown> | undefined;
+    const threadId = p?.threadId as string | undefined;
+    if (!threadId) throw new Error('threadId is required');
+    const limit = typeof p?.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 20;
+    const direction = p?.sortDirection === 'asc' ? 'asc' : 'desc';
+    const turns = await readTurns(threadId, ctx);
+    const sorted = direction === 'asc' ? turns : [...turns].reverse();
+    return { data: sorted.slice(0, limit), nextCursor: null, backwardsCursor: null };
+  }) as MethodHandler,
+
+  itemsList: (async (params, ctx) => {
+    const p = params as Record<string, unknown> | undefined;
+    const threadId = p?.threadId as string | undefined;
+    if (!threadId) throw new Error('threadId is required');
+    const turns = await readTurns(threadId, ctx);
+    const items = turns.flatMap((turn) =>
+      Array.isArray((turn as Record<string, unknown>).items) ? ((turn as Record<string, unknown>).items as unknown[]) : [],
+    );
+    return { data: items, nextCursor: null, backwardsCursor: null };
+  }) as MethodHandler,
+
   /** `thread/read` */
   read: (async (params, ctx) => {
     const p = params as Record<string, unknown> | undefined;

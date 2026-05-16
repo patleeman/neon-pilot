@@ -241,7 +241,13 @@ async function handleJsonRpcMessage(input: {
   }
 
   const { method, id, params } = request;
-  if (method === 'initialize' || method.startsWith('thread/')) {
+  if (
+    method === 'initialize' ||
+    method.startsWith('thread/') ||
+    method.startsWith('model') ||
+    method.startsWith('config/') ||
+    method.startsWith('fs/')
+  ) {
     logProtocol(`rpc request ${method} ${params ? JSON.stringify(params).slice(0, 500) : '{}'}`);
   }
 
@@ -272,7 +278,12 @@ async function handleJsonRpcMessage(input: {
     if (method === 'thread/list') {
       const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
       logProtocol(`rpc response ${method} count=${count ?? 'unknown'} ${JSON.stringify(result).slice(0, 800)}`);
-    } else if (method === 'thread/loaded/list') {
+    } else if (
+      method === 'thread/loaded/list' ||
+      method === 'thread/turns/list' ||
+      method === 'thread/turns/items/list' ||
+      method === 'model/list'
+    ) {
       const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
       logProtocol(`rpc response ${method} count=${count ?? 'unknown'} ${JSON.stringify(result).slice(0, 500)}`);
     }

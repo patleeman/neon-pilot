@@ -29,7 +29,6 @@ import {
   threadBackgroundTerminals,
   threadMemoryMode,
   threadRealtime,
-  threadTurns,
   toolRequestUserInput,
   windowsSandboxSetupStart,
 } from './stubs.js';
@@ -76,9 +75,9 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
   'thread/goal/get': thread.goalGet,
   'thread/goal/clear': thread.goalClear,
 
-  // Thread — pagination (stub)
-  'thread/turns/list': threadTurns.list,
-  'thread/turns/items/list': threadTurns.itemsList,
+  // Thread — pagination
+  'thread/turns/list': thread.turnsList,
+  'thread/turns/items/list': thread.itemsList,
 
   // Thread — experimental (stubs)
   'thread/realtime/start': threadRealtime.start,
