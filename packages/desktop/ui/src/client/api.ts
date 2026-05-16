@@ -626,31 +626,41 @@ export const api = {
       return desktopBridge.readOpenConversationTabs();
     }
 
-    return get<{ sessionIds: string[]; pinnedSessionIds: string[]; archivedSessionIds: string[]; workspacePaths: string[] }>(
-      '/ui/open-conversations',
-    );
+    return get<{
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      activeConversationId: string | null;
+      workspacePaths: string[];
+    }>('/ui/open-conversations');
   },
   setOpenConversationTabs: async (
     sessionIds?: string[] | null,
     pinnedSessionIds?: string[] | null,
     archivedSessionIds?: string[] | null,
     workspacePaths?: string[] | null,
+    activeConversationId?: string | null,
   ) => {
     const request = {
       ...(sessionIds !== undefined ? { sessionIds } : {}),
       ...(pinnedSessionIds !== undefined ? { pinnedSessionIds } : {}),
       ...(archivedSessionIds !== undefined ? { archivedSessionIds } : {}),
       ...(workspacePaths !== undefined ? { workspacePaths } : {}),
+      ...(activeConversationId !== undefined ? { activeConversationId } : {}),
     };
     const desktopBridge = getDesktopBridge();
     if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
       return desktopBridge.updateOpenConversationTabs(request);
     }
 
-    return patch<{ ok: boolean; sessionIds: string[]; pinnedSessionIds: string[]; archivedSessionIds: string[]; workspacePaths: string[] }>(
-      '/ui/open-conversations',
-      request,
-    );
+    return patch<{
+      ok: boolean;
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      activeConversationId: string | null;
+      workspacePaths: string[];
+    }>('/ui/open-conversations', request);
   },
   savedWorkspacePaths: async () => {
     const { workspacePaths } = await api.openConversationTabs();

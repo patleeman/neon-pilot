@@ -78,6 +78,7 @@ describe('registerUiPreferenceRoutes', () => {
       sessionIds: ['c1', 'c2'],
       pinnedSessionIds: ['c1'],
       archivedSessionIds: ['c3'],
+      activeConversationId: null,
       workspacePaths: ['/repo/a', '/repo/b'],
     });
   });
@@ -120,6 +121,7 @@ describe('registerUiPreferenceRoutes', () => {
       openConversationIds: ['c1'],
       pinnedConversationIds: [],
       archivedConversationIds: [],
+      activeConversationId: null,
       workspacePaths: [],
     });
 

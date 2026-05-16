@@ -1197,6 +1197,7 @@ export async function readDesktopOpenConversationTabs() {
     sessionIds: saved.openConversationIds,
     pinnedSessionIds: saved.pinnedConversationIds,
     archivedSessionIds: saved.archivedConversationIds,
+    activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
   };
 }
@@ -1205,9 +1206,10 @@ export async function updateDesktopOpenConversationTabs(input: {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
   archivedSessionIds?: string[];
+  activeConversationId?: string | null;
   workspacePaths?: string[];
 }) {
-  const { sessionIds, pinnedSessionIds, archivedSessionIds, workspacePaths } = input;
+  const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } = input;
 
   if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
     throw new Error('sessionIds must be an array when provided');
@@ -1221,12 +1223,22 @@ export async function updateDesktopOpenConversationTabs(input: {
     throw new Error('archivedSessionIds must be an array when provided');
   }
 
+  if (activeConversationId !== undefined && activeConversationId !== null && typeof activeConversationId !== 'string') {
+    throw new Error('activeConversationId must be a string or null when provided');
+  }
+
   if (workspacePaths !== undefined && !Array.isArray(workspacePaths)) {
     throw new Error('workspacePaths must be an array when provided');
   }
 
-  if (sessionIds === undefined && pinnedSessionIds === undefined && archivedSessionIds === undefined && workspacePaths === undefined) {
-    throw new Error('sessionIds, pinnedSessionIds, archivedSessionIds, or workspacePaths required');
+  if (
+    sessionIds === undefined &&
+    pinnedSessionIds === undefined &&
+    archivedSessionIds === undefined &&
+    activeConversationId === undefined &&
+    workspacePaths === undefined
+  ) {
+    throw new Error('sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, or workspacePaths required');
   }
 
   const context = await getLocalServerRouteContext();
@@ -1237,6 +1249,7 @@ export async function updateDesktopOpenConversationTabs(input: {
           openConversationIds: sessionIds,
           pinnedConversationIds: pinnedSessionIds,
           archivedConversationIds: archivedSessionIds,
+          activeConversationId,
           workspacePaths,
         },
         settingsFile,
@@ -1244,7 +1257,12 @@ export async function updateDesktopOpenConversationTabs(input: {
     { runtimeSettingsFile: context.getSettingsFile() },
   );
 
-  if (sessionIds !== undefined || pinnedSessionIds !== undefined || archivedSessionIds !== undefined) {
+  if (
+    sessionIds !== undefined ||
+    pinnedSessionIds !== undefined ||
+    archivedSessionIds !== undefined ||
+    activeConversationId !== undefined
+  ) {
     invalidateAppTopics('sessions');
   }
   if (workspacePaths !== undefined) {
@@ -1255,6 +1273,7 @@ export async function updateDesktopOpenConversationTabs(input: {
     sessionIds: saved.openConversationIds,
     pinnedSessionIds: saved.pinnedConversationIds,
     archivedSessionIds: saved.archivedConversationIds,
+    activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
   };
 }

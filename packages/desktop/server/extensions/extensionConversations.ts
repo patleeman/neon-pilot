@@ -132,6 +132,7 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
         openConversationIds: saved.openConversationIds,
         pinnedConversationIds: saved.pinnedConversationIds,
         archivedConversationIds: saved.archivedConversationIds,
+        activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
       };
     },
@@ -142,6 +143,7 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
       openConversationIds?: string[] | null;
       pinnedConversationIds?: string[] | null;
       archivedConversationIds?: string[] | null;
+      activeConversationId?: string | null;
       workspacePaths?: string[] | null;
     }): Promise<unknown> {
       if (!serverContext?.getSettingsFile) {
@@ -157,6 +159,7 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
               openConversationIds: input.openConversationIds,
               pinnedConversationIds: input.pinnedConversationIds,
               archivedConversationIds: input.archivedConversationIds,
+              activeConversationId: input.activeConversationId,
               workspacePaths: input.workspacePaths,
             },
             settingsFile,
@@ -168,9 +171,11 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
         input.openConversationIds !== undefined ||
         input.pinnedConversationIds !== undefined ||
         input.archivedConversationIds !== undefined ||
+        input.activeConversationId !== undefined ||
         before.openConversationIds.join('\0') !== saved.openConversationIds.join('\0') ||
         before.pinnedConversationIds.join('\0') !== saved.pinnedConversationIds.join('\0') ||
-        before.archivedConversationIds.join('\0') !== saved.archivedConversationIds.join('\0')
+        before.archivedConversationIds.join('\0') !== saved.archivedConversationIds.join('\0') ||
+        before.activeConversationId !== saved.activeConversationId
       ) {
         invalidateAppTopics('sessions');
       }
@@ -182,6 +187,7 @@ export function createExtensionConversationsCapability(serverContext?: Pick<Serv
         openConversationIds: saved.openConversationIds,
         pinnedConversationIds: saved.pinnedConversationIds,
         archivedConversationIds: saved.archivedConversationIds,
+        activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
       };
     },

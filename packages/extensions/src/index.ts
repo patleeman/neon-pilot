@@ -869,6 +869,7 @@ export interface ExtensionBackendContext {
       openConversationIds?: string[] | null;
       pinnedConversationIds?: string[] | null;
       archivedConversationIds?: string[] | null;
+      activeConversationId?: string | null;
       workspacePaths?: string[] | null;
     }): Promise<unknown>;
     sendMessage(conversationId: string, text: string, options?: { steer?: boolean }): Promise<unknown>;

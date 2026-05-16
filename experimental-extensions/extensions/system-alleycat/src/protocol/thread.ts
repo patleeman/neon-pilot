@@ -385,6 +385,7 @@ export const thread = {
 
     const nextWorkspace = await ctx.conversations.updateWorkspace({
       openConversationIds: [...openConversationIds.filter((id): id is string => typeof id === 'string'), threadId],
+      activeConversationId: threadId,
     });
     return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
@@ -398,9 +399,11 @@ export const thread = {
     const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
     const openConversationIds = Array.isArray(workspace?.openConversationIds) ? workspace.openConversationIds : [];
     const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds) ? workspace.pinnedConversationIds : [];
+    const nextActiveConversationId = workspace?.activeConversationId === threadId ? null : workspace?.activeConversationId;
     const nextWorkspace = await ctx.conversations.updateWorkspace({
       openConversationIds: openConversationIds.filter((id) => id !== threadId),
       pinnedConversationIds: pinnedConversationIds.filter((id) => id !== threadId),
+      activeConversationId: typeof nextActiveConversationId === 'string' ? nextActiveConversationId : null,
     });
     return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,

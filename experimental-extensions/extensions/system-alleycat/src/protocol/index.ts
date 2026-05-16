@@ -35,6 +35,7 @@ import {
 } from './stubs.js';
 import { thread } from './thread.js';
 import { turn } from './turn.js';
+import { workspace } from './workspace.js';
 
 /**
  * All registered JSON-RPC method handlers.
@@ -54,6 +55,10 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
   'thread/read': thread.read,
   'thread/archive': thread.archive,
   'thread/unarchive': thread.unarchive,
+
+  // Workspace
+  'workspace/read': workspace.read,
+  'workspace/update': workspace.update,
 
   // Thread — metadata & naming
   'thread/name/set': thread.nameSet,

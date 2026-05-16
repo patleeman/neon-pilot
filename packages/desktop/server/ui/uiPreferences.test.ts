@@ -27,6 +27,7 @@ describe('readSavedUiPreferences', () => {
       openConversationIds: [],
       pinnedConversationIds: [],
       archivedConversationIds: [],
+      activeConversationId: null,
       workspacePaths: [],
       nodeBrowserViews: [],
     });
@@ -51,6 +52,7 @@ describe('readSavedUiPreferences', () => {
       openConversationIds: ['session-1'],
       pinnedConversationIds: ['session-2', 'session-3'],
       archivedConversationIds: ['session-4'],
+      activeConversationId: null,
       workspacePaths: ['/tmp/alpha', '/tmp/beta'],
       nodeBrowserViews: [],
     });
@@ -114,6 +116,7 @@ describe('writeSavedUiPreferences', () => {
       openConversationIds: ['session-1'],
       pinnedConversationIds: ['session-4'],
       archivedConversationIds: ['session-3'],
+      activeConversationId: null,
       workspacePaths: ['/tmp/alpha'],
       nodeBrowserViews: [],
     });
@@ -143,6 +146,7 @@ describe('writeSavedUiPreferences', () => {
       openConversationIds: [],
       pinnedConversationIds: [],
       archivedConversationIds: [],
+      activeConversationId: null,
       workspacePaths: [],
       nodeBrowserViews: [
         {

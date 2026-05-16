@@ -11,6 +11,7 @@ export const DARK_THEME_STORAGE_KEY = 'pa-theme-dark-default';
 export const OPEN_SESSION_IDS_STORAGE_KEY = 'pa:open-session-ids';
 export const PINNED_SESSION_IDS_STORAGE_KEY = 'pa:pinned-session-ids';
 export const ARCHIVED_SESSION_IDS_STORAGE_KEY = 'pa:archived-session-ids';
+export const ACTIVE_SESSION_ID_STORAGE_KEY = 'pa:active-session-id';
 export const SAVED_WORKSPACE_PATHS_STORAGE_KEY = 'pa:saved-workspace-paths';
 const CONVERSATION_SEEN_MESSAGE_COUNT_STORAGE_KEY = 'pa:conversation-seen-message-counts';
 export const SIDEBAR_WIDTH_STORAGE_KEY = 'pa:sidebar-width';

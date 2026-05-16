@@ -154,9 +154,9 @@ describe('system-alleycat thread protocol', () => {
     const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
 
     await thread.open({ threadId: 'b' }, ctx as never, conn, vi.fn());
-    expect(updateWorkspace).toHaveBeenCalledWith({ openConversationIds: ['a', 'b'] });
+    expect(updateWorkspace).toHaveBeenCalledWith({ openConversationIds: ['a', 'b'], activeConversationId: 'b' });
 
     await thread.close({ threadId: 'b' }, ctx as never, conn, vi.fn());
-    expect(updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['a'], pinnedConversationIds: [] });
+    expect(updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['a'], pinnedConversationIds: [], activeConversationId: null });
   });
 });

@@ -13,6 +13,7 @@ export interface SavedUiPreferences {
   openConversationIds: string[];
   pinnedConversationIds: string[];
   archivedConversationIds: string[];
+  activeConversationId: string | null;
   workspacePaths: string[];
   nodeBrowserViews: SavedNodeBrowserViewPreference[];
 }
@@ -164,6 +165,7 @@ function normalizeSavedUiPreferences(input: {
   openConversationIds?: unknown;
   pinnedConversationIds?: unknown;
   archivedConversationIds?: unknown;
+  activeConversationId?: unknown;
   workspacePaths?: unknown;
   nodeBrowserViews?: unknown;
 }): SavedUiPreferences {
@@ -171,11 +173,13 @@ function normalizeSavedUiPreferences(input: {
   const pinnedIdSet = new Set(pinnedConversationIds);
   const openConversationIds = normalizeConversationIds(input.openConversationIds).filter((id) => !pinnedIdSet.has(id));
   const workspaceIdSet = new Set([...openConversationIds, ...pinnedConversationIds]);
+  const activeConversationId = readNonEmptyString(input.activeConversationId);
 
   return {
     openConversationIds,
     pinnedConversationIds,
     archivedConversationIds: normalizeConversationIds(input.archivedConversationIds).filter((id) => !workspaceIdSet.has(id)),
+    activeConversationId: activeConversationId && workspaceIdSet.has(activeConversationId) ? activeConversationId : null,
     workspacePaths: normalizeWorkspacePaths(input.workspacePaths),
     nodeBrowserViews: normalizeNodeBrowserViews(input.nodeBrowserViews),
   };
@@ -193,6 +197,7 @@ export function readSavedUiPreferences(settingsFile: string): SavedUiPreferences
     openConversationIds: ui.openConversationIds,
     pinnedConversationIds: ui.pinnedConversationIds,
     archivedConversationIds: ui.archivedConversationIds,
+    activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
     nodeBrowserViews: ui.nodeBrowserViews,
   });
@@ -203,6 +208,7 @@ export function writeSavedUiPreferences(
     openConversationIds?: string[] | null;
     pinnedConversationIds?: string[] | null;
     archivedConversationIds?: string[] | null;
+    activeConversationId?: string | null;
     workspacePaths?: string[] | null;
     nodeBrowserViews?: SavedNodeBrowserViewPreference[] | null;
   },
@@ -214,6 +220,7 @@ export function writeSavedUiPreferences(
     openConversationIds: ui.openConversationIds,
     pinnedConversationIds: ui.pinnedConversationIds,
     archivedConversationIds: ui.archivedConversationIds,
+    activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
     nodeBrowserViews: ui.nodeBrowserViews,
   });
@@ -223,6 +230,7 @@ export function writeSavedUiPreferences(
     pinnedConversationIds: input.pinnedConversationIds !== undefined ? (input.pinnedConversationIds ?? []) : current.pinnedConversationIds,
     archivedConversationIds:
       input.archivedConversationIds !== undefined ? (input.archivedConversationIds ?? []) : current.archivedConversationIds,
+    activeConversationId: input.activeConversationId !== undefined ? input.activeConversationId : current.activeConversationId,
     workspacePaths: input.workspacePaths !== undefined ? (input.workspacePaths ?? []) : current.workspacePaths,
     nodeBrowserViews: input.nodeBrowserViews !== undefined ? (input.nodeBrowserViews ?? []) : current.nodeBrowserViews,
   });
@@ -243,6 +251,12 @@ export function writeSavedUiPreferences(
     ui.archivedConversationIds = next.archivedConversationIds;
   } else {
     delete ui.archivedConversationIds;
+  }
+
+  if (next.activeConversationId) {
+    ui.activeConversationId = next.activeConversationId;
+  } else {
+    delete ui.activeConversationId;
   }
 
   if (next.workspacePaths.length > 0) {

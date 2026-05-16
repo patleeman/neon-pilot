@@ -88,6 +88,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-3'],
       pinnedSessionIds: ['session-2', 'session-4'],
       archivedSessionIds: ['session-5'],
+      activeSessionId: null,
     });
     expect(readOpenSessionIds()).toEqual(['session-1', 'session-3']);
     expect(readPinnedSessionIds()).toEqual(['session-2', 'session-4']);
@@ -99,7 +100,7 @@ describe('sessionTabs', () => {
 
     const layout = applyRemoteConversationLayout({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [] });
 
-    expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [] });
+    expect(layout).toEqual({ sessionIds: ['session-2'], pinnedSessionIds: [], archivedSessionIds: [], activeSessionId: null });
     expect(readArchivedSessionIds()).toEqual([]);
   });
 
@@ -123,6 +124,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2'],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
   });
 
@@ -131,6 +133,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: ['session-3'],
       archivedSessionIds: ['session-4'],
+      activeSessionId: null,
     });
     dispatchEvent.mockReset();
 
@@ -138,6 +141,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2', 'session-3'],
       archivedSessionIds: ['session-4'],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
 
@@ -146,6 +150,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: ['session-3'],
       archivedSessionIds: ['session-4'],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -158,6 +163,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-2', 'session-1', 'session-3'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
 
@@ -166,6 +172,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2', 'session-3'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -178,6 +185,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-3'],
       pinnedSessionIds: ['session-2', 'session-1'],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
 
@@ -186,6 +194,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-3'],
       pinnedSessionIds: ['session-2', 'session-1'],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).not.toHaveBeenCalled();
   });
@@ -198,6 +207,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).not.toHaveBeenCalled();
   });
@@ -210,6 +220,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2'],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -222,6 +233,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: ['session-2', 'session-3'],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -234,6 +246,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -246,6 +259,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2'],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -263,6 +277,7 @@ describe('sessionTabs', () => {
       sessionIds: [],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-1'],
+      activeSessionId: null,
     });
   });
 
@@ -274,6 +289,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2'],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
 
@@ -282,6 +298,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1', 'session-2'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -294,6 +311,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-3'],
+      activeSessionId: null,
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
@@ -303,6 +321,7 @@ describe('sessionTabs', () => {
       sessionIds: ['session-1'],
       pinnedSessionIds: [],
       archivedSessionIds: ['session-2', 'session-3'],
+      activeSessionId: null,
     });
     dispatchEvent.mockReset();
 
@@ -312,6 +331,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1', 'session-3'],
         pinnedSessionIds: [],
         archivedSessionIds: ['session-2'],
+        activeSessionId: null,
       },
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -323,6 +343,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1', 'session-3', 'session-2'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
+        activeSessionId: null,
       },
     });
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
@@ -338,6 +359,7 @@ describe('sessionTabs', () => {
         sessionIds: ['session-1'],
         pinnedSessionIds: [],
         archivedSessionIds: [],
+        activeSessionId: null,
       },
     });
     expect(dispatchEvent).not.toHaveBeenCalled();

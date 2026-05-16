@@ -2,7 +2,7 @@
 
 ## 0.8.0-rc.17 — 2026-05-16
 
-- feat: expose shared conversation workspace to Kitty/Alleycat
+- feat: expose shared conversation workspace with open/pinned/archived/active state to Kitty/Alleycat
 - fix: guard reply selection range documents
 - docs: rewrite README voice
 - fix: make executions primary background work surface

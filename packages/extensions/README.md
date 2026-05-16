@@ -472,7 +472,7 @@ Use `contributes.selectionActions` for actions on selected text, messages, files
 
 Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock(...)` / `ctx.conversations.updateTranscriptBlock(...)` for extension-owned durable visible transcript blocks. This is the preferred seam for product-specific interactive blocks instead of baking new block types into core.
 
-Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared open conversation workspace. Workspace open/close is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
+Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
 Use `backend.services` for long-lived backend work. The host starts enabled services at startup, calls returned stop functions on shutdown/disable/reload, runs declared health checks, and applies `restart: "always" | "on-failure"` when health fails. Extension Manager reports live service state alongside manifest declarations.
 

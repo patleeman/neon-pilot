@@ -28,6 +28,7 @@ function handleOpenConversationLayoutReadRequest(_req: Request, res: Response): 
       sessionIds: saved.openConversationIds,
       pinnedSessionIds: saved.pinnedConversationIds,
       archivedSessionIds: saved.archivedConversationIds,
+      activeConversationId: saved.activeConversationId ?? null,
       workspacePaths: saved.workspacePaths,
     });
   } catch (err) {
@@ -41,13 +42,15 @@ function handleOpenConversationLayoutReadRequest(_req: Request, res: Response): 
 
 async function handleOpenConversationLayoutWriteRequest(req: Request, res: Response): Promise<void> {
   try {
-    const { sessionIds, pinnedSessionIds, archivedConversationIds, archivedSessionIds, workspacePaths } = req.body as {
-      sessionIds?: unknown;
-      pinnedSessionIds?: unknown;
-      archivedConversationIds?: unknown;
-      archivedSessionIds?: unknown;
-      workspacePaths?: unknown;
-    };
+    const { sessionIds, pinnedSessionIds, archivedConversationIds, archivedSessionIds, activeConversationId, workspacePaths } =
+      req.body as {
+        sessionIds?: unknown;
+        pinnedSessionIds?: unknown;
+        archivedConversationIds?: unknown;
+        archivedSessionIds?: unknown;
+        activeConversationId?: unknown;
+        workspacePaths?: unknown;
+      };
 
     if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
       res.status(400).json({ error: 'sessionIds must be an array when provided' });
@@ -69,6 +72,11 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
       return;
     }
 
+    if (activeConversationId !== undefined && activeConversationId !== null && typeof activeConversationId !== 'string') {
+      res.status(400).json({ error: 'activeConversationId must be a string or null when provided' });
+      return;
+    }
+
     if (workspacePaths !== undefined && !Array.isArray(workspacePaths)) {
       res.status(400).json({ error: 'workspacePaths must be an array when provided' });
       return;
@@ -79,6 +87,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
       pinnedSessionIds === undefined &&
       archivedConversationIds === undefined &&
       archivedSessionIds === undefined &&
+      activeConversationId === undefined &&
       workspacePaths === undefined
     ) {
       res.status(400).json({ error: 'sessionIds, pinnedSessionIds, archived conversation ids, or workspacePaths required' });
@@ -92,6 +101,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
             openConversationIds: sessionIds as string[] | null | undefined,
             pinnedConversationIds: pinnedSessionIds as string[] | null | undefined,
             archivedConversationIds: (archivedConversationIds ?? archivedSessionIds) as string[] | null | undefined,
+            activeConversationId: activeConversationId as string | null | undefined,
             workspacePaths: workspacePaths as string[] | null | undefined,
           },
           settingsFile,
@@ -112,7 +122,8 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
       sessionIds !== undefined ||
       pinnedSessionIds !== undefined ||
       archivedConversationIds !== undefined ||
-      archivedSessionIds !== undefined
+      archivedSessionIds !== undefined ||
+      activeConversationId !== undefined
     ) {
       invalidateAppTopics('sessions');
     }
@@ -125,6 +136,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
       sessionIds: saved.openConversationIds,
       pinnedSessionIds: saved.pinnedConversationIds,
       archivedConversationIds: saved.archivedConversationIds,
+      activeConversationId: saved.activeConversationId ?? null,
       workspacePaths: saved.workspacePaths,
     });
   } catch (err) {

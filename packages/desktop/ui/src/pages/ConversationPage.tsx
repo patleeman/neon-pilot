@@ -243,7 +243,7 @@ import {
   buildConversationPendingQueueItems,
   resolveRestoredQueuedPromptComposerUpdate,
 } from '../pending/pendingQueueMessages';
-import { closeConversationTab, ensureConversationTabOpen } from '../session/sessionTabs';
+import { closeConversationTab, ensureConversationTabOpen, setActiveConversationTab } from '../session/sessionTabs';
 import type {
   ConversationAttachmentSummary,
   ConversationContextDocRef,
@@ -695,6 +695,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
 
     ensureConversationTabOpen(id);
+    setActiveConversationTab(id);
   }, [draft, id]);
 
   // ── Live session detection ─────────────────────────────────────────────────

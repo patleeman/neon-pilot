@@ -1077,6 +1077,7 @@ describe('api desktop transport', () => {
           sessionIds: ['conversation-1'],
           pinnedSessionIds: ['conversation-2'],
           archivedSessionIds: ['conversation-3'],
+          activeConversationId: null,
           workspacePaths: ['/tmp/alpha'],
         }),
       )
@@ -1086,6 +1087,7 @@ describe('api desktop transport', () => {
           sessionIds: ['conversation-4'],
           pinnedSessionIds: ['conversation-5'],
           archivedSessionIds: ['conversation-6'],
+          activeConversationId: null,
           workspacePaths: ['/tmp/beta'],
         }),
       );

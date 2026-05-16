@@ -1,5 +1,10 @@
 import { api } from '../client/api';
-import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
+import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  OPEN_SESSION_IDS_STORAGE_KEY,
+  PINNED_SESSION_IDS_STORAGE_KEY,
+} from '../local/localSettings';
 
 export const CONVERSATION_LAYOUT_CHANGED_EVENT = 'pa:conversation-layout-changed';
 
@@ -10,12 +15,14 @@ export interface ConversationLayout {
   sessionIds: string[];
   pinnedSessionIds: string[];
   archivedSessionIds: string[];
+  activeSessionId: string | null;
 }
 
 interface ConversationLayoutInput {
   sessionIds?: Iterable<unknown>;
   pinnedSessionIds?: Iterable<unknown>;
   archivedSessionIds?: Iterable<unknown>;
+  activeSessionId?: unknown;
 }
 
 function normalizeSessionId(value: unknown): string {
@@ -45,11 +52,13 @@ function normalizeConversationLayout(input: ConversationLayoutInput): Conversati
   const sessionIds = normalizeSessionIds(input.sessionIds ?? []).filter((id) => !pinnedIdSet.has(id));
   const workspaceIdSet = new Set([...sessionIds, ...pinnedSessionIds]);
   const archivedSessionIds = normalizeSessionIds(input.archivedSessionIds ?? []).filter((id) => !workspaceIdSet.has(id));
+  const activeSessionId = normalizeSessionId(input.activeSessionId);
 
   return {
     sessionIds,
     pinnedSessionIds,
     archivedSessionIds,
+    activeSessionId: activeSessionId && workspaceIdSet.has(activeSessionId) ? activeSessionId : null,
   };
 }
 
@@ -58,6 +67,7 @@ function mergeConversationLayout(current: ConversationLayout, input: Conversatio
     sessionIds: input.sessionIds ?? current.sessionIds,
     pinnedSessionIds: input.pinnedSessionIds ?? current.pinnedSessionIds,
     archivedSessionIds: input.archivedSessionIds ?? current.archivedSessionIds,
+    activeSessionId: input.activeSessionId !== undefined ? input.activeSessionId : current.activeSessionId,
   });
 }
 
@@ -84,6 +94,7 @@ function applyArchiveTransitions(current: ConversationLayout, next: Conversation
     sessionIds: next.sessionIds,
     pinnedSessionIds: next.pinnedSessionIds,
     archivedSessionIds: [...archivedSessionIds],
+    activeSessionId: next.activeSessionId,
   });
 }
 
@@ -99,14 +110,17 @@ function sameConversationLayout(left: ConversationLayout, right: ConversationLay
   return (
     sameSessionIds(left.sessionIds, right.sessionIds) &&
     sameSessionIds(left.pinnedSessionIds, right.pinnedSessionIds) &&
-    sameSessionIds(left.archivedSessionIds, right.archivedSessionIds)
+    sameSessionIds(left.archivedSessionIds, right.archivedSessionIds) &&
+    left.activeSessionId === right.activeSessionId
   );
 }
 
 function persistConversationLayoutToServer(layout: ConversationLayout): void {
-  void api.setOpenConversationTabs(layout.sessionIds, layout.pinnedSessionIds, layout.archivedSessionIds).catch(() => {
-    // Ignore best-effort sync failures.
-  });
+  void api
+    .setOpenConversationTabs(layout.sessionIds, layout.pinnedSessionIds, layout.archivedSessionIds, undefined, layout.activeSessionId)
+    .catch(() => {
+      // Ignore best-effort sync failures.
+    });
 }
 
 function readStoredSessionIds(storageKey: string): string[] {
@@ -130,6 +144,7 @@ export function readConversationLayout(): ConversationLayout {
     sessionIds: readStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY),
     pinnedSessionIds: readStoredSessionIds(PINNED_SESSION_IDS_STORAGE_KEY),
     archivedSessionIds: readStoredSessionIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
+    activeSessionId: localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY),
   });
 }
 
@@ -163,6 +178,15 @@ function writeConversationLayout(layout: ConversationLayout): ConversationLayout
   writeStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY, normalizedLayout.sessionIds);
   writeStoredSessionIds(PINNED_SESSION_IDS_STORAGE_KEY, normalizedLayout.pinnedSessionIds);
   writeStoredSessionIds(ARCHIVED_SESSION_IDS_STORAGE_KEY, normalizedLayout.archivedSessionIds);
+  try {
+    if (normalizedLayout.activeSessionId) {
+      localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, normalizedLayout.activeSessionId);
+    } else {
+      localStorage.removeItem(ACTIVE_SESSION_ID_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage write failures.
+  }
   persistConversationLayoutToServer(normalizedLayout);
   window.dispatchEvent(
     new CustomEvent(CONVERSATION_LAYOUT_CHANGED_EVENT, {
@@ -194,6 +218,18 @@ export function applyRemoteConversationLayout(layout: ConversationLayoutInput): 
   return writeConversationLayout(next);
 }
 
+export function setActiveConversationTab(sessionId: string | null | undefined): ConversationLayout {
+  const current = readConversationLayout();
+  const normalizedSessionId = normalizeSessionId(sessionId);
+  const nextActiveSessionId =
+    normalizedSessionId && listWorkspaceSessionIds(current).includes(normalizedSessionId) ? normalizedSessionId : null;
+  if (current.activeSessionId === nextActiveSessionId) {
+    return current;
+  }
+
+  return writeConversationLayout({ ...current, activeSessionId: nextActiveSessionId });
+}
+
 export function ensureConversationTabOpen(sessionId: string | null | undefined): string[] {
   const normalizedSessionId = normalizeSessionId(sessionId);
   const layout = readConversationLayout();
@@ -204,6 +240,7 @@ export function ensureConversationTabOpen(sessionId: string | null | undefined):
   return writeConversationLayout({
     ...layout,
     sessionIds: [...layout.sessionIds, normalizedSessionId],
+    activeSessionId: normalizedSessionId,
   }).sessionIds;
 }
 
@@ -317,6 +354,7 @@ function moveConversationToSection(
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: normalizedLayout.archivedSessionIds,
+      activeSessionId: normalizedLayout.activeSessionId,
     });
   }
 
@@ -327,6 +365,7 @@ function moveConversationToSection(
       sessionIds: nextSessionIds,
       pinnedSessionIds: nextPinnedSessionIds,
       archivedSessionIds: normalizedLayout.archivedSessionIds,
+      activeSessionId: normalizedLayout.activeSessionId,
     });
   }
 
@@ -336,6 +375,7 @@ function moveConversationToSection(
     sessionIds: nextSessionIds,
     pinnedSessionIds: nextPinnedSessionIds,
     archivedSessionIds: normalizedLayout.archivedSessionIds,
+    activeSessionId: normalizedLayout.activeSessionId,
   });
 }
 

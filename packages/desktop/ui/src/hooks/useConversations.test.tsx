@@ -118,12 +118,19 @@ describe('useConversations', () => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
-    apiMocks.openConversationTabs.mockResolvedValue({ sessionIds: [], pinnedSessionIds: [], archivedSessionIds: [], workspacePaths: [] });
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    });
     apiMocks.setOpenConversationTabs.mockResolvedValue({
       ok: true,
       sessionIds: ['conv-auto'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
+      activeConversationId: null,
       workspacePaths: [],
     });
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
