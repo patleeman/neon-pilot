@@ -36,6 +36,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
 
   registerTaskRoutes(app, context);
 
+  registerGatewayRoutes(app, context);
+
   registerExtensionRoutes(app, context);
 
   registerModelRoutes(app, context);
@@ -45,8 +47,6 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerSystemRoutes(app, context);
 
   registerUiPreferenceRoutes(app, context);
-
-  registerGatewayRoutes(app, context);
 
   registerConversationRoutes(app, context);
 

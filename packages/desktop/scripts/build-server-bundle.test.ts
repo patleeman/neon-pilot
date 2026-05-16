@@ -9,7 +9,7 @@ function readRepoFile(path: string): string {
 
 function extractLazyServerModuleSpecifiers(source: string): string[] {
   const specifiers = new Set<string>();
-  const regex = /callModuleExport(?:<[^>]+>)?\(\s*['"](\.\.\/\.\.\/[^'"]+)['"]/g;
+  const regex = /callModuleExport(?:<[^>]+>)?\(\s*['"](\.{1,2}\/[^'"]+)['"]/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(source))) {
     specifiers.add(match[1]);
@@ -18,12 +18,14 @@ function extractLazyServerModuleSpecifiers(source: string): string[] {
 }
 
 function normalizeLazySpecifier(specifier: string): string {
-  return specifier.replace(/^\.\.\/\.\.\//, '');
+  return specifier.replace(/^\.\.\/\.\.\//, '').replace(/^\.\.\//, '');
 }
 
 describe('desktop server bundle lazy module entries', () => {
   it('packages every relative backend API lazy module used by extension wrappers', () => {
-    const backendApiFiles = ['packages/desktop/server/extensions/backendApi/automations.ts'];
+    const backendApiFiles = ['automations.ts', 'gateways.ts', 'knowledgeVault.ts'].map(
+      (file) => `packages/desktop/server/extensions/backendApi/${file}`,
+    );
     const lazyModuleSpecifiers = backendApiFiles.flatMap((path) => extractLazyServerModuleSpecifiers(readRepoFile(path)));
     const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');
 

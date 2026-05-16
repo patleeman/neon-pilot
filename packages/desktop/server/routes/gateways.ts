@@ -8,6 +8,8 @@ import {
 import { registerLiveSessionLifecycleHandler } from '../conversations/liveSessionLifecycle.js';
 import { getAvailableModelObjects, renameSession, updateLiveSessionModelPreferences } from '../conversations/liveSessions.js';
 import { readSessionBlocks } from '../conversations/sessions.js';
+import type { TelegramGatewayHostApi } from '../extensions/backendApi/gateways.js';
+import { TELEGRAM_GATEWAY_HOST_API_GLOBAL } from '../extensions/backendApi/gateways.js';
 import {
   attachGatewayConversation,
   detachGatewayConversation,
@@ -38,11 +40,21 @@ let telegramRuntime: TelegramGatewayRuntime | null = null;
 let lifecycleRegistered = false;
 const lastTelegramDeliveryByConversation = new Map<string, string>();
 
+function publishTelegramGatewayHostApi(): void {
+  globalThis[TELEGRAM_GATEWAY_HOST_API_GLOBAL as keyof typeof globalThis] = {
+    registerTelegramGatewayLifecycleDelivery,
+    startTelegramGatewayRuntime,
+    stopTelegramGatewayRuntime,
+    readTelegramGatewayRuntimeStatus,
+  } as TelegramGatewayHostApi;
+}
+
 function initializeGatewayRoutesContext(context: ServerRouteContext): void {
   getCurrentProfileFn = context.getCurrentProfile;
   getStateRootFn = context.getStateRoot;
   getAuthFileFn = context.getAuthFile;
   routeContext = context;
+  publishTelegramGatewayHostApi();
 }
 
 export function registerTelegramGatewayLifecycleDelivery(): void {

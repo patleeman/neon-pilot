@@ -1,25 +1,35 @@
-import { callServerModuleExport } from './serverModuleResolver.js';
+export const TELEGRAM_GATEWAY_HOST_API_GLOBAL = '__personalAgentTelegramGatewayHostApi';
 
-async function callModuleExport<T>(specifier: string, name: string, ...args: unknown[]): Promise<T> {
-  try {
-    return await callServerModuleExport<T>(specifier, name, ...args);
-  } catch (error) {
-    if (error instanceof Error && error.message === `Backend API export ${name} is unavailable.`) {
-      throw new Error(`Gateways backend API export ${name} is unavailable.`);
-    }
-    throw error;
+export interface TelegramGatewayHostApi {
+  registerTelegramGatewayLifecycleDelivery: () => void;
+  startTelegramGatewayRuntime: (...args: unknown[]) => unknown;
+  stopTelegramGatewayRuntime: (...args: unknown[]) => unknown;
+  readTelegramGatewayRuntimeStatus: (...args: unknown[]) => unknown;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __personalAgentTelegramGatewayHostApi: TelegramGatewayHostApi | undefined;
+}
+
+function readTelegramGatewayHostApi(): TelegramGatewayHostApi {
+  const api = globalThis[TELEGRAM_GATEWAY_HOST_API_GLOBAL as keyof typeof globalThis] as TelegramGatewayHostApi | undefined;
+  if (!api) {
+    throw new Error('Gateways backend API is unavailable because gateway routes are not initialized.');
   }
+  return api;
 }
 
 export async function startTelegramGatewayService(...args: unknown[]) {
-  await callModuleExport('../routes/gateways.js', 'registerTelegramGatewayLifecycleDelivery');
-  return callModuleExport('../routes/gateways.js', 'startTelegramGatewayRuntime', ...args);
+  const api = readTelegramGatewayHostApi();
+  api.registerTelegramGatewayLifecycleDelivery();
+  return api.startTelegramGatewayRuntime(...args);
 }
 
 export async function stopTelegramGatewayService(...args: unknown[]) {
-  return callModuleExport('../routes/gateways.js', 'stopTelegramGatewayRuntime', ...args);
+  return readTelegramGatewayHostApi().stopTelegramGatewayRuntime(...args);
 }
 
 export async function readTelegramGatewayServiceStatus(...args: unknown[]) {
-  return callModuleExport('../routes/gateways.js', 'readTelegramGatewayRuntimeStatus', ...args);
+  return readTelegramGatewayHostApi().readTelegramGatewayRuntimeStatus(...args);
 }
