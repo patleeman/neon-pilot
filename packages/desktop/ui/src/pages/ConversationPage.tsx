@@ -2924,9 +2924,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return;
       }
 
-      if (el) {
-        el.value = insertion.nextInput;
-      }
       setInput(insertion.nextInput);
       setSlashIdx(0);
       setMentionIdx(0);
