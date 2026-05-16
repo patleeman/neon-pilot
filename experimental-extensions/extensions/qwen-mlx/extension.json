@@ -30,14 +30,7 @@
         "component": "QwenMlxPage"
       }
     ],
-    "nav": [
-      {
-        "id": "qwen-mlx-nav",
-        "label": "MLX Models",
-        "icon": "sparkle",
-        "route": "/ext/qwen-mlx"
-      }
-    ],
+    "nav": [],
     "tools": [
       {
         "id": "mlx_local_status",

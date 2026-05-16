@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "id": "local-models",
+  "name": "Local Models",
+  "description": "Manage local MLX and GGUF model runtimes from one workspace.",
+  "version": "0.1.0",
+  "packageType": "user",
+  "defaultEnabled": false,
+  "frontend": { "entry": "dist/frontend.js" },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "localModelsStatus", "handler": "status", "title": "Local models status" },
+      { "id": "localModelsMlxSetModel", "handler": "mlxSetModel", "title": "Set MLX model" },
+      { "id": "localModelsMlxSetup", "handler": "mlxSetup", "title": "Set up MLX model" },
+      { "id": "localModelsMlxStart", "handler": "mlxStart", "title": "Start MLX runtime" },
+      { "id": "localModelsMlxStop", "handler": "mlxStop", "title": "Stop MLX runtime" },
+      { "id": "localModelsMlxSearch", "handler": "mlxSearch", "title": "Search MLX models" },
+      { "id": "localModelsGgufDownload", "handler": "ggufDownload", "title": "Download GGUF model" },
+      { "id": "localModelsGgufSetModel", "handler": "ggufSetModel", "title": "Set GGUF model" },
+      { "id": "localModelsGgufReveal", "handler": "ggufReveal", "title": "Reveal GGUF model" },
+      { "id": "localModelsGgufStart", "handler": "ggufStart", "title": "Start llama.cpp server" },
+      { "id": "localModelsGgufStop", "handler": "ggufStop", "title": "Stop llama.cpp server" },
+      { "id": "localModelsGgufRunPrompt", "handler": "ggufRunPrompt", "title": "Run GGUF prompt" }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "main",
+        "title": "Local Models",
+        "location": "main",
+        "route": "/ext/local-models",
+        "component": "LocalModelsPage"
+      }
+    ],
+    "nav": [{ "id": "local-models", "label": "Local Models", "icon": "sparkle", "route": "/ext/local-models" }],
+    "tools": [
+      {
+        "id": "local_models_status",
+        "name": "local_models_status",
+        "description": "Check selected, installed, and running local MLX and GGUF models.",
+        "action": "localModelsStatus",
+        "inputSchema": { "type": "object", "properties": {} }
+      }
+    ]
+  },
+  "permissions": ["network:read", "network:write", "network:listen"]
+}
