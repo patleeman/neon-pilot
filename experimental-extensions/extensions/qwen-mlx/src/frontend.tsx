@@ -5,7 +5,8 @@ import {
   RuntimeFooter,
   RuntimeHeader,
   RuntimePage,
-  RuntimeWorkspace,
+  RuntimeSection,
+  RuntimeStrip,
   TerminalBlock,
   ToolbarButton,
 } from '../../../shared/localRuntimeWorkspace';
@@ -206,18 +207,18 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
     const loadedModel = status?.loadedModelId || 'None';
     const title = running ? 'Running' : starting ? 'Starting' : setupRunning ? 'Downloading' : ready ? 'Ready' : 'Needs setup';
     const message =
-      busy || error || status?.setup?.error || status?.server.error || status?.setup?.message || 'Local MLX runtime workspace';
+      busy ||
+      error ||
+      status?.setup?.error ||
+      status?.server.error ||
+      status?.setup?.message ||
+      'Choose a model, set it up, then start the runtime.';
 
     return (
       <RuntimePage>
         <RuntimeHeader
           title="✨ MLX Models"
           summary="Run Hugging Face MLX models locally and test them before using them in chat."
-          status={title}
-          tone={statusTone(status, busy)}
-          metadata={['Backend: MLX', `Loaded: ${loadedModel}`, `Endpoint: ${BASE_URL}`]}
-          message={message}
-          progress={setupRunning || progress > 0 ? progress : null}
           actions={
             <>
               <ToolbarButton disabled={Boolean(busy)} onClick={() => void this.refresh()}>
@@ -230,126 +231,110 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
           }
         />
 
-        <RuntimeWorkspace
-          left={
-            <>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-secondary">Models</h2>
-                <ToolbarButton disabled={Boolean(busy || setupRunning || !modelInput.trim())} onClick={() => void this.setupModel()}>
-                  Setup / Download
-                </ToolbarButton>
-              </div>
+        <RuntimeStrip
+          status={title}
+          tone={statusTone(status, busy)}
+          metadata={[`Backend: MLX`, `Loaded: ${loadedModel}`, `Endpoint: ${BASE_URL}`]}
+          message={message}
+          progress={setupRunning || progress > 0 ? progress : null}
+        >
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+            <label className="block space-y-2 text-sm">
+              <span className="text-secondary">Selected Model</span>
+              <input
+                name="mlx-model-id"
+                autoComplete="off"
+                value={modelInput}
+                disabled={running || starting || Boolean(busy)}
+                onChange={(event) => this.setState({ modelInput: event.target.value })}
+                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent disabled:opacity-60"
+                placeholder="org/model-name-MLX…"
+              />
+            </label>
+            <ToolbarButton disabled={Boolean(busy || running || starting || !modelInput.trim())} onClick={() => void this.saveModel()}>
+              Save Selection
+            </ToolbarButton>
+            <ToolbarButton disabled={Boolean(busy || setupRunning || !modelInput.trim())} onClick={() => void this.setupModel()}>
+              Setup / Download
+            </ToolbarButton>
+          </div>
+        </RuntimeStrip>
 
-              <label className="mt-4 block space-y-2 text-sm">
-                <span className="text-secondary">Selected Model</span>
-                <input
-                  name="mlx-model-id"
-                  autoComplete="off"
-                  value={modelInput}
-                  disabled={running || starting || Boolean(busy)}
-                  onChange={(event) => this.setState({ modelInput: event.target.value })}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent disabled:opacity-60"
-                  placeholder="org/model-name-MLX…"
-                />
-              </label>
-              <div className="mt-3 flex gap-2">
-                <ToolbarButton disabled={Boolean(busy || running || starting || !modelInput.trim())} onClick={() => void this.saveModel()}>
-                  Save Selection
-                </ToolbarButton>
-              </div>
-
-              <div className="my-5 border-t border-border-subtle" />
-
-              <div className="space-y-3">
-                <label className="block space-y-2 text-sm">
-                  <span className="text-secondary">Search Hugging Face</span>
-                  <div className="flex gap-2">
-                    <input
-                      name="mlx-model-search"
-                      autoComplete="off"
-                      value={searchQuery}
-                      onChange={(event) => this.setState({ searchQuery: event.target.value })}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') void this.searchModels();
-                      }}
-                      className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                      placeholder="Qwen MLX…"
-                    />
-                    <ToolbarButton disabled={searchBusy || !searchQuery.trim()} onClick={() => void this.searchModels()}>
-                      {searchBusy ? 'Searching…' : 'Search'}
-                    </ToolbarButton>
-                  </div>
-                </label>
-
-                <div className="divide-y divide-border-subtle border-y border-border-subtle text-sm">
-                  {searchResults.length > 0 ? (
-                    searchResults.map((model) => (
-                      <div key={model.id} className="py-3">
-                        <button
-                          type="button"
-                          disabled={running || starting}
-                          onClick={() => this.setState({ modelInput: model.id })}
-                          className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent disabled:opacity-60"
-                        >
-                          {model.id}
-                        </button>
-                        <div className="mt-1 flex items-center justify-between gap-3 text-xs text-secondary">
-                          <span>{model.downloads.toLocaleString()} downloads</span>
-                          <button
-                            type="button"
-                            disabled={Boolean(busy || running || starting)}
-                            onClick={() => void this.saveModel(model.id)}
-                            className="text-accent hover:text-primary disabled:opacity-60"
-                          >
-                            Use
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="py-3 text-secondary">Search for models like “Qwen MLX” or “Llama 4bit”.</p>
-                  )}
-                </div>
-              </div>
-            </>
+        <RuntimeSection
+          title="Test Prompt"
+          description="Run a quick smoke test against the local OpenAI-compatible endpoint."
+          action={
+            <ToolbarButton disabled={Boolean(busy || !running || !prompt.trim())} onClick={() => void this.runPrompt()}>
+              {busy === 'Running prompt…' ? 'Running…' : 'Run Prompt'}
+            </ToolbarButton>
           }
-          right={
-            <>
-              <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-primary">Test Prompt</h2>
-                  <p className="text-sm text-secondary">Run a quick smoke test against the local OpenAI-compatible endpoint.</p>
+        >
+          <label className="block space-y-2 text-sm">
+            <span className="text-secondary">Prompt</span>
+            <textarea
+              name="mlx-test-prompt"
+              autoComplete="off"
+              value={prompt}
+              onChange={(event) => this.setState({ prompt: event.target.value })}
+              className="min-h-28 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-primary outline-none focus-visible:border-accent"
+              placeholder="Ask the local model something…"
+            />
+          </label>
+          <TerminalBlock>{output || (running ? 'Prompt output will appear here.' : 'Start the runtime to test prompts.')}</TerminalBlock>
+        </RuntimeSection>
+
+        <RuntimeSection title="Search Hugging Face" description="Find a compatible public MLX model and use its model id above.">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <input
+              name="mlx-model-search"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(event) => this.setState({ searchQuery: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void this.searchModels();
+              }}
+              className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+              placeholder="Qwen MLX…"
+            />
+            <ToolbarButton disabled={searchBusy || !searchQuery.trim()} onClick={() => void this.searchModels()}>
+              {searchBusy ? 'Searching…' : 'Search'}
+            </ToolbarButton>
+          </div>
+          <div className="divide-y divide-border-subtle border-y border-border-subtle text-sm">
+            {searchResults.length > 0 ? (
+              searchResults.map((model) => (
+                <div key={model.id} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                  <button
+                    type="button"
+                    disabled={running || starting}
+                    onClick={() => this.setState({ modelInput: model.id })}
+                    className="min-w-0 truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent disabled:opacity-60"
+                  >
+                    {model.id}
+                  </button>
+                  <span className="text-xs text-secondary">{model.downloads.toLocaleString()} downloads</span>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy || running || starting)}
+                    onClick={() => void this.saveModel(model.id)}
+                    className="text-sm text-accent hover:text-primary disabled:opacity-60"
+                  >
+                    Use
+                  </button>
                 </div>
-                <ToolbarButton disabled={Boolean(busy || !running || !prompt.trim())} onClick={() => void this.runPrompt()}>
-                  {busy === 'Running prompt…' ? 'Running…' : 'Run Prompt'}
-                </ToolbarButton>
-              </div>
-              <label className="mt-4 block space-y-2 text-sm">
-                <span className="text-secondary">Prompt</span>
-                <textarea
-                  name="mlx-test-prompt"
-                  autoComplete="off"
-                  value={prompt}
-                  onChange={(event) => this.setState({ prompt: event.target.value })}
-                  className="min-h-28 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-primary outline-none focus-visible:border-accent"
-                  placeholder="Ask the local model something…"
-                />
-              </label>
-              <div className="mt-4 min-h-0 flex-1">
-                <TerminalBlock>
-                  {output || (running ? 'Prompt output will appear here.' : 'Start the runtime to test prompts.')}
-                </TerminalBlock>
-              </div>
-            </>
-          }
-        />
+              ))
+            ) : (
+              <p className="py-4 text-secondary">Search for models like “Qwen MLX” or “Llama 4bit”.</p>
+            )}
+          </div>
+        </RuntimeSection>
 
         <RuntimeFooter
           summary={`Runtime: MLX · Selected: ${status?.selectedModelId || modelInput || 'None'} · Logs`}
           open={logsOpen}
           onToggle={() => this.setState((prev) => ({ logsOpen: !prev.logsOpen }))}
         >
-          <TerminalBlock>{status?.log?.trim() || 'No logs yet.'}</TerminalBlock>
+          <TerminalBlock compact>{status?.log?.trim() || 'No logs yet.'}</TerminalBlock>
         </RuntimeFooter>
       </RuntimePage>
     );

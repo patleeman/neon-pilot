@@ -18,72 +18,86 @@ export function RuntimePage({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function RuntimeHeader({
-  title,
-  summary,
+export function RuntimeHeader({ title, summary, actions }: { title: string; summary: string; actions?: React.ReactNode }) {
+  return <AppPageIntro title={title} summary={summary} actions={actions} />;
+}
+
+export function RuntimeStrip({
   status,
   tone,
   metadata,
   message,
-  actions,
+  children,
   progress,
 }: {
-  title: string;
-  summary: string;
   status: string;
   tone: RuntimeStatusTone;
   metadata: string[];
   message?: string | null;
-  actions?: React.ReactNode;
+  children: React.ReactNode;
   progress?: number | null;
 }) {
   const clampedProgress = progress == null ? null : Math.max(0, Math.min(100, Math.round(progress)));
   return (
-    <header className="space-y-6">
-      <AppPageIntro title={title} summary={summary} actions={actions} />
-      <div className="space-y-3 border-y border-border-subtle/65 py-4">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
-          <span className="inline-flex items-center gap-2 font-medium text-primary">
-            <RuntimeDot tone={tone} />
-            {status}
+    <section className="space-y-5 border-y border-border-subtle/65 py-6">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
+        <span className="inline-flex items-center gap-2 font-medium text-primary">
+          <RuntimeDot tone={tone} />
+          {status}
+        </span>
+        {metadata.map((item) => (
+          <span key={item} className="min-w-0 truncate">
+            {item}
           </span>
-          {metadata.map((item) => (
-            <span key={item} className="min-w-0 truncate">
-              {item}
-            </span>
-          ))}
-        </div>
-        {clampedProgress != null ? (
-          <div className="h-1 overflow-hidden rounded-full bg-border-subtle" aria-label={`Setup progress ${clampedProgress}%`}>
-            <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${clampedProgress}%` }} />
-          </div>
-        ) : null}
-        {message ? (
-          <div className="text-sm text-secondary" aria-live="polite">
-            {message}
-          </div>
-        ) : null}
+        ))}
       </div>
-    </header>
-  );
-}
-
-export function RuntimeWorkspace({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
-  return (
-    <section className="grid gap-10 lg:grid-cols-[minmax(18rem,22rem)_1fr] lg:items-start">
-      <aside className="min-w-0 space-y-6">{left}</aside>
-      <main className="min-w-0 space-y-6">{right}</main>
+      {message ? (
+        <div className="text-sm text-secondary" aria-live="polite">
+          {message}
+        </div>
+      ) : null}
+      {children}
+      {clampedProgress != null ? (
+        <div className="h-1 overflow-hidden rounded-full bg-border-subtle" aria-label={`Setup progress ${clampedProgress}%`}>
+          <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${clampedProgress}%` }} />
+        </div>
+      ) : null}
     </section>
   );
 }
 
-export function RuntimePanel({ children }: { children: React.ReactNode }) {
-  return <section className="space-y-5 border-t border-border-subtle/65 pt-6">{children}</section>;
+export function RuntimeSection({
+  title,
+  description,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-5 border-t border-border-subtle/65 pt-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-lg font-semibold text-primary">{title}</h2>
+          {description ? <p className="text-sm text-secondary">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
 }
 
-export function TerminalBlock({ children }: { children: React.ReactNode }) {
+export function TerminalBlock({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
   return (
-    <pre className="min-h-36 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle/80 bg-surface/55 p-4 text-xs leading-relaxed text-secondary">
+    <pre
+      className={`overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle/80 bg-surface/55 p-4 text-xs leading-relaxed text-secondary ${
+        compact ? 'min-h-28' : 'min-h-44'
+      }`}
+    >
       {children}
     </pre>
   );

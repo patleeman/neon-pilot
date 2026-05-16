@@ -5,7 +5,8 @@ import {
   RuntimeFooter,
   RuntimeHeader,
   RuntimePage,
-  RuntimeWorkspace,
+  RuntimeSection,
+  RuntimeStrip,
   TerminalBlock,
   ToolbarButton,
 } from '../../../shared/localRuntimeWorkspace';
@@ -185,14 +186,6 @@ export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
       <RuntimeHeader
         title="✨ llama.cpp"
         summary="Download GGUF models, run a persistent local server, and smoke-test prompts before using them in chat."
-        status={statusLabel}
-        tone={tone}
-        metadata={[
-          'Backend: llama.cpp',
-          `Endpoint: ${status?.baseUrl ?? 'Checking…'}`,
-          `Model: ${modelPath ? modelPath.split('/').pop() : 'None selected'}`,
-        ]}
-        message={statusMessage}
         actions={
           <>
             <ToolbarButton disabled={Boolean(busy)} onClick={() => void refreshStatus()}>
@@ -205,130 +198,124 @@ export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
         }
       />
 
-      <RuntimeWorkspace
-        left={
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-secondary">Model</h2>
-              <ToolbarButton disabled={Boolean(busy || !repo.trim() || !filename.trim())} onClick={() => void downloadModel()}>
-                Download
-              </ToolbarButton>
-            </div>
+      <RuntimeStrip
+        status={statusLabel}
+        tone={tone}
+        metadata={[
+          `Backend: llama.cpp`,
+          `Endpoint: ${status?.baseUrl ?? 'Checking…'}`,
+          `Model: ${modelPath ? modelPath.split('/').pop() : 'None selected'}`,
+        ]}
+        message={statusMessage}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)_auto] lg:items-end">
+          <label className="block space-y-2 text-sm">
+            <span className="text-secondary">Repository</span>
+            <input
+              name="llama-repository"
+              autoComplete="off"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+              value={repo}
+              placeholder="unsloth/Qwen3.6-35B-A3B-MTP-GGUF…"
+              onChange={(event) => setRepo(event.target.value)}
+            />
+          </label>
+          <label className="block space-y-2 text-sm">
+            <span className="text-secondary">GGUF Filename</span>
+            <input
+              name="llama-gguf-filename"
+              autoComplete="off"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+              value={filename}
+              placeholder="model-q4_k_m.gguf…"
+              onChange={(event) => setFilename(event.target.value)}
+            />
+          </label>
+          <ToolbarButton disabled={Boolean(busy || !repo.trim() || !filename.trim())} onClick={() => void downloadModel()}>
+            Download & Use
+          </ToolbarButton>
+        </div>
+      </RuntimeStrip>
 
-            <label className="mt-4 block space-y-2 text-sm">
-              <span className="text-secondary">Repository</span>
-              <input
-                name="llama-repository"
-                autoComplete="off"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                value={repo}
-                placeholder="unsloth/Qwen3.6-35B-A3B-MTP-GGUF…"
-                onChange={(event) => setRepo(event.target.value)}
-              />
-            </label>
-            <label className="mt-4 block space-y-2 text-sm">
-              <span className="text-secondary">GGUF Filename</span>
-              <input
-                name="llama-gguf-filename"
-                autoComplete="off"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                value={filename}
-                placeholder="model-q4_k_m.gguf…"
-                onChange={(event) => setFilename(event.target.value)}
-              />
-            </label>
+      <RuntimeSection
+        title="Test Prompt"
+        description={
+          running
+            ? 'Using the local OpenAI-compatible llama-server endpoint.'
+            : 'Start the runtime for server mode, or run a one-shot llama-cli prompt.'
+        }
+        action={
+          <ToolbarButton disabled={Boolean(busy || !ready || !prompt.trim())} onClick={() => void runPrompt()}>
+            {busy === 'Running…' ? 'Running…' : 'Run Prompt'}
+          </ToolbarButton>
+        }
+      >
+        <label className="block space-y-2 text-sm">
+          <span className="text-secondary">GGUF Model Path</span>
+          <input
+            name="llama-model-path"
+            autoComplete="off"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+            value={modelPath}
+            placeholder="/path/to/model.gguf…"
+            onChange={(event) => setModelPath(event.target.value)}
+          />
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="text-secondary">Prompt</span>
+          <textarea
+            name="llama-test-prompt"
+            autoComplete="off"
+            className="min-h-28 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-primary outline-none focus-visible:border-accent"
+            value={prompt}
+            placeholder="Ask the local model something…"
+            onChange={(event) => setPrompt(event.target.value)}
+          />
+        </label>
+        <TerminalBlock>
+          {output || (ready ? 'Prompt output will appear here.' : 'Download, select, or paste a GGUF model path to test prompts.')}
+        </TerminalBlock>
+      </RuntimeSection>
 
-            <div className="my-5 border-t border-border-subtle" />
-
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-primary">Cached Models</h3>
-              <span className="text-xs text-secondary">{status?.models.length ?? 0}</span>
-            </div>
-            <div className="mt-3 divide-y divide-border-subtle border-y border-border-subtle text-sm">
-              {status?.models.length ? (
-                status.models.map((model) => (
-                  <div key={model.path} className="py-3">
-                    <button
-                      type="button"
-                      className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent"
-                      onClick={() => void useModel(model.path)}
-                    >
-                      {model.name}
-                    </button>
-                    <div className="mt-1 text-xs text-secondary">
-                      {bytesLabel(model.bytes)} · {dateLabel(model.updatedAt)}
-                    </div>
-                    <div className="mt-2 flex gap-3 text-xs">
-                      <button type="button" className="text-accent hover:text-primary" onClick={() => void useModel(model.path)}>
-                        Use
-                      </button>
-                      <button type="button" className="text-secondary hover:text-primary" onClick={() => void revealModel(model.path)}>
-                        Reveal in Finder
-                      </button>
-                    </div>
+      <RuntimeSection title="Cached Models" description="Local GGUF files downloaded through this extension.">
+        <div className="divide-y divide-border-subtle border-y border-border-subtle text-sm">
+          {status?.models.length ? (
+            status.models.map((model) => (
+              <div key={model.path} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent"
+                    onClick={() => void useModel(model.path)}
+                  >
+                    {model.name}
+                  </button>
+                  <div className="mt-1 truncate text-xs text-secondary">
+                    {bytesLabel(model.bytes)} · {dateLabel(model.updatedAt)} · {model.path}
                   </div>
-                ))
-              ) : (
-                <p className="py-3 text-secondary">No cached GGUF models yet. Download one above or paste a local path on the right.</p>
-              )}
-            </div>
-          </>
-        }
-        right={
-          <>
-            <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
-              <div>
-                <h2 className="text-lg font-semibold text-primary">Test Prompt</h2>
-                <p className="text-sm text-secondary">
-                  {running
-                    ? 'Using the local OpenAI-compatible llama-server endpoint.'
-                    : 'Start the runtime for server mode, or run a one-shot llama-cli prompt.'}
-                </p>
+                </div>
+                <button type="button" className="text-sm text-accent hover:text-primary" onClick={() => void useModel(model.path)}>
+                  Use
+                </button>
+                <button type="button" className="text-sm text-secondary hover:text-primary" onClick={() => void revealModel(model.path)}>
+                  Reveal in Finder
+                </button>
               </div>
-              <ToolbarButton disabled={Boolean(busy || !ready || !prompt.trim())} onClick={() => void runPrompt()}>
-                {busy === 'Running…' ? 'Running…' : 'Run Prompt'}
-              </ToolbarButton>
-            </div>
-
-            <label className="mt-4 block space-y-2 text-sm">
-              <span className="text-secondary">GGUF Model Path</span>
-              <input
-                name="llama-model-path"
-                autoComplete="off"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                value={modelPath}
-                placeholder="/path/to/model.gguf…"
-                onChange={(event) => setModelPath(event.target.value)}
-              />
-            </label>
-
-            <label className="mt-4 block space-y-2 text-sm">
-              <span className="text-secondary">Prompt</span>
-              <textarea
-                name="llama-test-prompt"
-                autoComplete="off"
-                className="min-h-28 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-primary outline-none focus-visible:border-accent"
-                value={prompt}
-                placeholder="Ask the local model something…"
-                onChange={(event) => setPrompt(event.target.value)}
-              />
-            </label>
-
-            <div className="mt-4 min-h-0 flex-1">
-              <TerminalBlock>
-                {output || (ready ? 'Prompt output will appear here.' : 'Download, select, or paste a GGUF model path to test prompts.')}
-              </TerminalBlock>
-            </div>
-          </>
-        }
-      />
+            ))
+          ) : (
+            <p className="py-4 text-secondary">
+              No cached GGUF models yet. Download one above or paste a local path into the prompt test section.
+            </p>
+          )}
+        </div>
+      </RuntimeSection>
 
       <RuntimeFooter
         summary={`Runtime: llama.cpp · Cache: ${status?.modelCacheRoot ?? 'Checking…'} · Details`}
         open={logsOpen}
         onToggle={() => setLogsOpen((open) => !open)}
       >
-        <TerminalBlock>{status?.log?.trim() || status?.version || status?.message || 'No runtime details yet.'}</TerminalBlock>
+        <TerminalBlock compact>{status?.log?.trim() || status?.version || status?.message || 'No runtime details yet.'}</TerminalBlock>
       </RuntimeFooter>
     </RuntimePage>
   );
