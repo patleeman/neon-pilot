@@ -35,7 +35,6 @@ import { parseWholeLineBashCommand } from '../conversation/conversationBashComma
 import { getConversationCheckpointIdFromSearch, setConversationCheckpointIdInSearch } from '../conversation/conversationCheckpoints';
 import {
   canNavigateComposerHistoryValue,
-  insertTextAtComposerSelection,
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
 } from '../conversation/conversationComposerEditing';
@@ -192,6 +191,7 @@ import {
   toggleRelatedThreadSelectionIds,
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
+import { useComposerController } from '../conversation/useComposerController';
 import { useComposerModifierKeys, useVisualViewportKeyboardInset } from '../conversation/useConversationKeyboardState';
 import { useConversationModels } from '../conversation/useConversationModels';
 import { useDesktopConversationShortcuts } from '../conversation/useDesktopConversationShortcuts';
@@ -2881,66 +2881,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [composerHistoryScopeId],
   );
 
-  const rememberComposerSelection = useCallback((element?: HTMLTextAreaElement | null) => {
-    const target = element ?? textareaRef.current;
-    if (!target) {
-      return;
-    }
-
-    composerSelectionRef.current = {
-      start: target.selectionStart ?? target.value.length,
-      end: target.selectionEnd ?? target.value.length,
-    };
-  }, []);
-
-  const moveComposerCaretToEnd = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      const el = textareaRef.current;
-      if (!el) {
-        return;
-      }
-
-      const end = el.value.length;
-      el.focus();
-      el.setSelectionRange(end, end);
-      composerSelectionRef.current = { start: end, end };
-    });
-  }, []);
-
-  const insertTextIntoComposer = useCallback(
-    (text: string) => {
-      const el = textareaRef.current;
-      const selection = el
-        ? {
-            start: el.selectionStart ?? composerSelectionRef.current.start,
-            end: el.selectionEnd ?? composerSelectionRef.current.end,
-          }
-        : composerSelectionRef.current;
-      const insertion = insertTextAtComposerSelection({
-        currentInput: el?.value ?? latestInputRef.current,
-        selection,
-        text,
-      });
-      if (!insertion) {
-        return;
-      }
-
-      setInput(insertion.nextInput);
+  const {
+    rememberSelection: rememberComposerSelection,
+    moveCaretToEnd: moveComposerCaretToEnd,
+    insertText: insertTextIntoComposer,
+  } = useComposerController({
+    inputRef: latestInputRef,
+    textareaRef,
+    selectionRef: composerSelectionRef,
+    setInput,
+    scheduleResize: scheduleComposerResize,
+    onTextInserted: () => {
       setSlashIdx(0);
       setMentionIdx(0);
-      window.requestAnimationFrame(() => {
-        const el = textareaRef.current;
-        if (!el) {
-          return;
-        }
-        el.focus();
-        el.setSelectionRange(insertion.nextCaret, insertion.nextCaret);
-        composerSelectionRef.current = { start: insertion.nextCaret, end: insertion.nextCaret };
-        scheduleComposerResize();
-      });
     },
-    [scheduleComposerResize, setInput],
-  );
+  });
 
   useEffect(() => {
     if (!pendingAskUserQuestion || input.length > 0 || attachments.length > 0 || drawingAttachments.length > 0) {
