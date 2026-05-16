@@ -27,6 +27,7 @@ setConversationServiceContext({
       openConversationIds: [],
       pinnedConversationIds: [],
       archivedConversationIds: [],
+      activeConversationId: null,
       workspacePaths: [],
       nodeBrowserViews: [],
     }) satisfies SavedUiPreferences as SavedUiPreferences,

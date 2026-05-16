@@ -332,7 +332,7 @@ function createStorage(extensionId: string): ExtensionBackendContext['storage'] 
 }
 
 export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getCurrentProfile'> &
-  Partial<Pick<ServerRouteContext, 'buildLiveSessionResourceOptions' | 'getRepoRoot'>>;
+  Partial<Pick<ServerRouteContext, 'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile'>>;
 
 export function createBackendContext(
   extensionId: string,
