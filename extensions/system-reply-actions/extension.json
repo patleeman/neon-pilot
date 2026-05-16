@@ -53,13 +53,13 @@
         "args": { "draftText": "🔁 Try again" }
       },
       {
-        "id": "reply-revise",
-        "title": "Revise this",
+        "id": "reply-do-it",
+        "title": "Do it",
         "action": "composer.replyToSelection",
         "kinds": ["text", "transcriptRange"],
-        "icon": "✏️",
+        "icon": "✅",
         "priority": 50,
-        "args": { "draftText": "✏️ Revise" }
+        "args": { "draftText": "Do it" }
       }
     ]
   }
