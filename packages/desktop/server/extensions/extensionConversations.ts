@@ -57,7 +57,9 @@ export interface ExtensionConversationSubscriptionOptions {
  * Write operations require the session to be live (in the in-memory registry).
  * Read-only meta operations work against persisted session data.
  */
-export function createExtensionConversationsCapability(serverContext?: Pick<ServerRouteContext, 'getCurrentProfile' | 'getSettingsFile'>) {
+export function createExtensionConversationsCapability(
+  serverContext?: Pick<ServerRouteContext, 'getCurrentProfile'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>,
+) {
   const findLiveEntry = (conversationId: string) => {
     const entry = liveSessionRegistry.get(conversationId);
     if (!entry) throw new Error(`Conversation "${conversationId}" is not live.`);
