@@ -1,32 +1,82 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
-import type React from 'react';
 import { useEffect, useState } from 'react';
+
+import {
+  RuntimeFooter,
+  RuntimeHeader,
+  RuntimePage,
+  RuntimeWorkspace,
+  TerminalBlock,
+  ToolbarButton,
+} from '../../../shared/localRuntimeWorkspace';
+
+type CachedModel = { path: string; name: string; bytes: number; updatedAt: number };
 
 type RuntimeStatus = {
   available: boolean;
+  serverAvailable: boolean;
+  cliAvailable: boolean;
   cliPath: string;
+  serverPath: string;
   modelCacheRoot: string;
+  selectedModelPath: string;
+  baseUrl: string;
   message?: string;
   version?: string;
+  server: { reachable: boolean; models: string[]; error?: string };
+  process: { managedRunning: boolean; managedPid: number | null };
+  models: CachedModel[];
+  log: string;
 };
 
-type DownloadResult = {
-  modelPath: string;
-  bytes: number;
-  cached: boolean;
-};
+type DownloadResult = { modelPath: string; bytes: number; cached: boolean; status?: RuntimeStatus };
 
-function TerminalBlock({ children }: { children: React.ReactNode }) {
-  return (
-    <pre className="min-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle bg-[#0f131c] p-4 text-xs leading-relaxed text-secondary">
-      {children}
-    </pre>
-  );
+const PROVIDER_ID = 'llama-cpp-local';
+
+async function postJson(path: string, body: unknown) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function tryRegisterModelProvider(status: RuntimeStatus | null, modelPath: string) {
+  if (!status?.baseUrl || !modelPath) return;
+  const modelName = modelPath.split('/').pop() || 'llama.cpp local';
+  try {
+    await postJson('/api/model-providers/providers', {
+      provider: PROVIDER_ID,
+      api: 'openai-completions',
+      baseUrl: status.baseUrl,
+      apiKey: 'local',
+      authHeader: false,
+      compat: { stream: true },
+    });
+    await postJson(`/api/model-providers/providers/${encodeURIComponent(PROVIDER_ID)}/models`, {
+      modelId: modelName,
+      name: modelName,
+      api: 'openai-completions',
+      baseUrl: status.baseUrl,
+      reasoning: true,
+      input: ['text'],
+      contextWindow: 8192,
+    });
+  } catch {
+    // Extension preview/test contexts may not expose the provider API. Runtime control should still work.
+  }
 }
 
 function bytesLabel(bytes: number) {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024 / 1024);
+  if (!bytes) return '0 B';
+  if (bytes < 1024 * 1024 * 1024) return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(bytes / 1024 / 1024)} MB`;
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024 / 1024)} GB`;
+}
+
+function dateLabel(value: number) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
 export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
@@ -40,96 +90,124 @@ export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [logsOpen, setLogsOpen] = useState(false);
 
-  async function refreshStatus() {
+  async function refreshStatus(syncModel = false) {
     setError(null);
     try {
       const nextStatus = await pa.extension.invoke<RuntimeStatus>('runtimeStatus', {});
       setStatus(nextStatus);
+      if (syncModel || !modelPath) setModelPath(nextStatus.selectedModelPath || '');
+      return nextStatus;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return null;
+    }
+  }
+
+  async function runAction(label: string, action: () => Promise<void>) {
+    setBusy(label);
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      setOutput(message);
+    } finally {
+      setBusy(null);
     }
   }
 
   async function downloadModel() {
-    setBusy('Downloading…');
-    setError(null);
-    setOutput('Downloading model. This can take a while for large GGUF files.');
-    try {
+    await runAction('Downloading…', async () => {
+      setOutput('Downloading model. This can take a while for large GGUF files.');
       const result = await pa.extension.invoke<DownloadResult>('downloadModel', { repo, filename });
       setModelPath(result.modelPath);
-      setOutput(`${result.cached ? 'Using cached model' : 'Downloaded model'}: ${result.modelPath}\nSize: ${bytesLabel(result.bytes)} GB`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      setOutput(message);
-    } finally {
-      setBusy(null);
-    }
+      setOutput(`${result.cached ? 'Using cached model' : 'Downloaded model'}: ${result.modelPath}\nSize: ${bytesLabel(result.bytes)}`);
+      setStatus(result.status ?? (await refreshStatus()) ?? status);
+    });
+  }
+
+  async function useModel(nextModelPath: string) {
+    await runAction('Selecting…', async () => {
+      await pa.extension.invoke('setModel', { modelPath: nextModelPath });
+      setModelPath(nextModelPath);
+      await refreshStatus();
+    });
+  }
+
+  async function revealModel(nextModelPath: string) {
+    await runAction('Revealing…', async () => {
+      await pa.extension.invoke('revealModel', { modelPath: nextModelPath });
+    });
+  }
+
+  async function toggleServer() {
+    const shouldStop = Boolean(status?.server.reachable || status?.process.managedRunning);
+    await runAction(shouldStop ? 'Stopping…' : 'Starting…', async () => {
+      const nextStatus = await pa.extension.invoke<{ status?: RuntimeStatus }>(shouldStop ? 'stopServer' : 'startServer', { modelPath });
+      const refreshed = nextStatus.status ?? (await refreshStatus()) ?? status;
+      setStatus(refreshed);
+      if (!shouldStop) await tryRegisterModelProvider(refreshed, modelPath || refreshed?.selectedModelPath || '');
+    });
   }
 
   async function runPrompt() {
-    setBusy('Running…');
-    setError(null);
-    setOutput('');
-    try {
-      const result = await pa.extension.invoke<{ output: string }>('runPrompt', { modelPath, prompt, gpuLayers: 999, contextSize: 8192 });
-      setOutput(result.output);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      setOutput(message);
-    } finally {
-      setBusy(null);
-    }
+    await runAction('Running…', async () => {
+      setOutput('');
+      const result = await pa.extension.invoke<{ output: string; source: string }>('runPrompt', {
+        modelPath,
+        prompt,
+        gpuLayers: 999,
+        contextSize: 8192,
+      });
+      setOutput(result.output || `No output from ${result.source}.`);
+    });
   }
 
   useEffect(() => {
-    void refreshStatus();
+    void refreshStatus(true);
   }, []);
 
-  const available = Boolean(status?.available);
-  const ready = available && Boolean(modelPath);
-  const statusLabel = available ? (modelPath ? 'Ready' : 'Runtime Ready') : 'Needs Setup';
-  const statusColor = available ? 'bg-success' : 'bg-warning';
+  const running = Boolean(status?.server.reachable);
+  const starting = Boolean(status?.process.managedRunning && !running);
+  const ready = Boolean(status?.available && modelPath);
+  const statusLabel = busy || (running ? 'Running' : starting ? 'Starting' : status?.available ? 'Runtime Ready' : 'Needs Setup');
+  const tone = busy ? 'warning' : running ? 'running' : status?.available ? 'ready' : 'warning';
   const statusMessage =
-    error || status?.message || (available ? 'Metal-enabled llama.cpp runtime found.' : 'Bundled llama-cli is missing.');
+    error ||
+    status?.message ||
+    (status?.serverAvailable
+      ? 'Persistent llama-server is available. Start the runtime to expose this model in the picker.'
+      : 'llama-server is not bundled yet; one-shot prompts can still use llama-cli if available.');
 
   return (
-    <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="space-y-5">
-        <header className="border-b border-border-subtle pb-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-3xl font-semibold tracking-[-0.04em] text-primary">✨ llama.cpp</h1>
-              <p className="mt-1 text-sm text-secondary">
-                Download GGUF models and run one-shot local prompts through bundled Metal llama.cpp.
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <ToolbarButton disabled={Boolean(busy)} onClick={() => void refreshStatus()}>
-                Refresh
-              </ToolbarButton>
-              <ToolbarButton disabled={Boolean(busy || !repo.trim() || !filename.trim())} onClick={() => void downloadModel()}>
-                Download & Use
-              </ToolbarButton>
-            </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
-            <span className="font-medium text-primary">
-              <span className={`mr-2 inline-block h-2 w-2 rounded-full ${statusColor}`} />
-              {busy || statusLabel}
-            </span>
-            <span>Backend: llama.cpp</span>
-            <span className="min-w-0 truncate">Model: {modelPath || 'None selected'}</span>
-            <span>Cache: {status?.modelCacheRoot ?? 'Checking…'}</span>
-          </div>
-          <div className="mt-3 text-sm text-secondary" aria-live="polite">
-            {statusMessage}
-          </div>
-        </header>
+    <RuntimePage>
+      <RuntimeHeader
+        title="✨ llama.cpp"
+        summary="Download GGUF models, run a persistent local server, and smoke-test prompts before using them in chat."
+        status={statusLabel}
+        tone={tone}
+        metadata={[
+          'Backend: llama.cpp',
+          `Endpoint: ${status?.baseUrl ?? 'Checking…'}`,
+          `Model: ${modelPath ? modelPath.split('/').pop() : 'None selected'}`,
+        ]}
+        message={statusMessage}
+        actions={
+          <>
+            <ToolbarButton disabled={Boolean(busy)} onClick={() => void refreshStatus()}>
+              Refresh
+            </ToolbarButton>
+            <ToolbarButton disabled={Boolean(busy || !status?.serverAvailable || !modelPath)} onClick={() => void toggleServer()}>
+              {running || starting ? 'Stop Runtime' : 'Start Runtime'}
+            </ToolbarButton>
+          </>
+        }
+      />
 
-        <section className="grid min-h-[34rem] overflow-hidden rounded-xl border border-border-subtle bg-surface/40 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
-          <aside className="border-b border-border-subtle p-4 lg:border-b-0 lg:border-r">
+      <RuntimeWorkspace
+        left={
+          <>
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-secondary">Model</h2>
               <ToolbarButton disabled={Boolean(busy || !repo.trim() || !filename.trim())} onClick={() => void downloadModel()}>
@@ -162,25 +240,50 @@ export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
 
             <div className="my-5 border-t border-border-subtle" />
 
-            <h3 className="text-sm font-semibold text-primary">Runtime</h3>
-            <div className="mt-3 space-y-2 text-sm text-secondary">
-              <div className="flex items-center justify-between gap-3">
-                <span>Status</span>
-                <span className="text-primary">{available ? 'Available' : 'Missing'}</span>
-              </div>
-              <div>
-                <div className="text-secondary">Binary</div>
-                <code className="mt-1 block break-all text-xs text-dim">{status?.cliPath ?? 'Checking…'}</code>
-              </div>
-              {status?.message ? <p className="border-l-2 border-warning pl-3 text-warning">{status.message}</p> : null}
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-primary">Cached Models</h3>
+              <span className="text-xs text-secondary">{status?.models.length ?? 0}</span>
             </div>
-          </aside>
-
-          <main className="flex min-w-0 flex-col p-4">
+            <div className="mt-3 divide-y divide-border-subtle border-y border-border-subtle text-sm">
+              {status?.models.length ? (
+                status.models.map((model) => (
+                  <div key={model.path} className="py-3">
+                    <button
+                      type="button"
+                      className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent"
+                      onClick={() => void useModel(model.path)}
+                    >
+                      {model.name}
+                    </button>
+                    <div className="mt-1 text-xs text-secondary">
+                      {bytesLabel(model.bytes)} · {dateLabel(model.updatedAt)}
+                    </div>
+                    <div className="mt-2 flex gap-3 text-xs">
+                      <button type="button" className="text-accent hover:text-primary" onClick={() => void useModel(model.path)}>
+                        Use
+                      </button>
+                      <button type="button" className="text-secondary hover:text-primary" onClick={() => void revealModel(model.path)}>
+                        Reveal in Finder
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="py-3 text-secondary">No cached GGUF models yet. Download one above or paste a local path on the right.</p>
+              )}
+            </div>
+          </>
+        }
+        right={
+          <>
             <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <div>
                 <h2 className="text-lg font-semibold text-primary">Test Prompt</h2>
-                <p className="text-sm text-secondary">Run a smoke test against the selected GGUF model.</p>
+                <p className="text-sm text-secondary">
+                  {running
+                    ? 'Using the local OpenAI-compatible llama-server endpoint.'
+                    : 'Start the runtime for server mode, or run a one-shot llama-cli prompt.'}
+                </p>
               </div>
               <ToolbarButton disabled={Boolean(busy || !ready || !prompt.trim())} onClick={() => void runPrompt()}>
                 {busy === 'Running…' ? 'Running…' : 'Run Prompt'}
@@ -213,29 +316,20 @@ export function LlamaCppPage({ pa }: ExtensionSurfaceProps) {
 
             <div className="mt-4 min-h-0 flex-1">
               <TerminalBlock>
-                {output || (ready ? 'Prompt output will appear here.' : 'Download or choose a GGUF model to test prompts.')}
+                {output || (ready ? 'Prompt output will appear here.' : 'Download, select, or paste a GGUF model path to test prompts.')}
               </TerminalBlock>
             </div>
-          </main>
-        </section>
+          </>
+        }
+      />
 
-        <footer className="rounded-lg border border-border-subtle bg-surface/30 text-sm text-secondary">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:text-primary"
-            onClick={() => setLogsOpen((open) => !open)}
-            aria-expanded={logsOpen}
-          >
-            <span>Runtime: llama.cpp · Cache: {status?.modelCacheRoot ?? 'Checking…'} · Details</span>
-            <span>{logsOpen ? 'Hide' : 'Show'}</span>
-          </button>
-          {logsOpen ? (
-            <div className="border-t border-border-subtle p-4">
-              <TerminalBlock>{status?.version || status?.message || 'No runtime details yet.'}</TerminalBlock>
-            </div>
-          ) : null}
-        </footer>
-      </AppPageLayout>
-    </div>
+      <RuntimeFooter
+        summary={`Runtime: llama.cpp · Cache: ${status?.modelCacheRoot ?? 'Checking…'} · Details`}
+        open={logsOpen}
+        onToggle={() => setLogsOpen((open) => !open)}
+      >
+        <TerminalBlock>{status?.log?.trim() || status?.version || status?.message || 'No runtime details yet.'}</TerminalBlock>
+      </RuntimeFooter>
+    </RuntimePage>
   );
 }

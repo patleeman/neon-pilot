@@ -1,6 +1,14 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
 import React from 'react';
+
+import {
+  RuntimeFooter,
+  RuntimeHeader,
+  RuntimePage,
+  RuntimeWorkspace,
+  TerminalBlock,
+  ToolbarButton,
+} from '../../../shared/localRuntimeWorkspace';
 
 const PROVIDER_ID = 'mlx-local';
 const BASE_URL = 'http://127.0.0.1:8011/v1';
@@ -75,19 +83,10 @@ async function tryRegisterModelProvider(modelId: string) {
 }
 
 function statusTone(status: Status | null, busy: string | null) {
-  if (busy) return 'bg-warning';
-  if (status?.server.reachable) return 'bg-success';
-  if (status?.setup?.status === 'running') return 'bg-warning';
-  if (status?.installed) return 'bg-accent';
-  return 'bg-dim';
-}
-
-function TerminalBlock({ children }: { children: React.ReactNode }) {
-  return (
-    <pre className="min-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle bg-[#0f131c] p-4 text-xs leading-relaxed text-secondary">
-      {children}
-    </pre>
-  );
+  if (busy || status?.setup?.status === 'running') return 'warning';
+  if (status?.server.reachable) return 'running';
+  if (status?.installed) return 'ready';
+  return 'muted';
 }
 
 export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageState> {
@@ -210,44 +209,30 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
       busy || error || status?.setup?.error || status?.server.error || status?.setup?.message || 'Local MLX runtime workspace';
 
     return (
-      <div className="h-full overflow-y-auto">
-        <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="space-y-5">
-          <header className="border-b border-border-subtle pb-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-primary">✨ MLX Models</h1>
-                <p className="mt-1 text-sm text-secondary">Run Hugging Face MLX models locally and test them before using them in chat.</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <ToolbarButton disabled={Boolean(busy)} onClick={() => void this.refresh()}>
-                  Refresh
-                </ToolbarButton>
-                <ToolbarButton disabled={Boolean(busy || setupRunning || !ready)} onClick={() => void this.toggleServer()}>
-                  {running || starting ? 'Stop Runtime' : 'Start Runtime'}
-                </ToolbarButton>
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
-              <span className="font-medium text-primary">
-                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${statusTone(status, busy)}`} />
-                {title}
-              </span>
-              <span>Backend: MLX</span>
-              <span className="min-w-0 truncate">Loaded: {loadedModel}</span>
-              <span>Endpoint: {BASE_URL}</span>
-            </div>
-            {(setupRunning || progress > 0) && (
-              <div className="mt-4 h-1 overflow-hidden rounded-full bg-border-subtle" aria-label={`Setup progress ${progress}%`}>
-                <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${progress}%` }} />
-              </div>
-            )}
-            <div className="mt-3 text-sm text-secondary" aria-live="polite">
-              {message}
-            </div>
-          </header>
+      <RuntimePage>
+        <RuntimeHeader
+          title="✨ MLX Models"
+          summary="Run Hugging Face MLX models locally and test them before using them in chat."
+          status={title}
+          tone={statusTone(status, busy)}
+          metadata={['Backend: MLX', `Loaded: ${loadedModel}`, `Endpoint: ${BASE_URL}`]}
+          message={message}
+          progress={setupRunning || progress > 0 ? progress : null}
+          actions={
+            <>
+              <ToolbarButton disabled={Boolean(busy)} onClick={() => void this.refresh()}>
+                Refresh
+              </ToolbarButton>
+              <ToolbarButton disabled={Boolean(busy || setupRunning || !ready)} onClick={() => void this.toggleServer()}>
+                {running || starting ? 'Stop Runtime' : 'Start Runtime'}
+              </ToolbarButton>
+            </>
+          }
+        />
 
-          <section className="grid min-h-[34rem] overflow-hidden rounded-xl border border-border-subtle bg-surface/40 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
-            <aside className="border-b border-border-subtle p-4 lg:border-b-0 lg:border-r">
+        <RuntimeWorkspace
+          left={
+            <>
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-secondary">Models</h2>
                 <ToolbarButton disabled={Boolean(busy || setupRunning || !modelInput.trim())} onClick={() => void this.setupModel()}>
@@ -326,9 +311,10 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
                   )}
                 </div>
               </div>
-            </aside>
-
-            <main className="flex min-w-0 flex-col p-4">
+            </>
+          }
+          right={
+            <>
               <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
                 <div>
                   <h2 className="text-lg font-semibold text-primary">Test Prompt</h2>
@@ -354,27 +340,18 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
                   {output || (running ? 'Prompt output will appear here.' : 'Start the runtime to test prompts.')}
                 </TerminalBlock>
               </div>
-            </main>
-          </section>
+            </>
+          }
+        />
 
-          <footer className="rounded-lg border border-border-subtle bg-surface/30 text-sm text-secondary">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:text-primary"
-              onClick={() => this.setState((prev) => ({ logsOpen: !prev.logsOpen }))}
-              aria-expanded={logsOpen}
-            >
-              <span>Runtime: MLX · Selected: {status?.selectedModelId || modelInput || 'None'} · Logs</span>
-              <span>{logsOpen ? 'Hide' : 'Show'}</span>
-            </button>
-            {logsOpen ? (
-              <div className="border-t border-border-subtle p-4">
-                <TerminalBlock>{status?.log?.trim() || 'No logs yet.'}</TerminalBlock>
-              </div>
-            ) : null}
-          </footer>
-        </AppPageLayout>
-      </div>
+        <RuntimeFooter
+          summary={`Runtime: MLX · Selected: ${status?.selectedModelId || modelInput || 'None'} · Logs`}
+          open={logsOpen}
+          onToggle={() => this.setState((prev) => ({ logsOpen: !prev.logsOpen }))}
+        >
+          <TerminalBlock>{status?.log?.trim() || 'No logs yet.'}</TerminalBlock>
+        </RuntimeFooter>
+      </RuntimePage>
     );
   }
 }

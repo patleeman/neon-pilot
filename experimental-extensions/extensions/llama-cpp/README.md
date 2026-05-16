@@ -29,11 +29,11 @@ Hugging Face GGUF downloads are stored under:
 ~/.cache/personal-agent/llama-cpp/models
 ```
 
-The UI asks for an exact GGUF filename from the repo, then caches the file locally.
+The UI asks for an exact GGUF filename from the repo, caches the file locally, and lists cached `.gguf` files with Use and Reveal in Finder actions.
 
 ## Notes
 
 - This is intentionally `defaultEnabled: false` while experimental.
-- The UI uses the shared local runtime workspace pattern: model/download controls on the left, one-shot prompt smoke testing on the right, runtime status in the header, and runtime details in a collapsible footer.
-- The current runtime path shells out to `llama-cli` for one-shot prompts.
-- `llama-server` should be the next step for persistent chat sessions and streaming.
+- The UI uses the shared local runtime workspace pattern: model/download controls on the left, prompt smoke testing on the right, runtime status in the header, and runtime details in a collapsible footer.
+- When `llama-server` is bundled, the extension starts a persistent OpenAI-compatible server on `http://127.0.0.1:8012/v1`, registers the selected GGUF in the Personal Agent model picker, and runs prompt tests through `/chat/completions`.
+- If the server is unavailable, prompt tests fall back to `llama-cli` one-shot execution.

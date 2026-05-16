@@ -1,4 +1,4 @@
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { access, chmod, mkdir, rename, stat, unlink } from 'node:fs/promises';
 import { get } from 'node:https';
 import { homedir } from 'node:os';
@@ -7,22 +7,21 @@ import { fileURLToPath } from 'node:url';
 
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
-type DownloadModelInput = {
-  repo?: string;
-  filename?: string;
-};
-
-type RunPromptInput = {
-  modelPath?: string;
-  prompt?: string;
-  contextSize?: number;
-  gpuLayers?: number;
-};
+type DownloadModelInput = { repo?: string; filename?: string };
+type RunPromptInput = { modelPath?: string; prompt?: string; contextSize?: number; gpuLayers?: number };
+type ServerInput = { modelPath?: string; contextSize?: number; gpuLayers?: number };
+type RevealInput = { modelPath?: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const extensionRoot = join(here, '..');
 const bundledCli = join(extensionRoot, 'bin', 'darwin-arm64', 'llama-cli');
+const bundledServer = join(extensionRoot, 'bin', 'darwin-arm64', 'llama-server');
 const modelCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp', 'models');
+const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
+const SERVER_PID_KEY = 'process/serverPid';
+const MODEL_PATH_KEY = 'settings/modelPath';
+const MODEL_PORT = 8012;
+const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -31,6 +30,10 @@ async function exists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function shellQuote(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 async function runProcess(
@@ -79,36 +82,102 @@ function download(url: string, destination: string, redirects = 0): Promise<void
   });
 }
 
-export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContext) {
-  const available = await exists(bundledCli);
+async function readPid(ctx: ExtensionBackendContext) {
+  const stored = await ctx.storage.get(SERVER_PID_KEY).catch(() => null);
+  const pid = typeof stored === 'number' ? stored : Number(stored);
+  return Number.isFinite(pid) && pid > 0 ? pid : null;
+}
 
-  if (!available) {
-    return {
-      available: false,
-      cliPath: bundledCli,
-      modelCacheRoot,
-      message: 'Bundled llama-cli is missing. Add a Metal-enabled darwin-arm64 llama-cli under bin/darwin-arm64/.',
-    };
+async function isPidRunning(ctx: ExtensionBackendContext, pid: number | null) {
+  if (!pid) return false;
+  const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `kill -0 ${pid} >/dev/null 2>&1 && echo yes || true`] });
+  return result.stdout.trim() === 'yes';
+}
+
+async function selectedModelPath(ctx: ExtensionBackendContext) {
+  const stored = await ctx.storage.get(MODEL_PATH_KEY).catch(() => null);
+  return typeof stored === 'string' && stored.trim() ? stored.trim() : '';
+}
+
+async function setSelectedModelPath(ctx: ExtensionBackendContext, modelPath: string) {
+  const normalized = modelPath.trim();
+  if (!normalized) throw new Error('modelPath is required. Select or download a GGUF model first.');
+  if (!(await exists(normalized))) throw new Error(`Model file does not exist: ${normalized}`);
+  await ctx.storage.put(MODEL_PATH_KEY, normalized);
+  return normalized;
+}
+
+function readLog() {
+  if (!existsSync(LOG_FILE)) return '';
+  return readFileSync(LOG_FILE, 'utf8').slice(-30000);
+}
+
+function listGgufFiles(root: string): Array<{ path: string; name: string; bytes: number; updatedAt: number }> {
+  if (!existsSync(root)) return [];
+  const out: Array<{ path: string; name: string; bytes: number; updatedAt: number }> = [];
+  for (const entry of readdirSync(root)) {
+    const path = join(root, entry);
+    const current = statSync(path);
+    if (current.isDirectory()) out.push(...listGgufFiles(path));
+    else if (entry.toLowerCase().endsWith('.gguf')) out.push({ path, name: entry, bytes: current.size, updatedAt: current.mtimeMs });
   }
+  return out.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50);
+}
 
-  await chmod(bundledCli, 0o755).catch(() => undefined);
-  const version = await runProcess(ctx, bundledCli, ['--version']);
+async function readServerHealth() {
+  try {
+    const response = await fetch(`${BASE_URL}/models`, { signal: AbortSignal.timeout(1500) });
+    if (!response.ok) return { reachable: false, status: response.status, models: [] as string[] };
+    const body = (await response.json()) as { data?: Array<{ id?: string }> };
+    return { reachable: true, status: response.status, models: (body.data ?? []).map((model) => model.id ?? '').filter(Boolean) };
+  } catch (error) {
+    return { reachable: false, error: error instanceof Error ? error.message : String(error), models: [] as string[] };
+  }
+}
+
+export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContext) {
+  const [cliAvailable, serverAvailable, modelPath, pid] = await Promise.all([
+    exists(bundledCli),
+    exists(bundledServer),
+    selectedModelPath(ctx),
+    readPid(ctx),
+  ]);
+  const [serverRunning, health] = await Promise.all([isPidRunning(ctx, pid), readServerHealth()]);
+  const runtimeAvailable = cliAvailable || serverAvailable;
+  const version = cliAvailable ? await runProcess(ctx, bundledCli, ['--version']) : null;
+
+  if (cliAvailable) await chmod(bundledCli, 0o755).catch(() => undefined);
+  if (serverAvailable) await chmod(bundledServer, 0o755).catch(() => undefined);
 
   return {
-    available: version.exitCode === 0,
+    available: runtimeAvailable,
+    serverAvailable,
+    cliAvailable,
     cliPath: bundledCli,
+    serverPath: bundledServer,
     modelCacheRoot,
-    version: version.stdout.trim() || version.stderr.trim(),
+    selectedModelPath: modelPath,
+    baseUrl: BASE_URL,
+    version: version?.stdout.trim() || version?.stderr.trim(),
+    message: runtimeAvailable
+      ? serverAvailable
+        ? undefined
+        : 'llama-server is missing. Persistent runtime is unavailable until bin/darwin-arm64/llama-server is bundled.'
+      : 'Bundled llama.cpp binaries are missing. Add Metal-enabled darwin-arm64 llama-cli and llama-server under bin/darwin-arm64/.',
+    server: health,
+    process: { managedPid: pid, managedRunning: serverRunning },
+    models: listGgufFiles(modelCacheRoot),
+    log: readLog(),
   };
 }
 
-export async function downloadModel(input: DownloadModelInput, _ctx: ExtensionBackendContext) {
+export async function downloadModel(input: DownloadModelInput, ctx: ExtensionBackendContext) {
   const repo = input.repo?.trim();
   const filename = input.filename?.trim();
 
-  if (!repo) throw new Error('repo is required, for example unsloth/Qwen3.6-35B-A3B-MTP-GGUF.');
-  if (!filename) throw new Error('filename is required, for example Q4_K_M.gguf.');
-  if (filename.includes('/') || filename.includes('..')) throw new Error('filename must be a single GGUF filename, not a path.');
+  if (!repo) throw new Error('Repository is required, for example unsloth/Qwen3.6-35B-A3B-MTP-GGUF.');
+  if (!filename) throw new Error('GGUF filename is required, for example model-q4_k_m.gguf.');
+  if (filename.includes('/') || filename.includes('..')) throw new Error('Filename must be a single GGUF filename, not a path.');
 
   const repoDir = join(modelCacheRoot, repo.replaceAll('/', '__'));
   const destination = join(repoDir, basename(filename));
@@ -118,7 +187,8 @@ export async function downloadModel(input: DownloadModelInput, _ctx: ExtensionBa
 
   if (await exists(destination)) {
     const current = await stat(destination);
-    return { modelPath: destination, bytes: current.size, cached: true };
+    await setSelectedModelPath(ctx, destination);
+    return { modelPath: destination, bytes: current.size, cached: true, status: await runtimeStatus({}, ctx) };
   }
 
   await unlink(partial).catch(() => undefined);
@@ -126,27 +196,90 @@ export async function downloadModel(input: DownloadModelInput, _ctx: ExtensionBa
   await download(url, partial);
   await rename(partial, destination);
   const current = await stat(destination);
+  await setSelectedModelPath(ctx, destination);
 
-  return { modelPath: destination, bytes: current.size, cached: false };
+  return { modelPath: destination, bytes: current.size, cached: false, status: await runtimeStatus({}, ctx) };
 }
 
-export async function runPrompt(input: RunPromptInput, _ctx: ExtensionBackendContext) {
+export async function setModel(input: RevealInput, ctx: ExtensionBackendContext) {
   const modelPath = input.modelPath?.trim();
-  const prompt = input.prompt?.trim();
+  if (!modelPath) throw new Error('modelPath is required.');
+  await setSelectedModelPath(ctx, modelPath);
+  return { ok: true, status: await runtimeStatus({}, ctx) };
+}
 
-  if (!modelPath) throw new Error('modelPath is required. Select or download a GGUF model first.');
-  if (!prompt) throw new Error('prompt is required.');
-  if (!(await exists(bundledCli))) throw new Error(`Bundled llama-cli is missing at ${bundledCli}`);
+export async function revealModel(input: RevealInput, ctx: ExtensionBackendContext) {
+  const modelPath = input.modelPath?.trim();
+  if (!modelPath) throw new Error('modelPath is required.');
+  if (!(await exists(modelPath))) throw new Error(`Model file does not exist: ${modelPath}`);
+  await ctx.shell.exec({ command: 'open', args: ['-R', modelPath] });
+  return { ok: true };
+}
+
+export async function startServer(input: ServerInput, ctx: ExtensionBackendContext) {
+  const modelPath = input.modelPath?.trim() || (await selectedModelPath(ctx));
+  if (!modelPath) throw new Error('Select or download a GGUF model before starting the runtime.');
+  if (!(await exists(bundledServer))) throw new Error(`Bundled llama-server is missing at ${bundledServer}`);
   if (!(await exists(modelPath))) throw new Error(`Model file does not exist: ${modelPath}`);
 
-  await chmod(bundledCli, 0o755).catch(() => undefined);
+  const health = await readServerHealth();
+  if (health.reachable) return { ok: true, alreadyRunning: true, status: await runtimeStatus({}, ctx) };
+  const pid = await readPid(ctx);
+  if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, status: await runtimeStatus({}, ctx) };
 
-  const args = ['-m', modelPath, '-p', prompt, '-ngl', String(input.gpuLayers ?? 999), '-c', String(input.contextSize ?? 8192)];
+  await mkdir(dirname(LOG_FILE), { recursive: true });
+  await chmod(bundledServer, 0o755).catch(() => undefined);
+  await setSelectedModelPath(ctx, modelPath);
+  const args = [
+    '-m',
+    shellQuote(modelPath),
+    '--host',
+    '127.0.0.1',
+    '--port',
+    String(MODEL_PORT),
+    '-ngl',
+    String(input.gpuLayers ?? 999),
+    '-c',
+    String(input.contextSize ?? 8192),
+  ];
+  const command = `${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
+  await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
+  return { ok: true, started: true, pid: Number(result.stdout.trim()), status: await runtimeStatus({}, ctx) };
+}
 
-  const result = await runProcess(ctx, bundledCli, args, { timeoutMs: 120_000, maxBuffer: 8 * 1024 * 1024 });
-  if (result.exitCode !== 0) {
-    throw new Error(result.stderr || `llama-cli exited with code ${result.exitCode}`);
+export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) {
+  const pid = await readPid(ctx);
+  if (!(await isPidRunning(ctx, pid))) return { ok: true, stopped: false, status: await runtimeStatus({}, ctx) };
+  await ctx.shell.exec({ command: 'sh', args: ['-c', `kill ${pid} >/dev/null 2>&1 || true`] });
+  return { ok: true, stopped: true, pid, status: await runtimeStatus({}, ctx) };
+}
+
+export async function runPrompt(input: RunPromptInput, ctx: ExtensionBackendContext) {
+  const modelPath = input.modelPath?.trim() || (await selectedModelPath(ctx));
+  const prompt = input.prompt?.trim();
+
+  if (!modelPath) throw new Error('Select or download a GGUF model first.');
+  if (!prompt) throw new Error('Prompt is required.');
+  if (!(await exists(modelPath))) throw new Error(`Model file does not exist: ${modelPath}`);
+
+  const health = await readServerHealth();
+  if (health.reachable) {
+    const response = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local' },
+      body: JSON.stringify({ model: basename(modelPath), messages: [{ role: 'user', content: prompt }], stream: false }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const result = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    return { output: result.choices?.[0]?.message?.content || JSON.stringify(result, null, 2), source: 'server' };
   }
 
-  return { output: result.stdout, stderr: result.stderr };
+  if (!(await exists(bundledCli))) throw new Error(`Bundled llama-cli is missing at ${bundledCli}`);
+  await chmod(bundledCli, 0o755).catch(() => undefined);
+  const args = ['-m', modelPath, '-p', prompt, '-ngl', String(input.gpuLayers ?? 999), '-c', String(input.contextSize ?? 8192)];
+  const result = await runProcess(ctx, bundledCli, args, { timeoutMs: 120_000, maxBuffer: 8 * 1024 * 1024 });
+  if (result.exitCode !== 0) throw new Error(result.stderr || `llama-cli exited with code ${result.exitCode}`);
+  return { output: result.stdout, stderr: result.stderr, source: 'cli' };
 }

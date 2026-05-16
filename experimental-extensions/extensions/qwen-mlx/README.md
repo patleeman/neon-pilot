@@ -6,4 +6,4 @@ The extension manages a private `mlx-lm` virtualenv, downloads models with the H
 
 Default model: `unsloth/Qwen3.6-35B-A3B-UD-MLX-4bit`.
 
-The page uses a two-pane local runtime workspace: model selection/search on the left, prompt smoke testing on the right, runtime status in the header, and collapsible logs in the footer.
+The page uses the shared two-pane local runtime workspace: model selection/search on the left, prompt smoke testing on the right, runtime status in the header, and collapsible logs in the footer.

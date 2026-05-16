@@ -12,6 +12,10 @@
     "actions": [
       { "id": "runtimeStatus", "handler": "runtimeStatus", "title": "Runtime status" },
       { "id": "downloadModel", "handler": "downloadModel", "title": "Download GGUF model" },
+      { "id": "setModel", "handler": "setModel", "title": "Set GGUF model" },
+      { "id": "revealModel", "handler": "revealModel", "title": "Reveal GGUF model" },
+      { "id": "startServer", "handler": "startServer", "title": "Start llama.cpp server" },
+      { "id": "stopServer", "handler": "stopServer", "title": "Stop llama.cpp server" },
       { "id": "runPrompt", "handler": "runPrompt", "title": "Run prompt" }
     ]
   },
@@ -27,5 +31,5 @@
     ],
     "nav": [{ "id": "llama-cpp", "label": "llama.cpp", "icon": "sparkle", "route": "/ext/llama-cpp" }]
   },
-  "permissions": ["network:read", "network:write"]
+  "permissions": ["network:read", "network:write", "network:listen"]
 }
