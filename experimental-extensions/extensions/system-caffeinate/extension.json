@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "system-caffeinate",
+  "name": "Caffeinate",
+  "packageType": "user",
+  "defaultEnabled": false,
+  "description": "Toggle macOS caffeinate from the top bar to keep the computer awake.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "onDisableAction": "stop",
+    "actions": [
+      { "id": "status", "handler": "status", "title": "Caffeinate status" },
+      { "id": "start", "handler": "start", "title": "Start caffeinate" },
+      { "id": "stop", "handler": "stop", "title": "Stop caffeinate" },
+      { "id": "toggle", "handler": "toggle", "title": "Toggle caffeinate" }
+    ]
+  },
+  "contributes": {
+    "topBarElements": [
+      {
+        "id": "caffeinate-toggle",
+        "label": "Caffeinate toggle",
+        "component": "CaffeinateToggle"
+      }
+    ]
+  },
+  "permissions": []
+}

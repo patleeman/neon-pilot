@@ -16,5 +16,6 @@ Current experiments:
 - `system-session-exchange` — import/export flow for conversation session handoff experiments.
 - `system-gateways` — Telegram gateway UI/runtime while gateway routing is still experimental.
 - `system-images` — Image generation tooling while provider behavior and UX are still experimental.
+- `system-caffeinate` — default-disabled macOS `caffeinate` top bar toggle.
 
 Release builds package these under `Resources/experimental-extensions/extensions` and load them as experimental extensions, separate from bundled `extensions/system-*`.
