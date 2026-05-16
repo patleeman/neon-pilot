@@ -56,4 +56,23 @@ describe('useComposerController', () => {
 
     expect(setInput).toHaveBeenCalledWith('fresh async draft');
   });
+
+  it('keeps long-lived extension insertion callbacks fresh across async completion', () => {
+    const inputRef = { current: '' };
+    const textareaRef = createRef<HTMLTextAreaElement>();
+    const selectionRef = { current: { start: 0, end: 0 } };
+    const setInput = vi.fn((next: string) => {
+      inputRef.current = next;
+    });
+
+    const { result } = renderHook(() => useComposerController({ inputRef, textareaRef, selectionRef, setInput, scheduleResize: vi.fn() }));
+    const extensionInsertText = result.current.insertText;
+
+    inputRef.current = 'typed while dictating';
+    selectionRef.current = { start: inputRef.current.length, end: inputRef.current.length };
+
+    act(() => extensionInsertText('transcript'));
+
+    expect(setInput).toHaveBeenCalledWith('typed while dictating transcript');
+  });
 });

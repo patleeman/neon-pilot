@@ -1,6 +1,7 @@
-import { type MutableRefObject, type RefObject, useEffect } from 'react';
+import { type RefObject, useEffect } from 'react';
 
 import { insertFileReplyQuoteIntoComposer } from './conversationReplyQuote';
+import type { ComposerController } from './useComposerController';
 
 const WORKSPACE_DRAFT_PROMPT_EVENT = 'pa:workspace-draft-prompt';
 const WORKSPACE_REPLY_SELECTION_EVENT = 'pa:workspace-reply-selection';
@@ -8,18 +9,11 @@ const WORKSPACE_REPLY_SELECTION_EVENT = 'pa:workspace-reply-selection';
 interface UseWorkspaceComposerEventsOptions {
   input: string;
   textareaRef: RefObject<HTMLTextAreaElement>;
-  composerSelectionRef: MutableRefObject<{ start: number; end: number }>;
-  setInput: (value: string) => void;
+  composer: Pick<ComposerController, 'setText'>;
   resetMenus: () => void;
 }
 
-export function useWorkspaceComposerEvents({
-  input,
-  textareaRef,
-  composerSelectionRef,
-  setInput,
-  resetMenus,
-}: UseWorkspaceComposerEventsOptions): void {
+export function useWorkspaceComposerEvents({ input, textareaRef, composer, resetMenus }: UseWorkspaceComposerEventsOptions): void {
   useEffect(() => {
     function handleWorkspaceDraftPrompt(event: Event) {
       const prompt = (event as CustomEvent<{ prompt?: unknown }>).detail?.prompt;
@@ -27,13 +21,12 @@ export function useWorkspaceComposerEvents({
         return;
       }
 
-      setInput(prompt);
-      textareaRef.current?.focus();
+      composer.setText(prompt);
     }
 
     window.addEventListener(WORKSPACE_DRAFT_PROMPT_EVENT, handleWorkspaceDraftPrompt);
     return () => window.removeEventListener(WORKSPACE_DRAFT_PROMPT_EVENT, handleWorkspaceDraftPrompt);
-  }, [setInput, textareaRef]);
+  }, [composer]);
 
   useEffect(() => {
     function handleWorkspaceReplySelection(event: Event) {
@@ -45,25 +38,11 @@ export function useWorkspaceComposerEvents({
       const currentInput = textareaRef.current?.value ?? input;
       const next = insertFileReplyQuoteIntoComposer(currentInput, detail.filePath, detail.text);
 
-      setInput(next.text);
       resetMenus();
-      composerSelectionRef.current = {
-        start: next.selectionStart,
-        end: next.selectionEnd,
-      };
-
-      window.requestAnimationFrame(() => {
-        const el = textareaRef.current;
-        if (!el || el.disabled) {
-          return;
-        }
-
-        el.focus();
-        el.setSelectionRange(next.selectionStart, next.selectionEnd);
-      });
+      composer.setText(next.text, { selection: { start: next.selectionStart, end: next.selectionEnd } });
     }
 
     window.addEventListener(WORKSPACE_REPLY_SELECTION_EVENT, handleWorkspaceReplySelection);
     return () => window.removeEventListener(WORKSPACE_REPLY_SELECTION_EVENT, handleWorkspaceReplySelection);
-  }, [composerSelectionRef, input, resetMenus, setInput, textareaRef]);
+  }, [composer, input, resetMenus, textareaRef]);
 }

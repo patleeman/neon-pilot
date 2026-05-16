@@ -1970,14 +1970,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setMentionIdx(0);
   }, []);
 
-  useWorkspaceComposerEvents({
-    input,
-    textareaRef,
-    composerSelectionRef,
-    setInput,
-    resetMenus: resetComposerMenus,
-  });
-
   useEffect(() => {
     setComposerQuestionIndex(0);
     setComposerQuestionOptionIndex(0);
@@ -2881,20 +2873,25 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [composerHistoryScopeId],
   );
 
-  const {
-    rememberSelection: rememberComposerSelection,
-    moveCaretToEnd: moveComposerCaretToEnd,
-    insertText: insertTextIntoComposer,
-  } = useComposerController({
+  const composerController = useComposerController({
     inputRef: latestInputRef,
     textareaRef,
     selectionRef: composerSelectionRef,
     setInput,
     scheduleResize: scheduleComposerResize,
-    onTextInserted: () => {
-      setSlashIdx(0);
-      setMentionIdx(0);
-    },
+    onTextInserted: resetComposerMenus,
+  });
+  const {
+    rememberSelection: rememberComposerSelection,
+    moveCaretToEnd: moveComposerCaretToEnd,
+    insertText: insertTextIntoComposer,
+  } = composerController;
+
+  useWorkspaceComposerEvents({
+    input,
+    textareaRef,
+    composer: composerController,
+    resetMenus: resetComposerMenus,
   });
 
   useEffect(() => {
@@ -3065,12 +3062,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       setComposerHistoryIndex(next.nextIndex);
-      setInput(next.nextInput);
+      composerController.setText(next.nextInput, { focus: false });
       composerHistoryDraftRef.current = next.nextDraftInput;
       moveComposerCaretToEnd();
       return true;
     },
-    [composerHistory, composerHistoryIndex, input, moveComposerCaretToEnd, setInput],
+    [composerController, composerHistory, composerHistoryIndex, input, moveComposerCaretToEnd],
   );
 
   useLayoutEffect(() => {
@@ -3849,10 +3846,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   function selectModel(modelId: string) {
     if (showModelPicker) {
-      setInput('');
+      composerController.clear();
     }
     setModelIdx(0);
-    textareaRef.current?.focus();
+    moveComposerCaretToEnd();
     void saveModelPreference(modelId);
   }
 
@@ -4091,7 +4088,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     try {
       const result = await api.scheduleDeferredResume(id, { delay, prompt, behavior });
       setDeferredResumes(result.resumes);
-      setInput('');
+      composerController.clear();
       showNotice(
         'accent',
         `Wakeup scheduled${behavior === 'followUp' ? ' as follow-up' : ''} for ${describeDeferredResumeStatus(result.resume)}.`,
@@ -4314,7 +4311,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return { kind: 'send', text: result };
       }
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
-        setInput('');
+        composerController.clear();
         return { kind: 'handled' };
       }
 
@@ -4329,11 +4326,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         showNotice(payload.notice.tone === 'danger' ? 'danger' : 'accent', payload.notice.text);
       }
       if (typeof payload.replaceComposerText === 'string') {
-        setInput(payload.replaceComposerText);
+        composerController.setText(payload.replaceComposerText);
         return { kind: 'handled' };
       }
       if (typeof payload.appendComposerText === 'string') {
-        setInput(`${inputSnapshot}${payload.appendComposerText}`);
+        composerController.setText(`${inputSnapshot}${payload.appendComposerText}`);
         return { kind: 'handled' };
       }
       if (typeof payload.prompt === 'string') {
@@ -4343,7 +4340,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return { kind: 'send', text: payload.text };
       }
 
-      setInput('');
+      composerController.clear();
       return { kind: 'handled' };
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
@@ -4361,7 +4358,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           return { kind: 'handled' };
         }
 
-        setInput('');
+        composerController.clear();
         try {
           const liveConversationId = await ensureConversationIsLive('be compacted');
           await retryLiveSessionActionAfterTakeover({
@@ -4394,25 +4391,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const nextSelectionStart = starter ? quoted.selectionStart + starter.length : quoted.selectionStart;
       const nextSelectionEnd = starter ? nextSelectionStart : quoted.selectionEnd;
 
-      setInput(nextText);
-      setSlashIdx(0);
-      setMentionIdx(0);
-      composerSelectionRef.current = {
-        start: nextSelectionStart,
-        end: nextSelectionEnd,
-      };
-
-      window.requestAnimationFrame(() => {
-        const el = textareaRef.current;
-        if (!el || el.disabled) {
-          return;
-        }
-
-        el.focus();
-        el.setSelectionRange(nextSelectionStart, nextSelectionEnd);
-      });
+      composerController.setText(nextText, { selection: { start: nextSelectionStart, end: nextSelectionEnd } });
     },
-    [input, setInput],
+    [composerController, input],
   );
 
   async function runWholeLineBashCommand(inputSnapshot: string, command: { command: string; excludeFromContext: boolean }) {
@@ -4429,7 +4410,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     wholeLineBashRunningRef.current = true;
     setWholeLineBashRunning(true);
     setPendingAssistantStatusLabel('Running bash…');
-    setInput('');
+    composerController.clear();
     rememberComposerInput(inputSnapshot);
 
     try {
@@ -4481,7 +4462,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         scrollToBottom();
       }, 50);
     } catch (error) {
-      setInput(inputSnapshot);
+      composerController.setText(inputSnapshot);
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
     } finally {
       wholeLineBashRunningRef.current = false;
@@ -4576,7 +4557,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         browserChangedContextMessage ? [browserChangedContextMessage] : undefined,
       );
 
-      setInput('');
+      composerController.clear();
       setAttachments([]);
       setDrawingAttachments([]);
       setPendingBrowserComments([]);
@@ -4962,7 +4943,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
       const attachmentRefs = await persistPromptDrawings();
       rememberComposerInput(inputSnapshot);
-      setInput('');
+      composerController.clear();
       setAttachments([]);
       setDrawingAttachments([]);
       setDrawingsError(null);
@@ -5079,7 +5060,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       if (restoredUpdate.nextInput !== null) {
-        setInput(restoredUpdate.nextInput);
+        composerController.setText(restoredUpdate.nextInput, { focus: false });
       }
       if (restoredFiles.length > 0) {
         setAttachments((current) => [...restoredFiles, ...current]);
@@ -5132,7 +5113,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
       if (clearShortcut.shouldClear) {
         e.preventDefault();
-        setInput('');
+        composerController.clear();
         setAttachments([]);
         setDrawingAttachments([]);
       }
@@ -5142,7 +5123,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     if (showModelPicker) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        setInput('');
+        composerController.clear();
         return;
       }
       if (modelItems.length === 0) {
@@ -5178,7 +5159,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
       if (e.key === 'Escape') {
         e.preventDefault();
-        setInput('');
+        composerController.clear();
         return;
       }
       if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
@@ -5200,16 +5181,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               setSlashIdx(0);
               await executeConversationSlashCommand(parsedSelectedSlash.command);
             } else {
-              setInput(sel.insertText);
-              setSlashIdx(0);
+              composerController.setText(sel.insertText);
             }
           }
         } else {
           const filtered = filterMentionItems(mentionItems, mentionQuery, { limit: MAX_MENTION_MENU_ITEMS });
           const sel = filtered[mentionIdx % (filtered.length || 1)];
           if (sel) {
-            setInput(input.replace(/@[\w./-]*$/, sel.id + ' '));
-            setMentionIdx(0);
+            composerController.setText(input.replace(/@[\w./-]*$/, sel.id + ' '));
           }
         }
         return;
@@ -5483,12 +5462,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         cwd: currentCwd ?? null,
         composerText: input,
       });
-      if (typeof result === 'string' && result.trim()) setInput(input ? `${input}\n${result}` : result);
+      if (typeof result === 'string' && result.trim()) composerController.setText(input ? `${input}\n${result}` : result);
       if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string' && result.text.trim()) {
-        setInput(input ? `${input}\n${result.text}` : result.text);
+        composerController.setText(input ? `${input}\n${result.text}` : result.text);
       }
     },
-    [composerAttachmentProviders, currentCwd, id, input, setInput],
+    [composerAttachmentProviders, composerController, currentCwd, id, input],
   );
   const hasComposerAttachmentShelfContent =
     attachments.length > 0 ||
@@ -6005,9 +5984,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     void executeConversationSlashCommand(parsedConversationSlash.command);
                     return;
                   }
-                  setInput(item.insertText);
-                  setSlashIdx(0);
-                  textareaRef.current?.focus();
+                  composerController.setText(item.insertText);
                 }}
               />
             )}
@@ -6017,9 +5994,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 query={mentionQuery}
                 idx={mentionIdx}
                 onSelect={(id) => {
-                  setInput(input.replace(/@[\w./-]*$/, id + ' '));
-                  setMentionIdx(0);
-                  textareaRef.current?.focus();
+                  composerController.setText(input.replace(/@[\w./-]*$/, id + ' '));
                 }}
               />
             )}
@@ -6031,8 +6006,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 idx={modelIdx}
                 onSelect={selectModel}
                 onClose={() => {
-                  setInput('');
-                  textareaRef.current?.focus();
+                  composerController.clear();
+                  moveComposerCaretToEnd();
                 }}
               />
             )}
@@ -6245,8 +6220,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 }}
                 onInputChange={(value, textarea) => {
                   setInput(value);
-                  setSlashIdx(0);
-                  setMentionIdx(0);
+                  resetComposerMenus();
                   rememberComposerSelection(textarea);
                 }}
                 onRememberComposerSelection={rememberComposerSelection}

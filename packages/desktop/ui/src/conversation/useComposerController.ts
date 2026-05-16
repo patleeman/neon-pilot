@@ -1,4 +1,4 @@
-import { type MutableRefObject, type RefObject, useCallback } from 'react';
+import { type MutableRefObject, type RefObject, useCallback, useMemo } from 'react';
 
 import { insertTextAtComposerSelection } from './conversationComposerEditing';
 
@@ -16,9 +16,16 @@ export interface UseComposerControllerOptions {
   onTextInserted?: () => void;
 }
 
+export interface ComposerTextUpdateOptions {
+  selection?: ComposerControllerSelection;
+  focus?: boolean;
+}
+
 export interface ComposerController {
   rememberSelection: (element?: HTMLTextAreaElement | null) => void;
   moveCaretToEnd: () => void;
+  setText: (text: string, options?: ComposerTextUpdateOptions) => void;
+  clear: () => void;
   insertText: (text: string) => void;
 }
 
@@ -59,6 +66,41 @@ export function useComposerController({
     });
   }, [selectionRef, textareaRef]);
 
+  const setText = useCallback(
+    (text: string, options: ComposerTextUpdateOptions = {}) => {
+      setInput(text);
+      onTextInserted?.();
+
+      const nextSelection = options.selection;
+      if (nextSelection) {
+        selectionRef.current = nextSelection;
+      }
+
+      if (options.focus === false && !nextSelection) {
+        scheduleResize();
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (!el) {
+          return;
+        }
+
+        if (options.focus !== false) {
+          el.focus();
+        }
+        if (nextSelection) {
+          el.setSelectionRange(nextSelection.start, nextSelection.end);
+        }
+        scheduleResize();
+      });
+    },
+    [onTextInserted, scheduleResize, selectionRef, setInput, textareaRef],
+  );
+
+  const clear = useCallback(() => setText('', { focus: false }), [setText]);
+
   const insertText = useCallback(
     (text: string) => {
       const el = textareaRef.current;
@@ -77,21 +119,13 @@ export function useComposerController({
         return;
       }
 
-      setInput(insertion.nextInput);
-      onTextInserted?.();
-      window.requestAnimationFrame(() => {
-        const el = textareaRef.current;
-        if (!el) {
-          return;
-        }
-        el.focus();
-        el.setSelectionRange(insertion.nextCaret, insertion.nextCaret);
-        selectionRef.current = { start: insertion.nextCaret, end: insertion.nextCaret };
-        scheduleResize();
-      });
+      setText(insertion.nextInput, { selection: { start: insertion.nextCaret, end: insertion.nextCaret } });
     },
-    [inputRef, onTextInserted, scheduleResize, selectionRef, setInput, textareaRef],
+    [inputRef, selectionRef, setText, textareaRef],
   );
 
-  return { rememberSelection, moveCaretToEnd, insertText };
+  return useMemo(
+    () => ({ rememberSelection, moveCaretToEnd, setText, clear, insertText }),
+    [clear, insertText, moveCaretToEnd, rememberSelection, setText],
+  );
 }
