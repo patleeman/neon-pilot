@@ -58,6 +58,8 @@ Example:
 
 Use `deferred_resume` with `action: "list"` before assuming no wakeups are pending.
 
+Do **not** schedule a `deferred_resume` just to poll a running background command/subagent that was started with `deliverResultToConversation: true`. That run already owns completion/failure delivery. Only schedule a wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
+
 ## `scheduled_task`
 
 Use `scheduled_task` for app-wide recurring or one-time automations, especially work that can run without this conversation being active.

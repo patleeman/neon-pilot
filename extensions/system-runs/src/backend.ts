@@ -266,7 +266,9 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
 
   ctx.ui?.invalidate?.(['executions', 'runs', 'tasks']);
   return {
-    text: `Started background command ${result.runId} for ${taskSlug}.`,
+    text: deliverResultToConversation
+      ? `Started background command ${result.runId} for ${taskSlug}. Completion/failure will resume this conversation; do not schedule a polling wakeup for this run.`
+      : `Started background command ${result.runId} for ${taskSlug}.`,
     details: {
       action: 'start',
       command,

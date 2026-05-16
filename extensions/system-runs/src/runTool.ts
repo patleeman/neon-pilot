@@ -359,7 +359,9 @@ export function createRunAgentExtension(options: {
                 content: [
                   {
                     type: 'text' as const,
-                    text: `Started background command ${result.runId} for ${taskSlug}.`,
+                    text: deliverResultToConversation
+                      ? `Started background command ${result.runId} for ${taskSlug}. Completion/failure will resume this conversation; do not schedule a polling wakeup for this run.`
+                      : `Started background command ${result.runId} for ${taskSlug}.`,
                   },
                 ],
                 details: {
@@ -551,6 +553,9 @@ export function createRunAgentExtension(options: {
                 message += ' [loop]';
               }
               message += '.';
+              if (deliverResultToConversation) {
+                message += ' Completion/failure will resume this conversation; do not schedule a polling wakeup for this run.';
+              }
 
               return {
                 content: [

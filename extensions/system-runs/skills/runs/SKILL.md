@@ -30,7 +30,7 @@ Use intent-shaped tools first. The old generic `run` tool is compatibility plumb
 
 ## Background commands
 
-Completion delivery is the normal “wake me when this finishes” path. If a background command/subagent uses `deliverResultToConversation: true`, do **not** also schedule a `deferred_resume` merely to check whether it finished. Only schedule a separate wakeup for a distinct time-based action that should happen regardless of completion timing.
+Completion delivery is the normal “wake me when this finishes” path. If a background command/subagent uses `deliverResultToConversation: true`, do **not** also schedule a `deferred_resume` merely to check whether it finished. Only schedule a separate wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
 
 Start a detached command with bash:
 
