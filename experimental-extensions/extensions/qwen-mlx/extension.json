@@ -12,12 +12,12 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "status", "handler": "status", "title": "Status" },
-      { "id": "setModel", "handler": "setModel", "title": "Set model" },
-      { "id": "setup", "handler": "setup", "title": "Setup" },
-      { "id": "start", "handler": "start", "title": "Start" },
-      { "id": "stop", "handler": "stop", "title": "Stop" },
-      { "id": "searchModels", "handler": "searchModels", "title": "Search Hugging Face models" }
+      { "id": "mlxStatus", "handler": "status", "title": "MLX status" },
+      { "id": "mlxSetModel", "handler": "setModel", "title": "Set MLX model" },
+      { "id": "mlxSetup", "handler": "setup", "title": "Set up MLX model" },
+      { "id": "mlxStart", "handler": "start", "title": "Start MLX runtime" },
+      { "id": "mlxStop", "handler": "stop", "title": "Stop MLX runtime" },
+      { "id": "mlxSearchModels", "handler": "searchModels", "title": "Search Hugging Face MLX models" }
     ]
   },
   "contributes": {
@@ -32,7 +32,7 @@
     ],
     "nav": [
       {
-        "id": "nav",
+        "id": "qwen-mlx-nav",
         "label": "MLX Models",
         "icon": "sparkle",
         "route": "/ext/qwen-mlx"
@@ -43,7 +43,7 @@
         "id": "mlx_local_status",
         "name": "mlx_local_status",
         "description": "Check which local MLX model is selected, loaded, installed, and running.",
-        "action": "status",
+        "action": "mlxStatus",
         "inputSchema": { "type": "object", "properties": {} }
       }
     ]

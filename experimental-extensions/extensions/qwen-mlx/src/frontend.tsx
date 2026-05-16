@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageIntro, AppPageLayout, AppPageSection, ToolbarButton } from '@personal-agent/extensions/ui';
+import { AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
 import React from 'react';
 
 const PROVIDER_ID = 'mlx-local';
@@ -23,9 +23,12 @@ type PageState = {
   busy: string | null;
   error: string | null;
   modelInput: string;
+  prompt: string;
+  output: string;
   searchQuery: string;
   searchResults: SearchResult[];
   searchBusy: boolean;
+  logsOpen: boolean;
 };
 
 function asStatus(value: unknown): Status | null {
@@ -71,33 +74,35 @@ async function tryRegisterModelProvider(modelId: string) {
   }
 }
 
-function Toggle({ checked, disabled, onClick }: { checked: boolean; disabled: boolean; onClick: () => void }) {
+function statusTone(status: Status | null, busy: string | null) {
+  if (busy) return 'bg-warning';
+  if (status?.server.reachable) return 'bg-success';
+  if (status?.setup?.status === 'running') return 'bg-warning';
+  if (status?.installed) return 'bg-accent';
+  return 'bg-dim';
+}
+
+function TerminalBlock({ children }: { children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={onClick}
-      className="relative inline-block shrink-0 rounded-full align-middle transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
-      style={{
-        width: 44,
-        height: 24,
-        padding: 0,
-        border: `1px solid ${checked ? 'var(--color-accent)' : 'var(--color-border)'}`,
-        background: checked ? 'var(--color-accent)' : '#2a2f45',
-      }}
-    >
-      <span
-        className="absolute rounded-full bg-white shadow-sm transition-[left]"
-        style={{ left: checked ? 21 : 1, top: 1, width: 20, height: 20 }}
-      />
-    </button>
+    <pre className="min-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle bg-[#0f131c] p-4 text-xs leading-relaxed text-secondary">
+      {children}
+    </pre>
   );
 }
 
 export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageState> {
-  state: PageState = { status: null, busy: null, error: null, modelInput: '', searchQuery: '', searchResults: [], searchBusy: false };
+  state: PageState = {
+    status: null,
+    busy: null,
+    error: null,
+    modelInput: '',
+    prompt: 'Write a tiny TypeScript function that reverses a string.',
+    output: '',
+    searchQuery: '',
+    searchResults: [],
+    searchBusy: false,
+    logsOpen: false,
+  };
   private timer: number | null = null;
 
   componentDidMount() {
@@ -111,7 +116,7 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
 
   private refresh = async (syncInput = false) => {
     try {
-      const status = asStatus(await this.props.pa.extension.invoke('status', {}));
+      const status = asStatus(await this.props.pa.extension.invoke('mlxStatus', {}));
       this.setState((prev) => ({
         status,
         error: null,
@@ -140,13 +145,19 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
     const { status } = this.state;
     const shouldStop = status?.server.reachable || status?.process.managedRunning;
     await this.run(shouldStop ? 'Stopping…' : 'Starting…', async () => {
-      await this.props.pa.extension.invoke(shouldStop ? 'stop' : 'start', {});
+      await this.props.pa.extension.invoke(shouldStop ? 'mlxStop' : 'mlxStart', {});
     });
   };
 
   private saveModel = async (modelId = this.state.modelInput) => {
     await this.run('Saving…', async () => {
-      await this.props.pa.extension.invoke('setModel', { modelId: modelId.trim() });
+      await this.props.pa.extension.invoke('mlxSetModel', { modelId: modelId.trim() });
+    });
+  };
+
+  private setupModel = async () => {
+    await this.run('Downloading…', async () => {
+      await this.props.pa.extension.invoke('mlxSetup', { modelId: this.state.modelInput.trim() });
     });
   };
 
@@ -155,7 +166,7 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
     if (!query) return;
     this.setState({ searchBusy: true, error: null });
     try {
-      const response = (await this.props.pa.extension.invoke('searchModels', { query })) as { models?: SearchResult[] };
+      const response = (await this.props.pa.extension.invoke('mlxSearchModels', { query })) as { models?: SearchResult[] };
       this.setState({ searchResults: response.models ?? [] });
     } catch (err) {
       this.setState({ error: err instanceof Error ? err.message : String(err) });
@@ -164,159 +175,204 @@ export class QwenMlxPage extends React.Component<ExtensionSurfaceProps, PageStat
     }
   };
 
+  private runPrompt = async () => {
+    const model = this.state.status?.loadedModelId || this.state.modelInput.trim();
+    this.setState({ busy: 'Running prompt…', output: '', error: null });
+    try {
+      const response = await fetch(`${BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local' },
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: this.state.prompt }], stream: false }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const result = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      this.setState({ output: result.choices?.[0]?.message?.content || JSON.stringify(result, null, 2) });
+    } catch (err) {
+      this.setState({
+        error: err instanceof Error ? err.message : String(err),
+        output: 'Prompt failed. Check that the runtime is enabled.',
+      });
+    } finally {
+      this.setState({ busy: null });
+    }
+  };
+
   render() {
-    const { status, busy, error, modelInput, searchQuery, searchResults, searchBusy } = this.state;
+    const { status, busy, error, modelInput, prompt, output, searchQuery, searchResults, searchBusy, logsOpen } = this.state;
     const running = Boolean(status?.server.reachable);
     const starting = Boolean(status?.process.managedRunning && !running);
     const setupRunning = status?.setup?.status === 'running';
     const ready = Boolean(status?.installed);
     const progress = Math.max(0, Math.min(100, Math.round(status?.setup?.progress ?? (ready ? 100 : 0))));
     const loadedModel = status?.loadedModelId || 'None';
-    const title = running ? 'Enabled' : starting ? 'Starting' : setupRunning ? 'Downloading' : ready ? 'Ready' : 'Not installed';
-    const subtitle = running
-      ? `Loaded: ${loadedModel}`
-      : setupRunning
-        ? status?.setup?.message
-        : ready
-          ? `${status?.downloaded || 'Model'} downloaded`
-          : 'Choose any MLX-compatible Hugging Face model, download it, then enable it locally.';
+    const title = running ? 'Running' : starting ? 'Starting' : setupRunning ? 'Downloading' : ready ? 'Ready' : 'Needs setup';
+    const message =
+      busy || error || status?.setup?.error || status?.server.error || status?.setup?.message || 'Local MLX runtime workspace';
 
     return (
       <div className="h-full overflow-y-auto">
-        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
-          <AppPageIntro
-            title="MLX Local Models"
-            summary="Run Hugging Face MLX models locally and expose the loaded model through the PA model picker."
-            actions={
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-secondary">Enable</span>
-                <Toggle
-                  checked={running || starting}
-                  disabled={Boolean(busy || setupRunning || !ready)}
-                  onClick={() => void this.toggleServer()}
-                />
+        <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="space-y-5">
+          <header className="border-b border-border-subtle pb-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-primary">✨ MLX Models</h1>
+                <p className="mt-1 text-sm text-secondary">Run Hugging Face MLX models locally and test them before using them in chat.</p>
               </div>
-            }
-          />
-
-          <section className="space-y-5">
-            <div className="flex flex-col gap-5 border-y border-border-subtle py-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <div className="text-2xl font-semibold tracking-[-0.03em] text-primary">{title}</div>
-                  <div className="text-sm text-secondary">{busy || error || status?.setup?.error || status?.server.error || subtitle}</div>
-                </div>
-                <div className="truncate text-sm text-secondary">
-                  Current loaded model: <span className="font-medium text-primary">{loadedModel}</span>
-                </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <ToolbarButton disabled={Boolean(busy)} onClick={() => void this.refresh()}>
+                  Refresh
+                </ToolbarButton>
+                <ToolbarButton disabled={Boolean(busy || setupRunning || !ready)} onClick={() => void this.toggleServer()}>
+                  {running || starting ? 'Stop Runtime' : 'Start Runtime'}
+                </ToolbarButton>
               </div>
-              <button
-                disabled={Boolean(busy)}
-                onClick={() => void this.refresh()}
-                className="self-start text-sm text-secondary hover:text-primary disabled:opacity-60 sm:self-center"
-                type="button"
-              >
-                Refresh
-              </button>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
+              <span className="font-medium text-primary">
+                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${statusTone(status, busy)}`} />
+                {title}
+              </span>
+              <span>Backend: MLX</span>
+              <span className="min-w-0 truncate">Loaded: {loadedModel}</span>
+              <span>Endpoint: {BASE_URL}</span>
             </div>
             {(setupRunning || progress > 0) && (
-              <div className="h-1 w-full overflow-hidden rounded-full bg-border-subtle">
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-border-subtle" aria-label={`Setup progress ${progress}%`}>
                 <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${progress}%` }} />
               </div>
             )}
-          </section>
+            <div className="mt-3 text-sm text-secondary" aria-live="polite">
+              {message}
+            </div>
+          </header>
 
-          <AppPageSection
-            title="Model"
-            description="Pick the MLX-compatible Hugging Face model to download and serve. Stop the current model before changing it."
-          >
-            <div className="space-y-3">
-              <div className="flex flex-col gap-2 sm:flex-row">
+          <section className="grid min-h-[34rem] overflow-hidden rounded-xl border border-border-subtle bg-surface/40 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
+            <aside className="border-b border-border-subtle p-4 lg:border-b-0 lg:border-r">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-secondary">Models</h2>
+                <ToolbarButton disabled={Boolean(busy || setupRunning || !modelInput.trim())} onClick={() => void this.setupModel()}>
+                  Setup / Download
+                </ToolbarButton>
+              </div>
+
+              <label className="mt-4 block space-y-2 text-sm">
+                <span className="text-secondary">Selected Model</span>
                 <input
+                  name="mlx-model-id"
+                  autoComplete="off"
                   value={modelInput}
                   disabled={running || starting || Boolean(busy)}
                   onChange={(event) => this.setState({ modelInput: event.target.value })}
-                  className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-accent disabled:opacity-60"
-                  placeholder="org/model-name-MLX"
+                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent disabled:opacity-60"
+                  placeholder="org/model-name-MLX…"
                 />
+              </label>
+              <div className="mt-3 flex gap-2">
                 <ToolbarButton disabled={Boolean(busy || running || starting || !modelInput.trim())} onClick={() => void this.saveModel()}>
-                  Save
-                </ToolbarButton>
-                <ToolbarButton
-                  disabled={Boolean(busy || setupRunning || !modelInput.trim())}
-                  onClick={() =>
-                    void this.run(
-                      'Downloading…',
-                      async () => void (await this.props.pa.extension.invoke('setup', { modelId: modelInput.trim() })),
-                    )
-                  }
-                >
-                  Setup / download
+                  Save Selection
                 </ToolbarButton>
               </div>
-              <div className="text-xs text-dim">Selected: {status?.selectedModelId || modelInput || 'None'}</div>
-            </div>
-          </AppPageSection>
 
-          <AppPageSection
-            title="Search Hugging Face"
-            description="Search public MLX models, then click a result to use its model id above."
-          >
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={searchQuery}
-                  onChange={(event) => this.setState({ searchQuery: event.target.value })}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') void this.searchModels();
-                  }}
-                  className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-accent"
-                  placeholder="Search MLX models"
-                />
-                <ToolbarButton disabled={searchBusy || !searchQuery.trim()} onClick={() => void this.searchModels()}>
-                  {searchBusy ? 'Searching…' : 'Search'}
-                </ToolbarButton>
-                {(searchQuery || searchResults.length > 0) && (
-                  <button
-                    type="button"
-                    disabled={searchBusy}
-                    onClick={() => this.setState({ searchQuery: '', searchResults: [] })}
-                    className="px-2 text-sm text-secondary hover:text-primary disabled:opacity-60"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              {searchResults.length > 0 ? (
+              <div className="my-5 border-t border-border-subtle" />
+
+              <div className="space-y-3">
+                <label className="block space-y-2 text-sm">
+                  <span className="text-secondary">Search Hugging Face</span>
+                  <div className="flex gap-2">
+                    <input
+                      name="mlx-model-search"
+                      autoComplete="off"
+                      value={searchQuery}
+                      onChange={(event) => this.setState({ searchQuery: event.target.value })}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') void this.searchModels();
+                      }}
+                      className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+                      placeholder="Qwen MLX…"
+                    />
+                    <ToolbarButton disabled={searchBusy || !searchQuery.trim()} onClick={() => void this.searchModels()}>
+                      {searchBusy ? 'Searching…' : 'Search'}
+                    </ToolbarButton>
+                  </div>
+                </label>
+
                 <div className="divide-y divide-border-subtle border-y border-border-subtle text-sm">
-                  {searchResults.map((model) => (
-                    <div key={model.id} className="flex items-center justify-between gap-4 py-3">
-                      <button
-                        type="button"
-                        disabled={running || starting}
-                        onClick={() => this.setState({ modelInput: model.id })}
-                        className="min-w-0 flex-1 truncate text-left font-medium text-primary hover:text-accent disabled:opacity-60"
-                      >
-                        {model.id}
-                      </button>
-                      <span className="shrink-0 text-xs text-secondary">{model.downloads.toLocaleString()} downloads</span>
-                      <ToolbarButton disabled={Boolean(busy || running || starting)} onClick={() => void this.saveModel(model.id)}>
-                        Use model
-                      </ToolbarButton>
-                    </div>
-                  ))}
+                  {searchResults.length > 0 ? (
+                    searchResults.map((model) => (
+                      <div key={model.id} className="py-3">
+                        <button
+                          type="button"
+                          disabled={running || starting}
+                          onClick={() => this.setState({ modelInput: model.id })}
+                          className="block max-w-full truncate text-left font-medium text-primary hover:text-accent focus-visible:text-accent disabled:opacity-60"
+                        >
+                          {model.id}
+                        </button>
+                        <div className="mt-1 flex items-center justify-between gap-3 text-xs text-secondary">
+                          <span>{model.downloads.toLocaleString()} downloads</span>
+                          <button
+                            type="button"
+                            disabled={Boolean(busy || running || starting)}
+                            onClick={() => void this.saveModel(model.id)}
+                            className="text-accent hover:text-primary disabled:opacity-60"
+                          >
+                            Use
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-3 text-secondary">Search for models like “Qwen MLX” or “Llama 4bit”.</p>
+                  )}
                 </div>
-              ) : (
-                <div className="text-sm text-secondary">Search for a model name like “Qwen MLX” or “Llama 4bit”.</div>
-              )}
-            </div>
-          </AppPageSection>
+              </div>
+            </aside>
 
-          <AppPageSection title="Logs" description="Setup and server output from the local MLX process.">
-            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-surface-muted p-4 text-xs leading-relaxed text-secondary">
-              {status?.log?.trim() || 'No logs yet.'}
-            </pre>
-          </AppPageSection>
+            <main className="flex min-w-0 flex-col p-4">
+              <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">Test Prompt</h2>
+                  <p className="text-sm text-secondary">Run a quick smoke test against the local OpenAI-compatible endpoint.</p>
+                </div>
+                <ToolbarButton disabled={Boolean(busy || !running || !prompt.trim())} onClick={() => void this.runPrompt()}>
+                  {busy === 'Running prompt…' ? 'Running…' : 'Run Prompt'}
+                </ToolbarButton>
+              </div>
+              <label className="mt-4 block space-y-2 text-sm">
+                <span className="text-secondary">Prompt</span>
+                <textarea
+                  name="mlx-test-prompt"
+                  autoComplete="off"
+                  value={prompt}
+                  onChange={(event) => this.setState({ prompt: event.target.value })}
+                  className="min-h-28 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-primary outline-none focus-visible:border-accent"
+                  placeholder="Ask the local model something…"
+                />
+              </label>
+              <div className="mt-4 min-h-0 flex-1">
+                <TerminalBlock>
+                  {output || (running ? 'Prompt output will appear here.' : 'Start the runtime to test prompts.')}
+                </TerminalBlock>
+              </div>
+            </main>
+          </section>
+
+          <footer className="rounded-lg border border-border-subtle bg-surface/30 text-sm text-secondary">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:text-primary"
+              onClick={() => this.setState((prev) => ({ logsOpen: !prev.logsOpen }))}
+              aria-expanded={logsOpen}
+            >
+              <span>Runtime: MLX · Selected: {status?.selectedModelId || modelInput || 'None'} · Logs</span>
+              <span>{logsOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {logsOpen ? (
+              <div className="border-t border-border-subtle p-4">
+                <TerminalBlock>{status?.log?.trim() || 'No logs yet.'}</TerminalBlock>
+              </div>
+            ) : null}
+          </footer>
         </AppPageLayout>
       </div>
     );

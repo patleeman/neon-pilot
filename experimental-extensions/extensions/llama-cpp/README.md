@@ -34,5 +34,6 @@ The UI asks for an exact GGUF filename from the repo, then caches the file local
 ## Notes
 
 - This is intentionally `defaultEnabled: false` while experimental.
-- The first implementation shells out to `llama-cli` for one-shot prompts.
+- The UI uses the shared local runtime workspace pattern: model/download controls on the left, one-shot prompt smoke testing on the right, runtime status in the header, and runtime details in a collapsible footer.
+- The current runtime path shells out to `llama-cli` for one-shot prompts.
 - `llama-server` should be the next step for persistent chat sessions and streaming.

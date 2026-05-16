@@ -25,7 +25,7 @@
         "component": "LlamaCppPage"
       }
     ],
-    "nav": [{ "id": "llama-cpp", "label": "llama.cpp", "icon": "terminal", "route": "/ext/llama-cpp" }]
+    "nav": [{ "id": "llama-cpp", "label": "llama.cpp", "icon": "sparkle", "route": "/ext/llama-cpp" }]
   },
   "permissions": ["network:read", "network:write"]
 }
