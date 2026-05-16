@@ -6,6 +6,7 @@ import {
   type ExtensionFactory,
   ModelRegistry,
   type SessionManager,
+  SettingsManager,
 } from '@earendil-works/pi-coding-agent';
 import { resolveChildProcessEnv } from '@personal-agent/core';
 
@@ -32,6 +33,18 @@ export function makeAuth(agentDir: string): AuthStorage {
 
 export function makeRegistry(auth: AuthStorage, _extensionFactories?: ExtensionFactory[]): ModelRegistry {
   return createRuntimeModelRegistry(auth);
+}
+
+function createDesktopConversationSettingsManager(cwd: string, agentDir: string): SettingsManager {
+  const settingsManager = SettingsManager.create(cwd, agentDir);
+
+  // pi's OpenAI Codex `auto` transport prefers cached WebSockets. A mid-turn
+  // 1006 close happens after tool calls have already run, so the upstream
+  // pre-stream SSE fallback cannot safely recover and the user sees a failed
+  // turn. Desktop conversations prioritize reliability over cached-WS speed.
+  settingsManager.applyOverrides({ transport: 'sse' });
+
+  return settingsManager;
 }
 
 function patchConversationBashTool(session: AgentSession, cwd: string, conversationId: string, sessionFile?: string): void {
@@ -78,16 +91,19 @@ export async function createPreparedLiveAgentSession(input: {
   ensureSessionFile?: boolean;
 }): Promise<{ session: AgentSession; modelRegistry: ModelRegistry }> {
   const options = input.options ?? {};
-  const auth = makeAuth(options.agentDir ?? input.agentDir);
+  const agentDir = options.agentDir ?? input.agentDir;
+  const auth = makeAuth(agentDir);
   const modelRegistry = makeRegistry(auth, options.extensionFactories);
+  const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const resourceLoader = await makeLoader(input.cwd, options);
   const { session } = await createAgentSession({
     cwd: input.cwd,
-    agentDir: options.agentDir ?? input.agentDir,
+    agentDir,
     authStorage: auth,
     modelRegistry,
     resourceLoader,
     sessionManager: input.sessionManager,
+    settingsManager,
     ...(options.allowedToolNames ? { tools: options.allowedToolNames } : {}),
   });
 

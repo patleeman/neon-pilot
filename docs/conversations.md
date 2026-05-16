@@ -107,6 +107,10 @@ Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above t
 
 Interrupted prompts are not replayed automatically after an app restart. Durable run state is used for status and explicit recovery surfaces only; startup recovery must not silently resend the last prompt.
 
+## Provider transport
+
+Desktop conversations force pi's provider transport to SSE at session creation. pi's OpenAI Codex `auto` mode prefers cached WebSockets, but intermittent mid-turn 1006 closes can happen after tools have already run; at that point replaying through SSE is unsafe because it can duplicate side effects. SSE is slower than cached WebSockets, but it keeps conversation/tool execution reliable.
+
 ## Run Mode / Auto Mode
 
 The composer exposes a run-mode selector with four states:

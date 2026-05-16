@@ -22,6 +22,8 @@ const {
   sessionManagerForkFromMock,
   sessionManagerInMemoryMock,
   sessionManagerOpenMock,
+  settingsManagerApplyOverridesMock,
+  settingsManagerCreateMock,
   syncWebLiveConversationRunMock,
 } = vi.hoisted(() => {
   const defaultResourceLoaderReloadMock = vi.fn(async () => undefined);
@@ -53,6 +55,8 @@ const {
     sessionManagerForkFromMock: vi.fn(),
     sessionManagerInMemoryMock: vi.fn(),
     sessionManagerOpenMock: vi.fn(),
+    settingsManagerApplyOverridesMock: vi.fn(),
+    settingsManagerCreateMock: vi.fn(),
     syncWebLiveConversationRunMock: vi.fn(),
   };
 });
@@ -77,6 +81,9 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
     forkFrom: sessionManagerForkFromMock,
     inMemory: sessionManagerInMemoryMock,
     open: sessionManagerOpenMock,
+  },
+  SettingsManager: {
+    create: settingsManagerCreateMock,
   },
   createAgentSession: createAgentSessionMock,
   createBashTool: createBashToolMock,
@@ -288,6 +295,8 @@ describe('liveSessions bootstrap helpers', () => {
     sessionManagerForkFromMock.mockReset();
     sessionManagerInMemoryMock.mockReset();
     sessionManagerOpenMock.mockReset();
+    settingsManagerApplyOverridesMock.mockReset();
+    settingsManagerCreateMock.mockReset();
     syncWebLiveConversationRunMock.mockReset();
 
     authCreateMock.mockReturnValue({ kind: 'auth' });
@@ -325,6 +334,9 @@ describe('liveSessions bootstrap helpers', () => {
       currentServiceTier: defaults?.currentServiceTier ?? '',
       hasExplicitServiceTier: false,
     }));
+    settingsManagerCreateMock.mockReturnValue({
+      applyOverrides: settingsManagerApplyOverridesMock,
+    });
     syncWebLiveConversationRunMock.mockResolvedValue(undefined);
   });
 
@@ -469,6 +481,11 @@ describe('liveSessions bootstrap helpers', () => {
     });
 
     expect(sessionManagerCreateMock).toHaveBeenCalledWith('/tmp/workspace', '/tmp/durable-sessions/--tmp-workspace--');
+    expect(settingsManagerCreateMock).toHaveBeenCalledWith('/tmp/workspace', '/tmp/agent-runtime');
+    expect(settingsManagerApplyOverridesMock).toHaveBeenCalledWith({ transport: 'sse' });
+    expect(createAgentSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ settingsManager: { applyOverrides: settingsManagerApplyOverridesMock } }),
+    );
     expect(createBashToolMock).toHaveBeenCalledWith(
       '/tmp/workspace',
       expect.objectContaining({
