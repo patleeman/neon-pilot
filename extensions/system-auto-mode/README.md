@@ -64,6 +64,7 @@ Simple delays are supported in the loop delay field: `immediate`, `After each tu
 
 The `set_goal` / `update_goal` tools are the legacy goal-mode path. They are hardened so a completed goal cannot keep speaking through stale queued continuations:
 
+- manually enabling goal mode in the UI only records the goal; it does not immediately start the thread;
 - turn-end events update progress counters but never enqueue continuations;
 - only one continuation timer can be pending at a time, and it is scheduled from `agent_end` after the active run is fully done;
 - overflow recovery compaction owns its automatic retry, so goal continuations are suppressed until the retry starts and finishes;

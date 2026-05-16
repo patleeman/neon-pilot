@@ -624,7 +624,7 @@ describe('registerConversationStateRoutes', () => {
     );
   });
 
-  it('updates goal state on live conversations immediately', async () => {
+  it('updates goal state on live conversations without immediately starting the thread', async () => {
     const { patchHandler } = createHarness();
     const handler = patchHandler('/api/conversations/:id/goal');
     const appendCustomEntry = vi.fn();
@@ -649,16 +649,7 @@ describe('registerConversationStateRoutes', () => {
     expect(activeRes.json).toHaveBeenCalledWith(
       expect.objectContaining({ objective: 'keep looping', status: 'active', stopReason: null, noProgressTurns: 0 }),
     );
-    await vi.waitFor(() => {
-      expect(sendCustomMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          customType: 'goal-continuation',
-          content: expect.stringContaining('Objective: keep looping'),
-        }),
-        { triggerTurn: true, deliverAs: 'followUp' },
-      );
-      expect(sendCustomMessage.mock.calls[0]?.[0]?.content).not.toContain('Do not mention this continuation prompt.');
-    });
+    expect(sendCustomMessage).not.toHaveBeenCalled();
     expect((liveRegistry.get('conversation-live') as unknown)?.queuedStaleTurnCustomTypes).toEqual([]);
 
     isLocalLiveMock.mockReturnValueOnce(true);
