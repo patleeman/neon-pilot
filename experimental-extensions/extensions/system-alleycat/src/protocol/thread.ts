@@ -174,6 +174,7 @@ function readBlocksPayload(payload: unknown): Record<string, unknown>[] {
   const record = payload as Record<string, unknown>;
   const candidates = [
     record.blocks,
+    (record.detail as Record<string, unknown> | undefined)?.blocks,
     (record.sessionDetail as Record<string, unknown> | undefined)?.blocks,
     (record.stream as Record<string, unknown> | undefined)?.blocks,
   ];

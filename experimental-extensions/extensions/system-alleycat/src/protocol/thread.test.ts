@@ -14,14 +14,23 @@ function makeContext(overrides: Record<string, unknown> = {}) {
       list: vi.fn().mockResolvedValue([]),
       getMeta: vi.fn().mockResolvedValue({ id: 'thread-1', title: 'Test thread', cwd: '/repo', updatedAt: 1_700_000_001_000 }),
       getBlocks: vi.fn().mockResolvedValue({
-        blocks: [
-          { type: 'user', id: 'u1', ts: '2026-05-15T10:00:00.000Z', text: 'hello' },
-          { type: 'thinking', id: 'r1', ts: '2026-05-15T10:00:01.000Z', text: 'thinking' },
-          { type: 'tool_use', id: 't1', ts: '2026-05-15T10:00:02.000Z', tool: 'read', input: { path: 'README.md' }, output: 'contents' },
-          { type: 'text', id: 'a1', ts: '2026-05-15T10:00:03.000Z', text: 'done' },
-          { type: 'user', id: 'u2', ts: '2026-05-15T10:01:00.000Z', text: 'next' },
-          { type: 'error', id: 'e1', ts: '2026-05-15T10:01:01.000Z', message: 'boom' },
-        ],
+        detail: {
+          blocks: [
+            { type: 'user', id: 'u1', ts: '2026-05-15T10:00:00.000Z', text: 'hello' },
+            { type: 'thinking', id: 'r1', ts: '2026-05-15T10:00:01.000Z', text: 'thinking' },
+            {
+              type: 'tool_use',
+              id: 't1',
+              ts: '2026-05-15T10:00:02.000Z',
+              tool: 'read',
+              input: { path: 'README.md' },
+              output: 'contents',
+            },
+            { type: 'text', id: 'a1', ts: '2026-05-15T10:00:03.000Z', text: 'done' },
+            { type: 'user', id: 'u2', ts: '2026-05-15T10:01:00.000Z', text: 'next' },
+            { type: 'error', id: 'e1', ts: '2026-05-15T10:01:01.000Z', message: 'boom' },
+          ],
+        },
       }),
       ...overrides,
     },
