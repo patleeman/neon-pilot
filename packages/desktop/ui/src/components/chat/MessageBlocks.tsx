@@ -1,4 +1,4 @@
-import { memo, type ReactNode, useCallback, useMemo } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
@@ -63,6 +63,7 @@ export const UserMessage = memo(function UserMessage({
   messageIndex,
   onRewindMessage,
   onForkMessage,
+  onEditMessage,
   onHydrateMessage,
   hydratingMessageBlockIds,
   onOpenFilePath,
@@ -76,6 +77,7 @@ export const UserMessage = memo(function UserMessage({
   messageIndex?: number;
   onRewindMessage?: (messageIndex: number) => Promise<void> | void;
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
+  onEditMessage?: (messageIndex: number, text: string) => Promise<void> | void;
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
   onOpenFilePath?: (path: string) => void;
@@ -102,8 +104,36 @@ export const UserMessage = memo(function UserMessage({
     return onForkMessage?.(messageIndex);
   }, [messageIndex, onForkMessage]);
   const canAddressMessage = typeof messageIndex === 'number';
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState(block.text);
+  const [editSaving, setEditSaving] = useState(false);
   const rawRunCallbackRuns = useMemo(() => readRawRunCallbackLinkedRuns(block.text), [block.text]);
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
+  const beginEdit = useCallback(() => {
+    setEditDraft(block.text);
+    setEditing(true);
+  }, [block.text]);
+  const cancelEdit = useCallback(() => {
+    setEditDraft(block.text);
+    setEditing(false);
+  }, [block.text]);
+  const saveEdit = useCallback(async () => {
+    if (!onEditMessage || typeof messageIndex !== 'number' || editSaving) {
+      return;
+    }
+
+    const nextText = editDraft.trim();
+    if (!nextText) {
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await onEditMessage(messageIndex, nextText);
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editDraft, editSaving, messageIndex, onEditMessage]);
 
   return (
     <div className="group flex flex-col items-end gap-1.5">
@@ -134,7 +164,37 @@ export const UserMessage = memo(function UserMessage({
               })}
             </div>
           )}
-          {showRawRunCallbackCard ? (
+          {editing ? (
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveEdit();
+              }}
+            >
+              <textarea
+                value={editDraft}
+                onChange={(event) => setEditDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    cancelEdit();
+                  }
+                }}
+                disabled={editSaving}
+                autoFocus
+                className="min-h-[96px] w-full resize-y rounded-xl border border-border-subtle bg-base/60 px-3 py-2 text-sm leading-relaxed text-primary outline-none focus:border-accent/50"
+              />
+              <div className="flex justify-end gap-2">
+                <button type="button" className="ui-message-action-button" onClick={cancelEdit} disabled={editSaving}>
+                  cancel
+                </button>
+                <button type="submit" className="ui-message-action-button text-accent" disabled={editSaving || !editDraft.trim()}>
+                  {editSaving ? 'rerunning…' : 'rerun'}
+                </button>
+              </div>
+            </form>
+          ) : showRawRunCallbackCard ? (
             <div className="px-1.5 pb-0.5">
               <RawRunCallbackCard
                 runs={rawRunCallbackRuns}
@@ -160,8 +220,9 @@ export const UserMessage = memo(function UserMessage({
             blockText={block.text}
             blockId={block.id}
             copyText={block.text}
-            onRewind={onRewindMessage && canAddressMessage ? handleRewind : undefined}
-            onFork={onForkMessage && canAddressMessage ? handleFork : undefined}
+            onRewind={!editing && onRewindMessage && canAddressMessage ? handleRewind : undefined}
+            onFork={!editing && onForkMessage && canAddressMessage ? handleFork : undefined}
+            onEdit={!editing && onEditMessage && canAddressMessage ? beginEdit : undefined}
           />
         </div>
       </div>

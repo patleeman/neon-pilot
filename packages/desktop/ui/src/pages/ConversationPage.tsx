@@ -3650,6 +3650,69 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
   );
 
+  const editConversationFromUserMessage = useCallback(
+    async (messageIndex: number, text: string) => {
+      if (!id || !realMessages) {
+        return;
+      }
+
+      const editedText = text.trim();
+      if (!editedText) {
+        showNotice('danger', 'Edited prompt cannot be empty.');
+        return;
+      }
+
+      const localMessageIndex = messageIndex - messageIndexOffset;
+      if (localMessageIndex < 0 || localMessageIndex >= realMessages.length) {
+        showNotice('danger', 'Load the relevant part of the conversation before editing it.');
+        return;
+      }
+
+      const clickedBlock = realMessages[localMessageIndex];
+      if (clickedBlock?.type !== 'user') {
+        return;
+      }
+
+      try {
+        const liveConversationId = await ensureConversationIsLive('edit this prompt');
+        let entryId = resolveSessionEntryIdFromBlockId(clickedBlock.id);
+        if (!entryId) {
+          const detail = await api.sessionDetail(liveConversationId, {
+            tailBlocks: Math.max(realMessages.length, 1),
+          });
+          entryId = resolveBranchEntryIdFromSessionDetailResult(clickedBlock, messageIndex, detail);
+        }
+        if (!entryId) {
+          throw new Error('The selected prompt is not ready to edit yet. Try again in a moment.');
+        }
+
+        if (!ensureConversationCanControl('edit this prompt')) {
+          return;
+        }
+
+        setPendingAssistantStatusLabel('Rerunning from edited prompt…');
+        const { newSessionId } = await api.forkSession(
+          liveConversationId,
+          entryId,
+          {
+            preserveSource: false,
+            beforeEntry: true,
+          },
+          currentSurfaceId,
+        );
+        ensureConversationTabOpen(newSessionId);
+        navigate(`/conversations/${newSessionId}`, { replace: true });
+        await api.promptSession(newSessionId, editedText, undefined, undefined, undefined, currentSurfaceId);
+        showNotice('accent', 'Conversation rerunning from edited prompt.');
+      } catch (error) {
+        showNotice('danger', `Edit failed: ${(error as Error).message}`);
+      } finally {
+        setPendingAssistantStatusLabel(null);
+      }
+    },
+    [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
+  );
+
   const forkConversationFromMessage = useCallback(
     async (messageIndex: number) => {
       if (!id || !realMessages) {
@@ -5715,6 +5778,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     : undefined
                 }
                 onRewindMessage={!renderingStaleTranscript && id && !conversationRunningForPage ? rewindConversationFromMessage : undefined}
+                onEditUserMessage={
+                  !renderingStaleTranscript && id && !conversationRunningForPage ? editConversationFromUserMessage : undefined
+                }
                 onReplyToSelection={renderingStaleTranscript ? undefined : handleReplyToSelection}
                 selectionActions={renderingStaleTranscript ? undefined : extensionRegistry.selectionActions}
                 onHydrateMessage={renderingStaleTranscript ? undefined : hydrateHistoricalBlock}
@@ -5872,6 +5938,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       requestedFocusMessageIndex,
       resumeConversation,
       resumeConversationBusy,
+      editConversationFromUserMessage,
       rewindConversationFromMessage,
       selectedArtifactId,
       selectedCheckpointId,

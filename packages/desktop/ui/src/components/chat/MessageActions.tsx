@@ -47,6 +47,7 @@ export function MessageActions({
   copyText,
   onFork,
   onRewind,
+  onEdit,
 }: {
   isUser?: boolean;
   blockText?: string;
@@ -55,6 +56,7 @@ export function MessageActions({
   copyText?: string;
   onFork?: () => Promise<void> | void;
   onRewind?: () => Promise<void> | void;
+  onEdit?: () => void;
 }) {
   const [isForking, setIsForking] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
@@ -150,6 +152,16 @@ export function MessageActions({
           title={copyState === 'failed' ? 'Copy to clipboard failed' : 'Copy this assistant message to the clipboard'}
         >
           {copyState === 'copied' ? '⎘ copied' : copyState === 'failed' ? '⎘ copy failed' : '⎘ copy'}
+        </button>
+      )}
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="ui-message-action-button"
+          title="Edit this prompt and rerun the conversation from here"
+        >
+          ✎ edit
         </button>
       )}
       {onRewind && (

@@ -33,6 +33,7 @@ interface ChatViewProps {
   layout?: ChatViewLayout;
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
   onRewindMessage?: (messageIndex: number) => Promise<void> | void;
+  onEditUserMessage?: (messageIndex: number, text: string) => Promise<void> | void;
   onReplyToSelection?: (selection: {
     text: string;
     messageIndex: number;
@@ -109,6 +110,7 @@ export const ChatView = memo(function ChatView({
   layout = 'default',
   onForkMessage,
   onRewindMessage,
+  onEditUserMessage,
   onReplyToSelection,
   selectionActions,
   onHydrateMessage,
@@ -282,6 +284,7 @@ export const ChatView = memo(function ChatView({
       layout={layout}
       onForkMessage={onForkMessage}
       onRewindMessage={onRewindMessage}
+      onEditUserMessage={onEditUserMessage}
       onReplyToSelection={onReplyToSelection}
       onHydrateMessage={onHydrateMessage}
       hydratingMessageBlockIds={hydratingMessageBlockIds}

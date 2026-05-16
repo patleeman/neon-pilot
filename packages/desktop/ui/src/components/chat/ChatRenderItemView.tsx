@@ -22,6 +22,7 @@ export function ChatRenderItemView({
   layout,
   onForkMessage,
   onRewindMessage,
+  onEditUserMessage,
   onReplyToSelection,
   onHydrateMessage,
   hydratingMessageBlockIds,
@@ -52,6 +53,7 @@ export function ChatRenderItemView({
   layout: ChatViewLayout;
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
   onRewindMessage?: (messageIndex: number) => Promise<void> | void;
+  onEditUserMessage?: (messageIndex: number, text: string) => Promise<void> | void;
   onReplyToSelection?: (selection: { text: string; messageIndex: number; blockId?: string }) => Promise<void> | void;
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
@@ -120,6 +122,7 @@ export function ChatRenderItemView({
             messageIndex={absoluteIndex}
             onRewindMessage={onRewindMessage}
             onForkMessage={onForkMessage}
+            onEditMessage={onEditUserMessage}
             onHydrateMessage={onHydrateMessage}
             hydratingMessageBlockIds={hydratingMessageBlockIds}
             onOpenFilePath={onOpenFilePath}
