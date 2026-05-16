@@ -2,8 +2,8 @@ import type { MethodHandler } from '../codexJsonRpcServer.js';
 
 /**
  * Compatibility handlers for Codex API methods Kitty may call outside the core
- * PA bridge surface. Prefer deterministic, typed no-op/stateful behavior over
- * "not implemented" stubs so the mobile client does not spin forever.
+ * PA bridge surface. Implement PA-backed behavior where possible; otherwise
+ * fail loudly with a stable unsupported error instead of silently pretending.
  */
 
 function nowSeconds(): number {
@@ -22,6 +22,12 @@ function ok(extra: Record<string, unknown> = {}) {
   return { ok: true, ...extra };
 }
 
+function unsupported(method: string, reason: string): MethodHandler {
+  return async () => {
+    throw new Error(`${method} is unsupported by Personal Agent Kitty Litter bridge: ${reason}`);
+  };
+}
+
 // ── Thread experimental features ───────────────────────────────────────────
 
 export const threadRealtime = {
@@ -38,7 +44,7 @@ export const threadRealtime = {
     await ctx.storage.delete(storageKey('thread/realtime', threadId)).catch(() => null);
     return ok({ status: 'stopped' });
   }) as MethodHandler,
-  appendAudio: (async () => ok({ accepted: false, reason: 'realtime audio is not supported by Personal Agent' })) as MethodHandler,
+  appendAudio: unsupported('thread/realtime/appendAudio', 'Personal Agent does not expose a realtime audio stream over this protocol'),
   appendText: (async (params, ctx) => {
     const p = paramsObject(params);
     const threadId = typeof p.threadId === 'string' ? p.threadId : undefined;
@@ -94,8 +100,8 @@ export const processStubs = {
     processes.set(id, { pid: child.pid, kill: child.kill, stdout: '', stderr: '', exit: null });
     return { processId: id, pid: child.pid, executionWrappers: child.executionWrappers };
   }) as MethodHandler,
-  writeStdin: (async () => ok({ written: false, reason: 'stdin streaming is not supported by this bridge yet' })) as MethodHandler,
-  resizePty: (async () => ok({ resized: false, reason: 'pty resize is not supported by this bridge yet' })) as MethodHandler,
+  writeStdin: unsupported('process/writeStdin', 'managed extension processes do not expose stdin handles yet'),
+  resizePty: unsupported('process/resizePty', 'managed extension processes do not expose PTY resize yet'),
   kill: (async (params) => {
     const p = paramsObject(params);
     const id = typeof p.processId === 'string' ? p.processId : typeof p.id === 'string' ? p.id : undefined;
@@ -109,18 +115,8 @@ export const processStubs = {
 // ── File watching ──────────────────────────────────────────────────────────
 
 export const fsWatch = {
-  watch: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const path = typeof p.path === 'string' ? p.path : 'default';
-    await ctx.storage.put(storageKey('fs/watch', path), { path, updatedAt: nowSeconds() });
-    return { watchId: path, path };
-  }) as MethodHandler,
-  unwatch: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const watchId = typeof p.watchId === 'string' ? p.watchId : typeof p.path === 'string' ? p.path : 'default';
-    await ctx.storage.delete(storageKey('fs/watch', watchId)).catch(() => null);
-    return ok({ watchId });
-  }) as MethodHandler,
+  watch: unsupported('fs/watch', 'extension file watching is not exposed through this bridge yet'),
+  unwatch: (async () => ok({ unwatched: true })) as MethodHandler,
 };
 
 // ── Model provider ─────────────────────────────────────────────────────────
@@ -158,24 +154,9 @@ export const hooksList = (async () => ({ data: [], nextCursor: null })) as Metho
 // ── Marketplace ───────────────────────────────────────────────────────────
 
 export const marketplace = {
-  add: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const id = String(p.id ?? p.name ?? p.url ?? `marketplace-${Date.now().toString(36)}`);
-    await ctx.storage.put(storageKey('marketplace', id), { ...p, id, installedAt: nowSeconds() });
-    return { id, installed: true };
-  }) as MethodHandler,
-  remove: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const id = String(p.id ?? p.name ?? 'unknown');
-    await ctx.storage.delete(storageKey('marketplace', id)).catch(() => null);
-    return { id, removed: true };
-  }) as MethodHandler,
-  upgrade: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const id = String(p.id ?? p.name ?? 'unknown');
-    await ctx.storage.put(storageKey('marketplaceUpgrade', id), { ...p, id, upgradedAt: nowSeconds() });
-    return { id, upgraded: true };
-  }) as MethodHandler,
+  add: unsupported('marketplace/add', 'Personal Agent extensions are installed through the desktop extension manager'),
+  remove: unsupported('marketplace/remove', 'Personal Agent extensions are removed through the desktop extension manager'),
+  upgrade: unsupported('marketplace/upgrade', 'Personal Agent extensions are upgraded through the desktop extension manager'),
 };
 
 // ── Plugins ───────────────────────────────────────────────────────────────
@@ -191,19 +172,8 @@ export const plugin = {
     const id = String(p.id ?? p.name ?? 'unknown');
     return { plugin: await ctx.storage.get(storageKey('plugin', id)).catch(() => null) };
   }) as MethodHandler,
-  install: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const id = String(p.id ?? p.name ?? `plugin-${Date.now().toString(36)}`);
-    const plugin = { ...p, id, installed: true, installedAt: nowSeconds() };
-    await ctx.storage.put(storageKey('plugin', id), plugin);
-    return { plugin };
-  }) as MethodHandler,
-  uninstall: (async (params, ctx) => {
-    const p = paramsObject(params);
-    const id = String(p.id ?? p.name ?? 'unknown');
-    await ctx.storage.delete(storageKey('plugin', id)).catch(() => null);
-    return { id, uninstalled: true };
-  }) as MethodHandler,
+  install: unsupported('plugin/install', 'Personal Agent does not install Codex plugins through Kitty'),
+  uninstall: unsupported('plugin/uninstall', 'Personal Agent does not uninstall Codex plugins through Kitty'),
 };
 
 // ── Review ─────────────────────────────────────────────────────────────────
@@ -229,24 +199,17 @@ export const collaborationModeList = (async () => ({
 // ── MCP Server ────────────────────────────────────────────────────────────
 
 export const mcpServer = {
-  oauthLogin: (async () => ({
-    loginId: null,
-    status: 'unavailable',
-    message: 'MCP OAuth is managed by Personal Agent desktop.',
-  })) as MethodHandler,
+  oauthLogin: unsupported('mcpServer/oauth/login', 'MCP OAuth is managed by Personal Agent desktop'),
 };
 
 export const mcpServerStatusList = (async () => ({ data: [], nextCursor: null })) as MethodHandler;
 
 export const mcpServerResource = {
-  read: (async () => ({ contents: [], data: null })) as MethodHandler,
+  read: unsupported('mcpServer/resource/read', 'MCP resources are not exposed through Kitty yet'),
 };
 
 export const mcpServerTool = {
-  call: (async () => ({
-    content: [{ type: 'text', text: 'MCP tool calls are not exposed through Kitty Litter yet.' }],
-    isError: true,
-  })) as MethodHandler,
+  call: unsupported('mcpServer/tool/call', 'MCP tool calls are not exposed through Kitty yet'),
 };
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -273,17 +236,13 @@ export const configStubs = {
 
 // ── Feedback ───────────────────────────────────────────────────────────────
 
-export const feedbackUpload = (async (params, ctx) => {
-  const id = `feedback-${Date.now().toString(36)}`;
-  await ctx.storage.put(storageKey('feedback', id), { id, params, createdAt: nowSeconds() });
-  return { feedbackId: id, uploaded: true };
-}) as MethodHandler;
+export const feedbackUpload = unsupported('feedback/upload', 'feedback upload is not routed through the Personal Agent bridge');
 
 // ── External Agent Config ─────────────────────────────────────────────────
 
 export const externalAgentConfig = {
   detect: (async () => ({ data: [], detected: [] })) as MethodHandler,
-  import_: (async () => ({ imported: false, data: [] })) as MethodHandler,
+  import_: unsupported('externalAgentConfig/import', 'external agent config import is not applicable to Personal Agent'),
 };
 
 // ── Tool ───────────────────────────────────────────────────────────────────
@@ -307,7 +266,10 @@ export const remoteControlStatusChanged = (async () => ok({ status: 'disabled' }
 
 // ── Windows Sandbox ────────────────────────────────────────────────────────
 
-export const windowsSandboxSetupStart = (async () => ok({ started: false, platform: process.platform })) as MethodHandler;
+export const windowsSandboxSetupStart = unsupported(
+  'windowsSandbox/setupStart',
+  'Windows sandbox setup is not applicable on this Personal Agent host',
+);
 
 // ── Environment ────────────────────────────────────────────────────────────
 

@@ -79,7 +79,7 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
   'thread/turns/list': thread.turnsList,
   'thread/turns/items/list': thread.itemsList,
 
-  // Thread — experimental (stubs)
+  // Thread — experimental compatibility
   'thread/realtime/start': threadRealtime.start,
   'thread/realtime/stop': threadRealtime.stop,
   'thread/realtime/appendAudio': threadRealtime.appendAudio,
@@ -119,7 +119,7 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
   'command/exec/resize': command.resize,
   'command/exec/terminate': command.terminate,
 
-  // Process (experimental, stubs)
+  // Process (experimental compatibility)
   'process/spawn': processStubs.spawn,
   'process/writeStdin': processStubs.writeStdin,
   'process/resizePty': processStubs.resizePty,

@@ -62,13 +62,14 @@ The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams t
 - `config/read`
 - `configRequirements/read`
 - `skills/list`
-- filesystem / command / process compatibility handlers and stubs used by Codex clients
+- filesystem / command / process compatibility handlers used by Codex clients
 
 Compatibility notes:
 
 - `thread/loaded/list` is intentionally workspace state, not runtime liveness. Open/close controls what appears in the shared desktop/mobile workspace; `activeConversationId` controls focused conversation; archive/unarchive controls conversation lifecycle; live/running status remains separate.
-- `model/list` maps PA model metadata into Codex fields, including reasoning-effort fields when PA metadata provides them. Do not advertise fake reasoning values.
+- `model/list` maps PA model metadata into Codex fields. Reasoning effort options use Codex's object shape; if PA metadata is unavailable the bridge returns deterministic PA model defaults so Kitty's model picker can render.
 - Tool calls are emitted as Codex `dynamicToolCall` items under the `personal-agent` namespace so Kitty can render them instead of seeing opaque PA events.
+- Compatibility endpoints must either be PA-backed or fail with a clear unsupported error. Do not add silent `not_implemented` placeholders; Kitty often spins forever on fake success shapes.
 - If Kitty adds stricter Codex rendering assumptions, update the protocol mapper here rather than changing PA conversation internals.
 
 ## Transport
