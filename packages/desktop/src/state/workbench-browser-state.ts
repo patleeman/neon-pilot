@@ -124,12 +124,20 @@ function writePendingStateNow(): Promise<void> {
   }
 
   mkdirSync(resolveDesktopRuntimePaths().desktopStateDir, { recursive: true, mode: 0o700 });
-  pendingWritePromise = writeFile(pending.file, `${JSON.stringify(pending.state, null, 2)}\n`, 'utf-8')
+  // Serialize writes: chain behind the in-flight promise so newer state
+  // is written AFTER the older write completes, preventing out-of-order
+  // completion from restoring a stale URL.
+  const nextWrite = (pendingWritePromise ?? Promise.resolve()).then(() =>
+    writeFile(pending.file, `${JSON.stringify(pending.state, null, 2)}\n`, 'utf-8'),
+  );
+  pendingWritePromise = nextWrite
     .catch(() => {
       // Browser URL persistence is best-effort.
     })
     .finally(() => {
-      pendingWritePromise = null;
+      if (pendingWritePromise === nextWrite) {
+        pendingWritePromise = null;
+      }
     });
   return pendingWritePromise;
 }
