@@ -1123,12 +1123,22 @@ function ExtensionSettingsSection() {
       );
   }, [saveError]);
 
+  const editedKeys = useRef(new Set<string>());
+
+  // Track explicit user edits so the values-refetch merge below preserves
+  // only keys the user has touched, not every key that happens to differ.
+  const markEdited = useCallback((key: string) => {
+    editedKeys.current.add(key);
+  }, []);
+
   useEffect(() => {
     if (values) {
       setDraft((prev) => {
+        // Start from the fresh backend snapshot, then overlay only the keys
+        // the user explicitly edited since the last save.
         const merged = { ...values };
-        for (const key of Object.keys(prev)) {
-          if (prev[key] !== values[key]) merged[key] = prev[key];
+        for (const key of editedKeys.current) {
+          if (key in prev) merged[key] = prev[key];
         }
         return merged;
       });
@@ -1188,6 +1198,7 @@ function ExtensionSettingsSection() {
               entry={entry}
               value={draft[entry.key]}
               onChange={(key, val) => {
+                markEdited(key);
                 setDraft((prev) => ({ ...prev, [key]: val }));
                 setSaveNotice(null);
                 setSaveError(null);
