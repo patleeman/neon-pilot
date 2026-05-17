@@ -732,14 +732,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             <>
               <main className="min-w-0 flex-1 space-y-5">
                 <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold text-primary">Model Library</h2>
-                      <p className="mt-1 text-sm text-secondary">
-                        Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
-                      </p>
-                    </div>
-                    <div className="flex min-w-0 flex-1 gap-2 lg:max-w-2xl">
+                  <div>
+                    <h2 className="text-xl font-semibold text-primary">Model Library</h2>
+                    <p className="mt-1 text-sm text-secondary">
+                      Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
+                    </p>
+                    <div className="mt-4 flex gap-2">
                       <TextInput
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
@@ -751,7 +749,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       <Select
                         value={searchFormat}
                         onChange={(event) => setSearchFormat(event.target.value as 'all' | 'mlx' | 'gguf')}
-                        className="w-32"
+                        className="w-32 shrink-0"
                       >
                         <option value="all">All</option>
                         <option value="mlx">MLX</option>
