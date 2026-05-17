@@ -1,6 +1,6 @@
 {
   "name": "@personal-agent/extensions",
-  "version": "0.8.0-rc.17",
+  "version": "0.8.0-rc.18",
   "license": "MIT",
   "description": "Public extension API types for Personal Agent",
   "type": "module",

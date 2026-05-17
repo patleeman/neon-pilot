@@ -2,6 +2,164 @@
 
 - fix: isolate dev/test daemon invocations with per-launch namespaces and ephemeral ports
 
+## 0.8.0-rc.18 — 2026-05-17
+
+- fix: preserve custom context length
+- chore: update pi dependencies to 0.75.0
+- feat: simplify local runtime logs
+- fix: link model details to Hugging Face
+- feat: surface local runtime update status
+- feat: support GGUF MTP speculative decoding
+- fix: refresh sidebar gateway badges
+- feat: split extension commands into tab
+- feat: add context length slider
+- feat: auto-detect local model context
+- test: add local models smoke harness
+- fix: use single local model provider
+- fix: stabilize automations table actions menu
+- fix: sync local model provider entries
+- docs: make extension guidance agent-first
+- fix: bundle llama cpp dylibs
+- feat: restyle telegram gateway page
+- feat: promote mobile pairing extensions
+- fix: improve error toast readability
+- fix: simplify extension row actions menu
+- fix: round telemetry agent loop metrics
+- chore: disable local models by default
+- refactor: promote local models to system extension
+- Split web search tools into extensions
+- feat: add GGUF runtime installer UI
+- fix: fetch current llama.cpp mac runtime archive
+- fix: color local model delete action red
+- fix: move local model server details inline
+- fix: split local model server sections
+- fix: force local model settings stack
+- fix: stack local model server settings
+- fix: suggested-context caches empty result after valid work (removed post-await budget check); telemetry page rereads JSONL 12x (added short-lived per-request cache)
+- fix: dictation settings split-brain — write runtime first, then profile; consistent reads on partial failure
+- fix: ACP event forwarding can reorder/drop stream updates — serialize via promise chain, await before prompt returns
+- fix: settings — duplicate shortcuts saved before validation; secret backend selector snaps back after save
+- fix: vision probe returns empty successful answer (now errors on empty); image backend passes abort signal to execute
+- fix: MCP grep ignores requested server filter — filter matches server-side when server param provided
+- fix: alleycat WebSocket heartbeat leaks on unauthorized connections; turn/interrupt keys by turnId not threadId
+- fix: checkpoint diff parser corrupts paths containing spaces (regex now anchors on a/ and b/ prefixes)
+- fix: apply-patch — preflight before apply (atomic multi-file), reject move-to-existing; extension-manager writes search paths to loader's canonical settings file
+- fix: settings stale refetch overwrites newer backend values — track edited keys explicitly
+- fix: alleycat stop() throws on null startPromise; fs/writeFile silently corrupts on malformed base64
+- fix: artifact update w/o content wipes body (preserve existing); ACP cancellation tracking race (identity check in finally)
+- fix: MCP settings UI editing silently drops advanced server config (env, oauth, headers) — preserve raw fields on edit
+- fix: timeout unauthenticated alleycat streams
+- fix: validate alleycat file image inputs
+- fix: redact alleycat rpc payload logs
+- fix: require alleycat transport authentication
+- fix: backend survives quit race (stop awaits startPromise, startInternal checks disposed); deferred resume only completes after followUp delivery confirmed
+- fix: redact alleycat pairing tokens from logs
+- fix: vault autosave drops edits during in-flight save — track revision, only mark clean if no newer edits arrived, reschedule on concurrent edit
+- fix: deferred resume scheduling rolls back persisted state when daemon scheduling fails (split-brain prevention)
+- chore: disable apply patch by default
+- fix: workbench browser state writes serialized to prevent out-of-order completion restoring stale URLs
+- fix: automation schedule type switching — cron/at not mutually exclusive on update, causing save failures
+- fix: extension backend compilation race — deduplicate concurrent builds via inflight promise map
+- fix: coalesce alleycat service starts
+- fix: system-knowledge — restore missing event bus exports (emitKBEvent, onKBEvent); fix vault watcher wrong argument shape
+- fix: stream alleycat reasoning items
+- fix: system-runs backend — executeRunInput strips isError, subagent start failures reported as success; test mock leakage from clearAllMocks
+- fix: serialize alleycat json-rpc requests
+- fix: report alleycat sidecar connect failures
+- fix: pair anonymous alleycat tool events
+- fix: MCP OAuth CSRF state verification + deferred resume file lock to prevent concurrent write loss
+- fix: suppress interrupted alleycat turns per turn
+- fix: report alleycat fs failures
+- feat: add apply patch extension
+- refactor: consolidate local model runtimes
+- fix: abort alleycat command exec
+- refactor: clean up default tool surface
+- feat: support conditional extension tools
+- fix: compact suggested conversation pointers
+- fix: 3 desktop UI hardening fixes — animation timeout leak (NotificationToaster), dead CustomEvent dispatch (notificationStore), Escape listener thrash (ArtifactModal)
+- fix: 3 core hardening fixes — SAVEPOINT for nested transactions, checkpoint delete catches corrupt metadata, KB push failure non-fatal
+- fix: excalidraw module — cached rejections permanently killed feature; double-parse fallback could throw uncaught
+- fix: second wave — migrateLegacyNodes, waitForAuthCode, composerButtons, commands, ExtensionModalHost, image serialization, sanitizeCssColor dedup, alleycat bind, ACP timeout, probe auth path, createCheckpointCommit, profiles cleanup, docs version, cached env promise
+- fix: handle non-live cwd changes as unavailable
+- fix: constrain telemetry cache stat floats
+- fix: harden alleycat bridge lifecycle
+- fix: more hardening fixes — desktopEventSource, pendingConversationPrompt, selection, useExtensionStyles
+- fix: reliability and correctness bugs from hardening loop
+- fix: stream post-tool assistant text live
+- fix: reconcile alleycat tool turn replies
+- chore: make old local model extensions backend-only
+- fix: stream alleycat turn notifications before completion
+- fix: resolve llama binaries from unified extension
+- fix: include remote marker prefs in inspect worker
+- chore: log alleycat outgoing notifications
+- fix: keep kitty remote marker out of transcript
+- fix: avoid narrowed unsubscribe call in runTurn
+- feat: add atomic conversation turn runner
+- fix: render kitty remote marker as context
+- fix: wait for alleycat persisted turn response
+- fix: complete alleycat turn before rpc response
+- fix: fallback alleycat turn responses from transcript
+- fix: soften local model input borders
+- fix: subscribe after resuming alleycat turns
+- fix: repair local model search controls
+- fix: guard alleycat turn unsubscribe cleanup
+- fix: surface kitty remote turns in desktop
+- fix: resume alleycat threads before sending turns
+- feat: make GGUF downloads cancellable
+- fix: show local model download progress
+- fix: use tabs for local model sections
+- fix: download selected models directly
+- fix: prevent model search table clipping
+- fix: give model search room
+- fix: log all alleycat rpc traffic
+- feat: delete downloaded local models
+- fix: strip ansi escapes from alleycat logs
+- fix: soften local models inner borders
+- fix: tolerate missing alleycat transcript blocks
+- fix: simplify local models header actions
+- fix: flatten local models center panels
+- feat: split local models server and library
+- revert: keep alleycat thread list exhaustive
+- fix: simplify local model selection
+- fix: align local models workspace flow
+- fix: isolate dev daemon invocations
+- fix: order alleycat threads by shared workspace
+- fix: keep local models studio layout
+- fix: restyle local models like telemetry
+- fix: enable unified local models by default
+- fix: type gateway host api global assignment
+- fix: use initialized gateway host api
+- feat: add unified local models workspace
+- fix: force desktop conversations to sse transport
+- fix: read PA transcript blocks from session detail
+- fix: fail unsupported Kitty compatibility methods honestly
+- fix: return Codex-shaped model metadata for Kitty
+- fix: replace Alleycat compatibility stubs
+- fix: simplify local runtime page layout
+- fix: implement Kitty thread turn pagination
+- fix: bundle gateway backend route
+- fix: use glowing caffeinate icon
+- fix: align runtime pages with standard layout
+- fix: allow conversation capability without settings file
+- fix: resolve desktop server type errors
+- feat: add first-class llama.cpp runtime
+- refactor: route composer mutations through controller
+- fix: do not start thread when enabling goal mode
+- docs: clarify background completion wakeups
+- fix: block redundant run polling wakeups
+- fix: replace revise quick reply with do it
+- feat: redesign local runtime workspaces
+- refactor: centralize composer insertion control
+- docs: codify composer extension boundary
+- fix: require packaged extension bundles in releases
+- feat: complete shared conversation workspace state
+- fix: prefer unpacked packaged extensions
+- fix: avoid direct composer DOM value writes
+- feat: expose shared conversation workspace to kitty
+- fix: keep composer insertion callback fresh
+- feat: edit and rerun conversation prompts
+- feat: add caffeinate top bar extension
+
 ## 0.8.0-rc.17 — 2026-05-16
 
 - feat: expose shared conversation workspace with open/pinned/archived/active state to Kitty/Alleycat
