@@ -31,6 +31,7 @@ interface SessionMeta {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
+const DEFAULT_RELATED_CONVERSATION_POINTERS = 3;
 const MAX_RELATED_CONVERSATION_POINTERS = 5;
 const AUTO_POINTER_MIN_SCORE = 6;
 const AUTO_POINTER_RECENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
@@ -128,10 +129,10 @@ function normalizeSessionIds(value: unknown): string[] {
   return ids;
 }
 
-function normalizePointerLimit(value: number | undefined): number {
+function normalizePointerLimit(value: number | undefined, fallback = DEFAULT_RELATED_CONVERSATION_POINTERS): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
     ? Math.min(value, MAX_RELATED_CONVERSATION_POINTERS)
-    : MAX_RELATED_CONVERSATION_POINTERS;
+    : fallback;
 }
 
 function normalizeCacheText(value: string | undefined): string {
@@ -169,10 +170,20 @@ function includesAnyTerm(text: string, terms: string[]): string[] {
   return terms.filter((term) => normalized.includes(term));
 }
 
-function normalizePreview(value: string | undefined, maxLength = 220): string | undefined {
+function normalizePreview(value: string | undefined, maxLength = 160): string | undefined {
   const normalized = value?.replace(/\s+/g, ' ').trim();
   if (!normalized) return undefined;
   return normalized.length > maxLength ? `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…` : normalized;
+}
+
+function normalizeInlineText(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (!normalized) return 'Untitled conversation';
+  return normalized.length > maxLength ? `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…` : normalized;
+}
+
+function ensureTerminalPunctuation(value: string): string {
+  return /[.!?…]$/.test(value) ? value : `${value}.`;
 }
 
 function parsePointerTimestamp(value: string | undefined): number {
@@ -302,24 +313,18 @@ function pointerActivityMs(pointer: RelatedConversationPointer): number {
 }
 
 function formatPointerContext(pointers: RelatedConversationPointer[]): string {
-  const lines = [
-    'Potentially related previous conversations are available as pointers only.',
-    'Do not treat these pointer previews as factual source context. If details matter, call conversation_inspect before relying on them.',
-    'Use only conversations that help with the current prompt; ignore stale or weak matches.',
-  ];
-  pointers.forEach((pointer, index) => {
-    lines.push(
-      '',
-      `${index + 1}. ${pointer.title}`,
-      `   id: ${pointer.sessionId}`,
-      `   workspace: ${pointer.cwd}`,
-      `   created: ${pointer.timestamp}`,
-      ...(pointer.lastActivityAt ? [`   last activity: ${pointer.lastActivityAt}`] : []),
-      `   source: ${pointer.source}${pointer.weakMatch ? ' (weak match, manually selected)' : ''}`,
-      `   relevance: ${pointer.score} — ${pointer.reasons.join('; ')}`,
-      ...(pointer.preview ? [`   cached preview: ${pointer.preview}`] : []),
-    );
-  });
+  const lines = ['Potentially related prior conversations. Previews only; call conversation_inspect before relying on details.'];
+  for (const pointer of pointers) {
+    const title = normalizeInlineText(pointer.title, 80);
+    const details = [
+      pointer.weakMatch ? 'weak/manual match' : undefined,
+      pointer.preview ? normalizeInlineText(pointer.preview, 160) : undefined,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join('; ');
+    const detailText = details ? ` — ${ensureTerminalPunctuation(details)}` : '';
+    lines.push(`- ${title}${detailText} id: ${pointer.sessionId}`);
+  }
   return lines.join('\n');
 }
 
@@ -341,8 +346,11 @@ async function buildRelatedConversationPointers(input: {
     return { contextMessages: [], pointers: [], warnings: [] };
   }
 
-  const limit = normalizePointerLimit(input.limit);
   const selectedIds = normalizeSessionIds(input.selectedSessionIds).filter((sessionId) => sessionId !== input.currentConversationId);
+  const limit = normalizePointerLimit(
+    input.limit,
+    selectedIds.length > 0 ? MAX_RELATED_CONVERSATION_POINTERS : DEFAULT_RELATED_CONVERSATION_POINTERS,
+  );
   const promptTerms = tokenize(prompt);
   const nowMs = Number.isSafeInteger(input.nowMs) && input.nowMs !== undefined ? input.nowMs : Date.now();
   const warnings: string[] = [];

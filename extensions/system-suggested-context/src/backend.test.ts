@@ -101,4 +101,70 @@ describe('system-suggested-context backend', () => {
     expect(result.contextMessages).toHaveLength(1);
     expect(result.contextMessages[0]?.content.match(/id: conv-related/g)).toHaveLength(1);
   });
+
+  it('injects compact one-line pointer previews without ranking internals', async () => {
+    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.readSessionMeta.mockResolvedValue({
+      id: 'conv-manual',
+      title: 'Fix Stale Run Hourglass',
+      cwd: '/repo',
+      timestamp: '2026-05-01T00:00:00.000Z',
+      isRunning: false,
+      needsAttention: false,
+    });
+    mocks.readConversationSummary.mockResolvedValue({
+      displaySummary: 'Stale sidebar hourglass fixed by refreshing executions from run snapshots.',
+    });
+
+    const result = await providePromptContext(
+      {
+        prompt: 'hourglass state bug',
+        conversationId: 'conv-new-compact',
+        currentCwd: '/repo',
+        relatedConversationIds: ['conv-manual'],
+      },
+      {} as never,
+    );
+
+    expect(result.contextMessages).toHaveLength(1);
+    expect(result.contextMessages[0]?.content).toBe(
+      'Potentially related prior conversations. Previews only; call conversation_inspect before relying on details.\n' +
+        '- Fix Stale Run Hourglass — Stale sidebar hourglass fixed by refreshing executions from run snapshots. id: conv-manual',
+    );
+    expect(result.contextMessages[0]?.content).not.toContain('workspace:');
+    expect(result.contextMessages[0]?.content).not.toContain('created:');
+    expect(result.contextMessages[0]?.content).not.toContain('source:');
+    expect(result.contextMessages[0]?.content).not.toContain('relevance:');
+    expect(result.contextMessages[0]?.content).not.toContain('cached preview:');
+  });
+
+  it('caps automatic pointer injection to three conversations by default', async () => {
+    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.searchIndexedConversationDocuments.mockResolvedValue(
+      [1, 2, 3, 4].map((index) => ({
+        sessionId: `conv-auto-${index}`,
+        title: `Architecture Review ${index}`,
+        cwd: '/repo',
+        timestamp: '2026-05-01T00:00:00.000Z',
+        searchText: 'architecture review routing',
+      })),
+    );
+
+    await warmPointers(
+      { prompt: 'compact automatic architecture routing review', currentConversationId: 'conv-new-auto', currentCwd: '/repo' },
+      {
+        profile: 'compact-cap',
+      } as never,
+    );
+    const result = await providePromptContext(
+      { prompt: 'compact automatic architecture routing review', conversationId: 'conv-new-auto', currentCwd: '/repo' },
+      { profile: 'compact-cap' } as never,
+    );
+
+    const content = result.contextMessages[0]?.content ?? '';
+    expect(content.match(/^-/gm)).toHaveLength(3);
+    expect(content).toContain('id: conv-auto-1');
+    expect(content).toContain('id: conv-auto-3');
+    expect(content).not.toContain('id: conv-auto-4');
+  });
 });
