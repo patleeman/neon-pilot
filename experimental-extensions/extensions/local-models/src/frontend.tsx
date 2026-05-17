@@ -590,7 +590,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                     <div className="space-y-3">
                       <h3 className="font-semibold text-primary">Downloaded Models</h3>
-                      <div className="overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
+                      <div className="overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
                         <table className="w-full text-left text-sm">
                           <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                             <tr>
@@ -761,16 +761,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                   </div>
 
-                  <div className="mt-5 overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
-                    <table className="w-full text-left text-sm">
+                  <div className="mt-5 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
+                    <table className="w-full table-fixed text-left text-sm">
                       <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                         <tr>
-                          <th className="px-3 py-2 font-medium">Model</th>
-                          <th className="px-3 py-2 font-medium">Format</th>
-                          <th className="px-3 py-2 font-medium">Downloads</th>
-                          <th className="px-3 py-2 font-medium">Likes</th>
-                          <th className="px-3 py-2 font-medium">Updated</th>
-                          <th className="px-3 py-2 font-medium">Actions</th>
+                          <th className="w-[52%] px-3 py-2 font-medium">Model</th>
+                          <th className="w-24 px-3 py-2 font-medium">Format</th>
+                          <th className="w-28 px-3 py-2 font-medium">Downloads</th>
+                          <th className="hidden w-20 px-3 py-2 font-medium 2xl:table-cell">Likes</th>
+                          <th className="hidden w-28 px-3 py-2 font-medium 2xl:table-cell">Updated</th>
+                          <th className="w-36 px-3 py-2 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -795,8 +795,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                               </Pill>
                             </td>
                             <td className="px-3 py-3 text-secondary">{model.downloads.toLocaleString()}</td>
-                            <td className="px-3 py-3 text-secondary">{model.likes.toLocaleString()}</td>
-                            <td className="px-3 py-3 text-secondary">{formatDate(model.lastModified)}</td>
+                            <td className="hidden px-3 py-3 text-secondary 2xl:table-cell">{model.likes.toLocaleString()}</td>
+                            <td className="hidden px-3 py-3 text-secondary 2xl:table-cell">{formatDate(model.lastModified)}</td>
                             <td className="px-3 py-3">
                               <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
                                 <ToolbarButton onClick={() => void loadDetails(model.id)}>Details</ToolbarButton>
@@ -833,7 +833,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                     <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
                   </div>
-                  <div className="mt-4 overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                         <tr>
