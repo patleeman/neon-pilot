@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const PI_PACKAGE_NAMES = ['@earendil-works/pi-coding-agent', '@earendil-works/pi-ai'];
+const PI_PACKAGE_NAMES = ['@earendil-works/pi-coding-agent', '@earendil-works/pi-agent-core', '@earendil-works/pi-ai'];
 
 export function resolvePiDependencyRange(version) {
   if (typeof version !== 'string' || version.trim().length === 0) {
@@ -24,15 +24,17 @@ export function applyLatestPiVersion(rootPackage, latestVersion) {
     throw new Error('Root package.json is missing a dependencies object.');
   }
 
+  const nextRange = resolvePiDependencyRange(latestVersion);
+  const packageJson = structuredClone(rootPackage);
+  const changedPackages = [];
   for (const packageName of PI_PACKAGE_NAMES) {
-    if (typeof rootPackage.dependencies[packageName] !== 'string') {
-      throw new Error(`Root package.json is missing dependency ${packageName}.`);
+    if (typeof packageJson.dependencies?.[packageName] === 'string' && packageJson.dependencies[packageName] !== nextRange) {
+      packageJson.dependencies[packageName] = nextRange;
+      changedPackages.push(packageName);
     }
   }
 
-  const nextRange = resolvePiDependencyRange(latestVersion);
-  const changed = PI_PACKAGE_NAMES.some((packageName) => rootPackage.dependencies[packageName] !== nextRange);
-  if (!changed) {
+  if (changedPackages.length === 0) {
     return {
       changed: false,
       packageJson: rootPackage,
@@ -42,13 +44,7 @@ export function applyLatestPiVersion(rootPackage, latestVersion) {
 
   return {
     changed: true,
-    packageJson: {
-      ...rootPackage,
-      dependencies: {
-        ...rootPackage.dependencies,
-        ...Object.fromEntries(PI_PACKAGE_NAMES.map((packageName) => [packageName, nextRange])),
-      },
-    },
+    packageJson,
     nextRange,
   };
 }
@@ -92,6 +88,8 @@ function isDirectExecution() {
 if (isDirectExecution()) {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = resolve(scriptDir, '..');
-  const rootPackagePath = resolve(repoRoot, 'package.json');
-  updatePiVersionForRelease(rootPackagePath);
+  const packagePaths = [resolve(repoRoot, 'package.json'), resolve(repoRoot, 'packages', 'desktop', 'package.json')];
+  for (const packagePath of packagePaths) {
+    updatePiVersionForRelease(packagePath);
+  }
 }

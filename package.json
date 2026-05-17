@@ -82,8 +82,8 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.21.1",
-    "@earendil-works/pi-ai": "^0.74.0",
-    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-ai": "^0.75.0",
+    "@earendil-works/pi-coding-agent": "^0.75.0",
     "@excalidraw/excalidraw": "^0.18.1",
     "@pierre/trees": "^1.0.0-beta.3",
     "@sinclair/typebox": "^0.34.49",

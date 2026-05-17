@@ -21,8 +21,8 @@
     "clean": "rm -rf dist ui/dist server/dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@earendil-works/pi-agent-core": "^0.74.0",
-    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-agent-core": "^0.75.0",
+    "@earendil-works/pi-coding-agent": "^0.75.0",
     "@excalidraw/excalidraw": "0.18.1",
     "@personal-agent/core": "workspace:*",
     "@personal-agent/extensions": "workspace:*",

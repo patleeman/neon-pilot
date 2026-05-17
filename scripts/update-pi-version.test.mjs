@@ -8,6 +8,7 @@ describe('update-pi-version', () => {
       name: 'personal-agent',
       dependencies: {
         '@earendil-works/pi-ai': '^0.69.0',
+        '@earendil-works/pi-agent-core': '^0.69.0',
         '@earendil-works/pi-coding-agent': '^0.69.0',
         jsdom: '^24.0.0',
       },
@@ -18,6 +19,7 @@ describe('update-pi-version', () => {
     expect(result.changed).toBe(true);
     expect(result.nextRange).toBe('^0.70.0');
     expect(result.packageJson.dependencies['@earendil-works/pi-ai']).toBe('^0.70.0');
+    expect(result.packageJson.dependencies['@earendil-works/pi-agent-core']).toBe('^0.70.0');
     expect(result.packageJson.dependencies['@earendil-works/pi-coding-agent']).toBe('^0.70.0');
     expect(result.packageJson.dependencies.jsdom).toBe('^24.0.0');
   });
@@ -27,6 +29,7 @@ describe('update-pi-version', () => {
       name: 'personal-agent',
       dependencies: {
         '@earendil-works/pi-ai': '^0.70.0',
+        '@earendil-works/pi-agent-core': '^0.70.0',
         '@earendil-works/pi-coding-agent': '^0.70.0',
       },
     };
