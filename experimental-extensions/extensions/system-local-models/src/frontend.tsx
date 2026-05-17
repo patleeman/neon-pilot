@@ -384,12 +384,20 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const endpoint = activeRuntime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
   const detectedContext = activeRuntime === 'mlx' ? status?.mlx?.detectedContextLength : status?.gguf?.detectedContextLength;
   const recommendedContext = activeRuntime === 'mlx' ? status?.mlx?.recommendedContextSize : status?.gguf?.recommendedContextSize;
+  const contextSliderMax = Math.max(detectedContext || 0, 600000);
+  const contextSliderValue = Math.min(Math.max(Number(contextSize) || 0, 0), contextSliderMax);
   const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
   const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
   const ggufFiles = details?.files.filter((file) => file.name.toLowerCase().endsWith('.gguf')) ?? [];
 
   function markDirty(setter: (value: string) => void, value: string) {
     setter(value);
+    setDirty(true);
+  }
+
+  function setContextFromSlider(value: string) {
+    const rounded = Math.round((Number(value) || 0) / 1024) * 1024;
+    setContextSize(String(Math.min(Math.max(rounded, 0), contextSliderMax)));
     setDirty(true);
   }
 
@@ -830,10 +838,24 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <Field label="Context length">
                       <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
-                      <div className="mt-1 text-xs text-tertiary">
-                        {detectedContext
-                          ? `Detected max ${detectedContext.toLocaleString()}; recommended ${recommendedContext?.toLocaleString() ?? '—'}`
-                          : `Recommended ${recommendedContext?.toLocaleString() ?? '—'}`}
+                      <input
+                        type="range"
+                        min={0}
+                        max={contextSliderMax}
+                        step={1024}
+                        value={contextSliderValue}
+                        onChange={(event) => setContextFromSlider(event.target.value)}
+                        className="mt-2 w-full accent-accent"
+                        aria-label="Context length slider"
+                      />
+                      <div className="mt-1 flex items-center justify-between gap-3 text-xs text-tertiary">
+                        <span>0</span>
+                        <span>
+                          {detectedContext
+                            ? `Detected max ${detectedContext.toLocaleString()}; recommended ${recommendedContext?.toLocaleString() ?? '—'}`
+                            : `Recommended ${recommendedContext?.toLocaleString() ?? '—'}`}
+                        </span>
+                        <span>{contextSliderMax.toLocaleString()}</span>
                       </div>
                     </Field>
                     <Field label="GPU layers">
