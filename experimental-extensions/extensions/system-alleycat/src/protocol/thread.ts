@@ -219,6 +219,7 @@ function blocksToTurns(blocks: Record<string, unknown>[]): unknown[] {
 }
 
 async function readTurns(threadId: string, ctx: Parameters<MethodHandler>[1]): Promise<unknown[]> {
+  if (!ctx.conversations.getBlocks) return [];
   const payload = await ctx.conversations.getBlocks(threadId).catch(() => null);
   return blocksToTurns(readBlocksPayload(payload));
 }

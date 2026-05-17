@@ -85,6 +85,19 @@ describe('system-alleycat thread protocol', () => {
     expect(ctx.conversations.getBlocks).toHaveBeenCalledWith('thread-1');
   });
 
+  it('returns metadata even when transcript block capability is unavailable', async () => {
+    const ctx = makeContext({ getBlocks: undefined });
+    const result = (await thread.read(
+      { threadId: 'thread-1' },
+      ctx as never,
+      { initialized: true, subscribedThreads: new Set(), activeTurnThreads: new Set() },
+      vi.fn(),
+    )) as { thread: { turns: unknown[]; id: string } };
+
+    expect(result.thread.id).toBe('thread-1');
+    expect(result.thread.turns).toEqual([]);
+  });
+
   it('can skip thread/read turns when requested', async () => {
     const ctx = makeContext();
     const result = (await thread.read(
