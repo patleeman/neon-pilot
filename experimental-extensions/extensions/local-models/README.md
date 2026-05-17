@@ -25,6 +25,7 @@ Use this page to acquire and manage local models.
 - Inspect model details, README preview, and available files in the right detail rail.
 - Download MLX models through the MLX setup flow.
 - Download GGUF files by selecting a concrete `.gguf` file from model details.
+- Track GGUF download progress and cancel in-flight GGUF downloads from the status banner.
 - View downloaded models and send one to the Server page.
 
 The older `qwen-mlx` and `llama-cpp` pages are retained as implementation references but should not be primary navigation surfaces.

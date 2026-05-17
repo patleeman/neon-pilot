@@ -8,6 +8,21 @@ import { fileURLToPath } from 'node:url';
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
 type DownloadModelInput = { repo?: string; filename?: string };
+type DownloadJob = {
+  id: string;
+  repo: string;
+  filename: string;
+  destination: string;
+  partial: string;
+  downloadedBytes: number;
+  totalBytes: number | null;
+  status: 'running' | 'succeeded' | 'failed' | 'cancelled';
+  message: string;
+  error: string | null;
+  startedAt: number;
+  updatedAt: number;
+  abort: AbortController;
+};
 type RunPromptInput = { modelPath?: string; prompt?: string; contextSize?: number; gpuLayers?: number };
 type ServerInput = { modelPath?: string; contextSize?: number; gpuLayers?: number };
 type RevealInput = { modelPath?: string };
@@ -22,6 +37,7 @@ const SERVER_PID_KEY = 'process/serverPid';
 const MODEL_PATH_KEY = 'settings/modelPath';
 const MODEL_PORT = 8012;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
+const downloadJobs = new Map<string, DownloadJob>();
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -50,9 +66,9 @@ async function runProcess(
   }
 }
 
-function download(url: string, destination: string, redirects = 0): Promise<void> {
+function download(url: string, destination: string, job: DownloadJob, redirects = 0): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = get(url, (response) => {
+    const request = get(url, { signal: job.abort.signal }, (response) => {
       const statusCode = response.statusCode ?? 0;
       const location = response.headers.location;
 
@@ -62,7 +78,7 @@ function download(url: string, destination: string, redirects = 0): Promise<void
           reject(new Error('Too many redirects while downloading model.'));
           return;
         }
-        download(new URL(location, url).toString(), destination, redirects + 1).then(resolve, reject);
+        download(new URL(location, url).toString(), destination, job, redirects + 1).then(resolve, reject);
         return;
       }
 
@@ -72,7 +88,14 @@ function download(url: string, destination: string, redirects = 0): Promise<void
         return;
       }
 
+      const contentLength = Number(response.headers['content-length']);
+      if (Number.isFinite(contentLength) && contentLength > 0) job.totalBytes = contentLength;
       const file = createWriteStream(destination);
+      response.on('data', (chunk: Buffer) => {
+        job.downloadedBytes += chunk.length;
+        job.updatedAt = Date.now();
+        job.message = `Downloading ${job.filename}`;
+      });
       response.pipe(file);
       file.on('finish', () => file.close((error) => (error ? reject(error) : resolve())));
       file.on('error', reject);
@@ -112,6 +135,30 @@ function readLog() {
   return readFileSync(LOG_FILE, 'utf8').slice(-30000);
 }
 
+function serializeDownloadJob(job: DownloadJob) {
+  return {
+    id: job.id,
+    repo: job.repo,
+    filename: job.filename,
+    downloadedBytes: job.downloadedBytes,
+    totalBytes: job.totalBytes,
+    progress: job.totalBytes ? Math.min(99, Math.round((job.downloadedBytes / job.totalBytes) * 100)) : null,
+    status: job.status,
+    message: job.message,
+    error: job.error,
+    startedAt: job.startedAt,
+    updatedAt: job.updatedAt,
+  };
+}
+
+function currentDownloadJob() {
+  return (
+    [...downloadJobs.values()].find((job) => job.status === 'running') ??
+    [...downloadJobs.values()].sort((a, b) => b.updatedAt - a.updatedAt)[0] ??
+    null
+  );
+}
+
 function listGgufFiles(root: string): Array<{ path: string; name: string; bytes: number; updatedAt: number }> {
   if (!existsSync(root)) return [];
   const out: Array<{ path: string; name: string; bytes: number; updatedAt: number }> = [];
@@ -149,6 +196,8 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
   if (cliAvailable) await chmod(bundledCli, 0o755).catch(() => undefined);
   if (serverAvailable) await chmod(bundledServer, 0o755).catch(() => undefined);
 
+  const download = currentDownloadJob();
+
   return {
     available: runtimeAvailable,
     serverAvailable,
@@ -167,6 +216,7 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     server: health,
     process: { managedPid: pid, managedRunning: serverRunning },
     models: listGgufFiles(modelCacheRoot),
+    download: download ? serializeDownloadJob(download) : null,
     log: readLog(),
   };
 }
@@ -191,14 +241,66 @@ export async function downloadModel(input: DownloadModelInput, ctx: ExtensionBac
     return { modelPath: destination, bytes: current.size, cached: true, status: await runtimeStatus({}, ctx) };
   }
 
-  await unlink(partial).catch(() => undefined);
-  const url = `https://huggingface.co/${repo}/resolve/main/${encodeURIComponent(filename)}?download=true`;
-  await download(url, partial);
-  await rename(partial, destination);
-  const current = await stat(destination);
-  await setSelectedModelPath(ctx, destination);
+  const existing = currentDownloadJob();
+  if (existing?.status === 'running')
+    return { ok: true, started: false, job: serializeDownloadJob(existing), status: await runtimeStatus({}, ctx) };
 
-  return { modelPath: destination, bytes: current.size, cached: false, status: await runtimeStatus({}, ctx) };
+  await unlink(partial).catch(() => undefined);
+  const job: DownloadJob = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    repo,
+    filename,
+    destination,
+    partial,
+    downloadedBytes: 0,
+    totalBytes: null,
+    status: 'running',
+    message: `Downloading ${filename}`,
+    error: null,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    abort: new AbortController(),
+  };
+  downloadJobs.set(job.id, job);
+  const url = `https://huggingface.co/${repo}/resolve/main/${encodeURIComponent(filename)}?download=true`;
+  void download(url, partial, job)
+    .then(async () => {
+      if (job.status === 'cancelled') return;
+      await rename(partial, destination);
+      const current = await stat(destination);
+      job.downloadedBytes = current.size;
+      job.totalBytes = current.size;
+      job.status = 'succeeded';
+      job.message = `Downloaded ${filename}`;
+      job.updatedAt = Date.now();
+      await setSelectedModelPath(ctx, destination);
+    })
+    .catch(async (error) => {
+      if (job.abort.signal.aborted || job.status === 'cancelled') {
+        job.status = 'cancelled';
+        job.message = `Cancelled ${filename}`;
+        job.error = null;
+      } else {
+        job.status = 'failed';
+        job.message = `Failed ${filename}`;
+        job.error = error instanceof Error ? error.message : String(error);
+      }
+      job.updatedAt = Date.now();
+      await unlink(partial).catch(() => undefined);
+    });
+
+  return { ok: true, started: true, job: serializeDownloadJob(job), status: await runtimeStatus({}, ctx) };
+}
+
+export async function cancelDownload(_input: unknown, ctx: ExtensionBackendContext) {
+  const job = currentDownloadJob();
+  if (!job || job.status !== 'running') return { ok: true, cancelled: false, status: await runtimeStatus({}, ctx) };
+  job.status = 'cancelled';
+  job.message = `Cancelling ${job.filename}`;
+  job.updatedAt = Date.now();
+  job.abort.abort();
+  await unlink(job.partial).catch(() => undefined);
+  return { ok: true, cancelled: true, job: serializeDownloadJob(job), status: await runtimeStatus({}, ctx) };
 }
 
 export async function setModel(input: RevealInput, ctx: ExtensionBackendContext) {

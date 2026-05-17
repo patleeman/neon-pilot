@@ -126,6 +126,10 @@ export async function ggufDownload(input: unknown, ctx: ExtensionBackendContext)
   return gguf.downloadModel(input as never, ctx);
 }
 
+export async function ggufCancelDownload(input: unknown, ctx: ExtensionBackendContext) {
+  return gguf.cancelDownload(input, ctx);
+}
+
 export async function ggufSetModel(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.setModel(input as never, ctx);
 }

@@ -25,6 +25,17 @@ type GgufStatus = {
   server: { reachable: boolean; models: string[]; error?: string };
   process: { managedRunning: boolean; managedPid: number | null };
   models: GgufModel[];
+  download: {
+    id: string;
+    repo: string;
+    filename: string;
+    downloadedBytes: number;
+    totalBytes: number | null;
+    progress: number | null;
+    status: 'running' | 'succeeded' | 'failed' | 'cancelled';
+    message: string;
+    error: string | null;
+  } | null;
   log: string;
 };
 
@@ -280,14 +291,22 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const setupRunning = Boolean(status?.mlx?.setup);
   const runtimeStatus =
     busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
-  const setupProgress = status?.mlx?.setup?.progress ?? 0;
-  const downloadMessage = setupRunning
-    ? status?.mlx?.setup?.message || 'Downloading MLX model…'
-    : busy === 'Downloading…'
-      ? selectedFile
-        ? `Downloading ${selectedFile}…`
-        : 'Downloading model…'
-      : null;
+  const ggufDownload = status?.gguf?.download?.status === 'running' ? status.gguf.download : null;
+  const setupProgress = ggufDownload?.progress ?? status?.mlx?.setup?.progress ?? 0;
+  const downloadMessage = ggufDownload
+    ? ggufDownload.message
+    : setupRunning
+      ? status?.mlx?.setup?.message || 'Downloading MLX model…'
+      : busy === 'Downloading…'
+        ? selectedFile
+          ? `Starting ${selectedFile}…`
+          : 'Starting download…'
+        : null;
+  const downloadSubtext = ggufDownload
+    ? ggufDownload.totalBytes
+      ? `${formatBytes(ggufDownload.downloadedBytes)} of ${formatBytes(ggufDownload.totalBytes)}`
+      : `${formatBytes(ggufDownload.downloadedBytes)} downloaded`
+    : null;
   const endpoint = activeRuntime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
   const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
   const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
@@ -333,8 +352,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   async function cancelDownload() {
     await runAction('Cancelling…', async () => {
-      if (setupRunning) await pa.extension.invoke('localModelsMlxStop', {});
-      else throw new Error('GGUF downloads cannot be cancelled yet. They run as a single file transfer.');
+      if (ggufDownload) await pa.extension.invoke('localModelsGgufCancelDownload', {});
+      else if (setupRunning) await pa.extension.invoke('localModelsMlxStop', {});
     });
   }
 
@@ -587,15 +606,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             <div className="flex items-center justify-between gap-3 text-sm">
               <div className="min-w-0 text-secondary">
                 <span className="font-medium text-primary">{downloadMessage}</span>
-                {setupRunning ? <span className="ml-2 text-dim">{setupProgress}%</span> : null}
+                {setupProgress ? <span className="ml-2 text-dim">{setupProgress}%</span> : null}
+                {downloadSubtext ? <div className="mt-1 text-xs text-dim">{downloadSubtext}</div> : null}
               </div>
-              <ToolbarButton disabled={!setupRunning || Boolean(busy === 'Cancelling…')} onClick={() => void cancelDownload()}>
+              <ToolbarButton disabled={Boolean(busy === 'Cancelling…')} onClick={() => void cancelDownload()}>
                 Stop Download
               </ToolbarButton>
             </div>
-            {setupRunning ? (
+            {setupRunning || ggufDownload?.progress !== null ? (
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, setupProgress)}%` }} />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, setupProgress || 2)}%` }} />
               </div>
             ) : (
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
