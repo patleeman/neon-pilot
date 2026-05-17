@@ -82,9 +82,19 @@ function draftFromServer(server: McpServerConfig): ServerDraft {
   };
 }
 
-function configFromDraft(draft: ServerDraft): Record<string, unknown> {
+function configFromDraft(draft: ServerDraft, existing?: Record<string, unknown>): Record<string, unknown> {
+  // When editing an existing server, preserve fields the form doesn't
+  // expose (env, headers, oauth, etc.) so editing name/command doesn't
+  // silently drop advanced config.
+  const base = existing ? { ...existing } : {};
+  delete base.command;
+  delete base.args;
+  delete base.cwd;
+  delete base.type;
+  delete base.url;
+
   if (draft.transport === 'remote') {
-    return { type: 'remote', url: draft.url.trim() };
+    return { ...base, type: 'remote', url: draft.url.trim() };
   }
 
   const args = draft.args
@@ -92,6 +102,7 @@ function configFromDraft(draft: ServerDraft): Record<string, unknown> {
     .map((arg) => arg.trim())
     .filter(Boolean);
   return {
+    ...base,
     command: draft.command.trim(),
     ...(args.length > 0 ? { args } : {}),
     ...(draft.cwd.trim() ? { cwd: draft.cwd.trim() } : {}),
@@ -189,7 +200,8 @@ export function McpSettingsPanel() {
     const name = draft.name.trim();
     const nextServers = { ...explicitConfig.mcpServers };
     if (draft.originalName && draft.originalName !== name) delete nextServers[draft.originalName];
-    nextServers[name] = configFromDraft(draft);
+    const existingServer = draft.originalName ? explicitConfig.mcpServers[draft.originalName] : undefined;
+    nextServers[name] = configFromDraft(draft, existingServer?.raw as Record<string, unknown> | undefined);
     await persist({ mcpServers: nextServers }, `${name} saved.`);
   }
 
