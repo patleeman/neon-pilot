@@ -405,13 +405,6 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
   });
 
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-    const heartbeat = setInterval(() => {
-      if (ws.readyState === ws.OPEN) {
-        ws.ping();
-      }
-    }, 25_000);
-    heartbeat.unref?.();
-
     const conn: ConnectionState = {
       initialized: false,
       subscribedThreads: new Set(),
@@ -419,6 +412,8 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
       transportAuthenticated: false,
     };
 
+    // Validate auth before starting heartbeat so unauthorized connections
+    // don't leak timer intervals.
     const authHeader = req.headers['authorization'] ?? '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
     if (!token || !auth.validate(token)) {
@@ -426,6 +421,13 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
       return;
     }
     conn.transportAuthenticated = true;
+
+    const heartbeat = setInterval(() => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      }
+    }, 25_000);
+    heartbeat.unref?.();
 
     const sendJson = (data: unknown) => {
       if (ws.readyState === ws.OPEN) {

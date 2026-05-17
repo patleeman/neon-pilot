@@ -189,7 +189,9 @@ export const turn = {
 
     const turnId = uid('turn-');
     const turnState = { turnId, interrupted: false };
-    activeTurns.set(threadId, turnState);
+    // Key by turnId so interrupt can target the specific turn,
+    // not whichever turn was last started on this thread.
+    activeTurns.set(turnId, turnState);
 
     // Notify turn started
     notify('turn/started', {
@@ -351,7 +353,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'completed';
           conn.activeTurnThreads.delete(threadId);
-          if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
+          if (activeTurns.get(turnId) === turnState) activeTurns.delete(turnId);
           cleanupTurnSubscriptions(threadId);
           completeReasoningItem();
           if (agentItemId && !agentItemCompleted) {
@@ -371,7 +373,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'failed';
           conn.activeTurnThreads.delete(threadId);
-          if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
+          if (activeTurns.get(turnId) === turnState) activeTurns.delete(turnId);
           cleanupTurnSubscriptions(threadId);
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error') });
           break;
@@ -391,7 +393,7 @@ export const turn = {
         });
       } catch (error) {
         conn.activeTurnThreads.delete(threadId);
-        if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
+        if (activeTurns.get(turnId) === turnState) activeTurns.delete(turnId);
         if (!turnDone && !turnState.interrupted) {
           turnDone = true;
           finalStatus = 'failed';
@@ -438,15 +440,19 @@ export const turn = {
     const threadId = p?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
 
-    const turnState = activeTurns.get(threadId);
+    // Look up by turnId when provided so we interrupt the correct turn,
+    // not whichever turn was last started on this thread.
+    const requestedTurnId = p?.turnId as string | undefined;
+    const turnState = requestedTurnId ? activeTurns.get(requestedTurnId) : activeTurns.get(threadId);
     if (turnState) turnState.interrupted = true;
     conn.activeTurnThreads.delete(threadId);
 
     // Notify the client that the turn was interrupted, so it doesn't hang
     // waiting for turn/completed that will never arrive.
+    const interruptedTurnId = requestedTurnId ?? turnState?.turnId ?? `interrupted-${Date.now()}`;
     notify('turn/interrupted', {
       threadId,
-      turn: codexTurn((p?.turnId as string) ?? `interrupted-${Date.now()}`, 'failed', 'Turn interrupted by user'),
+      turn: codexTurn(interruptedTurnId, 'failed', 'Turn interrupted by user'),
     });
 
     // Send abort command before cleaning up subscriptions, so any turn_end
