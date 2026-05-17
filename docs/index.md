@@ -30,14 +30,15 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Activity tree](activity-tree.md) — shared model for conversations, runs, and future sidebar sub-items
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
-- [Extension authoring](extensions.md) — build native extensions with manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
+- [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Personal Agent to create, build, reload, validate, and test native extensions
+- [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [System extensions](../extensions) — feature-owned docs and implementation packages
 - [Experimental extensions](../experimental-extensions) — rough user extensions that are not bundled with the app
 
 ## Extension docs
 
-Personal Agent product features live in extensions. Agents should use this index as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
+Personal Agent product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this index as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
 System extensions are bundled under `extensions/system-*`. Experimental extensions are bundled under `experimental-extensions/extensions/*`, are loaded by the registry, and should set `defaultEnabled: false`. User extensions live under `<state-root>/extensions/{extension-id}` by default and follow the same package contract.
 

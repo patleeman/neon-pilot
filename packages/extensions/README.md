@@ -1,5 +1,7 @@
 # Personal Agent Extension SDK
 
+The normal way to create a Personal Agent extension is to ask your agent to build it for you. Start with [`docs/build-an-extension.md`](../../docs/build-an-extension.md) for the agent-first workflow and copy-paste prompt.
+
 This package is the public import surface for native Personal Agent extensions. Extension code should import from `@personal-agent/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
 
 This doc is written for agents building extensions. Read it before creating or editing an extension, then inspect the current schema/types and nearby system extensions for exact examples.
@@ -13,6 +15,8 @@ User-facing, domain-specific, and workflow-specific behavior belongs in extensio
 If the SDK lacks a host primitive needed by a first-party extension, add a reusable API to `@personal-agent/extensions` instead of importing app internals or hardcoding the feature in the app shell. Core should make features possible; extensions should be where features live.
 
 ## Agent workflow
+
+When a user asks how to create an extension, lead with: describe the feature you want and ask your agent to build it. Do not start by dumping manifest schema unless they ask for reference details.
 
 When asked to build or modify an extension:
 

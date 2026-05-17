@@ -1,10 +1,12 @@
-# Extension Authoring Guide
+# Extension Authoring Reference
 
-Extensions add capabilities to the Personal Agent desktop app. This guide
-covers how to create, structure, and publish extensions.
+The normal way to create a Personal Agent extension is to ask your agent to build it for you. Start with [Build an extension with your agent](build-an-extension.md) for the user-facing workflow and copy-paste prompt.
+
+This reference covers the extension package contract: manifests, frontend/backend entries, tools, skills, agent hooks, event bus, permissions, build behavior, and integration testing. Use it when implementing or debugging an extension, not as the first stop for a user who just wants a new feature.
 
 ## Contents
 
+- [Agent-first workflow](#agent-first-workflow)
 - [Core vs extensions](#core-vs-extensions)
 - [Extension Structure](#extension-structure)
 - [Manifest (`extension.json`)](#manifest-extensionjson)
@@ -19,6 +21,23 @@ covers how to create, structure, and publish extensions.
 - [Permissions](#permissions)
 - [Development Workflow](#development-workflow)
 - [Examples](#examples)
+
+## Agent-first workflow
+
+Users should usually describe the feature they want and let their agent create the extension:
+
+```text
+Build a Personal Agent extension that [does what].
+
+Use the extension manager/template if helpful. Pick the right surface:
+- main page for a full app/workflow
+- right rail for conversation-specific side panel
+- workbench detail for split-pane workflows
+
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
+```
+
+The agent should create editable `src/` files, declare contributions in `extension.json`, build, validate, reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
 
 ## Core vs extensions
 
@@ -42,7 +61,7 @@ my-extension/
 └── dist/               # Built output
 ```
 
-Create a new extension with:
+Create a new extension by asking your agent to build it. Under the hood, the agent can use Extension Manager or the API:
 
 ```bash
 POST /api/extensions

@@ -2,6 +2,8 @@
 
 This extension owns the UI and operations for discovering, creating, building, reloading, enabling, disabling, importing, exporting, and inspecting Personal Agent native extensions.
 
+The normal user-facing flow is agent-first: ask Personal Agent to build the extension, then let the agent use Extension Manager to create, build, validate, reload, and inspect it. The manual buttons and APIs exist so agents and advanced users have a reliable control surface.
+
 For the extension authoring contract, read [`packages/extensions/README.md`](../../packages/extensions/README.md) in a repo checkout, or use the packaged `local-extension-development` skill when operating from the built app. Those are the source of truth for agents building extensions: package layout, manifests, frontend/backend APIs, dependencies, skills, tools, storage, permissions, and the build loop. Do not duplicate that contract here.
 
 ## Product direction

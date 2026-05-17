@@ -14,6 +14,8 @@ Use this skill when an agent is asked to build, fix, or inspect a Personal Agent
 
 ## Fast rule
 
+When a user asks how to create an extension, lead with: describe the feature you want and ask your agent to build it. The point of extensions is that the agent can create, build, validate, reload, and test them for the user.
+
 Build native extensions: a folder with `extension.json`, optional `src/frontend.tsx`, optional `src/backend.ts`, and generated `dist/` bundles. The app loads manifest-declared `dist/*` entries. Do not create iframe/webview extensions.
 
 ## First moves
@@ -26,6 +28,19 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 6. Reload from Extension Manager or `POST /api/extensions/{id}/reload`.
 7. Open the declared route/surface and visually inspect UI changes.
 8. Check Extension Manager diagnostics before reporting done.
+
+Copy-paste user prompt:
+
+```text
+Build a Personal Agent extension that [does what].
+
+Use the extension manager/template if helpful. Pick the right surface:
+- main page for a full app/workflow
+- right rail for conversation-specific side panel
+- workbench detail for split-pane workflows
+
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
+```
 
 Starter create payload:
 
