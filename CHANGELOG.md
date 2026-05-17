@@ -1,5 +1,7 @@
 # Changelog
 
+- fix: isolate dev/test daemon invocations with per-launch namespaces and ephemeral ports
+
 ## 0.8.0-rc.17 — 2026-05-16
 
 - feat: expose shared conversation workspace with open/pinned/archived/active state to Kitty/Alleycat

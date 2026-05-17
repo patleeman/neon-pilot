@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
@@ -137,6 +138,14 @@ export function applyDesktopRuntimeEnvironmentOverrides(
     env.PERSONAL_AGENT_COMPANION_PORT = String(companionPort);
   }
   env.PERSONAL_AGENT_RUNTIME_CHANNEL = channelConfig.channel;
+
+  if (
+    (channelConfig.channel === 'dev' || channelConfig.channel === 'test') &&
+    !env.PERSONAL_AGENT_DAEMON_NAMESPACE?.trim() &&
+    !env.PERSONAL_AGENT_DAEMON_SOCKET_PATH?.trim()
+  ) {
+    env.PERSONAL_AGENT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID()}`;
+  }
 
   seedTestingRuntimeState(env, options);
 }

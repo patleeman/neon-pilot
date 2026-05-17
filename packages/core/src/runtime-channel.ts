@@ -11,7 +11,7 @@ export interface PersonalAgentRuntimeChannelConfig {
 const CHANNEL_CONFIGS: Record<PersonalAgentRuntimeChannel, PersonalAgentRuntimeChannelConfig> = {
   stable: { channel: 'stable', stateRootSuffix: '', companionPort: 3842, codexPort: 3846, updatesEnabled: true },
   rc: { channel: 'rc', stateRootSuffix: '-rc', companionPort: 3843, codexPort: 3847, updatesEnabled: true },
-  dev: { channel: 'dev', stateRootSuffix: '-dev', companionPort: 3844, codexPort: 3848, updatesEnabled: false },
+  dev: { channel: 'dev', stateRootSuffix: '-dev', companionPort: 0, codexPort: 0, updatesEnabled: false },
   test: { channel: 'test', stateRootSuffix: '-testing', companionPort: 0, codexPort: 0, updatesEnabled: false },
 };
 

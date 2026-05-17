@@ -23,9 +23,14 @@ describe('runtime channel resolution', () => {
     expect(resolvePersonalAgentRuntimeChannel({}, { version: '0.8.0-rc.12', packaged: false })).toBe('stable');
   });
 
-  it('normalizes explicit dev and test aliases', () => {
+  it('normalizes explicit dev and test aliases with ephemeral ports', () => {
     expect(resolvePersonalAgentRuntimeChannel({ PERSONAL_AGENT_RUNTIME_CHANNEL: 'development' })).toBe('dev');
     expect(resolvePersonalAgentRuntimeChannel({ PERSONAL_AGENT_DESKTOP_VARIANT: 'testing' })).toBe('test');
+    expect(resolvePersonalAgentRuntimeChannelConfig({ PERSONAL_AGENT_RUNTIME_CHANNEL: 'development' })).toMatchObject({
+      channel: 'dev',
+      companionPort: 0,
+      codexPort: 0,
+    });
   });
 
   it('validates optional port overrides', () => {

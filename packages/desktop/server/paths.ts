@@ -5,6 +5,23 @@ import { dirname, join, resolve } from 'path';
 
 import type { DaemonPaths } from './daemon/types.js';
 
+const DAEMON_SOCKET_FILE_NAME = 'personal-agentd.sock';
+const DAEMON_PID_FILE_NAME = 'personal-agentd.pid';
+
+function normalizeDaemonNamespace(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return (
+    normalized
+      .replace(/[^a-zA-Z0-9._-]+/gu, '-')
+      .replace(/^-+|-+$/gu, '')
+      .slice(0, 80) || undefined
+  );
+}
+
 function expandHome(path: string): string {
   if (path === '~') {
     return homedir();
@@ -17,16 +34,20 @@ function expandHome(path: string): string {
   return path;
 }
 
-export function resolveDaemonPaths(explicitSocketPath?: string): DaemonPaths {
+export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.PERSONAL_AGENT_DAEMON_NAMESPACE): DaemonPaths {
   const statePaths = resolveStatePaths();
-  const socketPath = explicitSocketPath ? resolve(expandHome(explicitSocketPath)) : join(statePaths.root, 'daemon', 'personal-agentd.sock');
-  const root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, 'daemon');
+  const normalizedNamespace = explicitSocketPath ? undefined : normalizeDaemonNamespace(namespace);
+  const daemonDirName = normalizedNamespace ? `daemon-${normalizedNamespace}` : 'daemon';
+  const socketPath = explicitSocketPath
+    ? resolve(expandHome(explicitSocketPath))
+    : join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
+  const root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, daemonDirName);
 
   return {
     stateRoot: statePaths.root,
     root,
     socketPath,
-    pidFile: join(root, 'personal-agentd.pid'),
+    pidFile: join(root, DAEMON_PID_FILE_NAME),
     logDir: join(root, 'logs'),
     logFile: join(root, 'logs', 'daemon.log'),
   };

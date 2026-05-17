@@ -59,7 +59,7 @@ When launching the test desktop app for QA, pass a non-interactive quit flag:
 pnpm run desktop:dev -- --remote-debugging-port=9222 --no-quit-confirmation
 ```
 
-Desktop runtime channels are intentionally isolated. Stable uses `personal-agent`; RC uses `personal-agent-rc`; dev uses `personal-agent-dev`; test launches use `personal-agent-testing` and random/unset ports. Override only for dev/test with `PERSONAL_AGENT_RUNTIME_CHANNEL`.
+Desktop runtime channels are intentionally isolated. Stable uses `personal-agent`; RC uses `personal-agent-rc`; dev uses `personal-agent-dev`; test launches use `personal-agent-testing`. Dev/test ports default to random/unset (`0`) and each dev/test app process gets a unique `PERSONAL_AGENT_DAEMON_NAMESPACE` unless one is explicitly provided, so multiple dev/test app invocations do not share daemon sockets, pid locks, runtime DBs, or companion ports. Override only for dev/test with `PERSONAL_AGENT_RUNTIME_CHANNEL`, `PERSONAL_AGENT_DAEMON_NAMESPACE`, or `PERSONAL_AGENT_DAEMON_SOCKET_PATH`.
 
 Before launching or closing `Personal Agent Testing.app`, check whether another instance already exists. Do not quit, kill, or recycle a process you did not start; connect to it when appropriate or use a separate debug port/session. After QA, close only the app process and browser session you started.
 

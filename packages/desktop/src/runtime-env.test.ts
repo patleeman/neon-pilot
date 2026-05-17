@@ -60,6 +60,7 @@ describe('desktop runtime environment overrides', () => {
     expect(env.CODEX_PORT).toBeUndefined();
     expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('0');
     expect(env.PERSONAL_AGENT_RUNTIME_CHANNEL).toBe('test');
+    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toMatch(/^test-[0-9a-f-]+$/u);
   });
 
   it('applies dev overrides directly onto the process environment', () => {
@@ -71,9 +72,22 @@ describe('desktop runtime environment overrides', () => {
     applyDesktopRuntimeEnvironmentOverrides(env);
 
     expect(env.PERSONAL_AGENT_STATE_ROOT).toBe('/state/personal-agent-dev');
-    expect(env.CODEX_PORT).toBe('3848');
-    expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('3844');
+    expect(env.CODEX_PORT).toBeUndefined();
+    expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('0');
     expect(env.PERSONAL_AGENT_RUNTIME_CHANNEL).toBe('dev');
+    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toMatch(/^dev-[0-9a-f-]+$/u);
+  });
+
+  it('respects explicit daemon namespace for dev launches', () => {
+    const env: NodeJS.ProcessEnv = {
+      PERSONAL_AGENT_RUNTIME_CHANNEL: 'dev',
+      PERSONAL_AGENT_DAEMON_NAMESPACE: 'pinned',
+      XDG_STATE_HOME: '/state',
+    };
+
+    applyDesktopRuntimeEnvironmentOverrides(env);
+
+    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toBe('pinned');
   });
 
   it('applies RC overrides directly onto the process environment', () => {

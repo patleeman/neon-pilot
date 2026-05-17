@@ -47,7 +47,7 @@ Subagents and scheduled agent tasks run through the daemon's internal background
 
 ## State Storage
 
-The daemon stores its state in `<state-root>/daemon/` by default. If `PERSONAL_AGENT_DAEMON_SOCKET_PATH` is set, daemon runtime files live beside that explicit socket path instead; this lets dev hosts isolate their runtime DB from the desktop app.
+The daemon stores its state in `<state-root>/daemon/` by default. If `PERSONAL_AGENT_DAEMON_NAMESPACE` is set, daemon runtime files live in `<state-root>/daemon-<namespace>/`; the namespace is sanitized for path safety. Dev/test desktop processes set a unique namespace per invocation unless one is explicitly provided, so multiple dev/test apps can run without sharing sockets, pid locks, runtime DBs, or logs. If `PERSONAL_AGENT_DAEMON_SOCKET_PATH` is set, daemon runtime files live beside that explicit socket path instead and the namespace is ignored; this lets dev hosts pin a specific isolated runtime DB.
 
 | Path         | Content                                         |
 | ------------ | ----------------------------------------------- |

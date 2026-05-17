@@ -1,6 +1,7 @@
 /* eslint-env node */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -55,6 +56,7 @@ function buildDesktopLaunchEnv(baseEnv = process.env) {
     ...baseEnv,
     PERSONAL_AGENT_DESKTOP_VARIANT: desktopVariant,
     PERSONAL_AGENT_RUNTIME_CHANNEL: 'test',
+    PERSONAL_AGENT_DAEMON_NAMESPACE: baseEnv.PERSONAL_AGENT_DAEMON_NAMESPACE || `dev-${randomUUID()}`,
     PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR: readElectronNativeModulesDir(),
     PERSONAL_AGENT_REPO_ROOT: repoRoot,
   };
