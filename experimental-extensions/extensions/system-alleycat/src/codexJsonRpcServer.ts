@@ -280,7 +280,7 @@ async function handleJsonRpcMessage(input: {
 
   const { method, id, params } = request;
   const requestStartedAt = Date.now();
-  logProtocol(`rpc request ${method} ${params ? JSON.stringify(params).slice(0, 800) : '{}'}`);
+  logProtocol(`rpc request ${method}`);
 
   if (id === undefined || id === null) return;
 
@@ -310,7 +310,7 @@ async function handleJsonRpcMessage(input: {
     const result = await handler(params, input.ctx, input.conn, input.notify);
     const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
     const countSuffix = count === null ? '' : ` count=${count}`;
-    logProtocol(`rpc response ${method}${countSuffix} ${Date.now() - requestStartedAt}ms ${JSON.stringify(result).slice(0, 1200)}`);
+    logProtocol(`rpc response ${method}${countSuffix} ${Date.now() - requestStartedAt}ms`);
     input.sendJson({ jsonrpc: '2.0', id, result } satisfies JsonRpcSuccess);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
