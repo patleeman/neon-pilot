@@ -1,4 +1,4 @@
-import { createWriteStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { access, chmod, mkdir, rename, stat, unlink } from 'node:fs/promises';
 import { get } from 'node:https';
 import { homedir } from 'node:os';
@@ -206,6 +206,29 @@ export async function setModel(input: RevealInput, ctx: ExtensionBackendContext)
   if (!modelPath) throw new Error('modelPath is required.');
   await setSelectedModelPath(ctx, modelPath);
   return { ok: true, status: await runtimeStatus({}, ctx) };
+}
+
+export async function deleteModel(input: RevealInput, ctx: ExtensionBackendContext) {
+  const modelPath = input.modelPath?.trim();
+  if (!modelPath) throw new Error('modelPath is required.');
+  const normalizedRoot = `${modelCacheRoot}/`;
+  if (!modelPath.startsWith(normalizedRoot)) throw new Error('Can only delete GGUF models from the local model cache.');
+  if (!(await exists(modelPath))) return { ok: true, deleted: false, status: await runtimeStatus({}, ctx) };
+  if ((await selectedModelPath(ctx)) === modelPath && (await readServerHealth()).reachable) {
+    throw new Error('Stop the current model before deleting it.');
+  }
+  rmSync(modelPath, { force: true });
+  let parent = dirname(modelPath);
+  while (parent.startsWith(normalizedRoot) && parent !== modelCacheRoot) {
+    try {
+      rmSync(parent, { recursive: false });
+      parent = dirname(parent);
+    } catch {
+      break;
+    }
+  }
+  if ((await selectedModelPath(ctx)) === modelPath) await ctx.storage.put(MODEL_PATH_KEY, '');
+  return { ok: true, deleted: true, status: await runtimeStatus({}, ctx) };
 }
 
 export async function revealModel(input: RevealInput, ctx: ExtensionBackendContext) {

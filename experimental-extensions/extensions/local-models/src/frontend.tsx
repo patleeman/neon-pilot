@@ -306,6 +306,20 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
+  async function deleteDownloadedModel(model: DownloadedModel) {
+    const confirmed = window.confirm(`Delete ${model.title} from local disk? This cannot be undone.`);
+    if (!confirmed) return;
+    await runAction('Deleting…', async () => {
+      if (model.loaded) {
+        if (model.runtime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
+        else await pa.extension.invoke('localModelsGgufStop', {});
+      }
+      if (model.runtime === 'mlx') await pa.extension.invoke('localModelsMlxDelete', { modelId: model.subtitle });
+      else await pa.extension.invoke('localModelsGgufDelete', { modelPath: model.path });
+      if (selectedModelId === model.id) setSelectedModelId('');
+    });
+  }
+
   async function runPrompt() {
     if (!selectedModel) return;
     await runAction('Running…', async () => {
@@ -584,6 +598,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                               <th className="px-3 py-2 font-medium">Format</th>
                               <th className="px-3 py-2 font-medium">Size</th>
                               <th className="px-3 py-2 font-medium">State</th>
+                              <th className="px-3 py-2 font-medium">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -616,11 +631,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                                     <Pill>Ready</Pill>
                                   )}
                                 </td>
+                                <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
+                                  <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
+                                    Delete
+                                  </ToolbarButton>
+                                </td>
                               </tr>
                             ))}
                             {!downloadedModels.length ? (
                               <tr>
-                                <td colSpan={4} className="px-3 py-10 text-center text-secondary">
+                                <td colSpan={5} className="px-3 py-10 text-center text-secondary">
                                   No downloaded models yet. Go to Library to download one.
                                 </td>
                               </tr>
@@ -856,6 +876,9 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                                     Reveal
                                   </ToolbarButton>
                                 ) : null}
+                                <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
+                                  Delete
+                                </ToolbarButton>
                               </div>
                             </td>
                           </tr>

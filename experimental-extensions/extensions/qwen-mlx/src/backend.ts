@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -203,6 +203,17 @@ export async function stop(_input: unknown, ctx: ExtensionBackendContext) {
   await ctx.shell.exec({ command: 'sh', args: ['-c', `kill ${serverPid} >/dev/null 2>&1 || true`] });
   await appendLog(ctx, `sent SIGTERM to pid=${String(serverPid)}\n`);
   return { ok: true, stopped: true, pid: serverPid, status: await status({}, ctx) };
+}
+
+export async function deleteModel(input: unknown, ctx: ExtensionBackendContext) {
+  const modelId = typeof input === 'object' && input && 'modelId' in input ? String((input as { modelId: unknown }).modelId).trim() : '';
+  if (!modelId) throw new Error('modelId is required.');
+  const selectedModelId = await getSelectedModelId(ctx);
+  const serverRunning = await isPidRunning(ctx, await readPid(ctx, SERVER_PID_KEY));
+  if (serverRunning && selectedModelId === modelId) throw new Error('Stop the current model before deleting it.');
+  rmSync(modelCacheDir(modelId), { recursive: true, force: true });
+  await appendLog(ctx, `deleted model ${modelId}\n`);
+  return { ok: true, status: await status({}, ctx) };
 }
 
 export async function searchModels(input: unknown, _ctx: ExtensionBackendContext) {

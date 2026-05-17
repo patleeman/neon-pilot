@@ -130,8 +130,16 @@ export async function ggufSetModel(input: unknown, ctx: ExtensionBackendContext)
   return gguf.setModel(input as never, ctx);
 }
 
+export async function mlxDelete(input: unknown, ctx: ExtensionBackendContext) {
+  return mlx.deleteModel(input, ctx);
+}
+
 export async function ggufReveal(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.revealModel(input as never, ctx);
+}
+
+export async function ggufDelete(input: unknown, ctx: ExtensionBackendContext) {
+  return gguf.deleteModel(input as never, ctx);
 }
 
 export async function ggufStart(input: unknown, ctx: ExtensionBackendContext) {
