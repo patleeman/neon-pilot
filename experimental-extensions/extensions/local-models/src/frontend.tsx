@@ -469,53 +469,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
-  const serverRail = (
-    <aside className="w-72 shrink-0 border-l border-border-subtle pl-4">
-      <div className="sticky top-4 space-y-5">
-        <section className="space-y-3">
-          <h3 className="font-semibold text-primary">Selected Model</h3>
-          {selectedModel ? (
-            <div className="space-y-3 text-sm text-secondary">
-              <div>
-                <div className="font-medium text-primary">{selectedModel.title}</div>
-                <div className="mt-1 break-all text-xs text-dim">{selectedModel.subtitle}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg bg-surface/50 p-2">
-                  <div className="text-dim">Format</div>
-                  <div className="mt-1 text-primary">{selectedModel.format}</div>
-                </div>
-                <div className="rounded-lg bg-surface/50 p-2">
-                  <div className="text-dim">Size</div>
-                  <div className="mt-1 text-primary">{selectedModel.size || '—'}</div>
-                </div>
-                <div className="rounded-lg bg-surface/50 p-2">
-                  <div className="text-dim">Server</div>
-                  <div className={cx('mt-1', running ? 'text-success' : 'text-warning')}>{running ? 'Running' : 'Stopped'}</div>
-                </div>
-                <div className="rounded-lg bg-surface/50 p-2">
-                  <div className="text-dim">Loaded</div>
-                  <div className="mt-1 text-primary">{selectedModel.loaded ? 'Yes' : 'No'}</div>
-                </div>
-              </div>
-              {selectedModel.path ? (
-                <ToolbarButton onClick={() => void pa.extension.invoke('localModelsGgufReveal', { modelPath: selectedModel.path })}>
-                  Reveal in Finder
-                </ToolbarButton>
-              ) : null}
-            </div>
-          ) : (
-            <div className="text-sm text-secondary">No downloaded model selected.</div>
-          )}
-        </section>
-        <section className="space-y-2 text-sm text-secondary">
-          <h3 className="font-semibold text-primary">Endpoint</h3>
-          <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
-        </section>
-      </div>
-    </aside>
-  );
-
   const libraryRail = (
     <aside className="w-80 shrink-0 border-l border-border-subtle pl-4">
       <div className="sticky top-4 space-y-4">
@@ -661,7 +614,30 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </ToolbarButton>
                   </div>
 
-                  <div className="mt-5 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
+                  {selectedModel ? (
+                    <div className="mt-5 grid gap-2 text-xs sm:grid-cols-4">
+                      <div className="rounded-lg bg-surface/50 p-2">
+                        <div className="text-dim">Selected</div>
+                        <div className="mt-1 truncate text-primary">{selectedModel.title}</div>
+                      </div>
+                      <div className="rounded-lg bg-surface/50 p-2">
+                        <div className="text-dim">Format</div>
+                        <div className="mt-1 text-primary">{selectedModel.format}</div>
+                      </div>
+                      <div className="rounded-lg bg-surface/50 p-2">
+                        <div className="text-dim">Size</div>
+                        <div className="mt-1 text-primary">{selectedModel.size || '—'}</div>
+                      </div>
+                      <div className="rounded-lg bg-surface/50 p-2">
+                        <div className="text-dim">Loaded</div>
+                        <div className="mt-1 text-primary">{selectedModel.loaded ? 'Yes' : 'No'}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-5 text-sm text-secondary">No downloaded model selected.</div>
+                  )}
+
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                         <tr>
@@ -694,18 +670,27 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                             </td>
                             <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
                             <td className="px-3 py-3">
-                              {model.loaded ? (
+                              {model.selected ? (
+                                <span className="inline-flex items-center gap-1 text-accent">✓ Selected</span>
+                              ) : model.loaded ? (
                                 <Pill tone="success">Loaded</Pill>
-                              ) : model.selected ? (
-                                <Pill tone="warning">Selected</Pill>
                               ) : (
                                 <Pill>Ready</Pill>
                               )}
                             </td>
                             <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
-                              <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
-                                Delete
-                              </ToolbarButton>
+                              <div className="flex gap-2">
+                                {model.path ? (
+                                  <ToolbarButton
+                                    onClick={() => void pa.extension.invoke('localModelsGgufReveal', { modelPath: model.path })}
+                                  >
+                                    Reveal in Finder
+                                  </ToolbarButton>
+                                ) : null}
+                                <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
+                                  Delete
+                                </ToolbarButton>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -756,6 +741,10 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <Field label="Max tokens">
                       <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
                     </Field>
+                    <div className="space-y-1 sm:col-span-2">
+                      <div className="text-sm text-secondary">Endpoint</div>
+                      <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
+                    </div>
                   </div>
                 </section>
 
@@ -812,7 +801,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   )}
                 </section>
               </main>
-              {serverRail}
             </>
           ) : (
             <>
