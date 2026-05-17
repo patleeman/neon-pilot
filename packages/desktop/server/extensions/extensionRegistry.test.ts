@@ -271,6 +271,7 @@ describe('extension registry', () => {
               description: 'Create an agent board task.',
               action: 'createTask',
               inputSchema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] },
+              when: { providers: ['openai'], models: ['gpt-5.2'] },
             },
           ],
         },
@@ -293,6 +294,7 @@ describe('extension registry', () => {
           id: 'create-task',
           name: 'extension_agent_board_create_task',
           action: 'createTask',
+          when: { providers: ['openai'], models: ['gpt-5.2'] },
         }),
       ]),
     );

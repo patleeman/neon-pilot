@@ -11,7 +11,7 @@ import { createManifestAgentExtensions } from '../extensions/extensionAgentExten
 import { isExtensionEnabled, listExtensionEntries, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
-import { readSavedModelPreferences } from '../models/modelPreferences.js';
+import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
@@ -198,6 +198,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       ...createManifestToolAgentExtensions({
         getCurrentProfile: getRuntimeScope,
         getPreferredVisionModel,
+        getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
         hasOpenAiImageProvider,
         repoRoot,
         profilesRoot: getProfilesRoot(),

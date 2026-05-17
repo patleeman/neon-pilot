@@ -154,6 +154,13 @@ export interface ExtensionSkillContribution {
   path: string;
 }
 
+export interface ExtensionToolCondition {
+  /** Provider ids that may use this tool, e.g. "openai" or "openai-codex". */
+  providers?: string[];
+  /** Model ids or provider/model refs that may use this tool. */
+  models?: string[];
+}
+
 export interface ExtensionToolContribution {
   id: string;
   title?: string;
@@ -165,6 +172,8 @@ export interface ExtensionToolContribution {
   promptSnippet?: string;
   promptGuidelines?: string[];
   name?: string;
+  /** Only register this tool when the active model/provider matches. */
+  when?: ExtensionToolCondition;
   /**
    * Name of a built-in tool to replace (e.g. "bash", "read", "write", "edit").
    * When set, this tool overrides the built-in tool of that name.

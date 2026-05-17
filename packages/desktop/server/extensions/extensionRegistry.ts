@@ -97,6 +97,10 @@ export interface ExtensionToolRegistration {
   inputSchema: Record<string, unknown>;
   promptSnippet?: string;
   promptGuidelines?: string[];
+  when?: {
+    providers?: string[];
+    models?: string[];
+  };
   /** Built-in tool name this tool overrides. */
   replaces?: string;
 }
@@ -657,6 +661,7 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
         inputSchema: tool.inputSchema ?? { type: 'object', properties: {}, additionalProperties: false },
         ...(tool.promptSnippet ? { promptSnippet: tool.promptSnippet } : {}),
         ...(tool.promptGuidelines ? { promptGuidelines: tool.promptGuidelines } : {}),
+        ...(tool.when ? { when: tool.when } : {}),
         ...(replaces ? { replaces } : {}),
       },
     ];
@@ -975,6 +980,11 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
       validateOptionalString(tool.action, `contributes.tools[${index}].action`);
       validateOptionalString(tool.handler, `contributes.tools[${index}].handler`);
       validateOptionalString(tool.name, `contributes.tools[${index}].name`);
+      if (tool.when !== undefined) {
+        if (!isRecord(tool.when)) throw new Error(`Extension manifest contributes.tools[${index}].when must be an object.`);
+        if (tool.when.providers !== undefined) requireStringArray(tool.when.providers, `contributes.tools[${index}].when.providers`);
+        if (tool.when.models !== undefined) requireStringArray(tool.when.models, `contributes.tools[${index}].when.models`);
+      }
       validateOptionalString(tool.replaces, `contributes.tools[${index}].replaces`);
       if (tool.promptGuidelines !== undefined) requireStringArray(tool.promptGuidelines, `contributes.tools[${index}].promptGuidelines`);
     }

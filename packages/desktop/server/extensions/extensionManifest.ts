@@ -492,6 +492,13 @@ export interface ExtensionTranscriptRendererContribution {
   component: string;
 }
 
+export interface ExtensionToolCondition {
+  /** Provider ids that may use this tool, e.g. "openai" or "openai-codex". */
+  providers?: string[];
+  /** Model ids or provider/model refs that may use this tool. */
+  models?: string[];
+}
+
 export interface ExtensionToolContribution {
   id: string;
   title?: string;
@@ -504,6 +511,12 @@ export interface ExtensionToolContribution {
   promptGuidelines?: string[];
   /** Explicit agent tool name. Defaults to extension_{extensionId}_{toolId}. */
   name?: string;
+  /**
+   * Only register this tool when the active model/provider matches.
+   * Useful for model-specific replacement tools where the replacement should
+   * be invisible for unsupported providers.
+   */
+  when?: ExtensionToolCondition;
   /**
    * Name of a built-in tool to replace (e.g. "bash", "read", "write", "edit").
    * When set, this tool overrides the built-in tool of that name.

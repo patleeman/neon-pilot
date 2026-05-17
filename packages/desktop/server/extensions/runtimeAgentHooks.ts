@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
 
-import { readSavedModelPreferences } from '../models/modelPreferences.js';
+import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
@@ -48,6 +48,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
     ...createManifestToolAgentExtensions({
       getCurrentProfile: () => process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
+      getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
         try {
           const auth = AuthStorage.create(`${agentDir}/auth.json`);

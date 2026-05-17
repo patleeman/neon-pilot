@@ -686,6 +686,21 @@ When set, the tool registers under the built-in tool's name, overriding it.
 
 Supported overridable tools: `bash`, `read`, `write`, `edit`, `grep`, `find`, `ls`, `notify`, `web_fetch`, `web_search`.
 
+Use `when` to only register a tool for specific providers or models. This is the right shape for model-specific tool replacements, because unsupported models never see the replacement tool.
+
+```json
+{
+  "id": "apply-patch-edit",
+  "description": "Patch-based edit implementation for OpenAI models",
+  "action": "applyPatchEdit",
+  "replaces": "edit",
+  "when": { "providers": ["openai", "openai-codex"], "models": ["gpt-5.2"] },
+  "inputSchema": { "type": "object", "properties": { "patch": { "type": "string" } }, "required": ["patch"] }
+}
+```
+
+`when.providers` matches provider/model refs such as `openai/gpt-5.2`; `when.models` matches either `gpt-5.2` or `openai/gpt-5.2`.
+
 The replacement tool must accept the same input schema as the original
 and return compatible output.
 
@@ -1306,13 +1321,13 @@ diagnostics are release blockers: the integration smoke suite fails when a syste
 extension has registry errors, diagnostics, stale `dist/` output, missing exports,
 forbidden imports, or backend import crashes. Extension builds write
 `dist/build-manifest.json` with output files, byte sizes, and remaining external
-imports. Extension Manager also exposes the `extension_manager` agent tool for
-local extension authoring: `list`, `create`, `snapshot`, `build`, `validate`, and
-`reload`. Run `validate` after each build to check manifest references, dist
-files, stale output, frontend/backend exports, tool schemas, skill files,
-forbidden process imports, non-portable bundled imports, and backend import
-crashes for one extension. The release publisher reruns the packaged-extension
-check against the built `.app` before notarization/upload.
+imports. Use Extension Manager UI actions or `/api/extensions` endpoints for local
+extension authoring: list, create, snapshot, build, validate, and reload. Run
+validate after each build to check manifest references, dist files, stale output,
+frontend/backend exports, tool schemas, skill files, forbidden process imports,
+non-portable bundled imports, and backend import crashes for one extension. The
+release publisher reruns the packaged-extension check against the built `.app`
+before notarization/upload.
 
 The integration suite covers 79 tests across 12 categories:
 

@@ -127,6 +127,13 @@ export function normalizeSavedModelPreferences(settingsFile: string, models: rea
   return readSavedModelPreferences(settingsFile, models);
 }
 
+export function readSavedModelRef(settingsFile: string, models: readonly ModelPreferenceOption[] = []): string {
+  const parsed = readSettingsObject(settingsFile);
+  const preferences = readSavedModelPreferences(settingsFile, models);
+  const provider = readNonEmptyString(parsed.defaultProvider);
+  return provider && preferences.currentModel ? `${provider}/${preferences.currentModel}` : preferences.currentModel;
+}
+
 export function readSavedModelPreferences(settingsFile: string, models: readonly ModelPreferenceOption[] = []): SavedModelPreferences {
   const parsed = readSettingsObject(settingsFile);
   const defaultModel = readNonEmptyString(parsed.defaultModel);

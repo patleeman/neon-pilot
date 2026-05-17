@@ -10,7 +10,7 @@ import { createPreparedLiveAgentSession } from '../conversations/liveSessionFact
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';
-import { readSavedModelPreferences } from '../models/modelPreferences.js';
+import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
 interface RunnerArgs {
@@ -152,6 +152,7 @@ export async function main(): Promise<void> {
     ...createManifestToolAgentExtensions({
       getCurrentProfile: () => process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
+      getCurrentModelRef: () => args.model ?? readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
         try {
           const auth = AuthStorage.create(`${agentDir}/auth.json`);
