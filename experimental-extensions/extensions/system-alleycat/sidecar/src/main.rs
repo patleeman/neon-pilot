@@ -210,7 +210,10 @@ async fn handle_stream(
     config: Config,
 ) -> anyhow::Result<()> {
     let request: Request = read_json_frame(&mut recv).await?;
-    validate_request(&request, &config.token)?;
+    if let Err(error) = validate_request(&request, &config.token) {
+        write_json_frame(&mut send, &Response::error(error.to_string())).await?;
+        return Err(error);
+    }
 
     match request {
         Request::ListAgents { .. } => {
@@ -238,15 +241,19 @@ async fn handle_stream(
                 .await?;
                 return Err(anyhow!("unknown agent: {agent}"));
             }
+            let tcp =
+                match TcpStream::connect((config.jsonl_host.as_str(), config.jsonl_port)).await {
+                    Ok(tcp) => tcp,
+                    Err(error) => {
+                        let message = format!(
+                            "connecting to PA JSONL bridge on {}:{}: {error}",
+                            config.jsonl_host, config.jsonl_port
+                        );
+                        write_json_frame(&mut send, &Response::error(message.clone())).await?;
+                        return Err(anyhow!(message));
+                    }
+                };
             write_json_frame(&mut send, &Response::ok_with_session(resume)).await?;
-            let tcp = TcpStream::connect((config.jsonl_host.as_str(), config.jsonl_port))
-                .await
-                .with_context(|| {
-                    format!(
-                        "connecting to PA JSONL bridge on {}:{}",
-                        config.jsonl_host, config.jsonl_port
-                    )
-                })?;
             let iroh_stream = IrohBiStream { recv, send };
             bridge_jsonl(tcp, iroh_stream).await
         }
