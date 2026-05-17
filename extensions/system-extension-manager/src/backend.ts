@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 import {
   buildRuntimeExtension,
@@ -90,7 +89,7 @@ export async function updateSearchPaths(input: unknown, ctx: ExtensionBackendCon
   // Also write to the canonical state-root settings file that the extension
   // loader reads from (readConfiguredExtensionPaths). Without this, saved
   // search paths appear to be persisted but have no effect.
-  writeSettingsValue(join(getStateRoot(), 'settings.json'), pathsJoined);
+  writeSettingsValue(join(resolve(ctx.runtimeDir, '..'), 'settings.json'), pathsJoined);
   return readSearchPaths(input, ctx);
 }
 
