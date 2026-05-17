@@ -554,7 +554,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           {page === 'server' ? (
             <>
               <main className="min-w-0 flex-1 space-y-5">
-                <section className="space-y-5 border-b border-border-subtle pb-7">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <h2 className="text-xl font-semibold text-primary">Server</h2>
@@ -576,7 +576,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                     <div className="space-y-3">
                       <h3 className="font-semibold text-primary">Downloaded Models</h3>
-                      <div className="overflow-hidden border border-border-subtle">
+                      <div className="overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
                         <table className="w-full text-left text-sm">
                           <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                             <tr>
@@ -653,13 +653,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </section>
 
-                <section className="space-y-5 pt-1">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-xl font-semibold text-primary">Testing & Logs</h2>
                       <p className="mt-1 text-sm text-secondary">Smoke-test the server with a chat prompt, or inspect runtime logs.</p>
                     </div>
-                    <div className="grid grid-cols-2 overflow-hidden border border-border-subtle text-sm">
+                    <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border-subtle/50 text-sm">
                       <button
                         type="button"
                         className={cx('px-3 py-2', logTab === 'chat' ? 'bg-accent/15 text-primary' : 'text-secondary')}
@@ -679,7 +679,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
                   {logTab === 'chat' ? (
                     <div className="mt-5 space-y-3">
-                      <div className="min-h-52 bg-background/25 p-4">
+                      <div className="min-h-52 rounded-lg bg-background/20 p-4">
                         {output ? (
                           <pre className="whitespace-pre-wrap text-sm leading-6 text-primary">{output}</pre>
                         ) : (
@@ -698,7 +698,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       </div>
                     </div>
                   ) : (
-                    <pre className="mt-5 max-h-96 overflow-auto bg-background/35 p-4 text-xs leading-5 text-secondary">
+                    <pre className="mt-5 max-h-96 overflow-auto rounded-lg bg-background/25 p-4 text-xs leading-5 text-secondary">
                       {activeRuntime === 'mlx'
                         ? status?.mlx?.log || 'No logs yet.'
                         : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
@@ -711,7 +711,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           ) : (
             <>
               <main className="min-w-0 flex-1 space-y-5">
-                <section className="space-y-5 border-b border-border-subtle pb-7">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                       <h2 className="text-xl font-semibold text-primary">Model Library</h2>
@@ -743,7 +743,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                   </div>
 
-                  <div className="mt-5 overflow-hidden border border-border-subtle">
+                  <div className="mt-5 overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                         <tr>
@@ -807,7 +807,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </section>
 
-                <section className="space-y-5 pt-1">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-xl font-semibold text-primary">Downloaded Models</h2>
@@ -815,7 +815,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                     <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
                   </div>
-                  <div className="mt-4 overflow-hidden border border-border-subtle">
+                  <div className="mt-4 overflow-hidden rounded-lg border border-border-subtle/50 bg-background/15">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
                         <tr>
