@@ -177,8 +177,8 @@ function sidecarBinaryPath(): { binary: string | null; searched: string[] } {
     // Dev backend builds may run from a cache directory, so import.meta.url is
     // not always under the extension package. Search the repo checkout too.
     ...roots.flatMap((root) => [
-      join(root, 'experimental-extensions', 'extensions', 'system-alleycat', 'dist', 'bin', binaryName),
-      join(root, 'experimental-extensions', 'extensions', 'system-alleycat', 'bin', binaryName),
+      join(root, 'extensions', 'system-alleycat', 'dist', 'bin', binaryName),
+      join(root, 'extensions', 'system-alleycat', 'bin', binaryName),
     ]),
   ];
   return { binary: candidates.find((candidate) => existsSync(candidate)) ?? null, searched: [...new Set(candidates)] };

@@ -19,7 +19,7 @@ Do **not** install or run `npx kittylitter` for Personal Agent pairing. That sta
 
 Use the PA extension instead:
 
-1. Build/reload the experimental `system-alleycat` extension.
+1. Build/reload the default-disabled `system-alleycat` system extension.
 2. Enable it in Personal Agent; the companion host starts automatically while the extension is enabled.
 3. Open Personal Agent Settings → **Kitty Litter Mobile Pairing**, or the Kitty Litter page.
 4. In Kitty Litter, scan the QR code shown by Personal Agent.

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "system-caffeinate",
   "name": "Caffeinate",
-  "packageType": "user",
+  "packageType": "system",
   "defaultEnabled": false,
   "description": "Toggle macOS caffeinate from the top bar to keep the computer awake.",
   "version": "0.1.0",

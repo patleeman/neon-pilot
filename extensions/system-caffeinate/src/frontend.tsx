@@ -33,12 +33,15 @@ function CoffeeCupIcon({ active }: { active: boolean }) {
 }
 
 export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
-  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState<CaffeinateStatus>({ running: false, pid: null });
   const [busy, setBusy] = useState(false);
+
+  const running = status.running;
+  const statusLabel = running ? `Caffeinate is on${status.pid ? ` — pid ${status.pid}` : ''}` : 'Caffeinate is off';
 
   const refresh = useCallback(async () => {
     const next = (await pa.extension.invoke('status', {})) as CaffeinateStatus;
-    setRunning(next.running);
+    setStatus(next);
   }, [pa]);
 
   useEffect(() => {
@@ -52,7 +55,7 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
     setBusy(true);
     try {
       const next = (await pa.extension.invoke('toggle', {})) as CaffeinateStatus;
-      setRunning(next.running);
+      setStatus(next);
     } catch (error) {
       pa.ui.notify({
         type: 'error',
@@ -69,14 +72,17 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   return (
     <button
       type="button"
-      className={`ui-toolbar-button ui-desktop-top-bar__icon-button relative transition-colors ${running ? 'text-warning' : 'text-secondary'}`}
+      className={`ui-toolbar-button ui-desktop-top-bar__icon-button group relative transition-colors ${running ? 'text-warning' : 'text-secondary'}`}
       aria-label={running ? 'Stop caffeinate' : 'Start caffeinate'}
       aria-pressed={running}
-      title={running ? 'Caffeinate is on — click to stop' : 'Caffeinate is off — click to start'}
+      title={`${statusLabel} — click to ${running ? 'stop' : 'start'}`}
       disabled={busy}
       onClick={() => void toggle()}
     >
       <CoffeeCupIcon active={running} />
+      <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden whitespace-nowrap rounded-md bg-elevated px-2 py-1 text-xs font-medium text-primary shadow-lg ring-1 ring-border group-hover:block group-focus-visible:block">
+        {statusLabel}
+      </span>
     </button>
   );
 }
