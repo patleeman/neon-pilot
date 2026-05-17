@@ -89,7 +89,6 @@ type ModelDetails = {
 };
 
 type PageId = 'server' | 'library';
-type LogTab = 'chat' | 'logs';
 
 const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
 const LOCAL_PROVIDER_ID = 'local';
@@ -240,9 +239,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [mtpEnabled, setMtpEnabled] = useState(false);
   const [mtpDraftTokens, setMtpDraftTokens] = useState('6');
   const [dirty, setDirty] = useState(false);
-  const [logTab, setLogTab] = useState<LogTab>('chat');
-  const [prompt, setPrompt] = useState('Write a tiny TypeScript function that reverses a string.');
-  const [output, setOutput] = useState('');
   const [searchQuery, setSearchQuery] = useState('qwen mlx');
   const [searchFormat, setSearchFormat] = useState<'all' | 'mlx' | 'gguf'>('all');
   const [searchResults, setSearchResults] = useState<SearchModel[]>([]);
@@ -273,7 +269,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      if (label === 'Running…') setOutput(message);
     } finally {
       setBusy(null);
     }
@@ -281,6 +276,10 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   useEffect(() => {
     void refresh();
+    const interval = window.setInterval(() => {
+      void refresh();
+    }, 5000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -486,39 +485,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
       if (model.runtime === 'mlx') await pa.extension.invoke('localModelsMlxDelete', { modelId: model.subtitle });
       else await pa.extension.invoke('localModelsGgufDelete', { modelPath: model.path });
       if (selectedModelId === model.id) setSelectedModelId('');
-    });
-  }
-
-  async function runPrompt() {
-    if (!selectedModel) return;
-    await runAction('Running…', async () => {
-      setOutput('');
-      if (selectedModel.runtime === 'gguf') {
-        const result = await pa.extension.invoke<{ output: string }>('localModelsGgufRunPrompt', {
-          modelPath: selectedModel.path,
-          prompt,
-          contextSize: Number(contextSize),
-          gpuLayers: Number(gpuLayers),
-          ...ggufSpeculativeSettings(),
-        });
-        setOutput(result.output);
-        return;
-      }
-      const response = await fetch(`${MLX_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local' },
-        body: JSON.stringify({
-          model: status?.mlx?.loadedModelId || selectedModel.subtitle,
-          messages: [{ role: 'user', content: prompt }],
-          stream: false,
-          temperature: Number(temperature),
-          top_p: Number(topP),
-          max_tokens: Number(maxTokens),
-        }),
-      });
-      if (!response.ok) throw new Error(await response.text());
-      const body = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      setOutput(body.choices?.[0]?.message?.content || JSON.stringify(body, null, 2));
     });
   }
 
@@ -960,56 +926,15 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 </section>
 
                 <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h2 className="text-xl font-semibold text-primary">Testing & Logs</h2>
-                      <p className="mt-1 text-sm text-secondary">Smoke-test the server with a chat prompt, or inspect runtime logs.</p>
-                    </div>
-                    <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border-subtle/50 text-sm">
-                      <button
-                        type="button"
-                        className={cx('px-3 py-2', logTab === 'chat' ? 'bg-accent/15 text-primary' : 'text-secondary')}
-                        onClick={() => setLogTab('chat')}
-                      >
-                        Chat
-                      </button>
-                      <button
-                        type="button"
-                        className={cx('px-3 py-2', logTab === 'logs' ? 'bg-accent/15 text-primary' : 'text-secondary')}
-                        onClick={() => setLogTab('logs')}
-                      >
-                        Logs
-                      </button>
-                    </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-primary">Runtime Logs</h2>
+                    <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically. Tiny mercy, no button mashing.</p>
                   </div>
-
-                  {logTab === 'chat' ? (
-                    <div className="mt-5 space-y-3">
-                      <div className="min-h-52 rounded-lg bg-background/20 p-4">
-                        {output ? (
-                          <pre className="whitespace-pre-wrap text-sm leading-6 text-primary">{output}</pre>
-                        ) : (
-                          <div className="text-sm text-secondary">Start or reload the server, then send a prompt.</div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <textarea
-                          value={prompt}
-                          onChange={(event) => setPrompt(event.target.value)}
-                          className="min-h-20 flex-1 resize-y rounded-xl border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80"
-                        />
-                        <ToolbarButton disabled={Boolean(busy || !prompt.trim() || !selectedModel)} onClick={() => void runPrompt()}>
-                          Send
-                        </ToolbarButton>
-                      </div>
-                    </div>
-                  ) : (
-                    <pre className="mt-5 max-h-96 overflow-auto rounded-lg bg-background/25 p-4 text-xs leading-5 text-secondary">
-                      {activeRuntime === 'mlx'
-                        ? status?.mlx?.log || 'No logs yet.'
-                        : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
-                    </pre>
-                  )}
+                  <pre className="mt-5 max-h-96 overflow-auto rounded-lg bg-background/25 p-4 text-xs leading-5 text-secondary">
+                    {activeRuntime === 'mlx'
+                      ? status?.mlx?.log || 'No logs yet.'
+                      : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
+                  </pre>
                 </section>
               </main>
             </>
