@@ -9,13 +9,13 @@ The UI intentionally separates two workflows:
 Use this page to run a model that already exists locally.
 
 - Select one downloaded model.
-- Configure serving settings such as context length, GPU layers, temperature, top-p, and max tokens. Context length is auto-detected from GGUF metadata or MLX `config.json` and defaults to the detected value capped at 131,072 tokens.
+- Configure serving settings such as context length, GPU layers, temperature, top-p, max tokens, and GGUF speculative decoding. Context length is auto-detected from GGUF metadata or MLX `config.json` and defaults to the detected value capped at 131,072 tokens.
 - Save or reload the server after changing model/settings.
 - Inspect the active endpoint and selected model metadata in the right detail rail.
 - Smoke-test the runtime with a simple chat prompt or inspect logs.
 
 MLX models are served through `mlx_lm.server` on `http://127.0.0.1:8011/v1`.
-GGUF models are served through bundled `llama.cpp` on `http://127.0.0.1:8012/v1`. The server starts with `--parallel 1` so long-context local serving does not accidentally multiply KV-cache memory by the default parallel slot count.
+GGUF models are served through bundled `llama.cpp` on `http://127.0.0.1:8012/v1`. The server starts with `--parallel 1` so long-context local serving does not accidentally multiply KV-cache memory by the default parallel slot count. Qwen MTP GGUFs can enable llama.cpp speculative decoding with `--spec-type draft-mtp --spec-draft-n-max <n>` from the Server settings.
 
 ## Library
 

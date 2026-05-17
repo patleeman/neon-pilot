@@ -23,8 +23,22 @@ type DownloadJob = {
   updatedAt: number;
   abort: AbortController;
 };
-type RunPromptInput = { modelPath?: string; prompt?: string; contextSize?: number; gpuLayers?: number; maxTokens?: number };
-type ServerInput = { modelPath?: string; contextSize?: number; gpuLayers?: number };
+type RunPromptInput = {
+  modelPath?: string;
+  prompt?: string;
+  contextSize?: number;
+  gpuLayers?: number;
+  maxTokens?: number;
+  specType?: 'none' | 'draft-mtp';
+  specDraftNMax?: number;
+};
+type ServerInput = {
+  modelPath?: string;
+  contextSize?: number;
+  gpuLayers?: number;
+  specType?: 'none' | 'draft-mtp';
+  specDraftNMax?: number;
+};
 type RevealInput = { modelPath?: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -165,6 +179,15 @@ function serializeDownloadJob(job: DownloadJob) {
 function recommendedContextSize(detected: number | null) {
   if (!detected || detected <= 0) return FALLBACK_CONTEXT;
   return Math.min(detected, MAX_RECOMMENDED_CONTEXT);
+}
+
+function appendSpeculativeDecodingArgs(args: string[], input: Pick<ServerInput, 'specType' | 'specDraftNMax'>) {
+  if (input.specType !== 'draft-mtp') return;
+  const draftTokens =
+    Number.isFinite(input.specDraftNMax) && input.specDraftNMax && input.specDraftNMax > 0
+      ? Math.min(16, Math.floor(input.specDraftNMax))
+      : 6;
+  args.push('--spec-type', 'draft-mtp', '--spec-draft-n-max', String(draftTokens));
 }
 
 async function readModelMetadata(ctx: ExtensionBackendContext, modelPath: string) {
@@ -461,6 +484,7 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
     '-c',
     String(contextSize),
   ];
+  appendSpeculativeDecodingArgs(args, input);
   const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
   await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
@@ -508,6 +532,7 @@ export async function runPrompt(input: RunPromptInput, ctx: ExtensionBackendCont
   }));
   const contextSize = input.contextSize && input.contextSize > 0 ? input.contextSize : metadata.recommendedContextSize;
   const args = ['-m', modelPath, '-p', prompt, '-ngl', String(input.gpuLayers ?? 999), '-c', String(contextSize)];
+  appendSpeculativeDecodingArgs(args, input);
   const result = await runProcess(ctx, bundledCli, args, { timeoutMs: 120_000, maxBuffer: 8 * 1024 * 1024 });
   if (result.exitCode !== 0) throw new Error(result.stderr || `llama-cli exited with code ${result.exitCode}`);
   return { output: result.stdout, stderr: result.stderr, source: 'cli' };

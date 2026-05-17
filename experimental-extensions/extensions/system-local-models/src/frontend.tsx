@@ -249,6 +249,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [maxTokens, setMaxTokens] = useState('1024');
   const [contextSize, setContextSize] = useState('131072');
   const [gpuLayers, setGpuLayers] = useState('999');
+  const [mtpEnabled, setMtpEnabled] = useState(false);
+  const [mtpDraftTokens, setMtpDraftTokens] = useState('6');
   const [dirty, setDirty] = useState(false);
   const [logTab, setLogTab] = useState<LogTab>('chat');
   const [prompt, setPrompt] = useState('Write a tiny TypeScript function that reverses a string.');
@@ -395,6 +397,15 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     setDirty(true);
   }
 
+  function markBooleanDirty(setter: (value: boolean) => void, value: boolean) {
+    setter(value);
+    setDirty(true);
+  }
+
+  function ggufSpeculativeSettings() {
+    return mtpEnabled ? { specType: 'draft-mtp' as const, specDraftNMax: Number(mtpDraftTokens) || 6 } : { specType: 'none' as const };
+  }
+
   function setContextFromSlider(value: string) {
     const rounded = Math.round((Number(value) || 0) / 1024) * 1024;
     setContextSize(String(Math.min(Math.max(rounded, 0), contextSliderMax)));
@@ -424,6 +435,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             modelPath: selectedModel.path,
             contextSize: Number(contextSize),
             gpuLayers: Number(gpuLayers),
+            ...ggufSpeculativeSettings(),
           });
           await trySyncLocalProviderModel({
             runtime: 'gguf',
@@ -486,6 +498,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           prompt,
           contextSize: Number(contextSize),
           gpuLayers: Number(gpuLayers),
+          ...ggufSpeculativeSettings(),
         });
         setOutput(result.output);
         return;
@@ -870,6 +883,33 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <Field label="Max tokens">
                       <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
                     </Field>
+                    <div className="space-y-2 sm:col-span-2">
+                      <div className="flex flex-col gap-3 rounded-lg bg-surface/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <label className="flex items-start gap-3 text-sm text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={mtpEnabled}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markBooleanDirty(setMtpEnabled, event.target.checked)}
+                            className="mt-1 accent-accent"
+                          />
+                          <span>
+                            <span className="block font-medium text-primary">Qwen MTP speculative decoding</span>
+                            <span className="mt-1 block text-xs text-secondary">
+                              Adds llama.cpp <span className="font-mono">--spec-type draft-mtp</span>. Use with MTP GGUF models.
+                            </span>
+                          </span>
+                        </label>
+                        <div className="w-full sm:w-36">
+                          <div className="mb-1 text-xs text-secondary">Draft tokens</div>
+                          <TextInput
+                            value={mtpDraftTokens}
+                            disabled={activeRuntime !== 'gguf' || !mtpEnabled}
+                            onChange={(event) => markDirty(setMtpDraftTokens, event.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
                     <div className="space-y-2 sm:col-span-2">
                       <div className="flex items-center justify-between gap-3 rounded-lg bg-surface/50 p-3">
                         <div>
