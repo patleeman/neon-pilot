@@ -27,6 +27,7 @@ export const workspace = {
       openConversationIds: asStringArray(p.openConversationIds),
       pinnedConversationIds: asStringArray(p.pinnedConversationIds),
       archivedConversationIds: asStringArray(p.archivedConversationIds),
+      remoteControlledConversationIds: asStringArray(p.remoteControlledConversationIds),
       activeConversationId: activeConversationId === undefined ? undefined : activeConversationId,
     });
     return { ok: true, workspace: next };

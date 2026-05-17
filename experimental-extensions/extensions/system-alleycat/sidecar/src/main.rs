@@ -256,10 +256,30 @@ async fn handle_stream(
 async fn bridge_jsonl(mut tcp: TcpStream, iroh_stream: IrohBiStream) -> anyhow::Result<()> {
     let (mut tcp_read, mut tcp_write) = tcp.split();
     let (mut iroh_read, mut iroh_write) = iroh_stream.split();
-    tokio::select! {
-        result = tokio::io::copy(&mut iroh_read, &mut tcp_write) => { result.context("copying client to PA JSONL bridge")?; }
-        result = tokio::io::copy(&mut tcp_read, &mut iroh_write) => { result.context("copying PA JSONL bridge to client")?; }
-    }
+
+    let client_to_pa = async {
+        tokio::io::copy(&mut iroh_read, &mut tcp_write)
+            .await
+            .context("copying client to PA JSONL bridge")?;
+        tcp_write
+            .shutdown()
+            .await
+            .context("shutting down PA JSONL bridge write half")?;
+        Ok::<(), anyhow::Error>(())
+    };
+
+    let pa_to_client = async {
+        tokio::io::copy(&mut tcp_read, &mut iroh_write)
+            .await
+            .context("copying PA JSONL bridge to client")?;
+        iroh_write
+            .shutdown()
+            .await
+            .context("shutting down client write half")?;
+        Ok::<(), anyhow::Error>(())
+    };
+
+    tokio::try_join!(client_to_pa, pa_to_client)?;
     Ok(())
 }
 

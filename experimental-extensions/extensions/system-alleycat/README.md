@@ -40,7 +40,8 @@ The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams t
 - `thread/list`
 - `thread/loaded/list` (mirrors PA's shared open/pinned conversation workspace)
 - `thread/open` / `thread/close` (workspace open/close and active thread state, not archive)
-- `workspace/read` / `workspace/update` (shared open/pinned/archived/active workspace state)
+- `thread/archive` / `thread/unarchive` (shared workspace archive state; archive also removes open/pinned/remote-control markers)
+- `workspace/read` / `workspace/update` (shared open/pinned/archived/active/remote-control workspace state)
 - `thread/start`
 - `thread/read`
 - `thread/resume`
@@ -67,7 +68,7 @@ The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams t
 
 Compatibility notes:
 
-- `thread/loaded/list` is intentionally workspace state, not runtime liveness. Open/close controls what appears in the shared desktop/mobile workspace; `activeConversationId` controls focused conversation; archive/unarchive controls conversation lifecycle; live/running status remains separate.
+- `thread/loaded/list` is intentionally workspace state, not runtime liveness. Open/close controls what appears in the shared desktop/mobile workspace; `activeConversationId` controls focused conversation; archive/unarchive controls workspace archive state and removes archived threads from open/pinned/remote-control sets; live/running status remains separate.
 - `model/list` maps PA model metadata into Codex fields. Reasoning effort options use Codex's object shape; if PA metadata is unavailable the bridge returns deterministic PA model defaults so Kitty's model picker can render.
 - Tool calls are emitted as Codex `dynamicToolCall` items under the `personal-agent` namespace so Kitty can render them instead of seeing opaque PA events.
 - `turn/start` uses the extension conversation `runTurn` boundary so resume, live-event subscription, prompt dispatch, and terminal event handling are one atomic operation. It opens the thread in the shared desktop workspace and marks it with a visible remote-control note the first time Kitty drives it. `turn/start` and `turn/steer` preserve Kitty image input items and forward them as PA prompt images. Supported forms are data URLs, base64 fields with image MIME metadata, and local/file URLs readable by the desktop host.

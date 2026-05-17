@@ -256,6 +256,59 @@ describe('system-alleycat turn protocol', () => {
     expect(ctx.conversations.getBlocks).not.toHaveBeenCalled();
   });
 
+  it('does not orphan an implicit assistant item when text arrives before agent_start', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'text_delta', delta: 'Early ' });
+        options?.onEvent?.({ type: 'agent_start' });
+        options?.onEvent?.({ type: 'text_delta', delta: 'text' });
+        options?.onEvent?.({ type: 'agent_end' });
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
+    await flushAsyncTurnStart();
+
+    const agentStarts = notify.mock.calls.filter(([method, payload]) => method === 'item/started' && payload.item?.type === 'agentMessage');
+    const agentCompletes = notify.mock.calls.filter(
+      ([method, payload]) => method === 'item/completed' && payload.item?.type === 'agentMessage',
+    );
+    expect(agentStarts).toHaveLength(1);
+    expect(agentCompletes).toHaveLength(1);
+    expect(agentCompletes[0][1].item.text).toBe('Early text');
+  });
+
+  it('suppresses late turn completion after interrupt', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    let releaseTurn!: () => void;
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        await new Promise<void>((resolve) => {
+          releaseTurn = () => {
+            options?.onEvent?.({ type: 'turn_end' });
+            resolve();
+          };
+        });
+        return { accepted: true };
+      },
+    );
+    const conn = makeConn();
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, conn, notify);
+    await flushAsyncTurnStart();
+    await turn.interrupt({ threadId: 'thread-1', turnId: 'turn-1' }, ctx as never, conn, notify);
+    releaseTurn();
+    await flushAsyncTurnStart();
+
+    expect(notify.mock.calls.filter(([method]) => method === 'turn/interrupted')).toHaveLength(1);
+    expect(notify.mock.calls.filter(([method]) => method === 'turn/completed')).toHaveLength(0);
+  });
+
   it('fails the Codex turn when the atomic PA turn runner fails', async () => {
     const ctx = makeContext();
     const notify = vi.fn();

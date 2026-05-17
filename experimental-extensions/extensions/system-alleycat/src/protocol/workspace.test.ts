@@ -33,6 +33,7 @@ describe('system-alleycat workspace protocol', () => {
           pinnedConversationIds: ['c'],
           archivedConversationIds: ['d'],
           activeConversationId: 'b',
+          remoteControlledConversationIds: ['e'],
         },
         ctx as never,
         conn,
@@ -43,6 +44,7 @@ describe('system-alleycat workspace protocol', () => {
       openConversationIds: ['b'],
       pinnedConversationIds: ['c'],
       archivedConversationIds: ['d'],
+      remoteControlledConversationIds: ['e'],
       activeConversationId: 'b',
     });
   });

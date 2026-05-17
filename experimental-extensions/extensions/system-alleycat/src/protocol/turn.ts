@@ -2,10 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { MethodHandler } from '../codexJsonRpcServer.js';
+import { mutateWorkspace, workspaceList } from './workspaceState.js';
 
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
 // on connection drop. Map<threadId, Set<unsubscribeFn>>
 const turnSubscriptions = new Map<string, Set<() => void>>();
+const interruptedTurnThreads = new Set<string>();
 
 function uid(prefix = ''): string {
   return `${prefix}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -101,23 +103,18 @@ async function markThreadControlledRemotely(
   options?: { active?: boolean },
 ): Promise<void> {
   try {
-    const workspace = (await ctx.conversations.getWorkspace()) as Record<string, unknown> | null;
-    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds)
-      ? workspace.pinnedConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
-      : [];
-    const openConversationIds = Array.isArray(workspace?.openConversationIds)
-      ? workspace.openConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
-      : [];
-    const remoteControlledConversationIds = Array.isArray(workspace?.remoteControlledConversationIds)
-      ? workspace.remoteControlledConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
-      : [];
-    const alreadyVisible = pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId);
-    await ctx.conversations.updateWorkspace({
-      ...(alreadyVisible ? {} : { openConversationIds: [...openConversationIds, threadId] }),
-      ...(remoteControlledConversationIds.includes(threadId)
-        ? {}
-        : { remoteControlledConversationIds: [...remoteControlledConversationIds, threadId] }),
-      ...(options?.active === false ? {} : { activeConversationId: threadId }),
+    await mutateWorkspace(ctx, (workspace) => {
+      const pinnedConversationIds = workspaceList(workspace, 'pinnedConversationIds');
+      const openConversationIds = workspaceList(workspace, 'openConversationIds');
+      const remoteControlledConversationIds = workspaceList(workspace, 'remoteControlledConversationIds');
+      const alreadyVisible = pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId);
+      return {
+        ...(alreadyVisible ? {} : { openConversationIds: [...openConversationIds, threadId] }),
+        ...(remoteControlledConversationIds.includes(threadId)
+          ? {}
+          : { remoteControlledConversationIds: [...remoteControlledConversationIds, threadId] }),
+        ...(options?.active === false ? {} : { activeConversationId: threadId }),
+      };
     });
   } catch {
     // Workspace focus is best-effort; message delivery should not depend on desktop UI state.
@@ -171,6 +168,8 @@ export const turn = {
     const text = textParts.join('\n');
     if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
+    interruptedTurnThreads.delete(threadId);
+
     const turnId = uid('turn-');
 
     // Notify turn started
@@ -209,21 +208,23 @@ export const turn = {
     let agentItemCompleted = false;
 
     const onEvent = (event: unknown) => {
-      if (turnDone) return;
+      if (turnDone || interruptedTurnThreads.has(threadId)) return;
       const ev = event as Record<string, unknown>;
       if (!ev || typeof ev.type !== 'string') return;
 
       switch (ev.type) {
         case 'agent_start': {
-          agentItemId = uid('item-');
-          agentText = '';
-          agentItemCompleted = false;
-          notify('item/started', {
-            threadId,
-            turnId,
-            item: { id: agentItemId, type: 'agentMessage', text: '' },
-            startedAtMs: nowMs(),
-          });
+          if (!agentItemId || agentItemCompleted) {
+            agentItemId = uid('item-');
+            agentText = '';
+            agentItemCompleted = false;
+            notify('item/started', {
+              threadId,
+              turnId,
+              item: { id: agentItemId, type: 'agentMessage', text: '' },
+              startedAtMs: nowMs(),
+            });
+          }
           break;
         }
         case 'text_delta': {
@@ -302,6 +303,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'completed';
           conn.activeTurnThreads.delete(threadId);
+          interruptedTurnThreads.delete(threadId);
           cleanupTurnSubscriptions(threadId);
           if (agentItemId && !agentItemCompleted) {
             notify('item/completed', {
@@ -320,6 +322,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'failed';
           conn.activeTurnThreads.delete(threadId);
+          interruptedTurnThreads.delete(threadId);
           cleanupTurnSubscriptions(threadId);
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error') });
           break;
@@ -339,6 +342,7 @@ export const turn = {
         });
       } catch (error) {
         conn.activeTurnThreads.delete(threadId);
+        interruptedTurnThreads.delete(threadId);
         if (!turnDone) {
           turnDone = true;
           finalStatus = 'failed';
@@ -380,10 +384,13 @@ export const turn = {
   /**
    * `turn/interrupt` — interrupt a running turn.
    */
-  interrupt: (async (params, ctx, _conn, notify) => {
+  interrupt: (async (params, ctx, conn, notify) => {
     const p = params as Record<string, unknown> | undefined;
     const threadId = p?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
+
+    interruptedTurnThreads.add(threadId);
+    conn.activeTurnThreads.delete(threadId);
 
     // Notify the client that the turn was interrupted, so it doesn't hang
     // waiting for turn/completed that will never arrive.

@@ -164,6 +164,55 @@ describe('system-alleycat thread protocol', () => {
     expect(loaded.data).toEqual(['a']);
   });
 
+  it('archives and unarchives threads through shared workspace state', async () => {
+    const updateWorkspace = vi
+      .fn()
+      .mockResolvedValueOnce({ archivedConversationIds: ['b'], openConversationIds: ['a'], pinnedConversationIds: [] })
+      .mockResolvedValueOnce({ archivedConversationIds: [], openConversationIds: ['a'], pinnedConversationIds: [] });
+    const ctx = makeContext({
+      getWorkspace: vi.fn().mockResolvedValue({
+        openConversationIds: ['a', 'b'],
+        pinnedConversationIds: ['b'],
+        archivedConversationIds: [],
+        remoteControlledConversationIds: ['b'],
+        activeConversationId: 'b',
+      }),
+      updateWorkspace,
+    });
+    const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
+
+    const archived = await thread.archive({ threadId: 'b' }, ctx as never, conn, vi.fn());
+    expect(archived).toEqual({
+      ok: true,
+      workspace: { archivedConversationIds: ['b'], openConversationIds: ['a'], pinnedConversationIds: [] },
+    });
+    expect(updateWorkspace).toHaveBeenCalledWith({
+      openConversationIds: ['a'],
+      pinnedConversationIds: [],
+      archivedConversationIds: ['b'],
+      remoteControlledConversationIds: [],
+      activeConversationId: null,
+    });
+
+    await thread.unarchive({ threadId: 'b' }, ctx as never, conn, vi.fn());
+    expect(updateWorkspace).toHaveBeenLastCalledWith({ archivedConversationIds: [] });
+  });
+
+  it('starts compaction without synthetic idle status and rejects ignored custom instructions', async () => {
+    const compact = vi.fn().mockResolvedValue({ ok: true });
+    const ctx = makeContext({ compact });
+    const conn = { initialized: true, subscribedThreads: new Set<string>(), activeTurnThreads: new Set<string>() };
+    const notify = vi.fn();
+
+    await expect(thread.compactStart({ threadId: 'thread-1' }, ctx as never, conn, notify)).resolves.toEqual({});
+    expect(compact).toHaveBeenCalledWith('thread-1');
+    expect(notify).not.toHaveBeenCalledWith('thread/status/changed', expect.anything());
+
+    await expect(
+      thread.compactStart({ threadId: 'thread-1', options: { customInstructions: 'summarize this way' } }, ctx as never, conn, notify),
+    ).rejects.toThrow('customInstructions are unsupported');
+  });
+
   it('opens and closes threads in the shared workspace without archiving', async () => {
     const updateWorkspace = vi
       .fn()

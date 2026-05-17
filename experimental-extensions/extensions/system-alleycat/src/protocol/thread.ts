@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 
 import type { MethodHandler } from '../codexJsonRpcServer.js';
 import { broadcastToThread, subscribeConnectionToThread, unsubscribeConnectionFromThread } from '../codexJsonRpcServer.js';
+import { mutateWorkspace, workspaceList } from './workspaceState.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -377,17 +378,13 @@ export const thread = {
     const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
 
-    if (!ctx.conversations.updateWorkspace) throw new Error('Conversation workspace is unavailable.');
-    const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
-    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds) ? workspace.pinnedConversationIds : [];
-    const openConversationIds = Array.isArray(workspace?.openConversationIds) ? workspace.openConversationIds : [];
-    if (pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId)) {
-      return { ok: true, workspace };
-    }
-
-    const nextWorkspace = await ctx.conversations.updateWorkspace({
-      openConversationIds: [...openConversationIds.filter((id): id is string => typeof id === 'string'), threadId],
-      activeConversationId: threadId,
+    const nextWorkspace = await mutateWorkspace(ctx, (workspace) => {
+      const pinnedConversationIds = workspaceList(workspace, 'pinnedConversationIds');
+      const openConversationIds = workspaceList(workspace, 'openConversationIds');
+      if (pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId)) {
+        return { activeConversationId: threadId };
+      }
+      return { openConversationIds: [...openConversationIds, threadId], activeConversationId: threadId };
     });
     return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
@@ -397,15 +394,13 @@ export const thread = {
     const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
 
-    if (!ctx.conversations.updateWorkspace) throw new Error('Conversation workspace is unavailable.');
-    const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
-    const openConversationIds = Array.isArray(workspace?.openConversationIds) ? workspace.openConversationIds : [];
-    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds) ? workspace.pinnedConversationIds : [];
-    const nextActiveConversationId = workspace?.activeConversationId === threadId ? null : workspace?.activeConversationId;
-    const nextWorkspace = await ctx.conversations.updateWorkspace({
-      openConversationIds: openConversationIds.filter((id) => id !== threadId),
-      pinnedConversationIds: pinnedConversationIds.filter((id) => id !== threadId),
-      activeConversationId: typeof nextActiveConversationId === 'string' ? nextActiveConversationId : null,
+    const nextWorkspace = await mutateWorkspace(ctx, (workspace) => {
+      const nextActiveConversationId = workspace?.activeConversationId === threadId ? null : workspace?.activeConversationId;
+      return {
+        openConversationIds: workspaceList(workspace, 'openConversationIds').filter((id) => id !== threadId),
+        pinnedConversationIds: workspaceList(workspace, 'pinnedConversationIds').filter((id) => id !== threadId),
+        activeConversationId: typeof nextActiveConversationId === 'string' ? nextActiveConversationId : null,
+      };
     });
     return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
@@ -455,17 +450,36 @@ export const thread = {
   }) as MethodHandler,
 
   /** `thread/archive` */
-  archive: (async (params) => {
+  archive: (async (params, ctx) => {
     const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
-    return {};
+    const nextWorkspace = await mutateWorkspace(ctx, (workspace) => {
+      const archivedConversationIds = workspaceList(workspace, 'archivedConversationIds');
+      return {
+        openConversationIds: workspaceList(workspace, 'openConversationIds').filter((id) => id !== threadId),
+        pinnedConversationIds: workspaceList(workspace, 'pinnedConversationIds').filter((id) => id !== threadId),
+        archivedConversationIds: archivedConversationIds.includes(threadId)
+          ? archivedConversationIds
+          : [...archivedConversationIds, threadId],
+        remoteControlledConversationIds: workspaceList(workspace, 'remoteControlledConversationIds').filter((id) => id !== threadId),
+        activeConversationId: workspace?.activeConversationId === threadId ? null : workspace?.activeConversationId,
+      };
+    });
+    return { ok: true, workspace: nextWorkspace };
   }) as MethodHandler,
 
   /** `thread/unarchive` */
   unarchive: (async (params, ctx) => {
     const threadId = (params as Record<string, unknown> | undefined)?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
-    return { thread: toThreadResponse(threadId, undefined, [], ctx) };
+    if (ctx.conversations.updateWorkspace) {
+      await mutateWorkspace(ctx, (workspace) => ({
+        archivedConversationIds: workspaceList(workspace, 'archivedConversationIds').filter((id) => id !== threadId),
+      }));
+    }
+    const meta = await ctx.conversations.getMeta(threadId).catch(() => null);
+    const detail = meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : {};
+    return { thread: toThreadResponse(threadId, detail, [], ctx) };
   }) as MethodHandler,
 
   /** `thread/name/set` */
@@ -503,13 +517,11 @@ export const thread = {
 
     const options = p?.options as Record<string, unknown> | undefined;
     const customInstructions = options?.customInstructions as string | undefined;
+    if (customInstructions?.trim()) {
+      throw new Error('thread/compact/start customInstructions are unsupported by Personal Agent compact.');
+    }
 
-    await ctx.conversations.compact(threadId, customInstructions);
-    broadcastToThread(threadId, 'thread/status/changed', {
-      threadId,
-      status: { type: 'idle' },
-    });
-
+    await ctx.conversations.compact(threadId);
     return {};
   }) as MethodHandler,
 

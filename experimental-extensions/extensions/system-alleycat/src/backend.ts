@@ -248,6 +248,7 @@ async function startSidecar(ctx: ExtensionBackendContext): Promise<void> {
   const auth = codexAuth ?? createCodexAuth(ctx);
   const token = await auth.ensurePairing();
   codexAuth = auth;
+  pairPayloadCache = null;
   const secret = await ensureSecretKey(ctx);
   const logPath = join(ctx.runtimeDir, 'alleycat-sidecar.log');
   sidecarLogPath = logPath;
@@ -317,7 +318,7 @@ export async function startService(input: unknown, ctx: ExtensionBackendContext)
   };
 }
 
-export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Promise<{ ok: true }> {
+async function stopSidecar(ctx?: ExtensionBackendContext): Promise<void> {
   if (sidecarProcess) {
     sidecarProcess.kill();
     sidecarProcess = null;
@@ -326,6 +327,11 @@ export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Pro
     if (ctx) await ctx.shell.exec({ command: 'sh', args: ['-lc', `kill ${sidecarPid} >/dev/null 2>&1 || true`], timeoutMs: 5_000 });
     sidecarPid = null;
   }
+  pairPayloadCache = null;
+}
+
+export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Promise<{ ok: true }> {
+  await stopSidecar(ctx);
   if (ctx) await stopStaleSidecars(ctx);
   if (codexServer) {
     codexServer.stop();
@@ -340,7 +346,7 @@ export async function status(_input?: unknown, ctx?: ExtensionBackendContext): P
   if (ctx && !sidecarPid) {
     // Self-heal for dev reloads/imports where the manifest service registration
     // changed after the extension was already enabled. Enabled == running.
-    await start(ctx).catch((error) => rememberLog(error instanceof Error ? error.message : String(error)));
+    await start(undefined, ctx).catch((error) => rememberLog(error instanceof Error ? error.message : String(error)));
   }
   if (ctx && !pairPayloadCache) pairPayloadCache = await buildPairPayload(ctx);
   return {
@@ -361,6 +367,8 @@ export async function rotateToken(_input: unknown, ctx: ExtensionBackendContext)
   const auth = codexAuth ?? createCodexAuth(ctx);
   codexAuth = auth;
   auth.rotateToken();
+  await stopSidecar(ctx);
+  if (codexServer) await startSidecar(ctx);
   pairPayloadCache = await buildPairPayload(ctx);
   return status(_input, ctx);
 }

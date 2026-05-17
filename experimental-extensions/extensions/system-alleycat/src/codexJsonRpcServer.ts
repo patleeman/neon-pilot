@@ -154,6 +154,7 @@ function unsubscribeConnectionFromAll(notify: NotifyFn, conn?: ConnectionState):
  */
 function forwardConversationEvent(threadId: string, ev: Record<string, unknown>): void {
   switch (ev.type) {
+    case 'turn_start':
     case 'agent_start':
       broadcastToThread(threadId, 'thread/status/changed', {
         threadId,
