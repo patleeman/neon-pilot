@@ -669,7 +669,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                  <div className="mt-5 space-y-5">
                     <div className="space-y-3">
                       <h3 className="font-semibold text-primary">Downloaded Models</h3>
                       <div className="overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
