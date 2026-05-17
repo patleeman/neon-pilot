@@ -302,13 +302,18 @@ export function createExtensionConversationsCapability(
 
       let settled = false;
       let unsubscribe: (() => void) | null = null;
+      const cleanup = () => {
+        const current = unsubscribe;
+        unsubscribe = null;
+        current?.();
+      };
       const timeoutMs = Math.max(1, options?.timeoutMs ?? 120_000);
 
       const terminal = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           if (settled) return;
           settled = true;
-          unsubscribe?.();
+          cleanup();
           reject(new Error(`Timed out waiting for conversation "${conversationId}" turn to finish.`));
         }, timeoutMs);
         timeout.unref?.();
@@ -321,7 +326,7 @@ export function createExtensionConversationsCapability(
           if (settled) return;
           settled = true;
           clearTimeout(timeout);
-          unsubscribe?.();
+          cleanup();
           if (ev.type === 'error') {
             reject(new Error(typeof ev.message === 'string' ? ev.message : 'Conversation turn failed.'));
             return;
@@ -343,7 +348,7 @@ export function createExtensionConversationsCapability(
       } catch (error) {
         if (!settled) {
           settled = true;
-          unsubscribe?.();
+          cleanup();
         }
         throw error;
       }
