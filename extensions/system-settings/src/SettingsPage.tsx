@@ -1240,6 +1240,7 @@ function ExtensionSecretsSection() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savingBackend, setSavingBackend] = useState(false);
+  const [selectedBackend, setSelectedBackend] = useState<string | undefined>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -1262,11 +1263,12 @@ function ExtensionSecretsSection() {
   // Use local selectedBackend when the user has changed it so the select
   // doesn't snap back to the stale settings value before refetch.
   const activeBackend =
-    (selectedBackend ?? typeof settingsValues?.['secrets.provider'] === 'string')
+    selectedBackend ??
+    (typeof settingsValues?.['secrets.provider'] === 'string'
       ? settingsValues['secrets.provider']
       : secretsState?.backend === 'env-only' || secretsState?.backend === 'file' || secretsState?.backend === 'keychain'
         ? secretsState.backend
-        : 'keychain';
+        : 'keychain');
 
   const grouped = useMemo(() => {
     const groups = new Map<string, SecretStatusEntry[]>();
@@ -1297,8 +1299,6 @@ function ExtensionSecretsSection() {
       setSavingKey(null);
     }
   };
-
-  const [selectedBackend, setSelectedBackend] = useState<string | undefined>();
 
   const saveBackend = async (provider: string) => {
     setSavingBackend(true);
