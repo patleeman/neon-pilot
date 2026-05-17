@@ -45,15 +45,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = join(here, '..');
 const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
 const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
+const runtimeCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp');
+const runtimeBinDir = join(runtimeCacheRoot, 'bin', 'darwin-arm64');
 function bundledRuntimePath(name: string) {
+  const installedPath = join(runtimeBinDir, name);
+  if (existsSync(installedPath)) return installedPath;
   const localPath = join(runtimeRoot, 'bin', 'darwin-arm64', name);
   if (existsSync(localPath)) return localPath;
   return join(sourceRuntimeRoot, 'bin', 'darwin-arm64', name);
 }
 const bundledCli = bundledRuntimePath('llama-cli');
 const bundledServer = bundledRuntimePath('llama-server');
-const runtimeBinDir = dirname(bundledServer);
-const modelCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp', 'models');
+const modelCacheRoot = join(runtimeCacheRoot, 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'gguf/process/serverPid';
 const MODEL_PATH_KEY = 'gguf/settings/modelPath';
