@@ -30,6 +30,7 @@ function handleOpenConversationLayoutReadRequest(_req: Request, res: Response): 
       archivedSessionIds: saved.archivedConversationIds,
       activeConversationId: saved.activeConversationId ?? null,
       workspacePaths: saved.workspacePaths,
+      remoteControlledConversationIds: saved.remoteControlledConversationIds,
     });
   } catch (err) {
     logError('request handler error', {
@@ -138,6 +139,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
       archivedConversationIds: saved.archivedConversationIds,
       activeConversationId: saved.activeConversationId ?? null,
       workspacePaths: saved.workspacePaths,
+      remoteControlledConversationIds: saved.remoteControlledConversationIds,
     });
   } catch (err) {
     logError('request handler error', {

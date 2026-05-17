@@ -570,7 +570,23 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const { versions } = useAppEvents();
   const { tasks, sessions, runs, setRuns, setSessions } = useAppData();
   const [conversationExecutions, setConversationExecutions] = useState<ConversationExecutionsResult | null>(null);
+  const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .openConversationTabs()
+      .then((layout) => {
+        if (!cancelled) setRemoteControlledConversationIds(layout.remoteControlledConversationIds ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteControlledConversationIds([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [versions.sessions]);
+
   const openArtifact = useCallback(
     (artifactId: string) => {
       if (selectedArtifactId === artifactId) {
@@ -5701,6 +5717,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 messages={visibleTranscriptMessages}
                 systemPrompt={isLiveSession ? stream.systemPrompt : null}
                 toolDefinitions={isLiveSession ? stream.toolDefinitions : []}
+                remoteControlled={Boolean(
+                  (visibleTranscriptState?.conversationId ?? id) &&
+                  remoteControlledConversationIds.includes((visibleTranscriptState?.conversationId ?? id) as string),
+                )}
                 messageIndexOffset={visibleTranscriptMessageIndexOffset}
                 scrollContainerRef={scrollRef}
                 focusMessageIndex={renderingStaleTranscript ? null : requestedFocusMessageIndex}

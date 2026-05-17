@@ -116,6 +116,7 @@ export interface PersonalAgentDesktopBridge {
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }): Promise<DesktopAppPreferencesState>;
+  checkForUpdates(): Promise<DesktopAppPreferencesState>;
   readAppStatus(): Promise<AppStatus>;
   readDaemonState(): Promise<DaemonState>;
   readSessions(): Promise<SessionMeta[]>;
@@ -141,6 +142,7 @@ export interface PersonalAgentDesktopBridge {
     pinnedSessionIds: string[];
     archivedSessionIds: string[];
     workspacePaths: string[];
+    remoteControlledConversationIds?: string[];
   }>;
   updateOpenConversationTabs(input: {
     sessionIds?: string[];
@@ -153,6 +155,7 @@ export interface PersonalAgentDesktopBridge {
     pinnedSessionIds: string[];
     archivedSessionIds: string[];
     workspacePaths: string[];
+    remoteControlledConversationIds?: string[];
   }>;
   readModelProviders(): Promise<ModelProviderState>;
   saveModelProvider(input: {

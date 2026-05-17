@@ -1091,6 +1091,27 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-message-card-assistant');
   });
 
+  it('renders remote control state as UI-only transcript chrome', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        remoteControlled: true,
+        messages: [
+          {
+            type: 'user',
+            id: 'user-1',
+            ts: '2026-03-11T18:00:00.000Z',
+            text: 'What is happening?',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('data-remote-control-indicator="kitty-litter"');
+    expect(html).toContain('Controlled remotely from Kitty Litter');
+    expect(html).not.toContain('data-context-type="referenced_context"');
+    expect(html).not.toContain('ui-message-card-assistant');
+  });
+
   it('renders goal continuations as visible context blocks', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

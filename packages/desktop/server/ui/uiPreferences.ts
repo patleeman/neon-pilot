@@ -15,6 +15,7 @@ export interface SavedUiPreferences {
   archivedConversationIds: string[];
   activeConversationId: string | null;
   workspacePaths: string[];
+  remoteControlledConversationIds: string[];
   nodeBrowserViews: SavedNodeBrowserViewPreference[];
 }
 
@@ -167,6 +168,7 @@ function normalizeSavedUiPreferences(input: {
   archivedConversationIds?: unknown;
   activeConversationId?: unknown;
   workspacePaths?: unknown;
+  remoteControlledConversationIds?: unknown;
   nodeBrowserViews?: unknown;
 }): SavedUiPreferences {
   const pinnedConversationIds = normalizeConversationIds(input.pinnedConversationIds);
@@ -181,6 +183,7 @@ function normalizeSavedUiPreferences(input: {
     archivedConversationIds: normalizeConversationIds(input.archivedConversationIds).filter((id) => !workspaceIdSet.has(id)),
     activeConversationId: activeConversationId && workspaceIdSet.has(activeConversationId) ? activeConversationId : null,
     workspacePaths: normalizeWorkspacePaths(input.workspacePaths),
+    remoteControlledConversationIds: normalizeConversationIds(input.remoteControlledConversationIds),
     nodeBrowserViews: normalizeNodeBrowserViews(input.nodeBrowserViews),
   };
 }
@@ -199,6 +202,7 @@ export function readSavedUiPreferences(settingsFile: string): SavedUiPreferences
     archivedConversationIds: ui.archivedConversationIds,
     activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
+    remoteControlledConversationIds: ui.remoteControlledConversationIds,
     nodeBrowserViews: ui.nodeBrowserViews,
   });
 }
@@ -210,6 +214,7 @@ export function writeSavedUiPreferences(
     archivedConversationIds?: string[] | null;
     activeConversationId?: string | null;
     workspacePaths?: string[] | null;
+    remoteControlledConversationIds?: string[] | null;
     nodeBrowserViews?: SavedNodeBrowserViewPreference[] | null;
   },
   settingsFile: string,
@@ -222,6 +227,7 @@ export function writeSavedUiPreferences(
     archivedConversationIds: ui.archivedConversationIds,
     activeConversationId: ui.activeConversationId,
     workspacePaths: ui.workspacePaths,
+    remoteControlledConversationIds: ui.remoteControlledConversationIds,
     nodeBrowserViews: ui.nodeBrowserViews,
   });
 
@@ -232,6 +238,10 @@ export function writeSavedUiPreferences(
       input.archivedConversationIds !== undefined ? (input.archivedConversationIds ?? []) : current.archivedConversationIds,
     activeConversationId: input.activeConversationId !== undefined ? input.activeConversationId : current.activeConversationId,
     workspacePaths: input.workspacePaths !== undefined ? (input.workspacePaths ?? []) : current.workspacePaths,
+    remoteControlledConversationIds:
+      input.remoteControlledConversationIds !== undefined
+        ? (input.remoteControlledConversationIds ?? [])
+        : current.remoteControlledConversationIds,
     nodeBrowserViews: input.nodeBrowserViews !== undefined ? (input.nodeBrowserViews ?? []) : current.nodeBrowserViews,
   });
 
@@ -263,6 +273,12 @@ export function writeSavedUiPreferences(
     ui.workspacePaths = next.workspacePaths;
   } else {
     delete ui.workspacePaths;
+  }
+
+  if (next.remoteControlledConversationIds.length > 0) {
+    ui.remoteControlledConversationIds = next.remoteControlledConversationIds;
+  } else {
+    delete ui.remoteControlledConversationIds;
   }
 
   if (next.nodeBrowserViews.length > 0) {

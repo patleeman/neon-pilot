@@ -147,6 +147,7 @@ export function createExtensionConversationsCapability(
         archivedConversationIds: saved.archivedConversationIds,
         activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
+        remoteControlledConversationIds: saved.remoteControlledConversationIds,
       };
     },
 
@@ -158,6 +159,7 @@ export function createExtensionConversationsCapability(
       archivedConversationIds?: string[] | null;
       activeConversationId?: string | null;
       workspacePaths?: string[] | null;
+      remoteControlledConversationIds?: string[] | null;
     }): Promise<unknown> {
       if (!serverContext?.getSettingsFile) {
         throw new Error('Conversation workspace is unavailable.');
@@ -174,6 +176,7 @@ export function createExtensionConversationsCapability(
               archivedConversationIds: input.archivedConversationIds,
               activeConversationId: input.activeConversationId,
               workspacePaths: input.workspacePaths,
+              remoteControlledConversationIds: input.remoteControlledConversationIds,
             },
             settingsFile,
           ),
@@ -202,6 +205,7 @@ export function createExtensionConversationsCapability(
         archivedConversationIds: saved.archivedConversationIds,
         activeConversationId: saved.activeConversationId ?? null,
         workspacePaths: saved.workspacePaths,
+        remoteControlledConversationIds: saved.remoteControlledConversationIds,
       };
     },
 

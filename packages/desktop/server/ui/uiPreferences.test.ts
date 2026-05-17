@@ -29,6 +29,7 @@ describe('readSavedUiPreferences', () => {
       archivedConversationIds: [],
       activeConversationId: null,
       workspacePaths: [],
+      remoteControlledConversationIds: [],
       nodeBrowserViews: [],
     });
   });
@@ -54,6 +55,7 @@ describe('readSavedUiPreferences', () => {
       archivedConversationIds: ['session-4'],
       activeConversationId: null,
       workspacePaths: ['/tmp/alpha', '/tmp/beta'],
+      remoteControlledConversationIds: [],
       nodeBrowserViews: [],
     });
   });
@@ -106,6 +108,7 @@ describe('writeSavedUiPreferences', () => {
           pinnedConversationIds: ['session-2'],
           archivedConversationIds: ['session-3'],
           workspacePaths: ['/tmp/alpha'],
+          remoteControlledConversationIds: ['session-2'],
         },
       }),
     );
@@ -118,6 +121,7 @@ describe('writeSavedUiPreferences', () => {
       archivedConversationIds: ['session-3'],
       activeConversationId: null,
       workspacePaths: ['/tmp/alpha'],
+      remoteControlledConversationIds: ['session-2'],
       nodeBrowserViews: [],
     });
   });
@@ -148,6 +152,7 @@ describe('writeSavedUiPreferences', () => {
       archivedConversationIds: [],
       activeConversationId: null,
       workspacePaths: [],
+      remoteControlledConversationIds: [],
       nodeBrowserViews: [
         {
           id: 'shared-skills',

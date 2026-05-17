@@ -632,6 +632,7 @@ export const api = {
       archivedSessionIds: string[];
       activeConversationId: string | null;
       workspacePaths: string[];
+      remoteControlledConversationIds?: string[];
     }>('/ui/open-conversations');
   },
   setOpenConversationTabs: async (
@@ -660,6 +661,7 @@ export const api = {
       archivedSessionIds: string[];
       activeConversationId: string | null;
       workspacePaths: string[];
+      remoteControlledConversationIds?: string[];
     }>('/ui/open-conversations', request);
   },
   savedWorkspacePaths: async () => {

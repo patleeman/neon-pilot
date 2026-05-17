@@ -60,6 +60,7 @@ interface ChatViewProps {
   anchorWindowingToTail?: boolean;
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
+  remoteControlled?: boolean;
 }
 
 function shouldFocusComposerFromTranscriptPointerDown(event: React.PointerEvent<HTMLDivElement>): boolean {
@@ -132,6 +133,7 @@ export const ChatView = memo(function ChatView({
   anchorWindowingToTail = false,
   systemPrompt = null,
   toolDefinitions = [],
+  remoteControlled = false,
 }: ChatViewProps) {
   const renderStartedAtRef = useRef(performance.now());
   renderStartedAtRef.current = performance.now();
@@ -404,6 +406,12 @@ export const ChatView = memo(function ChatView({
         {/* Bottom padding (pb-24) keeps the last message clear of the input area
             when the user is scrolled to the bottom and the textarea grows
             while typing (e.g. multi-line input). */}
+        {remoteControlled ? (
+          <div className="mb-3 flex items-center gap-2 text-xs text-dim" data-remote-control-indicator="kitty-litter">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+            <span>Controlled remotely from Kitty Litter</span>
+          </div>
+        ) : null}
         {shouldGroupIntroContext ? (
           <div className={transcriptItems.length > 0 || transcriptBoundary ? 'mb-7 space-y-1.5' : 'space-y-1.5'}>
             {hasSystemPromptContext ? <SystemPromptMessage text={systemPrompt ?? ''} toolDefinitions={toolDefinitions} /> : null}

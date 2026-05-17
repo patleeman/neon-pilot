@@ -19,7 +19,7 @@ function makeContext() {
         return vi.fn();
       }),
       ensureLive: vi.fn().mockResolvedValue({ id: 'thread-1', conversationId: 'thread-1' }),
-      getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: [], pinnedConversationIds: [] }),
+      getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: [], pinnedConversationIds: [], remoteControlledConversationIds: [] }),
       updateWorkspace: vi
         .fn()
         .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
@@ -185,20 +185,20 @@ describe('system-alleycat turn protocol', () => {
 
     expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({
       openConversationIds: ['thread-1'],
+      remoteControlledConversationIds: ['thread-1'],
       activeConversationId: 'thread-1',
     });
-    expect(ctx.conversations.appendVisibleCustomMessage).toHaveBeenCalledWith(
-      'thread-1',
-      'referenced_context',
-      'Controlled remotely from Kitty Litter.',
-      { source: 'kitty-litter', markerType: 'remote_control' },
-    );
+    expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
   });
 
   it('does not duplicate open ids or remote-control markers', async () => {
     const ctx = makeContext();
     ctx.storage.get.mockResolvedValue({ source: 'kitty-litter' });
-    ctx.conversations.getWorkspace.mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [] });
+    ctx.conversations.getWorkspace.mockResolvedValue({
+      openConversationIds: ['thread-1'],
+      pinnedConversationIds: [],
+      remoteControlledConversationIds: ['thread-1'],
+    });
 
     await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Again' }] }, ctx as never, makeConn(), vi.fn());
     await flushAsyncTurnStart();

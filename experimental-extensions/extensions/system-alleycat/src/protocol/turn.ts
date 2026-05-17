@@ -108,26 +108,19 @@ async function markThreadControlledRemotely(
     const openConversationIds = Array.isArray(workspace?.openConversationIds)
       ? workspace.openConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
       : [];
+    const remoteControlledConversationIds = Array.isArray(workspace?.remoteControlledConversationIds)
+      ? workspace.remoteControlledConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
     const alreadyVisible = pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId);
     await ctx.conversations.updateWorkspace({
       ...(alreadyVisible ? {} : { openConversationIds: [...openConversationIds, threadId] }),
+      ...(remoteControlledConversationIds.includes(threadId)
+        ? {}
+        : { remoteControlledConversationIds: [...remoteControlledConversationIds, threadId] }),
       ...(options?.active === false ? {} : { activeConversationId: threadId }),
     });
   } catch {
     // Workspace focus is best-effort; message delivery should not depend on desktop UI state.
-  }
-
-  try {
-    const markerKey = `remote-control-marker:${threadId}`;
-    const existing = await ctx.storage.get(markerKey);
-    if (existing) return;
-    await ctx.conversations.appendVisibleCustomMessage(threadId, 'referenced_context', 'Controlled remotely from Kitty Litter.', {
-      source: 'kitty-litter',
-      markerType: 'remote_control',
-    });
-    await ctx.storage.put(markerKey, { source: 'kitty-litter', createdAt: new Date().toISOString() });
-  } catch {
-    // The marker is decorative; never block the remote turn on it.
   }
 }
 

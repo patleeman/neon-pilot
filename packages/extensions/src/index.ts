@@ -871,6 +871,7 @@ export interface ExtensionBackendContext {
       archivedConversationIds?: string[] | null;
       activeConversationId?: string | null;
       workspacePaths?: string[] | null;
+      remoteControlledConversationIds?: string[] | null;
     }): Promise<unknown>;
     sendMessage(
       conversationId: string,

@@ -1199,6 +1199,7 @@ export async function readDesktopOpenConversationTabs() {
     archivedSessionIds: saved.archivedConversationIds,
     activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
+    remoteControlledConversationIds: saved.remoteControlledConversationIds,
   };
 }
 
@@ -1275,6 +1276,7 @@ export async function updateDesktopOpenConversationTabs(input: {
     archivedSessionIds: saved.archivedConversationIds,
     activeConversationId: saved.activeConversationId ?? null,
     workspacePaths: saved.workspacePaths,
+    remoteControlledConversationIds: saved.remoteControlledConversationIds,
   };
 }
 
