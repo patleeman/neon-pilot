@@ -74,7 +74,7 @@ export const fs = {
     const path = p?.path as string | undefined;
     const dataBase64 = p?.dataBase64 as string | undefined;
     if (!path) throw new Error('path is required');
-    if (!dataBase64) throw new Error('dataBase64 is required');
+    if (typeof dataBase64 !== 'string') throw new Error('dataBase64 is required');
     writeFileSync(path, Buffer.from(dataBase64, 'base64'));
     return {};
   }) as MethodHandler,
@@ -116,11 +116,7 @@ export const fs = {
     const recursive = p?.recursive !== false;
     const force = p?.force !== false;
     if (!path) throw new Error('path is required');
-    try {
-      rmSync(path, { recursive, force });
-    } catch {
-      /* ok */
-    }
+    rmSync(path, { recursive, force });
     return {};
   }) as MethodHandler,
 
