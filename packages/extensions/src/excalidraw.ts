@@ -38,17 +38,21 @@ type ExcalidrawModule = Pick<typeof import('@excalidraw/excalidraw'), 'Excalidra
 let excalidrawModulePromise: Promise<ExcalidrawModule> | null = null;
 
 async function loadExcalidrawModule(): Promise<ExcalidrawModule> {
-  const modulePromise =
-    excalidrawModulePromise ??
-    import('@excalidraw/excalidraw').then((module) => ({
-      Excalidraw: module.Excalidraw,
-      loadFromBlob: module.loadFromBlob,
-      serializeAsJSON: module.serializeAsJSON,
-      exportToBlob: module.exportToBlob,
-    }));
+  if (!excalidrawModulePromise) {
+    excalidrawModulePromise = import('@excalidraw/excalidraw')
+      .then((module) => ({
+        Excalidraw: module.Excalidraw,
+        loadFromBlob: module.loadFromBlob,
+        serializeAsJSON: module.serializeAsJSON,
+        exportToBlob: module.exportToBlob,
+      }))
+      .catch((err) => {
+        excalidrawModulePromise = null; // allow retry on transient failure
+        throw err;
+      });
+  }
 
-  excalidrawModulePromise = modulePromise;
-  return modulePromise;
+  return excalidrawModulePromise;
 }
 
 export async function loadExcalidrawComponent(): Promise<ExcalidrawComponent> {
@@ -264,7 +268,11 @@ function parseExcalidrawSourcePayload(sourceData: string): unknown {
   try {
     return JSON.parse(decodeBase64ToUtf8(normalized)) as unknown;
   } catch {
-    return JSON.parse(normalized) as unknown;
+    try {
+      return JSON.parse(normalized) as unknown;
+    } catch {
+      return null;
+    }
   }
 }
 
