@@ -461,6 +461,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'extensions' | 'commands'>('extensions');
   const [filter, setFilter] = useState<'all' | 'system' | 'user' | 'enabled' | 'disabled'>('all');
   const [query, setQuery] = useState('');
   const location = useLocation();
@@ -471,7 +472,6 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const [showExperimental, setShowExperimental] = useState(false);
   const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
   const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
-  const [showCommands, setShowCommands] = useState(false);
   const [commandArgsDraft, setCommandArgsDraft] = useState<Record<string, string>>({});
   const [keybindingDraft, setKeybindingDraft] = useState<Record<string, string>>({});
 
@@ -874,13 +874,15 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
             title="Extensions"
             summary="Install, enable, and inspect local product modules."
             actions={
-              <div className="flex flex-wrap gap-2">
-                <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
-                <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
-                <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
-                  ↻
-                </IconButton>
-              </div>
+              activeTab === 'extensions' ? (
+                <div className="flex flex-wrap gap-2">
+                  <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
+                  <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
+                  <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
+                    ↻
+                  </IconButton>
+                </div>
+              ) : null
             }
           />
 
@@ -890,20 +892,28 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
             </div>
           ) : null}
 
-          <section className="space-y-3 border-b border-border-subtle/70 pb-5">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-3 text-left"
-              onClick={() => setShowCommands((value) => !value)}
-              aria-expanded={showCommands}
-            >
+          <div className="flex flex-wrap gap-1 border-b border-border-subtle/70 pb-5">
+            {(['extensions', 'commands'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={cx(
+                  'rounded-lg px-3 py-1.5 text-[13px] capitalize transition-colors',
+                  activeTab === tab ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+                )}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'commands' ? (
+            <section className="space-y-4">
               <div>
-                <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Command inspector</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Commands</div>
                 <div className="mt-1 text-[12px] text-secondary">{commands.length} host and extension commands registered.</div>
               </div>
-              <span className="text-[12px] text-dim">{showCommands ? 'Hide' : 'Show'}</span>
-            </button>
-            {showCommands ? (
               <div className="space-y-4">
                 <div className="overflow-auto rounded-xl bg-surface/30 p-2">
                   <table className="w-full border-collapse text-left text-[12px]">
@@ -1001,10 +1011,8 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
                   </table>
                 </div>
               </div>
-            ) : null}
-          </section>
-
-          {extensions.length === 0 ? (
+            </section>
+          ) : extensions.length === 0 ? (
             <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
           ) : (
             <div className="space-y-4">
