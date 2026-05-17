@@ -932,7 +932,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div>
                     <h2 className="text-xl font-semibold text-primary">Runtime Logs</h2>
-                    <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically. Tiny mercy, no button mashing.</p>
+                    <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically.</p>
                   </div>
                   <pre className="mt-5 max-h-96 overflow-auto rounded-lg bg-background/25 p-4 text-xs leading-5 text-secondary">
                     {activeRuntime === 'mlx'
