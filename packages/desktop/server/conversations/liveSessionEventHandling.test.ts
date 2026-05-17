@@ -159,6 +159,46 @@ describe('streaming lifecycle callbacks', () => {
     expect(entry.currentTurnError).toBeNull();
   });
 
+  it('broadcasts final assistant text from message_end when no deltas were emitted', () => {
+    const entry = makeEntry();
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'message_start', message: { role: 'assistant', content: [] } } as unknown, cbs);
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Tools work.' }] },
+      } as unknown,
+      cbs,
+    );
+
+    expect(cbs.broadcast).toHaveBeenCalledWith(entry, { type: 'text_delta', delta: 'Tools work.' });
+  });
+
+  it('does not duplicate assistant message_end text when deltas already streamed', () => {
+    const entry = makeEntry();
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'message_start', message: { role: 'assistant', content: [] } } as unknown, cbs);
+    handleLiveSessionEvent(
+      entry,
+      { type: 'message_update', message: {}, assistantMessageEvent: { type: 'text_delta', delta: 'Tools ' } } as unknown,
+      cbs,
+    );
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Tools work.' }] },
+      } as unknown,
+      cbs,
+    );
+
+    const textDeltas = cbs.broadcast.mock.calls.map((call: unknown[]) => call[1]).filter((event) => event?.type === 'text_delta');
+    expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Tools ' }]);
+  });
+
   it('schedules context usage update on agent_start, message_update, and tool events', () => {
     const entry = makeEntry();
     const cbs = makeCallbacks();

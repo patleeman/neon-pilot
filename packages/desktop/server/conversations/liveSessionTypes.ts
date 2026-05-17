@@ -28,6 +28,8 @@ export interface LiveEntry extends LiveSessionPresenceHost, LiveSessionStaleTurn
   lastQueueStateJson: string | null;
   lastParallelStateJson?: string | null;
   currentTurnError?: string | null;
+  currentAssistantMessageText?: string;
+  currentAssistantMessageHadDelta?: boolean;
   lastDurableRunState?: WebLiveConversationRunState;
   contextUsageTimer?: ReturnType<typeof setTimeout>;
   pendingAutoCompactionReason?: 'overflow' | 'threshold' | null;

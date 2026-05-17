@@ -227,27 +227,15 @@ describe('system-alleycat turn protocol', () => {
     expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
   });
 
-  it('reconciles a final assistant response after tool-only live events', async () => {
+  it('streams and completes assistant text that arrives after tool events without agent_end', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
-    ctx.conversations.getBlocks
-      .mockResolvedValueOnce({
-        detail: { blocks: [{ type: 'text', id: 'old', text: 'Old response' }] },
-      })
-      .mockResolvedValueOnce({
-        detail: {
-          blocks: [
-            { type: 'text', id: 'old', text: 'Old response' },
-            { type: 'user', id: 'u1', text: 'Test your tools' },
-            { type: 'text', id: 'a1', text: 'Tools work.' },
-          ],
-        },
-      });
     ctx.conversations.runTurn.mockImplementation(
       async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
         options?.onEvent?.({ type: 'agent_start' });
         options?.onEvent?.({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'read', input: { path: 'README.md' } });
         options?.onEvent?.({ type: 'tool_end', toolCallId: 'tool-1', toolName: 'read', output: 'ok' });
+        options?.onEvent?.({ type: 'text_delta', delta: 'Tools work.' });
         options?.onEvent?.({ type: 'turn_end' });
         return { accepted: true };
       },
@@ -257,10 +245,15 @@ describe('system-alleycat turn protocol', () => {
     await waitForExpectation(() => {
       expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Tools work.' }));
     });
-    const completionCallIndex = notify.mock.calls.findIndex(([method]) => method === 'turn/completed');
     const deltaCallIndex = notify.mock.calls.findIndex(([method]) => method === 'item/agentMessage/delta');
+    const agentCompletedIndex = notify.mock.calls.findIndex(
+      ([method, payload]) => method === 'item/completed' && payload.item?.type === 'agentMessage',
+    );
+    const turnCompletedIndex = notify.mock.calls.findIndex(([method]) => method === 'turn/completed');
     expect(deltaCallIndex).toBeGreaterThan(-1);
-    expect(completionCallIndex).toBeGreaterThan(deltaCallIndex);
+    expect(agentCompletedIndex).toBeGreaterThan(deltaCallIndex);
+    expect(turnCompletedIndex).toBeGreaterThan(agentCompletedIndex);
+    expect(ctx.conversations.getBlocks).not.toHaveBeenCalled();
   });
 
   it('fails the Codex turn when the atomic PA turn runner fails', async () => {

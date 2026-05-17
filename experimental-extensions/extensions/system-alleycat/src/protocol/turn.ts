@@ -95,56 +95,6 @@ function promptImagesFromInput(input: Array<Record<string, unknown>>): PromptIma
     .filter((image): image is PromptImage => image !== null);
 }
 
-function latestAssistantTextFromBlocksPayload(payload: unknown): string | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const record = payload as Record<string, unknown>;
-  const candidates = [
-    record.blocks,
-    (record.detail as Record<string, unknown> | undefined)?.blocks,
-    (record.sessionDetail as Record<string, unknown> | undefined)?.blocks,
-    (record.stream as Record<string, unknown> | undefined)?.blocks,
-  ];
-  for (const candidate of candidates) {
-    if (!Array.isArray(candidate)) continue;
-    for (let index = candidate.length - 1; index >= 0; index -= 1) {
-      const block = candidate[index] as Record<string, unknown> | undefined;
-      if (block?.type === 'text' && typeof block.text === 'string' && block.text.trim()) return block.text;
-    }
-  }
-  return null;
-}
-
-async function readLatestAssistantText(threadId: string, ctx: Parameters<MethodHandler>[1]): Promise<string | null> {
-  if (!ctx.conversations.getBlocks) return null;
-  return latestAssistantTextFromBlocksPayload(await ctx.conversations.getBlocks(threadId).catch(() => null));
-}
-
-async function emitAssistantTextFromTranscriptIfNew(input: {
-  threadId: string;
-  turnId: string;
-  previousAssistantText: string | null;
-  ctx: Parameters<MethodHandler>[1];
-  notify: Parameters<MethodHandler>[3];
-}): Promise<boolean> {
-  const text = await readLatestAssistantText(input.threadId, input.ctx);
-  if (!text) return false;
-  const itemId = uid('item-');
-  input.notify('item/started', {
-    threadId: input.threadId,
-    turnId: input.turnId,
-    item: { id: itemId, type: 'agentMessage', text: '' },
-    startedAtMs: nowMs(),
-  });
-  input.notify('item/agentMessage/delta', { threadId: input.threadId, turnId: input.turnId, itemId, delta: text });
-  input.notify('item/completed', {
-    threadId: input.threadId,
-    turnId: input.turnId,
-    item: { id: itemId, type: 'agentMessage', text },
-    completedAtMs: nowMs(),
-  });
-  return true;
-}
-
 async function markThreadControlledRemotely(
   threadId: string,
   ctx: Parameters<MethodHandler>[1],
@@ -254,10 +204,9 @@ export const turn = {
 
     let turnDone = false;
     let finalStatus: 'inProgress' | 'completed' | 'failed' = 'inProgress';
-    let deferSuccessfulCompletion = false;
-    let previousAssistantText: string | null = null;
     let agentItemId: string | null = null;
     let agentText = '';
+    let agentItemCompleted = false;
 
     const onEvent = (event: unknown) => {
       if (turnDone) return;
@@ -268,6 +217,7 @@ export const turn = {
         case 'agent_start': {
           agentItemId = uid('item-');
           agentText = '';
+          agentItemCompleted = false;
           notify('item/started', {
             threadId,
             turnId,
@@ -278,7 +228,18 @@ export const turn = {
         }
         case 'text_delta': {
           const delta = ev.delta as string | undefined;
-          if (delta && agentItemId) {
+          if (delta) {
+            if (!agentItemId) {
+              agentItemId = uid('item-');
+              agentText = '';
+              agentItemCompleted = false;
+              notify('item/started', {
+                threadId,
+                turnId,
+                item: { id: agentItemId, type: 'agentMessage', text: '' },
+                startedAtMs: nowMs(),
+              });
+            }
             agentText += delta;
             notify('item/agentMessage/delta', { threadId, turnId, itemId: agentItemId, delta });
           }
@@ -326,13 +287,14 @@ export const turn = {
           break;
         }
         case 'agent_end': {
-          if (agentItemId) {
+          if (agentItemId && !agentItemCompleted) {
             notify('item/completed', {
               threadId,
               turnId,
               item: { id: agentItemId, type: 'agentMessage', text: agentText },
               completedAtMs: nowMs(),
             });
+            agentItemCompleted = true;
           }
           break;
         }
@@ -341,13 +303,14 @@ export const turn = {
           finalStatus = 'completed';
           conn.activeTurnThreads.delete(threadId);
           cleanupTurnSubscriptions(threadId);
-          if (!agentText) {
-            deferSuccessfulCompletion = true;
-            void (async () => {
-              await emitAssistantTextFromTranscriptIfNew({ threadId, turnId, previousAssistantText, ctx, notify });
-              notify('turn/completed', { threadId, turn: codexTurn(turnId, 'completed') });
-            })();
-            break;
+          if (agentItemId && !agentItemCompleted) {
+            notify('item/completed', {
+              threadId,
+              turnId,
+              item: { id: agentItemId, type: 'agentMessage', text: agentText },
+              completedAtMs: nowMs(),
+            });
+            agentItemCompleted = true;
           }
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'completed') });
           break;
@@ -368,16 +331,12 @@ export const turn = {
     void (async () => {
       try {
         await ctx.conversations.ensureLive(threadId, cwdOptions);
-        previousAssistantText = await readLatestAssistantText(threadId, ctx);
         await markThreadControlledRemotely(threadId, ctx);
         await ctx.conversations.runTurn(threadId, text, {
           ...(cwdOptions ?? {}),
           ...(images.length > 0 ? { images } : {}),
           onEvent,
         });
-        if (deferSuccessfulCompletion) {
-          return;
-        }
       } catch (error) {
         conn.activeTurnThreads.delete(threadId);
         if (!turnDone) {

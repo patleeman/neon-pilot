@@ -39,6 +39,20 @@ function readToolEventArgs(event: AgentSessionEvent): unknown {
   return 'args' in event ? event.args : undefined;
 }
 
+function extractAssistantTextContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const record = item as Record<string, unknown>;
+      if (typeof record.text === 'string') return record.text;
+      return '';
+    })
+    .join('');
+}
+
 function stringifyToolError(result: unknown): string | undefined {
   if (result == null) return undefined;
   if (typeof result === 'string') return result;
@@ -110,6 +124,8 @@ export interface LiveSessionEventHost {
   session: AgentSession;
   title: string;
   currentTurnError?: string | null;
+  currentAssistantMessageText?: string;
+  currentAssistantMessageHadDelta?: boolean;
   activeStaleTurnCustomType?: string | null;
   pendingAutoModeContinuation?: boolean;
   pendingAutoCompactionReason?: 'overflow' | 'threshold' | null;
@@ -298,6 +314,19 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
     void callbacks.syncDurableConversationRun(entry, 'waiting');
   }
 
+  if (event.type === 'message_start' && event.message.role === 'assistant') {
+    entry.currentAssistantMessageText = '';
+    entry.currentAssistantMessageHadDelta = false;
+  }
+
+  if (event.type === 'message_update') {
+    const assistantEvent = event.assistantMessageEvent;
+    if (assistantEvent.type === 'text_delta') {
+      entry.currentAssistantMessageText = `${entry.currentAssistantMessageText ?? ''}${assistantEvent.delta}`;
+      entry.currentAssistantMessageHadDelta = true;
+    }
+  }
+
   if (event.type === 'message_end' && event.message.role === 'assistant') {
     const errorMessage = getAssistantErrorDisplayMessage(event.message);
     if (errorMessage) {
@@ -314,6 +343,11 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
         runId: entry.traceRunId ?? undefined,
         metadata: { message: errorMessage },
       });
+    } else if (!entry.currentAssistantMessageHadDelta) {
+      const finalText = extractAssistantTextContent(event.message.content);
+      if (finalText && !suppressLiveEvent) {
+        callbacks.broadcast(entry, { type: 'text_delta', delta: finalText });
+      }
     }
   }
 
