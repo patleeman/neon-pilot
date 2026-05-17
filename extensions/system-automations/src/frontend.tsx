@@ -460,9 +460,17 @@ function TaskActionsMenu({
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+
+  const positionMenu = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPosition({ top: rect.bottom + 8, right: Math.max(12, window.innerWidth - rect.right) });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+    positionMenu();
 
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
@@ -470,9 +478,19 @@ function TaskActionsMenu({
       setOpen(false);
     }
 
+    function handleReposition() {
+      positionMenu();
+    }
+
     document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [open]);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [open, positionMenu]);
 
   const menuButtonClass =
     'w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50';
@@ -494,7 +512,11 @@ function TaskActionsMenu({
         <MoreIcon />
       </IconButton>
       {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl" role="menu">
+        <div
+          className="fixed z-50 w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
+          role="menu"
+          style={menuPosition ? { top: menuPosition.top, right: menuPosition.right } : undefined}
+        >
           <button
             type="button"
             className={menuButtonClass}
@@ -544,8 +566,14 @@ function AutomationTable({
   onDeleteTask: (task: ScheduledTaskSummary) => void;
 }) {
   return (
-    <section className="min-w-0 overflow-auto">
-      <table className="w-full border-collapse text-left text-[13px]">
+    <section className="min-w-0 overflow-x-auto overflow-y-visible">
+      <table className="w-full min-w-[54rem] table-fixed border-collapse text-left text-[13px]">
+        <colgroup>
+          <col className="w-[46%]" />
+          <col className="w-[22%]" />
+          <col className="w-[18%]" />
+          <col className="w-[14%]" />
+        </colgroup>
         <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
           <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
             <th className="py-2 pr-4 font-semibold">Name</th>
