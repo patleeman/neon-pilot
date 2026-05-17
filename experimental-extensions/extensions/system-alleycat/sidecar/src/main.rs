@@ -14,6 +14,7 @@ const PROTOCOL_VERSION: u32 = 1;
 const ALLEYCAT_ALPN: &[u8] = b"alleycat/1";
 const AGENT_NAME: &str = "personal-agent";
 const MAX_FRAME_BYTES: usize = 1024 * 1024;
+const INITIAL_FRAME_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -209,7 +210,9 @@ async fn handle_stream(
     mut recv: iroh::endpoint::RecvStream,
     config: Config,
 ) -> anyhow::Result<()> {
-    let request: Request = read_json_frame(&mut recv).await?;
+    let request: Request = tokio::time::timeout(INITIAL_FRAME_TIMEOUT, read_json_frame(&mut recv))
+        .await
+        .context("timed out waiting for initial Alleycat request frame")??;
     if let Err(error) = validate_request(&request, &config.token) {
         write_json_frame(&mut send, &Response::error(error.to_string())).await?;
         return Err(error);
