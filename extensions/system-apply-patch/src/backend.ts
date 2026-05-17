@@ -172,21 +172,34 @@ function ensureParent(path: string): void {
   mkdirSync(dirname(path), { recursive: true });
 }
 
-function applyFilePatch(filePatch: FilePatch, cwd: string): ApplyResult {
+function preflightFilePatch(filePatch: FilePatch, cwd: string): void {
   const target = resolveInsideCwd(cwd, filePatch.path);
   if (filePatch.type === 'add') {
     if (existsSync(target)) throw new Error(`Cannot add file that already exists: ${filePatch.path}`);
+  } else if (filePatch.type === 'delete') {
+    if (!existsSync(target)) throw new Error(`Cannot delete missing file: ${filePatch.path}`);
+  } else {
+    if (!existsSync(target)) throw new Error(`Cannot update missing file: ${filePatch.path}`);
+    if (filePatch.hunks.length === 0) throw new Error(`No hunks provided for update: ${filePatch.path}`);
+    if (filePatch.moveTo) {
+      const movedTarget = resolveInsideCwd(cwd, filePatch.moveTo);
+      if (existsSync(movedTarget)) throw new Error(`Cannot move to existing file: ${filePatch.moveTo}`);
+    }
+  }
+}
+
+function applyFilePatch(filePatch: FilePatch, cwd: string): ApplyResult {
+  const target = resolveInsideCwd(cwd, filePatch.path);
+  if (filePatch.type === 'add') {
     ensureParent(target);
     writeFileSync(target, `${filePatch.lines.join('\n')}${filePatch.lines.length > 0 ? '\n' : ''}`);
     return { action: 'added', path: filePatch.path, linesAdded: filePatch.lines.length };
   }
   if (filePatch.type === 'delete') {
-    if (!existsSync(target)) throw new Error(`Cannot delete missing file: ${filePatch.path}`);
     rmSync(target);
     return { action: 'deleted', path: filePatch.path };
   }
 
-  if (!existsSync(target)) throw new Error(`Cannot update missing file: ${filePatch.path}`);
   const original = readFileSync(target, 'utf-8');
   const applied = applyHunks(original, filePatch.hunks);
   writeFileSync(target, applied.content);
@@ -234,15 +247,32 @@ function formatResults(results: ApplyResult[]): string {
   ].join('\n');
 }
 
+function applyPatchesFromInput(input: ApplyPatchInput, ctx: ToolContext): ApplyResult[] {
+  const cwd = readCwd(ctx);
+  const patch = input.patch?.trim() ?? legacyEditsToPatch(input);
+  const filePatches = parsePatch(patch);
+
+  // Preflight: validate every operation before applying any.
+  // This ensures atomicity — if one file fails validation, no changes
+  // are written to disk.
+  for (const filePatch of filePatches) {
+    preflightFilePatch(filePatch, cwd);
+  }
+
+  // Apply phase: now safe to write since preflight passed.
+  const results = filePatches.map((filePatch) => applyFilePatch(filePatch, cwd));
+  return results;
+}
+
 export async function applyPatch(input: ApplyPatchInput, ctx: ToolContext) {
-  const patch = input.patch?.trim();
-  if (!patch) throw new Error('patch is required.');
-  const results = parsePatch(patch).map((filePatch) => applyFilePatch(filePatch, readCwd(ctx)));
+  if (!input.patch?.trim()) throw new Error('patch is required.');
+  const results = applyPatchesFromInput(input, ctx);
   return { text: formatResults(results), details: { results } };
 }
 
 export async function applyPatchEdit(input: ApplyPatchInput, ctx: ToolContext) {
-  const patch = input.patch?.trim() ? input.patch : legacyEditsToPatch(input);
-  const results = parsePatch(patch).map((filePatch) => applyFilePatch(filePatch, readCwd(ctx)));
+  const patch = input.patch?.trim();
+  if (!patch && !input.edits?.length) throw new Error('Either patch or edits are required.');
+  const results = applyPatchesFromInput(input, ctx);
   return { text: formatResults(results), details: { results } };
 }
