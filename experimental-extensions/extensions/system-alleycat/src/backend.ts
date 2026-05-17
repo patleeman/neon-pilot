@@ -14,6 +14,7 @@ let sidecarProcess: { pid: number | null; kill: () => Promise<void> | void } | n
 let sidecarPid: number | null = null;
 let sidecarLogPath: string | null = null;
 let sidecarLogs: string[] = [];
+let startPromise: Promise<AlleycatStatus> | null = null;
 
 const DEFAULT_COMPAT_PORT = 3850;
 const SECRET_KEY = 'alleycat-secret-key';
@@ -295,7 +296,7 @@ async function startSidecar(ctx: ExtensionBackendContext): Promise<void> {
   throw new Error(`Timed out waiting for Alleycat sidecar ready event: ${sidecarLogs.slice(-5).join('\n')}`);
 }
 
-export async function start(_input: unknown, ctx: ExtensionBackendContext): Promise<AlleycatStatus> {
+async function startOnce(_input: unknown, ctx: ExtensionBackendContext): Promise<AlleycatStatus> {
   if (!codexServer) {
     const { createCodexServer, setCodexProtocolLogger } = await import('./codexJsonRpcServer.js');
     const auth = codexAuth ?? createCodexAuth(ctx);
@@ -309,6 +310,14 @@ export async function start(_input: unknown, ctx: ExtensionBackendContext): Prom
   await startSidecar(ctx);
   pairPayloadCache = await buildPairPayload(ctx);
   return status(_input, ctx);
+}
+
+export async function start(input: unknown, ctx: ExtensionBackendContext): Promise<AlleycatStatus> {
+  if (startPromise) return startPromise;
+  startPromise = startOnce(input, ctx).finally(() => {
+    startPromise = null;
+  });
+  return startPromise;
 }
 
 export async function startService(input: unknown, ctx: ExtensionBackendContext): Promise<() => Promise<void>> {
@@ -331,6 +340,8 @@ async function stopSidecar(ctx?: ExtensionBackendContext): Promise<void> {
 }
 
 export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Promise<{ ok: true }> {
+  await startPromise.catch(() => null);
+  startPromise = null;
   await stopSidecar(ctx);
   if (ctx) await stopStaleSidecars(ctx);
   if (codexServer) {
