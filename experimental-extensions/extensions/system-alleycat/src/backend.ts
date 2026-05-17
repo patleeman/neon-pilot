@@ -84,12 +84,51 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+function stripAnsiEscapes(value: string): string {
+  let output = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code !== 27) {
+      output += value[index];
+      continue;
+    }
+
+    const next = value[index + 1];
+    if (next === '[') {
+      index += 2;
+      while (index < value.length) {
+        const terminator = value.charCodeAt(index);
+        if (terminator >= 0x40 && terminator <= 0x7e) break;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (next === ']') {
+      index += 2;
+      while (index < value.length) {
+        const current = value.charCodeAt(index);
+        if (current === 7) break;
+        if (current === 27 && value[index + 1] === '\\') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+
+    index += 1;
+  }
+  return output;
+}
+
 function appendSidecarOutput(chunk: Buffer): void {
   for (const line of chunk.toString('utf8').split('\n')) rememberLog(line);
 }
 
 function rememberLog(line: string): void {
-  const trimmed = line.trim();
+  const trimmed = stripAnsiEscapes(line).trim();
   if (!trimmed) return;
   sidecarLogs.push(trimmed);
   if (sidecarLogs.length > 200) sidecarLogs = sidecarLogs.slice(-200);
