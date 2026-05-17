@@ -29,6 +29,7 @@ setConversationServiceContext({
       archivedConversationIds: [],
       activeConversationId: null,
       workspacePaths: [],
+      remoteControlledConversationIds: [],
       nodeBrowserViews: [],
     }) satisfies SavedUiPreferences as SavedUiPreferences,
 });
