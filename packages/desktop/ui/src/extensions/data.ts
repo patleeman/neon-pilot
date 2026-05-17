@@ -9,6 +9,7 @@ export {
   notifyExtensionRegistryChanged,
 } from '../extensions/extensionRegistryEvents';
 export type { ExtensionInstallSummary } from '../extensions/types';
+export { GATEWAY_STATE_CHANGED_EVENT, notifyGatewayStateChanged } from '../gateways/gatewayEvents';
 export { CONVERSATION_LAYOUT_CHANGED_EVENT, readConversationLayout } from '../session/sessionTabs';
 export type {
   AppTelemetryEventRow,

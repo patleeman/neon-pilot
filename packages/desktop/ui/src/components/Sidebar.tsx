@@ -47,6 +47,7 @@ import { createNativeExtensionClient } from '../extensions/nativePaClient';
 import { ThreadHeaderActionHost } from '../extensions/ThreadHeaderActionHost';
 import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
+import { GATEWAY_STATE_CHANGED_EVENT } from '../gateways/gatewayEvents';
 import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
 import { buildConversationBootstrapVersionKey, fetchConversationBootstrapCached } from '../hooks/useConversationBootstrap';
 import { useConversations } from '../hooks/useConversations';
@@ -1897,6 +1898,12 @@ export function Sidebar() {
 
   useEffect(() => {
     let cancelled = false;
+
+    function handleGatewayStateChanged(event: Event) {
+      setGatewayState((event as CustomEvent<GatewayState>).detail);
+    }
+
+    window.addEventListener(GATEWAY_STATE_CHANGED_EVENT, handleGatewayStateChanged);
     api
       .gateways()
       .then((next) => {
@@ -1907,6 +1914,7 @@ export function Sidebar() {
       });
     return () => {
       cancelled = true;
+      window.removeEventListener(GATEWAY_STATE_CHANGED_EVENT, handleGatewayStateChanged);
     };
   }, [versions.sessions]);
 

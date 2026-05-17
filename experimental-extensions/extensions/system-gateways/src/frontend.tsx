@@ -1,5 +1,11 @@
 import type { GatewayConnection, GatewayEvent, GatewayState, GatewayThreadBinding, SessionMeta } from '@personal-agent/extensions/data';
-import { api, CONVERSATION_LAYOUT_CHANGED_EVENT, readConversationLayout, timeAgoCompact } from '@personal-agent/extensions/data';
+import {
+  api,
+  CONVERSATION_LAYOUT_CHANGED_EVENT,
+  notifyGatewayStateChanged,
+  readConversationLayout,
+  timeAgoCompact,
+} from '@personal-agent/extensions/data';
 import { AppPageIntro, AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -144,7 +150,7 @@ export function GatewaysPage() {
     setTelegramChatNotice(null);
     try {
       const result = await api.saveTelegramGatewayToken(token);
-      setState(result.state);
+      applyGatewayState(result.state);
       setTelegramTokenState({ configured: result.configured });
       setTelegramTokenDraft('');
       setTelegramTokenEditing(false);
@@ -167,7 +173,7 @@ export function GatewaysPage() {
     setTelegramChatError(null);
     try {
       const result = await api.deleteTelegramGatewayToken();
-      setState(result.state);
+      applyGatewayState(result.state);
       setTelegramTokenState({ configured: result.configured });
       setTelegramTokenDraft('');
       setTelegramTokenEditing(false);
@@ -179,11 +185,16 @@ export function GatewaysPage() {
     }
   }
 
+  function applyGatewayState(next: GatewayState) {
+    setState(next);
+    notifyGatewayStateChanged(next);
+  }
+
   async function updateTelegram(enabled: boolean) {
     setBusy(enabled ? 'resume' : 'pause');
     setError(null);
     try {
-      setState(await api.updateGatewayConnection('telegram', { status: enabled ? 'active' : 'paused', enabled }));
+      applyGatewayState(await api.updateGatewayConnection('telegram', { status: enabled ? 'active' : 'paused', enabled }));
     } catch (err) {
       setError(formatGatewayError(err));
     } finally {
@@ -196,7 +207,7 @@ export function GatewaysPage() {
     setBusy('detach');
     setError(null);
     try {
-      setState(await api.detachGatewayConversation(telegramBinding.conversationId, 'telegram'));
+      applyGatewayState(await api.detachGatewayConversation(telegramBinding.conversationId, 'telegram'));
     } catch (err) {
       setError(formatGatewayError(err));
     } finally {
@@ -215,7 +226,7 @@ export function GatewaysPage() {
     setTelegramChatNotice(null);
     setTelegramChatError(null);
     try {
-      setState(await api.saveTelegramGatewayChat(chatId));
+      applyGatewayState(await api.saveTelegramGatewayChat(chatId));
       setTelegramChatNotice('Telegram chat ID saved.');
     } catch (err) {
       setTelegramChatError(formatGatewayError(err));
@@ -243,7 +254,7 @@ export function GatewaysPage() {
     setBusy('telegram-attach');
     setError(null);
     try {
-      setState(
+      applyGatewayState(
         await api.attachGatewayConversation({
           provider: 'telegram',
           conversationId: thread.id,
