@@ -47,7 +47,7 @@ async function findFile(root, filename) {
 const release = await fetchJson('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest');
 const asset = release.assets.find((candidate) => {
   const name = candidate.name.toLowerCase();
-  return name.endsWith('.zip') && name.includes('macos') && name.includes('arm64');
+  return name.endsWith('.tar.gz') && name.includes('macos') && name.includes('arm64') && !name.includes('kleidiai');
 });
 
 if (!asset) throw new Error(`Could not find a macOS arm64 llama.cpp release asset in ${release.html_url}`);
@@ -59,7 +59,7 @@ const zipPath = join(workDir, asset.name);
 try {
   console.log(`Downloading ${asset.name}`);
   await download(asset.browser_download_url, zipPath);
-  await run('ditto', ['-x', '-k', zipPath, workDir]);
+  await run('tar', ['-xzf', zipPath, '-C', workDir]);
 
   for (const binary of ['llama-cli', 'llama-server']) {
     const source = await findFile(workDir, binary);
