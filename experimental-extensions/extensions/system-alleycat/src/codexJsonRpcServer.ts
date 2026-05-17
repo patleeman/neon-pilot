@@ -61,6 +61,24 @@ function logProtocol(line: string): void {
   protocolLogger?.(line);
 }
 
+function notificationSummary(method: string, params: unknown): string {
+  const p = params as Record<string, unknown> | null;
+  const threadId = typeof p?.threadId === 'string' ? ` threadId=${p.threadId}` : '';
+  const turnId = typeof p?.turnId === 'string' ? ` turnId=${p.turnId}` : '';
+  const itemId = typeof p?.itemId === 'string' ? ` itemId=${p.itemId}` : '';
+  const delta = typeof p?.delta === 'string' ? ` delta=${JSON.stringify(p.delta.slice(0, 120))}` : '';
+  const turn = p?.turn as Record<string, unknown> | undefined;
+  const turnStatus = typeof turn?.status === 'string' ? ` turnStatus=${turn.status}` : '';
+  const item = p?.item as Record<string, unknown> | undefined;
+  const itemType = typeof item?.type === 'string' ? ` itemType=${item.type}` : '';
+  const itemStatus = typeof item?.status === 'string' ? ` itemStatus=${item.status}` : '';
+  return `${method}${threadId}${turnId}${itemId}${itemType}${itemStatus}${turnStatus}${delta}`;
+}
+
+function logNotification(method: string, params: unknown): void {
+  logProtocol(`rpc notify ${notificationSummary(method, params)}`);
+}
+
 // ── Thread event dispatch ────────────────────────────────────────────────────
 // Maps threadId → set of notification functions for subscribed connections.
 // The server.close/connection-close handlers call unsubscribeConnectionFromAll.
@@ -335,6 +353,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
       if (!socket.destroyed) socket.write(`${JSON.stringify(data)}\n`);
     };
     const notify: NotifyFn = (method: string, params: unknown) => {
+      logNotification(method, params);
       sendJson({ jsonrpc: '2.0', method, params } satisfies JsonRpcNotification);
     };
     const lines = createInterface({ input: socket, crlfDelay: Infinity });
@@ -376,6 +395,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     };
 
     const notify: NotifyFn = (method: string, params: unknown) => {
+      logNotification(method, params);
       sendJson({ jsonrpc: '2.0', method, params } satisfies JsonRpcNotification);
     };
 
