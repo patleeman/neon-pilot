@@ -719,6 +719,18 @@ export function DesktopKeyboardShortcutsSettingsSection() {
       return;
     }
 
+    // Pre-save duplicate check: reject before calling the API so a conflict
+    // isn't persisted before the next render can surface the warning.
+    const shortcutValues = Object.values(nextShortcuts).filter((s): s is string => typeof s === 'string' && s.length > 0);
+    const seenShortcuts = new Set<string>();
+    for (const value of shortcutValues) {
+      if (seenShortcuts.has(value)) {
+        setError(`Duplicate shortcut: ${value} is already assigned.`);
+        return;
+      }
+      seenShortcuts.add(value);
+    }
+
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -1247,8 +1259,10 @@ function ExtensionSecretsSection() {
       );
   }, [errorMessage]);
 
+  // Use local selectedBackend when the user has changed it so the select
+  // doesn't snap back to the stale settings value before refetch.
   const activeBackend =
-    typeof settingsValues?.['secrets.provider'] === 'string'
+    (selectedBackend ?? typeof settingsValues?.['secrets.provider'] === 'string')
       ? settingsValues['secrets.provider']
       : secretsState?.backend === 'env-only' || secretsState?.backend === 'file' || secretsState?.backend === 'keychain'
         ? secretsState.backend
@@ -1284,12 +1298,15 @@ function ExtensionSecretsSection() {
     }
   };
 
+  const [selectedBackend, setSelectedBackend] = useState<string | undefined>();
+
   const saveBackend = async (provider: string) => {
     setSavingBackend(true);
     setErrorMessage(null);
     setNotice(null);
     try {
       await api.updateSettings({ 'secrets.provider': provider });
+      setSelectedBackend(provider);
       setNotice('Secret storage backend saved. Restart any active agents that need newly stored secrets.');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
