@@ -29,8 +29,15 @@ type RevealInput = { modelPath?: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const extensionRoot = join(here, '..');
-const bundledCli = join(extensionRoot, 'bin', 'darwin-arm64', 'llama-cli');
-const bundledServer = join(extensionRoot, 'bin', 'darwin-arm64', 'llama-server');
+const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
+const llamaCppExtensionRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'extensions', 'llama-cpp') : extensionRoot;
+function bundledBinary(name: string) {
+  const localPath = join(extensionRoot, 'bin', 'darwin-arm64', name);
+  if (existsSync(localPath)) return localPath;
+  return join(llamaCppExtensionRoot, 'bin', 'darwin-arm64', name);
+}
+const bundledCli = bundledBinary('llama-cli');
+const bundledServer = bundledBinary('llama-server');
 const modelCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp', 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'process/serverPid';
