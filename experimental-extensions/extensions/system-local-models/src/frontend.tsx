@@ -77,8 +77,8 @@ type PageId = 'server' | 'library';
 type LogTab = 'chat' | 'logs';
 
 const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
-const GGUF_PROVIDER_ID = 'llama-cpp-local';
-const MLX_PROVIDER_ID = 'mlx-local';
+const LOCAL_PROVIDER_ID = 'local';
+const LEGACY_LOCAL_PROVIDER_IDS = ['mlx-local', 'llama-cpp-local'];
 
 function formatBytes(bytes?: number) {
   if (!bytes) return '';
@@ -136,16 +136,15 @@ async function deleteJson(path: string) {
 }
 
 async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string) {
-  const provider = runtime === 'mlx' ? MLX_PROVIDER_ID : GGUF_PROVIDER_ID;
   await postJson('/api/model-providers/providers', {
-    provider,
+    provider: LOCAL_PROVIDER_ID,
     api: 'openai-completions',
     baseUrl,
     apiKey: 'local',
     authHeader: false,
     compat: { stream: true },
   });
-  await postJson(`/api/model-providers/providers/${encodeURIComponent(provider)}/models`, {
+  await postJson(`/api/model-providers/providers/${encodeURIComponent(LOCAL_PROVIDER_ID)}/models`, {
     modelId,
     name: modelId.split('/').pop() || modelId,
     api: 'openai-completions',
@@ -156,26 +155,29 @@ async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: stri
   });
 }
 
-async function syncLocalProviderModel(runtime: 'mlx' | 'gguf', activeModelId: string | null, baseUrl: string) {
-  const provider = runtime === 'mlx' ? MLX_PROVIDER_ID : GGUF_PROVIDER_ID;
+async function syncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string } | null) {
   const state = (await getJson('/api/model-providers')) as { providers?: Array<{ id?: string; models?: Array<{ id?: string }> }> };
-  const currentModels = state.providers?.find((candidate) => candidate.id === provider)?.models ?? [];
+  const currentModels = state.providers?.find((candidate) => candidate.id === LOCAL_PROVIDER_ID)?.models ?? [];
+  const activeModelId = activeModel?.id ?? null;
 
-  if (activeModelId) {
-    await registerLocalProviderModel(runtime, activeModelId, baseUrl);
+  if (activeModel) {
+    await registerLocalProviderModel(activeModel.runtime, activeModel.id, activeModel.baseUrl);
   }
 
-  await Promise.all(
-    currentModels
+  await Promise.all([
+    ...currentModels
       .map((model) => model.id)
       .filter((modelId): modelId is string => Boolean(modelId && modelId !== activeModelId))
-      .map((modelId) => deleteJson(`/api/model-providers/providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}`)),
-  );
+      .map((modelId) =>
+        deleteJson(`/api/model-providers/providers/${encodeURIComponent(LOCAL_PROVIDER_ID)}/models/${encodeURIComponent(modelId)}`),
+      ),
+    ...LEGACY_LOCAL_PROVIDER_IDS.map((provider) => deleteJson(`/api/model-providers/providers/${encodeURIComponent(provider)}`)),
+  ]);
 }
 
-async function trySyncLocalProviderModel(runtime: 'mlx' | 'gguf', activeModelId: string | null, baseUrl: string) {
+async function trySyncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string } | null) {
   try {
-    await syncLocalProviderModel(runtime, activeModelId, baseUrl);
+    await syncLocalProviderModel(activeModel);
   } catch {
     // Preview/testing contexts may not expose provider APIs.
   }
@@ -287,17 +289,17 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   useEffect(() => {
     if (!status) return;
-    const mlxActiveModel = status.mlx.server.reachable ? status.mlx.loadedModelId || status.mlx.selectedModelId : null;
-    const ggufSelected = status.gguf.models.find((model) => model.path === status.gguf.selectedModelPath) ?? null;
-    const ggufActiveModel = status.gguf.server.reachable && ggufSelected ? ggufSelected.name : null;
     const ggufBaseUrl = status.gguf.baseUrl || 'http://127.0.0.1:8012/v1';
-    const syncKey = `${mlxActiveModel ?? ''}|${ggufActiveModel ?? ''}|${ggufBaseUrl}`;
+    const ggufSelected = status.gguf.models.find((model) => model.path === status.gguf.selectedModelPath) ?? null;
+    const activeModel = status.mlx.server.reachable
+      ? { runtime: 'mlx' as const, id: status.mlx.loadedModelId || status.mlx.selectedModelId, baseUrl: MLX_BASE_URL }
+      : status.gguf.server.reachable && ggufSelected
+        ? { runtime: 'gguf' as const, id: ggufSelected.name, baseUrl: ggufBaseUrl }
+        : null;
+    const syncKey = activeModel ? `${activeModel.runtime}|${activeModel.id}|${activeModel.baseUrl}` : 'off';
     if (providerSyncKeyRef.current === syncKey) return;
     providerSyncKeyRef.current = syncKey;
-    void Promise.all([
-      trySyncLocalProviderModel('mlx', mlxActiveModel, MLX_BASE_URL),
-      trySyncLocalProviderModel('gguf', ggufActiveModel, ggufBaseUrl),
-    ]);
+    void trySyncLocalProviderModel(activeModel);
   }, [status]);
 
   const downloadedModels = useMemo<DownloadedModel[]>(() => {
@@ -375,7 +377,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         if (reload) {
           if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
           await pa.extension.invoke('localModelsMlxStart', {});
-          await trySyncLocalProviderModel('mlx', selectedModel.subtitle, MLX_BASE_URL);
+          await trySyncLocalProviderModel({ runtime: 'mlx', id: selectedModel.subtitle, baseUrl: MLX_BASE_URL });
         }
       } else if (selectedModel.path) {
         await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
@@ -386,7 +388,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             contextSize: Number(contextSize),
             gpuLayers: Number(gpuLayers),
           });
-          await trySyncLocalProviderModel('gguf', selectedModel.title, status?.gguf?.baseUrl || endpoint);
+          await trySyncLocalProviderModel({ runtime: 'gguf', id: selectedModel.title, baseUrl: status?.gguf?.baseUrl || endpoint });
         }
       }
       setDirty(false);
@@ -397,10 +399,10 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     await runAction('Stopping…', async () => {
       if (activeRuntime === 'mlx') {
         await pa.extension.invoke('localModelsMlxStop', {});
-        await trySyncLocalProviderModel('mlx', null, MLX_BASE_URL);
+        await trySyncLocalProviderModel(null);
       } else {
         await pa.extension.invoke('localModelsGgufStop', {});
-        await trySyncLocalProviderModel('gguf', null, status?.gguf?.baseUrl || endpoint);
+        await trySyncLocalProviderModel(null);
       }
     });
   }
