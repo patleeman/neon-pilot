@@ -991,7 +991,9 @@ export class KnowledgeBaseManager {
       `kb sync ${timestamp}`,
     ]);
 
-    runGitText(root, ['push', 'origin', `HEAD:refs/heads/${branch}`]);
+    // Push failure is non-fatal — the commit is already local and stored
+    // state will be updated before the next sync, preventing duplicate commits.
+    runGitText(root, ['push', 'origin', `HEAD:refs/heads/${branch}`], { allowFailure: true });
   }
 
   private resolveChangedPaths(

@@ -98,7 +98,7 @@ describe('openSqliteDatabase', () => {
     })('ok');
     db.close();
 
-    expect(calls).toEqual(['PRAGMA foreign_keys = ON', 'BEGIN', 'body:ok', 'COMMIT', 'close']);
+    expect(calls).toEqual(['PRAGMA foreign_keys = ON', 'SAVEPOINT "pa_tx_0"', 'body:ok', 'RELEASE "pa_tx_0"', 'close']);
   });
 
   it('rolls back and rethrows when the emulated transaction body fails', async () => {
@@ -131,7 +131,7 @@ describe('openSqliteDatabase', () => {
     });
 
     expect(() => tx()).toThrow('boom');
-    expect(calls).toEqual(['BEGIN', 'ROLLBACK']);
+    expect(calls).toEqual(['SAVEPOINT "pa_tx_0"', 'ROLLBACK TO "pa_tx_0"']);
   });
 
   it('loads better-sqlite3 from the desktop native modules dir when provided', async () => {

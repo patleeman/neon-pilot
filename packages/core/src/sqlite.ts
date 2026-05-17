@@ -80,16 +80,21 @@ function loadSqliteDatabaseCtor(): SqliteDatabaseCtor {
   return require('better-sqlite3') as SqliteDatabaseCtor;
 }
 
+let savepointCounter = 0;
+
 function wrapTransaction<TArgs extends unknown[]>(db: RawSqliteDatabase, fn: (...args: TArgs) => void): (...args: TArgs) => void {
   return (...args: TArgs) => {
-    db.exec('BEGIN');
+    // Use named savepoints instead of BEGIN/COMMIT so wrapping an existing
+    // transaction (nested call) doesn't silently commit the outer tx.
+    const sp = `pa_tx_${savepointCounter++}`;
+    db.exec(`SAVEPOINT "${sp}"`);
 
     try {
       fn(...args);
-      db.exec('COMMIT');
+      db.exec(`RELEASE "${sp}"`);
     } catch (error) {
       try {
-        db.exec('ROLLBACK');
+        db.exec(`ROLLBACK TO "${sp}"`);
       } catch {
         // Ignore rollback failures so the original error wins.
       }

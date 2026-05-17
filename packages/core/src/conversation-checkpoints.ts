@@ -455,14 +455,21 @@ export function deleteConversationCheckpoint(options: ResolveConversationCheckpo
   validateProfileName(options.profile);
   validateConversationCheckpointId(options.checkpointId);
 
-  const existing = getConversationCheckpoint(options);
-  const snapshotPath = existing
-    ? resolveConversationCheckpointSnapshotFile({
-        stateRoot: options.stateRoot,
-        profile: options.profile,
-        checkpoint: existing,
-      })
-    : resolveConversationCheckpointSnapshotPath(options);
+  let snapshotPath: string;
+  try {
+    const existing = getConversationCheckpoint(options);
+    snapshotPath = existing
+      ? resolveConversationCheckpointSnapshotFile({
+          stateRoot: options.stateRoot,
+          profile: options.profile,
+          checkpoint: existing,
+        })
+      : resolveConversationCheckpointSnapshotPath(options);
+  } catch {
+    // Corrupt or inaccessible checkpoint record — fall back to the computed
+    // path so we can still clean up orphaned files.
+    snapshotPath = resolveConversationCheckpointSnapshotPath(options);
+  }
   const metaPath = resolveConversationCheckpointMetaPath(options);
 
   let deleted = false;
