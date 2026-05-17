@@ -241,15 +241,8 @@ async function handleJsonRpcMessage(input: {
   }
 
   const { method, id, params } = request;
-  if (
-    method === 'initialize' ||
-    method.startsWith('thread/') ||
-    method.startsWith('model') ||
-    method.startsWith('config/') ||
-    method.startsWith('fs/')
-  ) {
-    logProtocol(`rpc request ${method} ${params ? JSON.stringify(params).slice(0, 500) : '{}'}`);
-  }
+  const requestStartedAt = Date.now();
+  logProtocol(`rpc request ${method} ${params ? JSON.stringify(params).slice(0, 800) : '{}'}`);
 
   if (id === undefined || id === null) return;
 
@@ -266,35 +259,30 @@ async function handleJsonRpcMessage(input: {
     const allHandlers = await input.getHandlers();
     const handler = allHandlers[method];
     if (!handler) {
+      const message = `Method not found: ${method}`;
+      logProtocol(`rpc error ${method} ${Date.now() - requestStartedAt}ms ${message}`);
       input.sendJson({
         jsonrpc: '2.0',
         id,
-        error: { code: -32601, message: `Method not found: ${method}` },
+        error: { code: -32601, message },
       } satisfies JsonRpcError);
       return;
     }
 
     const result = await handler(params, input.ctx, input.conn, input.notify);
-    if (method === 'thread/list') {
-      const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
-      logProtocol(`rpc response ${method} count=${count ?? 'unknown'} ${JSON.stringify(result).slice(0, 800)}`);
-    } else if (
-      method === 'thread/loaded/list' ||
-      method === 'thread/turns/list' ||
-      method === 'thread/turns/items/list' ||
-      method === 'model/list'
-    ) {
-      const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
-      logProtocol(`rpc response ${method} count=${count ?? 'unknown'} ${JSON.stringify(result).slice(0, 500)}`);
-    }
+    const count = Array.isArray((result as Record<string, unknown> | null)?.data) ? (result as { data: unknown[] }).data.length : null;
+    const countSuffix = count === null ? '' : ` count=${count}`;
+    logProtocol(`rpc response ${method}${countSuffix} ${Date.now() - requestStartedAt}ms ${JSON.stringify(result).slice(0, 1200)}`);
     input.sendJson({ jsonrpc: '2.0', id, result } satisfies JsonRpcSuccess);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logProtocol(`rpc error ${method} ${Date.now() - requestStartedAt}ms ${message}`);
     input.sendJson({
       jsonrpc: '2.0',
       id,
       error: {
         code: -32603,
-        message: error instanceof Error ? error.message : String(error),
+        message,
       },
     } satisfies JsonRpcError);
   }
