@@ -377,6 +377,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
+  async function selectSearchModel(modelId: string) {
+    setSelectedSearchId(modelId);
+    setSelectedFile('');
+    setDetails(null);
+    const model = searchResults.find((candidate) => candidate.id === modelId);
+    if (model?.format === 'gguf') {
+      await loadDetails(modelId);
+    }
+  }
+
   async function downloadSelectedModel() {
     const model =
       details ?? (selectedSearch ? { id: selectedSearch.id, tags: selectedSearch.tags, files: [] as Array<{ name: string }> } : null);
@@ -496,13 +506,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               </div>
             </div>
             <div className="flex gap-2">
-              <ToolbarButton onClick={() => void loadDetails(selectedSearch.id)}>Details</ToolbarButton>
               <ToolbarButton
-                disabled={Boolean(busy || (selectedSearch.format === 'gguf' && !selectedFile && !details))}
+                disabled={Boolean(busy || (selectedSearch.format === 'gguf' && !selectedFile))}
                 onClick={() => void downloadSelectedModel()}
               >
                 Download
               </ToolbarButton>
+              <ToolbarButton onClick={() => void loadDetails(selectedSearch.id)}>Refresh Details</ToolbarButton>
             </div>
             {details ? (
               <>
@@ -524,7 +534,9 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               </>
             ) : (
               <div className="rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
-                Select Details to inspect files and README before downloading.
+                {selectedSearch.format === 'gguf'
+                  ? 'Loading details finds the downloadable GGUF files.'
+                  : 'README preview loads on demand; MLX models can download directly.'}
               </div>
             )}
           </div>
@@ -781,7 +793,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                               'border-t border-border-subtle hover:bg-surface/50',
                               model.id === selectedSearchId && 'bg-accent/10',
                             )}
-                            onClick={() => setSelectedSearchId(model.id)}
+                            onClick={() => void selectSearchModel(model.id)}
                           >
                             <td className="min-w-0 px-3 py-3">
                               <div className="truncate font-medium text-primary">{model.id}</div>
@@ -799,12 +811,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                             <td className="hidden px-3 py-3 text-secondary 2xl:table-cell">{formatDate(model.lastModified)}</td>
                             <td className="px-3 py-3">
                               <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
-                                <ToolbarButton onClick={() => void loadDetails(model.id)}>Details</ToolbarButton>
+                                <ToolbarButton onClick={() => void selectSearchModel(model.id)}>Select</ToolbarButton>
                                 <ToolbarButton
-                                  disabled={model.format !== 'mlx'}
+                                  disabled={model.format === 'unknown'}
                                   onClick={() => {
-                                    setSelectedSearchId(model.id);
-                                    void downloadMlxModel(model.id);
+                                    void selectSearchModel(model.id).then(() => {
+                                      if (model.format === 'mlx') void downloadMlxModel(model.id);
+                                    });
                                   }}
                                 >
                                   Download
