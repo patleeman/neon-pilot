@@ -256,6 +256,31 @@ describe('system-alleycat turn protocol', () => {
     expect(ctx.conversations.getBlocks).not.toHaveBeenCalled();
   });
 
+  it('matches anonymous tool start and end events to the same item id', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'tool_start', toolName: 'read', input: { path: 'README.md' } });
+        options?.onEvent?.({ type: 'tool_end', toolName: 'read', output: 'ok' });
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Use a tool' }] }, ctx as never, makeConn(), notify);
+    await flushAsyncTurnStart();
+
+    const toolStarted = notify.mock.calls.find(
+      ([method, payload]) => method === 'item/started' && payload.item?.type === 'dynamicToolCall',
+    );
+    const toolCompleted = notify.mock.calls.find(
+      ([method, payload]) => method === 'item/completed' && payload.item?.type === 'dynamicToolCall',
+    );
+    expect(toolStarted?.[1].item.id).toBeTruthy();
+    expect(toolCompleted?.[1].item.id).toBe(toolStarted?.[1].item.id);
+  });
+
   it('does not orphan an implicit assistant item when text arrives before agent_start', async () => {
     const ctx = makeContext();
     const notify = vi.fn();

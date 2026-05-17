@@ -206,6 +206,7 @@ export const turn = {
     let agentItemId: string | null = null;
     let agentText = '';
     let agentItemCompleted = false;
+    const anonymousToolIds: string[] = [];
 
     const onEvent = (event: unknown) => {
       if (turnDone || turnState.interrupted) return;
@@ -254,7 +255,8 @@ export const turn = {
           break;
         }
         case 'tool_start': {
-          const toolId = (ev.toolCallId as string) ?? uid('tool-');
+          const toolId = typeof ev.toolCallId === 'string' && ev.toolCallId ? ev.toolCallId : uid('tool-');
+          if (!(typeof ev.toolCallId === 'string' && ev.toolCallId)) anonymousToolIds.push(toolId);
           notify('item/started', {
             threadId,
             turnId,
@@ -270,7 +272,7 @@ export const turn = {
           break;
         }
         case 'tool_end': {
-          const toolId = (ev.toolCallId as string) ?? uid('tool-');
+          const toolId = typeof ev.toolCallId === 'string' && ev.toolCallId ? ev.toolCallId : (anonymousToolIds.shift() ?? uid('tool-'));
           notify('item/completed', {
             threadId,
             turnId,
