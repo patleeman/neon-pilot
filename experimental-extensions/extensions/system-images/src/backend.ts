@@ -49,7 +49,13 @@ async function executeRegisteredTool(factory: (pi: RegisterToolApi) => void, inp
     throw new Error('Image tools require an active agent tool context.');
   }
 
-  return registeredTool.execute('extension-backend-image', input, undefined, undefined, resolveAgentToolContext(ctx.agentToolContext));
+  return registeredTool.execute(
+    'extension-backend-image',
+    input,
+    ctx.agentToolContext?.signal,
+    undefined,
+    resolveAgentToolContext(ctx.agentToolContext),
+  );
 }
 
 export async function image(input: unknown, ctx: ImageBackendContext) {

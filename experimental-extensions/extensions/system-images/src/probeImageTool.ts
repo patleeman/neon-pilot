@@ -140,6 +140,13 @@ export function createImageProbeAgentExtension(options: Options) {
             details: { imageIds, model: model.id, provider: model.provider },
           };
         }
+        if (!text.trim()) {
+          return {
+            isError: true,
+            content: [{ type: 'text' as const, text: 'Vision model returned no answer.' }],
+            details: { imageIds, model: model.id, provider: model.provider },
+          };
+        }
         return { content: [{ type: 'text' as const, text }], details: { imageIds, model: model.id, provider: model.provider } };
       },
     } as never);
