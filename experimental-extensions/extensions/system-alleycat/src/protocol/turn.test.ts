@@ -25,6 +25,7 @@ function makeContext() {
         .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
+      getBlocks: vi.fn().mockResolvedValue({ detail: { blocks: [] } }),
     },
     emitConversationEvent(event: unknown) {
       conversationHandler?.(event);
@@ -183,6 +184,26 @@ describe('system-alleycat turn protocol', () => {
 
     expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({ activeConversationId: 'thread-1' });
     expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the persisted transcript when live response events are unavailable', async () => {
+    const ctx = makeContext();
+    ctx.conversations.sendMessage.mockResolvedValue({ accepted: true });
+    ctx.conversations.getBlocks.mockResolvedValue({
+      detail: {
+        blocks: [
+          { type: 'user', id: 'u1', text: 'Hi' },
+          { type: 'text', id: 'a1', text: 'Hi Patrick — I’m here.' },
+        ],
+      },
+    });
+    const notify = vi.fn();
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
+    await flushAsyncTurnStart();
+
+    expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hi Patrick — I’m here.' }));
+    expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));
   });
 
   it('tolerates conversation subscriptions that do not return an unsubscribe function', async () => {

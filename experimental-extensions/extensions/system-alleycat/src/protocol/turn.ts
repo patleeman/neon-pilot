@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { MethodHandler } from '../codexJsonRpcServer.js';
+import { readTurns } from './thread.js';
 
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
 // on connection drop. Map<threadId, Set<unsubscribeFn>>
@@ -93,6 +94,18 @@ function promptImagesFromInput(input: Array<Record<string, unknown>>): PromptIma
     .filter((item) => item.type === 'image' || item.type === 'input_image' || item.type === 'local_image')
     .map(promptImageFromInputItem)
     .filter((image): image is PromptImage => image !== null);
+}
+
+function latestAssistantTextFromTurns(turns: unknown[]): string | null {
+  for (let turnIndex = turns.length - 1; turnIndex >= 0; turnIndex -= 1) {
+    const turn = turns[turnIndex] as Record<string, unknown> | undefined;
+    const items = Array.isArray(turn?.items) ? turn.items : [];
+    for (let itemIndex = items.length - 1; itemIndex >= 0; itemIndex -= 1) {
+      const item = items[itemIndex] as Record<string, unknown> | undefined;
+      if (item?.type === 'agentMessage' && typeof item.text === 'string' && item.text.trim()) return item.text;
+    }
+  }
+  return null;
 }
 
 async function markThreadControlledRemotely(
@@ -356,6 +369,30 @@ export const turn = {
       unsubscribe = subscribeToTurn();
       await markThreadControlledRemotely(threadId, ctx);
       await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
+      if (!turnDone && !agentText) {
+        const fallbackText = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
+        if (fallbackText) {
+          const fallbackItemId = agentItemId ?? uid('item-');
+          notify('item/started', {
+            threadId,
+            turnId,
+            item: { id: fallbackItemId, type: 'agentMessage', text: '' },
+            startedAtMs: nowMs(),
+          });
+          notify('item/agentMessage/delta', { threadId, turnId, itemId: fallbackItemId, delta: fallbackText });
+          notify('item/completed', {
+            threadId,
+            turnId,
+            item: { id: fallbackItemId, type: 'agentMessage', text: fallbackText },
+            completedAtMs: nowMs(),
+          });
+          turnDone = true;
+          conn.activeTurnThreads.delete(threadId);
+          if (typeof unsubscribe === 'function') unsubscribe();
+          cleanupTurnSubscriptions(threadId);
+          notify('turn/completed', { threadId, turn: codexTurn(turnId, 'completed') });
+        }
+      }
     })().catch((error) => {
       conn.activeTurnThreads.delete(threadId);
       if (!turnDone) {
