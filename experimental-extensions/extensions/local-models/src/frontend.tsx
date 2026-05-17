@@ -1,15 +1,16 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageIntro, AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@personal-agent/extensions/ui';
+import { useEffect, useMemo, useState } from 'react';
 
 type MlxStatus = {
   selectedModelId: string;
   loadedModelId: string | null;
   installed: boolean;
   downloaded?: string;
+  baseUrl?: string;
   server: { reachable: boolean; models: string[]; error?: string };
   setup: { status: 'running' | 'succeeded' | 'failed'; message: string; progress: number; error: string | null } | null;
-  process: { managedRunning: boolean };
+  process: { managedRunning: boolean; setupRunning?: boolean };
   log: string;
 };
 
@@ -28,17 +29,40 @@ type GgufStatus = {
 };
 
 type Status = { mlx: MlxStatus; gguf: GgufStatus };
-type SearchResult = { id: string; downloads: number; likes: number; tags: string[] };
-type LibraryModel = {
+type DownloadedModel = {
   id: string;
   title: string;
   subtitle: string;
   runtime: 'mlx' | 'gguf';
-  installed: boolean;
+  format: 'MLX' | 'GGUF';
   size?: string;
-  meta?: string;
   path?: string;
+  modified?: number;
+  selected: boolean;
+  loaded: boolean;
 };
+type SearchModel = {
+  id: string;
+  title: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  format: 'mlx' | 'gguf' | 'unknown';
+  pipelineTag?: string;
+  lastModified?: string;
+};
+type ModelDetails = {
+  id: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  lastModified?: string;
+  files: Array<{ name: string; size?: number }>;
+  readme: string;
+};
+
+type PageId = 'server' | 'library';
+type LogTab = 'chat' | 'logs';
 
 const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
 const GGUF_PROVIDER_ID = 'llama-cpp-local';
@@ -48,6 +72,20 @@ function formatBytes(bytes?: number) {
   if (!bytes) return '';
   if (bytes < 1024 * 1024 * 1024) return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(bytes / 1024 / 1024)} MB`;
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024 / 1024)} GB`;
+}
+
+function formatDate(value?: string | number) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function detectFormat(modelId: string, tags: string[] = []): 'mlx' | 'gguf' | 'unknown' {
+  const lower = `${modelId} ${tags.join(' ')}`.toLowerCase();
+  if (lower.includes('gguf')) return 'gguf';
+  if (lower.includes('mlx')) return 'mlx';
+  return 'unknown';
 }
 
 async function postJson(path: string, body: unknown) {
@@ -81,33 +119,83 @@ async function tryRegisterProvider(runtime: 'mlx' | 'gguf', modelId: string, bas
   }
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1.5 text-sm text-secondary">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cx(
+        'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent',
+        props.className,
+      )}
+    />
+  );
+}
+
+function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={cx(
+        'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent',
+        props.className,
+      )}
+    />
+  );
+}
+
+function Pill({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'success' | 'warning' | 'accent' }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium',
+        tone === 'success' && 'bg-success/15 text-success',
+        tone === 'warning' && 'bg-warning/15 text-warning',
+        tone === 'accent' && 'bg-accent/15 text-accent',
+        tone === 'muted' && 'bg-surface text-secondary',
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
+  const [page, setPage] = useState<PageId>('server');
   const [status, setStatus] = useState<Status | null>(null);
-  const [selectedId, setSelectedId] = useState<string>('mlx-default');
-  const [repo, setRepo] = useState('unsloth/Qwen3.6-35B-A3B-MTP-GGUF');
-  const [filename, setFilename] = useState('');
-  const [mlxModel, setMlxModel] = useState('unsloth/Qwen3.6-35B-UD-MLX-4bit');
-  const [searchQuery, setSearchQuery] = useState('Qwen MLX');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [prompt, setPrompt] = useState('Write a tiny TypeScript function that reverses a string.');
-  const [output, setOutput] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [logsOpen, setLogsOpen] = useState(false);
   const [temperature, setTemperature] = useState('0.7');
   const [topP, setTopP] = useState('0.95');
   const [maxTokens, setMaxTokens] = useState('1024');
   const [contextSize, setContextSize] = useState('8192');
   const [gpuLayers, setGpuLayers] = useState('999');
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [logTab, setLogTab] = useState<LogTab>('chat');
+  const [prompt, setPrompt] = useState('Write a tiny TypeScript function that reverses a string.');
+  const [output, setOutput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('qwen mlx');
+  const [searchFormat, setSearchFormat] = useState<'all' | 'mlx' | 'gguf'>('all');
+  const [searchResults, setSearchResults] = useState<SearchModel[]>([]);
+  const [selectedSearchId, setSelectedSearchId] = useState<string>('');
+  const [details, setDetails] = useState<ModelDetails | null>(null);
+  const [selectedFile, setSelectedFile] = useState('');
 
   async function refresh() {
     setError(null);
     try {
       const next = await pa.extension.invoke<Status>('localModelsStatus', {});
       setStatus(next);
-      if (next.mlx?.selectedModelId) setMlxModel(next.mlx.selectedModelId);
-      if (!selectedId) setSelectedId(next.mlx?.selectedModelId ? 'mlx-selected' : next.gguf?.selectedModelPath || 'mlx-default');
+      setSelectedModelId((current) => current || next.gguf?.selectedModelPath || (next.mlx?.installed ? 'mlx:selected' : ''));
       return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -124,7 +212,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      setOutput(message);
+      if (label === 'Running…') setOutput(message);
     } finally {
       setBusy(null);
     }
@@ -134,17 +222,18 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     void refresh();
   }, []);
 
-  const library = useMemo<LibraryModel[]>(() => {
-    const models: LibraryModel[] = [];
-    if (status?.mlx?.selectedModelId) {
+  const downloadedModels = useMemo<DownloadedModel[]>(() => {
+    const models: DownloadedModel[] = [];
+    if (status?.mlx?.installed) {
       models.push({
-        id: 'mlx-selected',
+        id: 'mlx:selected',
         title: status.mlx.selectedModelId.split('/').pop() || status.mlx.selectedModelId,
         subtitle: status.mlx.selectedModelId,
         runtime: 'mlx',
-        installed: status.mlx.installed,
+        format: 'MLX',
         size: status.mlx.downloaded,
-        meta: 'MLX · 4-bit',
+        selected: selectedModelId === 'mlx:selected',
+        loaded: Boolean(status.mlx.server.reachable),
       });
     }
     for (const model of status?.gguf?.models ?? []) {
@@ -153,114 +242,77 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         title: model.name,
         subtitle: model.path,
         runtime: 'gguf',
-        installed: true,
+        format: 'GGUF',
         size: formatBytes(model.bytes),
-        meta: 'GGUF · llama.cpp',
         path: model.path,
-      });
-    }
-    if (!models.length) {
-      models.push({
-        id: 'mlx-default',
-        title: mlxModel.split('/').pop() || mlxModel,
-        subtitle: mlxModel,
-        runtime: 'mlx',
-        installed: false,
-        meta: 'MLX · Hugging Face',
+        modified: model.updatedAt,
+        selected: selectedModelId === model.path,
+        loaded: Boolean(status.gguf.server.reachable && status.gguf.selectedModelPath === model.path),
       });
     }
     return models;
-  }, [mlxModel, status]);
+  }, [selectedModelId, status]);
 
-  const selected = library.find((model) => model.id === selectedId) ?? library[0];
-  const runtime = selected?.runtime ?? 'mlx';
-  const running = runtime === 'mlx' ? Boolean(status?.mlx?.server.reachable) : Boolean(status?.gguf?.server.reachable);
-  const starting =
-    runtime === 'mlx'
+  const selectedModel = downloadedModels.find((model) => model.id === selectedModelId) ?? downloadedModels[0] ?? null;
+  const activeRuntime = selectedModel?.runtime ?? (status?.gguf?.server.reachable ? 'gguf' : 'mlx');
+  const running = activeRuntime === 'mlx' ? Boolean(status?.mlx?.server.reachable) : Boolean(status?.gguf?.server.reachable);
+  const loading =
+    activeRuntime === 'mlx'
       ? Boolean(status?.mlx?.process.managedRunning && !running)
       : Boolean(status?.gguf?.process.managedRunning && !running);
-  const endpoint = runtime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
-  const runtimeStatus = busy || (running ? 'Running' : starting ? 'Starting' : selected?.installed ? 'Ready' : 'Not Loaded');
-  const hfSlug = mlxModel.trim();
-  const hfSlugLooksGguf = /(^|[-_/])gguf($|[-_/])/i.test(hfSlug);
+  const setupRunning = Boolean(status?.mlx?.setup);
+  const runtimeStatus =
+    busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
+  const endpoint = activeRuntime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
+  const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
+  const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
+  const ggufFiles = details?.files.filter((file) => file.name.toLowerCase().endsWith('.gguf')) ?? [];
 
-  async function loadSelected() {
-    if (!selected) return;
-    if (selected.runtime === 'mlx') {
-      await runAction('Loading…', async () => {
-        await pa.extension.invoke('localModelsMlxSetModel', { modelId: selected.subtitle });
-        if (!status?.mlx?.installed) await pa.extension.invoke('localModelsMlxSetup', { modelId: selected.subtitle });
-        await pa.extension.invoke('localModelsMlxStart', {});
-        await tryRegisterProvider('mlx', selected.subtitle, MLX_BASE_URL);
-      });
-    } else if (selected.path) {
-      await runAction('Loading…', async () => {
-        await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selected.path });
-        await pa.extension.invoke('localModelsGgufStart', { modelPath: selected.path });
-        await tryRegisterProvider('gguf', selected.title, endpoint);
-      });
-    }
+  function markDirty(setter: (value: string) => void, value: string) {
+    setter(value);
+    setDirty(true);
   }
 
-  async function stopRuntime() {
+  async function saveAndMaybeReload(reload: boolean) {
+    if (!selectedModel) return;
+    await runAction(reload ? 'Reloading…' : 'Saving…', async () => {
+      if (selectedModel.runtime === 'mlx') {
+        await pa.extension.invoke('localModelsMlxSetModel', { modelId: selectedModel.subtitle });
+        if (reload) {
+          if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
+          await pa.extension.invoke('localModelsMlxStart', {});
+          await tryRegisterProvider('mlx', selectedModel.subtitle, MLX_BASE_URL);
+        }
+      } else if (selectedModel.path) {
+        await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
+        if (reload) {
+          if (status?.gguf?.server.reachable) await pa.extension.invoke('localModelsGgufStop', {});
+          await pa.extension.invoke('localModelsGgufStart', {
+            modelPath: selectedModel.path,
+            contextSize: Number(contextSize),
+            gpuLayers: Number(gpuLayers),
+          });
+          await tryRegisterProvider('gguf', selectedModel.title, status?.gguf?.baseUrl || endpoint);
+        }
+      }
+      setDirty(false);
+    });
+  }
+
+  async function stopServer() {
     await runAction('Stopping…', async () => {
-      if (runtime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
+      if (activeRuntime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
       else await pa.extension.invoke('localModelsGgufStop', {});
     });
   }
 
-  async function searchMlx() {
-    await runAction('Searching…', async () => {
-      const result = await pa.extension.invoke<{ models?: SearchResult[] }>('localModelsMlxSearch', { query: searchQuery });
-      setSearchResults(result.models ?? []);
-    });
-  }
-
-  async function useHuggingFaceSlug() {
-    const slug = mlxModel.trim();
-    if (!slug) return;
-    if (slug.toLowerCase().includes('gguf')) {
-      setRepo(slug);
-      setRuntimeFromSelection('gguf');
-      return;
-    }
-    await runAction('Selecting…', async () => {
-      await pa.extension.invoke('localModelsMlxSetModel', { modelId: slug });
-      setSelectedId('mlx-selected');
-    });
-  }
-
-  function setRuntimeFromSelection(nextRuntime: 'mlx' | 'gguf') {
-    const match = library.find((model) => model.runtime === nextRuntime);
-    if (match) setSelectedId(match.id);
-  }
-
-  async function downloadGguf() {
-    await runAction('Downloading…', async () => {
-      await pa.extension.invoke('localModelsGgufDownload', { repo: hfSlugLooksGguf ? hfSlug : repo, filename });
-      setRuntimeFromSelection('gguf');
-    });
-  }
-
-  async function selectLocalGguf(file: File | null | undefined) {
-    const modelPath = (file as (File & { path?: string }) | null | undefined)?.path;
-    if (!modelPath) {
-      setError('Could not read the selected file path. Pick a local .gguf file from the desktop app.');
-      return;
-    }
-    await runAction('Selecting…', async () => {
-      await pa.extension.invoke('localModelsGgufSetModel', { modelPath });
-      setSelectedId(modelPath);
-    });
-  }
-
   async function runPrompt() {
-    if (!selected) return;
+    if (!selectedModel) return;
     await runAction('Running…', async () => {
       setOutput('');
-      if (selected.runtime === 'gguf') {
+      if (selectedModel.runtime === 'gguf') {
         const result = await pa.extension.invoke<{ output: string }>('localModelsGgufRunPrompt', {
-          modelPath: selected.path || status?.gguf?.selectedModelPath,
+          modelPath: selectedModel.path,
           prompt,
           contextSize: Number(contextSize),
           gpuLayers: Number(gpuLayers),
@@ -268,12 +320,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         setOutput(result.output);
         return;
       }
-      const modelId = status?.mlx?.loadedModelId || selected.subtitle;
       const response = await fetch(`${MLX_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local' },
         body: JSON.stringify({
-          model: modelId,
+          model: status?.mlx?.loadedModelId || selectedModel.subtitle,
           messages: [{ role: 'user', content: prompt }],
           stream: false,
           temperature: Number(temperature),
@@ -287,328 +338,535 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
+  async function searchModels() {
+    await runAction('Searching…', async () => {
+      const result = await pa.extension.invoke<{ models: SearchModel[] }>('localModelsSearch', {
+        query: searchQuery,
+        format: searchFormat,
+        limit: 25,
+      });
+      setSearchResults(result.models ?? []);
+      setSelectedSearchId(result.models?.[0]?.id ?? '');
+      setDetails(null);
+      setSelectedFile('');
+    });
+  }
+
+  async function loadDetails(modelId: string) {
+    setSelectedSearchId(modelId);
+    setSelectedFile('');
+    await runAction('Loading details…', async () => {
+      const result = await pa.extension.invoke<{ model: ModelDetails }>('localModelsModelDetails', { modelId });
+      setDetails(result.model);
+      const firstGguf = result.model.files.find((file) => file.name.toLowerCase().endsWith('.gguf'));
+      setSelectedFile(firstGguf?.name ?? '');
+    });
+  }
+
+  async function downloadSelectedModel() {
+    const model =
+      details ?? (selectedSearch ? { id: selectedSearch.id, tags: selectedSearch.tags, files: [] as Array<{ name: string }> } : null);
+    if (!model) return;
+    const format = detectFormat(model.id, model.tags);
+    if (format === 'gguf') {
+      if (!selectedFile) {
+        setError('Choose a GGUF file to download.');
+        return;
+      }
+      await runAction('Downloading…', async () => {
+        await pa.extension.invoke('localModelsGgufDownload', { repo: model.id, filename: selectedFile });
+        setPage('server');
+      });
+      return;
+    }
+    if (format !== 'mlx') {
+      setError('This model does not advertise MLX or GGUF files. Open Details and choose a compatible file/model.');
+      return;
+    }
+    await downloadMlxModel(model.id);
+  }
+
+  async function downloadMlxModel(modelId: string) {
+    await runAction('Downloading…', async () => {
+      await pa.extension.invoke('localModelsMlxSetup', { modelId });
+      setSelectedModelId('mlx:selected');
+      setPage('server');
+    });
+  }
+
+  const sideNav = (
+    <aside className="w-44 shrink-0 border-r border-border-subtle pr-4">
+      <nav className="space-y-1" aria-label="Local Models sections">
+        {[
+          ['server', 'Server', 'Load and run models'],
+          ['library', 'Library', 'Find and download'],
+        ].map(([id, label, summary]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setPage(id as PageId)}
+            className={cx(
+              'w-full rounded-lg px-3 py-2 text-left transition-colors',
+              page === id ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-surface/70 hover:text-primary',
+            )}
+          >
+            <span className="block text-sm font-semibold">{label}</span>
+            <span className="mt-0.5 block text-[11px] text-dim">{summary}</span>
+          </button>
+        ))}
+      </nav>
+    </aside>
+  );
+
+  const serverRail = (
+    <aside className="w-72 shrink-0 border-l border-border-subtle pl-4">
+      <div className="sticky top-4 space-y-5">
+        <section className="space-y-3">
+          <h3 className="font-semibold text-primary">Selected Model</h3>
+          {selectedModel ? (
+            <div className="space-y-3 text-sm text-secondary">
+              <div>
+                <div className="font-medium text-primary">{selectedModel.title}</div>
+                <div className="mt-1 break-all text-xs text-dim">{selectedModel.subtitle}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-surface/50 p-2">
+                  <div className="text-dim">Format</div>
+                  <div className="mt-1 text-primary">{selectedModel.format}</div>
+                </div>
+                <div className="rounded-lg bg-surface/50 p-2">
+                  <div className="text-dim">Size</div>
+                  <div className="mt-1 text-primary">{selectedModel.size || '—'}</div>
+                </div>
+                <div className="rounded-lg bg-surface/50 p-2">
+                  <div className="text-dim">Server</div>
+                  <div className={cx('mt-1', running ? 'text-success' : 'text-warning')}>{running ? 'Running' : 'Stopped'}</div>
+                </div>
+                <div className="rounded-lg bg-surface/50 p-2">
+                  <div className="text-dim">Loaded</div>
+                  <div className="mt-1 text-primary">{selectedModel.loaded ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+              {selectedModel.path ? (
+                <ToolbarButton onClick={() => void pa.extension.invoke('localModelsGgufReveal', { modelPath: selectedModel.path })}>
+                  Reveal in Finder
+                </ToolbarButton>
+              ) : null}
+            </div>
+          ) : (
+            <div className="text-sm text-secondary">No downloaded model selected.</div>
+          )}
+        </section>
+        <section className="space-y-2 text-sm text-secondary">
+          <h3 className="font-semibold text-primary">Endpoint</h3>
+          <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
+        </section>
+      </div>
+    </aside>
+  );
+
+  const libraryRail = (
+    <aside className="w-80 shrink-0 border-l border-border-subtle pl-4">
+      <div className="sticky top-4 space-y-4">
+        <h3 className="font-semibold text-primary">Model Details</h3>
+        {selectedSearch ? (
+          <div className="space-y-4 text-sm text-secondary">
+            <div>
+              <div className="font-medium text-primary">{selectedSearch.id}</div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <Pill tone={selectedSearch.format === 'gguf' ? 'accent' : selectedSearch.format === 'mlx' ? 'success' : 'muted'}>
+                  {selectedSearch.format.toUpperCase()}
+                </Pill>
+                <Pill>{selectedSearch.downloads.toLocaleString()} downloads</Pill>
+                <Pill>{selectedSearch.likes.toLocaleString()} likes</Pill>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <ToolbarButton onClick={() => void loadDetails(selectedSearch.id)}>Details</ToolbarButton>
+              <ToolbarButton
+                disabled={Boolean(busy || (selectedSearch.format === 'gguf' && !selectedFile && !details))}
+                onClick={() => void downloadSelectedModel()}
+              >
+                Download
+              </ToolbarButton>
+            </div>
+            {details ? (
+              <>
+                {detailsFormat === 'gguf' ? (
+                  <Field label="GGUF file">
+                    <Select value={selectedFile} onChange={(event) => setSelectedFile(event.target.value)}>
+                      <option value="">Choose a file…</option>
+                      {ggufFiles.map((file) => (
+                        <option key={file.name} value={file.name}>
+                          {file.name} {file.size ? `(${formatBytes(file.size)})` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                ) : null}
+                <div className="max-h-[28rem] overflow-auto rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
+                  {details.readme ? details.readme.replace(/^---[\s\S]*?---/, '').slice(0, 4000) : 'No README preview available.'}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
+                Select Details to inspect files and README before downloading.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-secondary">Select a search result to inspect it here.</div>
+        )}
+      </div>
+    </aside>
+  );
+
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[88rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[92rem]" contentClassName="space-y-6">
         <AppPageIntro
           title="Local Models"
-          summary="Find a model, turn it on, then chat with it. The runtime is picked from the model you choose."
+          summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-secondary">
-                <span className={`h-2 w-2 rounded-full ${running ? 'bg-success' : 'bg-warning'}`} />
+                <span className={cx('h-2 w-2 rounded-full', running ? 'bg-success' : setupRunning ? 'bg-warning' : 'bg-dim')} />
                 <span className="font-medium text-primary">{runtimeStatus}</span>
               </div>
-              <ToolbarButton disabled={Boolean(busy || !running)} onClick={() => void stopRuntime()}>
-                Stop
-              </ToolbarButton>
-              <ToolbarButton disabled={Boolean(busy || !selected)} onClick={() => void loadSelected()}>
-                {running ? 'Restart' : 'Start'}
-              </ToolbarButton>
+              <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
             </div>
           }
         />
 
-        <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[22rem_minmax(0,1fr)_20rem]">
-          <aside className="space-y-5 rounded-xl border border-border-subtle/70 bg-surface/25 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-primary">Model</h2>
-                <p className="mt-1 text-sm text-secondary">
-                  Pick one model. Search, paste a Hugging Face slug, or choose a local GGUF file.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="text-secondary hover:text-primary"
-                onClick={() => void refresh()}
-                aria-label="Refresh models"
-              >
-                ↻
-              </button>
-            </div>
+        {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
-            <div className="space-y-3 rounded-lg bg-background/25 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Search Hugging Face</div>
-              <div className="flex gap-2">
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') void searchMlx();
-                  }}
-                  className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                  placeholder="Qwen MLX, Llama, Mistral…"
-                />
-                <ToolbarButton disabled={Boolean(busy)} onClick={() => void searchMlx()}>
-                  Search
-                </ToolbarButton>
-              </div>
-              {searchResults.length ? (
-                <div className="space-y-1">
-                  {searchResults.slice(0, 4).map((model) => (
-                    <button
-                      key={model.id}
-                      type="button"
-                      className="w-full rounded-lg px-2 py-2 text-left text-sm text-secondary hover:bg-surface/70 hover:text-primary"
-                      onClick={() => {
-                        setMlxModel(model.id);
-                        setSelectedId('mlx-selected');
-                      }}
-                    >
-                      <div className="truncate font-medium text-primary">{model.id}</div>
-                      <div className="mt-1 text-xs text-dim">{model.downloads.toLocaleString()} downloads</div>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+        <div className="flex gap-5">
+          {sideNav}
 
-            <div className="space-y-3 rounded-lg bg-background/25 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Selected Hugging Face slug</div>
-              <input
-                value={mlxModel}
-                onChange={(event) => setMlxModel(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                placeholder="org/model-name"
-              />
-              <div className="text-xs text-secondary">
-                {hfSlugLooksGguf
-                  ? 'Detected GGUF repo. Add the exact .gguf filename to download it.'
-                  : 'Detected MLX/HF model. Use it directly.'}
-              </div>
-              {hfSlugLooksGguf ? (
-                <div className="space-y-2">
-                  <input
-                    value={filename}
-                    onChange={(event) => setFilename(event.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                    placeholder="model-q4_k_m.gguf"
-                  />
-                  <ToolbarButton disabled={Boolean(busy || !hfSlug || !filename)} onClick={() => void downloadGguf()}>
-                    Download & Select
-                  </ToolbarButton>
-                </div>
-              ) : (
-                <ToolbarButton disabled={Boolean(busy || !hfSlug)} onClick={() => void useHuggingFaceSlug()}>
-                  Set Model
-                </ToolbarButton>
-              )}
-            </div>
-
-            <div className="space-y-3 rounded-lg bg-background/25 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Local GGUF file</div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".gguf"
-                className="hidden"
-                onChange={(event) => void selectLocalGguf(event.currentTarget.files?.[0])}
-              />
-              <ToolbarButton onClick={() => fileInputRef.current?.click()}>Choose File…</ToolbarButton>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Current choices</div>
-              {library.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => setSelectedId(model.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
-                    model.id === selected?.id ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-surface/60 hover:text-primary'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-primary">{model.title}</div>
-                      <div className="mt-1 truncate text-xs text-secondary">{model.subtitle}</div>
-                      <div className="mt-1 text-xs text-dim">{model.size || 'Not downloaded'}</div>
-                    </div>
-                    {model.installed ? <span className="text-[11px] text-success">Ready</span> : null}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </aside>
-
-          <main className="min-w-0 space-y-5">
-            <section className="rounded-xl border border-border-subtle/70 bg-surface/25 p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <div className="text-sm text-secondary">Current Model</div>
-                  <h2 className="mt-2 truncate text-2xl font-semibold tracking-[-0.03em] text-primary">
-                    {selected?.title || 'No model selected'}
-                  </h2>
-                  <p className="mt-1 truncate text-sm text-secondary">{selected?.subtitle}</p>
-                  <div className="mt-4 grid gap-3 text-sm text-secondary sm:grid-cols-3">
+          {page === 'server' ? (
+            <>
+              <main className="min-w-0 flex-1 space-y-5">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-dim">Status</div>
-                      <div className={running ? 'mt-1 font-medium text-success' : 'mt-1 font-medium text-warning'}>{runtimeStatus}</div>
+                      <h2 className="text-xl font-semibold text-primary">Server</h2>
+                      <p className="mt-1 text-sm text-secondary">Select a downloaded model, tune serving settings, then save and reload.</p>
                     </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-dim">Endpoint</div>
-                      <div className="mt-1 truncate font-mono text-xs text-primary">{endpoint}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-dim">Source</div>
-                      <div className="mt-1 text-primary">{selected?.meta || 'Auto detected'}</div>
+                    <div className="flex flex-wrap gap-2">
+                      <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
+                        Save
+                      </ToolbarButton>
+                      <ToolbarButton disabled={Boolean(busy || !selectedModel)} onClick={() => void saveAndMaybeReload(true)}>
+                        {running ? 'Save & Reload' : 'Start Server'}
+                      </ToolbarButton>
+                      <ToolbarButton disabled={Boolean(busy || !running)} onClick={() => void stopServer()}>
+                        Stop
+                      </ToolbarButton>
                     </div>
                   </div>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <ToolbarButton disabled={Boolean(busy || !selected)} onClick={() => void loadSelected()}>
-                    {running ? 'Restart' : 'Start'}
-                  </ToolbarButton>
-                  <ToolbarButton disabled={Boolean(busy || !running)} onClick={() => void stopRuntime()}>
-                    Stop
-                  </ToolbarButton>
-                  <ToolbarButton
-                    disabled={Boolean(busy || runtime !== 'gguf' || !selected?.path)}
-                    onClick={() => selected?.path && void pa.extension.invoke('localModelsGgufReveal', { modelPath: selected.path })}
-                  >
-                    Reveal
-                  </ToolbarButton>
-                </div>
-              </div>
-              {error ? (
-                <div className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div>
-              ) : null}
-            </section>
 
-            <section className="rounded-xl border border-border-subtle/70 bg-surface/25 p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-primary">Prompt Test</h2>
-                  <p className="text-sm text-secondary">A tiny chat loop for smoke-testing the selected model.</p>
-                </div>
-                <ToolbarButton disabled={Boolean(busy || !prompt.trim())} onClick={() => void runPrompt()}>
-                  {busy === 'Running…' ? 'Running…' : 'Send'}
-                </ToolbarButton>
-              </div>
-              <div className="mt-4 min-h-80 space-y-4 rounded-xl bg-background/35 p-4">
-                <div className="flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-br-md bg-accent/20 px-4 py-3 text-sm text-primary">{prompt}</div>
-                </div>
-                <div className="flex justify-start">
-                  <pre className="max-w-[86%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border-subtle bg-surface/70 px-4 py-3 text-sm leading-relaxed text-secondary">
-                    {output || error || 'Start the runtime, send a prompt, and the model response will appear here.'}
-                  </pre>
-                </div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <textarea
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') void runPrompt();
-                  }}
-                  className="min-h-20 flex-1 resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                  placeholder="Message your local model…"
-                />
-              </div>
-            </section>
+                  <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-primary">Downloaded Models</h3>
+                      <div className="overflow-hidden rounded-lg border border-border-subtle">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
+                            <tr>
+                              <th className="px-3 py-2 font-medium">Model</th>
+                              <th className="px-3 py-2 font-medium">Format</th>
+                              <th className="px-3 py-2 font-medium">Size</th>
+                              <th className="px-3 py-2 font-medium">State</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {downloadedModels.map((model) => (
+                              <tr
+                                key={model.id}
+                                className={cx(
+                                  'cursor-pointer border-t border-border-subtle hover:bg-surface/50',
+                                  model.selected && 'bg-accent/10',
+                                )}
+                                onClick={() => {
+                                  setSelectedModelId(model.id);
+                                  setDirty(true);
+                                }}
+                              >
+                                <td className="min-w-0 px-3 py-3">
+                                  <div className="truncate font-medium text-primary">{model.title}</div>
+                                  <div className="mt-0.5 truncate text-xs text-secondary">{model.subtitle}</div>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <Pill tone={model.runtime === 'mlx' ? 'success' : 'accent'}>{model.format}</Pill>
+                                </td>
+                                <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
+                                <td className="px-3 py-3">
+                                  {model.loaded ? (
+                                    <Pill tone="success">Loaded</Pill>
+                                  ) : model.selected ? (
+                                    <Pill tone="warning">Selected</Pill>
+                                  ) : (
+                                    <Pill>Ready</Pill>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                            {!downloadedModels.length ? (
+                              <tr>
+                                <td colSpan={4} className="px-3 py-10 text-center text-secondary">
+                                  No downloaded models yet. Go to Library to download one.
+                                </td>
+                              </tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
 
-            <section className="rounded-xl border border-border-subtle/70 bg-surface/25 p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-primary">Logs</h2>
-                  <p className="text-sm text-secondary">Runtime output and setup messages.</p>
-                </div>
-                <ToolbarButton onClick={() => setLogsOpen((open) => !open)}>{logsOpen ? 'Hide Logs' : 'Show Logs'}</ToolbarButton>
-              </div>
-              {logsOpen ? (
-                <pre className="mt-4 max-h-56 overflow-auto rounded-lg bg-background/45 p-4 text-xs text-secondary">
-                  {runtime === 'mlx' ? status?.mlx?.log || 'No logs yet.' : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
-                </pre>
-              ) : null}
-            </section>
-          </main>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-primary">Serving Settings</h3>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Context length">
+                          <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
+                        </Field>
+                        <Field label="GPU layers">
+                          <TextInput value={gpuLayers} onChange={(event) => markDirty(setGpuLayers, event.target.value)} />
+                        </Field>
+                        <Field label="Temperature">
+                          <TextInput value={temperature} onChange={(event) => markDirty(setTemperature, event.target.value)} />
+                        </Field>
+                        <Field label="Top P">
+                          <TextInput value={topP} onChange={(event) => markDirty(setTopP, event.target.value)} />
+                        </Field>
+                        <Field label="Max tokens">
+                          <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
+                        </Field>
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-          <aside className="space-y-5 rounded-xl border border-border-subtle/70 bg-surface/25 p-4">
-            <section>
-              <h2 className="font-semibold text-primary">Settings & Configuration</h2>
-              <p className="mt-1 text-sm text-secondary">Defaults used when starting and testing local models.</p>
-            </section>
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold text-primary">Testing & Logs</h2>
+                      <p className="mt-1 text-sm text-secondary">Smoke-test the server with a chat prompt, or inspect runtime logs.</p>
+                    </div>
+                    <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border-subtle text-sm">
+                      <button
+                        type="button"
+                        className={cx('px-3 py-2', logTab === 'chat' ? 'bg-accent/15 text-primary' : 'text-secondary')}
+                        onClick={() => setLogTab('chat')}
+                      >
+                        Chat
+                      </button>
+                      <button
+                        type="button"
+                        className={cx('px-3 py-2', logTab === 'logs' ? 'bg-accent/15 text-primary' : 'text-secondary')}
+                        onClick={() => setLogTab('logs')}
+                      >
+                        Logs
+                      </button>
+                    </div>
+                  </div>
 
-            <section className="space-y-4">
-              <label className="block space-y-2 text-sm text-secondary">
-                <span className="flex items-center justify-between gap-3">
-                  Temperature
-                  <input
-                    value={temperature}
-                    onChange={(event) => setTemperature(event.target.value)}
-                    className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-right text-primary"
-                  />
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.05"
-                  value={temperature}
-                  onChange={(event) => setTemperature(event.target.value)}
-                  className="w-full accent-accent"
-                />
-              </label>
-              <label className="block space-y-2 text-sm text-secondary">
-                <span className="flex items-center justify-between gap-3">
-                  Top P
-                  <input
-                    value={topP}
-                    onChange={(event) => setTopP(event.target.value)}
-                    className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-right text-primary"
-                  />
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={topP}
-                  onChange={(event) => setTopP(event.target.value)}
-                  className="w-full accent-accent"
-                />
-              </label>
-              <label className="block space-y-2 text-sm text-secondary">
-                Max Tokens
-                <input
-                  value={maxTokens}
-                  onChange={(event) => setMaxTokens(event.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-primary"
-                />
-              </label>
-            </section>
+                  {logTab === 'chat' ? (
+                    <div className="mt-5 space-y-3">
+                      <div className="min-h-52 rounded-xl bg-background/35 p-4">
+                        {output ? (
+                          <pre className="whitespace-pre-wrap text-sm leading-6 text-primary">{output}</pre>
+                        ) : (
+                          <div className="text-sm text-secondary">Start or reload the server, then send a prompt.</div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <textarea
+                          value={prompt}
+                          onChange={(event) => setPrompt(event.target.value)}
+                          className="min-h-20 flex-1 resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+                        />
+                        <ToolbarButton disabled={Boolean(busy || !prompt.trim() || !selectedModel)} onClick={() => void runPrompt()}>
+                          Send
+                        </ToolbarButton>
+                      </div>
+                    </div>
+                  ) : (
+                    <pre className="mt-5 max-h-96 overflow-auto rounded-xl bg-background/45 p-4 text-xs leading-5 text-secondary">
+                      {activeRuntime === 'mlx'
+                        ? status?.mlx?.log || 'No logs yet.'
+                        : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
+                    </pre>
+                  )}
+                </section>
+              </main>
+              {serverRail}
+            </>
+          ) : (
+            <>
+              <main className="min-w-0 flex-1 space-y-5">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-primary">Model Library</h2>
+                      <p className="mt-1 text-sm text-secondary">
+                        Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
+                      </p>
+                    </div>
+                    <div className="flex min-w-0 flex-1 gap-2 lg:max-w-2xl">
+                      <TextInput
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void searchModels();
+                        }}
+                        placeholder="Search models by name, author, or family…"
+                      />
+                      <Select
+                        value={searchFormat}
+                        onChange={(event) => setSearchFormat(event.target.value as 'all' | 'mlx' | 'gguf')}
+                        className="w-32"
+                      >
+                        <option value="all">All</option>
+                        <option value="mlx">MLX</option>
+                        <option value="gguf">GGUF</option>
+                      </Select>
+                      <ToolbarButton disabled={Boolean(busy)} onClick={() => void searchModels()}>
+                        Search
+                      </ToolbarButton>
+                    </div>
+                  </div>
 
-            <section className="space-y-3 pt-2">
-              <h3 className="font-semibold text-primary">Server</h3>
-              <label className="block space-y-2 text-sm text-secondary">
-                Endpoint
-                <input readOnly value={endpoint} className="w-full rounded-md border border-border bg-surface px-3 py-2 text-primary" />
-              </label>
-              <label className="block space-y-2 text-sm text-secondary">
-                Context Size
-                <input
-                  value={contextSize}
-                  onChange={(event) => setContextSize(event.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-primary"
-                />
-              </label>
-              <label className="block space-y-2 text-sm text-secondary">
-                GPU Layers
-                <input
-                  value={gpuLayers}
-                  onChange={(event) => setGpuLayers(event.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-primary"
-                />
-              </label>
-              <div className="flex items-center justify-between text-sm text-secondary">
-                <span>Connection</span>
-                <span className={running ? 'text-success' : 'text-warning'}>{running ? 'Connected' : 'Stopped'}</span>
-              </div>
-              <ToolbarButton onClick={() => void refresh()}>Refresh Status</ToolbarButton>
-            </section>
-          </aside>
+                  <div className="mt-5 overflow-hidden rounded-lg border border-border-subtle">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Model</th>
+                          <th className="px-3 py-2 font-medium">Format</th>
+                          <th className="px-3 py-2 font-medium">Downloads</th>
+                          <th className="px-3 py-2 font-medium">Likes</th>
+                          <th className="px-3 py-2 font-medium">Updated</th>
+                          <th className="px-3 py-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {searchResults.map((model) => (
+                          <tr
+                            key={model.id}
+                            className={cx(
+                              'border-t border-border-subtle hover:bg-surface/50',
+                              model.id === selectedSearchId && 'bg-accent/10',
+                            )}
+                            onClick={() => setSelectedSearchId(model.id)}
+                          >
+                            <td className="min-w-0 px-3 py-3">
+                              <div className="truncate font-medium text-primary">{model.id}</div>
+                              <div className="mt-0.5 truncate text-xs text-secondary">
+                                {model.pipelineTag || model.tags.slice(0, 3).join(' · ') || 'model'}
+                              </div>
+                            </td>
+                            <td className="px-3 py-3">
+                              <Pill tone={model.format === 'gguf' ? 'accent' : model.format === 'mlx' ? 'success' : 'muted'}>
+                                {model.format.toUpperCase()}
+                              </Pill>
+                            </td>
+                            <td className="px-3 py-3 text-secondary">{model.downloads.toLocaleString()}</td>
+                            <td className="px-3 py-3 text-secondary">{model.likes.toLocaleString()}</td>
+                            <td className="px-3 py-3 text-secondary">{formatDate(model.lastModified)}</td>
+                            <td className="px-3 py-3">
+                              <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+                                <ToolbarButton onClick={() => void loadDetails(model.id)}>Details</ToolbarButton>
+                                <ToolbarButton
+                                  disabled={model.format !== 'mlx'}
+                                  onClick={() => {
+                                    setSelectedSearchId(model.id);
+                                    void downloadMlxModel(model.id);
+                                  }}
+                                >
+                                  Download
+                                </ToolbarButton>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {!searchResults.length ? (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-12 text-center text-secondary">
+                              Search Hugging Face to find MLX and GGUF models.
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold text-primary">Downloaded Models</h2>
+                      <p className="mt-1 text-sm text-secondary">Models already available to the server page.</p>
+                    </div>
+                    <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
+                  </div>
+                  <div className="mt-4 overflow-hidden rounded-lg border border-border-subtle">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Model</th>
+                          <th className="px-3 py-2 font-medium">Format</th>
+                          <th className="px-3 py-2 font-medium">Size</th>
+                          <th className="px-3 py-2 font-medium">Modified</th>
+                          <th className="px-3 py-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {downloadedModels.map((model) => (
+                          <tr key={model.id} className="border-t border-border-subtle">
+                            <td className="min-w-0 px-3 py-3">
+                              <div className="truncate font-medium text-primary">{model.title}</div>
+                              <div className="mt-0.5 truncate text-xs text-secondary">{model.subtitle}</div>
+                            </td>
+                            <td className="px-3 py-3">
+                              <Pill tone={model.runtime === 'mlx' ? 'success' : 'accent'}>{model.format}</Pill>
+                            </td>
+                            <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
+                            <td className="px-3 py-3 text-secondary">{formatDate(model.modified)}</td>
+                            <td className="px-3 py-3">
+                              <div className="flex gap-2">
+                                <ToolbarButton
+                                  onClick={() => {
+                                    setSelectedModelId(model.id);
+                                    setPage('server');
+                                    setDirty(true);
+                                  }}
+                                >
+                                  Use on Server
+                                </ToolbarButton>
+                                {model.path ? (
+                                  <ToolbarButton
+                                    onClick={() => void pa.extension.invoke('localModelsGgufReveal', { modelPath: model.path })}
+                                  >
+                                    Reveal
+                                  </ToolbarButton>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {!downloadedModels.length ? (
+                          <tr>
+                            <td colSpan={5} className="px-3 py-10 text-center text-secondary">
+                              No downloaded models yet.
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </main>
+              {libraryRail}
+            </>
+          )}
         </div>
       </AppPageLayout>
     </div>

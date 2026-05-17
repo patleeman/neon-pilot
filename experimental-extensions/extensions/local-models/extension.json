@@ -16,6 +16,8 @@
       { "id": "localModelsMlxStart", "handler": "mlxStart", "title": "Start MLX runtime" },
       { "id": "localModelsMlxStop", "handler": "mlxStop", "title": "Stop MLX runtime" },
       { "id": "localModelsMlxSearch", "handler": "mlxSearch", "title": "Search MLX models" },
+      { "id": "localModelsSearch", "handler": "searchModels", "title": "Search local-compatible models" },
+      { "id": "localModelsModelDetails", "handler": "modelDetails", "title": "Get Hugging Face model details" },
       { "id": "localModelsGgufDownload", "handler": "ggufDownload", "title": "Download GGUF model" },
       { "id": "localModelsGgufSetModel", "handler": "ggufSetModel", "title": "Set GGUF model" },
       { "id": "localModelsGgufReveal", "handler": "ggufReveal", "title": "Reveal GGUF model" },
