@@ -75,7 +75,14 @@ export const fs = {
     const dataBase64 = p?.dataBase64 as string | undefined;
     if (!path) throw new Error('path is required');
     if (typeof dataBase64 !== 'string') throw new Error('dataBase64 is required');
-    writeFileSync(path, Buffer.from(dataBase64, 'base64'));
+    const decoded = Buffer.from(dataBase64, 'base64');
+    // Validate base64 by round-tripping: decode then re-encode.  Malformed
+    // input (truncated, missing padding, invalid chars) silently decodes to
+    // garbage bytes; this catches that case and prevents silent corruption.
+    if (decoded.toString('base64') !== dataBase64 || decoded.length === 0) {
+      throw new Error('dataBase64 contains invalid base64 encoding');
+    }
+    writeFileSync(path, decoded);
     return {};
   }) as MethodHandler,
 

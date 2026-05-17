@@ -360,7 +360,7 @@ async function stopSidecar(ctx?: ExtensionBackendContext): Promise<void> {
 }
 
 export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Promise<{ ok: true }> {
-  await startPromise.catch(() => null);
+  await startPromise?.catch(() => null);
   startPromise = null;
   await stopSidecar(ctx);
   if (ctx) await stopStaleSidecars(ctx);
