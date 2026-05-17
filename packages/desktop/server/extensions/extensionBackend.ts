@@ -248,6 +248,10 @@ export function listExtensionActionTelemetry(extensionId?: string): ExtensionAct
 
 const EXTENSION_BACKEND_BUILD_CACHE_VERSION = 'bundle-host-runtime-externals-v4-process-policy';
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
+
+// Deduplicate concurrent builds for the same extension.
+// Map values are cleaned up in the finally block of loadExtensionBackend.
+const inflightBackendBuilds = new Map<string, Promise<ExtensionBackendBuildResult>>();
 const HOST_RUNTIME_EXTERNAL_IMPORT_RE =
   /^(@personal-agent\/(core|daemon)|@earendil-works\/pi-coding-agent|@xenova\/transformers|better-sqlite3|esbuild|jsdom|@sinclair\/typebox)(\/.*)?$/;
 const FORBIDDEN_BACKEND_IMPORTS = new Set([
@@ -824,9 +828,19 @@ export async function loadExtensionBackend(extensionId: string): Promise<Extensi
   const packageRoot = resolve(entry.packageRoot);
   const entryPath = resolve(packageRoot, backendEntry);
   assertInside(packageRoot, entryPath);
+  // Deduplicate concurrent builds: if another caller is already building
+  // this extension, wait for their result instead of building again.
+  const existingBuild = inflightBackendBuilds.get(extensionId);
+  if (existingBuild) {
+    return loadCompiledExtensionBackendModule(extensionId, await existingBuild);
+  }
+
+  const buildPromise = buildExtensionBackend(extensionId, packageRoot, entryPath, { allowStaleOnFailure: true });
+  inflightBackendBuilds.set(extensionId, buildPromise);
+
   let compiled: ExtensionBackendBuildResult;
   try {
-    compiled = await buildExtensionBackend(extensionId, packageRoot, entryPath, { allowStaleOnFailure: true });
+    compiled = await buildPromise;
     if (compiled.stale) {
       logWarn('extension backend build failed; using previous compiled backend', { extensionId });
     }
@@ -846,6 +860,9 @@ export async function loadExtensionBackend(extensionId: string): Promise<Extensi
         cause: buildError,
       });
     }
+  } finally {
+    // Clear the inflight marker so future calls can rebuild
+    inflightBackendBuilds.delete(extensionId);
   }
 
   return loadCompiledExtensionBackendModule(extensionId, compiled);
