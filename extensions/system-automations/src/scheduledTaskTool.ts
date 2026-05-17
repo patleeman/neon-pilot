@@ -387,12 +387,30 @@ export function createScheduledTaskAgentExtension(options: { getCurrentProfile: 
                 throw new Error('deliverResultToConversation requires an active persisted conversation.');
               }
 
+              // Resolve schedule — when updating, cron and at must be mutually exclusive
+              const resolvedCron =
+                params.cron !== undefined
+                  ? params.cron
+                  : scheduledAt !== undefined
+                    ? undefined
+                    : existing.schedule.type === 'cron'
+                      ? existing.schedule.expression
+                      : undefined;
+              const resolvedAt =
+                scheduledAt !== undefined
+                  ? scheduledAt.dueAt
+                  : params.cron !== undefined
+                    ? undefined
+                    : existing.schedule.type === 'at'
+                      ? existing.schedule.at
+                      : undefined;
+
               const saved = existing
                 ? await updateStoredAutomation(taskId, {
                     title: readOptionalString(params.title) ?? existing.title ?? taskId,
                     enabled: params.enabled ?? existing.enabled,
-                    cron: params.cron ?? (existing.schedule.type === 'cron' ? existing.schedule.expression : undefined),
-                    at: scheduledAt?.dueAt ?? (existing.schedule.type === 'at' ? existing.schedule.at : undefined),
+                    cron: resolvedCron,
+                    at: resolvedAt,
                     modelRef: params.model ?? existing.modelRef,
                     cwd,
                     timeoutSeconds: params.timeoutSeconds ?? existing.timeoutSeconds,
