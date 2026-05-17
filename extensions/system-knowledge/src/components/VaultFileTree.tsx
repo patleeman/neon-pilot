@@ -1427,9 +1427,11 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   }, [applyDeleteEffects, applyRenameEffects, loadSnapshot, refetchKnowledgeBase]);
 
   // Watch for external file system changes to the vault root
-  useVaultWatcher(
-    useCallback(
-      (changedPaths: string[]) => {
+  useVaultWatcher({
+    apiPathPrefix: '/api/vault',
+    onEvent: useCallback(
+      (event) => {
+        const changedPaths = event.paths;
         const currentContent = activeFileIdRef.current;
         if (currentContent) {
           // Only emit the event if the current file was actually among the changed paths
@@ -1444,9 +1446,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
       },
       [loadSnapshot, refetchKnowledgeBase],
     ),
-    undefined,
-    { enabled: Boolean(knowledgeBaseSnapshotKey && !knowledgeBaseError) },
-  );
+  });
 
   useEffect(() => {
     const wrapper = treeHostWrapperRef.current;

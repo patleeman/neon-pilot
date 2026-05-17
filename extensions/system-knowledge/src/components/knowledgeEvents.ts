@@ -1,5 +1,32 @@
 import { useEffect, useRef } from 'react';
 
+export interface KBFileChangedExternallyDetail {
+  path: string;
+}
+
+type KbEventCallback<T = unknown> = (detail: T) => void;
+
+/**
+ * Emit a typed in-window KB event.
+ * Components use this to broadcast file-created/renamed/deleted/saved signals.
+ * Event type already includes the 'kb:' prefix (e.g. 'kb:file-renamed').
+ */
+export function emitKBEvent<T = unknown>(type: string, detail?: T): void {
+  window.dispatchEvent(new CustomEvent(type, { detail }));
+}
+
+/**
+ * Subscribe to a typed in-window KB event.
+ * Returns an unsubscribe function.
+ */
+export function onKBEvent<T = unknown>(type: string, handler: KbEventCallback<T>): () => void {
+  const listener = (event: Event) => {
+    handler((event as CustomEvent).detail as T);
+  };
+  window.addEventListener(type, listener);
+  return () => window.removeEventListener(type, listener);
+}
+
 export type VaultWatcherEvent = {
   /** Changed vault document paths */
   paths: Array<string>;
