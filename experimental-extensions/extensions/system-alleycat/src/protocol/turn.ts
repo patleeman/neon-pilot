@@ -153,8 +153,9 @@ async function markThreadControlledRemotely(
     const markerKey = `remote-control-marker:${threadId}`;
     const existing = await ctx.storage.get(markerKey);
     if (existing) return;
-    await ctx.conversations.appendVisibleCustomMessage(threadId, 'remote_control', 'Controlled remotely from Kitty Litter.', {
+    await ctx.conversations.appendVisibleCustomMessage(threadId, 'referenced_context', 'Controlled remotely from Kitty Litter.', {
       source: 'kitty-litter',
+      markerType: 'remote_control',
     });
     await ctx.storage.put(markerKey, { source: 'kitty-litter', createdAt: new Date().toISOString() });
   } catch {

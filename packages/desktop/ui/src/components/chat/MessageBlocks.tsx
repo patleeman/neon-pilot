@@ -21,6 +21,8 @@ function formatSystemEventLabel(customType?: string): string {
       return 'System prompt';
     case 'referenced_context':
       return 'Context added';
+    case 'remote_control':
+      return 'Remote control';
     case 'browser-comments':
       return 'Browser comments';
     case 'conversation_workspace_change':

@@ -176,9 +176,9 @@ describe('system-alleycat turn protocol', () => {
     });
     expect(ctx.conversations.appendVisibleCustomMessage).toHaveBeenCalledWith(
       'thread-1',
-      'remote_control',
+      'referenced_context',
       'Controlled remotely from Kitty Litter.',
-      { source: 'kitty-litter' },
+      { source: 'kitty-litter', markerType: 'remote_control' },
     );
   });
 
