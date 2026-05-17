@@ -304,29 +304,31 @@ export const turn = {
       }
     };
 
-    try {
-      const cwdOptions = typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined;
-      await ctx.conversations.ensureLive(threadId, cwdOptions);
-      await markThreadControlledRemotely(threadId, ctx);
-      await ctx.conversations.runTurn(threadId, text, {
-        ...(cwdOptions ?? {}),
-        ...(images.length > 0 ? { images } : {}),
-        onEvent,
-      });
-    } catch (error) {
-      conn.activeTurnThreads.delete(threadId);
-      if (!turnDone) {
-        turnDone = true;
-        finalStatus = 'failed';
-        notify('turn/completed', {
-          threadId,
-          turn: codexTurn(turnId, 'failed', error instanceof Error ? error.message : String(error)),
+    const cwdOptions = typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined;
+    void (async () => {
+      try {
+        await ctx.conversations.ensureLive(threadId, cwdOptions);
+        await markThreadControlledRemotely(threadId, ctx);
+        await ctx.conversations.runTurn(threadId, text, {
+          ...(cwdOptions ?? {}),
+          ...(images.length > 0 ? { images } : {}),
+          onEvent,
         });
-        cleanupTurnSubscriptions(threadId);
+      } catch (error) {
+        conn.activeTurnThreads.delete(threadId);
+        if (!turnDone) {
+          turnDone = true;
+          finalStatus = 'failed';
+          notify('turn/completed', {
+            threadId,
+            turn: codexTurn(turnId, 'failed', error instanceof Error ? error.message : String(error)),
+          });
+          cleanupTurnSubscriptions(threadId);
+        }
       }
-    }
+    })();
 
-    return { turn: codexTurn(turnId, turnDone ? finalStatus : 'inProgress') };
+    return { turn: codexTurn(turnId, finalStatus) };
   }) as MethodHandler,
 
   /**

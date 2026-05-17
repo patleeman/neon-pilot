@@ -44,6 +44,8 @@ function makeConn() {
 
 async function flushAsyncTurnStart() {
   await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 afterEach(() => {
@@ -146,13 +148,14 @@ describe('system-alleycat turn protocol', () => {
     );
 
     await turn.start({ threadId: 'thread-1', cwd: '/repo', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
+    await flushAsyncTurnStart();
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', { cwd: '/repo' });
     expect(ctx.conversations.runTurn).toHaveBeenCalledWith('thread-1', 'Hi', expect.objectContaining({ cwd: '/repo' }));
     expect(order).toEqual(['ensureLive', 'runTurn']);
   });
 
-  it('forwards PA response events to Kitty before returning the turn/start response', async () => {
+  it('returns turn/start immediately and streams PA response events asynchronously', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
     ctx.conversations.runTurn.mockImplementation(
@@ -172,9 +175,11 @@ describe('system-alleycat turn protocol', () => {
       notify,
     )) as { turn: { status: string } };
 
+    expect(result.turn.status).toBe('inProgress');
+    await flushAsyncTurnStart();
+
     expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hello back' }));
     expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));
-    expect(result.turn.status).toBe('completed');
   });
 
   it('opens and focuses the desktop workspace when Kitty starts a turn', async () => {
@@ -219,7 +224,9 @@ describe('system-alleycat turn protocol', () => {
       notify,
     )) as { turn: { status: string; error: string | null } };
 
-    expect(result.turn.status).toBe('failed');
+    expect(result.turn.status).toBe('inProgress');
+    await flushAsyncTurnStart();
+
     expect(notify).toHaveBeenCalledWith(
       'turn/completed',
       expect.objectContaining({ turn: expect.objectContaining({ status: 'failed', error: 'boom' }) }),
