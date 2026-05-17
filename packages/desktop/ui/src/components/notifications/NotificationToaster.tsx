@@ -20,6 +20,7 @@ interface ToastDisplay {
   id: string;
   type: NotificationType;
   message: string;
+  details?: string;
   source?: string;
   count: number;
   leaving: boolean;
@@ -33,8 +34,8 @@ const TYPE_BORDER_CLASS: Record<NotificationType, string> = {
 
 const TYPE_BG_CLASS: Record<NotificationType, string> = {
   info: 'bg-surface',
-  warning: 'bg-amber-50 dark:bg-amber-950/40',
-  error: 'bg-red-50 dark:bg-red-950/40',
+  warning: 'bg-amber-50 dark:bg-amber-950',
+  error: 'bg-red-50 dark:bg-red-950',
 };
 
 export function NotificationToaster() {
@@ -108,6 +109,7 @@ export function NotificationToaster() {
             ...toast,
             type: notif.type,
             message: notif.message,
+            details: notif.details,
             source: notif.source,
             count: notif.count,
           };
@@ -120,6 +122,7 @@ export function NotificationToaster() {
           id: notif.id,
           type: notif.type,
           message: notif.message,
+          details: notif.details,
           source: notif.source,
           count: notif.count,
           leaving: false,
@@ -159,7 +162,7 @@ export function NotificationToaster() {
         <div
           key={toast.id}
           className={cx(
-            'pointer-events-auto cursor-pointer max-w-sm rounded-lg border px-3 py-1.5 text-[12px] shadow-lg transition-all duration-300',
+            'pointer-events-auto cursor-pointer max-h-[45vh] w-[min(720px,calc(100vw-32px))] overflow-auto rounded-lg border px-3 py-2 text-[12px] leading-5 shadow-2xl transition-all duration-300',
             TYPE_BORDER_CLASS[toast.type],
             TYPE_BG_CLASS[toast.type],
             toast.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-primary',
@@ -171,9 +174,14 @@ export function NotificationToaster() {
           }}
           role="alert"
         >
-          {toast.source ? <span className="mr-1 opacity-50 text-[10px]">[{toast.source}]</span> : null}
-          {toast.message}
-          {toast.count > 1 ? <span className="ml-1 opacity-50">({toast.count})</span> : null}
+          <div className="whitespace-pre-wrap break-words">
+            {toast.source ? <span className="mr-1 text-[10px] opacity-60">[{toast.source}]</span> : null}
+            {toast.message}
+            {toast.count > 1 ? <span className="ml-1 opacity-60">({toast.count})</span> : null}
+          </div>
+          {toast.details ? (
+            <div className="mt-1 whitespace-pre-wrap break-words border-t border-current/15 pt-1 opacity-80">{toast.details}</div>
+          ) : null}
         </div>
       ))}
     </div>
