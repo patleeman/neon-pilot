@@ -134,7 +134,9 @@ async function markThreadControlledRemotely(
 export function cleanupTurnSubscriptions(threadId: string): void {
   const subs = turnSubscriptions.get(threadId);
   if (!subs) return;
-  for (const unsub of subs) unsub();
+  for (const unsub of subs) {
+    if (typeof unsub === 'function') unsub();
+  }
   turnSubscriptions.delete(threadId);
 }
 
@@ -213,7 +215,7 @@ export const turn = {
     let agentItemId: string | null = null;
     let agentText = '';
 
-    const unsubscribe = ctx.conversations.subscribe(threadId, (event: unknown) => {
+    const maybeUnsubscribe = ctx.conversations.subscribe(threadId, (event: unknown) => {
       if (turnDone) return;
       const ev = event as Record<string, unknown>;
       if (!ev || typeof ev.type !== 'string') return;
@@ -308,10 +310,10 @@ export const turn = {
         case 'turn_end': {
           turnDone = true;
           conn.activeTurnThreads.delete(threadId);
-          if (unsubscribe) {
-            unsubscribe();
-            cleanupTurnSubscriptions(threadId);
+          if (typeof maybeUnsubscribe === 'function') {
+            maybeUnsubscribe();
           }
+          cleanupTurnSubscriptions(threadId);
           notify('turn/completed', {
             threadId,
             turn: codexTurn(turnId, 'completed'),
@@ -322,10 +324,10 @@ export const turn = {
           const errorMsg = ev.message as string | undefined;
           turnDone = true;
           conn.activeTurnThreads.delete(threadId);
-          if (unsubscribe) {
-            unsubscribe();
-            cleanupTurnSubscriptions(threadId);
+          if (typeof maybeUnsubscribe === 'function') {
+            maybeUnsubscribe();
           }
+          cleanupTurnSubscriptions(threadId);
           notify('turn/completed', {
             threadId,
             turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error'),
@@ -341,7 +343,9 @@ export const turn = {
       subs = new Set();
       turnSubscriptions.set(threadId, subs);
     }
-    subs.add(unsubscribe);
+    if (typeof maybeUnsubscribe === 'function') {
+      subs.add(maybeUnsubscribe);
+    }
 
     void (async () => {
       await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
@@ -355,10 +359,10 @@ export const turn = {
           threadId,
           turn: codexTurn(turnId, 'failed', error instanceof Error ? error.message : String(error)),
         });
-        if (unsubscribe) {
-          unsubscribe();
-          cleanupTurnSubscriptions(threadId);
+        if (typeof maybeUnsubscribe === 'function') {
+          maybeUnsubscribe();
         }
+        cleanupTurnSubscriptions(threadId);
       }
     });
 

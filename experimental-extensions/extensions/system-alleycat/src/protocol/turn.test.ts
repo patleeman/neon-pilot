@@ -2,9 +2,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { turn } from './turn.js';
+import { cleanupTurnSubscriptions, turn, turnSubscriptions } from './turn.js';
 
 function makeContext() {
   return {
@@ -33,6 +33,10 @@ async function flushAsyncTurnStart() {
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
 }
+
+afterEach(() => {
+  turnSubscriptions.clear();
+});
 
 describe('system-alleycat turn protocol', () => {
   it('passes data-url image inputs through to PA conversations', async () => {
@@ -140,5 +144,23 @@ describe('system-alleycat turn protocol', () => {
 
     expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({ activeConversationId: 'thread-1' });
     expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
+  });
+
+  it('tolerates conversation subscriptions that do not return an unsubscribe function', async () => {
+    const ctx = makeContext();
+    ctx.conversations.subscribe.mockReturnValue(undefined);
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
+    await flushAsyncTurnStart();
+
+    expect(() => cleanupTurnSubscriptions('thread-1')).not.toThrow();
+    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
+  });
+
+  it('ignores stale non-function cleanup entries defensively', () => {
+    turnSubscriptions.set('thread-1', new Set([undefined as unknown as () => void]));
+
+    expect(() => cleanupTurnSubscriptions('thread-1')).not.toThrow();
+    expect(turnSubscriptions.has('thread-1')).toBe(false);
   });
 });
