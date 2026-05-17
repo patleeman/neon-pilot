@@ -134,6 +134,9 @@ async function main() {
 
   log('running GGUF server smoke');
   await backend.ggufSetModel({ modelPath: ggufModel }, ctx);
+  const ggufStatus = await backend.status({}, ctx);
+  if ((ggufStatus.gguf.recommendedContextSize ?? 0) < 32768) fail('GGUF recommended context did not auto-detect a long-context default');
+  pass(`GGUF context detected=${ggufStatus.gguf.detectedContextLength ?? 'unknown'} recommended=${ggufStatus.gguf.recommendedContextSize}`);
   await backend.ggufStart({ modelPath: ggufModel, contextSize: 1024, gpuLayers: 999 }, ctx);
   try {
     const models = await waitFor('http://127.0.0.1:8012/v1/models');
@@ -164,6 +167,8 @@ async function main() {
   setupStatus = await backend.status({}, ctx);
   if (!setupStatus.mlx.installed) fail(`MLX setup did not install ${mlxModel}. Last log:\n${setupStatus.mlx.log.slice(-4000)}`);
   pass(`MLX setup installed ${mlxModel}`);
+  if (!setupStatus.mlx.recommendedContextSize) fail('MLX recommended context was not reported');
+  pass(`MLX context detected=${setupStatus.mlx.detectedContextLength ?? 'unknown'} recommended=${setupStatus.mlx.recommendedContextSize}`);
 
   await backend.mlxStart({ maxTokens: 16 }, ctx);
   try {

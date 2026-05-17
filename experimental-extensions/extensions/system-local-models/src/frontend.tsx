@@ -8,6 +8,8 @@ type MlxStatus = {
   installed: boolean;
   downloaded?: string;
   baseUrl?: string;
+  detectedContextLength?: number | null;
+  recommendedContextSize?: number;
   server: { reachable: boolean; models: string[]; error?: string };
   setup: { status: 'running' | 'succeeded' | 'failed'; message: string; progress: number; error: string | null } | null;
   process: { managedRunning: boolean; setupRunning?: boolean };
@@ -20,6 +22,8 @@ type GgufStatus = {
   serverAvailable: boolean;
   cliAvailable: boolean;
   selectedModelPath: string;
+  detectedContextLength?: number | null;
+  recommendedContextSize?: number;
   baseUrl: string;
   message?: string;
   version?: string;
@@ -135,7 +139,7 @@ async function deleteJson(path: string) {
   return response.ok ? response.json() : null;
 }
 
-async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string) {
+async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string, contextWindow: number) {
   await postJson('/api/model-providers/providers', {
     provider: LOCAL_PROVIDER_ID,
     api: 'openai-completions',
@@ -151,17 +155,17 @@ async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: stri
     baseUrl,
     reasoning: true,
     input: ['text'],
-    contextWindow: runtime === 'mlx' ? 131072 : 8192,
+    contextWindow,
   });
 }
 
-async function syncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string } | null) {
+async function syncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string; contextWindow: number } | null) {
   const state = (await getJson('/api/model-providers')) as { providers?: Array<{ id?: string; models?: Array<{ id?: string }> }> };
   const currentModels = state.providers?.find((candidate) => candidate.id === LOCAL_PROVIDER_ID)?.models ?? [];
   const activeModelId = activeModel?.id ?? null;
 
   if (activeModel) {
-    await registerLocalProviderModel(activeModel.runtime, activeModel.id, activeModel.baseUrl);
+    await registerLocalProviderModel(activeModel.runtime, activeModel.id, activeModel.baseUrl, activeModel.contextWindow);
   }
 
   await Promise.all([
@@ -175,7 +179,9 @@ async function syncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id
   ]);
 }
 
-async function trySyncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string } | null) {
+async function trySyncLocalProviderModel(
+  activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string; contextWindow: number } | null,
+) {
   try {
     await syncLocalProviderModel(activeModel);
   } catch {
@@ -241,7 +247,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [temperature, setTemperature] = useState('0.7');
   const [topP, setTopP] = useState('0.95');
   const [maxTokens, setMaxTokens] = useState('1024');
-  const [contextSize, setContextSize] = useState('8192');
+  const [contextSize, setContextSize] = useState('131072');
   const [gpuLayers, setGpuLayers] = useState('999');
   const [dirty, setDirty] = useState(false);
   const [logTab, setLogTab] = useState<LogTab>('chat');
@@ -292,11 +298,21 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     const ggufBaseUrl = status.gguf.baseUrl || 'http://127.0.0.1:8012/v1';
     const ggufSelected = status.gguf.models.find((model) => model.path === status.gguf.selectedModelPath) ?? null;
     const activeModel = status.mlx.server.reachable
-      ? { runtime: 'mlx' as const, id: status.mlx.loadedModelId || status.mlx.selectedModelId, baseUrl: MLX_BASE_URL }
+      ? {
+          runtime: 'mlx' as const,
+          id: status.mlx.loadedModelId || status.mlx.selectedModelId,
+          baseUrl: MLX_BASE_URL,
+          contextWindow: status.mlx.recommendedContextSize || 131072,
+        }
       : status.gguf.server.reachable && ggufSelected
-        ? { runtime: 'gguf' as const, id: ggufSelected.name, baseUrl: ggufBaseUrl }
+        ? {
+            runtime: 'gguf' as const,
+            id: ggufSelected.name,
+            baseUrl: ggufBaseUrl,
+            contextWindow: status.gguf.recommendedContextSize || 131072,
+          }
         : null;
-    const syncKey = activeModel ? `${activeModel.runtime}|${activeModel.id}|${activeModel.baseUrl}` : 'off';
+    const syncKey = activeModel ? `${activeModel.runtime}|${activeModel.id}|${activeModel.baseUrl}|${activeModel.contextWindow}` : 'off';
     if (providerSyncKeyRef.current === syncKey) return;
     providerSyncKeyRef.current = syncKey;
     void trySyncLocalProviderModel(activeModel);
@@ -343,6 +359,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const setupRunning = Boolean(status?.mlx?.setup);
   const runtimeStatus =
     busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
+  useEffect(() => {
+    if (!status || dirty) return;
+    const recommended = activeRuntime === 'mlx' ? status.mlx.recommendedContextSize : status.gguf.recommendedContextSize;
+    if (recommended) setContextSize(String(recommended));
+  }, [activeRuntime, dirty, status]);
+
   const ggufDownload = status?.gguf?.download?.status === 'running' ? status.gguf.download : null;
   const setupProgress = ggufDownload?.progress ?? status?.mlx?.setup?.progress ?? 0;
   const downloadMessage = ggufDownload
@@ -360,6 +382,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
       : `${formatBytes(ggufDownload.downloadedBytes)} downloaded`
     : null;
   const endpoint = activeRuntime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
+  const detectedContext = activeRuntime === 'mlx' ? status?.mlx?.detectedContextLength : status?.gguf?.detectedContextLength;
+  const recommendedContext = activeRuntime === 'mlx' ? status?.mlx?.recommendedContextSize : status?.gguf?.recommendedContextSize;
   const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
   const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
   const ggufFiles = details?.files.filter((file) => file.name.toLowerCase().endsWith('.gguf')) ?? [];
@@ -377,7 +401,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         if (reload) {
           if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
           await pa.extension.invoke('localModelsMlxStart', {});
-          await trySyncLocalProviderModel({ runtime: 'mlx', id: selectedModel.subtitle, baseUrl: MLX_BASE_URL });
+          await trySyncLocalProviderModel({
+            runtime: 'mlx',
+            id: selectedModel.subtitle,
+            baseUrl: MLX_BASE_URL,
+            contextWindow: status?.mlx?.recommendedContextSize || Number(contextSize) || 131072,
+          });
         }
       } else if (selectedModel.path) {
         await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
@@ -388,7 +417,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             contextSize: Number(contextSize),
             gpuLayers: Number(gpuLayers),
           });
-          await trySyncLocalProviderModel({ runtime: 'gguf', id: selectedModel.title, baseUrl: status?.gguf?.baseUrl || endpoint });
+          await trySyncLocalProviderModel({
+            runtime: 'gguf',
+            id: selectedModel.title,
+            baseUrl: status?.gguf?.baseUrl || endpoint,
+            contextWindow: status?.gguf?.recommendedContextSize || Number(contextSize) || 131072,
+          });
         }
       }
       setDirty(false);
@@ -796,6 +830,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <Field label="Context length">
                       <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
+                      <div className="mt-1 text-xs text-tertiary">
+                        {detectedContext
+                          ? `Detected max ${detectedContext.toLocaleString()}; recommended ${recommendedContext?.toLocaleString() ?? '—'}`
+                          : `Recommended ${recommendedContext?.toLocaleString() ?? '—'}`}
+                      </div>
                     </Field>
                     <Field label="GPU layers">
                       <TextInput value={gpuLayers} onChange={(event) => markDirty(setGpuLayers, event.target.value)} />

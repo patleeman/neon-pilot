@@ -19,6 +19,8 @@ const SERVER_PID_KEY = 'mlx/process/serverPid';
 const SETUP_PID_KEY = 'mlx/process/setupPid';
 const SETUP_MODEL_KEY = 'mlx/process/setupModel';
 const ESTIMATED_MODEL_BYTES = 22 * 1024 * 1024 * 1024;
+const MAX_RECOMMENDED_CONTEXT = 131072;
+const FALLBACK_CONTEXT = 32768;
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
@@ -76,15 +78,47 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
-function hasDownloadedModel(modelId: string) {
+function modelSnapshotDir(modelId: string) {
   const mainRef = join(modelCacheDir(modelId), 'refs', 'main');
-  if (!existsSync(mainRef)) return false;
+  if (!existsSync(mainRef)) return null;
   try {
     const snapshot = readFileSync(mainRef, 'utf8').trim();
-    return Boolean(snapshot) && existsSync(join(modelCacheDir(modelId), 'snapshots', snapshot));
+    if (!snapshot) return null;
+    const snapshotDir = join(modelCacheDir(modelId), 'snapshots', snapshot);
+    return existsSync(snapshotDir) ? snapshotDir : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function recommendedContextSize(detected: number | null) {
+  if (!detected || detected <= 0) return FALLBACK_CONTEXT;
+  return Math.min(detected, MAX_RECOMMENDED_CONTEXT);
+}
+
+function readModelContextLength(modelId: string) {
+  const snapshotDir = modelSnapshotDir(modelId);
+  if (!snapshotDir) return { detectedContextLength: null, recommendedContextSize: FALLBACK_CONTEXT };
+  try {
+    const config = JSON.parse(readFileSync(join(snapshotDir, 'config.json'), 'utf8')) as Record<string, unknown>;
+    const candidates = [
+      config.max_position_embeddings,
+      config.model_max_length,
+      config.max_sequence_length,
+      config.seq_length,
+      typeof config.rope_scaling === 'object' && config.rope_scaling
+        ? (config.rope_scaling as Record<string, unknown>).original_max_position_embeddings
+        : null,
+    ];
+    const detectedContextLength = candidates.map(Number).find((value) => Number.isFinite(value) && value > 0) ?? null;
+    return { detectedContextLength, recommendedContextSize: recommendedContextSize(detectedContextLength) };
+  } catch {
+    return { detectedContextLength: null, recommendedContextSize: FALLBACK_CONTEXT };
+  }
+}
+
+function hasDownloadedModel(modelId: string) {
+  return Boolean(modelSnapshotDir(modelId));
 }
 
 async function readServerHealth() {
@@ -116,6 +150,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   ]);
   const downloadedBytes = getDownloadedBytes(modelCacheDir(setupRunning ? setupModel : selectedModelId));
   const installed = existsSync(VENV_PYTHON) && hasDownloadedModel(selectedModelId);
+  const metadata = readModelContextLength(selectedModelId);
   const setupProgress = setupRunning
     ? Math.min(95, Math.max(15, Math.round((downloadedBytes / ESTIMATED_MODEL_BYTES) * 90)))
     : installed
@@ -127,6 +162,8 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     selectedModelId,
     loadedModelId: health.models[0] ?? (serverRunning ? selectedModelId : null),
     baseUrl: BASE_URL,
+    detectedContextLength: metadata.detectedContextLength,
+    recommendedContextSize: metadata.recommendedContextSize,
     cacheDir: CACHE_DIR,
     downloadedBytes,
     downloaded: formatBytes(downloadedBytes),

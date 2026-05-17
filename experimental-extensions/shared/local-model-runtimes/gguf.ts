@@ -46,6 +46,9 @@ const MODEL_PATH_KEY = 'gguf/settings/modelPath';
 const MODEL_PORT = 8012;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
 const downloadJobs = new Map<string, DownloadJob>();
+const metadataCache = new Map<string, { detectedContextLength: number | null; recommendedContextSize: number }>();
+const MAX_RECOMMENDED_CONTEXT = 131072;
+const FALLBACK_CONTEXT = 32768;
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -159,6 +162,30 @@ function serializeDownloadJob(job: DownloadJob) {
   };
 }
 
+function recommendedContextSize(detected: number | null) {
+  if (!detected || detected <= 0) return FALLBACK_CONTEXT;
+  return Math.min(detected, MAX_RECOMMENDED_CONTEXT);
+}
+
+async function readModelMetadata(ctx: ExtensionBackendContext, modelPath: string) {
+  const cached = metadataCache.get(modelPath);
+  if (cached) return cached;
+  const fallback = { detectedContextLength: null, recommendedContextSize: FALLBACK_CONTEXT };
+  if (!modelPath || !(await exists(modelPath)) || !(await exists(bundledCli))) return fallback;
+
+  await chmod(bundledCli, 0o755).catch(() => undefined);
+  const result = await runProcess(ctx, bundledCli, ['-m', modelPath, '-p', 'metadata', '-n', '1', '-c', '128', '--verbose'], {
+    timeoutMs: 10_000,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+  const output = `${result.stdout}\n${result.stderr}`;
+  const match = output.match(/\b[\w.-]+\.context_length\s+\w+\s+=\s+(\d+)/);
+  const detectedContextLength = match ? Number(match[1]) : null;
+  const metadata = { detectedContextLength, recommendedContextSize: recommendedContextSize(detectedContextLength) };
+  metadataCache.set(modelPath, metadata);
+  return metadata;
+}
+
 function currentDownloadJob() {
   return (
     [...downloadJobs.values()].find((job) => job.status === 'running') ??
@@ -205,6 +232,12 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
   if (serverAvailable) await chmod(bundledServer, 0o755).catch(() => undefined);
 
   const download = currentDownloadJob();
+  const metadata = modelPath
+    ? await readModelMetadata(ctx, modelPath).catch(() => ({
+        detectedContextLength: null,
+        recommendedContextSize: FALLBACK_CONTEXT,
+      }))
+    : { detectedContextLength: null, recommendedContextSize: FALLBACK_CONTEXT };
 
   return {
     available: runtimeAvailable,
@@ -214,6 +247,8 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     serverPath: bundledServer,
     modelCacheRoot,
     selectedModelPath: modelPath,
+    detectedContextLength: metadata.detectedContextLength,
+    recommendedContextSize: metadata.recommendedContextSize,
     baseUrl: BASE_URL,
     version: version?.stdout.trim() || version?.stderr.trim(),
     message: runtimeAvailable
@@ -407,6 +442,11 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
   await mkdir(dirname(LOG_FILE), { recursive: true });
   await chmod(bundledServer, 0o755).catch(() => undefined);
   await setSelectedModelPath(ctx, modelPath);
+  const metadata = await readModelMetadata(ctx, modelPath).catch(() => ({
+    detectedContextLength: null,
+    recommendedContextSize: FALLBACK_CONTEXT,
+  }));
+  const contextSize = input.contextSize && input.contextSize > 0 ? input.contextSize : metadata.recommendedContextSize;
   const args = [
     '-m',
     shellQuote(modelPath),
@@ -414,10 +454,12 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
     '127.0.0.1',
     '--port',
     String(MODEL_PORT),
+    '--parallel',
+    '1',
     '-ngl',
     String(input.gpuLayers ?? 999),
     '-c',
-    String(input.contextSize ?? 8192),
+    String(contextSize),
   ];
   const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
@@ -460,7 +502,12 @@ export async function runPrompt(input: RunPromptInput, ctx: ExtensionBackendCont
 
   if (!(await exists(bundledCli))) throw new Error(`Bundled llama-cli is missing at ${bundledCli}`);
   await chmod(bundledCli, 0o755).catch(() => undefined);
-  const args = ['-m', modelPath, '-p', prompt, '-ngl', String(input.gpuLayers ?? 999), '-c', String(input.contextSize ?? 8192)];
+  const metadata = await readModelMetadata(ctx, modelPath).catch(() => ({
+    detectedContextLength: null,
+    recommendedContextSize: FALLBACK_CONTEXT,
+  }));
+  const contextSize = input.contextSize && input.contextSize > 0 ? input.contextSize : metadata.recommendedContextSize;
+  const args = ['-m', modelPath, '-p', prompt, '-ngl', String(input.gpuLayers ?? 999), '-c', String(contextSize)];
   const result = await runProcess(ctx, bundledCli, args, { timeoutMs: 120_000, maxBuffer: 8 * 1024 * 1024 });
   if (result.exitCode !== 0) throw new Error(result.stderr || `llama-cli exited with code ${result.exitCode}`);
   return { output: result.stdout, stderr: result.stderr, source: 'cli' };
