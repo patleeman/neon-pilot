@@ -113,7 +113,7 @@ function parseDiffSections(rawPatch: string): ConversationCommitCheckpointFile[]
 
   return sections.map((section) => {
     const lines = section.split('\n');
-    const match = (lines[0] ?? '').match(/^diff --git (.+) (.+)$/);
+    const match = (lines[0] ?? '').match(/^diff --git a\/(.+) b\/(.+)$/);
     if (!match) throw new Error('Could not parse git diff header for checkpoint review.');
     const originalPath = stripGitDiffPrefix(match[1] ?? '', 'a/');
     const nextPath = stripGitDiffPrefix(match[2] ?? '', 'b/');
