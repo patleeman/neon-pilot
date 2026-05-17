@@ -28,13 +28,13 @@ type ServerInput = { modelPath?: string; contextSize?: number; gpuLayers?: numbe
 type RevealInput = { modelPath?: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
-const extensionRoot = join(here, '..');
+const runtimeRoot = join(here, '..');
 const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
-const llamaCppExtensionRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'extensions', 'llama-cpp') : extensionRoot;
+const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
 function bundledBinary(name: string) {
-  const localPath = join(extensionRoot, 'bin', 'darwin-arm64', name);
+  const localPath = join(runtimeRoot, 'bin', 'darwin-arm64', name);
   if (existsSync(localPath)) return localPath;
-  return join(llamaCppExtensionRoot, 'bin', 'darwin-arm64', name);
+  return join(sourceRuntimeRoot, 'bin', 'darwin-arm64', name);
 }
 const bundledCli = bundledBinary('llama-cli');
 const bundledServer = bundledBinary('llama-server');

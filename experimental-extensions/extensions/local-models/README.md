@@ -28,4 +28,4 @@ Use this page to acquire and manage local models.
 - Track GGUF download progress and cancel in-flight GGUF downloads from the status banner.
 - View downloaded models and send one to the Server page.
 
-The older `qwen-mlx` and `llama-cpp` pages are retained as implementation references but should not be primary navigation surfaces.
+Runtime implementation lives in `experimental-extensions/shared/local-model-runtimes`; `local-models` owns the user-facing extension UI.

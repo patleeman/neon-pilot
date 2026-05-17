@@ -1,7 +1,7 @@
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
-import * as gguf from '../../llama-cpp/src/backend';
-import * as mlx from '../../qwen-mlx/src/backend';
+import * as gguf from '../../../shared/local-model-runtimes/gguf';
+import * as mlx from '../../../shared/local-model-runtimes/mlx';
 
 type SearchInput = { query?: string; format?: 'all' | 'mlx' | 'gguf'; limit?: number };
 type DetailsInput = { modelId?: string };
