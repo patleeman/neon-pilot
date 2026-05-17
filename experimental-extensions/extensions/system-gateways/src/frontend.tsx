@@ -262,34 +262,88 @@ export function GatewaysPage() {
 
   const telegramConfigured = telegramTokenState?.configured === true;
   const showTelegramTokenEditor = !telegramConfigured || telegramTokenEditing;
+  const gatewayActive =
+    telegramConnection?.enabled && (telegramConnection.status === 'active' || telegramConnection.status === 'connected');
+  const gatewayStatusLabel = telegramTokenLoading
+    ? 'Loading'
+    : telegramConfigured
+      ? gatewayActive
+        ? 'Active'
+        : telegramConnection?.status
+          ? formatStatus(telegramConnection.status)
+          : 'Configured'
+      : 'Needs setup';
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
-        <AppPageIntro title="Telegram Gateway" summary="Configure Telegram and route it into conversation threads." />
+      <AppPageLayout shellClassName="max-w-[112rem]" contentClassName="space-y-6">
+        <AppPageIntro
+          title="Telegram Gateway"
+          summary="Configure Telegram and route it into conversation threads. One bot, one saved chat, attached to the thread that should handle it. Civilized."
+          actions={
+            <div className="inline-flex items-center gap-2 text-sm text-secondary">
+              <span className={`h-2 w-2 rounded-full ${gatewayActive ? 'bg-success' : telegramConfigured ? 'bg-warning' : 'bg-dim'}`} />
+              <span className="font-medium text-primary">{gatewayStatusLabel}</span>
+            </div>
+          }
+        />
 
-        {error ? <p className="text-[13px] text-danger">{error}</p> : null}
-        {loading ? <p className="text-[13px] text-dim">Loading…</p> : null}
+        {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
+        {loading ? <div className="rounded-lg border border-border-subtle bg-surface/25 px-3 py-2 text-sm text-dim">Loading…</div> : null}
 
-        <section className="max-w-4xl">
-          <h2 className="text-[18px] font-semibold tracking-tight text-primary">Telegram</h2>
-          <div className="mt-3 space-y-3 border-t border-border-subtle pt-5">
-            <p className="text-[13px] text-secondary">
-              Configure one bot and one Telegram chat, then attach that chat to whichever thread should handle it right now.
-            </p>
-            {telegramTokenLoading && !telegramTokenState ? <p className="text-[13px] text-dim">Loading Telegram config…</p> : null}
+        <main className="space-y-5">
+          <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-primary">Bot Settings</h2>
+                <p className="mt-1 text-sm text-secondary">Store the Telegram bot token used by the managed gateway runtime.</p>
+              </div>
+              {!showTelegramTokenEditor ? (
+                <div className="flex flex-wrap gap-2">
+                  <ToolbarButton
+                    disabled={busy !== null}
+                    onClick={() => {
+                      setTelegramTokenEditing(true);
+                      setTelegramTokenNotice(null);
+                      setTelegramTokenSaveError(null);
+                      setTelegramChatNotice(null);
+                    }}
+                  >
+                    Replace token
+                  </ToolbarButton>
+                  <ToolbarButton disabled={busy !== null} onClick={removeTelegramToken}>
+                    {busy === 'telegram-token-remove' ? 'Removing…' : 'Remove bot'}
+                  </ToolbarButton>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-5 grid gap-2 text-xs sm:grid-cols-3">
+              <div className="rounded-lg bg-surface/50 p-2">
+                <div className="text-dim">Token</div>
+                <div className={`mt-1 ${telegramConfigured ? 'text-success' : 'text-secondary'}`}>
+                  {telegramConfigured ? 'Stored' : 'Not configured'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-surface/50 p-2">
+                <div className="text-dim">Chat ID</div>
+                <div className="mt-1 truncate text-primary">{configuredTelegramChatId || '—'}</div>
+              </div>
+              <div className="rounded-lg bg-surface/50 p-2">
+                <div className="text-dim">Attached thread</div>
+                <div className="mt-1 truncate text-primary">
+                  {telegramBinding?.conversationTitle || telegramBinding?.conversationId || '—'}
+                </div>
+              </div>
+            </div>
+
+            {telegramTokenLoading && !telegramTokenState ? <p className="mt-4 text-sm text-dim">Loading Telegram config…</p> : null}
             {telegramTokenError && !telegramTokenState ? (
-              <p className="text-[13px] text-danger">Failed to load Telegram config: {telegramTokenError}</p>
+              <p className="mt-4 text-sm text-danger">Failed to load Telegram config: {telegramTokenError}</p>
             ) : null}
-            <p className="text-[13px] text-secondary">
-              Status:{' '}
-              <span className={telegramTokenState?.configured ? 'text-success' : 'text-dim'}>
-                {telegramTokenState?.configured ? 'Bot token stored' : 'No bot token stored'}
-              </span>
-            </p>
             {showTelegramTokenEditor ? (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <label className="min-w-0 flex-1 text-[12px] text-secondary">
+              <div className="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <label className="min-w-0 text-sm text-secondary">
                   Bot token
                   <input
                     type="password"
@@ -301,16 +355,11 @@ export function GatewaysPage() {
                   />
                 </label>
                 <div className="flex shrink-0 gap-2">
-                  <ToolbarButton
-                    className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-                    disabled={busy !== null || telegramTokenDraft.trim().length === 0}
-                    onClick={saveTelegramToken}
-                  >
+                  <ToolbarButton disabled={busy !== null || telegramTokenDraft.trim().length === 0} onClick={saveTelegramToken}>
                     {busy === 'telegram-token-save' ? 'Saving…' : telegramConfigured ? 'Save token' : 'Add bot'}
                   </ToolbarButton>
                   {telegramConfigured ? (
                     <ToolbarButton
-                      className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
                       disabled={busy !== null}
                       onClick={() => {
                         setTelegramTokenDraft('');
@@ -323,98 +372,72 @@ export function GatewaysPage() {
                   ) : null}
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <ToolbarButton
-                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-                  disabled={busy !== null}
-                  onClick={() => {
-                    setTelegramTokenEditing(true);
-                    setTelegramTokenNotice(null);
-                    setTelegramTokenSaveError(null);
+            ) : null}
+            {telegramTokenNotice ? <p className="mt-3 text-xs text-success">{telegramTokenNotice}</p> : null}
+            {telegramTokenSaveError ? <p className="mt-3 text-xs text-danger">{telegramTokenSaveError}</p> : null}
+          </section>
+
+          <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+            <div>
+              <h2 className="text-xl font-semibold text-primary">Routing Settings</h2>
+              <p className="mt-1 text-sm text-secondary">Save a chat ID, then attach that Telegram chat to an open conversation thread.</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <label className="min-w-0 text-sm text-secondary">
+                Chat ID
+                <input
+                  value={telegramChatIdDraft}
+                  onChange={(event) => {
+                    setTelegramChatIdDraft(event.target.value);
                     setTelegramChatNotice(null);
+                    setTelegramChatError(null);
                   }}
-                >
-                  Replace token
-                </ToolbarButton>
-                <ToolbarButton
-                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
+                  placeholder="123456789"
+                  className={`${INPUT_CLASS} mt-1`}
                   disabled={busy !== null}
-                  onClick={removeTelegramToken}
+                />
+              </label>
+              <label className="min-w-0 text-sm text-secondary">
+                Thread
+                <select
+                  className={`${INPUT_CLASS} mt-1`}
+                  value={telegramThreadId}
+                  onChange={(event) => setTelegramThreadId(event.target.value)}
+                  disabled={busy !== null || sessions.length === 0}
                 >
-                  {busy === 'telegram-token-remove' ? 'Removing…' : 'Remove bot'}
-                </ToolbarButton>
-              </div>
-            )}
-            {telegramTokenNotice ? <p className="text-[12px] text-success">{telegramTokenNotice}</p> : null}
-            {telegramTokenSaveError ? <p className="text-[12px] text-danger">{telegramTokenSaveError}</p> : null}
-
-            <div className="border-t border-border-subtle pt-4">
-              <h3 className="text-[13px] font-medium text-primary">Chat config</h3>
-              <p className="mt-1 text-[12px] text-secondary">Send a message to your bot, then save that Telegram chat ID here.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                <label className="min-w-0 text-[12px] text-secondary">
-                  Chat ID
-                  <input
-                    value={telegramChatIdDraft}
-                    onChange={(event) => {
-                      setTelegramChatIdDraft(event.target.value);
-                      setTelegramChatNotice(null);
-                      setTelegramChatError(null);
-                    }}
-                    placeholder="123456789"
-                    className={`${INPUT_CLASS} mt-1`}
-                    disabled={busy !== null}
-                  />
-                </label>
-                <ToolbarButton
-                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-                  disabled={busy !== null || !telegramTokenState?.configured || !telegramChatIdDraft.trim()}
-                  onClick={saveTelegramChatConfig}
-                >
-                  {busy === 'telegram-chat-save' ? 'Saving…' : configuredTelegramChatId ? 'Save chat ID' : 'Add chat ID'}
-                </ToolbarButton>
-              </div>
-              {telegramChatNotice ? <p className="mt-2 text-[12px] text-success">{telegramChatNotice}</p> : null}
-              {telegramChatError ? <p className="mt-2 text-[12px] text-danger">{telegramChatError}</p> : null}
+                  <option value="">No thread (detached)</option>
+                  {openSessions.map((session) => (
+                    <option key={session.id} value={session.id}>
+                      {session.title || session.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-
-            <div className="border-t border-border-subtle pt-4">
-              <h3 className="text-[13px] font-medium text-primary">Thread attachment</h3>
-              <p className="mt-1 text-[12px] text-secondary">Swap the saved Telegram chat between conversation threads as needed.</p>
-              {sessionsError ? <p className="mt-2 text-[12px] text-danger">Failed to load threads: {sessionsError}</p> : null}
-              <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                <label className="min-w-0 text-[12px] text-secondary">
-                  Thread
-                  <select
-                    className={`${INPUT_CLASS} mt-1`}
-                    value={telegramThreadId}
-                    onChange={(event) => setTelegramThreadId(event.target.value)}
-                    disabled={busy !== null || sessions.length === 0}
-                  >
-                    <option value="">No thread (detached)</option>
-                    {openSessions.map((session) => (
-                      <option key={session.id} value={session.id}>
-                        {session.title || session.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <ToolbarButton
-                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-                  disabled={busy !== null || !configuredTelegramChatId || (!telegramThreadId && !telegramBinding)}
-                  onClick={attachTelegramChat}
-                >
-                  {busy === 'telegram-attach'
-                    ? 'Attaching…'
-                    : !telegramThreadId && telegramBinding
-                      ? 'Detach thread'
-                      : telegramBinding
-                        ? 'Update attachment'
-                        : 'Attach thread'}
-                </ToolbarButton>
-              </div>
+            {sessionsError ? <p className="mt-3 text-xs text-danger">Failed to load threads: {sessionsError}</p> : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ToolbarButton
+                disabled={busy !== null || !telegramTokenState?.configured || !telegramChatIdDraft.trim()}
+                onClick={saveTelegramChatConfig}
+              >
+                {busy === 'telegram-chat-save' ? 'Saving…' : configuredTelegramChatId ? 'Save chat ID' : 'Add chat ID'}
+              </ToolbarButton>
+              <ToolbarButton
+                disabled={busy !== null || !configuredTelegramChatId || (!telegramThreadId && !telegramBinding)}
+                onClick={attachTelegramChat}
+              >
+                {busy === 'telegram-attach'
+                  ? 'Attaching…'
+                  : !telegramThreadId && telegramBinding
+                    ? 'Detach thread'
+                    : telegramBinding
+                      ? 'Update attachment'
+                      : 'Attach thread'}
+              </ToolbarButton>
             </div>
+            {telegramChatNotice ? <p className="mt-3 text-xs text-success">{telegramChatNotice}</p> : null}
+            {telegramChatError ? <p className="mt-3 text-xs text-danger">{telegramChatError}</p> : null}
+
             {telegramBinding ? (
               <GatewayRow
                 connection={telegramConnection}
@@ -430,11 +453,10 @@ export function GatewaysPage() {
                 showPauseResume
               />
             ) : null}
-          </div>
-        </section>
+          </section>
 
-        {/* Activity */}
-        <GatewayActivity events={state.events} />
+          <GatewayActivity events={state.events} />
+        </main>
       </AppPageLayout>
     </div>
   );
@@ -542,23 +564,40 @@ function GatewayMeta({ label, value, muted = false }: { label: string; value: st
 function GatewayActivity({ events }: { events: GatewayEvent[] }) {
   const rows = useMemo(() => events.slice(0, 10), [events]);
   return (
-    <section className="max-w-4xl">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[18px] font-semibold tracking-tight text-primary">Recent activity</h2>
-        <p className="text-[12px] text-dim">Last 100 retained</p>
+    <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-primary">Recent Activity</h2>
+          <p className="mt-1 text-sm text-secondary">Routing, status, and outbound delivery events from Telegram.</p>
+        </div>
+        <p className="text-xs text-dim">Last 100 retained</p>
       </div>
-      <div className="mt-3 border-t border-border-subtle">
-        {rows.length === 0 ? (
-          <p className="py-6 text-[14px] text-secondary">No activity yet.</p>
-        ) : (
-          rows.map((event) => (
-            <div key={event.id} className="flex items-baseline gap-6 border-t border-border-subtle py-3 text-[13px] first:border-t-0">
-              <span className="w-20 shrink-0 text-[12px] text-dim">{timeAgoCompact(event.createdAt)}</span>
-              <span className="min-w-0 flex-1">{event.message}</span>
-              <span className="shrink-0 text-[12px] text-secondary">{formatActivityKind(event.kind)}</span>
-            </div>
-          ))
-        )}
+      <div className="mt-5 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
+            <tr>
+              <th className="px-3 py-2 font-medium">Time</th>
+              <th className="px-3 py-2 font-medium">Event</th>
+              <th className="px-3 py-2 font-medium">Kind</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((event) => (
+              <tr key={event.id} className="border-t border-border-subtle">
+                <td className="w-28 px-3 py-3 text-xs text-dim">{timeAgoCompact(event.createdAt)}</td>
+                <td className="min-w-0 px-3 py-3 text-primary">{event.message}</td>
+                <td className="px-3 py-3 text-xs text-secondary">{formatActivityKind(event.kind)}</td>
+              </tr>
+            ))}
+            {!rows.length ? (
+              <tr>
+                <td colSpan={3} className="px-3 py-10 text-center text-secondary">
+                  No activity yet.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
       </div>
     </section>
   );
