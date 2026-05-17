@@ -528,12 +528,20 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           title="Local Models"
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-secondary">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 text-sm text-secondary">
                 <span className={cx('h-2 w-2 rounded-full', running ? 'bg-success' : setupRunning ? 'bg-warning' : 'bg-dim')} />
                 <span className="font-medium text-primary">{runtimeStatus}</span>
               </div>
-              <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="text-secondary hover:text-primary"
+                aria-label="Refresh local models"
+                title="Refresh"
+              >
+                ↻
+              </button>
             </div>
           }
         />
