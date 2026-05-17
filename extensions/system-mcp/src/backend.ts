@@ -389,19 +389,34 @@ export function createMcpAgentExtension(): ExtensionAPI {
                 withDescriptions: true,
               });
 
-              if (result.matches.length === 0) {
+              // Filter by server when requested
+              const serverFilter = typeof params.server === 'string' && params.server.trim() ? params.server.trim() : undefined;
+              const matches = serverFilter ? result.matches.filter((m) => m.server === serverFilter) : result.matches;
+
+              if (matches.length === 0) {
                 return {
-                  content: [{ type: 'text', text: `No tools matched pattern: ${grepPattern}` }],
+                  content: [
+                    {
+                      type: 'text',
+                      text: serverFilter
+                        ? `No tools matched pattern ${grepPattern} on server ${serverFilter}.`
+                        : `No tools matched pattern: ${grepPattern}`,
+                    },
+                  ],
                   details: {
                     action: 'grep',
                     pattern: grepPattern,
+                    server: serverFilter,
                     matchCount: 0,
                   },
                 };
               }
 
-              let output = `Matches for "${grepPattern}" (${result.matches.length}):\n`;
-              for (const match of result.matches) {
+              const matchCount = matches.length;
+              let output = serverFilter
+                ? `Matches for "${grepPattern}" on server "${serverFilter}" (${matchCount}):\n`
+                : `Matches for "${grepPattern}" (${matchCount}):\n`;
+              for (const match of matches) {
                 output += `\n  ${match.server}/${match.tool.name}`;
                 if (match.tool.description) {
                   output += ` — ${match.tool.description}`;
@@ -421,7 +436,8 @@ export function createMcpAgentExtension(): ExtensionAPI {
                 details: {
                   action: 'grep',
                   pattern: grepPattern,
-                  matchCount: result.matches.length,
+                  server: serverFilter,
+                  matchCount: matchCount,
                   errorCount: result.errors.length,
                 },
               };
