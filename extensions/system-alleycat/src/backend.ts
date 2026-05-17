@@ -374,11 +374,6 @@ export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Pro
 export async function status(_input?: unknown, ctx?: ExtensionBackendContext): Promise<AlleycatStatus> {
   if (ctx) await refreshSidecarLogs();
   if (ctx && sidecarPid && !(await isPidRunning(ctx, sidecarPid))) sidecarPid = null;
-  if (ctx && !sidecarPid) {
-    // Self-heal for dev reloads/imports where the manifest service registration
-    // changed after the extension was already enabled. Enabled == running.
-    await start(undefined, ctx).catch((error) => rememberLog(error instanceof Error ? error.message : String(error)));
-  }
   if (ctx && !pairPayloadCache) pairPayloadCache = await buildPairPayload(ctx);
   return {
     running: Boolean(codexServer && sidecarPid),

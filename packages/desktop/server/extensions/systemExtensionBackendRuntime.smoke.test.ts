@@ -190,10 +190,24 @@ const smokes = {
     const result = await module.deferredResume({ action: 'list' }, ctx);
     assert(result.action === 'list', 'deferred resume list did not return list action');
   },
+  async 'system-apply-patch'() {
+    const target = join(cwd, 'smoke.txt');
+    writeFileSync(target, 'hello\n');
+    const result = await module.applyPatch({ patch: '*** Begin Patch\n*** Update File: smoke.txt\n@@\n-hello\n+hello smoke\n*** End Patch' }, ctx);
+    assert(result.text.includes('updated: smoke.txt'), 'applyPatch did not update smoke file');
+  },
   async 'system-alleycat'() {
     const result = await module.status({}, ctx);
     assert(result.running === false, 'alleycat status should not auto-start service');
     assert(result.agents.length === 1 && result.agents[0].name === 'personal-agent', 'alleycat should advertise only Personal Agent');
+  },
+  async 'system-caffeinate'() {
+    const before = await module.status({}, ctx);
+    assert(before.running === false && before.pid === null, 'caffeinate should start stopped');
+    const started = await module.start({}, ctx);
+    assert(started.running === true && started.pid === 12345, 'caffeinate start failed');
+    const stopped = await module.stop({}, ctx);
+    assert(stopped.running === false && stopped.pid === null, 'caffeinate stop failed');
   },
   async 'system-browser'() {
     await smokeAgentFactory('createWorkbenchBrowserAgentExtension');

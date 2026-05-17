@@ -719,6 +719,7 @@ const releaseDir = resolve(buildRoot, 'dist', 'release');
 rmSync(releaseDir, { recursive: true, force: true });
 
 console.log(`Building signed desktop artifacts for ${tag} from the clean snapshot...`);
+run('pnpm', ['run', 'check:release'], { cwd: buildRoot, env });
 run('pnpm', ['run', 'desktop:dist'], { cwd: buildRoot, env });
 validatePackagedAutoUpdateConfig(releaseDir, releaseRepo);
 validatePackagedRuntimeDependencies(buildRoot, releaseDir);

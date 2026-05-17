@@ -40,7 +40,7 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   const statusLabel = running ? `Caffeinate is on${status.pid ? ` — pid ${status.pid}` : ''}` : 'Caffeinate is off';
 
   const refresh = useCallback(async () => {
-    const next = (await pa.extension.invoke('status', {})) as CaffeinateStatus;
+    const next = (await pa.extension.invoke('caffeinateStatus', {})) as CaffeinateStatus;
     setStatus(next);
   }, [pa]);
 
@@ -54,7 +54,7 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
     if (busy) return;
     setBusy(true);
     try {
-      const next = (await pa.extension.invoke('toggle', {})) as CaffeinateStatus;
+      const next = (await pa.extension.invoke('caffeinateToggle', {})) as CaffeinateStatus;
       setStatus(next);
     } catch (error) {
       pa.ui.notify({

@@ -47,7 +47,7 @@ function AlleycatPanel({ pa }: AlleycatSettingsPanelProps) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setStatus((await pa.extension.invoke('status')) as AlleycatStatus);
+      setStatus((await pa.extension.invoke('alleycatStatus')) as AlleycatStatus);
     } finally {
       setLoading(false);
     }

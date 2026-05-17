@@ -23,9 +23,9 @@
       }
     ],
     "actions": [
-      { "id": "start", "handler": "start", "title": "Start Alleycat host" },
-      { "id": "stop", "handler": "stop", "title": "Stop Alleycat host" },
-      { "id": "status", "handler": "status", "title": "Alleycat host status" },
+      { "id": "alleycatStart", "handler": "start", "title": "Start Alleycat host" },
+      { "id": "alleycatStop", "handler": "stop", "title": "Stop Alleycat host" },
+      { "id": "alleycatStatus", "handler": "status", "title": "Alleycat host status" },
       { "id": "rotateToken", "handler": "rotateToken", "title": "Rotate Alleycat pairing token" }
     ]
   },
