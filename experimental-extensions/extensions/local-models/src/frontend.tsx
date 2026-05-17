@@ -18,6 +18,7 @@ type GgufModel = { path: string; name: string; bytes: number; updatedAt: number 
 type GgufStatus = {
   available: boolean;
   serverAvailable: boolean;
+  cliAvailable: boolean;
   selectedModelPath: string;
   baseUrl: string;
   message?: string;
@@ -347,6 +348,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     await runAction('Stopping…', async () => {
       if (activeRuntime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
       else await pa.extension.invoke('localModelsGgufStop', {});
+    });
+  }
+
+  async function installGgufRuntime() {
+    await runAction('Installing runtime…', async () => {
+      await pa.extension.invoke('localModelsGgufInstallRuntime', {});
     });
   }
 
@@ -746,9 +753,27 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <Field label="Max tokens">
                       <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
                     </Field>
-                    <div className="space-y-1 sm:col-span-2">
-                      <div className="text-sm text-secondary">Endpoint</div>
-                      <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-surface/50 p-3">
+                        <div>
+                          <div className="text-sm font-medium text-primary">llama.cpp Runtime</div>
+                          <div className="mt-1 text-xs text-secondary">
+                            {status?.gguf?.cliAvailable && status?.gguf?.serverAvailable
+                              ? '✓ Installed'
+                              : 'Required for GGUF server and prompt execution.'}
+                          </div>
+                        </div>
+                        <ToolbarButton
+                          disabled={Boolean(busy || (status?.gguf?.cliAvailable && status?.gguf?.serverAvailable))}
+                          onClick={() => void installGgufRuntime()}
+                        >
+                          {status?.gguf?.cliAvailable && status?.gguf?.serverAvailable ? 'Installed' : 'Download & Install'}
+                        </ToolbarButton>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-secondary">Endpoint</div>
+                        <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
+                      </div>
                     </div>
                   </div>
                 </section>

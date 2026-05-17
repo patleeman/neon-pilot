@@ -146,6 +146,10 @@ export async function ggufDelete(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.deleteModel(input as never, ctx);
 }
 
+export async function ggufInstallRuntime(input: unknown, ctx: ExtensionBackendContext) {
+  return gguf.installRuntime(input, ctx);
+}
+
 export async function ggufStart(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.startServer(input as never, ctx);
 }

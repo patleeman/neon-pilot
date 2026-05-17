@@ -348,6 +348,43 @@ export async function revealModel(input: RevealInput, ctx: ExtensionBackendConte
   return { ok: true };
 }
 
+export async function installRuntime(_input: unknown, ctx: ExtensionBackendContext) {
+  if ((await exists(bundledCli)) && (await exists(bundledServer)))
+    return { ok: true, installed: false, status: await runtimeStatus({}, ctx) };
+
+  const releaseResponse = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
+    headers: { 'user-agent': 'personal-agent-local-models' },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!releaseResponse.ok) throw new Error(`Failed to read llama.cpp releases: ${releaseResponse.status} ${releaseResponse.statusText}`);
+  const release = (await releaseResponse.json()) as {
+    html_url?: string;
+    assets?: Array<{ name?: string; browser_download_url?: string }>;
+  };
+  const asset = release.assets?.find((candidate) => {
+    const name = candidate.name?.toLowerCase() ?? '';
+    return name.endsWith('.tar.gz') && name.includes('macos') && name.includes('arm64') && !name.includes('kleidiai');
+  });
+  if (!asset?.browser_download_url)
+    throw new Error(`Could not find a macOS arm64 llama.cpp release asset in ${release.html_url ?? 'latest release'}`);
+
+  await mkdir(dirname(bundledServer), { recursive: true });
+  const script = `set -euo pipefail
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+curl -L ${shellQuote(asset.browser_download_url)} -o "$workdir/llama.tar.gz"
+tar -xzf "$workdir/llama.tar.gz" -C "$workdir"
+cli=$(find "$workdir" -name llama-cli -type f | head -1)
+server=$(find "$workdir" -name llama-server -type f | head -1)
+test -n "$cli"
+test -n "$server"
+install -m 755 "$cli" ${shellQuote(bundledCli)}
+install -m 755 "$server" ${shellQuote(bundledServer)}
+`;
+  await ctx.shell.exec({ command: 'sh', args: ['-c', script], timeoutMs: 120_000, maxBuffer: 1024 * 1024 });
+  return { ok: true, installed: true, status: await runtimeStatus({}, ctx) };
+}
+
 export async function startServer(input: ServerInput, ctx: ExtensionBackendContext) {
   const modelPath = input.modelPath?.trim() || (await selectedModelPath(ctx));
   if (!modelPath) throw new Error('Select or download a GGUF model before starting the runtime.');
