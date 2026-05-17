@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { getStateRoot } from './runtime/paths.js';
 export const DEFERRED_RESUME_STATE_FILE_NAME = 'deferred-resumes-state.json';
@@ -316,6 +316,79 @@ export function saveDeferredResumeState(state, path = resolveDeferredResumeState
     )}\n`,
   );
 }
+
+const LOCK_RETRY_MS = 50;
+const LOCK_TIMEOUT_MS = 5_000;
+
+function acquireDeferredResumeLock(lockPath) {
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+
+  for (;;) {
+    try {
+      const fd = openSync(lockPath, 'wx');
+      try {
+        writeFileSync(lockPath, String(process.pid), 'utf-8');
+      } catch {}
+      closeSync(fd);
+
+      return {
+        release: () => {
+          try {
+            unlinkSync(lockPath);
+          } catch {}
+        },
+      };
+    } catch (err) {
+      const nodeErr = err;
+      if (nodeErr.code !== 'EEXIST') {
+        throw err;
+      }
+
+      if (Date.now() > deadline) {
+        try {
+          const pidStr = readFileSync(lockPath, 'utf-8').trim();
+          const pid = Number(pidStr);
+          if (Number.isFinite(pid) && pid > 0) {
+            try {
+              process.kill(pid, 0);
+            } catch {
+              try {
+                unlinkSync(lockPath);
+              } catch {}
+              continue;
+            }
+          }
+        } catch {
+          try {
+            unlinkSync(lockPath);
+          } catch {}
+          continue;
+        }
+
+        throw new Error(`Timed out waiting for deferred resume lock: ${lockPath}`);
+      }
+
+      const pollUntil = Date.now() + LOCK_RETRY_MS;
+      while (Date.now() < pollUntil) {}
+    }
+  }
+}
+
+export function withDeferredResumeLock(fn, path) {
+  const statePath = path ?? resolveDeferredResumeStateFile();
+  const lockPath = `${statePath}.lock`;
+  const lock = acquireDeferredResumeLock(lockPath);
+
+  try {
+    const state = loadDeferredResumeState(statePath);
+    const result = fn(state);
+    saveDeferredResumeState(state, statePath);
+    return result;
+  } finally {
+    lock.release();
+  }
+}
+
 export function loadDeferredResumeEntries(stateFile = resolveDeferredResumeStateFile()) {
   const state = loadDeferredResumeState(stateFile);
   return Object.values(state.resumes).map((record) => ({ sessionFile: record.sessionFile }));

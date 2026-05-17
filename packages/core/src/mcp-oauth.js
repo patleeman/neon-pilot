@@ -200,6 +200,12 @@ function setupOAuthCallbackServer(options) {
       writeText(res, 404, 'Not found');
       return;
     }
+    // Verify CSRF state parameter when expected
+    const state = requestUrl.searchParams.get('state');
+    if (options.expectedState && state !== options.expectedState) {
+      writeText(res, 403, 'CSRF state mismatch — authorization rejected');
+      return;
+    }
     const code = requestUrl.searchParams.get('code');
     const error = requestUrl.searchParams.get('error');
     if (error) {
@@ -351,6 +357,7 @@ function createLazyAuthCoordinator(options) {
         path: options.callbackPath,
         events,
         authTimeoutMs: options.authTimeoutMs,
+        expectedState: options.expectedState,
         log: options.log,
       });
       if (!callbackServer.server.listening) {
@@ -611,6 +618,7 @@ export async function openRemoteMcpClient(options) {
     callbackPort: options.callbackPort,
     callbackPath: options.callbackPath,
     authTimeoutMs: options.authTimeoutMs,
+    expectedState: authProvider.state(),
     log: options.log,
   });
   let callbackServer = null;

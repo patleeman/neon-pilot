@@ -275,6 +275,7 @@ function setupOAuthCallbackServer(options: {
   path: string;
   events: EventEmitter;
   authTimeoutMs: number;
+  expectedState?: string;
   log?: (message: string) => void;
 }): OAuthCallbackServerState {
   let authCode: string | null = null;
@@ -305,6 +306,13 @@ function setupOAuthCallbackServer(options: {
 
     if (requestUrl.pathname !== options.path) {
       writeText(res, 404, 'Not found');
+      return;
+    }
+
+    // Verify CSRF state parameter when expected
+    const state = requestUrl.searchParams.get('state');
+    if (options.expectedState && state !== options.expectedState) {
+      writeText(res, 403, 'CSRF state mismatch — authorization rejected');
       return;
     }
 
@@ -463,6 +471,7 @@ function createLazyAuthCoordinator(options: {
   callbackPort: number;
   callbackPath: string;
   authTimeoutMs: number;
+  expectedState?: string;
   log?: (message: string) => void;
 }): {
   initializeAuth: () => Promise<AuthInitializationState>;
@@ -502,6 +511,7 @@ function createLazyAuthCoordinator(options: {
         path: options.callbackPath,
         events,
         authTimeoutMs: options.authTimeoutMs,
+        expectedState: options.expectedState,
         log: options.log,
       });
 
@@ -842,6 +852,7 @@ export async function openRemoteMcpClient(options: McpRemoteOAuthOptions): Promi
     callbackPort: options.callbackPort,
     callbackPath: options.callbackPath,
     authTimeoutMs: options.authTimeoutMs,
+    expectedState: authProvider.state(),
     log: options.log,
   });
 

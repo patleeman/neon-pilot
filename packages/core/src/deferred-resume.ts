@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 
 import { getStateRoot } from './runtime/paths.js';
@@ -424,6 +424,101 @@ export function saveDeferredResumeState(state: DeferredResumeStateFile, path = r
       2,
     )}\n`,
   );
+}
+
+const LOCK_RETRY_MS = 50;
+const LOCK_TIMEOUT_MS = 5_000;
+
+/**
+ * Acquire an exclusive file lock by atomically creating a lockfile.
+ * Releases automatically when the returned function is called.
+ */
+function acquireDeferredResumeLock(lockPath: string): { release: () => void } {
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+
+  for (;;) {
+    try {
+      const fd = openSync(lockPath, 'wx');
+      try {
+        writeFileSync(lockPath, String(process.pid), 'utf-8');
+      } catch {
+        // Best-effort PID write; lock is still held.
+      }
+      closeSync(fd);
+
+      return {
+        release: () => {
+          try {
+            unlinkSync(lockPath);
+          } catch {
+            // Best-effort cleanup; lock may have been stolen.
+          }
+        },
+      };
+    } catch (err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      if (nodeErr.code !== 'EEXIST') {
+        throw err;
+      }
+
+      if (Date.now() > deadline) {
+        // Stale lock — try to break it by checking if the holder is alive.
+        try {
+          const pidStr = readFileSync(lockPath, 'utf-8').trim();
+          const pid = Number(pidStr);
+          if (Number.isFinite(pid) && pid > 0) {
+            try {
+              process.kill(pid, 0);
+              // Process is alive — keep waiting
+            } catch {
+              // Process is dead — break the lock
+              try {
+                unlinkSync(lockPath);
+              } catch {
+                // Another process may have broken it
+              }
+              continue;
+            }
+          }
+        } catch {
+          // Can't read lock file — break it
+          try {
+            unlinkSync(lockPath);
+          } catch {
+            // Another process may have broken it
+          }
+          continue;
+        }
+
+        throw new Error(`Timed out waiting for deferred resume lock: ${lockPath}`);
+      }
+
+      // Busy-wait before retry (sync context — no sleepSync available)
+      const pollUntil = Date.now() + LOCK_RETRY_MS;
+      while (Date.now() < pollUntil) {
+        /* spin */
+      }
+    }
+  }
+}
+
+/**
+ * Load state, apply a mutation, and save — all while holding an exclusive
+ * file lock to prevent concurrent-process write loss.
+ */
+export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T, path?: string): T {
+  const statePath = path ?? resolveDeferredResumeStateFile();
+  const lockPath = `${statePath}.lock`;
+  const lock = acquireDeferredResumeLock(lockPath);
+
+  try {
+    const state = loadDeferredResumeState(statePath);
+    const result = fn(state);
+    saveDeferredResumeState(state, statePath);
+    return result;
+  } finally {
+    lock.release();
+  }
 }
 
 export function loadDeferredResumeEntries(stateFile = resolveDeferredResumeStateFile()): Array<{ sessionFile: string }> {
