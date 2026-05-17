@@ -161,7 +161,7 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cx(
-        'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent',
+        'w-full rounded-lg border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80',
         props.className,
       )}
     />
@@ -173,7 +173,7 @@ function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={cx(
-        'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent',
+        'w-full rounded-lg border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80',
         props.className,
       )}
     />
@@ -792,7 +792,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                         <textarea
                           value={prompt}
                           onChange={(event) => setPrompt(event.target.value)}
-                          className="min-h-20 flex-1 resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+                          className="min-h-20 flex-1 resize-y rounded-xl border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80"
                         />
                         <ToolbarButton disabled={Boolean(busy || !prompt.trim() || !selectedModel)} onClick={() => void runPrompt()}>
                           Send
