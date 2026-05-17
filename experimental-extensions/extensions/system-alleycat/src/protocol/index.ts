@@ -98,6 +98,7 @@ export const REGISTERED_HANDLERS: Record<string, import('../codexJsonRpcServer.j
 
   // Account
   'account/read': account.read,
+  'account/rateLimits/read': account.rateLimitsRead,
 
   // File system
   fuzzyFileSearch: fsHandlers.fuzzyFileSearch,

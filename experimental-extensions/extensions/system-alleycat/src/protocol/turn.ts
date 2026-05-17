@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { basename } from 'node:path';
+
 import type { MethodHandler } from '../codexJsonRpcServer.js';
 
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
@@ -23,6 +26,73 @@ function codexTurn(id: string, status: 'inProgress' | 'completed' | 'failed', er
 
 function nowMs(): number {
   return Date.now();
+}
+
+interface PromptImage {
+  data: string;
+  mimeType: string;
+  name?: string;
+}
+
+function normalizeBase64(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) ? trimmed : null;
+}
+
+function imageFromDataUrl(url: string, name?: string): PromptImage | null {
+  const match = /^data:([^;,]+);base64,(.+)$/i.exec(url.trim());
+  if (!match) return null;
+  const mimeType = match[1]?.trim() || '';
+  const data = normalizeBase64(match[2]);
+  if (!mimeType.toLowerCase().startsWith('image/') || !data) return null;
+  return { data, mimeType, ...(name ? { name } : {}) };
+}
+
+function imageFromFilePath(pathOrUrl: string, mimeType?: string, name?: string): PromptImage | null {
+  let rawPath: string;
+  try {
+    rawPath = pathOrUrl.startsWith('file://') ? new URL(pathOrUrl).pathname : pathOrUrl;
+  } catch {
+    return null;
+  }
+  if (!rawPath.startsWith('/') || !existsSync(rawPath)) return null;
+  const inferredMimeType = mimeType || mimeTypeFromName(rawPath);
+  if (!inferredMimeType.toLowerCase().startsWith('image/')) return null;
+  return { data: readFileSync(rawPath).toString('base64'), mimeType: inferredMimeType, name: name || basename(rawPath) };
+}
+
+function mimeTypeFromName(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.png')) return 'image/png';
+  return 'application/octet-stream';
+}
+
+function promptImageFromInputItem(item: Record<string, unknown>): PromptImage | null {
+  const name = typeof item.name === 'string' && item.name.trim() ? item.name.trim() : undefined;
+  const mimeType =
+    typeof item.mimeType === 'string' && item.mimeType.trim()
+      ? item.mimeType.trim()
+      : typeof item.media_type === 'string' && item.media_type.trim()
+        ? item.media_type.trim()
+        : undefined;
+  const data = normalizeBase64(item.dataBase64 ?? item.data ?? item.base64);
+  if (data && mimeType?.toLowerCase().startsWith('image/')) return { data, mimeType, ...(name ? { name } : {}) };
+
+  const url = typeof item.url === 'string' ? item.url : typeof item.image_url === 'string' ? item.image_url : undefined;
+  if (!url) return null;
+  return imageFromDataUrl(url, name) ?? imageFromFilePath(url, mimeType, name);
+}
+
+function promptImagesFromInput(input: Array<Record<string, unknown>>): PromptImage[] {
+  return input
+    .filter((item) => item.type === 'image' || item.type === 'input_image' || item.type === 'local_image')
+    .map(promptImageFromInputItem)
+    .filter((image): image is PromptImage => image !== null);
 }
 
 /** Clean up all turn subscriptions for a given thread. */
@@ -66,8 +136,9 @@ export const turn = {
         textParts.push(item.text);
       }
     }
+    const images = promptImagesFromInput(input);
     const text = textParts.join('\n');
-    if (!text) throw new Error('input must contain at least one text item');
+    if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
     const turnId = uid('turn-');
 
@@ -79,7 +150,14 @@ export const turn = {
 
     // User message item
     const userItemId = uid('item-');
-    const userItem = { id: userItemId, type: 'userMessage', content: [{ type: 'text', text, textElements: [] }] };
+    const userItem = {
+      id: userItemId,
+      type: 'userMessage',
+      content: [
+        ...(text ? [{ type: 'text', text, textElements: [] }] : []),
+        ...images.map((image) => ({ type: 'image', mimeType: image.mimeType, name: image.name ?? null })),
+      ],
+    };
     notify('item/started', {
       threadId,
       turnId,
@@ -230,7 +308,10 @@ export const turn = {
     }
     subs.add(unsubscribe);
 
-    void ctx.conversations.sendMessage(threadId, text).catch((error) => {
+    void (async () => {
+      await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+      await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
+    })().catch((error) => {
       conn.activeTurnThreads.delete(threadId);
       if (!turnDone) {
         turnDone = true;
@@ -259,13 +340,16 @@ export const turn = {
     const input = p?.input as Array<Record<string, unknown>> | undefined;
     if (!threadId) throw new Error('threadId is required');
 
-    const text = (input ?? [])
+    const normalizedInput = input ?? [];
+    const text = normalizedInput
       .map((i) => (i.type === 'text' ? (i.text as string) : ''))
       .filter(Boolean)
       .join('\n');
-    if (!text) throw new Error('input must contain at least one text item');
+    const images = promptImagesFromInput(normalizedInput);
+    if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
-    await ctx.conversations.sendMessage(threadId, text, { steer: true });
+    await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+    await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { steer: true, images } : { steer: true });
     return { turnId: threadId };
   }) as MethodHandler,
 
