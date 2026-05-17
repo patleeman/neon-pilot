@@ -88,6 +88,23 @@ function detectFormat(modelId: string, tags: string[] = []): 'mlx' | 'gguf' | 'u
   return 'unknown';
 }
 
+function readableReadme(raw: string) {
+  return raw
+    .replace(/^---[\s\S]*?---/, '')
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function postJson(path: string, body: unknown) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(await response.text());
@@ -263,6 +280,14 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const setupRunning = Boolean(status?.mlx?.setup);
   const runtimeStatus =
     busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
+  const setupProgress = status?.mlx?.setup?.progress ?? 0;
+  const downloadMessage = setupRunning
+    ? status?.mlx?.setup?.message || 'Downloading MLX model…'
+    : busy === 'Downloading…'
+      ? selectedFile
+        ? `Downloading ${selectedFile}…`
+        : 'Downloading model…'
+      : null;
   const endpoint = activeRuntime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
   const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
   const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
@@ -303,6 +328,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     await runAction('Stopping…', async () => {
       if (activeRuntime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
       else await pa.extension.invoke('localModelsGgufStop', {});
+    });
+  }
+
+  async function cancelDownload() {
+    await runAction('Cancelling…', async () => {
+      if (setupRunning) await pa.extension.invoke('localModelsMlxStop', {});
+      else throw new Error('GGUF downloads cannot be cancelled yet. They run as a single file transfer.');
     });
   }
 
@@ -504,8 +536,10 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </Select>
                   </Field>
                 ) : null}
-                <div className="max-h-[28rem] overflow-auto rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
-                  {details.readme ? details.readme.replace(/^---[\s\S]*?---/, '').slice(0, 4000) : 'No README preview available.'}
+                <div className="max-h-[34rem] overflow-auto rounded-lg bg-surface/45 p-4 text-[13px] leading-6 text-secondary">
+                  <pre className="whitespace-pre-wrap font-sans">
+                    {details.readme ? readableReadme(details.readme).slice(0, 6000) : 'No README preview available.'}
+                  </pre>
                 </div>
               </>
             ) : (
@@ -547,6 +581,29 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             </div>
           }
         />
+
+        {downloadMessage ? (
+          <div className="rounded-lg border border-border-subtle bg-surface/25 px-3 py-3">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="min-w-0 text-secondary">
+                <span className="font-medium text-primary">{downloadMessage}</span>
+                {setupRunning ? <span className="ml-2 text-dim">{setupProgress}%</span> : null}
+              </div>
+              <ToolbarButton disabled={!setupRunning || Boolean(busy === 'Cancelling…')} onClick={() => void cancelDownload()}>
+                Stop Download
+              </ToolbarButton>
+            </div>
+            {setupRunning ? (
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
+                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, setupProgress)}%` }} />
+              </div>
+            ) : (
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-accent/70" />
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
