@@ -42,6 +42,7 @@ export function NotificationToaster() {
   const [toasts, setToasts] = useState<ToastDisplay[]>([]);
   const seenCounts = useRef(new Map<string, number>());
   const autoDismissTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const leaveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const clearAutoDismissTimer = useCallback((id: string) => {
     const timer = autoDismissTimers.current.get(id);
@@ -58,7 +59,11 @@ export function NotificationToaster() {
     (id: string) => {
       clearAutoDismissTimer(id);
       setToasts((current) => current.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
-      setTimeout(() => removeToast(id), LEAVE_ANIMATION_MS);
+      const timer = setTimeout(() => {
+        leaveTimers.current.delete(id);
+        removeToast(id);
+      }, LEAVE_ANIMATION_MS);
+      leaveTimers.current.set(id, timer);
     },
     [clearAutoDismissTimer, removeToast],
   );
@@ -138,6 +143,10 @@ export function NotificationToaster() {
         clearTimeout(timer);
       }
       autoDismissTimers.current.clear();
+      for (const timer of leaveTimers.current.values()) {
+        clearTimeout(timer);
+      }
+      leaveTimers.current.clear();
     },
     [],
   );

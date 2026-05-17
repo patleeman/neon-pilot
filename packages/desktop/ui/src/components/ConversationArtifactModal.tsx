@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppEvents } from '../app/contexts';
@@ -67,16 +67,19 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
     [location.pathname, location.search, navigate],
   );
 
+  const closeArtifactRef = useRef(closeArtifact);
+  closeArtifactRef.current = closeArtifact;
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        closeArtifact();
+        closeArtifactRef.current();
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeArtifact]);
+  }, []);
 
   useEffect(() => {
     void refetch({ resetLoading: false });

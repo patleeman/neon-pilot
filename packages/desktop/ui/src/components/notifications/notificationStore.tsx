@@ -154,16 +154,9 @@ export function addNotification(payload: AddNotificationPayload): string {
   }
 
   // Store hasn't mounted yet — buffer for replay.
+  // The provider flushes the buffer in its mount effect.
   preMountBuffer.push(payload);
-
-  // Also fire a CustomEvent as a belt-and-suspenders fallback.
-  const id = generateId();
-  window.dispatchEvent(
-    new CustomEvent('pa-notification', {
-      detail: { ...payload, _id: id },
-    }),
-  );
-  return id;
+  return generateId();
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
