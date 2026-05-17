@@ -2,6 +2,15 @@ import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
 import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@personal-agent/extensions/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+type RuntimeUpdateStatus = {
+  name: string;
+  installed: boolean;
+  installedVersion: string | null;
+  latestVersion: string | null;
+  updateCheckError?: string | null;
+  needsUpdate: boolean;
+};
+
 type MlxStatus = {
   selectedModelId: string;
   loadedModelId: string | null;
@@ -13,6 +22,7 @@ type MlxStatus = {
   server: { reachable: boolean; models: string[]; error?: string };
   setup: { status: 'running' | 'succeeded' | 'failed'; message: string; progress: number; error: string | null } | null;
   process: { managedRunning: boolean; setupRunning?: boolean };
+  runtime?: RuntimeUpdateStatus;
   log: string;
 };
 
@@ -29,6 +39,7 @@ type GgufStatus = {
   version?: string;
   server: { reachable: boolean; models: string[]; error?: string };
   process: { managedRunning: boolean; managedPid: number | null };
+  runtime?: RuntimeUpdateStatus;
   models: GgufModel[];
   download: {
     id: string;
@@ -461,10 +472,23 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
-  async function installGgufRuntime() {
-    await runAction('Installing runtime…', async () => {
-      await pa.extension.invoke('localModelsGgufInstallRuntime', {});
+  async function installGgufRuntime(force = false) {
+    await runAction(force ? 'Updating llama.cpp…' : 'Installing runtime…', async () => {
+      await pa.extension.invoke('localModelsGgufInstallRuntime', { force });
     });
+  }
+
+  async function updateMlxRuntime() {
+    await runAction('Updating MLX…', async () => {
+      await pa.extension.invoke('localModelsMlxUpdateRuntime', {});
+    });
+  }
+
+  function runtimeBadge(runtime?: RuntimeUpdateStatus) {
+    if (!runtime?.installed) return <Pill tone="warning">Not installed</Pill>;
+    if (runtime.needsUpdate) return <Pill tone="warning">Update available</Pill>;
+    if (runtime.updateCheckError) return <Pill>Check failed</Pill>;
+    return <Pill tone="success">Installed</Pill>;
   }
 
   async function cancelDownload() {
@@ -911,21 +935,41 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       </div>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <div className="flex items-center justify-between gap-3 rounded-lg bg-surface/50 p-3">
-                        <div>
-                          <div className="text-sm font-medium text-primary">llama.cpp Runtime</div>
-                          <div className="mt-1 text-xs text-secondary">
-                            {status?.gguf?.cliAvailable && status?.gguf?.serverAvailable
-                              ? '✓ Installed'
-                              : 'Required for GGUF server and prompt execution.'}
+                      <div className="rounded-lg bg-surface/50 p-3">
+                        <div className="mb-3 text-sm font-medium text-primary">Supported backends</div>
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          <div className="flex items-start justify-between gap-3 rounded-lg border border-border-subtle/50 p-3">
+                            <div>
+                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                MLX <span>{runtimeBadge(status?.mlx?.runtime)}</span>
+                              </div>
+                              <div className="mt-1 text-xs text-secondary">
+                                Installed: {status?.mlx?.runtime?.installedVersion ?? '—'} · Latest:{' '}
+                                {status?.mlx?.runtime?.latestVersion ?? (status?.mlx?.runtime?.updateCheckError ? 'check failed' : '—')}
+                              </div>
+                            </div>
+                            <ToolbarButton disabled={Boolean(busy)} onClick={() => void updateMlxRuntime()}>
+                              {status?.mlx?.runtime?.installed ? 'Update' : 'Install'}
+                            </ToolbarButton>
+                          </div>
+                          <div className="flex items-start justify-between gap-3 rounded-lg border border-border-subtle/50 p-3">
+                            <div>
+                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                llama.cpp <span>{runtimeBadge(status?.gguf?.runtime)}</span>
+                              </div>
+                              <div className="mt-1 text-xs text-secondary">
+                                Installed: {status?.gguf?.runtime?.installedVersion ?? '—'} · Latest:{' '}
+                                {status?.gguf?.runtime?.latestVersion ?? (status?.gguf?.runtime?.updateCheckError ? 'check failed' : '—')}
+                              </div>
+                            </div>
+                            <ToolbarButton
+                              disabled={Boolean(busy)}
+                              onClick={() => void installGgufRuntime(Boolean(status?.gguf?.runtime?.installed))}
+                            >
+                              {status?.gguf?.runtime?.installed ? 'Update' : 'Install'}
+                            </ToolbarButton>
                           </div>
                         </div>
-                        <ToolbarButton
-                          disabled={Boolean(busy || (status?.gguf?.cliAvailable && status?.gguf?.serverAvailable))}
-                          onClick={() => void installGgufRuntime()}
-                        >
-                          {status?.gguf?.cliAvailable && status?.gguf?.serverAvailable ? 'Installed' : 'Download & Install'}
-                        </ToolbarButton>
                       </div>
                       <div className="space-y-1">
                         <div className="text-sm text-secondary">Endpoint</div>

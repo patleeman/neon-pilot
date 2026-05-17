@@ -19,6 +19,10 @@ export async function mlxSetup(input: unknown, ctx: ExtensionBackendContext) {
   return mlx.setup(input, ctx);
 }
 
+export async function mlxUpdateRuntime(input: unknown, ctx: ExtensionBackendContext) {
+  return mlx.updateRuntime(input, ctx);
+}
+
 export async function mlxStart(input: unknown, ctx: ExtensionBackendContext) {
   return mlx.start(input, ctx);
 }

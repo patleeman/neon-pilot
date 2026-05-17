@@ -9,6 +9,8 @@ The UI intentionally separates two workflows:
 Use this page to run a model that already exists locally.
 
 - Select one downloaded model.
+- Inspect supported backend status for MLX and llama.cpp, including installed version, latest checked version, and update availability.
+- Update MLX or llama.cpp runtimes from the Server page.
 - Configure serving settings such as context length, GPU layers, temperature, top-p, max tokens, and GGUF speculative decoding. Context length is auto-detected from GGUF metadata or MLX `config.json` and defaults to the detected value capped at 131,072 tokens.
 - Save or reload the server after changing model/settings.
 - Inspect the active endpoint and selected model metadata in the right detail rail.

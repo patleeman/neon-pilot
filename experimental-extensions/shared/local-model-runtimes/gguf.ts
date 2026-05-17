@@ -61,6 +61,11 @@ const MODEL_PORT = 8012;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
 const downloadJobs = new Map<string, DownloadJob>();
 const metadataCache = new Map<string, { detectedContextLength: number | null; recommendedContextSize: number }>();
+const runtimeUpdateCache: { checkedAt: number; latestTag: string | null; error: string | null } = {
+  checkedAt: 0,
+  latestTag: null,
+  error: null,
+};
 const MAX_RECOMMENDED_CONTEXT = 131072;
 const FALLBACK_CONTEXT = 32768;
 
@@ -229,6 +234,34 @@ function listGgufFiles(root: string): Array<{ path: string; name: string; bytes:
   return out.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50);
 }
 
+async function readLlamaLatestRelease() {
+  if (Date.now() - runtimeUpdateCache.checkedAt < 6 * 60 * 60 * 1000) return runtimeUpdateCache;
+  runtimeUpdateCache.checkedAt = Date.now();
+  try {
+    const response = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
+      headers: { 'user-agent': 'personal-agent-local-models' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const release = (await response.json()) as { tag_name?: string };
+    runtimeUpdateCache.latestTag = release.tag_name ?? null;
+    runtimeUpdateCache.error = null;
+  } catch (error) {
+    runtimeUpdateCache.error = error instanceof Error ? error.message : String(error);
+  }
+  return runtimeUpdateCache;
+}
+
+function parseLlamaBuild(version: string | undefined) {
+  const match = version?.match(/(?:version:\s*)?(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
+function parseLlamaReleaseBuild(tag: string | null | undefined) {
+  const match = tag?.match(/b?(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
 async function readServerHealth() {
   try {
     const response = await fetch(`${BASE_URL}/models`, { signal: AbortSignal.timeout(1500) });
@@ -254,6 +287,9 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
   if (cliAvailable) await chmod(bundledCli, 0o755).catch(() => undefined);
   if (serverAvailable) await chmod(bundledServer, 0o755).catch(() => undefined);
 
+  const latestRelease = runtimeAvailable ? await readLlamaLatestRelease() : { latestTag: null, error: null };
+  const installedBuild = parseLlamaBuild(version?.stdout.trim() || version?.stderr.trim());
+  const latestBuild = parseLlamaReleaseBuild(latestRelease.latestTag);
   const download = currentDownloadJob();
   const metadata = modelPath
     ? await readModelMetadata(ctx, modelPath).catch(() => ({
@@ -274,6 +310,14 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     recommendedContextSize: metadata.recommendedContextSize,
     baseUrl: BASE_URL,
     version: version?.stdout.trim() || version?.stderr.trim(),
+    runtime: {
+      name: 'llama.cpp',
+      installed: runtimeAvailable,
+      installedVersion: version?.stdout.trim() || version?.stderr.trim() || null,
+      latestVersion: latestRelease.latestTag,
+      updateCheckError: latestRelease.error,
+      needsUpdate: Boolean(installedBuild && latestBuild && installedBuild < latestBuild),
+    },
     message: runtimeAvailable
       ? serverAvailable
         ? undefined
@@ -407,8 +451,9 @@ export async function revealModel(input: RevealInput, ctx: ExtensionBackendConte
   return { ok: true };
 }
 
-export async function installRuntime(_input: unknown, ctx: ExtensionBackendContext) {
-  if ((await exists(bundledCli)) && (await exists(bundledServer)))
+export async function installRuntime(input: unknown, ctx: ExtensionBackendContext) {
+  const force = typeof input === 'object' && input !== null && 'force' in input ? Boolean((input as { force?: unknown }).force) : false;
+  if (!force && (await exists(bundledCli)) && (await exists(bundledServer)))
     return { ok: true, installed: false, status: await runtimeStatus({}, ctx) };
 
   const releaseResponse = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
@@ -448,6 +493,7 @@ $dylibs
 EOF
 `;
   await ctx.shell.exec({ command: 'sh', args: ['-c', script], timeoutMs: 120_000, maxBuffer: 1024 * 1024 });
+  runtimeUpdateCache.checkedAt = 0;
   return { ok: true, installed: true, status: await runtimeStatus({}, ctx) };
 }
 
