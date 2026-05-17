@@ -1,6 +1,6 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
 import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@personal-agent/extensions/ui';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type MlxStatus = {
   selectedModelId: string;
@@ -117,32 +117,65 @@ function readableReadme(raw: string) {
     .trim();
 }
 
+async function getJson(path: string) {
+  const response = await fetch(path, { method: 'GET', cache: 'no-store' });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
 async function postJson(path: string, body: unknown) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(await response.text());
   return response.json();
 }
 
-async function tryRegisterProvider(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string) {
+async function deleteJson(path: string) {
+  const response = await fetch(path, { method: 'DELETE' });
+  if (!response.ok && response.status !== 404) throw new Error(await response.text());
+  return response.ok ? response.json() : null;
+}
+
+async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string) {
   const provider = runtime === 'mlx' ? MLX_PROVIDER_ID : GGUF_PROVIDER_ID;
+  await postJson('/api/model-providers/providers', {
+    provider,
+    api: 'openai-completions',
+    baseUrl,
+    apiKey: 'local',
+    authHeader: false,
+    compat: { stream: true },
+  });
+  await postJson(`/api/model-providers/providers/${encodeURIComponent(provider)}/models`, {
+    modelId,
+    name: modelId.split('/').pop() || modelId,
+    api: 'openai-completions',
+    baseUrl,
+    reasoning: true,
+    input: ['text'],
+    contextWindow: runtime === 'mlx' ? 131072 : 8192,
+  });
+}
+
+async function syncLocalProviderModel(runtime: 'mlx' | 'gguf', activeModelId: string | null, baseUrl: string) {
+  const provider = runtime === 'mlx' ? MLX_PROVIDER_ID : GGUF_PROVIDER_ID;
+  const state = (await getJson('/api/model-providers')) as { providers?: Array<{ id?: string; models?: Array<{ id?: string }> }> };
+  const currentModels = state.providers?.find((candidate) => candidate.id === provider)?.models ?? [];
+
+  if (activeModelId) {
+    await registerLocalProviderModel(runtime, activeModelId, baseUrl);
+  }
+
+  await Promise.all(
+    currentModels
+      .map((model) => model.id)
+      .filter((modelId): modelId is string => Boolean(modelId && modelId !== activeModelId))
+      .map((modelId) => deleteJson(`/api/model-providers/providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}`)),
+  );
+}
+
+async function trySyncLocalProviderModel(runtime: 'mlx' | 'gguf', activeModelId: string | null, baseUrl: string) {
   try {
-    await postJson('/api/model-providers/providers', {
-      provider,
-      api: 'openai-completions',
-      baseUrl,
-      apiKey: 'local',
-      authHeader: false,
-      compat: { stream: true },
-    });
-    await postJson(`/api/model-providers/providers/${encodeURIComponent(provider)}/models`, {
-      modelId,
-      name: modelId.split('/').pop() || modelId,
-      api: 'openai-completions',
-      baseUrl,
-      reasoning: true,
-      input: ['text'],
-      contextWindow: runtime === 'mlx' ? 131072 : 8192,
-    });
+    await syncLocalProviderModel(runtime, activeModelId, baseUrl);
   } catch {
     // Preview/testing contexts may not expose provider APIs.
   }
@@ -218,6 +251,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [selectedSearchId, setSelectedSearchId] = useState<string>('');
   const [details, setDetails] = useState<ModelDetails | null>(null);
   const [selectedFile, setSelectedFile] = useState('');
+  const providerSyncKeyRef = useRef('');
 
   async function refresh() {
     setError(null);
@@ -250,6 +284,21 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!status) return;
+    const mlxActiveModel = status.mlx.server.reachable ? status.mlx.loadedModelId || status.mlx.selectedModelId : null;
+    const ggufSelected = status.gguf.models.find((model) => model.path === status.gguf.selectedModelPath) ?? null;
+    const ggufActiveModel = status.gguf.server.reachable && ggufSelected ? ggufSelected.name : null;
+    const ggufBaseUrl = status.gguf.baseUrl || 'http://127.0.0.1:8012/v1';
+    const syncKey = `${mlxActiveModel ?? ''}|${ggufActiveModel ?? ''}|${ggufBaseUrl}`;
+    if (providerSyncKeyRef.current === syncKey) return;
+    providerSyncKeyRef.current = syncKey;
+    void Promise.all([
+      trySyncLocalProviderModel('mlx', mlxActiveModel, MLX_BASE_URL),
+      trySyncLocalProviderModel('gguf', ggufActiveModel, ggufBaseUrl),
+    ]);
+  }, [status]);
 
   const downloadedModels = useMemo<DownloadedModel[]>(() => {
     const models: DownloadedModel[] = [];
@@ -326,7 +375,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         if (reload) {
           if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
           await pa.extension.invoke('localModelsMlxStart', {});
-          await tryRegisterProvider('mlx', selectedModel.subtitle, MLX_BASE_URL);
+          await trySyncLocalProviderModel('mlx', selectedModel.subtitle, MLX_BASE_URL);
         }
       } else if (selectedModel.path) {
         await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
@@ -337,7 +386,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             contextSize: Number(contextSize),
             gpuLayers: Number(gpuLayers),
           });
-          await tryRegisterProvider('gguf', selectedModel.title, status?.gguf?.baseUrl || endpoint);
+          await trySyncLocalProviderModel('gguf', selectedModel.title, status?.gguf?.baseUrl || endpoint);
         }
       }
       setDirty(false);
@@ -346,8 +395,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   async function stopServer() {
     await runAction('Stopping…', async () => {
-      if (activeRuntime === 'mlx') await pa.extension.invoke('localModelsMlxStop', {});
-      else await pa.extension.invoke('localModelsGgufStop', {});
+      if (activeRuntime === 'mlx') {
+        await pa.extension.invoke('localModelsMlxStop', {});
+        await trySyncLocalProviderModel('mlx', null, MLX_BASE_URL);
+      } else {
+        await pa.extension.invoke('localModelsGgufStop', {});
+        await trySyncLocalProviderModel('gguf', null, status?.gguf?.baseUrl || endpoint);
+      }
     });
   }
 
