@@ -25,6 +25,7 @@ function makeContext() {
         .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
+      getBlocks: vi.fn().mockResolvedValue({ detail: { blocks: [] } }),
       runTurn: vi.fn(async (_threadId: string, runText: string, options?: { images?: unknown[]; onEvent?: (event: unknown) => void }) => {
         await ctx.conversations.sendMessage('thread-1', runText, options?.images ? { images: options.images } : undefined);
         options?.onEvent?.({ type: 'turn_end' });
@@ -43,9 +44,23 @@ function makeConn() {
 }
 
 async function flushAsyncTurnStart() {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function waitForExpectation(assertion: () => void): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+  throw lastError;
 }
 
 afterEach(() => {
@@ -210,6 +225,42 @@ describe('system-alleycat turn protocol', () => {
 
     expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({ activeConversationId: 'thread-1' });
     expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
+  });
+
+  it('reconciles a final assistant response after tool-only live events', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    ctx.conversations.getBlocks
+      .mockResolvedValueOnce({
+        detail: { blocks: [{ type: 'text', id: 'old', text: 'Old response' }] },
+      })
+      .mockResolvedValueOnce({
+        detail: {
+          blocks: [
+            { type: 'text', id: 'old', text: 'Old response' },
+            { type: 'user', id: 'u1', text: 'Test your tools' },
+            { type: 'text', id: 'a1', text: 'Tools work.' },
+          ],
+        },
+      });
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'agent_start' });
+        options?.onEvent?.({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'read', input: { path: 'README.md' } });
+        options?.onEvent?.({ type: 'tool_end', toolCallId: 'tool-1', toolName: 'read', output: 'ok' });
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Test your tools' }] }, ctx as never, makeConn(), notify);
+    await waitForExpectation(() => {
+      expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Tools work.' }));
+    });
+    const completionCallIndex = notify.mock.calls.findIndex(([method]) => method === 'turn/completed');
+    const deltaCallIndex = notify.mock.calls.findIndex(([method]) => method === 'item/agentMessage/delta');
+    expect(deltaCallIndex).toBeGreaterThan(-1);
+    expect(completionCallIndex).toBeGreaterThan(deltaCallIndex);
   });
 
   it('fails the Codex turn when the atomic PA turn runner fails', async () => {
