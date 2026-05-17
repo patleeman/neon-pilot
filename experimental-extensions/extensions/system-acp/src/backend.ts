@@ -332,8 +332,17 @@ class PersonalAgentAcpAgent implements acp.Agent {
       };
     }
 
+    // Serialize event forwarding so fast events (tool_start → tool_end)
+    // are delivered to the ACP client in order, even when sessionUpdate
+    // latencies vary.
+    let forwardingChain = Promise.resolve();
+
     const unsubscribe = this.ctx.conversations.subscribe(record.conversationId, (event) => {
-      void this.forwardEvent(record.sessionId, event, active);
+      forwardingChain = forwardingChain
+        .then(() => this.forwardEvent(record.sessionId, event, active))
+        .catch((error) => {
+          this.ctx.log.error('ACP event forwarding failed', { error: renderErrorMessage(error) });
+        });
     });
 
     let timeoutHandle: NodeJS.Timeout | null = null;
@@ -355,6 +364,10 @@ class PersonalAgentAcpAgent implements acp.Agent {
       if (active.abortController.signal.aborted) {
         throw new Error(`ACP prompt timed out after ${timeoutMs}ms.`);
       }
+
+      // Wait for all forwarded events to be delivered before returning,
+      // ensuring the client has received the complete event stream.
+      await forwardingChain;
 
       const updated = await refreshSessionRecord(this.ctx, params.sessionId);
       this.ctx.log.info('ACP prompt completed', {
