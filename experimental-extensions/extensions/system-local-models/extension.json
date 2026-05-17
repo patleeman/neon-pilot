@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
-  "id": "local-models",
+  "id": "system-local-models",
   "name": "Local Models",
   "description": "Manage local MLX and GGUF model runtimes from one workspace.",
   "version": "0.1.0",
-  "packageType": "user",
+  "packageType": "system",
   "defaultEnabled": true,
   "frontend": { "entry": "dist/frontend.js" },
   "backend": {
@@ -36,11 +36,11 @@
         "id": "main",
         "title": "Local Models",
         "location": "main",
-        "route": "/ext/local-models",
+        "route": "/ext/system-local-models",
         "component": "LocalModelsPage"
       }
     ],
-    "nav": [{ "id": "local-models", "label": "Local Models", "icon": "sparkle", "route": "/ext/local-models" }],
+    "nav": [{ "id": "system-local-models", "label": "Local Models", "icon": "sparkle", "route": "/ext/system-local-models" }],
     "tools": [
       {
         "id": "local_models_status",

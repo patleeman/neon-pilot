@@ -28,4 +28,4 @@ Use this page to acquire and manage local models.
 - Track GGUF download progress and cancel in-flight GGUF downloads from the status banner.
 - View downloaded models and send one to the Server page.
 
-Runtime implementation lives in `experimental-extensions/shared/local-model-runtimes`; `local-models` owns the user-facing extension UI.
+Runtime implementation lives in `experimental-extensions/shared/local-model-runtimes`; `system-local-models` owns the user-facing extension UI.
