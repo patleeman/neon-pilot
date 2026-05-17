@@ -107,19 +107,26 @@ function DurBar({ label, pct, val, color }: { label: string; pct: number; val: s
 
 function formatNumber(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '0';
-  return String(value);
+  return formatRounded(value);
 }
 
 function formatPercent(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '0%';
-  return `${value}%`;
+  return `${formatRounded(value, { maxFractionDigits: 1 })}%`;
 }
 
 function formatTokens(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value) || value <= 0) return '0';
-  if (value >= 1_000_000) return `${Math.round(value / 100_000) / 10}M`;
-  if (value >= 1_000) return `${Math.round(value / 100) / 10}K`;
-  return String(value);
+  if (value >= 1_000_000) return `${formatRounded(value / 1_000_000, { maxFractionDigits: 1 })}M`;
+  if (value >= 1_000) return `${formatRounded(value / 1_000, { maxFractionDigits: 1 })}K`;
+  return formatRounded(value);
+}
+
+function formatRounded(value: number, options: { maxFractionDigits?: number } = {}): string {
+  const maxFractionDigits = options.maxFractionDigits ?? (Math.abs(value) < 10 ? 2 : 1);
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: Number.isInteger(value) ? 0 : maxFractionDigits,
+  }).format(value);
 }
 
 function formatDuration(ms: number): string {
