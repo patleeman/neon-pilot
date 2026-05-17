@@ -51,12 +51,13 @@ Each release command performs these steps in order:
 1. **Version bump** — `pnpm version` bumps the version following semver
 2. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
 3. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
-4. **Changelog update** — adds a dated `CHANGELOG.md` section for the new version from commits since the previous tag
-5. **Build** — builds signed desktop artifacts locally
-6. **Notarize** — submits the built `.app` for Apple notarization
-7. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
-8. **Git push** — pushes the version commit and tag to the remote
-9. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+4. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
+5. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
+6. **Build** — builds signed desktop artifacts locally
+7. **Notarize** — submits the built `.app` for Apple notarization
+8. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
+9. **Git push** — pushes the version commit and tag to the remote
+10. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
 
 ## Automated Smoke Test
 
@@ -98,7 +99,7 @@ If the version bump and build succeeded but the publish step failed:
 pnpm run release:publish
 ```
 
-This runs the smoke test, push, and GitHub release creation without repeating the version bump, changelog update, and build steps. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing, so GitHub release notes stay aligned with the changelog. For non-interactive reruns of an already-tested build, set `PERSONAL_AGENT_RELEASE_SMOKE_TESTED=1`.
+This runs the smoke test, push, and GitHub release creation without repeating the version bump, changelog update, and build steps. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing or still contains the generated release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested build, set `PERSONAL_AGENT_RELEASE_SMOKE_TESTED=1`.
 
 ## Release artifacts
 

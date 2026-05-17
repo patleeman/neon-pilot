@@ -16,9 +16,21 @@ export function formatReleaseSection(version, date, entries) {
   }
 
   const normalizedEntries = entries.map((entry) => entry.trim()).filter(Boolean);
-  const renderedEntries = normalizedEntries.length > 0 ? normalizedEntries : ['Release maintenance'];
+  const commitCount = normalizedEntries.length;
+  const commitSummary = commitCount === 1 ? '1 commit since the previous release.' : `${commitCount} commits since the previous release.`;
 
-  return [`## ${version.trim()} — ${date.trim()}`, '', ...renderedEntries.map((entry) => `- ${entry}`), ''].join('\n');
+  return [
+    `## ${version.trim()} — ${date.trim()}`,
+    '',
+    '### Highlights',
+    '',
+    '- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.',
+    '',
+    '### Notes',
+    '',
+    `- ${commitSummary}`,
+    '',
+  ].join('\n');
 }
 
 export function applyChangelogRelease(content, version, date, entries) {

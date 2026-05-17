@@ -111,6 +111,9 @@ function getChangelogReleaseNotes(version) {
   if (!section) {
     fail(`CHANGELOG.md release section for ${version} is empty.`);
   }
+  if (/TODO:\s+Replace this with/u.test(section)) {
+    fail(`CHANGELOG.md release section for ${version} still contains the release-note TODO. Summarize the changes before publishing.`);
+  }
 
   return section;
 }
