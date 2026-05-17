@@ -246,6 +246,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [details, setDetails] = useState<ModelDetails | null>(null);
   const [selectedFile, setSelectedFile] = useState('');
   const providerSyncKeyRef = useRef('');
+  const contextInitKeyRef = useRef('');
 
   async function refresh() {
     setError(null);
@@ -349,10 +350,13 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const runtimeStatus =
     busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
   useEffect(() => {
-    if (!status || dirty) return;
+    if (!status || !selectedModel) return;
+    const contextInitKey = `${activeRuntime}:${selectedModel.id}`;
+    if (contextInitKeyRef.current === contextInitKey) return;
+    contextInitKeyRef.current = contextInitKey;
     const recommended = activeRuntime === 'mlx' ? status.mlx.recommendedContextSize : status.gguf.recommendedContextSize;
     if (recommended) setContextSize(String(recommended));
-  }, [activeRuntime, dirty, status]);
+  }, [activeRuntime, selectedModel, status]);
 
   const ggufDownload = status?.gguf?.download?.status === 'running' ? status.gguf.download : null;
   const setupProgress = ggufDownload?.progress ?? status?.mlx?.setup?.progress ?? 0;
