@@ -115,29 +115,6 @@ function detectFormat(modelId: string, tags: string[] = []): 'mlx' | 'gguf' | 'u
   return 'unknown';
 }
 
-function readableReadme(raw: string) {
-  return raw
-    .replace(/^---[\s\S]*?---/, '')
-    .replace(/<br\s*\/?\s*>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/h[1-6]>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-async function getJson(path: string) {
-  const response = await fetch(path, { method: 'GET', cache: 'no-store' });
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-}
-
 async function postJson(path: string, body: unknown) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(await response.text());
@@ -650,17 +627,20 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </Select>
                   </Field>
                 ) : null}
-                <div className="max-h-[34rem] overflow-auto rounded-lg bg-surface/45 p-4 text-[13px] leading-6 text-secondary">
-                  <pre className="whitespace-pre-wrap font-sans">
-                    {details.readme ? readableReadme(details.readme).slice(0, 6000) : 'No README preview available.'}
-                  </pre>
-                </div>
+                <a
+                  href={`https://huggingface.co/${details.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-lg border border-border-subtle/60 bg-surface/45 p-4 text-sm text-accent hover:text-primary"
+                >
+                  Open model page on Hugging Face ↗
+                </a>
               </>
             ) : (
               <div className="rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
                 {selectedSearch.format === 'gguf'
                   ? 'Loading details finds the downloadable GGUF files.'
-                  : 'README preview loads on demand; MLX models can download directly.'}
+                  : 'Model details load on demand; MLX models can download directly.'}
               </div>
             )}
           </div>

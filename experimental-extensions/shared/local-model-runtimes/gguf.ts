@@ -337,7 +337,9 @@ export async function downloadModel(input: DownloadModelInput, ctx: ExtensionBac
 
   if (!repo) throw new Error('Repository is required, for example unsloth/Qwen3.6-35B-A3B-MTP-GGUF.');
   if (!filename) throw new Error('GGUF filename is required, for example model-q4_k_m.gguf.');
-  if (filename.includes('/') || filename.includes('..')) throw new Error('Filename must be a single GGUF filename, not a path.');
+  if (filename.startsWith('/') || filename.split('/').some((part) => part === '..' || part === '')) {
+    throw new Error('GGUF filename must be a relative file path from the Hugging Face repo.');
+  }
 
   const repoDir = join(modelCacheRoot, repo.replaceAll('/', '__'));
   const destination = join(repoDir, basename(filename));
@@ -372,7 +374,8 @@ export async function downloadModel(input: DownloadModelInput, ctx: ExtensionBac
     abort: new AbortController(),
   };
   downloadJobs.set(job.id, job);
-  const url = `https://huggingface.co/${repo}/resolve/main/${encodeURIComponent(filename)}?download=true`;
+  const encodedFilename = filename.split('/').map(encodeURIComponent).join('/');
+  const url = `https://huggingface.co/${repo}/resolve/main/${encodedFilename}?download=true`;
   void download(url, partial, job)
     .then(async () => {
       if (job.status === 'cancelled') return;
