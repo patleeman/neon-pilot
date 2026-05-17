@@ -819,7 +819,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <p className="mt-1 text-sm text-secondary">
                       Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
                     </p>
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(16rem,1fr)_8rem_auto]">
                       <TextInput
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
@@ -827,12 +827,9 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                           if (event.key === 'Enter') void searchModels();
                         }}
                         placeholder="Search models by name, author, or family…"
+                        className="min-w-0"
                       />
-                      <Select
-                        value={searchFormat}
-                        onChange={(event) => setSearchFormat(event.target.value as 'all' | 'mlx' | 'gguf')}
-                        className="w-32 shrink-0"
-                      >
+                      <Select value={searchFormat} onChange={(event) => setSearchFormat(event.target.value as 'all' | 'mlx' | 'gguf')}>
                         <option value="all">All</option>
                         <option value="mlx">MLX</option>
                         <option value="gguf">GGUF</option>
