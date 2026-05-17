@@ -253,6 +253,15 @@ async fn handle_stream(
                         return Err(anyhow!(message));
                     }
                 };
+            let mut tcp = tcp;
+            let auth_line =
+                serde_json::to_vec(&serde_json::json!({ "type": "auth", "token": config.token }))?;
+            tcp.write_all(&auth_line)
+                .await
+                .context("writing JSONL bridge auth")?;
+            tcp.write_all(b"\n")
+                .await
+                .context("terminating JSONL bridge auth")?;
             write_json_frame(&mut send, &Response::ok_with_session(resume)).await?;
             let iroh_stream = IrohBiStream { recv, send };
             bridge_jsonl(tcp, iroh_stream).await

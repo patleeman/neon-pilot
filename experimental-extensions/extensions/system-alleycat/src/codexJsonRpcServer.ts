@@ -46,6 +46,7 @@ export interface ConnectionState {
   activeTurnThreads: Set<string>;
   /** Serialize requests from one client so initialize and follow-up calls cannot race. */
   requestQueue?: Promise<void>;
+  transportAuthenticated?: boolean;
 }
 
 export type NotifyFn = (method: string, params: unknown) => void;
@@ -91,6 +92,8 @@ interface ThreadSubscriberGroup {
   /** Track which connections are subscribed for cleanup on disconnect. */
   connectionIds?: Set<string>;
 }
+
+const MAX_JSON_RPC_MESSAGE_BYTES = 1024 * 1024;
 
 const threadSubscribers = new Map<string, ThreadSubscriberGroup>();
 
@@ -254,6 +257,15 @@ async function handleJsonRpcMessage(input: {
   sendJson: (data: unknown) => void;
   getHandlers: () => Promise<Record<string, MethodHandler>>;
 }): Promise<void> {
+  if (Buffer.byteLength(input.raw, 'utf8') > MAX_JSON_RPC_MESSAGE_BYTES) {
+    input.sendJson({
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: -32600, message: 'JSON-RPC message exceeds size limit' },
+    } satisfies JsonRpcError);
+    return;
+  }
+
   let request: JsonRpcRequest;
   try {
     request = JSON.parse(input.raw) as JsonRpcRequest;
@@ -356,6 +368,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
       initialized: false,
       subscribedThreads: new Set(),
       activeTurnThreads: new Set(),
+      transportAuthenticated: false,
     };
     const sendJson = (data: unknown) => {
       if (!socket.destroyed) socket.write(`${JSON.stringify(data)}\n`);
@@ -367,6 +380,23 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     const lines = createInterface({ input: socket, crlfDelay: Infinity });
     lines.on('line', (line) => {
       if (!line.trim()) return;
+      if (Buffer.byteLength(line, 'utf8') > MAX_JSON_RPC_MESSAGE_BYTES) {
+        socket.destroy(new Error('JSON-RPC message exceeds size limit'));
+        return;
+      }
+      if (!conn.transportAuthenticated) {
+        try {
+          const authLine = JSON.parse(line) as { type?: string; token?: unknown };
+          if (authLine.type === 'auth' && typeof authLine.token === 'string' && auth.validate(authLine.token)) {
+            conn.transportAuthenticated = true;
+            return;
+          }
+        } catch {
+          // Fall through to close.
+        }
+        socket.destroy(new Error('Unauthorized JSONL bridge connection'));
+        return;
+      }
       enqueueJsonRpcMessage({ raw: line, conn, ctx, notify, sendJson, getHandlers });
     });
     const cleanupConnection = () => unsubscribeConnectionFromAll(notify, conn);
@@ -386,15 +416,16 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
       initialized: false,
       subscribedThreads: new Set(),
       activeTurnThreads: new Set(),
+      transportAuthenticated: false,
     };
 
-    // Optional bearer auth
     const authHeader = req.headers['authorization'] ?? '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    if (token && !auth.validate(token)) {
-      ws.close(4001, 'Unauthorized: invalid token');
+    if (!token || !auth.validate(token)) {
+      ws.close(4001, 'Unauthorized');
       return;
     }
+    conn.transportAuthenticated = true;
 
     const sendJson = (data: unknown) => {
       if (ws.readyState === ws.OPEN) {
@@ -408,6 +439,10 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     };
 
     ws.on('message', (raw) => {
+      if (raw.byteLength > MAX_JSON_RPC_MESSAGE_BYTES) {
+        ws.close(1009, 'JSON-RPC message exceeds size limit');
+        return;
+      }
       enqueueJsonRpcMessage({ raw: raw.toString(), conn, ctx, notify, sendJson, getHandlers });
     });
 
