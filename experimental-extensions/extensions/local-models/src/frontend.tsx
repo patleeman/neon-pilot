@@ -418,30 +418,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     });
   }
 
-  const sideNav = (
-    <aside className="w-44 shrink-0 border-r border-border-subtle pr-4">
-      <nav className="space-y-1" aria-label="Local Models sections">
-        {[
-          ['server', 'Server', 'Load and run models'],
-          ['library', 'Library', 'Find and download'],
-        ].map(([id, label, summary]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setPage(id as PageId)}
-            className={cx(
-              'w-full rounded-lg px-3 py-2 text-left transition-colors',
-              page === id ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-surface/70 hover:text-primary',
-            )}
-          >
-            <span className="block text-sm font-semibold">{label}</span>
-            <span className="mt-0.5 block text-[11px] text-dim">{summary}</span>
-          </button>
-        ))}
-      </nav>
-    </aside>
-  );
-
   const serverRail = (
     <aside className="w-72 shrink-0 border-l border-border-subtle pl-4">
       <div className="sticky top-4 space-y-5">
@@ -549,7 +525,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[92rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[112rem]" contentClassName="space-y-6">
         <AppPageIntro
           title="Local Models"
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
@@ -574,9 +550,26 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
         {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
-        <div className="flex gap-5">
-          {sideNav}
+        <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
+          {[
+            ['server', 'Server'],
+            ['library', 'Library'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setPage(id as PageId)}
+              className={cx(
+                'rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                page === id ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-surface/70 hover:text-primary',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
+        <div className="flex gap-5">
           {page === 'server' ? (
             <>
               <main className="min-w-0 flex-1 space-y-5">
