@@ -60,9 +60,9 @@ Loop mode stores a prompt, max iteration count, iterations used, and delay. Afte
 
 Simple delays are supported in the loop delay field: `immediate`, `After each turn`, `500ms`, `2s`, `5m`, or `1h`. Unknown delay text falls back to immediate continuation.
 
-## Legacy Goal Mode Guardrails
+## Goal Tool Guardrails
 
-The `set_goal` / `update_goal` tools are the legacy goal-mode path. They are hardened so a completed goal cannot keep speaking through stale queued continuations:
+The `goal` tool manages the goal-mode path. It is hardened so a completed goal cannot keep speaking through stale queued continuations:
 
 - manually enabling goal mode in the UI only records the goal; it does not immediately start the thread;
 - turn-end events update progress counters but never enqueue continuations;
@@ -70,7 +70,7 @@ The `set_goal` / `update_goal` tools are the legacy goal-mode path. They are har
 - overflow recovery compaction owns its automatic retry, so goal continuations are suppressed until the retry starts and finishes;
 - the timer re-reads the latest goal state before it sends;
 - changing, clearing, pausing, or completing the goal cancels any queued continuation;
-- repeated `update_goal { status: "complete" }` calls are idempotent no-ops.
+- repeated `goal { status: "complete" }` calls are idempotent no-ops.
 
 ## Tools
 

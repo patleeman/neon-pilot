@@ -212,15 +212,12 @@ export function createRunAgentExtension(options: {
   profilesRoot: string;
 }): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
-    const legacyRunTool = {
-      name: 'run',
-      label: 'Run (legacy)',
-      description: 'Legacy compatibility tool for durable background commands and subagents. Prefer background_command or subagent.',
-      promptSnippet: 'Prefer background_command for shell work and subagent for delegated agent work; use run only for legacy inspection.',
+    const backgroundWorkTool = {
+      name: 'background_work_internal',
+      label: 'Background Work Internal',
+      description: 'Internal executor for background_command and subagent.',
+      promptSnippet: '',
       promptGuidelines: [
-        'Prefer background_command for daemon-backed shell commands.',
-        'Prefer subagent for detached agent delegation and follow-up.',
-        'Use run only when you need the legacy generic list/get/logs/rerun/cancel surface.',
         'Runs are detached by default. Only set deliverResultToConversation=true when the result should flow back to this conversation.',
         'For persistent time-based automations, prefer scheduled_task.',
         'For pure conversation follow-up later, prefer deferred_resume with trigger="after_turn", "delay", or "at" instead.',
@@ -466,7 +463,7 @@ export function createRunAgentExtension(options: {
                 recordTelemetryEvent({
                   source: 'agent',
                   category: 'scheduled_task',
-                  name: 'save_from_run_tool',
+                  name: 'save_from_subagent_tool',
                   metadata: {
                     automationId: task.id,
                     taskSlug,
@@ -681,7 +678,7 @@ export function createRunAgentExtension(options: {
             }
 
             default:
-              throw new Error(`Unsupported run action: ${String(params.action)}`);
+              throw new Error(`Unsupported background work action: ${String(params.action)}`);
           }
         } catch (error) {
           return {
@@ -694,8 +691,6 @@ export function createRunAgentExtension(options: {
         }
       },
     };
-
-    pi.registerTool(legacyRunTool);
 
     pi.registerTool({
       name: 'background_command',
@@ -713,7 +708,7 @@ export function createRunAgentExtension(options: {
         deliverResultToConversation: Type.Optional(Type.Boolean({ description: 'Whether completion should wake this conversation.' })),
       }),
       execute(toolCallId: string, params: RunToolExecutionParams, signal: unknown, onUpdate: unknown, ctx: RunToolExecutionContext) {
-        return legacyRunTool.execute(toolCallId, params, signal, onUpdate, ctx);
+        return backgroundWorkTool.execute(toolCallId, params, signal, onUpdate, ctx);
       },
     });
 
@@ -747,7 +742,7 @@ export function createRunAgentExtension(options: {
       }),
       execute(toolCallId: string, params: RunToolExecutionParams, signal: unknown, onUpdate: unknown, ctx: RunToolExecutionContext) {
         const action = params.action === 'start' ? 'start_agent' : params.action;
-        return legacyRunTool.execute(toolCallId, { ...params, action }, signal, onUpdate, ctx);
+        return backgroundWorkTool.execute(toolCallId, { ...params, action }, signal, onUpdate, ctx);
       },
     });
   };

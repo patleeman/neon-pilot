@@ -1,6 +1,6 @@
 # Background Work Extension
 
-This extension owns the UI and compatibility tool for detached background work.
+This extension owns the UI and agent tools for detached background work.
 
 Product-facing UI is moving to the **Execution** model. A durable run is the daemon/runtime storage record; an execution is the app-level projection used by routes, extension APIs, and conversation-scoped UI. Do not add new product UI that filters raw `/api/runs` records directly.
 
@@ -11,7 +11,7 @@ Background work has two user-facing shapes:
 | Background command | A daemon-backed shell command with logs, status, cancel, and rerun behavior.                            |
 | Subagent           | A daemon-backed agent delegation with prompt, model, transcript/result, follow-up, and cancel behavior. |
 
-The generic `run` name is legacy compatibility plumbing. Product UI should say **Background commands** or **Subagents**, and agent-facing surfaces should prefer intent-shaped tools over a generic run abstraction.
+Product UI and agent-facing surfaces should say **Background commands** or **Subagents** instead of exposing a generic run abstraction.
 
 ## Lifecycle
 
@@ -30,7 +30,6 @@ Created -> Queued -> Running -> Completed
 - `background_command` is shell-only; it lists/inspects background commands and rejects subagent IDs with a hint to use `subagent`.
 - Use `deferred_resume` for “wait, then continue this conversation” requests. Do not use foreground `bash` with `sleep` as a timer.
 - Do not pair `deliverResultToConversation: true` background work with a wakeup that only polls the same run. Completion delivery already resumes the conversation; use a wakeup only for a distinct time-based action. If a distinct action is genuinely needed, pass a clear `reason` to `deferred_resume`.
-- Use this extension's legacy `run` tool only for compatibility and low-level inspection (`list`, `get`, `logs`, `rerun`, `follow_up`, `cancel`).
 
 ## UI
 

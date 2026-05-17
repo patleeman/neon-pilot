@@ -34,4 +34,4 @@ Use executions for product UI freshness:
 - conversation background-work rail
 - background-work detail actions (`cancel`, `rerun`, `follow-up`)
 
-Use durable runs only inside low-level detail/log plumbing, compatibility tools, daemon recovery, and agent-facing `run`/`background_command` APIs. Any durable-run mutation that can affect visible background work must invalidate the `executions` topic; invalidating `runs` alone is not enough.
+Use durable runs only inside low-level detail/log plumbing, daemon recovery, and agent-facing `background_command`/`subagent` APIs. Any durable-run mutation that can affect visible background work must invalidate the `executions` topic; invalidating `runs` alone is not enough.

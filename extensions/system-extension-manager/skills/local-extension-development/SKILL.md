@@ -18,12 +18,12 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 
 ## First moves
 
-1. Inspect installed extensions through Extension Manager, `GET /api/extensions/installed`, or the `extension_manager` tool with `{ "action": "list" }`.
-2. If editing an existing user extension, snapshot it first with `{ "action": "snapshot", "id": "..." }`.
-3. If creating a new extension, use `{ "action": "create", "id": "...", "name": "...", "template": "main-page" }` or `POST /api/extensions`.
-4. Edit `src/` files and `extension.json`, then build with `{ "action": "build", "id": "..." }`.
-5. Validate with `{ "action": "validate", "id": "..." }` and fix every error.
-6. Reload with `{ "action": "reload", "id": "..." }`.
+1. Inspect installed extensions through Extension Manager or `GET /api/extensions/installed`.
+2. If editing an existing user extension, snapshot it first from Extension Manager or `POST /api/extensions/{id}/snapshot`.
+3. If creating a new extension, use Extension Manager **Create** or `POST /api/extensions`.
+4. Edit `src/` files and `extension.json`, then build from Extension Manager or `POST /api/extensions/{id}/build`.
+5. Validate from Extension Manager or `POST /api/extensions/{id}/validate` and fix every error.
+6. Reload from Extension Manager or `POST /api/extensions/{id}/reload`.
 7. Open the declared route/surface and visually inspect UI changes.
 8. Check Extension Manager diagnostics before reporting done.
 
@@ -38,19 +38,9 @@ Starter create payload:
 }
 ```
 
-## Agent tool contract
+## Extension Manager API contract
 
-Use the `extension_manager` tool when it is available. It is the built-app authoring loop and does not require a repo checkout.
-
-```json
-{ "action": "list" }
-{ "action": "create", "id": "my-extension", "name": "My Extension", "description": "...", "template": "main-page" }
-{ "action": "snapshot", "id": "my-extension" }
-{ "action": "build", "id": "my-extension" }
-{ "action": "validate", "id": "my-extension" }
-{ "action": "reload", "id": "my-extension" }
-{ "action": "validate", "packageRoot": "/absolute/path/to/uninstalled-extension" }
-```
+Use Extension Manager UI actions or the `/api/extensions` endpoints for the built-app authoring loop when a repo checkout is not available.
 
 A validation result has this shape:
 
@@ -334,9 +324,9 @@ Never import app internals like `packages/desktop/server/*`, `packages/desktop/u
 
 Built app path:
 
-1. Build with the `extension_manager` tool `{ "action": "build", "id": "my-extension" }`, Extension Manager **Build**, or `POST /api/extensions/{id}/build`.
-2. Validate with `{ "action": "validate", "id": "my-extension" }`. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
-3. Reload with `{ "action": "reload", "id": "my-extension" }`, Extension Manager **Reload**, or `POST /api/extensions/{id}/reload`.
+1. Build with Extension Manager **Build** or `POST /api/extensions/{id}/build`.
+2. Validate with Extension Manager **Validate** or `POST /api/extensions/{id}/validate`. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
+3. Reload with Extension Manager **Reload** or `POST /api/extensions/{id}/reload`.
 4. Inspect diagnostics in Extension Manager.
 
 Repo checkout fallback:
@@ -363,7 +353,7 @@ Before reporting done:
 - `extension.json` parses and all contribution references match real exports.
 - `dist/frontend.js` exists when `frontend.entry` is declared.
 - `dist/backend.mjs` exists when `backend.entry` is declared.
-- `extension_manager { "action": "validate", "id": "..." }` returns `ok: true`, or every finding is understood and explicitly reported.
+- Extension Manager validation returns `ok: true`, or every finding is understood and explicitly reported.
 - Build/reload succeeded without Extension Manager diagnostics.
 - Backend imports at module scope without throwing.
 - No absolute, `file:`, release-temp, or machine-local imports remain in `dist/`.

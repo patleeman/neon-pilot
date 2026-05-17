@@ -6,8 +6,7 @@ import { Type } from '@sinclair/typebox';
 const GOAL_STATE_CUSTOM_TYPE = 'conversation-goal';
 const CONTINUATION_CUSTOM_TYPE = 'goal-continuation';
 
-const GOAL_SET_TOOL = 'set_goal';
-const GOAL_UPDATE_TOOL = 'update_goal';
+const GOAL_TOOL = 'goal';
 
 // ── State types ──────────────────────────────────────────────────────────────
 
@@ -95,7 +94,7 @@ function buildContinuationPrompt(state: GoalState): string {
     `Objective: ${state.objective}`,
     '',
     'Continue working until the objective is fully achieved.',
-    'If the objective is fully achieved, call update_goal with status: "complete" and stop.',
+    'If the objective is fully achieved, call goal with status: "complete" and stop.',
     'If work remains, make concrete progress before replying.',
   ].join('\n');
 }
@@ -120,17 +119,13 @@ function isOverflowCompactionRetry(event: unknown): boolean {
 
 // ── Tool parameter schemas ───────────────────────────────────────────────────
 
-const SetGoalParams = Type.Object({
-  objective: Type.String({ description: 'The concrete objective to pursue.' }),
-});
-
-const UpdateGoalParams = Type.Object({
+const GoalParams = Type.Object({
+  objective: Type.Optional(Type.String({ description: 'Start or replace the active goal objective.' })),
   status: Type.Optional(
     Type.Union([Type.Literal('complete')], {
-      description: 'Mark the goal as complete only when the objective is achieved.',
+      description: 'Mark the active goal complete only when the objective is achieved.',
     }),
   ),
-  objective: Type.Optional(Type.String({ description: 'Replace the active goal objective when the goal has changed.' })),
 });
 
 // ── Extension entry ──────────────────────────────────────────────────────────
@@ -147,62 +142,32 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       }
     };
 
-    // ── Register set_goal tool ───────────────────────────────────────────
+    // ── Register goal tool ───────────────────────────────────────────────
     pi.registerTool({
-      name: GOAL_SET_TOOL,
-      label: 'Set goal',
-      description: 'Enable goal mode with a concrete objective, or replace the active objective.',
-      promptSnippet: 'Set a concrete objective to work toward.',
+      name: GOAL_TOOL,
+      label: 'Goal',
+      description: 'Start, replace, or complete the current goal.',
+      promptSnippet: 'Use goal for explicit sustained objectives; set objective to start/replace, or status="complete" when done.',
       promptGuidelines: [
         'Use goal mode only for explicit requests or sustained autonomous work; ordinary one-shot tasks do not need a goal.',
+        'Set objective to start or replace the active goal.',
+        'Use status="complete" only when the objective is actually achieved.',
       ],
-      parameters: SetGoalParams,
-      async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
-        const objective = params.objective.trim();
-        if (!objective) {
-          throw new Error('Goal objective cannot be empty.');
-        }
-
-        const newState = createActiveGoalState(objective);
-        writeGoalState(pi, newState);
-        clearPendingContinuation();
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: `Goal set: "${objective}"`,
-            },
-          ],
-          details: { state: newState },
-        };
-      },
-    });
-
-    // ── Register update_goal tool ───────────────────────────────────────
-    pi.registerTool({
-      name: GOAL_UPDATE_TOOL,
-      label: 'Update goal',
-      description: 'Update the current goal objective or mark it complete.',
-      promptSnippet: 'Enable or update the goal when the objective changes, or mark it achieved when done.',
-      promptGuidelines: ['Update the objective when the goal changes; use status="complete" only when the objective is actually achieved.'],
-      parameters: UpdateGoalParams,
+      parameters: GoalParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-        const state = readGoalState(ctx.sessionManager);
         const objective = typeof params.objective === 'string' ? params.objective.trim() : undefined;
+        if (params.status === 'complete' && objective) {
+          throw new Error('Use either objective or status="complete", not both.');
+        }
         if (params.status !== 'complete' && !objective) {
-          throw new Error('Provide objective to update the goal, or status: "complete" to finish it.');
+          throw new Error('Provide objective to start/update the goal, or status: "complete" to finish it.');
         }
 
+        const state = readGoalState(ctx.sessionManager);
         if (params.status === 'complete' && state.status !== 'active') {
           clearPendingContinuation();
           return {
-            content: [
-              {
-                type: 'text' as const,
-                text: 'Goal already complete.',
-              },
-            ],
+            content: [{ type: 'text' as const, text: 'Goal already complete.' }],
             details: { state },
           };
         }
@@ -211,14 +176,9 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
         writeGoalState(pi, newState);
         clearPendingContinuation();
 
-        const text = newState.status === 'complete' ? 'Goal complete!' : `Goal updated: "${newState.objective}"`;
+        const text = newState.status === 'complete' ? 'Goal complete!' : `Goal set: "${newState.objective}"`;
         return {
-          content: [
-            {
-              type: 'text' as const,
-              text,
-            },
-          ],
+          content: [{ type: 'text' as const, text }],
           details: { state: newState },
         };
       },

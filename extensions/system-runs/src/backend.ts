@@ -281,10 +281,6 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
   };
 }
 
-export async function run(input: unknown, ctx: NativeBackendContext) {
-  return executeRunInput(input, ctx, 'run');
-}
-
 export async function bash(input: unknown, ctx: NativeBackendContext) {
   const params = isRecord(input) ? input : {};
   const command = readString(params.command);

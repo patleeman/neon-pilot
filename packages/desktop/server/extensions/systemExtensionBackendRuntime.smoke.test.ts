@@ -123,6 +123,7 @@ const ctx = {
       getSessionId: () => 'smoke-session',
       getSessionFile: () => sessionFile,
       getCwd: () => cwd,
+      getEntries: () => [],
     },
   },
 };
@@ -180,10 +181,10 @@ const smokes = {
   },
   async 'system-auto-mode'() {
     await smokeAgentFactory('createConversationAutoModeAgentExtension');
-    const setGoal = registeredTools.find((tool) => tool.name === 'set_goal');
-    assert(setGoal?.execute, 'set_goal tool was not registered');
-    const result = await setGoal.execute('smoke', { objective: 'smoke test goal' }, undefined, undefined, ctx.agentToolContext);
-    assert(result?.content?.[0]?.text?.includes('Goal set'), 'set_goal did not execute');
+    const goal = registeredTools.find((tool) => tool.name === 'goal');
+    assert(goal?.execute, 'goal tool was not registered');
+    const result = await goal.execute('smoke', { objective: 'smoke test goal' }, undefined, undefined, ctx.agentToolContext);
+    assert(result?.content?.[0]?.text?.includes('Goal set'), 'goal did not execute');
   },
   async 'system-automations'() {
     const result = await module.deferredResume({ action: 'list' }, ctx);

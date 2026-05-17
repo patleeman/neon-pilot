@@ -74,8 +74,7 @@ function createHarness(initialEntries: unknown[] = []) {
     sendUserMessage,
     registeredTools,
     registeredCommands,
-    setGoal: registeredTools.find((tool) => tool.name === 'set_goal')!,
-    updateGoal: registeredTools.find((tool) => tool.name === 'update_goal')!,
+    goal: registeredTools.find((tool) => tool.name === 'goal')!,
     turnEnd: handlers.get('turn_end')?.[0] as AgentEventHandler,
     agentStart: handlers.get('agent_start')?.[0] as AgentEventHandler,
     agentEnd: handlers.get('agent_end')?.[0] as AgentEventHandler,
@@ -100,15 +99,15 @@ async function finishAgentRunWithFakeTimers(harness: { agentEnd: AgentEventHandl
 }
 
 describe('system-goal-mode extension', () => {
-  it('registers only goal set and update tools', () => {
+  it('registers only the goal tool', () => {
     const { registeredTools } = createHarness();
-    expect(registeredTools.map((tool) => tool.name)).toEqual(['set_goal', 'update_goal']);
+    expect(registeredTools.map((tool) => tool.name)).toEqual(['goal']);
   });
 
-  it('set_goal enables goal mode with a concrete objective', async () => {
-    const { setGoal, appendEntry, ctx } = createHarness();
+  it('goal enables goal mode with a concrete objective', async () => {
+    const { goal, appendEntry, ctx } = createHarness();
 
-    const result = await setGoal.execute('goal-1', { objective: ' ship it ' }, new AbortController().signal, vi.fn(), ctx);
+    const result = await goal.execute('goal-1', { objective: ' ship it ' }, new AbortController().signal, vi.fn(), ctx);
 
     expect(appendEntry).toHaveBeenCalledWith(
       'conversation-goal',
@@ -117,10 +116,10 @@ describe('system-goal-mode extension', () => {
     expect(result.content?.[0]?.text).toBe('Goal set: "ship it"');
   });
 
-  it('set_goal updates the active goal instead of throwing', async () => {
-    const { setGoal, appendEntry, ctx } = createHarness([activeGoal('old goal')]);
+  it('goal updates the active goal instead of throwing', async () => {
+    const { goal, appendEntry, ctx } = createHarness([activeGoal('old goal')]);
 
-    const result = await setGoal.execute('goal-1', { objective: 'new goal' }, new AbortController().signal, vi.fn(), ctx);
+    const result = await goal.execute('goal-1', { objective: 'new goal' }, new AbortController().signal, vi.fn(), ctx);
 
     expect(appendEntry).toHaveBeenCalledWith(
       'conversation-goal',
@@ -129,23 +128,23 @@ describe('system-goal-mode extension', () => {
     expect(result.content?.[0]?.text).toBe('Goal set: "new goal"');
   });
 
-  it('update_goal can enable or update goal mode with a new objective', async () => {
-    const { updateGoal, appendEntry, ctx } = createHarness([completeGoal('cleared')]);
+  it('goal can enable or update goal mode with a new objective', async () => {
+    const { goal, appendEntry, ctx } = createHarness([completeGoal('cleared')]);
 
-    const result = await updateGoal.execute('goal-2', { objective: 'resume work' }, new AbortController().signal, vi.fn(), ctx);
+    const result = await goal.execute('goal-2', { objective: 'resume work' }, new AbortController().signal, vi.fn(), ctx);
 
     expect(appendEntry).toHaveBeenCalledWith(
       'conversation-goal',
       expect.objectContaining({ objective: 'resume work', status: 'active', stopReason: null, noProgressTurns: 0 }),
     );
-    expect(result.content?.[0]?.text).toBe('Goal updated: "resume work"');
+    expect(result.content?.[0]?.text).toBe('Goal set: "resume work"');
   });
 
-  it('update_goal complete disables goal mode without aborting the current turn', async () => {
-    const { updateGoal, appendEntry, ctx } = createHarness([activeGoal('ship it')]);
+  it('goal complete disables goal mode without aborting the current turn', async () => {
+    const { goal, appendEntry, ctx } = createHarness([activeGoal('ship it')]);
     const abort = vi.fn();
 
-    const result = await updateGoal.execute('goal-2', { status: 'complete' }, new AbortController().signal, vi.fn(), { ...ctx, abort });
+    const result = await goal.execute('goal-2', { status: 'complete' }, new AbortController().signal, vi.fn(), { ...ctx, abort });
 
     expect(appendEntry).toHaveBeenCalledWith(
       'conversation-goal',
@@ -178,9 +177,9 @@ describe('system-goal-mode extension', () => {
 
   it('runs a realistic goal lifecycle: enable, continue, update, complete, then stop', async () => {
     const harness = createHarness();
-    const { setGoal, updateGoal, turnEnd, sendMessage, appendEntry, ctx } = harness;
+    const { goal, turnEnd, sendMessage, appendEntry, ctx } = harness;
 
-    await setGoal.execute('goal-1', { objective: 'audit the repo' }, new AbortController().signal, vi.fn(), ctx);
+    await goal.execute('goal-1', { objective: 'audit the repo' }, new AbortController().signal, vi.fn(), ctx);
     await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'bash' }] }, ctx);
     await finishAgentRun(harness);
     expect(sendMessage).toHaveBeenCalledTimes(1);
@@ -189,7 +188,7 @@ describe('system-goal-mode extension', () => {
       { deliverAs: 'followUp', triggerTurn: true },
     );
 
-    await updateGoal.execute('goal-2', { objective: 'audit the repo deeply' }, new AbortController().signal, vi.fn(), ctx);
+    await goal.execute('goal-2', { objective: 'audit the repo deeply' }, new AbortController().signal, vi.fn(), ctx);
     await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'read' }] }, ctx);
     await finishAgentRun(harness);
     expect(sendMessage).toHaveBeenCalledTimes(2);
@@ -198,7 +197,7 @@ describe('system-goal-mode extension', () => {
       { deliverAs: 'followUp', triggerTurn: true },
     );
 
-    await updateGoal.execute('goal-3', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
+    await goal.execute('goal-3', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
     await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'bash' }] }, ctx);
     await finishAgentRun(harness);
 
@@ -213,14 +212,14 @@ describe('system-goal-mode extension', () => {
     vi.useFakeTimers();
     try {
       const harness = createHarness([activeGoal('ship the fix')]);
-      const { updateGoal, turnEnd, sendMessage, appendEntry, ctx } = harness;
+      const { goal, turnEnd, sendMessage, appendEntry, ctx } = harness;
 
       await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'read' }] }, ctx);
       await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'edit' }] }, ctx);
       await vi.runOnlyPendingTimersAsync();
       expect(sendMessage).not.toHaveBeenCalled();
 
-      await updateGoal.execute('goal-complete', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
+      await goal.execute('goal-complete', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
       await finishAgentRunWithFakeTimers(harness);
 
       expect(sendMessage).not.toHaveBeenCalled();
@@ -237,9 +236,9 @@ describe('system-goal-mode extension', () => {
     vi.useFakeTimers();
     try {
       const harness = createHarness();
-      const { setGoal, updateGoal, turnEnd, sendMessage, appendEntry, ctx } = harness;
+      const { goal, turnEnd, sendMessage, appendEntry, ctx } = harness;
 
-      await setGoal.execute('goal-1', { objective: 'ship the fix' }, new AbortController().signal, vi.fn(), ctx);
+      await goal.execute('goal-1', { objective: 'ship the fix' }, new AbortController().signal, vi.fn(), ctx);
       await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'bash' }] }, ctx);
 
       expect(sendMessage).not.toHaveBeenCalled();
@@ -257,7 +256,7 @@ describe('system-goal-mode extension', () => {
         { deliverAs: 'followUp', triggerTurn: true },
       );
 
-      await updateGoal.execute('goal-2', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
+      await goal.execute('goal-2', { status: 'complete' }, new AbortController().signal, vi.fn(), ctx);
       await turnEnd({ toolResults: [] }, ctx);
       await vi.runOnlyPendingTimersAsync();
 

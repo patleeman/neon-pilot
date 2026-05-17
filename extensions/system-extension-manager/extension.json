@@ -42,28 +42,6 @@
         "section": "settings"
       }
     ],
-    "tools": [
-      {
-        "id": "extension-manager",
-        "name": "extension_manager",
-        "title": "Extension manager",
-        "description": "Create, list, snapshot, build, reload, or validate local Personal Agent extensions.",
-        "action": "manageExtension",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "action": { "type": "string", "enum": ["list", "create", "snapshot", "build", "reload", "validate", "hostViewComponents"] },
-            "id": { "type": "string", "description": "Extension id." },
-            "extensionId": { "type": "string", "description": "Extension id; alias for id." },
-            "name": { "type": "string", "description": "Display name when creating an extension." },
-            "description": { "type": "string", "description": "Description when creating an extension." },
-            "template": { "type": "string", "enum": ["main-page", "right-rail", "workbench-detail"] },
-            "packageRoot": { "type": "string", "description": "Package root to validate when the extension is not installed." }
-          },
-          "required": ["action"]
-        }
-      }
-    ],
     "views": [
       {
         "id": "page",

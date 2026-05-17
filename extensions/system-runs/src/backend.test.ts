@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  runExecute: vi.fn(),
   backgroundCommandExecute: vi.fn(),
   subagentExecute: vi.fn(),
   pingDaemon: vi.fn().mockResolvedValue(true),
@@ -16,7 +15,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./runTool.js', () => ({
   createRunAgentExtension: vi.fn(() => (pi: { registerTool: (t: unknown) => void }) => {
-    pi.registerTool({ name: 'run', execute: mocks.runExecute });
     pi.registerTool({ name: 'background_command', execute: mocks.backgroundCommandExecute });
     pi.registerTool({ name: 'subagent', execute: mocks.subagentExecute });
   }),
@@ -49,7 +47,7 @@ vi.mock('@personal-agent/extensions/backend', () => ({
   parseDeferredResumeDelayMs: vi.fn(),
 }));
 
-import { background_command, bash, run, subagent } from './backend.js';
+import { background_command, bash, subagent } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
   return {
@@ -72,48 +70,6 @@ function durableRun(runId: string, kind: string, taskSlug: string, status = 'run
 describe('system-runs backend', () => {
   afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('run handler', () => {
-    it('delegates to the registered run tool and wraps text result', async () => {
-      mocks.runExecute.mockResolvedValue({
-        content: [{ type: 'text', text: 'Run abc1234 started.' }],
-      });
-
-      const result = await run({ action: 'start', taskSlug: 'test' }, createCtx());
-      expect(result.text).toBe('Run abc1234 started.');
-    });
-
-    it('passes details through when present', async () => {
-      mocks.runExecute.mockResolvedValue({
-        content: [{ type: 'text', text: 'Running...' }],
-        details: { runId: 'abc1234', status: 'running' },
-      });
-
-      const result = await run({ action: 'start', taskSlug: 'test' }, createCtx());
-      expect(result.details).toEqual({ runId: 'abc1234', status: 'running' });
-    });
-
-    it('does not fail when UI invalidation is unavailable', async () => {
-      mocks.runExecute.mockResolvedValue({
-        content: [{ type: 'text', text: 'Running...' }],
-      });
-
-      const result = await run({ action: 'start', taskSlug: 'test' }, createCtx({ ui: undefined }));
-      expect(result.text).toBe('Running...');
-    });
-
-    it('handles multiple content blocks', async () => {
-      mocks.runExecute.mockResolvedValue({
-        content: [
-          { type: 'text', text: 'Run 1' },
-          { type: 'text', text: 'Run 2' },
-        ],
-      });
-
-      const result = await run({ action: 'list' }, createCtx());
-      expect(result.text).toBe('Run 1\nRun 2');
-    });
   });
 
   describe('bash handler', () => {

@@ -7,8 +7,7 @@ metadata:
   summary: Set one objective and let the system automatically continue until it is met.
   status: active
 tools:
-  - set_goal
-  - update_goal
+  - goal
 ---
 
 # Goal Mode
@@ -19,17 +18,16 @@ Goal mode is a single active objective. The system injects the current objective
 
 ## How it works
 
-1. **`set_goal`** — enable goal mode with a concrete objective, or replace the active objective.
-2. **`update_goal(objective: "...")`** — enable goal mode or replace the active objective.
-3. **`update_goal(status: "complete")`** — disable goal mode when the objective is met.
+1. **`goal(objective: "...")`** — enable goal mode or replace the active objective.
+2. **`goal(status: "complete")`** — disable goal mode when the objective is met.
 
 The system automatically schedules a visible goal-continuation block after each turn while the goal is active, then uses it to trigger the next turn.
 
 ## Rules
 
 - Do not create a goal for every ordinary request — only for sustained multi-turn tasks.
-- Calling `set_goal` while goal mode is active replaces the objective and keeps goal mode running.
-- Mark the goal complete with `update_goal` only when the objective is actually achieved.
+- Calling `goal` with an objective while goal mode is active replaces the objective and keeps goal mode running.
+- Mark the goal complete with `goal { status: "complete" }` only when the objective is actually achieved.
 - The system's continuation prompt already includes the current objective.
 
 ## Safety guards

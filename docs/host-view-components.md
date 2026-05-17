@@ -181,15 +181,7 @@ The canonical catalog lives in `@personal-agent/extensions/host-view-components`
 | `workbench.browser.rail`     | Browser rail           | `rightRail` | none  | `wrapper`      |
 | `workbench.browser.detail`   | Browser detail         | `workbench` | none  | `wrapper`      |
 
-Agents can inspect the catalog with:
-
-```json
-{
-  "action": "hostViewComponents"
-}
-```
-
-through the `extension_manager` tool once the extension tool schema has been regenerated/reloaded in the running app.
+Agents can inspect the catalog through the Extension Manager UI or `/api/extensions/host-view-components` once the extension registry has been regenerated/reloaded in the running app.
 
 ## Runtime split
 

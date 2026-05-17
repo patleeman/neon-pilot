@@ -126,7 +126,7 @@ See [Auto Mode](../extensions/system-auto-mode/README.md) for the full nudge, mi
 
 ### Goal Mode (legacy)
 
-The `set_goal` / `update_goal` tools provide a legacy goal-mode path. Continuations are scheduled only after `agent_end`, and repeated `update_goal { status: "complete" }` calls are idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
+The `goal` tool provides the legacy goal-mode path. Continuations are scheduled only after `agent_end`, and repeated `goal { status: "complete" }` calls are idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
 
 ## Slash Commands
 

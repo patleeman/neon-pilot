@@ -321,7 +321,7 @@ function safeActionInputFor(id, manifest, actionId) {
   const criticalInput = criticalSmokeActionInput(id, actionId);
   if (criticalInput !== undefined) return criticalInput;
   const tool = manifest.contributes?.tools?.find((candidate) => candidate.action === actionId);
-  const safeListTools = new Set(['scheduled_task', 'queue_followup', 'run']);
+  const safeListTools = new Set(['scheduled_task', 'queue_followup']);
   if (!tool?.name || !safeListTools.has(tool.name)) return undefined;
   const actionEnum = tool.inputSchema?.properties?.action?.enum;
   if (Array.isArray(actionEnum) && actionEnum.includes('list')) return { action: 'list' };

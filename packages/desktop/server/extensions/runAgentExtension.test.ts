@@ -65,7 +65,7 @@ vi.mock('@personal-agent/core', async (importOriginal) => {
   };
 });
 
-function registerRunTool() {
+function registerTool(toolName: 'background_command' | 'subagent') {
   let registeredTool:
     | {
         execute: (
@@ -80,7 +80,7 @@ function registerRunTool() {
     profilesRoot: '/profiles',
   })({
     registerTool: (tool: unknown) => {
-      if ((tool as { name?: string }).name !== 'run') return;
+      if ((tool as { name?: string }).name !== toolName) return;
       registeredTool = tool as {
         execute: (
           ...args: unknown[]
@@ -90,7 +90,7 @@ function registerRunTool() {
   } as never);
 
   if (!registeredTool) {
-    throw new Error('Run tool was not registered.');
+    throw new Error(`${toolName} tool was not registered.`);
   }
 
   return registeredTool;
@@ -146,7 +146,7 @@ describe('run agent extension', () => {
       runs: [{ runId: 'run-123', manifest: { kind: 'background-run', source: { type: 'tool' } }, status: { status: 'running' } }],
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute('tool-1', { action: 'list' }, undefined, undefined, createToolContext());
 
     expect(result.isError).not.toBe(true);
@@ -182,7 +182,7 @@ describe('run agent extension', () => {
       log: '',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const detail = await runTool.execute('tool-1', { action: 'get', runId: 'run-123' }, undefined, undefined, createToolContext());
     const logs = await runTool.execute(
       'tool-2',
@@ -217,7 +217,7 @@ describe('run agent extension', () => {
     expect(unsafeLogs.content[0]?.text).toContain('(empty log)');
   });
 
-  it('starts a background run through the daemon without conversation callbacks by default', async () => {
+  it('starts a background command through the daemon without conversation callbacks by default', async () => {
     pingDaemonMock.mockResolvedValue(true);
     startBackgroundRunMock.mockResolvedValue({
       accepted: true,
@@ -225,7 +225,7 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-456.log',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('background_command');
     const result = await runTool.execute(
       'tool-1',
       {
@@ -264,11 +264,11 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-agent-123.log',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'fix-build',
         prompt: 'Fix the build errors and report back.',
         model: 'openai-codex/gpt-5.4',
@@ -314,11 +314,11 @@ describe('run agent extension', () => {
     applyScheduledTaskThreadBindingMock.mockReturnValue({ id: 'monitor-build', prompt: 'Watch the deployment and report back.' });
 
     try {
-      const runTool = registerRunTool();
+      const runTool = registerTool('subagent');
       const result = await runTool.execute(
         'tool-1',
         {
-          action: 'start_agent',
+          action: 'start',
           taskSlug: '  monitor-build  ',
           prompt: '  Watch the deployment and report back.  ',
           model: '   ',
@@ -363,11 +363,11 @@ describe('run agent extension', () => {
   it('rejects malformed scheduled agent at timestamps', async () => {
     pingDaemonMock.mockResolvedValue(true);
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'monitor-build',
         prompt: 'Watch the deployment and report back.',
         at: '9999',
@@ -386,11 +386,11 @@ describe('run agent extension', () => {
   it('rejects overflowed scheduled agent at timestamps', async () => {
     pingDaemonMock.mockResolvedValue(true);
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'monitor-build',
         prompt: 'Watch the deployment and report back.',
         at: '2026-02-31T09:00:00.000Z',
@@ -419,11 +419,11 @@ describe('run agent extension', () => {
     applyScheduledTaskThreadBindingMock.mockReturnValue({ id: 'deploy-watch', prompt: 'Watch the deployment and report back.' });
 
     try {
-      const runTool = registerRunTool();
+      const runTool = registerTool('subagent');
       const result = await runTool.execute(
         'tool-1',
         {
-          action: 'start_agent',
+          action: 'start',
           taskSlug: 'deploy-watch',
           prompt: 'Watch the deployment and report back.',
           cron: '0 9 * * 1-5',
@@ -468,11 +468,11 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-agent-callback.log',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'deploy-watch',
         prompt: 'Watch the deployment and report back.',
         deliverResultToConversation: true,
@@ -513,11 +513,11 @@ describe('run agent extension', () => {
   it('rejects unsafe loop iteration limits before starting durable agent runs', async () => {
     pingDaemonMock.mockResolvedValue(true);
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const fractional = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'loop-watch',
         prompt: 'Keep watching.',
         loop: true,
@@ -530,7 +530,7 @@ describe('run agent extension', () => {
     const unsafe = await runTool.execute(
       'tool-2',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'loop-watch',
         prompt: 'Keep watching.',
         loop: true,
@@ -551,11 +551,11 @@ describe('run agent extension', () => {
   it('requires a persisted conversation when opting into result delivery', async () => {
     pingDaemonMock.mockResolvedValue(true);
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
-        action: 'start_agent',
+        action: 'start',
         taskSlug: 'deploy-watch',
         prompt: 'Watch the deployment and report back.',
         deliverResultToConversation: true,
@@ -579,7 +579,7 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-rerun-123.log',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
@@ -606,7 +606,7 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-followup-123.log',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
@@ -635,7 +635,7 @@ describe('run agent extension', () => {
       reason: 'cannot continue',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
@@ -659,7 +659,7 @@ describe('run agent extension', () => {
       runId: 'run-original-123',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const result = await runTool.execute(
       'tool-1',
       {
@@ -685,7 +685,7 @@ describe('run agent extension', () => {
       reason: 'cancel denied',
     });
 
-    const runTool = registerRunTool();
+    const runTool = registerTool('subagent');
     const missingRun = await runTool.execute(
       'tool-1',
       {

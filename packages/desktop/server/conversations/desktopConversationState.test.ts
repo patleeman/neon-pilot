@@ -191,13 +191,13 @@ describe('desktopConversationState reducer', () => {
     let state = createEmptyDesktopConversationStreamState();
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_start',
-      toolName: 'set_goal',
+      toolName: 'goal',
       args: { objective: 'Ship the thing' },
       toolCallId: 'goal-1',
     } as never);
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_end',
-      toolName: 'set_goal',
+      toolName: 'goal',
       toolCallId: 'goal-1',
       output: 'Goal set: "Ship the thing"',
       isError: false,
@@ -223,7 +223,7 @@ describe('desktopConversationState reducer', () => {
 
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_end',
-      toolName: 'update_goal',
+      toolName: 'goal',
       toolCallId: 'goal-2',
       output: 'Goal complete!',
       isError: false,

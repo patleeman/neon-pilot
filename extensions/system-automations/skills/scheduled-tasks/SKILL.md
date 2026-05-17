@@ -36,7 +36,7 @@ Do not confuse scheduled tasks with:
 
 - **project tasks** in `state.yaml` — those are planning/checklist items
 - **follow-up queue entries** — those are conversation-bound wakeups
-- **durable background runs** — those are detached jobs launched on demand with the `run` tool
+- **durable background runs** — those are detached jobs launched on demand with `background_command` or `subagent`
 
 ## Where automations live
 

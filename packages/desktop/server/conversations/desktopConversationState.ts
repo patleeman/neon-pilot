@@ -123,7 +123,7 @@ export function createEmptyDesktopConversationStreamState(): DesktopConversation
 }
 
 const TERMINAL_BASH_DISPLAY_MODE = 'terminal';
-const GOAL_TOOL_NAMES = new Set(['set_goal', 'update_goal']);
+const GOAL_TOOL_NAMES = new Set(['goal']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;

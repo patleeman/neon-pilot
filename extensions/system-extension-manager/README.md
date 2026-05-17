@@ -22,7 +22,7 @@ The Extension Manager should make that loop boring:
 - export/import extension packages
 - snapshot a user extension before agent edits
 - open an extension folder in Finder/editor
-- expose an agent-facing `extension_manager` tool for list/create/snapshot/build/validate/reload
+- expose build/reload/validate operations through the Extension Manager UI and backend actions
 - show build/runtime errors in a way an agent can fix
 
 ## Operational model
@@ -39,7 +39,7 @@ The loader also includes repo-local experimental extensions from `experimental-e
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `PERSONAL_AGENT_EXTENSION_PATHS` for process-level overrides.
 
-Extension Manager can build runtime extensions in-app when running from an unpackaged/dev desktop bundle. Use the per-extension **Build** action or the `extension_manager` tool's `build` action to compile `src/frontend.tsx` and `src/backend.ts` into manifest-declared `dist/*` entries, then **Reload** / `reload` to refresh backend modules, restart services, and registry surfaces. Use `validate` after each build; the extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Packaged desktop releases are prebuilt-only: they load existing `dist` bundles and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
+Extension Manager can build runtime extensions in-app when running from an unpackaged/dev desktop bundle. Use the per-extension **Build** action to compile `src/frontend.tsx` and `src/backend.ts` into manifest-declared `dist/*` entries, then **Reload** to refresh backend modules, restart services, and registry surfaces. Use **Validate** after each build; the extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Packaged desktop releases are prebuilt-only: they load existing `dist` bundles and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
 
 ## Agent workflow for this extension
 
