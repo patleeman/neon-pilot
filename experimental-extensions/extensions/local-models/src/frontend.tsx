@@ -181,6 +181,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
       : Boolean(status?.gguf?.process.managedRunning && !running);
   const endpoint = runtime === 'mlx' ? MLX_BASE_URL : status?.gguf?.baseUrl || 'http://127.0.0.1:8012/v1';
   const runtimeStatus = busy || (running ? 'Running' : starting ? 'Starting' : selected?.installed ? 'Ready' : 'Not Loaded');
+  const hfSlug = mlxModel.trim();
+  const hfSlugLooksGguf = /(^|[-_/])gguf($|[-_/])/i.test(hfSlug);
 
   async function loadSelected() {
     if (!selected) return;
@@ -235,7 +237,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   async function downloadGguf() {
     await runAction('Downloading…', async () => {
-      await pa.extension.invoke('localModelsGgufDownload', { repo, filename });
+      await pa.extension.invoke('localModelsGgufDownload', { repo: hfSlugLooksGguf ? hfSlug : repo, filename });
       setRuntimeFromSelection('gguf');
     });
   }
@@ -309,10 +311,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
         <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[22rem_minmax(0,1fr)_20rem]">
           <aside className="space-y-5 rounded-xl border border-border-subtle/70 bg-surface/25 p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-primary">Find or Set a Model</h2>
-                <p className="mt-1 text-sm text-secondary">Search Hugging Face, paste a slug, or select a local GGUF.</p>
+                <h2 className="font-semibold text-primary">Model</h2>
+                <p className="mt-1 text-sm text-secondary">
+                  Pick one model. Search, paste a Hugging Face slug, or choose a local GGUF file.
+                </p>
               </div>
               <button
                 type="button"
@@ -324,8 +328,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Hugging Face search</label>
+            <div className="space-y-3 rounded-lg bg-background/25 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Search Hugging Face</div>
               <div className="flex gap-2">
                 <input
                   value={searchQuery}
@@ -334,63 +338,66 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     if (event.key === 'Enter') void searchMlx();
                   }}
                   className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                  placeholder="Search models…"
+                  placeholder="Qwen MLX, Llama, Mistral…"
                 />
                 <ToolbarButton disabled={Boolean(busy)} onClick={() => void searchMlx()}>
                   Search
                 </ToolbarButton>
               </div>
-              <div className="space-y-1">
-                {searchResults.slice(0, 4).map((model) => (
-                  <button
-                    key={model.id}
-                    type="button"
-                    className="w-full rounded-lg px-2 py-2 text-left text-sm text-secondary hover:bg-surface/60 hover:text-primary"
-                    onClick={() => {
-                      setMlxModel(model.id);
-                      setSelectedId('mlx-selected');
-                    }}
-                  >
-                    <div className="truncate font-medium text-primary">{model.id}</div>
-                    <div className="mt-1 text-xs text-dim">{model.downloads.toLocaleString()} downloads</div>
-                  </button>
-                ))}
-                {!searchResults.length ? <div className="text-sm text-dim">Search to pull model slugs from Hugging Face.</div> : null}
-              </div>
+              {searchResults.length ? (
+                <div className="space-y-1">
+                  {searchResults.slice(0, 4).map((model) => (
+                    <button
+                      key={model.id}
+                      type="button"
+                      className="w-full rounded-lg px-2 py-2 text-left text-sm text-secondary hover:bg-surface/70 hover:text-primary"
+                      onClick={() => {
+                        setMlxModel(model.id);
+                        setSelectedId('mlx-selected');
+                      }}
+                    >
+                      <div className="truncate font-medium text-primary">{model.id}</div>
+                      <div className="mt-1 text-xs text-dim">{model.downloads.toLocaleString()} downloads</div>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Use a Hugging Face slug</label>
+            <div className="space-y-3 rounded-lg bg-background/25 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Selected Hugging Face slug</div>
               <input
                 value={mlxModel}
                 onChange={(event) => setMlxModel(event.target.value)}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
                 placeholder="org/model-name"
               />
-              <div className="flex gap-2">
-                <ToolbarButton disabled={Boolean(busy || !mlxModel.trim())} onClick={() => void useHuggingFaceSlug()}>
-                  Use Slug
-                </ToolbarButton>
-                <ToolbarButton disabled={Boolean(busy || !repo || !filename)} onClick={() => void downloadGguf()}>
-                  Download GGUF
-                </ToolbarButton>
+              <div className="text-xs text-secondary">
+                {hfSlugLooksGguf
+                  ? 'Detected GGUF repo. Add the exact .gguf filename to download it.'
+                  : 'Detected MLX/HF model. Use it directly.'}
               </div>
-              <input
-                value={repo}
-                onChange={(event) => setRepo(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                placeholder="GGUF repo, e.g. unsloth/...-GGUF"
-              />
-              <input
-                value={filename}
-                onChange={(event) => setFilename(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
-                placeholder="GGUF filename, e.g. model-q4_k_m.gguf"
-              />
+              {hfSlugLooksGguf ? (
+                <div className="space-y-2">
+                  <input
+                    value={filename}
+                    onChange={(event) => setFilename(event.target.value)}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent"
+                    placeholder="model-q4_k_m.gguf"
+                  />
+                  <ToolbarButton disabled={Boolean(busy || !hfSlug || !filename)} onClick={() => void downloadGguf()}>
+                    Download & Select
+                  </ToolbarButton>
+                </div>
+              ) : (
+                <ToolbarButton disabled={Boolean(busy || !hfSlug)} onClick={() => void useHuggingFaceSlug()}>
+                  Set Model
+                </ToolbarButton>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Local GGUF</label>
+            <div className="space-y-3 rounded-lg bg-background/25 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Local GGUF file</div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -398,11 +405,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 className="hidden"
                 onChange={(event) => void selectLocalGguf(event.currentTarget.files?.[0])}
               />
-              <ToolbarButton onClick={() => fileInputRef.current?.click()}>Select GGUF File…</ToolbarButton>
+              <ToolbarButton onClick={() => fileInputRef.current?.click()}>Choose File…</ToolbarButton>
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Available models</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dim">Current choices</div>
               {library.map((model) => (
                 <button
                   key={model.id}
@@ -416,9 +423,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-primary">{model.title}</div>
                       <div className="mt-1 truncate text-xs text-secondary">{model.subtitle}</div>
-                      <div className="mt-1 text-xs text-dim">
-                        {model.size || 'Not downloaded'} · {model.meta}
-                      </div>
+                      <div className="mt-1 text-xs text-dim">{model.size || 'Not downloaded'}</div>
                     </div>
                     {model.installed ? <span className="text-[11px] text-success">Ready</span> : null}
                   </div>
