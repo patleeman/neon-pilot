@@ -1,13 +1,12 @@
-# Web Tools Extension
+# Web Fetch Extension
 
-This extension owns web content tools for agent conversations.
+This extension owns the `web_fetch` agent tool.
 
 ## Tools
 
-| Tool                | Parameters                          | Description                                |
-| ------------------- | ----------------------------------- | ------------------------------------------ |
-| `web_fetch`         | `url`, `raw?`                       | Fetch a URL and extract readable markdown. |
-| `duckduckgo_search` | `query`, `count?` (max 20), `page?` | Scrape DuckDuckGo HTML search results.     |
+| Tool        | Parameters    | Description                                |
+| ----------- | ------------- | ------------------------------------------ |
+| `web_fetch` | `url`, `raw?` | Fetch a URL and extract readable markdown. |
 
 ## Web Fetch
 
@@ -28,18 +27,7 @@ Set `raw: true` to return raw HTML/text instead of extracted markdown. Non-HTML 
 
 Content beyond these limits is truncated, and the tool reports truncation details.
 
-## Exa Search
+Search tools live in separate system extensions:
 
-Exa support is kept as an opt-in backend action, but `exa_search` is not registered as a default agent tool. The default search tool is DuckDuckGo.
-
-## DuckDuckGo Search
-
-Scrapes `https://html.duckduckgo.com/html/` and returns titles, URLs, and snippets. No authentication needed.
-
-## Search parameters
-
-| Parameter | Type   | Default  | Description                |
-| --------- | ------ | -------- | -------------------------- |
-| `query`   | string | required | Search query               |
-| `count`   | number | 5        | Number of results (max 20) |
-| `page`    | number | 1        | Page number for pagination |
+- `system-duckduckgo-search` contributes `duckduckgo_search`.
+- `system-exa-search` contributes `exa_search` and owns the Exa API key secret.

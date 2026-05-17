@@ -258,6 +258,23 @@ const smokes = {
     const result = await module.webFetch({ url: 'data:text/plain,smoke' }, ctx);
     assert(result.text.includes('smoke'), 'webFetch data URL failed');
   },
+  async 'system-duckduckgo-search'() {
+    globalThis.fetch = async () => ({
+      ok: true,
+      text: async () => '<html><body><a class="result__a" href="https://example.org/page">Example Title</a></body></html>',
+    });
+    const result = await module.duckDuckGoSearch({ query: 'smoke' }, ctx);
+    assert(result.source === 'duckduckgo', 'duckDuckGoSearch failed');
+  },
+  async 'system-exa-search'() {
+    const exaCtx = { ...ctx, secrets: { get: () => 'smoke-key' } };
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({ results: [{ title: 'Exa Smoke', url: 'https://example.org/exa', text: 'smoke' }] }),
+    });
+    const result = await module.exaSearch({ query: 'smoke' }, exaCtx);
+    assert(result.source === 'exa', 'exaSearch failed');
+  },
 };
 
 const smoke = smokes[extensionId];

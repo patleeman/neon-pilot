@@ -208,9 +208,9 @@ describe('SettingsPage', () => {
           backend: 'keychain',
           secrets: [
             {
-              extensionId: 'system-web-tools',
+              extensionId: 'system-exa-search',
               secretId: 'exaApiKey',
-              key: 'extension:system-web-tools:exaApiKey',
+              key: 'extension:system-exa-search:exaApiKey',
               label: 'Exa API key',
               env: 'EXA_API_KEY',
               configured: false,

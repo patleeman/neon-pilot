@@ -7,10 +7,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../extensions/extensionRegistry.js', () => ({
   listExtensionSecretRegistrations: () => [
     {
-      extensionId: 'system-web-tools',
+      extensionId: 'system-exa-search',
       packageType: 'system',
       id: 'exaApiKey',
-      key: 'system-web-tools.exaApiKey',
+      key: 'system-exa-search.exaApiKey',
       label: 'Exa API key',
       env: 'EXA_API_KEY',
       order: 0,
@@ -47,12 +47,12 @@ describe('secretStore', () => {
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
 
-    setSecret('system-web-tools', 'exaApiKey', 'exa-secret', stateRoot);
+    setSecret('system-exa-search', 'exaApiKey', 'exa-secret', stateRoot);
 
-    expect(resolveSecret('system-web-tools', 'exaApiKey', stateRoot)).toBe('exa-secret');
+    expect(resolveSecret('system-exa-search', 'exaApiKey', stateRoot)).toBe('exa-secret');
     expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toEqual({ secrets: { provider: 'file' } });
     expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.json'), 'utf-8'))).toEqual({
-      'extension:system-web-tools:exaApiKey': 'exa-secret',
+      'extension:system-exa-search:exaApiKey': 'exa-secret',
     });
   });
 
@@ -60,11 +60,11 @@ describe('secretStore', () => {
     const stateRoot = createTempStateRoot();
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
-    setSecret('system-web-tools', 'exaApiKey', 'stored-secret', stateRoot);
+    setSecret('system-exa-search', 'exaApiKey', 'stored-secret', stateRoot);
 
     process.env.EXA_API_KEY = 'env-secret';
 
-    expect(resolveSecret('system-web-tools', 'exaApiKey', stateRoot)).toBe('env-secret');
+    expect(resolveSecret('system-exa-search', 'exaApiKey', stateRoot)).toBe('env-secret');
     expect(listSecretStatuses(stateRoot)[0]).toMatchObject({ configured: true, source: 'env', writable: true });
   });
 
@@ -72,11 +72,11 @@ describe('secretStore', () => {
     const stateRoot = createTempStateRoot();
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
-    setSecret('system-web-tools', 'exaApiKey', 'stored-secret', stateRoot);
+    setSecret('system-exa-search', 'exaApiKey', 'stored-secret', stateRoot);
 
-    deleteSecret('system-web-tools', 'exaApiKey', stateRoot);
+    deleteSecret('system-exa-search', 'exaApiKey', stateRoot);
 
-    expect(resolveSecret('system-web-tools', 'exaApiKey', stateRoot)).toBeUndefined();
+    expect(resolveSecret('system-exa-search', 'exaApiKey', stateRoot)).toBeUndefined();
     expect(listSecretStatuses(stateRoot)[0]).toMatchObject({ configured: false, source: null });
   });
 
@@ -85,6 +85,6 @@ describe('secretStore', () => {
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'env-only' } }));
 
-    expect(() => setSecret('system-web-tools', 'exaApiKey', 'secret', stateRoot)).toThrow('env-only');
+    expect(() => setSecret('system-exa-search', 'exaApiKey', 'secret', stateRoot)).toThrow('env-only');
   });
 });

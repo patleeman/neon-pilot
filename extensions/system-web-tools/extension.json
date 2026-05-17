@@ -1,28 +1,15 @@
 {
   "schemaVersion": 2,
   "id": "system-web-tools",
-  "name": "Web tools",
+  "name": "Web fetch",
   "packageType": "system",
-  "description": "Fetch and search web content from agent conversations.",
+  "description": "Fetch web content from agent conversations.",
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
-    "actions": [
-      { "id": "webFetch", "handler": "webFetch", "title": "Fetch URL" },
-      { "id": "exaSearch", "handler": "exaSearch", "title": "Search with Exa" },
-      { "id": "duckDuckGoSearch", "handler": "duckDuckGoSearch", "title": "Search with DuckDuckGo" }
-    ]
+    "actions": [{ "id": "webFetch", "handler": "webFetch", "title": "Fetch URL" }]
   },
   "contributes": {
-    "secrets": {
-      "exaApiKey": {
-        "label": "Exa API key",
-        "description": "Used by the opt-in Exa search action.",
-        "env": "EXA_API_KEY",
-        "placeholder": "exa_…",
-        "order": 1
-      }
-    },
     "tools": [
       {
         "id": "web-fetch",
@@ -39,25 +26,8 @@
           "required": ["url"],
           "additionalProperties": false
         }
-      },
-      {
-        "id": "duckduckgo-search",
-        "name": "duckduckgo_search",
-        "title": "Search DuckDuckGo",
-        "description": "Search DuckDuckGo's HTML results and return titles, URLs, and snippets.",
-        "action": "duckDuckGoSearch",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "query": { "type": "string", "description": "Search query" },
-            "count": { "type": "number", "description": "Number of results to return (default: 5, max: 20)" },
-            "page": { "type": "number", "description": "Page number for pagination (default: 1)" }
-          },
-          "required": ["query"],
-          "additionalProperties": false
-        }
       }
     ]
   },
-  "permissions": ["network:read", "secrets:read"]
+  "permissions": ["network:read"]
 }

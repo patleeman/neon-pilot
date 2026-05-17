@@ -64,7 +64,9 @@ Feature-specific documentation lives beside the owning extension package:
 - [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
-- [Web Tools](../extensions/system-web-tools/README.md)
+- [Web Fetch](../extensions/system-web-tools/README.md)
+- [DuckDuckGo Search](../extensions/system-duckduckgo-search/README.md)
+- [Exa Search](../extensions/system-exa-search/README.md)
 
 ## Sections
 

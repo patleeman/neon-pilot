@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "id": "system-exa-search",
+  "name": "Exa Search",
+  "packageType": "system",
+  "description": "Search Exa from agent conversations.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [{ "id": "exaSearch", "handler": "exaSearch", "title": "Search with Exa" }]
+  },
+  "contributes": {
+    "secrets": {
+      "exaApiKey": {
+        "label": "Exa API key",
+        "description": "Used by the Exa search tool.",
+        "env": "EXA_API_KEY",
+        "placeholder": "exa_…",
+        "order": 1
+      }
+    },
+    "tools": [
+      {
+        "id": "exa-search",
+        "name": "exa_search",
+        "title": "Search Exa",
+        "description": "Search Exa and return titles, URLs, and snippets.",
+        "action": "exaSearch",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Search query" },
+            "count": { "type": "number", "description": "Number of results to return (default: 5, max: 20)" },
+            "page": { "type": "number", "description": "Page number for pagination (default: 1)" }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      }
+    ]
+  },
+  "permissions": ["network:read", "secrets:read"]
+}
