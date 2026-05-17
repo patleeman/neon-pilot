@@ -3,6 +3,7 @@
   "id": "system-apply-patch",
   "name": "Apply Patch",
   "packageType": "system",
+  "defaultEnabled": false,
   "description": "Apply Codex-style file patches from agent tool calls.",
   "version": "0.1.0",
   "backend": {
