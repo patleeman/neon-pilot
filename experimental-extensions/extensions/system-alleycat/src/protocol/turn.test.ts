@@ -39,8 +39,7 @@ function makeConn() {
 }
 
 async function flushAsyncTurnStart() {
-  await new Promise((resolve) => setImmediate(resolve));
-  await new Promise((resolve) => setImmediate(resolve));
+  await Promise.resolve();
 }
 
 afterEach(() => {
@@ -133,27 +132,33 @@ describe('system-alleycat turn protocol', () => {
     });
 
     await turn.start({ threadId: 'thread-1', cwd: '/repo', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
-    await flushAsyncTurnStart();
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', { cwd: '/repo' });
     expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
     expect(order).toEqual(['ensureLive', 'subscribe', 'sendMessage']);
   });
 
-  it('forwards PA response events to Kitty after resuming a persisted thread', async () => {
+  it('forwards PA response events to Kitty before returning the turn/start response', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
+    ctx.conversations.sendMessage.mockImplementation(async () => {
+      ctx.emitConversationEvent({ type: 'agent_start' });
+      ctx.emitConversationEvent({ type: 'text_delta', delta: 'Hello back' });
+      ctx.emitConversationEvent({ type: 'agent_end' });
+      ctx.emitConversationEvent({ type: 'turn_end' });
+      return { accepted: true };
+    });
 
-    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
-    await flushAsyncTurnStart();
-
-    ctx.emitConversationEvent({ type: 'agent_start' });
-    ctx.emitConversationEvent({ type: 'text_delta', delta: 'Hello back' });
-    ctx.emitConversationEvent({ type: 'agent_end' });
-    ctx.emitConversationEvent({ type: 'turn_end' });
+    const result = (await turn.start(
+      { threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] },
+      ctx as never,
+      makeConn(),
+      notify,
+    )) as { turn: { status: string } };
 
     expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hello back' }));
     expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));
+    expect(result.turn.status).toBe('completed');
   });
 
   it('opens and focuses the desktop workspace when Kitty starts a turn', async () => {
@@ -200,7 +205,6 @@ describe('system-alleycat turn protocol', () => {
     const notify = vi.fn();
 
     await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
-    await flushAsyncTurnStart();
 
     expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hi Patrick — I’m here.' }));
     expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));

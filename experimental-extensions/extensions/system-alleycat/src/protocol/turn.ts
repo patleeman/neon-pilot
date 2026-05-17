@@ -364,7 +364,7 @@ export const turn = {
     };
 
     let unsubscribe: unknown;
-    void (async () => {
+    try {
       await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
       unsubscribe = subscribeToTurn();
       await markThreadControlledRemotely(threadId, ctx);
@@ -393,7 +393,7 @@ export const turn = {
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'completed') });
         }
       }
-    })().catch((error) => {
+    } catch (error) {
       conn.activeTurnThreads.delete(threadId);
       if (!turnDone) {
         turnDone = true;
@@ -406,10 +406,10 @@ export const turn = {
         }
         cleanupTurnSubscriptions(threadId);
       }
-    });
+    }
 
     return {
-      turn: codexTurn(turnId, 'inProgress'),
+      turn: codexTurn(turnId, turnDone ? 'completed' : 'inProgress'),
     };
   }) as MethodHandler,
 
