@@ -1511,7 +1511,7 @@ function collectLegacyCandidates(options: ResolveNodesOptions = {}): LegacyNodeC
 export function migrateLegacyNodes(options: ResolveNodesOptions = {}): LegacyNodeMigrationResult {
   const nodesDir = resolveUnifiedNodesDir(options);
   const candidates = collectLegacyCandidates(options);
-  const existing = listUnifiedNodes(options);
+  const existing = loadUnifiedNodes(options).nodes;
   const existingKindsByNodeId = new Map<string, string[]>();
   for (const node of existing) {
     const existing = existingKindsByNodeId.get(node.id) ?? [];

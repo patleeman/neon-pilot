@@ -4,6 +4,7 @@
 
 ## 0.8.0-rc.18 — 2026-05-17
 
+- fix: restore unified node migration build
 - fix: preserve custom context length
 - chore: update pi dependencies to 0.75.0
 - feat: simplify local runtime logs
