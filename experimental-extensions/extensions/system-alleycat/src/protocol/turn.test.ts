@@ -25,10 +25,11 @@ function makeContext() {
         .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
-      getBlocks: vi
-        .fn()
-        .mockResolvedValueOnce({ detail: { blocks: [] } })
-        .mockResolvedValue({ detail: { blocks: [{ type: 'text', id: 'default-assistant', text: 'ok' }] } }),
+      runTurn: vi.fn(async (_threadId: string, runText: string, options?: { images?: unknown[]; onEvent?: (event: unknown) => void }) => {
+        await ctx.conversations.sendMessage('thread-1', runText, options?.images ? { images: options.images } : undefined);
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      }),
     },
     emitConversationEvent(event: unknown) {
       conversationHandler?.(event);
@@ -69,9 +70,13 @@ describe('system-alleycat turn protocol', () => {
     await flushAsyncTurnStart();
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', undefined);
-    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'what do you see?', {
-      images: [{ data: 'aGVsbG8=', mimeType: 'image/png', name: 'shot.png' }],
-    });
+    expect(ctx.conversations.runTurn).toHaveBeenCalledWith(
+      'thread-1',
+      'what do you see?',
+      expect.objectContaining({
+        images: [{ data: 'aGVsbG8=', mimeType: 'image/png', name: 'shot.png' }],
+      }),
+    );
   });
 
   it('passes local image path inputs through to PA conversations', async () => {
@@ -95,9 +100,13 @@ describe('system-alleycat turn protocol', () => {
 
     await flushAsyncTurnStart();
 
-    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'inspect this', {
-      images: [{ data: Buffer.from('pixels').toString('base64'), mimeType: 'image/jpeg', name: 'photo.jpg' }],
-    });
+    expect(ctx.conversations.runTurn).toHaveBeenCalledWith(
+      'thread-1',
+      'inspect this',
+      expect.objectContaining({
+        images: [{ data: Buffer.from('pixels').toString('base64'), mimeType: 'image/jpeg', name: 'photo.jpg' }],
+      }),
+    );
   });
 
   it('allows image-only turns', async () => {
@@ -112,9 +121,13 @@ describe('system-alleycat turn protocol', () => {
 
     await flushAsyncTurnStart();
 
-    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', '', {
-      images: [{ data: 'aGVsbG8=', mimeType: 'image/png' }],
-    });
+    expect(ctx.conversations.runTurn).toHaveBeenCalledWith(
+      'thread-1',
+      '',
+      expect.objectContaining({
+        images: [{ data: 'aGVsbG8=', mimeType: 'image/png' }],
+      }),
+    );
   });
 
   it('resumes persisted threads before subscribing and sending follow-up messages', async () => {
@@ -124,33 +137,33 @@ describe('system-alleycat turn protocol', () => {
       order.push('ensureLive');
       return { id: 'thread-1', conversationId: 'thread-1' };
     });
-    ctx.conversations.subscribe.mockImplementation((_threadId: string, handler: (event: unknown) => void) => {
-      order.push('subscribe');
-      ctx.emitConversationEvent = handler;
-      return vi.fn();
-    });
-    ctx.conversations.sendMessage.mockImplementation(async () => {
-      order.push('sendMessage');
-      return { accepted: true };
-    });
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        order.push('runTurn');
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
 
     await turn.start({ threadId: 'thread-1', cwd: '/repo', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', { cwd: '/repo' });
-    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
-    expect(order).toEqual(['ensureLive', 'subscribe', 'sendMessage']);
+    expect(ctx.conversations.runTurn).toHaveBeenCalledWith('thread-1', 'Hi', expect.objectContaining({ cwd: '/repo' }));
+    expect(order).toEqual(['ensureLive', 'runTurn']);
   });
 
   it('forwards PA response events to Kitty before returning the turn/start response', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
-    ctx.conversations.sendMessage.mockImplementation(async () => {
-      ctx.emitConversationEvent({ type: 'agent_start' });
-      ctx.emitConversationEvent({ type: 'text_delta', delta: 'Hello back' });
-      ctx.emitConversationEvent({ type: 'agent_end' });
-      ctx.emitConversationEvent({ type: 'turn_end' });
-      return { accepted: true };
-    });
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'agent_start' });
+        options?.onEvent?.({ type: 'text_delta', delta: 'Hello back' });
+        options?.onEvent?.({ type: 'agent_end' });
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
 
     const result = (await turn.start(
       { threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] },
@@ -194,54 +207,23 @@ describe('system-alleycat turn protocol', () => {
     expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
   });
 
-  it('falls back to the persisted transcript when live response events are unavailable', async () => {
+  it('fails the Codex turn when the atomic PA turn runner fails', async () => {
     const ctx = makeContext();
-    ctx.conversations.sendMessage.mockResolvedValue({ accepted: true });
-    ctx.conversations.getBlocks.mockReset();
-    ctx.conversations.getBlocks
-      .mockResolvedValueOnce({
-        detail: {
-          blocks: [
-            { type: 'user', id: 'u0', text: 'Before' },
-            { type: 'text', id: 'a0', text: 'Old response' },
-          ],
-        },
-      })
-      .mockResolvedValueOnce({
-        detail: {
-          blocks: [
-            { type: 'user', id: 'u0', text: 'Before' },
-            { type: 'text', id: 'a0', text: 'Old response' },
-          ],
-        },
-      })
-      .mockResolvedValueOnce({
-        detail: {
-          blocks: [
-            { type: 'user', id: 'u0', text: 'Before' },
-            { type: 'text', id: 'a0', text: 'Old response' },
-            { type: 'user', id: 'u1', text: 'Hi' },
-            { type: 'text', id: 'a1', text: 'Hi Patrick — I’m here.' },
-          ],
-        },
-      });
     const notify = vi.fn();
+    ctx.conversations.runTurn.mockRejectedValue(new Error('boom'));
 
-    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
+    const result = (await turn.start(
+      { threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] },
+      ctx as never,
+      makeConn(),
+      notify,
+    )) as { turn: { status: string; error: string | null } };
 
-    expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hi Patrick — I’m here.' }));
-    expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));
-  });
-
-  it('tolerates conversation subscriptions that do not return an unsubscribe function', async () => {
-    const ctx = makeContext();
-    ctx.conversations.subscribe.mockReturnValue(undefined);
-
-    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
-    await flushAsyncTurnStart();
-
-    expect(() => cleanupTurnSubscriptions('thread-1')).not.toThrow();
-    expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
+    expect(result.turn.status).toBe('failed');
+    expect(notify).toHaveBeenCalledWith(
+      'turn/completed',
+      expect.objectContaining({ turn: expect.objectContaining({ status: 'failed', error: 'boom' }) }),
+    );
   });
 
   it('ignores stale non-function cleanup entries defensively', () => {

@@ -872,7 +872,22 @@ export interface ExtensionBackendContext {
       activeConversationId?: string | null;
       workspacePaths?: string[] | null;
     }): Promise<unknown>;
-    sendMessage(conversationId: string, text: string, options?: { steer?: boolean }): Promise<unknown>;
+    sendMessage(
+      conversationId: string,
+      text: string,
+      options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+    ): Promise<unknown>;
+    runTurn(
+      conversationId: string,
+      text: string,
+      options?: {
+        cwd?: string;
+        steer?: boolean;
+        images?: Array<{ data: string; mimeType: string; name?: string }>;
+        timeoutMs?: number;
+        onEvent?: (event: unknown) => void;
+      },
+    ): Promise<{ accepted: boolean }>;
     setTitle(conversationId: string, title: string): Promise<unknown>;
     compact(conversationId: string): Promise<unknown>;
     create(input?: ExtensionConversationCreateInput): Promise<ExtensionConversationResult>;

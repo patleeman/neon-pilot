@@ -23,6 +23,17 @@ export interface ExtensionConversationDetailOptions {
 export interface ExtensionConversationSendOptions {
   /** Send as "steer" (interrupt current turn) — default false, uses "followUp". */
   steer?: boolean;
+  /** Image attachments to send with the prompt. */
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+}
+
+export interface ExtensionConversationRunTurnOptions extends ExtensionConversationSendOptions {
+  /** Cwd override used when the conversation must be resumed before sending. */
+  cwd?: string;
+  /** Maximum time to wait for a terminal live event. Default: 120 seconds. */
+  timeoutMs?: number;
+  /** Called for every live event observed for this turn. */
+  onEvent?: (event: unknown) => void;
 }
 
 export interface ExtensionConversationCreateOptions {
@@ -266,19 +277,75 @@ export function createExtensionConversationsCapability(
       const session = entry.session;
 
       try {
+        const images = options?.images?.map((image) => ({ type: 'image' as const, ...image }));
         if (entry.session.isStreaming) {
           if (options?.steer) {
-            await session.steer(text);
+            await (images && images.length > 0 ? session.steer(text, images) : session.steer(text));
           } else {
-            await session.followUp(text);
+            await (images && images.length > 0 ? session.followUp(text, images) : session.followUp(text));
           }
         } else {
-          await session.prompt(text);
+          await (images && images.length > 0 ? session.prompt(text, { images }) : session.prompt(text));
         }
         invalidateAppTopics('sessions');
         return { accepted: true };
       } catch (error) {
         throw new Error(`Failed to send message: ${(error as Error).message}`);
+      }
+    },
+
+    /**
+     * Atomically resume, subscribe, send, and wait for a terminal turn event.
+     */
+    async runTurn(conversationId: string, text: string, options?: ExtensionConversationRunTurnOptions): Promise<{ accepted: boolean }> {
+      await this.ensureLive(conversationId, options?.cwd ? { cwd: options.cwd } : undefined);
+
+      let settled = false;
+      let unsubscribe: (() => void) | null = null;
+      const timeoutMs = Math.max(1, options?.timeoutMs ?? 120_000);
+
+      const terminal = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          unsubscribe?.();
+          reject(new Error(`Timed out waiting for conversation "${conversationId}" turn to finish.`));
+        }, timeoutMs);
+        timeout.unref?.();
+
+        unsubscribe = this.subscribe(conversationId, (event: unknown) => {
+          options?.onEvent?.(event);
+          const ev = event as Record<string, unknown> | null;
+          if (!ev || typeof ev.type !== 'string') return;
+          if (ev.type !== 'turn_end' && ev.type !== 'error') return;
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          unsubscribe?.();
+          if (ev.type === 'error') {
+            reject(new Error(typeof ev.message === 'string' ? ev.message : 'Conversation turn failed.'));
+            return;
+          }
+          resolve();
+        });
+
+        if (!unsubscribe) {
+          clearTimeout(timeout);
+          settled = true;
+          reject(new Error(`Conversation "${conversationId}" is not live.`));
+        }
+      });
+
+      try {
+        await this.sendMessage(conversationId, text, options);
+        await terminal;
+        return { accepted: true };
+      } catch (error) {
+        if (!settled) {
+          settled = true;
+          unsubscribe?.();
+        }
+        throw error;
       }
     },
 

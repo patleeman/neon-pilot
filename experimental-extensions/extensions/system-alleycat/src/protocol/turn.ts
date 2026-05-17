@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { MethodHandler } from '../codexJsonRpcServer.js';
-import { readTurns } from './thread.js';
 
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
 // on connection drop. Map<threadId, Set<unsubscribeFn>>
@@ -94,37 +93,6 @@ function promptImagesFromInput(input: Array<Record<string, unknown>>): PromptIma
     .filter((item) => item.type === 'image' || item.type === 'input_image' || item.type === 'local_image')
     .map(promptImageFromInputItem)
     .filter((image): image is PromptImage => image !== null);
-}
-
-function latestAssistantTextFromTurns(turns: unknown[]): string | null {
-  for (let turnIndex = turns.length - 1; turnIndex >= 0; turnIndex -= 1) {
-    const turn = turns[turnIndex] as Record<string, unknown> | undefined;
-    const items = Array.isArray(turn?.items) ? turn.items : [];
-    for (let itemIndex = items.length - 1; itemIndex >= 0; itemIndex -= 1) {
-      const item = items[itemIndex] as Record<string, unknown> | undefined;
-      if (item?.type === 'agentMessage' && typeof item.text === 'string' && item.text.trim()) return item.text;
-    }
-  }
-  return null;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForNewAssistantText(
-  threadId: string,
-  ctx: Parameters<MethodHandler>[1],
-  previousAssistantText: string | null,
-  isDone: () => boolean,
-): Promise<string | null> {
-  const deadline = Date.now() + 15_000;
-  while (!isDone() && Date.now() < deadline) {
-    const latest = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
-    if (latest && latest !== previousAssistantText) return latest;
-    await delay(300);
-  }
-  return null;
 }
 
 async function markThreadControlledRemotely(
@@ -241,197 +209,131 @@ export const turn = {
       completedAtMs: nowMs(),
     });
 
-    // Subscribe to PA session events and forward them as Codex notifications.
-    // The subscription stays alive until the turn ends — do NOT unsubscribe
-    // in a finally block because sendMessage may resolve before streaming finishes.
     let turnDone = false;
+    let finalStatus: 'inProgress' | 'completed' | 'failed' = 'inProgress';
     let agentItemId: string | null = null;
     let agentText = '';
 
-    const subscribeToTurn = () => {
-      const maybeUnsubscribe = ctx.conversations.subscribe(threadId, (event: unknown) => {
-        if (turnDone) return;
-        const ev = event as Record<string, unknown>;
-        if (!ev || typeof ev.type !== 'string') return;
+    const onEvent = (event: unknown) => {
+      if (turnDone) return;
+      const ev = event as Record<string, unknown>;
+      if (!ev || typeof ev.type !== 'string') return;
 
-        switch (ev.type) {
-          case 'agent_start': {
-            agentItemId = uid('item-');
-            agentText = '';
-            notify('item/started', {
-              threadId,
-              turnId,
-              item: { id: agentItemId, type: 'agentMessage', text: '' },
-              startedAtMs: nowMs(),
-            });
-            break;
-          }
-          case 'text_delta': {
-            const delta = ev.delta as string | undefined;
-            if (delta && agentItemId) {
-              agentText += delta;
-              notify('item/agentMessage/delta', {
-                threadId,
-                turnId,
-                itemId: agentItemId,
-                delta,
-              });
-            }
-            break;
-          }
-          case 'thinking_delta': {
-            const delta = ev.delta as string | undefined;
-            if (delta && agentItemId) {
-              notify('item/reasoning/delta', {
-                threadId,
-                turnId,
-                itemId: agentItemId,
-                delta,
-                summaryIndex: 0,
-              });
-            }
-            break;
-          }
-          case 'tool_start': {
-            const toolId = (ev.toolCallId as string) ?? uid('tool-');
-            notify('item/started', {
-              threadId,
-              turnId,
-              item: {
-                id: toolId,
-                type: 'dynamicToolCall',
-                namespace: 'personal-agent',
-                tool: (ev.toolName as string) || 'tool',
-                arguments: ev.input ?? {},
-                status: 'inProgress',
-              },
-            });
-            break;
-          }
-          case 'tool_end': {
-            const toolId = (ev.toolCallId as string) ?? uid('tool-');
-            notify('item/completed', {
-              threadId,
-              turnId,
-              item: {
-                id: toolId,
-                type: 'dynamicToolCall',
-                namespace: 'personal-agent',
-                tool: (ev.toolName as string) || 'tool',
-                arguments: ev.input ?? {},
-                status: 'completed',
-                contentItems: typeof ev.output === 'string' ? [{ type: 'text', text: ev.output }] : [],
-                success: ev.isError === true ? false : true,
-              },
-            });
-            break;
-          }
-          case 'agent_end': {
-            if (agentItemId) {
-              notify('item/completed', {
-                threadId,
-                turnId,
-                item: {
-                  id: agentItemId,
-                  type: 'agentMessage',
-                  text: agentText,
-                },
-                completedAtMs: nowMs(),
-              });
-            }
-            break;
-          }
-          case 'turn_end': {
-            turnDone = true;
-            conn.activeTurnThreads.delete(threadId);
-            if (typeof maybeUnsubscribe === 'function') {
-              maybeUnsubscribe();
-            }
-            cleanupTurnSubscriptions(threadId);
-            notify('turn/completed', {
-              threadId,
-              turn: codexTurn(turnId, 'completed'),
-            });
-            break;
-          }
-          case 'error': {
-            const errorMsg = ev.message as string | undefined;
-            turnDone = true;
-            conn.activeTurnThreads.delete(threadId);
-            if (typeof maybeUnsubscribe === 'function') {
-              maybeUnsubscribe();
-            }
-            cleanupTurnSubscriptions(threadId);
-            notify('turn/completed', {
-              threadId,
-              turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error'),
-            });
-            break;
-          }
-        }
-      });
-
-      // Track this subscription so it can be cleaned up on connection drop.
-      if (typeof maybeUnsubscribe === 'function') {
-        let subs = turnSubscriptions.get(threadId);
-        if (!subs) {
-          subs = new Set();
-          turnSubscriptions.set(threadId, subs);
-        }
-        subs.add(maybeUnsubscribe);
-      }
-      return maybeUnsubscribe;
-    };
-
-    let unsubscribe: unknown;
-    try {
-      await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
-      const previousAssistantText = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
-      unsubscribe = subscribeToTurn();
-      await markThreadControlledRemotely(threadId, ctx);
-      await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
-      if (!turnDone && !agentText) {
-        const fallbackText = await waitForNewAssistantText(threadId, ctx, previousAssistantText, () => turnDone || Boolean(agentText));
-        if (fallbackText) {
-          const fallbackItemId = agentItemId ?? uid('item-');
+      switch (ev.type) {
+        case 'agent_start': {
+          agentItemId = uid('item-');
+          agentText = '';
           notify('item/started', {
             threadId,
             turnId,
-            item: { id: fallbackItemId, type: 'agentMessage', text: '' },
+            item: { id: agentItemId, type: 'agentMessage', text: '' },
             startedAtMs: nowMs(),
           });
-          notify('item/agentMessage/delta', { threadId, turnId, itemId: fallbackItemId, delta: fallbackText });
+          break;
+        }
+        case 'text_delta': {
+          const delta = ev.delta as string | undefined;
+          if (delta && agentItemId) {
+            agentText += delta;
+            notify('item/agentMessage/delta', { threadId, turnId, itemId: agentItemId, delta });
+          }
+          break;
+        }
+        case 'thinking_delta': {
+          const delta = ev.delta as string | undefined;
+          if (delta && agentItemId) {
+            notify('item/reasoning/delta', { threadId, turnId, itemId: agentItemId, delta, summaryIndex: 0 });
+          }
+          break;
+        }
+        case 'tool_start': {
+          const toolId = (ev.toolCallId as string) ?? uid('tool-');
+          notify('item/started', {
+            threadId,
+            turnId,
+            item: {
+              id: toolId,
+              type: 'dynamicToolCall',
+              namespace: 'personal-agent',
+              tool: (ev.toolName as string) || 'tool',
+              arguments: ev.input ?? {},
+              status: 'inProgress',
+            },
+          });
+          break;
+        }
+        case 'tool_end': {
+          const toolId = (ev.toolCallId as string) ?? uid('tool-');
           notify('item/completed', {
             threadId,
             turnId,
-            item: { id: fallbackItemId, type: 'agentMessage', text: fallbackText },
-            completedAtMs: nowMs(),
+            item: {
+              id: toolId,
+              type: 'dynamicToolCall',
+              namespace: 'personal-agent',
+              tool: (ev.toolName as string) || 'tool',
+              arguments: ev.input ?? {},
+              status: 'completed',
+              contentItems: typeof ev.output === 'string' ? [{ type: 'text', text: ev.output }] : [],
+              success: ev.isError === true ? false : true,
+            },
           });
+          break;
+        }
+        case 'agent_end': {
+          if (agentItemId) {
+            notify('item/completed', {
+              threadId,
+              turnId,
+              item: { id: agentItemId, type: 'agentMessage', text: agentText },
+              completedAtMs: nowMs(),
+            });
+          }
+          break;
+        }
+        case 'turn_end': {
           turnDone = true;
+          finalStatus = 'completed';
           conn.activeTurnThreads.delete(threadId);
-          if (typeof unsubscribe === 'function') unsubscribe();
           cleanupTurnSubscriptions(threadId);
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'completed') });
+          break;
+        }
+        case 'error': {
+          const errorMsg = ev.message as string | undefined;
+          turnDone = true;
+          finalStatus = 'failed';
+          conn.activeTurnThreads.delete(threadId);
+          cleanupTurnSubscriptions(threadId);
+          notify('turn/completed', { threadId, turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error') });
+          break;
         }
       }
+    };
+
+    try {
+      const cwdOptions = typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined;
+      await ctx.conversations.ensureLive(threadId, cwdOptions);
+      await markThreadControlledRemotely(threadId, ctx);
+      await ctx.conversations.runTurn(threadId, text, {
+        ...(cwdOptions ?? {}),
+        ...(images.length > 0 ? { images } : {}),
+        onEvent,
+      });
     } catch (error) {
       conn.activeTurnThreads.delete(threadId);
       if (!turnDone) {
         turnDone = true;
+        finalStatus = 'failed';
         notify('turn/completed', {
           threadId,
           turn: codexTurn(turnId, 'failed', error instanceof Error ? error.message : String(error)),
         });
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
         cleanupTurnSubscriptions(threadId);
       }
     }
 
-    return {
-      turn: codexTurn(turnId, turnDone ? 'completed' : 'inProgress'),
-    };
+    return { turn: codexTurn(turnId, turnDone ? finalStatus : 'inProgress') };
   }) as MethodHandler,
 
   /**

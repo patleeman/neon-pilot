@@ -474,6 +474,8 @@ Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock
 
 Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
+Use `ctx.conversations.runTurn(conversationId, text, { onEvent })` when an extension needs to drive a visible conversation and stream the resulting turn. `runTurn` atomically resumes the conversation, subscribes to live events, sends the prompt, and resolves only after `turn_end` or `error`; prefer it over separately calling `ensureLive` + `subscribe` + `sendMessage` when the caller needs reliable remote/client streaming.
+
 Use `backend.services` for long-lived backend work. The host starts enabled services at startup, calls returned stop functions on shutdown/disable/reload, runs declared health checks, and applies `restart: "always" | "on-failure"` when health fails. Extension Manager reports live service state alongside manifest declarations.
 
 Use `contributes.subscriptions` for host-owned event sources. Current built-in producers include `workspaceFiles` (`host:workspaceFiles`), `settings` (`host:settings`), and shared selection changes (`host:selection`). Subscription handlers run in the backend through the extension event bus.
