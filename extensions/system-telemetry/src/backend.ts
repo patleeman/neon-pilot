@@ -639,7 +639,11 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
       cost: number;
     }
   >();
-  const events = eventsSince(parseRangeParam(req.query.range));
+  // The contribution-style token chart is meant to show lifetime/retained
+  // daily aggregates, not the currently selected dashboard range. Tying this
+  // to `24h` turns the chart into two sad squares. Nobody asked for pixel art.
+  void req;
+  const events = eventsSince('1970-01-01T00:00:00.000Z');
   const stats = statsEvents(events);
   const sourceEvents = stats.length > 0 ? stats : latestContextBySession(events);
   for (const event of sourceEvents) {
