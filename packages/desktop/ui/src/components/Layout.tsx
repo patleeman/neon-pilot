@@ -1530,31 +1530,49 @@ export function Layout() {
     const previousConversationId = previousActiveConversationIdRef.current;
     previousActiveConversationIdRef.current = activeConversationId;
 
-    if (previousConversationId === activeConversationId || !previousConversationId) {
+    if (previousConversationId === activeConversationId) {
       return;
     }
 
     // Save outgoing conversation state (skip browser which is global)
-    if (activeWorkbenchTool !== 'browser') {
-      setSelectedToolByConversation((current) => ({
+    if (previousConversationId) {
+      if (activeWorkbenchTool !== 'browser') {
+        setSelectedToolByConversation((current) => ({
+          ...current,
+          [previousConversationId]: activeWorkbenchTool,
+        }));
+      }
+      setSelectedFileByConversation((current) => ({
         ...current,
-        [previousConversationId]: activeWorkbenchTool,
+        [previousConversationId]: activeWorkbenchKnowledgeFileId,
+      }));
+      setSelectedArtifactByConversation((current) => ({
+        ...current,
+        [previousConversationId]: activeWorkbenchArtifactId,
+      }));
+      setSelectedRunByConversation((current) => ({
+        ...current,
+        [previousConversationId]: activeWorkbenchRunFromSearch,
       }));
     }
-    setSelectedFileByConversation((current) => ({
-      ...current,
-      [previousConversationId]: activeWorkbenchKnowledgeFileId,
-    }));
-    setSelectedArtifactByConversation((current) => ({
-      ...current,
-      [previousConversationId]: activeWorkbenchArtifactId,
-    }));
-    setSelectedRunByConversation((current) => ({
-      ...current,
-      [previousConversationId]: activeWorkbenchRunFromSearch,
-    }));
+
+    if (!activeConversationId) {
+      if (isRunsRailMode(activeWorkbenchTool) || activeWorkbenchRunFromSearch) {
+        setActiveWorkbenchTool('files');
+        setSearchParams(
+          (current) => {
+            const next = new URLSearchParams(current);
+            next.delete('run');
+            return next;
+          },
+          { replace: true },
+        );
+      }
+      return;
+    }
+
     // Restore incoming conversation state
-    if (activeConversationId && activeWorkbenchTool !== 'browser') {
+    if (activeWorkbenchTool !== 'browser') {
       // Restore tool: prefer saved per-conversation state unless it would keep
       // stale run detail visible after moving to a different conversation.
       const savedTool = selectedToolByConversation[activeConversationId];

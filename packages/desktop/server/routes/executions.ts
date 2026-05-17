@@ -92,7 +92,8 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
       let logPollTimer: ReturnType<typeof setTimeout> | null = null;
       let logPath = initialLog.path;
       let logCursor = getDurableRunLogCursor(logPath);
-      let active = isExecutionActive(initialDetail.execution.status);
+      let previousStatus = initialDetail.execution.status;
+      let active = isExecutionActive(previousStatus);
       const heartbeat = setInterval(() => {
         if (!closed) res.write(': heartbeat\n\n');
       }, 15_000);
@@ -122,7 +123,12 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
             res.end();
             return;
           }
-          active = isExecutionActive(detail.execution.status);
+          const nextStatus = detail.execution.status;
+          active = isExecutionActive(nextStatus);
+          if (nextStatus !== previousStatus) {
+            previousStatus = nextStatus;
+            invalidateAppTopics('executions', 'runs');
+          }
           writeEvent({ type: 'detail', detail });
           scheduleDetailPoll(active ? ACTIVE_EXECUTION_POLL_INTERVAL_MS : IDLE_EXECUTION_POLL_INTERVAL_MS);
         } catch {
