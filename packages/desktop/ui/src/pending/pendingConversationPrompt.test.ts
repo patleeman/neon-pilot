@@ -44,7 +44,7 @@ describe('pendingConversationPrompt helpers', () => {
     );
 
     expect(storage.getItem('pa:reload:conversation:session-memory-only:pending-prompt')).toBeNull();
-    expect(readPendingConversationPrompt('session-memory-only', storage)).toEqual({ text: 'hello world', images: [], attachmentRefs: [] });
+    expect(readPendingConversationPrompt('session-memory-only')).toEqual({ text: 'hello world', images: [], attachmentRefs: [] });
 
     clearPendingConversationPrompt('session-memory-only', null);
   });
@@ -65,7 +65,7 @@ describe('pendingConversationPrompt helpers', () => {
       storage,
     );
 
-    expect(readPendingConversationPrompt('session-123', storage)).toEqual({
+    expect(readPendingConversationPrompt('session-123')).toEqual({
       text: 'hello world',
       behavior: 'followUp',
       images: [{ mimeType: 'image/png', data: 'abc', name: 'diagram.png' }],
@@ -93,7 +93,7 @@ describe('pendingConversationPrompt helpers', () => {
       null,
     );
 
-    expect(readPendingConversationPrompt('session-refs', null)).toEqual({
+    expect(readPendingConversationPrompt('session-refs')).toEqual({
       text: 'hello world',
       images: [],
       attachmentRefs: [{ attachmentId: 'diagram-1', revision: 2 }],
@@ -123,7 +123,7 @@ describe('pendingConversationPrompt helpers', () => {
       null,
     );
 
-    expect(readPendingConversationPrompt('session-images', null)).toEqual({
+    expect(readPendingConversationPrompt('session-images')).toEqual({
       text: '',
       images: [
         { mimeType: 'image/png', data: 'abc', name: 'diagram.png', previewUrl: 'blob:diagram' },
@@ -148,14 +148,14 @@ describe('pendingConversationPrompt helpers', () => {
       null,
     );
 
-    expect(readPendingConversationPrompt('session-in-memory', null)).toEqual({
+    expect(readPendingConversationPrompt('session-in-memory')).toEqual({
       text: 'hello world',
       images: [],
       attachmentRefs: [],
     });
 
     clearPendingConversationPrompt('session-in-memory', null);
-    expect(readPendingConversationPrompt('session-in-memory', null)).toBeNull();
+    expect(readPendingConversationPrompt('session-in-memory')).toBeNull();
   });
 
   it('consumes pending prompts at most once', () => {
@@ -182,7 +182,7 @@ describe('pendingConversationPrompt helpers', () => {
     });
     expect(storage.getItem(composerKey)).toBeNull();
     expect(consumePendingConversationPrompt('session-123', storage)).toBeNull();
-    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
+    expect(readPendingConversationPrompt('session-123')).toBeNull();
   });
 
   it('clears pending prompts explicitly', () => {
@@ -199,7 +199,7 @@ describe('pendingConversationPrompt helpers', () => {
     );
     clearPendingConversationPrompt('session-123', storage);
 
-    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
+    expect(readPendingConversationPrompt('session-123')).toBeNull();
   });
 
   it('ignores absurd persisted dispatching timestamps', () => {
@@ -232,7 +232,7 @@ describe('pendingConversationPrompt helpers', () => {
       storage,
     );
 
-    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
+    expect(readPendingConversationPrompt('session-123')).toBeNull();
   });
 
   it('ignores legacy stored prompts instead of replaying them after a reload', () => {
@@ -247,7 +247,7 @@ describe('pendingConversationPrompt helpers', () => {
       }),
     );
 
-    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
+    expect(readPendingConversationPrompt('session-123')).toBeNull();
   });
 
   it('drops blank pending prompt context messages before caching', () => {
@@ -262,7 +262,7 @@ describe('pendingConversationPrompt helpers', () => {
       null,
     );
 
-    expect(readPendingConversationPrompt('session-blank-context', null)).toBeNull();
+    expect(readPendingConversationPrompt('session-blank-context')).toBeNull();
   });
 
   it('keeps related-thread staging metadata even before the prompt starts', () => {
@@ -279,7 +279,7 @@ describe('pendingConversationPrompt helpers', () => {
       storage,
     );
 
-    expect(readPendingConversationPrompt('session-123', storage)).toEqual({
+    expect(readPendingConversationPrompt('session-123')).toEqual({
       text: '',
       images: [],
       attachmentRefs: [],

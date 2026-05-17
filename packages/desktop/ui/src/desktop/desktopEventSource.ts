@@ -17,7 +17,11 @@ async function readDesktopEnvironment() {
   }
 
   if (!desktopEnvironmentPromise) {
-    desktopEnvironmentPromise = bridge.getEnvironment().catch(() => null);
+    desktopEnvironmentPromise = bridge.getEnvironment().catch(() => {
+      // Allow retry on next call instead of permanently caching the failure
+      desktopEnvironmentPromise = null;
+      return null;
+    });
   }
 
   return desktopEnvironmentPromise;

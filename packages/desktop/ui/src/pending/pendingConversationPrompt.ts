@@ -247,14 +247,10 @@ export function persistPendingConversationPrompt(
     inMemoryPendingPrompts.set(sessionId, nextPrompt);
   }
 
-  clearStoredState(storage, buildPendingConversationPromptStorageKey(sessionId));
   emitPendingConversationPromptChanged(sessionId, shouldPersist ? nextPrompt : null, storage);
 }
 
-export function readPendingConversationPrompt(
-  sessionId: string,
-  _storage: StorageLike | null = getSessionStorage(),
-): PendingConversationPrompt | null {
+export function readPendingConversationPrompt(sessionId: string): PendingConversationPrompt | null {
   if (!sessionId) {
     return null;
   }
@@ -266,7 +262,7 @@ export function consumePendingConversationPrompt(
   sessionId: string,
   storage: StorageLike | null = getSessionStorage(),
 ): PendingConversationPrompt | null {
-  const prompt = readPendingConversationPrompt(sessionId, storage);
+  const prompt = readPendingConversationPrompt(sessionId);
   if (!prompt) {
     return null;
   }
@@ -321,5 +317,5 @@ export function setPendingConversationPromptDispatching(
 
   clearStoredState(storage, buildPendingConversationPromptDispatchingStorageKey(sessionId));
 
-  emitPendingConversationPromptChanged(sessionId, readPendingConversationPrompt(sessionId, storage), storage);
+  emitPendingConversationPromptChanged(sessionId, readPendingConversationPrompt(sessionId), storage);
 }

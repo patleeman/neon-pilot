@@ -20,7 +20,13 @@ export function readExtensionSelection(): ExtensionSelectionState | null {
 
 export function setExtensionSelection(selection: Omit<ExtensionSelectionState, 'updatedAt'> | null): void {
   currentSelection = selection ? { ...selection, updatedAt: new Date().toISOString() } : null;
-  for (const listener of listeners) listener(currentSelection);
+  for (const listener of listeners) {
+    try {
+      listener(currentSelection);
+    } catch (error) {
+      console.warn('[extension-selection] listener error:', error);
+    }
+  }
   window.dispatchEvent(new CustomEvent('pa-extension-selection-change', { detail: currentSelection }));
   window.dispatchEvent(new CustomEvent('pa-ext-event', { detail: { event: 'host:selection', payload: currentSelection } }));
 }
