@@ -8,9 +8,18 @@ import { turn } from './turn.js';
 
 function makeContext() {
   return {
+    storage: {
+      get: vi.fn().mockResolvedValue(null),
+      put: vi.fn().mockResolvedValue({ ok: true }),
+    },
     conversations: {
       subscribe: vi.fn().mockReturnValue(vi.fn()),
       ensureLive: vi.fn().mockResolvedValue({ id: 'thread-1', conversationId: 'thread-1' }),
+      getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: [], pinnedConversationIds: [] }),
+      updateWorkspace: vi
+        .fn()
+        .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
+      appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
     },
   };
@@ -21,6 +30,7 @@ function makeConn() {
 }
 
 async function flushAsyncTurnStart() {
+  await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
 }
 
@@ -100,5 +110,35 @@ describe('system-alleycat turn protocol', () => {
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', { cwd: '/repo' });
     expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
+  });
+
+  it('opens and focuses the desktop workspace when Kitty starts a turn', async () => {
+    const ctx = makeContext();
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
+    await flushAsyncTurnStart();
+
+    expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({
+      openConversationIds: ['thread-1'],
+      activeConversationId: 'thread-1',
+    });
+    expect(ctx.conversations.appendVisibleCustomMessage).toHaveBeenCalledWith(
+      'thread-1',
+      'remote_control',
+      'Controlled remotely from Kitty Litter.',
+      { source: 'kitty-litter' },
+    );
+  });
+
+  it('does not duplicate open ids or remote-control markers', async () => {
+    const ctx = makeContext();
+    ctx.storage.get.mockResolvedValue({ source: 'kitty-litter' });
+    ctx.conversations.getWorkspace.mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [] });
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Again' }] }, ctx as never, makeConn(), vi.fn());
+    await flushAsyncTurnStart();
+
+    expect(ctx.conversations.updateWorkspace).toHaveBeenCalledWith({ activeConversationId: 'thread-1' });
+    expect(ctx.conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
   });
 });

@@ -70,7 +70,7 @@ Compatibility notes:
 - `thread/loaded/list` is intentionally workspace state, not runtime liveness. Open/close controls what appears in the shared desktop/mobile workspace; `activeConversationId` controls focused conversation; archive/unarchive controls conversation lifecycle; live/running status remains separate.
 - `model/list` maps PA model metadata into Codex fields. Reasoning effort options use Codex's object shape; if PA metadata is unavailable the bridge returns deterministic PA model defaults so Kitty's model picker can render.
 - Tool calls are emitted as Codex `dynamicToolCall` items under the `personal-agent` namespace so Kitty can render them instead of seeing opaque PA events.
-- `turn/start` and `turn/steer` first resume persisted PA conversations into the live registry, then preserve Kitty image input items and forward them as PA prompt images. Supported forms are data URLs, base64 fields with image MIME metadata, and local/file URLs readable by the desktop host.
+- `turn/start` and `turn/steer` first resume persisted PA conversations into the live registry, open the thread in the shared desktop workspace, and mark it with a visible remote-control note the first time Kitty drives it. They preserve Kitty image input items and forward them as PA prompt images. Supported forms are data URLs, base64 fields with image MIME metadata, and local/file URLs readable by the desktop host.
 - Compatibility endpoints must either be PA-backed or fail with a clear unsupported error. Do not add silent `not_implemented` placeholders; Kitty often spins forever on fake success shapes.
 - If Kitty adds stricter Codex rendering assumptions, update the protocol mapper here rather than changing PA conversation internals.
 

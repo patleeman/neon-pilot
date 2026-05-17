@@ -95,6 +95,41 @@ function promptImagesFromInput(input: Array<Record<string, unknown>>): PromptIma
     .filter((image): image is PromptImage => image !== null);
 }
 
+async function markThreadControlledRemotely(
+  threadId: string,
+  ctx: Parameters<MethodHandler>[1],
+  options?: { active?: boolean },
+): Promise<void> {
+  try {
+    const workspace = (await ctx.conversations.getWorkspace()) as Record<string, unknown> | null;
+    const pinnedConversationIds = Array.isArray(workspace?.pinnedConversationIds)
+      ? workspace.pinnedConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
+    const openConversationIds = Array.isArray(workspace?.openConversationIds)
+      ? workspace.openConversationIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
+    const alreadyVisible = pinnedConversationIds.includes(threadId) || openConversationIds.includes(threadId);
+    await ctx.conversations.updateWorkspace({
+      ...(alreadyVisible ? {} : { openConversationIds: [...openConversationIds, threadId] }),
+      ...(options?.active === false ? {} : { activeConversationId: threadId }),
+    });
+  } catch {
+    // Workspace focus is best-effort; message delivery should not depend on desktop UI state.
+  }
+
+  try {
+    const markerKey = `remote-control-marker:${threadId}`;
+    const existing = await ctx.storage.get(markerKey);
+    if (existing) return;
+    await ctx.conversations.appendVisibleCustomMessage(threadId, 'remote_control', 'Controlled remotely from Kitty Litter.', {
+      source: 'kitty-litter',
+    });
+    await ctx.storage.put(markerKey, { source: 'kitty-litter', createdAt: new Date().toISOString() });
+  } catch {
+    // The marker is decorative; never block the remote turn on it.
+  }
+}
+
 /** Clean up all turn subscriptions for a given thread. */
 export function cleanupTurnSubscriptions(threadId: string): void {
   const subs = turnSubscriptions.get(threadId);
@@ -310,6 +345,7 @@ export const turn = {
 
     void (async () => {
       await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+      await markThreadControlledRemotely(threadId, ctx);
       await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
     })().catch((error) => {
       conn.activeTurnThreads.delete(threadId);
@@ -349,6 +385,7 @@ export const turn = {
     if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
     await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+    await markThreadControlledRemotely(threadId, ctx, { active: false });
     await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { steer: true, images } : { steer: true });
     return { turnId: threadId };
   }) as MethodHandler,
