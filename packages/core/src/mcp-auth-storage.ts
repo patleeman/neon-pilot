@@ -31,7 +31,7 @@ function getPersonalAgentMcpBaseDir(): string {
   return join(resolveStatePaths().auth, 'mcp');
 }
 
-function getMcpAuthConfigDir(): string {
+export function getMcpAuthConfigDir(): string {
   return join(getPersonalAgentMcpBaseDir(), MCP_AUTH_SCHEMA_VERSION);
 }
 

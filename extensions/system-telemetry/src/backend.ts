@@ -163,9 +163,7 @@ function queryAppTelemetryEvents(input: { since: string; limit?: number }): AppT
 }
 
 function eventsSince(since: string): TraceTelemetryLogEvent[] {
-  const events = readTraceTelemetryLogEvents({ since, limit: 100_000 });
-  if (events.length > 0) return events;
-  return readTraceTelemetryLogEvents({ since: '1970-01-01T00:00:00.000Z', limit: 100_000 });
+  return readTraceTelemetryLogEvents({ since, limit: 100_000 });
 }
 
 function numberValue(value: unknown): number {

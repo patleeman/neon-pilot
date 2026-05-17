@@ -1,123 +1,105 @@
-// Simple module-level event bus for knowledge base tree↔editor sync.
-// Uses window custom events so it works across arbitrary component tree boundaries.
-
-export type KBEventType =
-  | 'kb:file-created'
-  | 'kb:file-deleted'
-  | 'kb:file-renamed'
-  | 'kb:entries-changed' // catch-all for tree refresh
-  | 'kb:content-saved'
-  | 'kb:file-changed-externally' // file changed on disk via external editor
-  | 'kb:close-active-file'
-  | 'kb:reopen-closed-file';
-
-export interface KBFileRenamedDetail {
-  oldId: string;
-  newId: string;
-}
-export interface KBFileCreatedDetail {
-  id: string;
-}
-export interface KBFileDeletedDetail {
-  id: string;
-}
-
-export function emitKBEvent(type: 'kb:file-renamed', detail: KBFileRenamedDetail): void;
-export function emitKBEvent(type: 'kb:file-created', detail: KBFileCreatedDetail): void;
-export function emitKBEvent(type: 'kb:file-deleted', detail: KBFileDeletedDetail): void;
-export function emitKBEvent(type: 'kb:entries-changed'): void;
-export function emitKBEvent(type: 'kb:content-saved'): void;
-export function emitKBEvent(type: 'kb:close-active-file'): void;
-export interface KBFileChangedExternallyDetail {
-  path: string;
-}
-
-export function emitKBEvent(type: 'kb:file-changed-externally', detail: KBFileChangedExternallyDetail): void;
-export function emitKBEvent(type: 'kb:reopen-closed-file'): void;
-export function emitKBEvent(type: KBEventType, detail?: unknown): void {
-  window.dispatchEvent(new CustomEvent(type, detail !== undefined ? { detail } : undefined));
-}
-
-export function onKBEvent<T = unknown>(type: KBEventType, handler: (detail: T) => void): () => void {
-  const listener = (e: Event) => handler((e as CustomEvent<T>).detail);
-  window.addEventListener(type, listener);
-  return () => window.removeEventListener(type, listener);
-}
-
-// ── Vault file system watcher ─────────────────────────────────────────────
-
-import { createDesktopAwareEventSource } from '@personal-agent/extensions/ui';
 import { useEffect, useRef } from 'react';
 
-const VAULT_WATCH_DEBOUNCE_MS = 180;
+export type VaultWatcherEvent = {
+  /** Changed vault document paths */
+  paths: Array<string>;
+  /** All current vault document paths after the change */
+  snapshot: Array<string>;
+};
+
+type Props = {
+  apiPathPrefix: string;
+  onEvent: (event: VaultWatcherEvent) => void;
+};
+
+type State = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 /**
- * Subscribe to file system changes in the vault root via SSE.
- * Calls onEvent (with debounce) with the set of changed paths whenever a 'vault' event is received.
- * Also calls onReady with the root path on connection.
+ * Subscribe to server-sent vault filesystem watch events.
+ *
+ * Uses EventSource for long-lived push. When the EventSource drops (network
+ * blip, server restart, sleep/wake), the native EventSource auto-reconnect
+ * re-establishes the connection automatically — we do NOT close the source
+ * in onerror.
  */
-export function useVaultWatcher(
-  onEvent: (paths: string[]) => void,
-  onReady?: (root: string) => void,
-  options?: { enabled?: boolean },
-): void {
-  const enabled = options?.enabled ?? true;
+export function useVaultWatcher({ apiPathPrefix, onEvent }: Props): State {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
+
+  const stateRef = useRef<State>('disconnected');
+  const returnStateRef = useRef<State>('disconnected');
 
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined' || typeof EventSource === 'undefined') return;
-    let timer: number | null = null;
-    let source: {
-      onmessage: ((event: MessageEvent<string>) => void) | null;
-      onerror: ((event: Event) => void) | null;
-      close: () => void;
-    } | null = null;
-    /** Paths that changed during the current debounce window. */
     const changedPaths = new Set<string>();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
 
-    source = createDesktopAwareEventSource('/api/vault/events') as typeof source;
+    const url = `${apiPathPrefix}/events`;
 
-    const schedule = () => {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        const paths = [...changedPaths];
-        changedPaths.clear();
-        onEventRef.current(paths);
-      }, VAULT_WATCH_DEBOUNCE_MS);
+    function flush() {
+      if (!mounted || changedPaths.size === 0) return;
+
+      const paths = [...changedPaths];
+      changedPaths.clear();
+      onEventRef.current({ paths, snapshot: [] });
+    }
+
+    function scheduleFlush() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, 150);
+    }
+
+    const source = new EventSource(url);
+
+    source.onopen = () => {
+      if (!mounted) return;
+      stateRef.current = 'connected';
+      returnStateRef.current = 'connected';
     };
 
-    source.onmessage = (event: MessageEvent<string>) => {
+    source.onmessage = (event) => {
+      if (!mounted) return;
       try {
-        const payload = JSON.parse(event.data) as Record<string, unknown>;
-        if (payload.type === 'ready' && typeof payload.root === 'string') {
-          onReadyRef.current?.(payload.root);
-          return;
-        }
+        const data = JSON.parse(event.data);
 
-        // Collect the changed path if available
-        if (typeof payload.path === 'string') {
-          changedPaths.add(payload.path);
+        if ('kb:file-changed-externally' === data.type) {
+          for (const entry of data.entries ?? []) {
+            if (typeof entry.path === 'string') {
+              changedPaths.add(entry.path);
+            }
+          }
+          scheduleFlush();
+        } else if ('kb:entries-changed' === data.type) {
+          for (const entry of data.entries ?? []) {
+            if (typeof entry.path === 'string' && typeof entry.kind === 'string') {
+              changedPaths.add(entry.path);
+            }
+          }
+          scheduleFlush();
+        } else if ('loadSnapshot' === data.type) {
+          const paths = (data.entries ?? []).map((e: { path: string }) => e.path);
+          onEventRef.current({ paths, snapshot: paths });
         }
       } catch {
-        // ignore parse errors
+        // ignore malformed events
       }
-      schedule();
     };
 
     source.onerror = () => {
-      source?.close();
-      const paths = [...changedPaths];
-      changedPaths.clear();
-      onEventRef.current(paths);
+      if (!mounted) return;
+      stateRef.current = 'error';
+      returnStateRef.current = 'error';
+      // Do NOT call source.close() here — EventSource's native auto-reconnect
+      // handles transient failures (network blips, server restarts, sleep/wake).
+      // Closing the source in onerror permanently disables reconnection.
     };
 
     return () => {
-      if (timer !== null) window.clearTimeout(timer);
-      source?.close();
-      changedPaths.clear();
+      mounted = false;
+      if (timer) clearTimeout(timer);
+      source.close();
     };
-  }, [enabled]);
+  }, [apiPathPrefix]);
+
+  return returnStateRef.current;
 }

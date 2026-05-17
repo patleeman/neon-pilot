@@ -116,7 +116,7 @@ The agent can read it, edit it, and use it as context. You can also tag files in
 - **MCP integration** — external tool server support
 - **Browser and artifact tools** — browser context, screenshots, rendered artifacts, and files the agent can work with
 
-See the [full feature catalog](docs/features.md) for the complete list organized by surface.
+See the [docs index](docs/index.md) for the complete documentation.
 
 ---
 
@@ -129,7 +129,7 @@ All docs are in the [`docs/`](docs/) folder. They are written for agents first, 
 - [Getting Started](docs/getting-started.md) — install, first-run flow, vault setup
 - [How personal-agent works](docs/how-it-works.md) — state model and runtime layering
 - [Decision Guide](docs/decision-guide.md) — pick the right durable surface
-- [Features](docs/features.md) — complete feature catalog
+- [Docs](docs/index.md) — complete documentation index
 
 ### Key references
 

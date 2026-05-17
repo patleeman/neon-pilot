@@ -9,11 +9,11 @@ function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'tit
     title: overrides.title,
     cwd: overrides.cwd ?? '/repo',
     createdAt: overrides.createdAt ?? '2026-05-12T10:00:00.000Z',
-    updatedAt: overrides.updatedAt ?? '2026-05-12T10:00:00.000Z',
+    timestamp: overrides.timestamp ?? '2026-05-12T10:00:00.000Z',
     isRunning: overrides.isRunning ?? false,
     parentSessionId: overrides.parentSessionId,
     sourceRunId: overrides.sourceRunId,
-  } as SessionMeta;
+  };
 }
 
 function execution(overrides: Partial<ExecutionRecord> & Pick<ExecutionRecord, 'id'>): ExecutionRecord {
@@ -51,8 +51,8 @@ describe('buildActivityTreeItems', () => {
   it('preserves caller-provided conversation order', () => {
     const items = buildActivityTreeItems({
       conversations: [
-        session({ id: 'pinned', title: 'Pinned thread', updatedAt: '2026-05-12T09:00:00.000Z' }),
-        session({ id: 'recent', title: 'Recent thread', updatedAt: '2026-05-12T10:00:00.000Z' }),
+        session({ id: 'pinned', title: 'Pinned thread', timestamp: '2026-05-12T09:00:00.000Z' }),
+        session({ id: 'recent', title: 'Recent thread', timestamp: '2026-05-12T10:00:00.000Z' }),
       ],
     });
 
@@ -65,12 +65,12 @@ describe('buildActivityTreeItems', () => {
   it('nests child conversations under their parent conversation', () => {
     const items = buildActivityTreeItems({
       conversations: [
-        session({ id: 'conv-parent', title: 'Parent conversation', updatedAt: '2026-05-12T10:00:00.000Z' }),
+        session({ id: 'conv-parent', title: 'Parent conversation', timestamp: '2026-05-12T10:00:00.000Z' }),
         session({
           id: 'conv-child',
           title: 'Subagent conversation',
           parentSessionId: 'conv-parent',
-          updatedAt: '2026-05-12T10:01:00.000Z',
+          timestamp: '2026-05-12T10:01:00.000Z',
         }),
       ],
     });

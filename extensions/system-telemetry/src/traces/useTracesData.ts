@@ -84,21 +84,7 @@ export function useTracesData(range: TraceRange): TracesData & { refetch: () => 
   const fetch = useCallback(async () => {
     setData((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const [
-        summary,
-        modelUsage,
-        costByConversation,
-        toolHealth,
-        context,
-        agentLoop,
-        tokensDaily,
-        toolFlow,
-        autoMode,
-        cacheEff,
-        sysPrompt,
-        contextPointers,
-        sessionIntegrity,
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         telemetryGet<TraceSummary>('/traces/summary', range),
         telemetryGet<{ models: TraceModelUsage[]; throughput: TraceThroughput[] }>('/traces/model-usage', range),
         telemetryGet<TraceCostRow[]>('/traces/cost-by-conversation', range),
@@ -117,25 +103,50 @@ export function useTracesData(range: TraceRange): TracesData & { refetch: () => 
         telemetryGet<AppTelemetryEventRow[]>('/traces/session-integrity', range),
       ]);
 
+      const ok = <T>(r: PromiseSettledResult<T>): T | null => (r.status === 'fulfilled' ? r.value : null);
+
+      const summary = ok<TraceSummary>(results[0]);
+      const modelUsage = ok<{ models: TraceModelUsage[]; throughput: TraceThroughput[] }>(results[1]);
+      const costByConversation = ok<TraceCostRow[]>(results[2]);
+      const toolHealth = ok<TraceToolHealth[]>(results[3]);
+      const context = ok<{ sessions: TraceContextSession[]; compactions: TraceCompactionEvent[]; compactionAggs: TraceCompactionAggs }>(
+        results[4],
+      );
+      const agentLoop = ok<TraceAgentLoop>(results[5]);
+      const tokensDaily = ok<TraceTokenDaily[]>(results[6]);
+      const toolFlow = ok<ToolFlowResult>(results[7]);
+      const autoMode = ok<AutoModeSummary>(results[8]);
+      const cacheEff = ok<{ series: unknown[]; aggregate: CacheEfficiencyAggregate }>(results[9]);
+      const sysPrompt = ok<{ series: unknown[]; aggregate: SystemPromptAggregate }>(results[10]);
+      const contextPointers = ok<ContextPointerUsageResult>(results[11]);
+      const sessionIntegrity = ok<AppTelemetryEventRow[]>(results[12]);
+
+      // Log any rejected endpoints for debugging
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === 'rejected') {
+          console.warn('[telemetry] endpoint failed:', results[i].reason);
+        }
+      }
+
       setData({
         summary,
-        modelUsage: modelUsage.models,
-        throughput: modelUsage.throughput,
+        modelUsage: modelUsage?.models ?? null,
+        throughput: modelUsage?.throughput ?? null,
         costByConversation,
         toolHealth,
-        contextSessions: context.sessions,
-        compactions: context.compactions,
-        compactionAggs: context.compactionAggs,
+        contextSessions: context?.sessions ?? null,
+        compactions: context?.compactions ?? null,
+        compactionAggs: context?.compactionAggs ?? null,
         agentLoop,
         tokensDaily,
         toolFlow,
         autoMode,
-        cacheEfficiency: cacheEff.aggregate,
-        systemPrompt: sysPrompt.aggregate,
+        cacheEfficiency: cacheEff?.aggregate ?? null,
+        systemPrompt: sysPrompt?.aggregate ?? null,
         contextPointers,
         sessionIntegrity,
         loading: false,
-        error: null,
+        error: results.every((r) => r.status === 'rejected') ? 'All telemetry endpoints failed' : null,
       });
     } catch (err) {
       setData((prev) => ({

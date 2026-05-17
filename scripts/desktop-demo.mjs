@@ -301,7 +301,7 @@ writeSession({
   lines: [
     assistantText('demo-subagent-child', 1, 'I checked the docs references and found two stale examples.', 'demo-subagent-child-user-1'),
   ],
-}).replace(/.*/, (file) => file);
+});
 const subagentDir = join(sessionsRoot, '__runs', 'run-subagent-demo');
 mkdirp(subagentDir);
 write(

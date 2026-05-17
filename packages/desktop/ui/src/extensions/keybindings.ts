@@ -51,9 +51,12 @@ function matchesExtensionKeybinding(event: KeybindingEventLike, shortcut: string
 
   if (!key) return false;
   const eventMod = event.metaKey || event.ctrlKey;
-  if (required.has('mod') !== eventMod) return false;
-  if (!required.has('mod') && required.has('ctrl') !== event.ctrlKey) return false;
-  if (!required.has('mod') && required.has('meta') !== event.metaKey) return false;
+  if (required.has('mod')) {
+    if (!eventMod) return false;
+  } else {
+    if (required.has('ctrl') !== event.ctrlKey) return false;
+    if (required.has('meta') !== event.metaKey) return false;
+  }
   if (required.has('alt') !== event.altKey) return false;
   if (required.has('shift') !== event.shiftKey) return false;
 

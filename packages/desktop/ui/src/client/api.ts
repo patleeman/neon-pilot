@@ -114,6 +114,12 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
+      // Retry transient server errors (5xx) like transient network failures
+      if (!res.ok && res.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
+        lastError = new Error(`Server error ${res.status} for ${input}`);
+        await sleep(RETRY_DELAYS_MS[attempt] as number);
+        continue;
+      }
       return res;
     } catch (error) {
       lastError = error;

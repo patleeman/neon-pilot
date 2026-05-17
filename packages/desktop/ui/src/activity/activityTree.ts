@@ -4,7 +4,8 @@ export type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'termi
 export type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
 
 function executionIsActive(status: string | undefined): boolean {
-  return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
+  // Match server-side terminalStatus(): only completed/failed/cancelled/interrupted are terminal
+  return !(status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'interrupted');
 }
 
 export interface ActivityTreeItem {

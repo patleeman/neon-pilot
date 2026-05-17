@@ -67,10 +67,11 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
     );
   }
 
-  componentDidUpdate(_prevProps: { children: ReactNode }, prevState: AppErrorBoundaryState) {
-    // If we recovered (e.g., hot reload), clear the error state.
-    if (prevState.hasError && !this.state.hasError) {
-      return;
+  componentDidUpdate(prevProps: { children: ReactNode }) {
+    // Reset error state when the route/children change so navigation works
+    // after a crash without requiring a full page reload.
+    if (this.state.hasError && prevProps.children !== this.props.children) {
+      this.setState({ hasError: false, errorMessage: null });
     }
   }
 

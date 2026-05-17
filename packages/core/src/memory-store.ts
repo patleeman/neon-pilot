@@ -160,7 +160,7 @@ function mapUnifiedNodeToMemoryDoc(node: UnifiedNodeRecord): ParsedMemoryDoc {
     role: extractTagValue(node.tags, 'role') ?? extractTagValue(node.tags, 'noteType'),
     parent: node.links.parent,
     related: node.links.related,
-    updated: node.updatedAt ?? currentDateYyyyMmDd(),
+    updated: node.updatedAt ?? new Date().toISOString(),
     body: node.body,
     metadata: {},
     referencePaths: loadMemoryPackageReferences(node.dirPath).map((reference) => reference.filePath),

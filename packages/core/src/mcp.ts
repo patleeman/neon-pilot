@@ -6,7 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { OAuthClientInformationFull, OAuthClientMetadata } from '@modelcontextprotocol/sdk/shared/auth.js';
 
-import { deleteConfigFile } from './mcp-auth-storage.js';
+import { deleteConfigFile, getMcpAuthConfigDir } from './mcp-auth-storage.js';
 import { getMcpServerUrlHash, type McpTransportStrategy, openRemoteMcpClient, resolveCallbackPort } from './mcp-oauth.js';
 
 export interface McpServerConfig {
@@ -1267,11 +1267,7 @@ export async function clearMcpServerAuth(
 export function hasStoredMcpServerTokens(server: McpServerConfig): boolean {
   if (server.transport !== 'remote' || !server.url) return false;
   const hash = getMcpServerUrlHash(server.url, server.authorizeResource, {});
-  // Mirror getPersonalAgentMcpBaseDir / getMcpAuthConfigDir from mcp-auth-storage.ts
-  const baseDir = process.env.PERSONAL_AGENT_MCP_AUTH_DIR?.trim()
-    ? join(process.env.PERSONAL_AGENT_MCP_AUTH_DIR.trim(), 'v1')
-    : join(homedir(), '.local', 'state', 'personal-agent', 'auth', 'mcp', 'v1');
-  return existsSync(join(baseDir, `${hash}_tokens.json`));
+  return existsSync(join(getMcpAuthConfigDir(), `${hash}_tokens.json`));
 }
 
 /**
