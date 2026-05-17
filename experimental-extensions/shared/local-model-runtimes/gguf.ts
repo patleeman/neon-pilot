@@ -31,13 +31,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = join(here, '..');
 const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
 const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
-function bundledBinary(name: string) {
+function bundledRuntimePath(name: string) {
   const localPath = join(runtimeRoot, 'bin', 'darwin-arm64', name);
   if (existsSync(localPath)) return localPath;
   return join(sourceRuntimeRoot, 'bin', 'darwin-arm64', name);
 }
-const bundledCli = bundledBinary('llama-cli');
-const bundledServer = bundledBinary('llama-server');
+const bundledCli = bundledRuntimePath('llama-cli');
+const bundledServer = bundledRuntimePath('llama-server');
+const runtimeBinDir = dirname(bundledServer);
 const modelCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp', 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'process/serverPid';
@@ -368,7 +369,7 @@ export async function installRuntime(_input: unknown, ctx: ExtensionBackendConte
   if (!asset?.browser_download_url)
     throw new Error(`Could not find a macOS arm64 llama.cpp release asset in ${release.html_url ?? 'latest release'}`);
 
-  await mkdir(dirname(bundledServer), { recursive: true });
+  await mkdir(runtimeBinDir, { recursive: true });
   const script = `set -euo pipefail
 workdir=$(mktemp -d)
 trap 'rm -rf "$workdir"' EXIT
@@ -380,6 +381,13 @@ test -n "$cli"
 test -n "$server"
 install -m 755 "$cli" ${shellQuote(bundledCli)}
 install -m 755 "$server" ${shellQuote(bundledServer)}
+dylibs=$(find "$workdir" -name '*.dylib')
+test -n "$dylibs"
+while IFS= read -r dylib; do
+  install -m 755 "$dylib" ${shellQuote(runtimeBinDir)}/$(basename "$dylib")
+done <<EOF
+$dylibs
+EOF
 `;
   await ctx.shell.exec({ command: 'sh', args: ['-c', script], timeoutMs: 120_000, maxBuffer: 1024 * 1024 });
   return { ok: true, installed: true, status: await runtimeStatus({}, ctx) };

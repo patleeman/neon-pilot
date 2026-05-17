@@ -2,7 +2,7 @@
 import { createWriteStream } from 'node:fs';
 import { chmod, copyFile, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -65,6 +65,24 @@ try {
     const source = await findFile(workDir, binary);
     if (!source) throw new Error(`Downloaded asset did not contain ${binary}`);
     const destination = join(runtimeDir, binary);
+    await copyFile(source, destination);
+    await chmod(destination, 0o755);
+    console.log(`Installed ${destination}`);
+  }
+
+  const dylibSources = [];
+  async function collectDylibs(root) {
+    const entries = await readdir(root, { withFileTypes: true });
+    for (const entry of entries) {
+      const path = join(root, entry.name);
+      if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.endsWith('.dylib')) dylibSources.push(path);
+      else if (entry.isDirectory()) await collectDylibs(path);
+    }
+  }
+  await collectDylibs(workDir);
+  if (dylibSources.length === 0) throw new Error('Downloaded asset did not contain llama.cpp dylibs');
+  for (const source of dylibSources) {
+    const destination = join(runtimeDir, basename(source));
     await copyFile(source, destination);
     await chmod(destination, 0o755);
     console.log(`Installed ${destination}`);
