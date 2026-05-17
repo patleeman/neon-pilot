@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "id": "system-apply-patch",
+  "name": "Apply Patch",
+  "packageType": "system",
+  "description": "Apply Codex-style file patches from agent tool calls.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "applyPatch",
+        "handler": "applyPatch",
+        "title": "Apply Patch"
+      },
+      {
+        "id": "applyPatchEdit",
+        "handler": "applyPatchEdit",
+        "title": "Patch Edit"
+      }
+    ]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "apply-patch",
+        "name": "apply_patch",
+        "title": "Apply Patch",
+        "description": "Apply a Codex-style patch to files. Supports add, delete, update, and move operations.",
+        "action": "applyPatch",
+        "promptSnippet": "apply_patch: apply Codex-style file patches using a single patch string.",
+        "promptGuidelines": ["Use apply_patch for multi-line file edits. Send a complete patch with *** Begin Patch and *** End Patch."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "patch": {
+              "type": "string",
+              "description": "Codex-style patch text beginning with *** Begin Patch and ending with *** End Patch."
+            }
+          },
+          "required": ["patch"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "apply-patch-edit",
+        "title": "Edit",
+        "description": "OpenAI-only patch-based replacement for the built-in edit tool. Accepts either { patch } or the legacy { path, edits } shape.",
+        "action": "applyPatchEdit",
+        "replaces": "edit",
+        "when": { "providers": ["openai", "openai-codex"] },
+        "promptSnippet": "edit: patch-based file edits; prefer a complete patch string for multi-line changes.",
+        "promptGuidelines": [
+          "This edit tool accepts Codex-style patches via the patch field; prefer that over exact oldText replacement for non-trivial changes."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "patch": { "type": "string", "description": "Codex-style patch text." },
+            "path": { "type": "string", "description": "Legacy edit path. Used only with edits." },
+            "edits": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "oldText": { "type": "string" },
+                  "newText": { "type": "string" }
+                },
+                "required": ["oldText", "newText"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}
