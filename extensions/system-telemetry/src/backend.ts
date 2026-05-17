@@ -5,7 +5,7 @@
  * handlers calculate dashboard view models from recent trace events on demand.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface ExtensionRouteRequest {
@@ -162,8 +162,36 @@ function queryAppTelemetryEvents(input: { since: string; limit?: number }): AppT
   return events.sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, limit);
 }
 
+// Per-request cache for eventsSince — the telemetry dashboard calls this
+// 7+ times with the same range per page load.  Keyed by since + dir + file
+// mtime so stale reads are automatically invalidated when logs roll.
+const eventsSinceCache = new Map<string, { events: TraceTelemetryLogEvent[]; cachedAt: number }>();
+const EVENTS_CACHE_TTL_MS = 5_000;
+
 function eventsSince(since: string): TraceTelemetryLogEvent[] {
-  return readTraceTelemetryLogEvents({ since, limit: 100_000 });
+  const dir = telemetryLogDir();
+  const dirState = [since, dir];
+  try {
+    if (existsSync(dir)) {
+      for (const name of readdirSync(dir)
+        .filter((f) => f.startsWith('trace-telemetry-') && f.endsWith('.jsonl'))
+        .sort()
+        .slice(0, 3)) {
+        const mtime = statSync(join(dir, name)).mtimeMs;
+        dirState.push(name, String(mtime));
+      }
+    }
+  } catch {
+    // Best-effort cache key
+  }
+  const key = dirState.join('|');
+  const cached = eventsSinceCache.get(key);
+  if (cached && Date.now() - cached.cachedAt < EVENTS_CACHE_TTL_MS) {
+    return cached.events;
+  }
+  const events = readTraceTelemetryLogEvents({ since, limit: 100_000 });
+  eventsSinceCache.set(key, { events, cachedAt: Date.now() });
+  return events;
 }
 
 function numberValue(value: unknown): number {

@@ -449,11 +449,11 @@ async function warmRelatedConversationPointerCache(input: {
     includeAuto: true,
     nowMs,
   });
-  if (Date.now() - started > WARM_POINTER_BUDGET_MS) {
-    const empty = { contextMessages: [], pointers: [], warnings: [] };
-    pointerCache.set(key, { cachedAtMs: nowMs, result: empty });
-    return empty;
-  }
+  // NOTE: we do NOT re-check budget here.  If the await exceeded the 150ms
+  // budget, the real result is still better than caching empty — caching
+  // empty would suppress valid pointers for POINTER_CACHE_TTL_MS (60s).
+  // The first budget check (before the await) already prevents the expensive
+  // work from starting when the budget is already exhausted.
   pointerCache.set(key, { cachedAtMs: nowMs, result });
   return result;
 }
