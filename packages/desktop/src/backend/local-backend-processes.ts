@@ -46,6 +46,7 @@ export class LocalBackendProcesses {
   private logStream?: WriteStream;
   private healthTimer?: NodeJS.Timeout;
   private notifiedUnhealthy = false;
+  private disposed = false;
 
   async ensureStarted(): Promise<void> {
     if (this.startPromise) {
@@ -87,9 +88,19 @@ export class LocalBackendProcesses {
   }
 
   async stop(): Promise<void> {
+    this.disposed = true;
     this.stopHealthMonitor();
     this.clearInProcessClientBinding?.();
     this.clearInProcessClientBinding = undefined;
+
+    // Wait for any in-flight startup to settle, then stop whatever started
+    if (this.startPromise) {
+      try {
+        await this.startPromise;
+      } catch {
+        // Start-up error is expected during quit — ignore.
+      }
+    }
 
     if (this.daemon) {
       await this.daemon.stop();
@@ -182,6 +193,14 @@ export class LocalBackendProcesses {
       await daemon.stop().catch(() => undefined);
       await new Promise<void>((resolve) => logStream.end(resolve));
       throw error;
+    }
+
+    // If stop() was called while we were starting, dispose the daemon
+    // instead of installing it, preventing a zombie runtime after quit.
+    if (this.disposed) {
+      await daemon.stop().catch(() => undefined);
+      logStream.end();
+      return;
     }
 
     this.clearInProcessClientBinding?.();

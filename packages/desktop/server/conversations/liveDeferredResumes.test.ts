@@ -57,6 +57,12 @@ vi.mock('@personal-agent/daemon', () => ({
 vi.mock('./liveSessions.js', () => ({
   getLiveSessions: getLiveSessionsMock,
   promptSession: promptSessionMock,
+  submitPromptSession: vi.fn((_sessionId, text, behavior) => {
+    // Delegate to promptSessionMock so rejection tests still work,
+    // but expose the completion separately for followUp behavior.
+    const completion = promptSessionMock(_sessionId, text, behavior);
+    return { acceptedAs: 'started', completion };
+  }),
   queuePromptContext: queuePromptContextMock,
   registry: liveRegistry,
 }));

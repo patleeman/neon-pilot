@@ -12,7 +12,13 @@ import {
   retryDeferredResumeForSessionFile,
 } from '../automation/deferredResumes.js';
 import { syncWebLiveConversationRun } from './conversationRuns.js';
-import { getLiveSessions, promptSession as promptLocalSession, queuePromptContext, registry as liveRegistry } from './liveSessions.js';
+import {
+  getLiveSessions,
+  promptSession as promptLocalSession,
+  queuePromptContext,
+  registry as liveRegistry,
+  submitPromptSession,
+} from './liveSessions.js';
 
 const DEFAULT_RETRY_DELAY_MS = 30_000;
 
@@ -150,7 +156,14 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
               });
             }
 
-            await promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
+            if (deferredResumeBehavior === 'followUp') {
+              // followUp returns as soon as the prompt is queued — wait for
+              // actual completion before removing the deferred resume entry.
+              const { completion } = await submitPromptSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
+              await completion;
+            } else {
+              await promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
+            }
 
             const completedEntry = completeDeferredResumeForSessionFile({
               sessionFile: readyEntry.sessionFile,
