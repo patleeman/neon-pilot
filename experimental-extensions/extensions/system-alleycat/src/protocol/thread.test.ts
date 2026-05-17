@@ -100,7 +100,6 @@ describe('system-alleycat thread protocol', () => {
 
   it('filters and sorts thread/list by cwd, search term, and updated time', async () => {
     const ctx = makeContext({
-      getWorkspace: vi.fn().mockResolvedValue(null),
       list: vi.fn().mockResolvedValue([
         { id: 'a', title: 'Alpha', cwd: '/repo/a', lastActivityAt: '2026-01-01T00:00:10.000Z' },
         { id: 'b', title: 'Beta needle', cwd: '/repo/b', lastActivityAt: '2026-01-01T00:00:30.000Z', isLive: true },
@@ -119,31 +118,6 @@ describe('system-alleycat thread protocol', () => {
     expect(result.data[0].status.type).toBe('idle');
     expect(result.data[1].status.type).toBe('idle');
     expect(result.data[0].path).toBe('/repo/b');
-  });
-
-  it('orders thread/list by shared workspace pins/opens and hides archived conversations', async () => {
-    const ctx = makeContext({
-      getWorkspace: vi.fn().mockResolvedValue({
-        pinnedConversationIds: ['b'],
-        openConversationIds: ['c', 'b'],
-        archivedConversationIds: ['d'],
-      }),
-      list: vi.fn().mockResolvedValue([
-        { id: 'a', title: 'Alpha', cwd: '/repo', lastActivityAt: '2026-01-01T00:00:40.000Z' },
-        { id: 'b', title: 'Beta', cwd: '/repo', lastActivityAt: '2026-01-01T00:00:10.000Z' },
-        { id: 'c', title: 'Gamma', cwd: '/repo', lastActivityAt: '2026-01-01T00:00:20.000Z' },
-        { id: 'd', title: 'Archived', cwd: '/repo', lastActivityAt: '2026-01-01T00:00:50.000Z' },
-      ]),
-    });
-
-    const result = (await thread.list(
-      { limit: 10 },
-      ctx as never,
-      { initialized: true, subscribedThreads: new Set(), activeTurnThreads: new Set() },
-      vi.fn(),
-    )) as { data: Array<{ id: string }> };
-
-    expect(result.data.map((item) => item.id)).toEqual(['b', 'c', 'a']);
   });
 
   it('treats Kitty mobile /root cwd as global and reports workspace-open loaded threads', async () => {

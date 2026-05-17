@@ -310,30 +310,13 @@ export const thread = {
       return null;
     })();
 
-    const workspace = (await ctx.conversations.getWorkspace?.().catch(() => null)) as Record<string, unknown> | null;
-    const workspacePinnedIds = Array.isArray(workspace?.pinnedConversationIds)
-      ? workspace.pinnedConversationIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-      : [];
-    const workspaceOpenIds = Array.isArray(workspace?.openConversationIds)
-      ? workspace.openConversationIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-      : [];
-    const workspaceArchivedIds = new Set(
-      Array.isArray(workspace?.archivedConversationIds)
-        ? workspace.archivedConversationIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-        : [],
-    );
-    const workspaceOrder = new Map<string, number>();
-    [...workspacePinnedIds, ...workspaceOpenIds].forEach((id) => {
-      if (!workspaceOrder.has(id)) workspaceOrder.set(id, workspaceOrder.size);
-    });
-
     const sessions = await ctx.conversations.list();
     const all = Array.isArray(sessions)
       ? sessions
           .map((s: unknown) => {
             const session = s as Record<string, unknown>;
             const id = String(session.id ?? session.sessionId ?? '');
-            if (!id || workspaceArchivedIds.has(id)) return null;
+            if (!id) return null;
             return toThreadResponse(
               id,
               {
@@ -352,13 +335,6 @@ export const thread = {
       .filter((item) => (requestedCwds ? requestedCwds.has(item.cwd) : true))
       .filter((item) => (searchTerm ? `${item.name ?? ''} ${item.preview ?? ''}`.toLowerCase().includes(searchTerm) : true))
       .sort((a, b) => {
-        const leftWorkspaceOrder = workspaceOrder.get(a.id);
-        const rightWorkspaceOrder = workspaceOrder.get(b.id);
-        if (leftWorkspaceOrder !== undefined || rightWorkspaceOrder !== undefined) {
-          if (leftWorkspaceOrder === undefined) return 1;
-          if (rightWorkspaceOrder === undefined) return -1;
-          return leftWorkspaceOrder - rightWorkspaceOrder;
-        }
         const key = p?.sortKey === 'created_at' || p?.sortKey === 'createdAt' ? 'createdAt' : 'updatedAt';
         const direction = p?.sortDirection === 'asc' ? 1 : -1;
         return ((a[key] as number) - (b[key] as number)) * direction;
