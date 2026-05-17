@@ -269,15 +269,22 @@ export async function scheduleDeferredResumeForSessionFile(input: {
   });
 
   saveDeferredResumeState(state);
-  await scheduleDeferredResumeConversationRun({
-    daemonRoot: resolveDaemonRoot(),
-    deferredResumeId: record.id,
-    sessionFile: record.sessionFile,
-    prompt: record.prompt,
-    dueAt: record.dueAt,
-    createdAt: record.createdAt,
-    conversationId: input.conversationId?.trim() || readSessionConversationId(record.sessionFile),
-  });
+  try {
+    await scheduleDeferredResumeConversationRun({
+      daemonRoot: resolveDaemonRoot(),
+      deferredResumeId: record.id,
+      sessionFile: record.sessionFile,
+      prompt: record.prompt,
+      dueAt: record.dueAt,
+      createdAt: record.createdAt,
+      conversationId: input.conversationId?.trim() || readSessionConversationId(record.sessionFile),
+    });
+  } catch (error) {
+    // Daemon scheduling failed — roll back the persisted state
+    removeDeferredResume(state, record.id);
+    saveDeferredResumeState(state);
+    throw error;
+  }
   return toDeferredResumeSummary(record);
 }
 
