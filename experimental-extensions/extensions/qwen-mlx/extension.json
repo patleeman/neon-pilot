@@ -1,14 +1,11 @@
 {
   "schemaVersion": 2,
   "id": "qwen-mlx",
-  "name": "MLX Local Models",
-  "description": "Set up, start, stop, and register local Hugging Face MLX models.",
+  "name": "MLX Local Models Runtime",
+  "description": "Backend runtime implementation for Local Models MLX support.",
   "version": "0.2.0",
   "packageType": "user",
   "defaultEnabled": false,
-  "frontend": {
-    "entry": "dist/frontend.js"
-  },
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
@@ -17,29 +14,14 @@
       { "id": "mlxSetup", "handler": "setup", "title": "Set up MLX model" },
       { "id": "mlxStart", "handler": "start", "title": "Start MLX runtime" },
       { "id": "mlxStop", "handler": "stop", "title": "Stop MLX runtime" },
+      { "id": "mlxDeleteModel", "handler": "deleteModel", "title": "Delete MLX model" },
       { "id": "mlxSearchModels", "handler": "searchModels", "title": "Search Hugging Face MLX models" }
     ]
   },
   "contributes": {
-    "views": [
-      {
-        "id": "page",
-        "title": "MLX Local Models",
-        "location": "main",
-        "route": "/ext/qwen-mlx",
-        "component": "QwenMlxPage"
-      }
-    ],
+    "views": [],
     "nav": [],
-    "tools": [
-      {
-        "id": "mlx_local_status",
-        "name": "mlx_local_status",
-        "description": "Check which local MLX model is selected, loaded, installed, and running.",
-        "action": "mlxStatus",
-        "inputSchema": { "type": "object", "properties": {} }
-      }
-    ]
+    "tools": []
   },
   "permissions": ["network:listen"]
 }

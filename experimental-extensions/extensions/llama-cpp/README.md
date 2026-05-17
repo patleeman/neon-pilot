@@ -1,12 +1,22 @@
-# llama.cpp extension
+# llama.cpp runtime
 
-Experimental PA extension for running local GGUF models through llama.cpp.
+Backend/runtime implementation for the unified Local Models extension.
 
-The extension bundles the llama.cpp runtime instead of installing compilers or Homebrew on user machines. Model files are downloaded or selected at runtime because GGUF files are large.
+This package owns GGUF/llama.cpp behavior:
+
+- bundled Metal-enabled `llama-cli` and `llama-server`
+- local GGUF cache under `~/.cache/personal-agent/llama-cpp/models`
+- selected model persistence
+- cancellable GGUF download jobs with progress
+- start/stop/status/delete/reveal/prompt backend actions
+- OpenAI-compatible server on `http://127.0.0.1:8012/v1`
+
+The user-facing UI is `experimental-extensions/extensions/local-models`.
+This extension intentionally contributes no nav item and no main-page view.
 
 ## Runtime layout
 
-Packaged builds should include prebuilt, Metal-enabled macOS arm64 binaries here:
+Packaged builds should include prebuilt macOS arm64 binaries here:
 
 ```text
 bin/darwin-arm64/llama-cli
@@ -19,21 +29,4 @@ For local development, fetch the latest upstream macOS arm64 release binaries wi
 npm run fetch:runtime
 ```
 
-The backend checks the bundled runtime first. A custom binary path can be added later if we want a power-user escape hatch.
-
-## Model cache
-
-Hugging Face GGUF downloads are stored under:
-
-```text
-~/.cache/personal-agent/llama-cpp/models
-```
-
-The UI asks for an exact GGUF filename from the repo, caches the file locally, and lists cached `.gguf` files with Use and Reveal in Finder actions.
-
-## Notes
-
-- This is intentionally `defaultEnabled: false` while experimental.
-- The UI uses the shared local runtime workspace pattern: model/download controls on the left, prompt smoke testing on the right, runtime status in the header, and runtime details in a collapsible footer.
-- When `llama-server` is bundled, the extension starts a persistent OpenAI-compatible server on `http://127.0.0.1:8012/v1`, registers the selected GGUF in the Personal Agent model picker, and runs prompt tests through `/chat/completions`.
-- If the server is unavailable, prompt tests fall back to `llama-cli` one-shot execution.
+The backend checks its bundled runtime first. When imported by the unified Local Models extension during local development, it falls back to this extension's runtime directory via `PERSONAL_AGENT_REPO_ROOT`.

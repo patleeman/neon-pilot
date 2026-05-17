@@ -1,18 +1,19 @@
 {
   "schemaVersion": 2,
   "id": "llama-cpp",
-  "name": "llama.cpp",
-  "description": "Run local GGUF models through a bundled llama.cpp Metal runtime.",
+  "name": "llama.cpp Runtime",
+  "description": "Backend runtime implementation for Local Models GGUF support.",
   "version": "0.1.0",
   "packageType": "user",
   "defaultEnabled": false,
-  "frontend": { "entry": "dist/frontend.js" },
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
       { "id": "runtimeStatus", "handler": "runtimeStatus", "title": "Runtime status" },
       { "id": "downloadModel", "handler": "downloadModel", "title": "Download GGUF model" },
+      { "id": "cancelDownload", "handler": "cancelDownload", "title": "Cancel GGUF download" },
       { "id": "setModel", "handler": "setModel", "title": "Set GGUF model" },
+      { "id": "deleteModel", "handler": "deleteModel", "title": "Delete GGUF model" },
       { "id": "revealModel", "handler": "revealModel", "title": "Reveal GGUF model" },
       { "id": "startServer", "handler": "startServer", "title": "Start llama.cpp server" },
       { "id": "stopServer", "handler": "stopServer", "title": "Stop llama.cpp server" },
@@ -20,15 +21,7 @@
     ]
   },
   "contributes": {
-    "views": [
-      {
-        "id": "main",
-        "title": "llama.cpp",
-        "location": "main",
-        "route": "/ext/llama-cpp",
-        "component": "LlamaCppPage"
-      }
-    ],
+    "views": [],
     "nav": []
   },
   "permissions": ["network:read", "network:write", "network:listen"]

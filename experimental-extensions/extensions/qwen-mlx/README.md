@@ -1,9 +1,16 @@
-# MLX Local Models
+# MLX Local Models runtime
 
-Run local Hugging Face MLX models from Personal Agent.
+Backend/runtime implementation for the unified Local Models extension.
 
-The extension manages a private `mlx-lm` virtualenv, downloads models with the Hugging Face CLI, starts `mlx_lm.server` on `http://127.0.0.1:8011/v1`, and registers the selected model as an OpenAI-compatible provider in the model picker.
+This package owns the MLX-specific runtime behavior:
+
+- private `mlx-lm` virtualenv under `~/.cache/personal-agent/mlx-local-models`
+- Hugging Face model download through the HF CLI
+- `mlx_lm.server` on `http://127.0.0.1:8011/v1`
+- selected model persistence
+- setup/start/stop/delete/search backend actions
+
+The user-facing UI is `experimental-extensions/extensions/local-models`.
+This extension intentionally contributes no nav item and no main-page view.
 
 Default model: `unsloth/Qwen3.6-35B-A3B-UD-MLX-4bit`.
-
-The page uses the shared two-pane local runtime workspace: model selection/search on the left, prompt smoke testing on the right, runtime status in the header, and collapsible logs in the footer.
