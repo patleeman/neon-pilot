@@ -256,6 +256,35 @@ describe('system-alleycat turn protocol', () => {
     expect(ctx.conversations.getBlocks).not.toHaveBeenCalled();
   });
 
+  it('streams reasoning deltas as a dedicated item before agent_start', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        options?.onEvent?.({ type: 'thinking_delta', delta: 'Thinking' });
+        options?.onEvent?.({ type: 'agent_start' });
+        options?.onEvent?.({ type: 'text_delta', delta: 'Done' });
+        options?.onEvent?.({ type: 'agent_end' });
+        options?.onEvent?.({ type: 'turn_end' });
+        return { accepted: true };
+      },
+    );
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Think' }] }, ctx as never, makeConn(), notify);
+    await flushAsyncTurnStart();
+
+    const reasoningStartedIndex = notify.mock.calls.findIndex(
+      ([method, payload]) => method === 'item/started' && payload.item?.type === 'reasoning',
+    );
+    const reasoningDeltaIndex = notify.mock.calls.findIndex(([method]) => method === 'item/reasoning/delta');
+    const reasoningCompletedIndex = notify.mock.calls.findIndex(
+      ([method, payload]) => method === 'item/completed' && payload.item?.type === 'reasoning',
+    );
+    expect(reasoningStartedIndex).toBeGreaterThan(-1);
+    expect(reasoningDeltaIndex).toBeGreaterThan(reasoningStartedIndex);
+    expect(reasoningCompletedIndex).toBeGreaterThan(reasoningDeltaIndex);
+  });
+
   it('matches anonymous tool start and end events to the same item id', async () => {
     const ctx = makeContext();
     const notify = vi.fn();

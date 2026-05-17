@@ -206,7 +206,21 @@ export const turn = {
     let agentItemId: string | null = null;
     let agentText = '';
     let agentItemCompleted = false;
+    let reasoningItemId: string | null = null;
+    let reasoningText = '';
+    let reasoningItemCompleted = false;
     const anonymousToolIds: string[] = [];
+
+    const completeReasoningItem = () => {
+      if (!reasoningItemId || reasoningItemCompleted) return;
+      notify('item/completed', {
+        threadId,
+        turnId,
+        item: { id: reasoningItemId, type: 'reasoning', summary: [], content: reasoningText ? [reasoningText] : [] },
+        completedAtMs: nowMs(),
+      });
+      reasoningItemCompleted = true;
+    };
 
     const onEvent = (event: unknown) => {
       if (turnDone || turnState.interrupted) return;
@@ -249,8 +263,20 @@ export const turn = {
         }
         case 'thinking_delta': {
           const delta = ev.delta as string | undefined;
-          if (delta && agentItemId) {
-            notify('item/reasoning/delta', { threadId, turnId, itemId: agentItemId, delta, summaryIndex: 0 });
+          if (delta) {
+            if (!reasoningItemId) {
+              reasoningItemId = uid('item-');
+              reasoningText = '';
+              reasoningItemCompleted = false;
+              notify('item/started', {
+                threadId,
+                turnId,
+                item: { id: reasoningItemId, type: 'reasoning', summary: [], content: [] },
+                startedAtMs: nowMs(),
+              });
+            }
+            reasoningText += delta;
+            notify('item/reasoning/delta', { threadId, turnId, itemId: reasoningItemId, delta, summaryIndex: 0 });
           }
           break;
         }
@@ -290,6 +316,7 @@ export const turn = {
           break;
         }
         case 'agent_end': {
+          completeReasoningItem();
           if (agentItemId && !agentItemCompleted) {
             notify('item/completed', {
               threadId,
@@ -307,6 +334,7 @@ export const turn = {
           conn.activeTurnThreads.delete(threadId);
           if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
           cleanupTurnSubscriptions(threadId);
+          completeReasoningItem();
           if (agentItemId && !agentItemCompleted) {
             notify('item/completed', {
               threadId,
