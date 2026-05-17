@@ -282,17 +282,17 @@ describe('system-alleycat turn protocol', () => {
     expect(agentCompletes[0][1].item.text).toBe('Early text');
   });
 
-  it('suppresses late turn completion after interrupt', async () => {
+  it('suppresses late turn completion after interrupt even after a new turn starts', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
-    let releaseTurn!: () => void;
+    const releases: Array<() => void> = [];
     ctx.conversations.runTurn.mockImplementation(
       async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
         await new Promise<void>((resolve) => {
-          releaseTurn = () => {
+          releases.push(() => {
             options?.onEvent?.({ type: 'turn_end' });
             resolve();
-          };
+          });
         });
         return { accepted: true };
       },
@@ -302,11 +302,17 @@ describe('system-alleycat turn protocol', () => {
     await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, conn, notify);
     await flushAsyncTurnStart();
     await turn.interrupt({ threadId: 'thread-1', turnId: 'turn-1' }, ctx as never, conn, notify);
-    releaseTurn();
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'New turn' }] }, ctx as never, conn, notify);
+    await flushAsyncTurnStart();
+    releases[0]?.();
     await flushAsyncTurnStart();
 
     expect(notify.mock.calls.filter(([method]) => method === 'turn/interrupted')).toHaveLength(1);
     expect(notify.mock.calls.filter(([method]) => method === 'turn/completed')).toHaveLength(0);
+
+    releases[1]?.();
+    await flushAsyncTurnStart();
+    expect(notify.mock.calls.filter(([method]) => method === 'turn/completed')).toHaveLength(1);
   });
 
   it('fails the Codex turn when the atomic PA turn runner fails', async () => {

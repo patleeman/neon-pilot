@@ -7,7 +7,7 @@ import { mutateWorkspace, workspaceList } from './workspaceState.js';
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
 // on connection drop. Map<threadId, Set<unsubscribeFn>>
 const turnSubscriptions = new Map<string, Set<() => void>>();
-const interruptedTurnThreads = new Set<string>();
+const activeTurns = new Map<string, { turnId: string; interrupted: boolean }>();
 
 function uid(prefix = ''): string {
   return `${prefix}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -168,9 +168,9 @@ export const turn = {
     const text = textParts.join('\n');
     if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
-    interruptedTurnThreads.delete(threadId);
-
     const turnId = uid('turn-');
+    const turnState = { turnId, interrupted: false };
+    activeTurns.set(threadId, turnState);
 
     // Notify turn started
     notify('turn/started', {
@@ -208,7 +208,7 @@ export const turn = {
     let agentItemCompleted = false;
 
     const onEvent = (event: unknown) => {
-      if (turnDone || interruptedTurnThreads.has(threadId)) return;
+      if (turnDone || turnState.interrupted) return;
       const ev = event as Record<string, unknown>;
       if (!ev || typeof ev.type !== 'string') return;
 
@@ -303,7 +303,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'completed';
           conn.activeTurnThreads.delete(threadId);
-          interruptedTurnThreads.delete(threadId);
+          if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
           cleanupTurnSubscriptions(threadId);
           if (agentItemId && !agentItemCompleted) {
             notify('item/completed', {
@@ -322,7 +322,7 @@ export const turn = {
           turnDone = true;
           finalStatus = 'failed';
           conn.activeTurnThreads.delete(threadId);
-          interruptedTurnThreads.delete(threadId);
+          if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
           cleanupTurnSubscriptions(threadId);
           notify('turn/completed', { threadId, turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error') });
           break;
@@ -342,8 +342,8 @@ export const turn = {
         });
       } catch (error) {
         conn.activeTurnThreads.delete(threadId);
-        interruptedTurnThreads.delete(threadId);
-        if (!turnDone) {
+        if (activeTurns.get(threadId) === turnState) activeTurns.delete(threadId);
+        if (!turnDone && !turnState.interrupted) {
           turnDone = true;
           finalStatus = 'failed';
           notify('turn/completed', {
@@ -389,7 +389,8 @@ export const turn = {
     const threadId = p?.threadId as string | undefined;
     if (!threadId) throw new Error('threadId is required');
 
-    interruptedTurnThreads.add(threadId);
+    const turnState = activeTurns.get(threadId);
+    if (turnState) turnState.interrupted = true;
     conn.activeTurnThreads.delete(threadId);
 
     // Notify the client that the turn was interrupted, so it doesn't hang
