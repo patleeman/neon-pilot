@@ -1509,15 +1509,36 @@ function collectLegacyCandidates(options: ResolveNodesOptions = {}): LegacyNodeC
 }
 
 export function migrateLegacyNodes(options: ResolveNodesOptions = {}): LegacyNodeMigrationResult {
-  void copyLegacyNodeCandidate;
-  void collectLegacyCandidates;
-  return {
-    nodesDir: resolveUnifiedNodesDir(options),
-    created: [],
-    updated: [],
-    skipped: [],
-    conflicts: [],
-  };
+  const nodesDir = resolveUnifiedNodesDir(options);
+  const candidates = collectLegacyCandidates(options);
+  const existing = listUnifiedNodes(options);
+  const existingKindsByNodeId = new Map<string, string[]>();
+  for (const node of existing) {
+    const existing = existingKindsByNodeId.get(node.id) ?? [];
+    existing.push(...node.kinds);
+    existingKindsByNodeId.set(node.id, existing);
+  }
+
+  const result: LegacyNodeMigrationResult = { nodesDir, created: [], updated: [], skipped: [], conflicts: [] };
+
+  for (const candidate of candidates) {
+    const existingKinds = existingKindsByNodeId.get(candidate.id) ?? [];
+    const outcome = copyLegacyNodeCandidate(candidate, nodesDir, existingKinds);
+    switch (outcome.action) {
+      case 'created':
+        result.created.push(candidate.id);
+        break;
+      case 'updated':
+        result.updated.push(candidate.id);
+        if (outcome.conflict) result.conflicts.push(outcome.conflict);
+        break;
+      case 'skipped':
+        result.skipped.push(candidate.id);
+        break;
+    }
+  }
+
+  return result;
 }
 
 export function listUnifiedSkillNodeDirs(profile: string, options: ResolveNodesOptions = {}): string[] {

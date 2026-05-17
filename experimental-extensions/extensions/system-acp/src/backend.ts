@@ -350,11 +350,17 @@ class PersonalAgentAcpAgent implements acp.Agent {
           }, timeoutMs);
         }),
       ]);
+
+      // If the timeout fired after sendMessage also resolved, the abort already cleaned up.
+      if (active.abortController.signal.aborted) {
+        throw new Error(`ACP prompt timed out after ${timeoutMs}ms.`);
+      }
+
       const updated = await refreshSessionRecord(this.ctx, params.sessionId);
       this.ctx.log.info('ACP prompt completed', {
         sessionId: params.sessionId,
         conversationId: record.conversationId,
-        stopReason: active.abortController.signal.aborted ? 'cancelled' : 'end_turn',
+        stopReason: 'end_turn',
       });
       await this.connection.sessionUpdate({
         sessionId: record.sessionId,
@@ -365,7 +371,7 @@ class PersonalAgentAcpAgent implements acp.Agent {
         },
       });
       return {
-        stopReason: active.abortController.signal.aborted ? 'cancelled' : 'end_turn',
+        stopReason: 'end_turn',
         ...(params.messageId ? { userMessageId: params.messageId } : {}),
       };
     } catch (error) {

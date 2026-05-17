@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { AuthStorage, createAgentSession, type ExtensionAPI, SessionManager } from '@earendil-works/pi-coding-agent';
 import { Type } from '@sinclair/typebox';
 
@@ -83,7 +86,12 @@ export function createImageProbeAgentExtension(options: Options) {
         const sessionResult = await createAgentSession({
           cwd: context?.cwd,
           sessionManager: SessionManager.inMemory(context?.cwd ?? process.cwd()),
-          authStorage: AuthStorage.create('auth.json'),
+          // Resolve auth.json relative to context cwd first, falling back to
+          // process.cwd(). In packaged production builds the config lives in
+          // the runtime data directory, so using an explicit path is preferred.
+          authStorage: AuthStorage.create(
+            context?.cwd && existsSync(resolve(context.cwd, 'auth.json')) ? resolve(context.cwd, 'auth.json') : 'auth.json',
+          ),
           model,
         } as never);
         const session = (

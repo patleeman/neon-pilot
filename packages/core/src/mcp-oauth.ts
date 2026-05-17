@@ -591,12 +591,13 @@ async function connectToRemoteServer(options: {
     const authState = await options.authInitializer();
     if (authState.skipBrowserAuth) {
       emitLog(options.log, 'Authentication completed by another instance. Reconnecting with stored tokens…');
+      // Tokens are already stored by the other instance — skip waitForAuthCode
+      // and retry the connection below.
     } else {
       emitLog(options.log, 'Authentication required. Waiting for browser authorization…');
+      const code = await authState.waitForAuthCode();
+      await transport.finishAuth(code);
     }
-
-    const code = await authState.waitForAuthCode();
-    await transport.finishAuth(code);
 
     if (recursionReasons.has('authentication-needed')) {
       throw new Error('Authentication did not complete successfully.');

@@ -4,9 +4,9 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.8.0-rc.14** — published 2026-05-15.
+**v0.8.0-rc.17** — published 2026-05-16.
 
-Release page: https://github.com/patleeman/personal-agent/releases/tag/v0.8.0-rc.14
+Release page: https://github.com/patleeman/personal-agent/releases/tag/v0.8.0-rc.17
 
 Highlights:
 

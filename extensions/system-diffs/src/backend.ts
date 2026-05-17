@@ -153,7 +153,10 @@ async function createCheckpointCommit(ctx: CheckpointBackendContext, options: { 
     allowEmptyStdout: true,
   });
   if (stagedFiles.trim().length === 0) throw new Error('No staged changes were found for the requested checkpoint paths.');
-  await runGit(ctx, options.cwd, ['commit', '--only', '-m', options.message, '--', ...options.paths], { allowEmptyStdout: true });
+  // Explicitly disallow empty stdout so a silent commit failure (e.g. the file
+  // was reverted between git-add and commit) raises an error instead of silently
+  // returning the previous HEAD SHA.
+  await runGit(ctx, options.cwd, ['commit', '--only', '-m', options.message, '--', ...options.paths]);
   const commitSha = (await runGit(ctx, options.cwd, ['rev-parse', 'HEAD'])).trim();
   const metadata = parseCommitMetadata(
     await runGit(ctx, options.cwd, ['show', '-s', `--format=%H%x00%h%x00%s%x00%B%x00%an%x00%ae%x00%cI`, commitSha]),

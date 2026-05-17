@@ -228,7 +228,7 @@ export interface CodexServerOptions {
   port: number;
   auth: CodexAuth;
   ctx: ExtensionBackendContext;
-  /** Bind address. Default: '0.0.0.0' */
+  /** Bind address. Default: '127.0.0.1' */
   bindAddress?: string;
   fallbackToEphemeralPortOnConflict?: boolean;
 }
@@ -330,7 +330,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     return handlers;
   };
 
-  const bindAddress = options.bindAddress ?? '0.0.0.0';
+  const bindAddress = options.bindAddress ?? '127.0.0.1';
   if (options.fallbackToEphemeralPortOnConflict && port !== 0 && !(await canBindPort(port, bindAddress))) {
     ctx.log.warn(`codex protocol port ${port} is already in use; falling back to an ephemeral port`);
     port = 0;

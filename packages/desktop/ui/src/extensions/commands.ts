@@ -280,9 +280,14 @@ export async function executeExtensionCommand(command: string, args: unknown, op
       handled = Boolean(await hostCommand.execute(commandArgs));
       return handled;
     }
-    const extensionCommand = options.extensionCommands?.find(
-      (candidate) => candidate.surfaceId === invocation.command || `${candidate.extensionId}.${candidate.surfaceId}` === invocation.command,
-    );
+    // Prefer scoped match (extensionId.surfaceId) over bare surfaceId to avoid
+    // cross-extension collisions. Bare matches are only accepted when unambiguous.
+    const extensionCommand =
+      options.extensionCommands?.find((candidate) => `${candidate.extensionId}.${candidate.surfaceId}` === invocation.command) ??
+      (() => {
+        const bare = options.extensionCommands?.filter((c) => c.surfaceId === invocation.command);
+        return bare?.length === 1 ? bare[0] : undefined;
+      })();
     if (!extensionCommand) return false;
     if (!evaluateCommandEnablement(extensionCommand.enablement, options.context)) return false;
     const effectiveArgs = commandArgs ?? (extensionCommand.args as ExtensionCommandArgs);

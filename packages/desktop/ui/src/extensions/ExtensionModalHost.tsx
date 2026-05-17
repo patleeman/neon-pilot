@@ -1,5 +1,6 @@
 import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 
+import { buildApiPath } from '../client/apiBase';
 import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
 
@@ -21,6 +22,7 @@ export function ExtensionModalHost() {
     close: (result?: unknown) => void;
   }> | null>(null);
   const resolveRef = useRef<((value: unknown) => void) | null>(null);
+  const rejectRef = useRef<((error: Error) => void) | null>(null);
 
   useEffect(() => {
     function handleModal(event: CustomEvent) {
@@ -36,6 +38,7 @@ export function ExtensionModalHost() {
         extensionId: string;
       };
       resolveRef.current = resolve;
+      rejectRef.current = reject;
 
       setModal({ extensionId, title, component: componentName, props, size, resolve, reject });
     }
@@ -44,10 +47,20 @@ export function ExtensionModalHost() {
     return () => window.removeEventListener('pa-extension-modal', handleModal as EventListener);
   }, []);
 
+  // Reject the promise if the host unmounts while a modal is open
+  useEffect(() => {
+    return () => {
+      rejectRef.current?.(new Error('Extension modal host unmounted'));
+      resolveRef.current = null;
+      rejectRef.current = null;
+    };
+  }, []);
+
   const handleClose = useCallback((result?: unknown) => {
     if (resolveRef.current) {
       resolveRef.current(result ?? null);
       resolveRef.current = null;
+      rejectRef.current = null;
     }
     setModal(null);
     setComponent(null);
@@ -64,20 +77,44 @@ export function ExtensionModalHost() {
 
     async function load() {
       try {
-        const module = systemLoader ? await systemLoader() : null;
-        if (!module) return; // For runtime extensions, component must be pre-bundled
-        const comp = module[modal.component] as ComponentType | undefined;
-        if (typeof comp !== 'function') return;
-        setComponent(
-          () =>
-            comp as ComponentType<{
-              pa: ReturnType<typeof createNativeExtensionClient>;
-              props: Record<string, unknown>;
-              close: (result?: unknown) => void;
-            }>,
-        );
-      } catch {
-        // Component load failed
+        if (systemLoader) {
+          // System extension — load from bundled module
+          const module = await systemLoader();
+          const comp = module[modal.component] as ComponentType | undefined;
+          if (typeof comp !== 'function') {
+            rejectRef.current?.(new Error(`Component "${modal.component}" not found in extension "${modal.extensionId}"`));
+            return;
+          }
+          setComponent(
+            () =>
+              comp as ComponentType<{
+                pa: ReturnType<typeof createNativeExtensionClient>;
+                props: Record<string, unknown>;
+                close: (result?: unknown) => void;
+              }>,
+          );
+        } else {
+          // User/runtime extension — load from remote Vite module
+          const url = buildApiPath(
+            `/extensions/${encodeURIComponent(modal.extensionId)}/files/${modal.component.split('/').map(encodeURIComponent).join('/')}`,
+          );
+          const remoteModule = await import(/* @vite-ignore */ url);
+          const comp = remoteModule[modal.component.split('/').pop() ?? modal.component] as ComponentType | undefined;
+          if (typeof comp !== 'function') {
+            rejectRef.current?.(new Error(`Component "${modal.component}" not found in extension "${modal.extensionId}"`));
+            return;
+          }
+          setComponent(
+            () =>
+              comp as ComponentType<{
+                pa: ReturnType<typeof createNativeExtensionClient>;
+                props: Record<string, unknown>;
+                close: (result?: unknown) => void;
+              }>,
+          );
+        }
+      } catch (err) {
+        rejectRef.current?.(err instanceof Error ? err : new Error(String(err)));
       }
     }
 

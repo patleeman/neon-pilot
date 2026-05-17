@@ -407,7 +407,14 @@ function normalizeComposerControls(extensions: ExtensionManifest[]): ExtensionCo
         frontendEntry: extension.frontend?.entry,
       });
     }
+  }
+  result.sort(compareComposerControls);
+  return result;
+}
 
+function normalizeComposerButtons(extensions: ExtensionManifest[]): ExtensionComposerButtonRegistration[] {
+  const result: ExtensionComposerButtonRegistration[] = [];
+  for (const extension of extensions) {
     for (const button of extension.contributes?.composerButtons ?? []) {
       result.push({
         extensionId: extension.id,
@@ -743,7 +750,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
             settingsComponents,
             settingsComponent: settingsComponents[0] ?? null,
             composerControls: normalizeComposerControls(enabledRegistryExtensions),
-            composerButtons: normalizeComposerControls(enabledRegistryExtensions),
+            composerButtons: normalizeComposerButtons(enabledRegistryExtensions),
             composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
             toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
             contextMenus: normalizeContextMenus(enabledRegistryExtensions),

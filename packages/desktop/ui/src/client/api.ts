@@ -218,6 +218,19 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 const pendingMemoryRequests = new Map<string, Promise<MemoryData>>();
 let desktopEnvironmentPromise: Promise<DesktopEnvironmentState | null> | null = null;
 
+/** Keep the cached promise retryable so transient failures don't permanently
+ *  disable the desktop bridge path. Matching the same pattern in desktopEventSource.ts. */
+async function readCachedDesktopEnvironment(): Promise<DesktopEnvironmentState | null> {
+  if (!desktopEnvironmentPromise) {
+    desktopEnvironmentPromise = readDesktopEnvironment().catch(() => {
+      desktopEnvironmentPromise = null;
+      return null;
+    });
+  }
+
+  return desktopEnvironmentPromise;
+}
+
 async function getMemoryData(): Promise<MemoryData> {
   const cacheKey = '__current__';
   const pending = pendingMemoryRequests.get(cacheKey);
@@ -230,14 +243,6 @@ async function getMemoryData(): Promise<MemoryData> {
   });
   pendingMemoryRequests.set(cacheKey, request);
   return request;
-}
-
-async function readCachedDesktopEnvironment(): Promise<DesktopEnvironmentState | null> {
-  if (!desktopEnvironmentPromise) {
-    desktopEnvironmentPromise = readDesktopEnvironment().catch(() => null);
-  }
-
-  return desktopEnvironmentPromise;
 }
 
 async function shouldUseDesktopLocalCapabilities(): Promise<boolean> {
@@ -1305,6 +1310,7 @@ export const api = {
           data: image.data,
           mimeType: image.mimeType,
           ...(image.name ? { name: image.name } : {}),
+          ...(image.previewUrl ? { previewUrl: image.previewUrl } : {}),
         })),
         attachmentRefs: attachmentRefs?.map((attachmentRef) => ({
           attachmentId: attachmentRef.attachmentId,
@@ -1354,6 +1360,7 @@ export const api = {
         data: image.data,
         mimeType: image.mimeType,
         ...(image.name ? { name: image.name } : {}),
+        ...(image.previewUrl ? { previewUrl: image.previewUrl } : {}),
       })),
       attachmentRefs: attachmentRefs?.map((attachmentRef) => ({
         attachmentId: attachmentRef.attachmentId,
