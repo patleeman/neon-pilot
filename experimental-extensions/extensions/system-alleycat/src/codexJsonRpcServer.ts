@@ -44,6 +44,8 @@ export interface ConnectionState {
   subscribedThreads: Set<string>;
   /** Track which threads this connection has initiated turn/start for cleanup on disconnect. */
   activeTurnThreads: Set<string>;
+  /** Serialize requests from one client so initialize and follow-up calls cannot race. */
+  requestQueue?: Promise<void>;
 }
 
 export type NotifyFn = (method: string, params: unknown) => void;
@@ -239,6 +241,11 @@ export interface CodexServerHandle {
   stop: () => void;
 }
 
+function enqueueJsonRpcMessage(input: Parameters<typeof handleJsonRpcMessage>[0]): void {
+  const run = (input.conn.requestQueue ?? Promise.resolve()).then(() => handleJsonRpcMessage(input));
+  input.conn.requestQueue = run.catch(() => undefined);
+}
+
 async function handleJsonRpcMessage(input: {
   raw: string;
   conn: ConnectionState;
@@ -360,7 +367,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     const lines = createInterface({ input: socket, crlfDelay: Infinity });
     lines.on('line', (line) => {
       if (!line.trim()) return;
-      void handleJsonRpcMessage({ raw: line, conn, ctx, notify, sendJson, getHandlers });
+      enqueueJsonRpcMessage({ raw: line, conn, ctx, notify, sendJson, getHandlers });
     });
     const cleanupConnection = () => unsubscribeConnectionFromAll(notify, conn);
     socket.on('close', cleanupConnection);
@@ -401,7 +408,7 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
     };
 
     ws.on('message', (raw) => {
-      void handleJsonRpcMessage({ raw: raw.toString(), conn, ctx, notify, sendJson, getHandlers });
+      enqueueJsonRpcMessage({ raw: raw.toString(), conn, ctx, notify, sendJson, getHandlers });
     });
 
     const cleanupConnection = () => {
