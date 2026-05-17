@@ -23,7 +23,7 @@ type DownloadJob = {
   updatedAt: number;
   abort: AbortController;
 };
-type RunPromptInput = { modelPath?: string; prompt?: string; contextSize?: number; gpuLayers?: number };
+type RunPromptInput = { modelPath?: string; prompt?: string; contextSize?: number; gpuLayers?: number; maxTokens?: number };
 type ServerInput = { modelPath?: string; contextSize?: number; gpuLayers?: number };
 type RevealInput = { modelPath?: string };
 
@@ -41,8 +41,8 @@ const bundledServer = bundledRuntimePath('llama-server');
 const runtimeBinDir = dirname(bundledServer);
 const modelCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp', 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
-const SERVER_PID_KEY = 'process/serverPid';
-const MODEL_PATH_KEY = 'settings/modelPath';
+const SERVER_PID_KEY = 'gguf/process/serverPid';
+const MODEL_PATH_KEY = 'gguf/settings/modelPath';
 const MODEL_PORT = 8012;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
 const downloadJobs = new Map<string, DownloadJob>();
@@ -419,7 +419,7 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
     '-c',
     String(input.contextSize ?? 8192),
   ];
-  const command = `${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
   await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
   return { ok: true, started: true, pid: Number(result.stdout.trim()), status: await runtimeStatus({}, ctx) };
@@ -445,7 +445,12 @@ export async function runPrompt(input: RunPromptInput, ctx: ExtensionBackendCont
     const response = await fetch(`${BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local' },
-      body: JSON.stringify({ model: basename(modelPath), messages: [{ role: 'user', content: prompt }], stream: false }),
+      body: JSON.stringify({
+        model: basename(modelPath),
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: input.maxTokens ?? 64,
+        stream: false,
+      }),
       signal: AbortSignal.timeout(120_000),
     });
     if (!response.ok) throw new Error(await response.text());

@@ -29,3 +29,19 @@ Use this page to acquire and manage local models.
 - View downloaded models and send one to the Server page.
 
 Runtime implementation lives in `experimental-extensions/shared/local-model-runtimes`; `system-local-models` owns the user-facing extension UI.
+
+## Smoke testing
+
+Use the headless smoke harness before testing through the desktop UI:
+
+```bash
+pnpm run smoke:local-models       # fast build/import/runtime integrity checks
+pnpm run smoke:local-models:full  # starts GGUF and MLX servers and hits /v1 chat endpoints
+```
+
+The full smoke uses these defaults, overrideable with environment variables:
+
+- `LOCAL_MODELS_GGUF_MODEL` — local GGUF file path. Defaults to Patrick's cached Qwen GGUF path.
+- `LOCAL_MODELS_MLX_MODEL` — Hugging Face MLX model id. Defaults to `mlx-community/SmolLM-135M-Instruct-4bit`.
+
+Run this before doing the slower build/install/click loop. If it fails, the bug is in runtime acquisition, process lifecycle, storage keys, or server compatibility — not the UI.

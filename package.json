@@ -48,7 +48,9 @@
     "ab:run": "node scripts/agent-browser-session.mjs run",
     "ab:cleanup": "node scripts/agent-browser-session.mjs cleanup",
     "acp:smoke": "node scripts/acp-smoke.mjs",
-    "extension:build": "node scripts/extension-build.mjs"
+    "extension:build": "node scripts/extension-build.mjs",
+    "smoke:local-models": "node experimental-extensions/extensions/system-local-models/scripts/smoke.mjs",
+    "smoke:local-models:full": "node experimental-extensions/extensions/system-local-models/scripts/smoke.mjs --full"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

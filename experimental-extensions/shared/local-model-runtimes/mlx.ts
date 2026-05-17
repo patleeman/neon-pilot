@@ -14,10 +14,10 @@ const VENV_PYTHON = join(VENV_DIR, 'bin', 'python');
 const VENV_HF = join(VENV_DIR, 'bin', 'hf');
 const VENV_MLX_SERVER = join(VENV_DIR, 'bin', 'mlx_lm.server');
 const LOG_FILE = join(CACHE_DIR, 'latest.log');
-const MODEL_KEY = 'settings/modelId';
-const SERVER_PID_KEY = 'process/serverPid';
-const SETUP_PID_KEY = 'process/setupPid';
-const SETUP_MODEL_KEY = 'process/setupModel';
+const MODEL_KEY = 'mlx/settings/modelId';
+const SERVER_PID_KEY = 'mlx/process/serverPid';
+const SETUP_PID_KEY = 'mlx/process/setupPid';
+const SETUP_MODEL_KEY = 'mlx/process/setupModel';
 const ESTIMATED_MODEL_BYTES = 22 * 1024 * 1024 * 1024;
 
 function shellQuote(value: string) {
@@ -175,7 +175,7 @@ export async function setup(input: unknown, ctx: ExtensionBackendContext) {
   return { ok: true, started: true, status: await status({}, ctx) };
 }
 
-export async function start(_input: unknown, ctx: ExtensionBackendContext) {
+export async function start(input: unknown, ctx: ExtensionBackendContext) {
   const modelId = await getSelectedModelId(ctx);
   const health = await readServerHealth();
   if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
@@ -185,8 +185,10 @@ export async function start(_input: unknown, ctx: ExtensionBackendContext) {
     await appendLog(ctx, 'mlx_lm.server is not installed. Run setup/download first.\n');
     return { ok: false, error: 'mlx_lm.server is not installed. Run setup/download first.', status: await status({}, ctx) };
   }
+  const maxTokens = typeof input === 'object' && input && 'maxTokens' in input ? Number((input as { maxTokens?: unknown }).maxTokens) : 512;
+  const safeMaxTokens = Number.isFinite(maxTokens) && maxTokens > 0 ? Math.floor(maxTokens) : 512;
   await appendLog(ctx, `\n--- start ${new Date().toISOString()} ${modelId} ---\n`);
-  const command = `HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_SERVER)} --model ${shellQuote(modelId)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const command = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_SERVER)} --model ${shellQuote(modelId)} --host 127.0.0.1 --port ${MODEL_PORT} --max-tokens ${safeMaxTokens} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
   await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
   return { ok: true, started: true, pid: Number(result.stdout.trim()), status: await status({}, ctx) };
