@@ -46,8 +46,11 @@ export async function updateSettings(input: { enabled?: unknown; model?: unknown
     if (!model) throw new Error('model must be a non-empty string');
     update.model = model;
   }
-  writeDictationSettings(ctx.profileSettingsFilePath, update);
+  // Write runtime first (source of truth for reads), then profile.
+  // This prevents split-brain: if the second write fails, the runtime
+  // state is consistent and reads still return the correct values.
   writeDictationSettings(settingsFile(ctx.runtimeDir), update);
+  writeDictationSettings(ctx.profileSettingsFilePath, update);
   return buildDictationSettingsState(settingsFile(ctx.runtimeDir));
 }
 
