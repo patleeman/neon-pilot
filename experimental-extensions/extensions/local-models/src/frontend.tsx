@@ -670,7 +670,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
 
                   <div className="mt-5 space-y-5">
-                    <div className="space-y-3">
+                    <div className="space-y-3 lg:col-span-2">
                       <h3 className="font-semibold text-primary">Downloaded Models</h3>
                       <div className="overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
                         <table className="w-full text-left text-sm">
@@ -732,7 +732,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 lg:col-span-2">
                       <h3 className="font-semibold text-primary">Serving Settings</h3>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <Field label="Context length">
