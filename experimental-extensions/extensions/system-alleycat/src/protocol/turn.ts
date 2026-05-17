@@ -108,6 +108,25 @@ function latestAssistantTextFromTurns(turns: unknown[]): string | null {
   return null;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForNewAssistantText(
+  threadId: string,
+  ctx: Parameters<MethodHandler>[1],
+  previousAssistantText: string | null,
+  isDone: () => boolean,
+): Promise<string | null> {
+  const deadline = Date.now() + 15_000;
+  while (!isDone() && Date.now() < deadline) {
+    const latest = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
+    if (latest && latest !== previousAssistantText) return latest;
+    await delay(300);
+  }
+  return null;
+}
+
 async function markThreadControlledRemotely(
   threadId: string,
   ctx: Parameters<MethodHandler>[1],
@@ -366,11 +385,12 @@ export const turn = {
     let unsubscribe: unknown;
     try {
       await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+      const previousAssistantText = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
       unsubscribe = subscribeToTurn();
       await markThreadControlledRemotely(threadId, ctx);
       await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
       if (!turnDone && !agentText) {
-        const fallbackText = latestAssistantTextFromTurns(await readTurns(threadId, ctx));
+        const fallbackText = await waitForNewAssistantText(threadId, ctx, previousAssistantText, () => turnDone || Boolean(agentText));
         if (fallbackText) {
           const fallbackItemId = agentItemId ?? uid('item-');
           notify('item/started', {

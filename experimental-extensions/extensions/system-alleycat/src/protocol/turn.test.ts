@@ -25,7 +25,10 @@ function makeContext() {
         .mockResolvedValue({ openConversationIds: ['thread-1'], pinnedConversationIds: [], activeConversationId: 'thread-1' }),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
-      getBlocks: vi.fn().mockResolvedValue({ detail: { blocks: [] } }),
+      getBlocks: vi
+        .fn()
+        .mockResolvedValueOnce({ detail: { blocks: [] } })
+        .mockResolvedValue({ detail: { blocks: [{ type: 'text', id: 'default-assistant', text: 'ok' }] } }),
     },
     emitConversationEvent(event: unknown) {
       conversationHandler?.(event);
@@ -194,14 +197,34 @@ describe('system-alleycat turn protocol', () => {
   it('falls back to the persisted transcript when live response events are unavailable', async () => {
     const ctx = makeContext();
     ctx.conversations.sendMessage.mockResolvedValue({ accepted: true });
-    ctx.conversations.getBlocks.mockResolvedValue({
-      detail: {
-        blocks: [
-          { type: 'user', id: 'u1', text: 'Hi' },
-          { type: 'text', id: 'a1', text: 'Hi Patrick — I’m here.' },
-        ],
-      },
-    });
+    ctx.conversations.getBlocks.mockReset();
+    ctx.conversations.getBlocks
+      .mockResolvedValueOnce({
+        detail: {
+          blocks: [
+            { type: 'user', id: 'u0', text: 'Before' },
+            { type: 'text', id: 'a0', text: 'Old response' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        detail: {
+          blocks: [
+            { type: 'user', id: 'u0', text: 'Before' },
+            { type: 'text', id: 'a0', text: 'Old response' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        detail: {
+          blocks: [
+            { type: 'user', id: 'u0', text: 'Before' },
+            { type: 'text', id: 'a0', text: 'Old response' },
+            { type: 'user', id: 'u1', text: 'Hi' },
+            { type: 'text', id: 'a1', text: 'Hi Patrick — I’m here.' },
+          ],
+        },
+      });
     const notify = vi.fn();
 
     await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
