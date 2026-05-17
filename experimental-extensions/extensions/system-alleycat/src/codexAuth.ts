@@ -93,7 +93,7 @@ export function createCodexAuth(ctx: ExtensionBackendContext): CodexAuth {
       cachedToken = token;
       writeStableToken(token);
       await ctx.storage.put(SETTINGS_KEY, token);
-      ctx.log.info(`codex protocol auth token generated: ${token.slice(0, 16)}...`);
+      ctx.log.info('codex protocol auth token generated');
       return token;
     },
   };

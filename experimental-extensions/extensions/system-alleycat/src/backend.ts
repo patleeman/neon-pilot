@@ -124,12 +124,32 @@ function stripAnsiEscapes(value: string): string {
   return output;
 }
 
+function redactSensitiveLogLine(line: string): string {
+  try {
+    const event = JSON.parse(line) as { type?: string; pairPayload?: AlleycatPairPayload };
+    if (event.type === 'ready' && event.pairPayload) {
+      return JSON.stringify({ ...event, pairPayload: { ...event.pairPayload, token: '<redacted>' } });
+    }
+  } catch {
+    // Plain text log line; handle with regex below.
+  }
+  return line.replace(/("token"\s*:\s*")([^"]+)(")/g, '$1<redacted>$3');
+}
+
 function appendSidecarOutput(chunk: Buffer): void {
-  for (const line of chunk.toString('utf8').split('\n')) rememberLog(line);
+  for (const line of chunk.toString('utf8').split('\n')) {
+    try {
+      const event = JSON.parse(line) as { type?: string; pairPayload?: AlleycatPairPayload };
+      if (event.type === 'ready' && event.pairPayload) pairPayloadCache = event.pairPayload;
+    } catch {
+      // Non-JSON sidecar log line.
+    }
+    rememberLog(line);
+  }
 }
 
 function rememberLog(line: string): void {
-  const trimmed = stripAnsiEscapes(line).trim();
+  const trimmed = stripAnsiEscapes(redactSensitiveLogLine(line)).trim();
   if (!trimmed) return;
   sidecarLogs.push(trimmed);
   if (sidecarLogs.length > 200) sidecarLogs = sidecarLogs.slice(-200);
@@ -198,7 +218,7 @@ async function refreshSidecarLogs(): Promise<void> {
     for (const line of lines) {
       try {
         const event = JSON.parse(line) as { type?: string; pairPayload?: AlleycatPairPayload };
-        if (event.type === 'ready' && event.pairPayload) pairPayloadCache = event.pairPayload;
+        if (event.type === 'ready' && event.pairPayload && event.pairPayload.token !== '<redacted>') pairPayloadCache = event.pairPayload;
       } catch {
         // Keep non-JSON log lines only.
       }
