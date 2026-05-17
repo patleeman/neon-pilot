@@ -148,9 +148,10 @@ The `change_working_directory` tool switches the conversation's working director
 ## Behavior
 
 1. The tool validates that the target directory exists
-2. If valid, the conversation's cwd is updated
-3. All subsequent tool calls use the new cwd as their working directory
-4. If `continuePrompt` is provided, that prompt is queued as a follow-up
+2. If the calling conversation is not currently live, the tool returns an unavailable/no-op result instead of a tool error
+3. If valid, the conversation's cwd is updated
+4. All subsequent tool calls use the new cwd as their working directory
+5. If `continuePrompt` is provided, that prompt is queued as a follow-up
 
 ```json
 // Change to a subdirectory
@@ -169,12 +170,13 @@ The `change_working_directory` tool switches the conversation's working director
 
 ## Validation
 
-| Condition                          | Result                        |
-| ---------------------------------- | ----------------------------- |
-| Target directory exists            | Cwd is updated                |
-| Target directory does not exist    | Error returned, cwd unchanged |
-| Target is a file (not a directory) | Error returned                |
-| Relative path with no current cwd  | Error returned                |
+| Condition                          | Result                            |
+| ---------------------------------- | --------------------------------- |
+| Target directory exists            | Cwd is updated                    |
+| Target directory does not exist    | Error returned, cwd unchanged     |
+| Target is a file (not a directory) | Error returned                    |
+| Relative path with no current cwd  | Error returned                    |
+| Calling session is not live        | Unavailable result, cwd unchanged |
 
 ## Use Cases
 

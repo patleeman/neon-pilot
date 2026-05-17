@@ -71,11 +71,34 @@ export function createChangeWorkingDirectoryAgentExtension(options: {
         const continuePrompt =
           typeof params.continuePrompt === 'string' && params.continuePrompt.trim().length > 0 ? params.continuePrompt.trim() : undefined;
 
-        const result = await options.requestConversationWorkingDirectoryChange({
-          conversationId,
-          cwd: nextCwd,
-          ...(continuePrompt ? { continuePrompt } : {}),
-        });
+        let result: RequestConversationWorkingDirectoryChangeResult;
+        try {
+          result = await options.requestConversationWorkingDirectoryChange({
+            conversationId,
+            cwd: nextCwd,
+            ...(continuePrompt ? { continuePrompt } : {}),
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (message === `Session ${conversationId} is not live.`) {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: 'Cannot change the working directory because this conversation is not currently live. Start or resume the conversation in the UI, then try again.',
+                },
+              ],
+              details: {
+                action: 'unavailable',
+                reason: 'session_not_live',
+                conversationId,
+                cwd: nextCwd,
+                queued: false,
+              },
+            };
+          }
+          throw error;
+        }
 
         if (result.unchanged) {
           return {

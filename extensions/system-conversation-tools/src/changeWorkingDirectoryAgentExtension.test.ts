@@ -135,6 +135,26 @@ describe('change working directory agent extension', () => {
     });
   });
 
+  it('returns unavailable instead of failing when the conversation is not live', async () => {
+    const repoRoot = createTempRepo();
+    const requestConversationWorkingDirectoryChange = vi.fn(async () => {
+      throw new Error('Session conv-123 is not live.');
+    });
+    const { tool } = registerChangeWorkingDirectoryTool(requestConversationWorkingDirectoryChange);
+    const ctx = createToolContext('conv-123', repoRoot);
+
+    const result = await tool.execute('tool-1', { cwd: '.' }, undefined, undefined, ctx);
+
+    expect(result.content[0]?.text).toContain('not currently live');
+    expect(result.details).toMatchObject({
+      action: 'unavailable',
+      reason: 'session_not_live',
+      conversationId: 'conv-123',
+      cwd: repoRoot,
+      queued: false,
+    });
+  });
+
   it('rejects non-directory targets before queueing the change', async () => {
     const repoRoot = createTempRepo();
     const filePath = join(repoRoot, 'notes.txt');
