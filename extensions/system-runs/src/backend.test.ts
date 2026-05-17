@@ -68,8 +68,13 @@ function durableRun(runId: string, kind: string, taskSlug: string, status = 'run
 }
 
 describe('system-runs backend', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+  beforeEach(() => {
+    // Reset all mock implementations and restore defaults
+    // so tests don't leak return values across each other
+    for (const mock of Object.values(mocks)) {
+      mock.mockReset();
+    }
+    mocks.pingDaemon.mockResolvedValue(true);
   });
 
   describe('bash handler', () => {

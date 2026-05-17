@@ -128,7 +128,7 @@ async function executeRunInput(input: unknown, ctx: NativeBackendContext, toolNa
   const text = Array.isArray(result?.content)
     ? result.content.map((item) => (item.type === 'text' ? (item.text ?? '') : JSON.stringify(item))).join('\n')
     : JSON.stringify(result, null, 2);
-  return { text, ...(result?.details ? { details: result.details } : {}) };
+  return { text, ...(result?.details ? { details: result.details } : {}), ...(result?.isError ? { isError: true } : {}) };
 }
 
 function normalizeRunLogTail(value: unknown): number {
