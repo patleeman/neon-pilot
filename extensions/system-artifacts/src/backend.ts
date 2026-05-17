@@ -68,13 +68,22 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
 
   switch (input.action) {
     case 'save': {
+      // When updating an existing artifact, preserve current content if not provided
+      let content = input.content;
+      if (content === undefined && input.artifactId !== undefined) {
+        const existing = getConversationArtifact(input.artifactId, { profile, conversationId });
+        if (existing) {
+          content = existing.content;
+        }
+      }
+
       const record = saveConversationArtifact({
         profile,
         conversationId,
         ...(input.artifactId !== undefined ? { artifactId: input.artifactId } : {}),
         title: readRequiredString(input.title, 'title'),
         kind: readRequiredKind(input.kind),
-        content: input.content ?? '',
+        content: content ?? '',
       });
       const openRequested = input.open ?? true;
       ctx.ui?.invalidate('artifacts');

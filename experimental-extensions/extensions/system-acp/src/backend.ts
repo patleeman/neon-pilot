@@ -384,7 +384,13 @@ class PersonalAgentAcpAgent implements acp.Agent {
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
       unsubscribe?.();
-      this.activePrompts.delete(params.sessionId);
+      // Only delete if we're still the active prompt for this session.
+      // A replacement prompt (started while this one was in-flight) will
+      // have overwritten the map entry; deleting it here would orphan the
+      // replacement's AbortController and break cancellation.
+      if (this.activePrompts.get(params.sessionId) === active) {
+        this.activePrompts.delete(params.sessionId);
+      }
     }
   }
 
