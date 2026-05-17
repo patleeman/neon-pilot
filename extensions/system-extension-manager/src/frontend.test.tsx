@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,16 +43,6 @@ vi.mock('@personal-agent/extensions/workbench-browser', () => ({
 import { ExtensionManagerPage } from './frontend';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
 
 function createExtension() {
   return {
@@ -107,71 +97,19 @@ describe('ExtensionManagerPage', () => {
     });
   });
 
-  it('shows row-level progress and a sticky success notice for build actions', async () => {
-    const build = deferred<{ ok: true; extensionId: string; outputs: string[] }>();
-    mocks.buildExtension.mockReturnValue(build.promise);
+  it('keeps the row actions menu focused on opening the package folder', async () => {
     renderPage();
 
     await screen.findByText('Menu Test');
     fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Build'));
 
-    expect(screen.getByText('Working…')).toBeTruthy();
-
-    build.resolve({ ok: true, extensionId: 'menu-test', outputs: ['dist/frontend.js'] });
-
-    await waitFor(() => {
-      expect(screen.getByText('Built 1 bundle output.')).toBeTruthy();
-    });
-    await waitFor(() => {
-      expect(screen.queryByText('Working…')).toBeNull();
-    });
-    expect(mocks.reloadExtension).toHaveBeenCalledWith('menu-test');
-  });
-
-  it('shows extension doctor validation findings from the actions menu', async () => {
-    mocks.validateExtension.mockResolvedValue({
-      ok: false,
-      extensionId: 'menu-test',
-      packageRoot: '/tmp/menu-test',
-      findings: [
-        {
-          severity: 'error',
-          code: 'missing-frontend-dist',
-          message: 'Frontend entry is missing: dist/frontend.js',
-          fix: 'Build the extension.',
-        },
-      ],
-      summary: { errors: 1, warnings: 0, info: 0 },
-    });
-    renderPage();
-
-    await screen.findByText('Menu Test');
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Validate'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/ERROR missing-frontend-dist/)).toBeTruthy();
-    });
-  });
-
-  it('reports export failures without replacing the page', async () => {
-    mocks.exportExtension.mockRejectedValue(new Error('export broke'));
-    const { notify } = renderPage();
-
-    await screen.findByText('Menu Test');
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Export'));
-
-    await waitFor(() => {
-      expect(notify).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Export failed for Menu Test: export broke',
-          source: 'system-extension-manager',
-          type: 'error',
-        }),
-      );
-    });
-    expect(screen.getByText('Menu Test')).toBeTruthy();
+    expect(screen.getByText('Open folder')).toBeTruthy();
+    expect(screen.queryByText('Build')).toBeNull();
+    expect(screen.queryByText('Reload')).toBeNull();
+    expect(screen.queryByText('Validate')).toBeNull();
+    expect(screen.queryByText('Run self-test')).toBeNull();
+    expect(screen.queryByText('Snapshot')).toBeNull();
+    expect(screen.queryByText('Export')).toBeNull();
+    expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 });
