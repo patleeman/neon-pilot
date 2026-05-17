@@ -15,7 +15,7 @@ function numberParam(value: unknown, fallback: number): number {
 // Track active command sessions for protocol compatibility. Commands run through
 // ctx.shell so PA can apply execution wrappers; interactive stdin is not supported
 // by the host shell capability yet.
-const activeSessions = new Set<string>();
+const activeSessions = new Map<string, AbortController>();
 
 export const command = {
   /**
@@ -29,10 +29,17 @@ export const command = {
     if (!command) throw new Error('command is required');
 
     const processId = (p?.processId as string | undefined) ?? `exec-${Date.now()}`;
-    activeSessions.add(processId);
+    const controller = new AbortController();
+    activeSessions.set(processId, controller);
 
     try {
-      const result = await _ctx.shell.exec({ command: command.executable, args: command.args, cwd, timeoutMs: timeout || undefined });
+      const result = await _ctx.shell.exec({
+        command: command.executable,
+        args: command.args,
+        cwd,
+        timeoutMs: timeout || undefined,
+        signal: controller.signal,
+      });
       if (result.stdout) {
         notify('command/exec/outputDelta', {
           processId,
@@ -87,6 +94,9 @@ export const command = {
     const processId = p?.processId as string | undefined;
     if (!processId) throw new Error('processId is required');
 
+    const controller = activeSessions.get(processId);
+    if (!controller) throw new Error('Command session not found or already finished.');
+    controller.abort();
     activeSessions.delete(processId);
     return {};
   }) as MethodHandler,
