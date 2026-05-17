@@ -7,13 +7,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanupTurnSubscriptions, turn, turnSubscriptions } from './turn.js';
 
 function makeContext() {
-  return {
+  let conversationHandler: ((event: unknown) => void) | null = null;
+  const ctx = {
     storage: {
       get: vi.fn().mockResolvedValue(null),
       put: vi.fn().mockResolvedValue({ ok: true }),
     },
     conversations: {
-      subscribe: vi.fn().mockReturnValue(vi.fn()),
+      subscribe: vi.fn((_threadId: string, handler: (event: unknown) => void) => {
+        conversationHandler = handler;
+        return vi.fn();
+      }),
       ensureLive: vi.fn().mockResolvedValue({ id: 'thread-1', conversationId: 'thread-1' }),
       getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: [], pinnedConversationIds: [] }),
       updateWorkspace: vi
@@ -22,7 +26,11 @@ function makeContext() {
       appendVisibleCustomMessage: vi.fn().mockResolvedValue({ ok: true }),
       sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
     },
+    emitConversationEvent(event: unknown) {
+      conversationHandler?.(event);
+    },
   };
+  return ctx;
 }
 
 function makeConn() {
@@ -106,14 +114,45 @@ describe('system-alleycat turn protocol', () => {
     });
   });
 
-  it('resumes persisted threads before sending follow-up messages', async () => {
+  it('resumes persisted threads before subscribing and sending follow-up messages', async () => {
     const ctx = makeContext();
+    const order: string[] = [];
+    ctx.conversations.ensureLive.mockImplementation(async () => {
+      order.push('ensureLive');
+      return { id: 'thread-1', conversationId: 'thread-1' };
+    });
+    ctx.conversations.subscribe.mockImplementation((_threadId: string, handler: (event: unknown) => void) => {
+      order.push('subscribe');
+      ctx.emitConversationEvent = handler;
+      return vi.fn();
+    });
+    ctx.conversations.sendMessage.mockImplementation(async () => {
+      order.push('sendMessage');
+      return { accepted: true };
+    });
 
     await turn.start({ threadId: 'thread-1', cwd: '/repo', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), vi.fn());
     await flushAsyncTurnStart();
 
     expect(ctx.conversations.ensureLive).toHaveBeenCalledWith('thread-1', { cwd: '/repo' });
     expect(ctx.conversations.sendMessage).toHaveBeenCalledWith('thread-1', 'Hi', undefined);
+    expect(order).toEqual(['ensureLive', 'subscribe', 'sendMessage']);
+  });
+
+  it('forwards PA response events to Kitty after resuming a persisted thread', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+
+    await turn.start({ threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] }, ctx as never, makeConn(), notify);
+    await flushAsyncTurnStart();
+
+    ctx.emitConversationEvent({ type: 'agent_start' });
+    ctx.emitConversationEvent({ type: 'text_delta', delta: 'Hello back' });
+    ctx.emitConversationEvent({ type: 'agent_end' });
+    ctx.emitConversationEvent({ type: 'turn_end' });
+
+    expect(notify).toHaveBeenCalledWith('item/agentMessage/delta', expect.objectContaining({ delta: 'Hello back' }));
+    expect(notify).toHaveBeenCalledWith('turn/completed', expect.objectContaining({ threadId: 'thread-1' }));
   });
 
   it('opens and focuses the desktop workspace when Kitty starts a turn', async () => {

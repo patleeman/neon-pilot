@@ -215,140 +215,145 @@ export const turn = {
     let agentItemId: string | null = null;
     let agentText = '';
 
-    const maybeUnsubscribe = ctx.conversations.subscribe(threadId, (event: unknown) => {
-      if (turnDone) return;
-      const ev = event as Record<string, unknown>;
-      if (!ev || typeof ev.type !== 'string') return;
+    const subscribeToTurn = () => {
+      const maybeUnsubscribe = ctx.conversations.subscribe(threadId, (event: unknown) => {
+        if (turnDone) return;
+        const ev = event as Record<string, unknown>;
+        if (!ev || typeof ev.type !== 'string') return;
 
-      switch (ev.type) {
-        case 'agent_start': {
-          agentItemId = uid('item-');
-          agentText = '';
-          notify('item/started', {
-            threadId,
-            turnId,
-            item: { id: agentItemId, type: 'agentMessage', text: '' },
-            startedAtMs: nowMs(),
-          });
-          break;
-        }
-        case 'text_delta': {
-          const delta = ev.delta as string | undefined;
-          if (delta && agentItemId) {
-            agentText += delta;
-            notify('item/agentMessage/delta', {
+        switch (ev.type) {
+          case 'agent_start': {
+            agentItemId = uid('item-');
+            agentText = '';
+            notify('item/started', {
               threadId,
               turnId,
-              itemId: agentItemId,
-              delta,
+              item: { id: agentItemId, type: 'agentMessage', text: '' },
+              startedAtMs: nowMs(),
             });
+            break;
           }
-          break;
-        }
-        case 'thinking_delta': {
-          const delta = ev.delta as string | undefined;
-          if (delta && agentItemId) {
-            notify('item/reasoning/delta', {
+          case 'text_delta': {
+            const delta = ev.delta as string | undefined;
+            if (delta && agentItemId) {
+              agentText += delta;
+              notify('item/agentMessage/delta', {
+                threadId,
+                turnId,
+                itemId: agentItemId,
+                delta,
+              });
+            }
+            break;
+          }
+          case 'thinking_delta': {
+            const delta = ev.delta as string | undefined;
+            if (delta && agentItemId) {
+              notify('item/reasoning/delta', {
+                threadId,
+                turnId,
+                itemId: agentItemId,
+                delta,
+                summaryIndex: 0,
+              });
+            }
+            break;
+          }
+          case 'tool_start': {
+            const toolId = (ev.toolCallId as string) ?? uid('tool-');
+            notify('item/started', {
               threadId,
               turnId,
-              itemId: agentItemId,
-              delta,
-              summaryIndex: 0,
+              item: {
+                id: toolId,
+                type: 'dynamicToolCall',
+                namespace: 'personal-agent',
+                tool: (ev.toolName as string) || 'tool',
+                arguments: ev.input ?? {},
+                status: 'inProgress',
+              },
             });
+            break;
           }
-          break;
-        }
-        case 'tool_start': {
-          const toolId = (ev.toolCallId as string) ?? uid('tool-');
-          notify('item/started', {
-            threadId,
-            turnId,
-            item: {
-              id: toolId,
-              type: 'dynamicToolCall',
-              namespace: 'personal-agent',
-              tool: (ev.toolName as string) || 'tool',
-              arguments: ev.input ?? {},
-              status: 'inProgress',
-            },
-          });
-          break;
-        }
-        case 'tool_end': {
-          const toolId = (ev.toolCallId as string) ?? uid('tool-');
-          notify('item/completed', {
-            threadId,
-            turnId,
-            item: {
-              id: toolId,
-              type: 'dynamicToolCall',
-              namespace: 'personal-agent',
-              tool: (ev.toolName as string) || 'tool',
-              arguments: ev.input ?? {},
-              status: 'completed',
-              contentItems: typeof ev.output === 'string' ? [{ type: 'text', text: ev.output }] : [],
-              success: ev.isError === true ? false : true,
-            },
-          });
-          break;
-        }
-        case 'agent_end': {
-          if (agentItemId) {
+          case 'tool_end': {
+            const toolId = (ev.toolCallId as string) ?? uid('tool-');
             notify('item/completed', {
               threadId,
               turnId,
               item: {
-                id: agentItemId,
-                type: 'agentMessage',
-                text: agentText,
+                id: toolId,
+                type: 'dynamicToolCall',
+                namespace: 'personal-agent',
+                tool: (ev.toolName as string) || 'tool',
+                arguments: ev.input ?? {},
+                status: 'completed',
+                contentItems: typeof ev.output === 'string' ? [{ type: 'text', text: ev.output }] : [],
+                success: ev.isError === true ? false : true,
               },
-              completedAtMs: nowMs(),
             });
+            break;
           }
-          break;
-        }
-        case 'turn_end': {
-          turnDone = true;
-          conn.activeTurnThreads.delete(threadId);
-          if (typeof maybeUnsubscribe === 'function') {
-            maybeUnsubscribe();
+          case 'agent_end': {
+            if (agentItemId) {
+              notify('item/completed', {
+                threadId,
+                turnId,
+                item: {
+                  id: agentItemId,
+                  type: 'agentMessage',
+                  text: agentText,
+                },
+                completedAtMs: nowMs(),
+              });
+            }
+            break;
           }
-          cleanupTurnSubscriptions(threadId);
-          notify('turn/completed', {
-            threadId,
-            turn: codexTurn(turnId, 'completed'),
-          });
-          break;
-        }
-        case 'error': {
-          const errorMsg = ev.message as string | undefined;
-          turnDone = true;
-          conn.activeTurnThreads.delete(threadId);
-          if (typeof maybeUnsubscribe === 'function') {
-            maybeUnsubscribe();
+          case 'turn_end': {
+            turnDone = true;
+            conn.activeTurnThreads.delete(threadId);
+            if (typeof maybeUnsubscribe === 'function') {
+              maybeUnsubscribe();
+            }
+            cleanupTurnSubscriptions(threadId);
+            notify('turn/completed', {
+              threadId,
+              turn: codexTurn(turnId, 'completed'),
+            });
+            break;
           }
-          cleanupTurnSubscriptions(threadId);
-          notify('turn/completed', {
-            threadId,
-            turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error'),
-          });
-          break;
+          case 'error': {
+            const errorMsg = ev.message as string | undefined;
+            turnDone = true;
+            conn.activeTurnThreads.delete(threadId);
+            if (typeof maybeUnsubscribe === 'function') {
+              maybeUnsubscribe();
+            }
+            cleanupTurnSubscriptions(threadId);
+            notify('turn/completed', {
+              threadId,
+              turn: codexTurn(turnId, 'failed', errorMsg ?? 'Unknown error'),
+            });
+            break;
+          }
         }
+      });
+
+      // Track this subscription so it can be cleaned up on connection drop.
+      if (typeof maybeUnsubscribe === 'function') {
+        let subs = turnSubscriptions.get(threadId);
+        if (!subs) {
+          subs = new Set();
+          turnSubscriptions.set(threadId, subs);
+        }
+        subs.add(maybeUnsubscribe);
       }
-    });
+      return maybeUnsubscribe;
+    };
 
-    // Track this subscription so it can be cleaned up on connection drop
-    let subs = turnSubscriptions.get(threadId);
-    if (!subs) {
-      subs = new Set();
-      turnSubscriptions.set(threadId, subs);
-    }
-    if (typeof maybeUnsubscribe === 'function') {
-      subs.add(maybeUnsubscribe);
-    }
-
+    let unsubscribe: unknown;
     void (async () => {
       await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
+      unsubscribe = subscribeToTurn();
       await markThreadControlledRemotely(threadId, ctx);
       await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { images } : undefined);
     })().catch((error) => {
@@ -359,8 +364,8 @@ export const turn = {
           threadId,
           turn: codexTurn(turnId, 'failed', error instanceof Error ? error.message : String(error)),
         });
-        if (typeof maybeUnsubscribe === 'function') {
-          maybeUnsubscribe();
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
         }
         cleanupTurnSubscriptions(threadId);
       }
