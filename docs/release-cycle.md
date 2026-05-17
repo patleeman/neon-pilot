@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.8.0-rc.17** — published 2026-05-16.
+**v0.8.0-rc.18** — published 2026-05-17.
 
-Release page: https://github.com/patleeman/personal-agent/releases/tag/v0.8.0-rc.17
+Release page: https://github.com/patleeman/personal-agent/releases/tag/v0.8.0-rc.18
 
 Highlights:
 
-- Added managed extension sidecar processes and packaged the Alleycat sidecar binary.
-- Moved Alleycat and browser work into experimental extension surfaces.
-- Improved Kitty Litter pairing, live PA thread hydration, timestamp handling, and thread list behavior.
-- Hardened subagent tool allowlists, logs, final output capture, and activity-tree navigation.
-- Stabilized release validation for backend module imports, conversation cwd changes, and packaged extension smoke counts.
+- Updated Pi dependencies to 0.75.0.
+- Improved local model runtime logging and cache installation behavior.
+- Fixed packaged extension-manager backend validation by removing forbidden runtime imports.
+- Restored unified node migration TypeScript build validation.
+- Published signed, notarized RC macOS ZIP/DMG artifacts with passing automated smoke tests.
 
 ## Release Commands
 
