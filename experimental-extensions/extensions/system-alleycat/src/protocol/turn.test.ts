@@ -99,7 +99,7 @@ describe('system-alleycat turn protocol', () => {
   it('passes local image path inputs through to PA conversations', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'pa-alleycat-turn-'));
     const imagePath = join(dir, 'photo.jpg');
-    writeFileSync(imagePath, Buffer.from('pixels'));
+    writeFileSync(imagePath, Buffer.from([0xff, 0xd8, 0xff, 0xdb]));
     const ctx = makeContext();
 
     await turn.start(
@@ -121,9 +121,26 @@ describe('system-alleycat turn protocol', () => {
       'thread-1',
       'inspect this',
       expect.objectContaining({
-        images: [{ data: Buffer.from('pixels').toString('base64'), mimeType: 'image/jpeg', name: 'photo.jpg' }],
+        images: [{ data: Buffer.from([0xff, 0xd8, 0xff, 0xdb]).toString('base64'), mimeType: 'image/jpeg', name: 'photo.jpg' }],
       }),
     );
+  });
+
+  it('rejects file path image inputs that are not real images', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pa-alleycat-turn-'));
+    const imagePath = join(dir, 'secret.txt');
+    writeFileSync(imagePath, Buffer.from('not actually an image'));
+    const ctx = makeContext();
+
+    await expect(
+      turn.start(
+        { threadId: 'thread-1', input: [{ type: 'image', url: imagePath, mimeType: 'image/png' }] },
+        ctx as never,
+        makeConn(),
+        vi.fn(),
+      ),
+    ).rejects.toThrow('input must contain at least one text or image item');
+    expect(ctx.conversations.runTurn).not.toHaveBeenCalled();
   });
 
   it('allows image-only turns', async () => {

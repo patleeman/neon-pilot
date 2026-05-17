@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { MethodHandler } from '../codexJsonRpcServer.js';
@@ -30,6 +30,8 @@ function nowMs(): number {
   return Date.now();
 }
 
+const MAX_PROMPT_IMAGE_BYTES = 15 * 1024 * 1024;
+
 interface PromptImage {
   data: string;
   mimeType: string;
@@ -52,6 +54,18 @@ function imageFromDataUrl(url: string, name?: string): PromptImage | null {
   return { data, mimeType, ...(name ? { name } : {}) };
 }
 
+function sniffImageMime(data: Buffer): string | null {
+  if (data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return 'image/jpeg';
+  if (data.length >= 12 && data.subarray(0, 4).toString('ascii') === 'RIFF' && data.subarray(8, 12).toString('ascii') === 'WEBP')
+    return 'image/webp';
+  if (data.length >= 6) {
+    const header = data.subarray(0, 6).toString('ascii');
+    if (header === 'GIF87a' || header === 'GIF89a') return 'image/gif';
+  }
+  return null;
+}
+
 function imageFromFilePath(pathOrUrl: string, mimeType?: string, name?: string): PromptImage | null {
   let rawPath: string;
   try {
@@ -60,9 +74,14 @@ function imageFromFilePath(pathOrUrl: string, mimeType?: string, name?: string):
     return null;
   }
   if (!rawPath.startsWith('/') || !existsSync(rawPath)) return null;
+  const stats = statSync(rawPath);
+  if (!stats.isFile() || stats.size > MAX_PROMPT_IMAGE_BYTES) return null;
+  const fileData = readFileSync(rawPath);
+  const sniffedMimeType = sniffImageMime(fileData);
+  if (!sniffedMimeType) return null;
   const inferredMimeType = mimeType || mimeTypeFromName(rawPath);
-  if (!inferredMimeType.toLowerCase().startsWith('image/')) return null;
-  return { data: readFileSync(rawPath).toString('base64'), mimeType: inferredMimeType, name: name || basename(rawPath) };
+  if (inferredMimeType.toLowerCase() !== sniffedMimeType) return null;
+  return { data: fileData.toString('base64'), mimeType: sniffedMimeType, name: name || basename(rawPath) };
 }
 
 function mimeTypeFromName(name: string): string {
