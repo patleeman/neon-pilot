@@ -91,33 +91,61 @@ function useAutosave(
 ) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
+  const revisionAtStartRef = useRef<number | null>(null);
+  const pendingEditDuringSave = useRef(false);
+
+  async function performSave(savedRevision: number): Promise<void> {
+    saving.current = true;
+    revisionAtStartRef.current = savedRevision;
+    try {
+      await knowledgeApi.writeFile(fileId!, getContent());
+      // Only mark clean if no newer edits came in during the save
+      if (revisionAtStartRef.current === savedRevision) {
+        onSaved();
+      }
+    } catch (error) {
+      console.error('vault autosave failed', error);
+      onError(error instanceof Error ? error.message : String(error));
+      window.dispatchEvent(
+        new CustomEvent('pa-notification', {
+          detail: {
+            type: 'warning',
+            message: 'Vault autosave failed',
+            details: error instanceof Error ? error.message : String(error),
+            source: 'system-knowledge',
+          },
+        }),
+      );
+    } finally {
+      saving.current = false;
+      revisionAtStartRef.current = null;
+
+      // If an edit arrived during the save, schedule another save
+      if (pendingEditDuringSave.current) {
+        pendingEditDuringSave.current = false;
+        scheduleSave();
+      }
+    }
+  }
+
+  function scheduleSave(): void {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      if (saving.current) return;
+      void performSave(revision);
+    }, AUTOSAVE_MS);
+  }
 
   useEffect(() => {
     if (!fileId || !dirty || revision <= 0) return;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      if (saving.current) return;
-      saving.current = true;
-      try {
-        await knowledgeApi.writeFile(fileId, getContent());
-        onSaved();
-      } catch (error) {
-        console.error('vault autosave failed', error);
-        onError(error instanceof Error ? error.message : String(error));
-        window.dispatchEvent(
-          new CustomEvent('pa-notification', {
-            detail: {
-              type: 'warning',
-              message: 'Vault autosave failed',
-              details: error instanceof Error ? error.message : String(error),
-              source: 'system-knowledge',
-            },
-          }),
-        );
-      } finally {
-        saving.current = false;
-      }
-    }, AUTOSAVE_MS);
+
+    if (saving.current) {
+      // A save is in flight — flag for reschedule once it completes
+      pendingEditDuringSave.current = true;
+      return;
+    }
+
+    scheduleSave();
 
     return () => {
       if (timer.current) clearTimeout(timer.current);
