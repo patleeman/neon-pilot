@@ -653,8 +653,79 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-primary">Server</h2>
-                      <p className="mt-1 text-sm text-secondary">Select a downloaded model, tune serving settings, then save and reload.</p>
+                      <h2 className="text-xl font-semibold text-primary">Model Settings</h2>
+                      <p className="mt-1 text-sm text-secondary">Choose which downloaded model the server should use.</p>
+                    </div>
+                    <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
+                      Save
+                    </ToolbarButton>
+                  </div>
+
+                  <div className="mt-5 overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Model</th>
+                          <th className="px-3 py-2 font-medium">Format</th>
+                          <th className="px-3 py-2 font-medium">Size</th>
+                          <th className="px-3 py-2 font-medium">State</th>
+                          <th className="px-3 py-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {downloadedModels.map((model) => (
+                          <tr
+                            key={model.id}
+                            className={cx(
+                              'cursor-pointer border-t border-border-subtle hover:bg-surface/50',
+                              model.selected && 'bg-accent/10',
+                            )}
+                            onClick={() => {
+                              setSelectedModelId(model.id);
+                              setDirty(true);
+                            }}
+                          >
+                            <td className="min-w-0 px-3 py-3">
+                              <div className="truncate font-medium text-primary">{model.title}</div>
+                              <div className="mt-0.5 truncate text-xs text-secondary">{model.subtitle}</div>
+                            </td>
+                            <td className="px-3 py-3">
+                              <Pill tone={model.runtime === 'mlx' ? 'success' : 'accent'}>{model.format}</Pill>
+                            </td>
+                            <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
+                            <td className="px-3 py-3">
+                              {model.loaded ? (
+                                <Pill tone="success">Loaded</Pill>
+                              ) : model.selected ? (
+                                <Pill tone="warning">Selected</Pill>
+                              ) : (
+                                <Pill>Ready</Pill>
+                              )}
+                            </td>
+                            <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
+                              <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
+                                Delete
+                              </ToolbarButton>
+                            </td>
+                          </tr>
+                        ))}
+                        {!downloadedModels.length ? (
+                          <tr>
+                            <td colSpan={5} className="px-3 py-10 text-center text-secondary">
+                              No downloaded models yet. Go to Library to download one.
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-primary">Serving Settings</h2>
+                      <p className="mt-1 text-sm text-secondary">Tune runtime parameters, then start or reload the server.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
@@ -669,89 +740,22 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                   </div>
 
-                  <div className="mt-5 space-y-5">
-                    <div className="space-y-3 lg:col-span-2">
-                      <h3 className="font-semibold text-primary">Downloaded Models</h3>
-                      <div className="overflow-x-auto rounded-lg border border-border-subtle/50 bg-background/15">
-                        <table className="w-full text-left text-sm">
-                          <thead className="bg-surface/50 text-xs uppercase tracking-[0.12em] text-dim">
-                            <tr>
-                              <th className="px-3 py-2 font-medium">Model</th>
-                              <th className="px-3 py-2 font-medium">Format</th>
-                              <th className="px-3 py-2 font-medium">Size</th>
-                              <th className="px-3 py-2 font-medium">State</th>
-                              <th className="px-3 py-2 font-medium">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {downloadedModels.map((model) => (
-                              <tr
-                                key={model.id}
-                                className={cx(
-                                  'cursor-pointer border-t border-border-subtle hover:bg-surface/50',
-                                  model.selected && 'bg-accent/10',
-                                )}
-                                onClick={() => {
-                                  setSelectedModelId(model.id);
-                                  setDirty(true);
-                                }}
-                              >
-                                <td className="min-w-0 px-3 py-3">
-                                  <div className="truncate font-medium text-primary">{model.title}</div>
-                                  <div className="mt-0.5 truncate text-xs text-secondary">{model.subtitle}</div>
-                                </td>
-                                <td className="px-3 py-3">
-                                  <Pill tone={model.runtime === 'mlx' ? 'success' : 'accent'}>{model.format}</Pill>
-                                </td>
-                                <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
-                                <td className="px-3 py-3">
-                                  {model.loaded ? (
-                                    <Pill tone="success">Loaded</Pill>
-                                  ) : model.selected ? (
-                                    <Pill tone="warning">Selected</Pill>
-                                  ) : (
-                                    <Pill>Ready</Pill>
-                                  )}
-                                </td>
-                                <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
-                                  <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
-                                    Delete
-                                  </ToolbarButton>
-                                </td>
-                              </tr>
-                            ))}
-                            {!downloadedModels.length ? (
-                              <tr>
-                                <td colSpan={5} className="px-3 py-10 text-center text-secondary">
-                                  No downloaded models yet. Go to Library to download one.
-                                </td>
-                              </tr>
-                            ) : null}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 lg:col-span-2">
-                      <h3 className="font-semibold text-primary">Serving Settings</h3>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Field label="Context length">
-                          <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
-                        </Field>
-                        <Field label="GPU layers">
-                          <TextInput value={gpuLayers} onChange={(event) => markDirty(setGpuLayers, event.target.value)} />
-                        </Field>
-                        <Field label="Temperature">
-                          <TextInput value={temperature} onChange={(event) => markDirty(setTemperature, event.target.value)} />
-                        </Field>
-                        <Field label="Top P">
-                          <TextInput value={topP} onChange={(event) => markDirty(setTopP, event.target.value)} />
-                        </Field>
-                        <Field label="Max tokens">
-                          <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
-                        </Field>
-                      </div>
-                    </div>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <Field label="Context length">
+                      <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
+                    </Field>
+                    <Field label="GPU layers">
+                      <TextInput value={gpuLayers} onChange={(event) => markDirty(setGpuLayers, event.target.value)} />
+                    </Field>
+                    <Field label="Temperature">
+                      <TextInput value={temperature} onChange={(event) => markDirty(setTemperature, event.target.value)} />
+                    </Field>
+                    <Field label="Top P">
+                      <TextInput value={topP} onChange={(event) => markDirty(setTopP, event.target.value)} />
+                    </Field>
+                    <Field label="Max tokens">
+                      <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
+                    </Field>
                   </div>
                 </section>
 
