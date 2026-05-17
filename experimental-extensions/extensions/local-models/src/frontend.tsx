@@ -687,9 +687,14 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                                     Reveal in Finder
                                   </ToolbarButton>
                                 ) : null}
-                                <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
+                                <button
+                                  type="button"
+                                  disabled={Boolean(busy)}
+                                  onClick={() => void deleteDownloadedModel(model)}
+                                  className="rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
                                   Delete
-                                </ToolbarButton>
+                                </button>
                               </div>
                             </td>
                           </tr>
