@@ -82,7 +82,7 @@ describe('resolveExcalidrawPreviewFrameSize', () => {
   });
 
   it('returns null for non-number dimensions', () => {
-    expect(excalidrawModule.resolveExcalidrawPreviewFrameSize({ width: '100', height: 100 })).toBeNull();
+    expect(excalidrawModule.resolveExcalidrawPreviewFrameSize({ width: '100' as unknown as number, height: 100 })).toBeNull();
   });
 });
 

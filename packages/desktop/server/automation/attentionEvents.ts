@@ -6,12 +6,12 @@ import {
   createReadyAttentionEvent,
   getSessionAttentionEvents,
   loadAttentionEventsState,
+  parseDeferredResumeDelayMs,
   readSessionConversationId,
   saveAttentionEventsState,
   scheduleAttentionEvent,
 } from '@personal-agent/core';
 
-import { parseDeferredResumeDelayMs } from './deferredResumes.js';
 import { parseFutureHumanDateTime } from './humanDateTime.js';
 
 function createAttentionEventId(now: Date): string {

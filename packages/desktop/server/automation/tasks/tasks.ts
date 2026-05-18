@@ -435,7 +435,6 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       createdAt: details.finishedAt,
       readyAt: details.finishedAt,
       attempts: 0,
-      kind: 'task-callback',
       title,
       source: {
         kind: 'scheduled-task',
