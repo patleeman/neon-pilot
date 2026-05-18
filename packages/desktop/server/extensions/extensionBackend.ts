@@ -339,7 +339,7 @@ const FORBIDDEN_BACKEND_IMPORTS = new Set([
 
 export class ExtensionLoadError extends Error {
   readonly extensionId: string;
-  readonly code: 'build_failure' | 'load_failure' | 'handler_not_found' | 'module_not_found';
+  readonly code: 'build_failure' | 'load_failure' | 'handler_not_found' | 'module_not_found' | 'extension_disabled';
 
   constructor(opts: { extensionId: string; code: ExtensionLoadError['code']; message: string; cause?: unknown }) {
     super(opts.message);

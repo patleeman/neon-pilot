@@ -126,7 +126,7 @@ export interface ExtensionInstallSummary {
   description?: string;
   version?: string;
   packageRoot?: string;
-  manifest: ExtensionManifest;
+  manifest: LoadedExtensionManifest;
   permissions: ExtensionManifest['permissions'];
   surfaces: ExtensionSurface[];
   backendActions: NonNullable<ExtensionManifest['backend']>['actions'];
@@ -140,7 +140,7 @@ export interface ExtensionInstallSummary {
 }
 
 export interface ExtensionRegistrySnapshot {
-  extensions: ExtensionManifest[];
+  extensions: LoadedExtensionManifest[];
   routes: Array<{ route: string; extensionId: string; surfaceId: string; packageType: ExtensionPackageType }>;
   surfaces: Array<ExtensionSurface & { extensionId: string; packageType: ExtensionPackageType }>;
   views: Array<
@@ -1608,7 +1608,7 @@ export function listEnabledExtensionEntries(stateRoot: string = getStateRoot()):
   return listExtensionEntries(stateRoot).filter((entry) => isExtensionEnabled(entry.manifest.id, stateRoot));
 }
 
-export function listExtensions(): ExtensionManifest[] {
+export function listExtensions(): LoadedExtensionManifest[] {
   return listEnabledExtensionEntries().map((entry) => entry.manifest);
 }
 
@@ -1925,8 +1925,14 @@ export function listExtensionPromptContextProviderRegistrations(
               packageType: entry.manifest.packageType ?? 'user',
               handler,
               ...(provider.title ? { title: provider.title } : {}),
-              ...('priority' in provider && Number.isInteger(provider.priority) ? { priority: provider.priority } : {}),
-              ...('scope' in provider && Array.isArray(provider.scope) ? { scope: provider.scope } : {}),
+              ...('priority' in provider && Number.isInteger(provider.priority) ? { priority: provider.priority as number } : {}),
+              ...('scope' in provider && Array.isArray(provider.scope)
+                ? {
+                    scope: (provider.scope as Array<'global' | 'workspace' | 'conversation'>).filter(
+                      (s) => s === 'global' || s === 'workspace' || s === 'conversation',
+                    ),
+                  }
+                : {}),
             },
           ];
         },

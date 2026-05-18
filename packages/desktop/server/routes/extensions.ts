@@ -26,6 +26,7 @@ import {
   clearBuildError,
   findExtensionCommandRegistration,
   findExtensionEntry,
+  isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
   listExtensionKeybindingRegistrations,
@@ -577,6 +578,16 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/actions/:actionId', async (req, res) => {
     try {
+      const entry = findExtensionEntry(req.params.id);
+      if (!entry || !isExtensionEnabled(req.params.id)) {
+        res.status(404).json({ error: `Extension "${req.params.id}" not found or is disabled.` });
+        return;
+      }
+      const declaredAction = entry.manifest.backend?.actions?.find((a) => a.id === req.params.actionId);
+      if (!declaredAction) {
+        res.status(404).json({ error: `Action "${req.params.actionId}" is not declared in extension "${req.params.id}" backend.actions.` });
+        return;
+      }
       res.json(await invokeExtensionAction(req.params.id, req.params.actionId, req.body, context));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

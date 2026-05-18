@@ -6,8 +6,8 @@ import { pathToFileURL } from 'node:url';
 import { init, parse } from 'es-module-lexer';
 
 import type { ExtensionManifest } from './extensionManifest.js';
-import { parseExtensionManifest } from './extensionRegistry.js';
-import { findExtensionEntry } from './extensionRegistry.js';
+import type { LoadedExtensionManifest } from './extensionRegistry.js';
+import { findExtensionEntry, parseExtensionManifest } from './extensionRegistry.js';
 
 export type ExtensionDoctorSeverity = 'error' | 'warning' | 'info';
 
@@ -244,14 +244,18 @@ function latestMtimeUnder(path: string): number | null {
   return latest;
 }
 
-function validateDistFreshness(packageRoot: string, manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]) {
+function validateDistFreshness(
+  packageRoot: string,
+  manifest: ExtensionManifest | LoadedExtensionManifest,
+  findings: ExtensionDoctorFinding[],
+) {
   const sourceLatest = Math.max(
     latestMtimeUnder(resolve(packageRoot, 'src')) ?? 0,
     latestMtimeUnder(resolve(packageRoot, 'extension.json')) ?? 0,
   );
   if (sourceLatest <= 0) return;
 
-  const severity: ExtensionDoctorSeverity = manifest.packageType === 'system' ? 'error' : 'warning';
+  const severity: ExtensionDoctorSeverity = (manifest as LoadedExtensionManifest).packageType === 'system' ? 'error' : 'warning';
   const frontendEntry = manifest.frontend?.entry ? resolve(packageRoot, manifest.frontend.entry) : undefined;
   if (frontendEntry && existsSync(frontendEntry) && statSync(frontendEntry).mtimeMs + 1000 < sourceLatest) {
     add(
@@ -380,12 +384,18 @@ function collectFrontendComponents(manifest: ExtensionManifest): string[] {
     ...(contributions?.composerControls ?? []).map((item) => item.component),
     ...(contributions?.composerButtons ?? []).map((item) => item.component),
     ...(contributions?.composerInputTools ?? []).map((item) => item.component),
+    ...(contributions?.composerShelves ?? []).map((item) => item.component),
     ...(contributions?.topBarElements ?? []).map((item) => item.component),
     ...(contributions?.conversationHeaderElements ?? []).map((item) => item.component),
     ...(contributions?.conversationDecorators ?? []).map((item) => item.component),
+    ...(contributions?.conversationLifecycle ?? []).map((item) => item.component),
     ...(contributions?.newConversationPanels ?? []).map((item) => item.component),
     ...(contributions?.statusBarItems ?? []).map((item) => item.component).filter(Boolean),
     ...(contributions?.transcriptRenderers ?? []).map((item) => item.component),
+    ...(contributions?.transcriptBlocks ?? []).map((item) => item.component),
+    ...(contributions?.threadHeaderActions ?? []).map((item) => item.component),
+    ...(contributions?.activityTreeItemElements ?? []).map((item) => item.component),
+    ...(contributions?.composerAttachmentRenderers ?? []).map((item) => item.component),
     contributions?.settingsComponent?.component,
   ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
 }
