@@ -5680,7 +5680,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   )}
                 </div>
                 {!draft && id ? (
-                  <div className="mt-1 inline-flex shrink-0 rounded-md border border-border-subtle/60 bg-transparent p-0.5 text-secondary/70">
+                  <div className="ml-auto mt-1 inline-flex shrink-0 rounded-md border border-border-subtle/60 bg-transparent p-0.5 text-secondary/70">
                     <button
                       type="button"
                       className={cx(
