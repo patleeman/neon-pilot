@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "skills-manager",
+  "name": "Skills",
+  "packageType": "user",
+  "description": "Manage agent skills: enable, disable, edit, and inspect all skill sources.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "agentExtension": "skillsManagerAgentExtension",
+    "actions": [
+      { "id": "listSkills", "handler": "listSkills", "title": "List all skills" },
+      { "id": "toggleSkill", "handler": "toggleSkill", "title": "Toggle skill enabled/disabled" },
+      { "id": "readSkillFile", "handler": "readSkillFile", "title": "Read skill file content" },
+      { "id": "writeSkillFile", "handler": "writeSkillFile", "title": "Write skill file content" }
+    ]
+  },
+  "contributes": {
+    "nav": [
+      {
+        "id": "skills-nav",
+        "label": "Skills",
+        "route": "/skills",
+        "icon": "sparkle",
+        "section": "settings"
+      }
+    ],
+    "views": [
+      {
+        "id": "page",
+        "title": "Skills",
+        "location": "main",
+        "route": "/skills",
+        "component": "SkillsManagerPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ]
+  },
+  "permissions": ["extensions:read"]
+}
