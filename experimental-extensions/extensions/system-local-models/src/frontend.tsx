@@ -734,7 +734,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[112rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
         <AppPageIntro
           title="Local Models"
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
