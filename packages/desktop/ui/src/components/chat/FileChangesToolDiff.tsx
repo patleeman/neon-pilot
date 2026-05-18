@@ -90,41 +90,8 @@ export function readFileChanges(details: unknown): FileChange[] {
   });
 }
 
-function countContentLines(content: string): number {
-  if (!content) return 0;
-  return content.endsWith('\n') ? content.slice(0, -1).split('\n').length : content.split('\n').length;
-}
-
-function buildAddedPatch(path: string, content: string): string {
-  const lines = content ? content.replace(/\n$/, '').split('\n') : [];
-  return [
-    'diff --git a/' + path + ' b/' + path,
-    '--- /dev/null',
-    '+++ b/' + path,
-    `@@ -1,0 +1,${countContentLines(content)} @@`,
-    ...lines.map((line) => `+${line}`),
-  ].join('\n');
-}
-
-export function readFileChangesForToolBlock(block: { tool?: string; input?: unknown; details?: unknown }): FileChange[] {
-  const fileChanges = readFileChanges(block.details);
-  if (fileChanges.length > 0) return fileChanges;
-
-  if (block.tool !== 'write' || !isRecord(block.input)) return [];
-  const path = readString(block.input, 'path');
-  const content = typeof block.input.content === 'string' ? block.input.content : undefined;
-  if (!path || content === undefined) return [];
-
-  return [
-    {
-      path,
-      status: 'added',
-      additions: countContentLines(content),
-      deletions: 0,
-      patch: buildAddedPatch(path, content),
-      truncated: false,
-    },
-  ];
+export function readFileChangesForToolBlock(block: { details?: unknown }): FileChange[] {
+  return readFileChanges(block.details);
 }
 
 function resolveDiffThemeType(theme: string, availableThemes: ColorTheme[]): 'light' | 'dark' {

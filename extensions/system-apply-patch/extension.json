@@ -18,11 +18,34 @@
         "id": "applyPatchEdit",
         "handler": "applyPatchEdit",
         "title": "Patch Edit"
+      },
+      {
+        "id": "writeFile",
+        "handler": "writeFile",
+        "title": "Write file"
       }
     ]
   },
   "contributes": {
     "tools": [
+      {
+        "id": "write-file",
+        "title": "Write",
+        "description": "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
+        "action": "writeFile",
+        "replaces": "write",
+        "promptSnippet": "Create or overwrite files",
+        "promptGuidelines": ["Use write only for new files or complete rewrites."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Path to the file to write (relative or absolute)" },
+            "content": { "type": "string", "description": "Content to write to the file" }
+          },
+          "required": ["path", "content"],
+          "additionalProperties": false
+        }
+      },
       {
         "id": "apply-patch-edit",
         "title": "Edit",

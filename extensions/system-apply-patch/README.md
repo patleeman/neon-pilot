@@ -1,6 +1,6 @@
 # Apply Patch
 
-Adds an `edit` agent tool for Codex-style file patches and an OpenAI-only patch-based replacement for `edit`.
+Adds a `write` agent tool with file-change metadata plus an `edit` agent tool for Codex-style file patches and an OpenAI-only patch-based replacement for `edit`.
 
 Patch format:
 

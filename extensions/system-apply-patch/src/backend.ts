@@ -9,6 +9,11 @@ interface ApplyPatchInput {
   edits?: Array<{ oldText: string; newText: string }>;
 }
 
+interface WriteFileInput {
+  path?: string;
+  content?: string;
+}
+
 type FilePatch =
   | { type: 'add'; path: string; lines: string[] }
   | { type: 'delete'; path: string }
@@ -402,4 +407,32 @@ export async function applyPatchEdit(input: ApplyPatchInput, ctx: ToolContext) {
   if (!patch && !input.edits?.length) throw new Error('Either patch or edits are required.');
   const outcome = applyPatchesFromInput(input, ctx);
   return { text: formatResults(outcome.results), details: outcome };
+}
+
+export async function writeFile(input: WriteFileInput, ctx: ToolContext) {
+  const filePath = input.path?.trim();
+  if (!filePath) throw new Error('path is required.');
+  if (typeof input.content !== 'string') throw new Error('content is required.');
+
+  const cwd = readCwd(ctx);
+  const target = resolveInsideCwd(cwd, filePath);
+  const existed = existsSync(target);
+  const oldContent = existed ? readFileSync(target, 'utf-8') : '';
+  ensureParent(target);
+  writeFileSync(target, input.content, 'utf-8');
+
+  const additions = countLines(input.content);
+  const deletions = existed ? countLines(oldContent) : 0;
+  const fileChange: FileChangeMetadata = {
+    path: filePath,
+    status: existed ? 'modified' : 'added',
+    additions,
+    deletions,
+    ...maybePatch({ path: filePath, oldContent, newContent: input.content }),
+  };
+
+  return {
+    text: `Successfully wrote ${input.content.length} bytes to ${filePath}`,
+    details: { fileChanges: [fileChange] },
+  };
 }

@@ -47,15 +47,7 @@ describe('readFileChanges', () => {
     ).toEqual([expect.objectContaining({ path: 'src/app.ts', status: 'modified', additions: 1, deletions: 1 })]);
   });
 
-  it('derives an added-file diff for write tool blocks', () => {
-    expect(readFileChangesForToolBlock({ tool: 'write', input: { path: 'demo.txt', content: 'one\ntwo\n' } })).toEqual([
-      expect.objectContaining({
-        path: 'demo.txt',
-        status: 'added',
-        additions: 2,
-        deletions: 0,
-        patch: expect.stringContaining('+one\n+two'),
-      }),
-    ]);
+  it('does not derive file changes from tool input', () => {
+    expect(readFileChangesForToolBlock({ details: null })).toEqual([]);
   });
 });
