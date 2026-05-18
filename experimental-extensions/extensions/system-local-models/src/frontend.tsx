@@ -603,7 +603,9 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               >
                 Download
               </ToolbarButton>
-              <ToolbarButton onClick={() => void loadDetails(selectedSearch.id)}>Refresh Details</ToolbarButton>
+              <a href={`https://huggingface.co/${selectedSearch.id}`} target="_blank" rel="noreferrer" className="ui-toolbar-button">
+                Hugging Face ↗
+              </a>
             </div>
             {details ? (
               <>
@@ -619,20 +621,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </Select>
                   </Field>
                 ) : null}
-                <a
-                  href={`https://huggingface.co/${details.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-lg border border-border-subtle/60 bg-surface/45 p-4 text-sm text-accent hover:text-primary"
-                >
-                  Open model page on Hugging Face ↗
-                </a>
               </>
             ) : (
               <div className="rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
                 {selectedSearch.format === 'gguf'
-                  ? 'Loading details finds the downloadable GGUF files.'
-                  : 'Model details load on demand; MLX models can download directly.'}
+                  ? 'Selecting a GGUF model loads its file list automatically.'
+                  : 'MLX models can download directly. Use the Hugging Face link for full model details.'}
               </div>
             )}
           </div>
