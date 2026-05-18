@@ -646,6 +646,8 @@ export function registerExtensionRoutes(
         await stopExtensionServices(entry.manifest.id);
         const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
         unregisterBashProcessWrapper(entry.manifest.id);
+        const { uninstallExtensionSubscriptions } = await import('../extensions/extensionSubscriptions.js');
+        uninstallExtensionSubscriptions(entry.manifest.id);
         const onDisableAction = entry.manifest.backend?.onDisableAction;
         actionResult = onDisableAction ? await invokeExtensionAction(entry.manifest.id, onDisableAction, {}, context) : undefined;
         setExtensionEnabled(entry.manifest.id, false);
@@ -653,6 +655,8 @@ export function registerExtensionRoutes(
       if (enabled) {
         const { startExtensionServices } = await import('../extensions/extensionServices.js');
         await startExtensionServices(context);
+        const { installSubscriptionsForExtension } = await import('../extensions/extensionSubscriptions.js');
+        await installSubscriptionsForExtension(entry.manifest.id, context);
       }
       res.json({
         ok: true,

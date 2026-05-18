@@ -88,7 +88,7 @@ export interface ExtensionBackendContext {
   };
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
-    put(key: string, value: unknown): Promise<{ ok: true }>;
+    put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<{ ok: true }>;
     delete(key: string): Promise<{ ok: true; deleted: boolean }>;
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
@@ -393,8 +393,8 @@ function createStorage(extensionId: string): ExtensionBackendContext['storage'] 
     async get<T = unknown>(key: string): Promise<T | null> {
       return readExtensionState<T>(extensionId, key)?.value ?? null;
     },
-    async put(key: string, value: unknown): Promise<{ ok: true }> {
-      writeExtensionState(extensionId, key, value);
+    async put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<{ ok: true }> {
+      writeExtensionState(extensionId, key, value, opts ? { expectedVersion: opts.expectedVersion } : {});
       return { ok: true };
     },
     async delete(key: string): Promise<{ ok: true; deleted: boolean }> {

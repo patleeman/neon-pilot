@@ -31,6 +31,15 @@ export async function stopExtensionServices(extensionId: string): Promise<void> 
   }
 }
 
+async function stopOneService(extensionId: string, serviceId: string): Promise<void> {
+  const key = serviceKey(extensionId, serviceId);
+  const service = runningServices.get(key);
+  if (!service) return;
+  runningServices.delete(key);
+  if (service.stop) await service.stop();
+  logInfo('extension service stopped', { extensionId, serviceId });
+}
+
 export async function stopAllExtensionServices(): Promise<void> {
   for (const extensionId of new Set([...runningServices.values()].map((service) => service.extensionId))) {
     await stopExtensionServices(extensionId);
@@ -103,7 +112,7 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (running) running.lastError = message;
         setExtensionHealthError(summary.id, message);
         if (service.restart === 'always' || service.restart === 'on-failure') {
-          await stopExtensionServices(summary.id);
+          await stopOneService(summary.id, service.id);
           await startOneExtensionService(summary.id, service, serverContext);
         }
       }
