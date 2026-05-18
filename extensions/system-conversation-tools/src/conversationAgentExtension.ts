@@ -17,6 +17,15 @@ function payloadWithoutAction(params: Record<string, unknown>): Record<string, u
   return payload;
 }
 
+function conversationInspectPayload(params: Record<string, unknown>): Record<string, unknown> {
+  const payload = payloadWithoutAction(params);
+  if (typeof payload.inspectAction === 'string') {
+    payload.action = payload.inspectAction;
+  }
+  delete payload.inspectAction;
+  return payload;
+}
+
 function readAction(params: unknown): ConversationAction {
   if (!params || typeof params !== 'object' || Array.isArray(params)) {
     throw new Error('conversation action is required.');
@@ -53,7 +62,7 @@ export function createConversationAgentExtension(options: {
           case 'ask':
             return executeAskUserQuestion(payload, ctx);
           case 'inspect':
-            return executeConversationInspectTool(payload, ctx);
+            return executeConversationInspectTool(conversationInspectPayload(params as Record<string, unknown>), ctx);
           case 'set_title':
             return executeSetConversationTitle(payload, ctx, (title) => pi.setSessionName(title));
           case 'change_working_directory':

@@ -5,6 +5,12 @@ import { ChangeWorkingDirectoryToolParams } from './changeWorkingDirectoryAgentE
 import { ConversationInspectToolParams } from './conversationInspectAgentExtension.js';
 import { ConversationTitleToolParams } from './conversationTitleAgentExtension.js';
 
+function optionalProperties(schema: { properties?: Record<string, unknown> }, except = new Set<string>()): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(schema.properties ?? {}).map(([key, value]) => [key, except.has(key) ? value : Type.Optional(value as never)]),
+  );
+}
+
 const DeferredResumeParams = Type.Object({
   action: Type.Literal('deferred_resume'),
   deferredAction: Type.Union([Type.Literal('add'), Type.Literal('list'), Type.Literal('cancel')], {
@@ -25,13 +31,26 @@ const DeferredResumeParams = Type.Object({
   ),
 });
 
-export const ConversationToolParams = Type.Union([
-  Type.Intersect([Type.Object({ action: Type.Literal('ask') }), AskUserQuestionToolParams]),
-  Type.Intersect([Type.Object({ action: Type.Literal('inspect') }), ConversationInspectToolParams]),
-  Type.Intersect([Type.Object({ action: Type.Literal('set_title') }), ConversationTitleToolParams]),
-  Type.Intersect([Type.Object({ action: Type.Literal('change_working_directory') }), ChangeWorkingDirectoryToolParams]),
-  DeferredResumeParams,
-]);
+const { action: inspectAction, ...inspectProperties } = ConversationInspectToolParams.properties;
+
+export const ConversationToolParams = Type.Object(
+  {
+    action: Type.Union([
+      Type.Literal('ask'),
+      Type.Literal('inspect'),
+      Type.Literal('set_title'),
+      Type.Literal('change_working_directory'),
+      Type.Literal('deferred_resume'),
+    ]),
+    ...optionalProperties(AskUserQuestionToolParams),
+    inspectAction: Type.Optional(inspectAction),
+    ...Object.fromEntries(Object.entries(inspectProperties).map(([key, value]) => [key, Type.Optional(value as never)])),
+    ...optionalProperties(ConversationTitleToolParams),
+    ...optionalProperties(ChangeWorkingDirectoryToolParams),
+    ...optionalProperties(DeferredResumeParams, new Set(['action'])),
+  },
+  { additionalProperties: false },
+);
 
 export const CONVERSATION_ACTIONS = ['ask', 'inspect', 'set_title', 'change_working_directory', 'deferred_resume'] as const;
 
