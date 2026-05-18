@@ -158,13 +158,24 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
     [pa],
   );
 
-  const handleAdd = useCallback(() => {
-    setDraft((prev) => [...prev, '']);
-  }, []);
+  const [picking, setPicking] = useState(false);
 
-  const handleChange = useCallback((index: number, value: string) => {
-    setDraft((prev) => prev.map((d, i) => (i === index ? value : d)));
-  }, []);
+  const handleAdd = useCallback(async () => {
+    if (picking || saving) return;
+    setPicking(true);
+    setError(null);
+    try {
+      const result = (await pa.pickFolder({ prompt: 'Choose skill folder' })) as { path: string | null; cancelled: boolean };
+      if (result.cancelled || !result.path) return;
+      const next = draft.includes(result.path) ? draft : [...draft, result.path];
+      setDraft(next);
+      void save(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to pick folder');
+    } finally {
+      setPicking(false);
+    }
+  }, [picking, saving, draft, pa, save]);
 
   const handleRemove = useCallback(
     (index: number) => {
@@ -183,21 +194,6 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
       [next[index], next[swap]] = [next[swap], next[index]];
       setDraft(next);
       void save(next);
-    },
-    [draft, save],
-  );
-
-  const handleBlur = useCallback(
-    (index: number) => {
-      const trimmed = draft[index]?.trim();
-      if (!trimmed) {
-        // Remove empty entry on blur
-        const next = draft.filter((_, i) => i !== index);
-        setDraft(next);
-        void save(next);
-      } else {
-        void save(draft);
-      }
     },
     [draft, save],
   );
@@ -234,20 +230,14 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
                 <div className="mb-3 space-y-2">
                   {draft.map((path, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={path}
-                        onChange={(e) => handleChange(index, e.target.value)}
-                        onBlur={() => handleBlur(index)}
-                        placeholder="/path/to/skills"
-                        className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[12px] text-primary outline-none focus:border-border focus:ring-1 focus:ring-border"
-                        disabled={saving}
-                      />
+                      <div className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface/50 px-3 py-1.5 font-mono text-[12px] text-primary break-all">
+                        {path}
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleMove(index, -1)}
                         disabled={saving || index === 0}
-                        className="text-[12px] text-dim disabled:opacity-30 hover:text-primary"
+                        className="shrink-0 text-[12px] text-dim disabled:opacity-30 hover:text-primary"
                         title="Move up"
                       >
                         ↑
@@ -256,7 +246,7 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
                         type="button"
                         onClick={() => handleMove(index, 1)}
                         disabled={saving || index === draft.length - 1}
-                        className="text-[12px] text-dim disabled:opacity-30 hover:text-primary"
+                        className="shrink-0 text-[12px] text-dim disabled:opacity-30 hover:text-primary"
                         title="Move down"
                       >
                         ↓
@@ -265,7 +255,7 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
                         type="button"
                         onClick={() => handleRemove(index)}
                         disabled={saving}
-                        className="text-[12px] text-dim disabled:opacity-30 hover:text-danger"
+                        className="shrink-0 text-[12px] text-dim disabled:opacity-30 hover:text-danger"
                         title="Remove"
                       >
                         Remove
@@ -278,11 +268,11 @@ function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={handleAdd}
-                  disabled={saving}
+                  onClick={() => void handleAdd()}
+                  disabled={saving || picking}
                   className="rounded-lg border border-border-subtle px-3 py-1.5 text-[12px] text-secondary transition-colors hover:bg-base hover:text-primary disabled:opacity-50"
                 >
-                  Add folder
+                  {picking ? 'Picking…' : 'Add folder'}
                 </button>
                 {saving ? <span className="text-[12px] text-dim">Saving…</span> : null}
                 {error ? <span className="text-[12px] text-danger">{error}</span> : null}
