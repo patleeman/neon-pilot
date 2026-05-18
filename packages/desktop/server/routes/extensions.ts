@@ -664,10 +664,11 @@ export function registerExtensionRoutes(
         setExtensionEnabled(entry.manifest.id, false);
       }
       if (enabled) {
-        const { startExtensionServices } = await import('../extensions/extensionServices.js');
-        await startExtensionServices(context);
+        // Install subscriptions before starting services so any service startup events are received.
         const { installSubscriptionsForExtension } = await import('../extensions/extensionSubscriptions.js');
         await installSubscriptionsForExtension(entry.manifest.id, context);
+        const { startExtensionServices } = await import('../extensions/extensionServices.js');
+        await startExtensionServices(context);
       }
       res.json({
         ok: true,

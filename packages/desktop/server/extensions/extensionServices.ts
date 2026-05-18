@@ -57,10 +57,19 @@ async function startOneExtensionService(
     const backend = await loadExtensionBackend(extensionId);
     const handler = backend[service.handler];
     if (typeof handler !== 'function') throw new Error(`Missing service handler export "${service.handler}".`);
-    const result = await (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-      { serviceId: service.id },
-      createBackendContext(extensionId, serverContext),
-    );
+    const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
+    const result = await Promise.race([
+      (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+        { serviceId: service.id },
+        createBackendContext(extensionId, serverContext),
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Service "${service.id}" startup timed out after ${SERVICE_STARTUP_TIMEOUT_MS / 1000}s.`)),
+          SERVICE_STARTUP_TIMEOUT_MS,
+        ).unref(),
+      ),
+    ]);
     const stop = typeof result === 'function' ? (result as () => unknown | Promise<unknown>) : undefined;
     runningServices.set(key, { extensionId, serviceId: service.id, stop, startedAt: new Date().toISOString() });
     logInfo('extension service started', { extensionId, serviceId: service.id });
@@ -99,10 +108,19 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         const backend = await loadExtensionBackend(summary.id);
         const healthCheck = backend[service.healthCheck];
         if (typeof healthCheck !== 'function') throw new Error(`Missing service healthCheck export "${service.healthCheck}".`);
-        const result = await (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-          { serviceId: service.id },
-          createBackendContext(summary.id, serverContext),
-        );
+        const HEALTH_CHECK_TIMEOUT_MS = 15_000;
+        const result = await Promise.race([
+          (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+            { serviceId: service.id },
+            createBackendContext(summary.id, serverContext),
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`Health check for service "${service.id}" timed out after ${HEALTH_CHECK_TIMEOUT_MS / 1000}s.`)),
+              HEALTH_CHECK_TIMEOUT_MS,
+            ).unref(),
+          ),
+        ]);
         if (result && typeof result === 'object' && 'running' in result && (result as { running?: unknown }).running === false) {
           throw new Error('Service health check reported stopped.');
         }

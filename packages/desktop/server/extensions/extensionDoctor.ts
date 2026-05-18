@@ -200,6 +200,30 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
     }
   }
 
+  for (const service of manifest.backend?.services ?? []) {
+    const handler = service.handler?.trim();
+    if (!handler) add(findings, 'error', 'missing-service-handler', `Backend service "${service.id}" is missing a handler.`);
+    else if (backendContent && !hasExport(backendContent, handler)) {
+      add(
+        findings,
+        'error',
+        'missing-backend-export',
+        `Backend service handler "${handler}" is referenced by the manifest but is not exported.`,
+        backendSource,
+      );
+    }
+    const healthCheck = service.healthCheck?.trim();
+    if (healthCheck && backendContent && !hasExport(backendContent, healthCheck)) {
+      add(
+        findings,
+        'error',
+        'missing-backend-export',
+        `Backend service healthCheck "${healthCheck}" is referenced by the manifest but is not exported.`,
+        backendSource,
+      );
+    }
+  }
+
   for (const tool of manifest.contributes?.tools ?? []) {
     if (!tool.id?.trim()) add(findings, 'error', 'invalid-tool', 'Tool contribution is missing id.');
     if (!tool.description?.trim()) add(findings, 'error', 'invalid-tool', `Tool "${tool.id}" is missing description.`);
