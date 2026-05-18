@@ -1,61 +1,15 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { Type } from '@sinclair/typebox';
 
 import { deferredResume } from '../../system-automations/src/conversationQueueBackend.js';
-import { createAskUserQuestionAgentExtension } from './askUserQuestionAgentExtension.js';
+import { executeAskUserQuestion } from './askUserQuestionAgentExtension.js';
 import {
-  createChangeWorkingDirectoryAgentExtension,
+  executeChangeWorkingDirectory,
   type RequestConversationWorkingDirectoryChangeInput,
   type RequestConversationWorkingDirectoryChangeResult,
 } from './changeWorkingDirectoryAgentExtension.js';
-import { createConversationInspectAgentExtension } from './conversationInspectAgentExtension.js';
-import { createConversationTitleAgentExtension } from './conversationTitleAgentExtension.js';
-
-type RegisteredTool = {
-  name?: string;
-  execute?: (...args: unknown[]) => Promise<unknown> | unknown;
-};
-
-type RegisterToolApi = {
-  registerTool(tool: RegisteredTool): void;
-};
-
-const CONVERSATION_ACTIONS = ['ask', 'inspect', 'set_title', 'change_working_directory', 'deferred_resume'] as const;
-
-type ConversationAction = (typeof CONVERSATION_ACTIONS)[number];
-
-const ConversationToolParams = Type.Object(
-  {
-    action: Type.Union(
-      CONVERSATION_ACTIONS.map((action) => Type.Literal(action)),
-      {
-        description: 'Conversation/session action to perform.',
-      },
-    ),
-  },
-  {
-    additionalProperties: true,
-  },
-);
-
-function registerLegacyConversationTools(options: {
-  requestConversationWorkingDirectoryChange: (
-    input: RequestConversationWorkingDirectoryChangeInput,
-  ) => Promise<RequestConversationWorkingDirectoryChangeResult>;
-}): Map<string, RegisteredTool> {
-  const tools = new Map<string, RegisteredTool>();
-  const api: RegisterToolApi = {
-    registerTool(tool) {
-      if (tool.name) tools.set(tool.name, tool);
-    },
-  };
-
-  createAskUserQuestionAgentExtension()(api as ExtensionAPI);
-  createConversationInspectAgentExtension()(api as ExtensionAPI);
-  createConversationTitleAgentExtension()(api as ExtensionAPI);
-  createChangeWorkingDirectoryAgentExtension(options)(api as ExtensionAPI);
-  return tools;
-}
+import { executeConversationInspectTool } from './conversationInspectAgentExtension.js';
+import { executeSetConversationTitle } from './conversationTitleAgentExtension.js';
+import { CONVERSATION_ACTIONS, type ConversationAction, ConversationToolParams } from './conversationToolSchema.js';
 
 function payloadWithoutAction(params: Record<string, unknown>): Record<string, unknown> {
   const payload = { ...params };
@@ -80,8 +34,6 @@ export function createConversationAgentExtension(options: {
   ) => Promise<RequestConversationWorkingDirectoryChangeResult>;
 }): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
-    const legacyTools = registerLegacyConversationTools(options);
-
     pi.registerTool({
       name: 'conversation',
       label: 'Conversation',
@@ -93,35 +45,35 @@ export function createConversationAgentExtension(options: {
         'Ask the user only when blocked on a real decision or approval.',
       ],
       parameters: ConversationToolParams,
-      async execute(toolCallId, params, signal, onUpdate, ctx) {
+      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         const action = readAction(params);
         const payload = payloadWithoutAction(params as Record<string, unknown>);
 
-        if (action === 'deferred_resume') {
-          const result = await deferredResume(payload as never, {
-            profile: 'shared',
-            toolContext: {
-              sessionId: ctx.sessionManager.getSessionId(),
-              sessionFile: ctx.sessionManager.getSessionFile?.(),
-              cwd: ctx.sessionManager.getCwd?.(),
-            },
-          });
-          return {
-            content: [{ type: 'text' as const, text: result.text }],
-            details: result,
-          };
+        switch (action) {
+          case 'ask':
+            return executeAskUserQuestion(payload, ctx);
+          case 'inspect':
+            return executeConversationInspectTool(payload, ctx);
+          case 'set_title':
+            return executeSetConversationTitle(payload, ctx, (title) => pi.setSessionName(title));
+          case 'change_working_directory':
+            return executeChangeWorkingDirectory(payload, ctx, options.requestConversationWorkingDirectoryChange);
+          case 'deferred_resume': {
+            const { deferredAction, ...resumePayload } = payload;
+            const result = await deferredResume({ ...resumePayload, action: deferredAction } as never, {
+              profile: 'shared',
+              toolContext: {
+                sessionId: ctx.sessionManager.getSessionId(),
+                sessionFile: ctx.sessionManager.getSessionFile?.(),
+                cwd: ctx.sessionManager.getCwd?.(),
+              },
+            });
+            return {
+              content: [{ type: 'text' as const, text: result.text }],
+              details: result,
+            };
+          }
         }
-
-        const toolNameByAction: Record<Exclude<ConversationAction, 'deferred_resume'>, string> = {
-          ask: 'ask_user_question',
-          inspect: 'conversation_inspect',
-          set_title: 'set_conversation_title',
-          change_working_directory: 'change_working_directory',
-        };
-        const toolName = toolNameByAction[action as Exclude<ConversationAction, 'deferred_resume'>];
-        const tool = legacyTools.get(toolName);
-        if (!tool?.execute) throw new Error(`Conversation tool action ${action} is unavailable.`);
-        return tool.execute(toolCallId, payload, signal, onUpdate, ctx);
       },
     });
   };

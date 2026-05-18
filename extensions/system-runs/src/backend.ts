@@ -439,5 +439,3 @@ export async function subagent(input: unknown, ctx: NativeBackendContext) {
 
   throw new Error(`Unsupported subagent action: ${action}`);
 }
-
-export const background_command = background_bash;

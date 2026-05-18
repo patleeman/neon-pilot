@@ -4,7 +4,7 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { resolveRequestedCwd } from '@personal-agent/extensions/backend/conversations';
 import { Type } from '@sinclair/typebox';
 
-const ChangeWorkingDirectoryToolParams = Type.Object({
+export const ChangeWorkingDirectoryToolParams = Type.Object({
   cwd: Type.String({
     description: 'Target working directory. Relative paths resolve from the current conversation cwd.',
   }),
@@ -37,6 +37,96 @@ function readRequiredString(value: string | undefined, label: string): string {
   return normalized;
 }
 
+export async function executeChangeWorkingDirectory(
+  params: { cwd?: string; continuePrompt?: string },
+  ctx: { sessionManager: { getSessionId(): string }; cwd?: string },
+  requestConversationWorkingDirectoryChange: (
+    input: RequestConversationWorkingDirectoryChangeInput,
+  ) => Promise<RequestConversationWorkingDirectoryChangeResult>,
+) {
+  const conversationId = readRequiredString(ctx.sessionManager.getSessionId?.(), 'conversationId');
+  const nextCwd = await resolveRequestedCwd(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
+  if (!nextCwd) {
+    throw new Error('cwd is required.');
+  }
+
+  if (!existsSync(nextCwd)) {
+    throw new Error(`Directory does not exist: ${nextCwd}`);
+  }
+
+  if (!statSync(nextCwd).isDirectory()) {
+    throw new Error(`Not a directory: ${nextCwd}`);
+  }
+
+  const continuePrompt =
+    typeof params.continuePrompt === 'string' && params.continuePrompt.trim().length > 0 ? params.continuePrompt.trim() : undefined;
+
+  let result: RequestConversationWorkingDirectoryChangeResult;
+  try {
+    result = await requestConversationWorkingDirectoryChange({
+      conversationId,
+      cwd: nextCwd,
+      ...(continuePrompt ? { continuePrompt } : {}),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === `Session ${conversationId} is not live.`) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: 'Cannot change the working directory because this conversation is not currently live. Start or resume the conversation in the UI, then try again.',
+          },
+        ],
+        details: {
+          action: 'unavailable',
+          reason: 'session_not_live',
+          conversationId,
+          cwd: nextCwd,
+          queued: false,
+        },
+      };
+    }
+    throw error;
+  }
+
+  if (result.unchanged) {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Already using working directory ${result.cwd}.`,
+        },
+      ],
+      details: {
+        action: 'noop',
+        conversationId,
+        cwd: result.cwd,
+        queued: false,
+        unchanged: true,
+      },
+    };
+  }
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: continuePrompt
+          ? `Queued working directory change to ${result.cwd}. This conversation will move there after this turn and continue automatically.`
+          : `Queued working directory change to ${result.cwd}. This conversation will move there after this turn.`,
+      },
+    ],
+    details: {
+      action: 'queue',
+      conversationId,
+      cwd: result.cwd,
+      queued: result.queued,
+      continuePrompt: Boolean(continuePrompt),
+    },
+  };
+}
+
 export function createChangeWorkingDirectoryAgentExtension(options: {
   requestConversationWorkingDirectoryChange: (
     input: RequestConversationWorkingDirectoryChangeInput,
@@ -54,87 +144,7 @@ export function createChangeWorkingDirectoryAgentExtension(options: {
       ],
       parameters: ChangeWorkingDirectoryToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-        const conversationId = readRequiredString(ctx.sessionManager.getSessionId?.(), 'conversationId');
-        const nextCwd = await resolveRequestedCwd(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
-        if (!nextCwd) {
-          throw new Error('cwd is required.');
-        }
-
-        if (!existsSync(nextCwd)) {
-          throw new Error(`Directory does not exist: ${nextCwd}`);
-        }
-
-        if (!statSync(nextCwd).isDirectory()) {
-          throw new Error(`Not a directory: ${nextCwd}`);
-        }
-
-        const continuePrompt =
-          typeof params.continuePrompt === 'string' && params.continuePrompt.trim().length > 0 ? params.continuePrompt.trim() : undefined;
-
-        let result: RequestConversationWorkingDirectoryChangeResult;
-        try {
-          result = await options.requestConversationWorkingDirectoryChange({
-            conversationId,
-            cwd: nextCwd,
-            ...(continuePrompt ? { continuePrompt } : {}),
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          if (message === `Session ${conversationId} is not live.`) {
-            return {
-              content: [
-                {
-                  type: 'text' as const,
-                  text: 'Cannot change the working directory because this conversation is not currently live. Start or resume the conversation in the UI, then try again.',
-                },
-              ],
-              details: {
-                action: 'unavailable',
-                reason: 'session_not_live',
-                conversationId,
-                cwd: nextCwd,
-                queued: false,
-              },
-            };
-          }
-          throw error;
-        }
-
-        if (result.unchanged) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Already using working directory ${result.cwd}.`,
-              },
-            ],
-            details: {
-              action: 'noop',
-              conversationId,
-              cwd: result.cwd,
-              queued: false,
-              unchanged: true,
-            },
-          };
-        }
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: continuePrompt
-                ? `Queued working directory change to ${result.cwd}. This conversation will move there after this turn and continue automatically.`
-                : `Queued working directory change to ${result.cwd}. This conversation will move there after this turn.`,
-            },
-          ],
-          details: {
-            action: 'queue',
-            conversationId,
-            cwd: result.cwd,
-            queued: result.queued,
-            continuePrompt: Boolean(continuePrompt),
-          },
-        };
+        return executeChangeWorkingDirectory(params, ctx, options.requestConversationWorkingDirectoryChange);
       },
     });
   };

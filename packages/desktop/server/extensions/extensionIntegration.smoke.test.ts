@@ -642,6 +642,28 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
+  it('exposes the consolidated default agent tool surface', () => {
+    const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
+    for (const expected of ['web.search', 'web.fetch', 'background_bash', 'subagent']) {
+      expect(toolNames.has(expected), `missing consolidated tool ${expected}`).toBe(true);
+    }
+    for (const legacy of [
+      'duckduckgo_search',
+      'exa_search',
+      'web_fetch',
+      'ask_user_question',
+      'conversation_inspect',
+      'set_conversation_title',
+      'change_working_directory',
+      'deferred_resume',
+      'background_command',
+      'apply_patch',
+      'local_models_status',
+    ]) {
+      expect(toolNames.has(legacy), `legacy tool should not be model-visible: ${legacy}`).toBe(false);
+    }
+  });
+
   it('no duplicate slash command names', () => {
     const commands = listExtensionSlashCommandRegistrations();
     const conflicts = findAllStringConflicts(commands.map((c) => [c.name, `${c.extensionId}/${c.surfaceId}`]));

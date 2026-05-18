@@ -13,7 +13,7 @@ import {
 } from '@personal-agent/extensions/backend/conversations';
 import { Type } from '@sinclair/typebox';
 
-const ConversationInspectToolParams = Type.Object({
+export const ConversationInspectToolParams = Type.Object({
   action: Type.Union(
     CONVERSATION_INSPECT_ACTION_VALUES.map((value) => Type.Literal(value)),
     { description: `Action to perform. Valid values: ${CONVERSATION_INSPECT_ACTION_VALUES.join(', ')}.` },
@@ -131,6 +131,39 @@ async function trackContextPointerInspect(currentSessionId: string, targetConver
   }
 }
 
+export async function executeConversationInspectTool(params: Record<string, unknown>, ctx: { sessionManager: { getSessionId(): string } }) {
+  const workerParams: Record<string, unknown> = { ...params };
+  const currentSessionId = ctx.sessionManager.getSessionId();
+  const targetConversationId = typeof params.conversationId === 'string' ? params.conversationId.trim() : '';
+
+  if (params.action === 'list' || params.action === 'search') {
+    workerParams.currentConversationId = currentSessionId;
+    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot();
+    if (sessionSnapshot !== undefined) {
+      workerParams.sessionSnapshot = sessionSnapshot;
+    }
+  } else if (targetConversationId) {
+    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot(targetConversationId);
+    if (sessionSnapshot !== undefined) {
+      workerParams.sessionSnapshot = sessionSnapshot;
+    }
+  }
+
+  const { action, result, text } = await executeConversationInspect(params.action as string, workerParams);
+
+  if (targetConversationId && currentSessionId) {
+    void trackContextPointerInspect(currentSessionId, targetConversationId);
+  }
+
+  return {
+    content: [{ type: 'text' as const, text }],
+    details: {
+      action,
+      ...(result as Record<string, unknown>),
+    },
+  };
+}
+
 export function createConversationInspectAgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     pi.registerTool({
@@ -143,44 +176,7 @@ export function createConversationInspectAgentExtension(): (pi: ExtensionAPI) =>
       ],
       parameters: ConversationInspectToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-        // Build params that the worker will pass through to the capability functions.
-        // The worker runs in a dedicated thread so synchronous file I/O doesn't
-        // block the Electron main thread.
-        const workerParams: Record<string, unknown> = { ...params };
-        const currentSessionId = ctx.sessionManager.getSessionId();
-        const targetConversationId = typeof params.conversationId === 'string' ? params.conversationId.trim() : '';
-
-        if (params.action === 'list' || params.action === 'search') {
-          workerParams.currentConversationId = currentSessionId;
-          // The worker thread cannot read the live in-memory session registry from the
-          // main server process. Inject a minimal main-thread snapshot so scope=live and
-          // scope=running stay accurate for other active conversations.
-          const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot();
-          if (sessionSnapshot !== undefined) {
-            workerParams.sessionSnapshot = sessionSnapshot;
-          }
-        } else if (targetConversationId) {
-          const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot(targetConversationId);
-          if (sessionSnapshot !== undefined) {
-            workerParams.sessionSnapshot = sessionSnapshot;
-          }
-        }
-
-        const { action, result, text } = await executeConversationInspect(params.action as string, workerParams);
-
-        // Track whether this inspect targets a suggested pointer.
-        // Looks up the DB instead of an in-memory registry so it survives server restarts.
-        if (targetConversationId && currentSessionId) {
-          void trackContextPointerInspect(currentSessionId, targetConversationId);
-        }
-
-        return {
-          content: [{ type: 'text' as const, text }],
-          details: {
-            action,
-            ...(result as Record<string, unknown>),
-          },
-        };
+        return executeConversationInspectTool(params, ctx);
       },
     });
   };

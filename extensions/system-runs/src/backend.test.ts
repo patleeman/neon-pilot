@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  backgroundCommandExecute: vi.fn(),
+  backgroundBashExecute: vi.fn(),
   subagentExecute: vi.fn(),
   pingDaemon: vi.fn().mockResolvedValue(true),
   startBackgroundRun: vi.fn(),
@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./runTool.js', () => ({
   createRunAgentExtension: vi.fn(() => (pi: { registerTool: (t: unknown) => void }) => {
-    pi.registerTool({ name: 'background_command', execute: mocks.backgroundCommandExecute });
+    pi.registerTool({ name: 'background_bash', execute: mocks.backgroundBashExecute });
     pi.registerTool({ name: 'subagent', execute: mocks.subagentExecute });
   }),
 }));
@@ -47,7 +47,7 @@ vi.mock('@personal-agent/extensions/backend', () => ({
   parseDeferredResumeDelayMs: vi.fn(),
 }));
 
-import { background_command, bash, subagent } from './backend.js';
+import { background_bash, bash, subagent } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
   return {
@@ -118,14 +118,14 @@ describe('system-runs backend', () => {
     });
   });
 
-  describe('background_command handler', () => {
+  describe('background_bash handler', () => {
     it('lists only shell background commands through the host runs backend API', async () => {
       mocks.listDurableRuns.mockResolvedValue({
         runs: [durableRun('run-shell', 'raw-shell', 'shell-task'), durableRun('run-agent', 'background-run', 'agent-task')],
         summary: { total: 2 },
       });
 
-      const result = await background_command({ action: 'list' }, createCtx());
+      const result = await background_bash({ action: 'list' }, createCtx());
 
       expect(mocks.listDurableRuns).toHaveBeenCalled();
       expect(result.text).toContain('Background commands (1):');
@@ -136,9 +136,7 @@ describe('system-runs backend', () => {
     it('rejects subagent runs with a clear tool hint', async () => {
       mocks.getDurableRun.mockResolvedValue({ run: durableRun('run-agent', 'background-run', 'agent-task') });
 
-      await expect(background_command({ action: 'logs', runId: 'run-agent' }, createCtx())).rejects.toThrow(
-        'Use subagent for this execution',
-      );
+      await expect(background_bash({ action: 'logs', runId: 'run-agent' }, createCtx())).rejects.toThrow('Use subagent for this execution');
     });
   });
 
@@ -167,7 +165,7 @@ describe('system-runs backend', () => {
       expect(result.text).not.toContain('run-shell');
     });
 
-    it('reads subagent logs without using background_command', async () => {
+    it('reads subagent logs without using background_bash', async () => {
       mocks.getDurableRun.mockResolvedValue({ run: durableRun('run-agent', 'background-run', 'agent-task') });
       mocks.getDurableRunLog.mockResolvedValue({ path: '/tmp/run-agent.log', log: 'agent failed' });
 

@@ -65,7 +65,7 @@ vi.mock('@personal-agent/core', async (importOriginal) => {
   };
 });
 
-function registerTool(toolName: 'background_command' | 'subagent') {
+function registerTool(toolName: 'background_bash' | 'subagent') {
   let registeredTool:
     | {
         execute: (
@@ -225,7 +225,7 @@ describe('run agent extension', () => {
       logPath: '/tmp/run-456.log',
     });
 
-    const runTool = registerTool('background_command');
+    const runTool = registerTool('background_bash');
     const result = await runTool.execute(
       'tool-1',
       {

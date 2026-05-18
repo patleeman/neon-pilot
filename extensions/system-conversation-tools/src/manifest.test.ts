@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { createConversationToolsAgentExtension } from './backend.js';
+
 const PKG_ROOT = resolve(import.meta.dirname, '..');
 const EXTENSION_JSON_PATH = resolve(PKG_ROOT, 'extension.json');
 
@@ -58,5 +60,21 @@ describe('system-conversation-tools manifest', () => {
       (renderer: { id: string }) => renderer.id === 'terminal-bash-tool-block',
     );
     expect(bashRenderer).not.toHaveProperty('standalone');
+  });
+
+  it('registers only the consolidated conversation agent tool', () => {
+    const registered: Array<{ name?: string }> = [];
+    const pi = {
+      registerTool(tool: { name?: string }) {
+        registered.push(tool);
+      },
+    };
+
+    createConversationToolsAgentExtension()(pi as never);
+
+    expect(registered.map((tool) => tool.name)).toEqual(['conversation']);
+    expect(registered.map((tool) => tool.name)).not.toEqual(
+      expect.arrayContaining(['ask_user_question', 'conversation_inspect', 'set_conversation_title', 'change_working_directory']),
+    );
   });
 });

@@ -28,7 +28,7 @@ const AskUserQuestionPromptParams = Type.Object({
   }),
 });
 
-const AskUserQuestionToolParams = Type.Object({
+export const AskUserQuestionToolParams = Type.Object({
   question: Type.Optional(
     Type.String({
       description: 'Legacy single-question form. Use questions[] for multiple questions or check-style questions.',
@@ -258,6 +258,27 @@ function formatResultText(payload: AskUserQuestionPayload): string {
   return lines.join('\n');
 }
 
+export async function executeAskUserQuestion(params: unknown, ctx: { sessionManager: { getSessionId(): string } }) {
+  const payload = normalizePayload(params as { question?: unknown; details?: unknown; options?: unknown; questions?: unknown });
+  const conversationId = ctx.sessionManager.getSessionId();
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: formatResultText(payload),
+      },
+    ],
+    details: {
+      action: 'ask_user_question',
+      conversationId,
+      ...(payload.details ? { details: payload.details } : {}),
+      questions: payload.questions,
+    },
+    terminate: true,
+  };
+}
+
 export function createAskUserQuestionAgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     pi.registerTool({
@@ -266,28 +287,11 @@ export function createAskUserQuestionAgentExtension(): (pi: ExtensionAPI) => voi
       description: 'Ask one or more focused questions in the desktop UI and wait for the user to answer or skip with a normal prompt.',
       promptSnippet: 'Ask one or more focused questions in the desktop UI.',
       promptGuidelines: [
-        'Ask only when blocked on a user answer/approval; use questions[] with radio/check style for structured choices, and use deferred_resume for time-based follow-up.',
+        'Ask only when blocked on a user answer/approval; use questions[] with radio/check style for structured choices, and use conversation action deferred_resume for time-based follow-up.',
       ],
       parameters: AskUserQuestionToolParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-        const payload = normalizePayload(params);
-        const conversationId = ctx.sessionManager.getSessionId();
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: formatResultText(payload),
-            },
-          ],
-          details: {
-            action: 'ask_user_question',
-            conversationId,
-            ...(payload.details ? { details: payload.details } : {}),
-            questions: payload.questions,
-          },
-          terminate: true,
-        };
+        return executeAskUserQuestion(params, ctx);
       },
     });
   };
