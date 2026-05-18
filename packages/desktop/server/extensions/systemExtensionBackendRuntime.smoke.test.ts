@@ -220,6 +220,14 @@ const smokes = {
     const result = await module.copyConversationId({ conversationId: 'smoke-conversation' }, ctx);
     assert(result.ok === true && result.conversationId === 'smoke-conversation', 'copyConversationId failed');
   },
+  async 'system-context-hardening'() {
+    await smokeAgentFactory('createContextHardeningAgentExtension');
+    assert(registeredEvents.some((event) => event.eventName === 'message_end'), 'context hardening message_end hook missing');
+    assert(
+      registeredEvents.some((event) => event.eventName === 'before_provider_request'),
+      'context hardening provider hook missing',
+    );
+  },
   async 'system-diffs'() {
     const result = await module.checkpoint({ action: 'list' }, ctx);
     assert(result.action === 'list', 'checkpoint list did not return list action');

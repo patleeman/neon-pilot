@@ -364,6 +364,31 @@ describe('system-goal-mode extension', () => {
     );
   });
 
+  it('completes the goal when overflow recovery fails after its compact-and-retry attempt', async () => {
+    const harness = createHarness([activeGoal('ship it')]);
+    const { compactionStart, compactionEnd, agentEnd, sendMessage, appendEntry, ctx } = harness;
+
+    await compactionStart({ type: 'compaction_start', reason: 'overflow' }, ctx);
+    await compactionEnd(
+      {
+        type: 'compaction_end',
+        reason: 'overflow',
+        aborted: false,
+        willRetry: false,
+        errorMessage: 'Context overflow recovery failed after one compact-and-retry attempt.',
+      },
+      ctx,
+    );
+    await agentEnd({}, ctx);
+    await flushTimers();
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: '', status: 'complete', stopReason: 'overflow recovery failed' }),
+    );
+  });
+
   it('disables goal mode after two consecutive active turns with no tool calls', async () => {
     const harness = createHarness([activeGoal('ship it')]);
     const { turnEnd, sendMessage, appendEntry, ctx } = harness;

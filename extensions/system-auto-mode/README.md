@@ -67,7 +67,7 @@ The `goal` tool manages the goal-mode path. It is hardened so a completed goal c
 - manually enabling goal mode in the UI only records the goal; it does not immediately start the thread;
 - turn-end events update progress counters but never enqueue continuations;
 - only one continuation timer can be pending at a time, and it is scheduled from `agent_end` after the active run is fully done;
-- overflow recovery compaction owns its automatic retry, so goal continuations are suppressed until the retry starts and finishes;
+- overflow recovery compaction owns its automatic retry, so goal continuations are suppressed until the retry starts and finishes; if that retry also fails, goal mode is completed with `overflow recovery failed` instead of queuing another continuation;
 - the timer re-reads the latest goal state before it sends;
 - changing, clearing, pausing, or completing the goal cancels any queued continuation;
 - repeated `goal { status: "complete" }` calls are idempotent no-ops.

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "id": "system-context-hardening",
+  "name": "Context Hardening",
+  "packageType": "system",
+  "description": "Bounds oversized tool outputs before they enter agent context.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "agentExtension": "createContextHardeningAgentExtension"
+  },
+  "permissions": ["conversations:readwrite"]
+}

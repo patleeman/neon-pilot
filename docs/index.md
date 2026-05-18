@@ -51,6 +51,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Browser](../experimental-extensions/extensions/system-browser/README.md)
 - [ACP Protocol](../experimental-extensions/extensions/system-acp/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
+- [Context Hardening](../extensions/system-context-hardening/README.md)
 - [Diffs](../extensions/system-diffs/README.md)
 - [Extension Manager](../extensions/system-extension-manager/README.md)
 - [Host view components](host-view-components.md)

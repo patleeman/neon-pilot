@@ -8,6 +8,8 @@ type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type JsonRecord = { [key: string]: unknown };
 type ModelLike = JsonRecord;
 
+const TOOL_RESULT_TEXT_MAX_CHARS = 64 * 1024;
+
 type ResponseContentItem =
   | { type: 'input_text'; text: string }
   | { type: 'input_image'; image_url: string }
@@ -478,13 +480,23 @@ function sanitizeResponseContent(content: unknown): ResponseContentItem[] {
   return sanitized;
 }
 
+function truncateOversizedToolOutput(output: string): string {
+  if (output.length <= TOOL_RESULT_TEXT_MAX_CHARS) return output;
+  const marker = `\n\n[Personal Agent truncated oversized tool output: ${output.length - TOOL_RESULT_TEXT_MAX_CHARS} characters omitted]\n\n`;
+  const budget = Math.max(0, TOOL_RESULT_TEXT_MAX_CHARS - marker.length);
+  const head = Math.ceil(budget * 0.6);
+  const tail = Math.floor(budget * 0.4);
+  return `${output.slice(0, head)}${marker}${tail > 0 ? output.slice(-tail) : ''}`;
+}
+
 function sanitizeFunctionCallOutput(
   output: ResponseItem & { type: 'function_call_output' },
 ): string | Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string }> {
-  if (typeof output.output === 'string') return output.output;
+  if (typeof output.output === 'string') return truncateOversizedToolOutput(output.output);
 
   const sanitized = sanitizeResponseContent(output.output).flatMap((part) => {
-    if (part.type === 'output_text') return [{ type: 'input_text' as const, text: part.text }];
+    if (part.type === 'output_text') return [{ type: 'input_text' as const, text: truncateOversizedToolOutput(part.text) }];
+    if (part.type === 'input_text') return [{ type: 'input_text' as const, text: truncateOversizedToolOutput(part.text) }];
     return [part];
   });
 

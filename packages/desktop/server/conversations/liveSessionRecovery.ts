@@ -114,6 +114,25 @@ function buildTranscriptTailRecoveryPlan(input: {
   };
 }
 
+function isContextOverflowMessage(message: string | undefined): boolean {
+  return /context_length_exceeded|context window|context overflow/i.test(message ?? '');
+}
+
+function hasPriorOverflowTailRecovery(branch: ReturnType<SessionManager['getBranch']>): boolean {
+  return branch.some((entry) => {
+    if (entry?.type !== 'branch_summary') return false;
+    const details = entry.details;
+    if (!details || typeof details !== 'object') return false;
+    const record = details as Record<string, unknown>;
+    return (
+      record.source === 'conversation-recovery' &&
+      record.reason === 'assistant_error' &&
+      typeof record.errorMessage === 'string' &&
+      isContextOverflowMessage(record.errorMessage)
+    );
+  });
+}
+
 export function resolveTranscriptTailRecoveryPlan(sessionManager: Pick<SessionManager, 'getBranch'>): TranscriptTailRecoveryPlan | null {
   const branch = sessionManager.getBranch();
   if (branch.length === 0) {
@@ -124,6 +143,9 @@ export function resolveTranscriptTailRecoveryPlan(sessionManager: Pick<SessionMa
   if (leafEntry?.type === 'message' && leafEntry.message.role === 'assistant') {
     const errorMessage = getAssistantErrorDisplayMessage(leafEntry.message);
     if (errorMessage) {
+      if (isContextOverflowMessage(errorMessage) && hasPriorOverflowTailRecovery(branch)) {
+        return null;
+      }
       return buildTranscriptTailRecoveryPlan({
         targetEntryId: resolveVisibleSessionBranchTargetId(leafEntry.parentId ?? null),
         reason: 'assistant_error',

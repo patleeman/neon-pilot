@@ -730,6 +730,56 @@ describe('openai native compaction extension', () => {
     ]);
   });
 
+  it('truncates oversized tool outputs before native compaction input', async () => {
+    const harness = createPiHarness();
+    openaiNativeCompactionExtension(harness.pi as never);
+
+    const beforeCompact =
+      harness.getHandler<(event: Record<string, unknown>, ctx: Record<string, unknown>) => Promise<unknown>>('session_before_compact');
+
+    compactMock.mockResolvedValue({ summary: 'Local summary', firstKeptEntryId: 'user-1', tokensBefore: 321 });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Native replacement history' }] }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await beforeCompact(
+      {
+        branchEntries: [
+          {
+            id: 'assistant-1',
+            type: 'message',
+            message: {
+              role: 'assistant',
+              provider: OPENAI_MODEL.provider,
+              model: OPENAI_MODEL.id,
+              content: [{ type: 'toolCall', id: 'call-1', name: 'bash', arguments: {} }],
+            },
+          },
+          toolResultEntry('tool-1', 'call-1', 'bash', 'x'.repeat(80 * 1024)),
+        ],
+        preparation: { firstKeptEntryId: 'user-1', tokensBefore: 321 },
+        signal: new AbortController().signal,
+      },
+      {
+        model: OPENAI_MODEL,
+        hasUI: false,
+        ui: { notify: vi.fn() },
+        getSystemPrompt: () => 'System instructions',
+        sessionManager: { getSessionId: () => 'session-compact-large-tool' },
+        modelRegistry: { getApiKeyAndHeaders: vi.fn().mockResolvedValue({ ok: true, apiKey: 'sk-openai' }) },
+      },
+    );
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const outputText = requestBody.input[1].output[0].text;
+    expect(outputText).toContain('Personal Agent truncated oversized tool output');
+    expect(outputText.length).toBeLessThanOrEqual(64 * 1024);
+  });
+
   it('does not crash without UI notifications when all compaction paths fail', async () => {
     const harness = createPiHarness();
     openaiNativeCompactionExtension(harness.pi as never);

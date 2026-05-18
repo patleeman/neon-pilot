@@ -11,7 +11,9 @@ type BranchEntry = {
     content: Array<Record<string, unknown>>;
     toolCallId?: string;
     stopReason?: string;
+    errorMessage?: string;
   };
+  details?: unknown;
 };
 
 function message(
@@ -62,6 +64,19 @@ function assistantText(id: string, parentId: string | null, text = 'done'): Bran
 
 function branchSummary(id: string, parentId: string | null): BranchEntry {
   return { type: 'branch_summary', id, parentId };
+}
+
+function overflowRecoverySummary(id: string, parentId: string | null): BranchEntry {
+  return {
+    type: 'branch_summary',
+    id,
+    parentId,
+    details: {
+      source: 'conversation-recovery',
+      reason: 'assistant_error',
+      errorMessage: 'Codex error: context_length_exceeded',
+    },
+  } as BranchEntry;
 }
 
 describe('live session recovery', () => {
@@ -134,6 +149,22 @@ describe('live session recovery', () => {
         targetEntryId: 'user-1',
         reason: 'dangling_tool_call',
       });
+    });
+
+    it('does not keep adding branch summaries after a context overflow recovery already failed', () => {
+      const plan = resolveTranscriptTailRecoveryPlan({
+        getBranch: () => [
+          user('user-1', null),
+          overflowRecoverySummary('summary-1', 'user-1'),
+          user('user-2', 'summary-1', 'status?'),
+          message('assistant-1', 'user-2', 'assistant', [], {
+            stopReason: 'error',
+            errorMessage: 'Codex error: context_length_exceeded',
+          }),
+        ],
+      } as never);
+
+      expect(plan).toBeNull();
     });
   });
 

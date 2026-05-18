@@ -117,6 +117,18 @@ function isOverflowCompactionRetry(event: unknown): boolean {
   );
 }
 
+function isOverflowRecoveryFailure(event: unknown): boolean {
+  return (
+    isRecord(event) &&
+    event.type === 'compaction_end' &&
+    event.reason === 'overflow' &&
+    event.aborted !== true &&
+    event.willRetry !== true &&
+    typeof event.errorMessage === 'string' &&
+    event.errorMessage.trim().length > 0
+  );
+}
+
 // ── Tool parameter schemas ───────────────────────────────────────────────────
 
 const GoalParams = Type.Object({
@@ -260,8 +272,17 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       clearPendingContinuation();
     });
 
-    pi.on('compaction_end', async (event) => {
+    pi.on('compaction_end', async (event, ctx) => {
       if (!isRecord(event) || event.reason !== 'overflow') {
+        return;
+      }
+      if (isOverflowRecoveryFailure(event)) {
+        const state = readGoalState(ctx.sessionManager);
+        if (state.status === 'active') {
+          writeGoalState(pi, createCompleteGoalState('overflow recovery failed'));
+        }
+        overflowRecoveryActive = false;
+        clearPendingContinuation();
         return;
       }
       overflowRecoveryActive = isOverflowCompactionRetry(event);
