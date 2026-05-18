@@ -14,6 +14,7 @@ import { resolveSecret } from '../secrets/secretStore.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 import {
   isPrebuiltOnlyExtensionRuntime,
@@ -91,6 +92,7 @@ export interface ExtensionBackendContext {
     delete(key: string): Promise<{ ok: true; deleted: boolean }>;
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
+  attention: ReturnType<typeof createExtensionAttentionCapability>;
   automations: ReturnType<typeof createExtensionAutomationsCapability>;
   runs: ReturnType<typeof createExtensionRunsCapability>;
   executions: ReturnType<typeof createExtensionExecutionsCapability>;
@@ -432,6 +434,7 @@ export function createBackendContext(
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
     },
     storage: createStorage(extensionId),
+    attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),
     runs: createExtensionRunsCapability(extensionId),
     executions: createExtensionExecutionsCapability(extensionId),

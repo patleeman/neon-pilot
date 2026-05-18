@@ -1,9 +1,8 @@
 import {
-  createReadyDeferredResume,
+  createReadyAttentionEvent,
   getTaskCallbackBinding,
-  loadDeferredResumeState,
-  resolveDeferredResumeStateFile,
-  saveDeferredResumeState,
+  loadAttentionEventsState,
+  saveAttentionEventsState,
   upsertAlert,
 } from '@personal-agent/core';
 import { randomUUID } from 'crypto';
@@ -11,8 +10,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 
 import type { TasksModuleConfig } from '../../config.js';
-import { surfaceReadyDeferredResume } from '../../daemon/conversation-wakeups.js';
-import { markDeferredResumeConversationRunReady } from '../../runs/deferred-resume-conversations.js';
 import {
   appendDurableRunEvent,
   createDurableRunManifest,
@@ -429,9 +426,8 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     ].join('-');
     const notifyLevel = status === 'success' ? binding.notifyOnSuccess : binding.notifyOnFailure;
     const title = status === 'success' ? `Scheduled task @${task.id} completed` : `Scheduled task @${task.id} failed`;
-    const deferredResumeStateFile = resolveDeferredResumeStateFile(context.paths.stateRoot);
-    const deferredState = loadDeferredResumeState(deferredResumeStateFile);
-    const entry = createReadyDeferredResume(deferredState, {
+    const attentionState = loadAttentionEventsState();
+    createReadyAttentionEvent(attentionState, {
       id: wakeupId,
       sessionFile: binding.sessionFile,
       prompt: formatTaskCallbackPrompt(task, status, details),
@@ -445,32 +441,15 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         kind: 'scheduled-task',
         id: task.id,
       },
+      conversationId: binding.conversationId,
       delivery: {
-        alertLevel: notifyLevel,
+        mode: binding.requireAck ? 'isolated' : 'batchable',
+        priority: notifyLevel === 'disruptive' || binding.requireAck ? 'high' : 'normal',
         autoResumeIfOpen: binding.autoResumeIfOpen,
         requireAck: binding.requireAck,
       },
     });
-    saveDeferredResumeState(deferredState, deferredResumeStateFile);
-
-    await markDeferredResumeConversationRunReady({
-      daemonRoot: context.paths.root,
-      deferredResumeId: entry.id,
-      sessionFile: entry.sessionFile,
-      prompt: entry.prompt,
-      dueAt: entry.dueAt,
-      createdAt: entry.createdAt,
-      readyAt: entry.readyAt ?? details.finishedAt,
-      profile: task.profile,
-      conversationId: binding.conversationId,
-    });
-
-    surfaceReadyDeferredResume({
-      entry,
-      profile: task.profile,
-      stateRoot: context.paths.stateRoot,
-      conversationId: binding.conversationId,
-    });
+    saveAttentionEventsState(attentionState);
 
     return [binding.conversationId];
   };

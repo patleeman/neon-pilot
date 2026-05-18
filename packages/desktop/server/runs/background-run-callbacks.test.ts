@@ -1,4 +1,4 @@
-import { loadDeferredResumeState, resolveDeferredResumeStateFile } from '@personal-agent/core';
+import { loadAttentionEventsState, resolveAttentionEventsStateFile } from '@personal-agent/core';
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -94,8 +94,8 @@ describe('background run callbacks', () => {
       conversationId: 'conv-123',
     });
 
-    const deferredState = loadDeferredResumeState(resolveDeferredResumeStateFile(stateRoot));
-    const wakeup = deferredState.resumes[delivered.wakeupId ?? ''];
+    const attentionState = loadAttentionEventsState(resolveAttentionEventsStateFile(stateRoot));
+    const wakeup = attentionState.events[delivered.wakeupId ?? ''];
     expect(wakeup).toEqual(
       expect.objectContaining({
         id: delivered.wakeupId,
@@ -107,7 +107,8 @@ describe('background run callbacks', () => {
           id: run.runId,
         },
         delivery: expect.objectContaining({
-          alertLevel: 'passive',
+          mode: 'batchable',
+          priority: 'normal',
           autoResumeIfOpen: true,
           requireAck: false,
         }),
@@ -152,8 +153,8 @@ describe('background run callbacks', () => {
       runId: run.runId,
     });
 
-    const deferredState = loadDeferredResumeState(resolveDeferredResumeStateFile(stateRoot));
-    const wakeup = deferredState.resumes[delivered.wakeupId ?? ''];
+    const attentionState = loadAttentionEventsState(resolveAttentionEventsStateFile(stateRoot));
+    const wakeup = attentionState.events[delivered.wakeupId ?? ''];
     expect(delivered.delivered).toBe(true);
     expect(wakeup).toEqual(
       expect.objectContaining({
@@ -275,7 +276,7 @@ describe('background run callbacks', () => {
       }),
     ).resolves.toEqual({ delivered: false });
 
-    const deferredState = loadDeferredResumeState(resolveDeferredResumeStateFile(stateRoot));
-    expect(Object.keys(deferredState.resumes)).toEqual([]);
+    const attentionState = loadAttentionEventsState(resolveAttentionEventsStateFile(stateRoot));
+    expect(Object.keys(attentionState.events)).toEqual([]);
   });
 });

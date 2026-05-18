@@ -907,6 +907,27 @@ export interface ExtensionBackendContext {
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
   runs: Record<string, (...args: never[]) => Promise<unknown>>;
+  attention: {
+    enqueue(input: {
+      conversationId?: string;
+      sessionFile?: string;
+      title?: string;
+      prompt: string;
+      delay?: string;
+      at?: string;
+      source?: { kind?: string; id?: string };
+      delivery?: {
+        mode?: 'batchable' | 'sequential' | 'isolated';
+        priority?: 'low' | 'normal' | 'high';
+        requireAck?: boolean;
+        autoResumeIfOpen?: boolean;
+        behavior?: 'steer' | 'followUp';
+        batchKey?: string;
+      };
+    }): Promise<unknown>;
+    list(input?: { sessionFile?: string }): Promise<unknown[]>;
+    cancel(input: { id: string; sessionFile?: string }): Promise<unknown>;
+  };
   automations: Record<string, (...args: never[]) => Promise<unknown>>;
   vault: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {

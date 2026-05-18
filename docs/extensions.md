@@ -961,6 +961,7 @@ The `ExtensionBackendContext` provides:
 | Property            | Purpose                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
 | `ctx.storage`       | Persistent key-value store per extension (SQLite-backed)                                                |
+| `ctx.attention`     | Enqueue/list/cancel async conversation attention events (wakeups, callbacks)                            |
 | `ctx.automations`   | Scheduled task management                                                                               |
 | `ctx.runs`          | Background run management                                                                               |
 | `ctx.conversations` | Conversation read/write operations                                                                      |
@@ -974,6 +975,28 @@ The `ExtensionBackendContext` provides:
 | `ctx.extensions`    | Call actions on other extensions                                                                        |
 | `ctx.ui`            | Invalidate UI state topics                                                                              |
 | `ctx.log`           | Structured logging                                                                                      |
+
+## Attention events
+
+Use `ctx.attention` when an extension has async work that should resume or notify a conversation later. Extensions submit intent; core owns batching, ordering, retries, and delivery.
+
+```typescript
+await ctx.attention.enqueue({
+  prompt: 'The import finished. Summarize the result for the user.',
+  title: 'Import finished',
+  delivery: { mode: 'batchable', priority: 'normal' },
+});
+```
+
+Delivery modes:
+
+- `batchable` — combine with other ready wakeups when possible.
+- `sequential` — preserve order as a distinct follow-up.
+- `isolated` — do not batch; use for approvals/ack-required events.
+
+`ctx.attention.enqueue` uses the active conversation session when called from a tool/action context. Outside an active conversation, pass `sessionFile` and optionally `conversationId`.
+
+**Permissions:** `attention:write` for `enqueue`/`cancel`, `attention:read` for `list`.
 
 ## Conversation Write API
 
@@ -1184,6 +1207,8 @@ enforces permissions for storage and conversation operations.
     "storage:read",
     "storage:write",
     "storage:readwrite",
+    "attention:read",
+    "attention:write",
     "conversations:read",
     "conversations:readwrite",
     "vault:read",

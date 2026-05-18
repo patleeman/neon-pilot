@@ -1,13 +1,10 @@
 import {
-  createReadyDeferredResume,
+  createReadyAttentionEvent,
   type DeferredResumeAlertLevel,
-  loadDeferredResumeState,
-  resolveDeferredResumeStateFile,
-  saveDeferredResumeState,
+  loadAttentionEventsState,
+  saveAttentionEventsState,
 } from '@personal-agent/core';
 
-import { surfaceReadyDeferredResume } from '../daemon/conversation-wakeups.js';
-import { markDeferredResumeConversationRunReady } from './deferred-resume-conversations.js';
 import {
   loadDurableRunCheckpoint,
   resolveDurableRunPaths,
@@ -237,9 +234,8 @@ export async function deliverBackgroundRunCallbackWakeup(input: {
   const createdAt = run.manifest?.createdAt ?? readyAt;
   const prompt = buildWakeupPrompt(run);
   const title = buildWakeupTitle(run);
-  const stateFile = resolveDeferredResumeStateFile(input.stateRoot);
-  const deferredState = loadDeferredResumeState(stateFile);
-  const entry = createReadyDeferredResume(deferredState, {
+  const attentionState = loadAttentionEventsState();
+  createReadyAttentionEvent(attentionState, {
     id: wakeupId,
     sessionFile: binding.sessionFile,
     prompt,
@@ -252,33 +248,15 @@ export async function deliverBackgroundRunCallbackWakeup(input: {
       kind: 'background-run',
       id: run.runId,
     },
+    conversationId: binding.conversationId,
     delivery: {
-      alertLevel: binding.alertLevel,
+      mode: binding.requireAck ? 'isolated' : 'batchable',
+      priority: binding.alertLevel === 'disruptive' || binding.requireAck ? 'high' : 'normal',
       autoResumeIfOpen: binding.autoResumeIfOpen,
       requireAck: binding.requireAck,
     },
   });
-  saveDeferredResumeState(deferredState, stateFile);
-
-  await markDeferredResumeConversationRunReady({
-    daemonRoot: input.daemonRoot,
-    deferredResumeId: entry.id,
-    sessionFile: entry.sessionFile,
-    prompt: entry.prompt,
-    dueAt: entry.dueAt,
-    createdAt: entry.createdAt,
-    readyAt: entry.readyAt ?? readyAt,
-    profile: binding.profile,
-    conversationId: binding.conversationId,
-  });
-
-  surfaceReadyDeferredResume({
-    entry,
-    repoRoot: binding.repoRoot,
-    profile: binding.profile,
-    stateRoot: input.stateRoot,
-    conversationId: binding.conversationId,
-  });
+  saveAttentionEventsState(attentionState);
 
   markBackgroundRunCallbackDelivered({
     runsRoot: input.runsRoot,

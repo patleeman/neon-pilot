@@ -1,7 +1,7 @@
 import {
   getAlert,
   listProfileActivityEntries,
-  loadDeferredResumeState,
+  loadAttentionEventsState,
   openSqliteDatabase,
   setTaskCallbackBinding,
 } from '@personal-agent/core';
@@ -1802,19 +1802,19 @@ Run hourly task
     await module.handleEvent(createTimerEvent(), context);
 
     await waitForCondition(() => {
-      const state = loadDeferredResumeState(join(stateRoot, 'pi-agent', 'deferred-resumes-state.json'));
-      return Object.keys(state.resumes).length === 1;
+      const state = loadAttentionEventsState(join(stateRoot, 'pi-agent', 'attention-events-state.json'));
+      return Object.keys(state.events).length === 1;
     });
 
     const activityEntries = listProfileActivityEntries({ stateRoot, profile: 'shared' });
     expect(activityEntries).toHaveLength(1);
     expect(activityEntries[0]?.entry.summary).toContain('Scheduled task @watch-prod completed');
 
-    const deferredState = loadDeferredResumeState(join(stateRoot, 'pi-agent', 'deferred-resumes-state.json'));
-    const callback = Object.values(deferredState.resumes)[0];
+    const attentionState = loadAttentionEventsState(join(stateRoot, 'pi-agent', 'attention-events-state.json'));
+    const callback = Object.values(attentionState.events)[0];
     expect(callback).toEqual(
       expect.objectContaining({
-        kind: 'task-callback',
+        source: expect.objectContaining({ kind: 'scheduled-task', id: 'watch-prod' }),
         status: 'ready',
         title: 'Scheduled task @watch-prod completed',
       }),
@@ -1871,8 +1871,8 @@ Run hourly task
       return runtimeState['conversation-check']?.lastStatus === 'success';
     });
 
-    const deferredState = loadDeferredResumeState(join(stateRoot, 'pi-agent', 'deferred-resumes-state.json'));
-    expect(Object.keys(deferredState.resumes)).toHaveLength(0);
+    const attentionState = loadAttentionEventsState(join(stateRoot, 'pi-agent', 'attention-events-state.json'));
+    expect(Object.keys(attentionState.events)).toHaveLength(0);
 
     const runtimeState = loadAutomationRuntimeStateMap({ dbPath });
     expect(runtimeState['conversation-check']).toEqual(
@@ -1955,8 +1955,8 @@ Run hourly task
       return (status.runningTasks ?? 0) === 0 && (status.successfulRuns ?? 0) === 2;
     });
 
-    const deferredState = loadDeferredResumeState(join(stateRoot, 'pi-agent', 'deferred-resumes-state.json'));
-    expect(Object.keys(deferredState.resumes)).toHaveLength(0);
+    const attentionState = loadAttentionEventsState(join(stateRoot, 'pi-agent', 'attention-events-state.json'));
+    expect(Object.keys(attentionState.events)).toHaveLength(0);
 
     const runtimeState = loadAutomationRuntimeStateMap({ dbPath });
     expect(runtimeState['hourly-check']).toEqual(
