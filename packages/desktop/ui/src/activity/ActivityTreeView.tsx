@@ -46,6 +46,16 @@ interface ActivityTreeContextMenuState {
   y: number;
 }
 
+const ACTIVITY_TREE_ROOT_INDENT_REM = 0.25;
+const ACTIVITY_TREE_CHILD_INDENT_REM = 0.375;
+
+export function getActivityTreeRowPaddingLeftRem(item: ActivityTreeItem, depth: number): number {
+  if (item.kind === 'group') {
+    return ACTIVITY_TREE_ROOT_INDENT_REM;
+  }
+  return ACTIVITY_TREE_ROOT_INDENT_REM + Math.max(0, depth) * ACTIVITY_TREE_CHILD_INDENT_REM;
+}
+
 function PinIcon() {
   return (
     <svg
@@ -200,7 +210,7 @@ export function ActivityTreeView({
           const conversationHasPendingRuns = item.kind === 'conversation' && item.metadata?.hasPendingRuns === true;
           const conversationIsPinned = item.kind === 'conversation' && item.metadata?.isPinned === true;
           const showConversationStatus = conversationIsRunning || conversationHasPendingRuns || conversationNeedsAttention;
-          const rowPaddingLeft = item.kind === 'group' ? 0.5 : 0.5 + depth * 0.5;
+          const rowPaddingLeft = getActivityTreeRowPaddingLeftRem(item, depth);
           return (
             <button
               key={item.id}

@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 
 import type { ActivityTreeItem } from './activityTree';
-import { ActivityTreeView } from './ActivityTreeView';
+import { ActivityTreeView, getActivityTreeRowPaddingLeftRem } from './ActivityTreeView';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -50,6 +50,15 @@ function renderTree() {
 }
 
 describe('ActivityTreeView', () => {
+  it('uses compact sidebar indentation for nested rows', () => {
+    const group: ActivityTreeItem = { id: 'group:test', kind: 'group', title: 'Project', status: 'idle' };
+    const child: ActivityTreeItem = { ...items[0]!, parentId: group.id };
+
+    expect(getActivityTreeRowPaddingLeftRem(group, 0)).toBe(0.25);
+    expect(getActivityTreeRowPaddingLeftRem(child, 1)).toBe(0.625);
+    expect(getActivityTreeRowPaddingLeftRem(child, 3)).toBe(1.375);
+  });
+
   it('closes the context menu when clicking outside the tree', () => {
     const { container, unmount } = renderTree();
 
