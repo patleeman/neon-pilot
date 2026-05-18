@@ -194,6 +194,17 @@ export interface ExtensionPromptContextProviderRegistration {
   packageType: ExtensionPackageType;
   handler: string;
   title?: string;
+  priority?: number;
+  scope?: Array<'global' | 'workspace' | 'conversation'>;
+}
+
+export interface ExtensionRuntimeProviderRegistration {
+  extensionId: string;
+  id: string;
+  packageType: ExtensionPackageType;
+  handler: string;
+  title: string;
+  description?: string;
 }
 
 export interface ExtensionPromptReferenceRegistration {
@@ -935,6 +946,34 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     }
   }
 
+  if (contributes.turnContextProviders !== undefined) {
+    for (const [index, provider] of assertRecordArray(contributes.turnContextProviders, 'contributes.turnContextProviders').entries()) {
+      requireString(provider.id, `contributes.turnContextProviders[${index}].id`);
+      requireString(provider.handler, `contributes.turnContextProviders[${index}].handler`);
+      validateOptionalString(provider.title, `contributes.turnContextProviders[${index}].title`);
+      if (provider.priority !== undefined && (typeof provider.priority !== 'number' || !Number.isInteger(provider.priority))) {
+        throw new Error(`Extension manifest contributes.turnContextProviders[${index}].priority must be an integer.`);
+      }
+      if (provider.scope !== undefined) {
+        for (const [scopeIndex, scope] of requireStringArray(
+          provider.scope,
+          `contributes.turnContextProviders[${index}].scope`,
+        ).entries()) {
+          validateEnum(scope, ['global', 'workspace', 'conversation'], `contributes.turnContextProviders[${index}].scope[${scopeIndex}]`);
+        }
+      }
+    }
+  }
+
+  if (contributes.runtimeProviders !== undefined) {
+    for (const [index, provider] of assertRecordArray(contributes.runtimeProviders, 'contributes.runtimeProviders').entries()) {
+      requireString(provider.id, `contributes.runtimeProviders[${index}].id`);
+      requireString(provider.handler, `contributes.runtimeProviders[${index}].handler`);
+      requireString(provider.title, `contributes.runtimeProviders[${index}].title`);
+      validateOptionalString(provider.description, `contributes.runtimeProviders[${index}].description`);
+    }
+  }
+
   if (contributes.quickOpen !== undefined) {
     for (const [index, provider] of assertRecordArray(contributes.quickOpen, 'contributes.quickOpen').entries()) {
       requireString(provider.id, `contributes.quickOpen[${index}].id`);
@@ -1664,6 +1703,8 @@ export function readExtensionSchema() {
       'tools',
       'promptReferences',
       'promptContextProviders',
+      'turnContextProviders',
+      'runtimeProviders',
       'quickOpen',
       'searchProviders',
       'themes',
@@ -1870,18 +1911,45 @@ export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandR
 export function listExtensionPromptContextProviderRegistrations(
   stateRoot: string = getStateRoot(),
 ): ExtensionPromptContextProviderRegistration[] {
+  return listEnabledExtensionEntries(stateRoot)
+    .flatMap((entry) =>
+      [...(entry.manifest.contributes?.promptContextProviders ?? []), ...(entry.manifest.contributes?.turnContextProviders ?? [])].flatMap(
+        (provider): ExtensionPromptContextProviderRegistration[] => {
+          const id = provider.id.trim();
+          const handler = provider.handler.trim();
+          if (!id || !handler) return [];
+          return [
+            {
+              extensionId: entry.manifest.id,
+              id,
+              packageType: entry.manifest.packageType ?? 'user',
+              handler,
+              ...(provider.title ? { title: provider.title } : {}),
+              ...('priority' in provider && Number.isInteger(provider.priority) ? { priority: provider.priority } : {}),
+              ...('scope' in provider && Array.isArray(provider.scope) ? { scope: provider.scope } : {}),
+            },
+          ];
+        },
+      ),
+    )
+    .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0));
+}
+
+export function listExtensionRuntimeProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionRuntimeProviderRegistration[] {
   return listEnabledExtensionEntries(stateRoot).flatMap((entry) =>
-    (entry.manifest.contributes?.promptContextProviders ?? []).flatMap((provider): ExtensionPromptContextProviderRegistration[] => {
+    (entry.manifest.contributes?.runtimeProviders ?? []).flatMap((provider): ExtensionRuntimeProviderRegistration[] => {
       const id = provider.id.trim();
       const handler = provider.handler.trim();
-      if (!id || !handler) return [];
+      const title = provider.title.trim();
+      if (!id || !handler || !title) return [];
       return [
         {
           extensionId: entry.manifest.id,
           id,
           packageType: entry.manifest.packageType ?? 'user',
           handler,
-          ...(provider.title ? { title: provider.title } : {}),
+          title,
+          ...(provider.description ? { description: provider.description } : {}),
         },
       ];
     }),

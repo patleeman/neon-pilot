@@ -476,11 +476,17 @@ Use `contributes.selectionActions` for actions on selected text, messages, files
 
 Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock(...)` / `ctx.conversations.updateTranscriptBlock(...)` for extension-owned durable visible transcript blocks. This is the preferred seam for product-specific interactive blocks instead of baking new block types into core.
 
+Use `ctx.conversations.metadata` for small extension-owned facts attached to conversations. Metadata is namespaced by extension by default and can be queried by namespace, which is the right shape for board/task state, badges, and other lightweight conversation indexes. Store large documents in extension storage or a dedicated host document API instead.
+
 Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
 Use `ctx.conversations.runTurn(conversationId, text, { onEvent })` when an extension needs to drive a visible conversation and stream the resulting turn. `runTurn` atomically resumes the conversation, subscribes to live events, sends the prompt, and resolves only after `turn_end` or `error`; prefer it over separately calling `ensureLive` + `subscribe` + `sendMessage` when the caller needs reliable remote/client streaming.
 
 Use `backend.services` for long-lived backend work. The host starts enabled services at startup, calls returned stop functions on shutdown/disable/reload, runs declared health checks, and applies `restart: "always" | "on-failure"` when health fails. Extension Manager reports live service state alongside manifest declarations.
+
+Use `contributes.turnContextProviders` when an extension needs per-turn hidden context without mutating the system prompt. Providers run during prompt preparation and can return `{ contextMessages }` or `{ blocks }`.
+
+Use `contributes.runtimeProviders` to advertise local or remote runtime targets such as SSH hosts. The first API surface is discovery/health via `ctx.runtimes`; actual non-local conversation execution must go through host-owned runtime routing.
 
 Use `contributes.subscriptions` for host-owned event sources. Current built-in producers include `workspaceFiles` (`host:workspaceFiles`), `settings` (`host:settings`), and shared selection changes (`host:selection`). Subscription handlers run in the backend through the extension event bus.
 

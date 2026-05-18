@@ -33,6 +33,7 @@ import {
   isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
+  listExtensionRuntimeProviderRegistrations,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -166,11 +167,79 @@ export interface ExtensionBackendContext {
       metadata?: Record<string, unknown>;
     }): void;
   };
+  runtimes: {
+    list(): Promise<ExtensionRuntimeSummary[]>;
+    get(runtimeId: string): Promise<ExtensionRuntimeSummary>;
+    healthCheck(runtimeId: string): Promise<{ runtimeId: string; status: string; checkedAt: string }>;
+  };
   log: {
     info(message: string, fields?: Record<string, unknown>): void;
     warn(message: string, fields?: Record<string, unknown>): void;
     error(message: string, fields?: Record<string, unknown>): void;
   };
+}
+
+interface ExtensionRuntimeSummary {
+  id: string;
+  providerId: string;
+  extensionId: string;
+  title: string;
+  kind: string;
+  status: string;
+  version?: string;
+  workspaceRoots?: Array<{ id: string; path: string; label?: string }>;
+  capabilities?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+async function listExtensionRuntimes(
+  serverContext?: ExtensionBackendServerContext,
+  toolContext?: ExtensionBackendContext['toolContext'],
+  agentToolContext?: unknown,
+): Promise<ExtensionRuntimeSummary[]> {
+  const runtimes: ExtensionRuntimeSummary[] = [];
+  for (const provider of listExtensionRuntimeProviderRegistrations()) {
+    const result = await invokeExtensionAction(provider.extensionId, provider.handler, {}, serverContext, toolContext, agentToolContext);
+    if (!result.ok) {
+      runtimes.push({
+        id: `${provider.extensionId}/${provider.id}`,
+        providerId: provider.id,
+        extensionId: provider.extensionId,
+        title: provider.title,
+        kind: 'remote',
+        status: 'degraded',
+        metadata: { error: result.error },
+      });
+      continue;
+    }
+    const items = Array.isArray((result.result as { runtimes?: unknown[] } | null)?.runtimes)
+      ? (result.result as { runtimes: unknown[] }).runtimes
+      : [];
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue;
+      const value = item as Record<string, unknown>;
+      const rawId = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : provider.id;
+      runtimes.push({
+        id: rawId.includes('/') ? rawId : `${provider.extensionId}/${rawId}`,
+        providerId: provider.id,
+        extensionId: provider.extensionId,
+        title: typeof value.title === 'string' && value.title.trim() ? value.title.trim() : provider.title,
+        kind: typeof value.kind === 'string' ? value.kind : 'remote',
+        status: typeof value.status === 'string' ? value.status : 'unknown',
+        ...(typeof value.version === 'string' ? { version: value.version } : {}),
+        ...(Array.isArray(value.workspaceRoots)
+          ? { workspaceRoots: value.workspaceRoots as ExtensionRuntimeSummary['workspaceRoots'] }
+          : {}),
+        ...(Array.isArray(value.capabilities)
+          ? { capabilities: value.capabilities.filter((item) => typeof item === 'string') as string[] }
+          : {}),
+        ...(value.metadata && typeof value.metadata === 'object' && !Array.isArray(value.metadata)
+          ? { metadata: value.metadata as Record<string, unknown> }
+          : {}),
+      });
+    }
+  }
+  return runtimes;
 }
 
 type ExtensionBackendModule = Record<string, unknown>;
@@ -368,7 +437,7 @@ export function createBackendContext(
     executions: createExtensionExecutionsCapability(extensionId),
     models: createExtensionModelsCapability(),
     vault: createExtensionVaultCapability(),
-    conversations: createExtensionConversationsCapability(serverContext),
+    conversations: createExtensionConversationsCapability(serverContext, extensionId),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext),
     git: createExtensionGitCapability(),
@@ -464,6 +533,19 @@ export function createBackendContext(
           source: event.source ?? 'server',
           metadata: { ...(event.metadata ?? {}), extensionId },
         });
+      },
+    },
+    runtimes: {
+      list: async () => listExtensionRuntimes(serverContext, toolContext, agentToolContext),
+      get: async (runtimeId) => {
+        const runtime = (await listExtensionRuntimes(serverContext, toolContext, agentToolContext)).find((item) => item.id === runtimeId);
+        if (!runtime) throw new Error(`Runtime "${runtimeId}" not found.`);
+        return runtime;
+      },
+      healthCheck: async (runtimeId) => {
+        const runtime = (await listExtensionRuntimes(serverContext, toolContext, agentToolContext)).find((item) => item.id === runtimeId);
+        if (!runtime) throw new Error(`Runtime "${runtimeId}" not found.`);
+        return { runtimeId, status: runtime.status, checkedAt: new Date().toISOString() };
       },
     },
     log: {

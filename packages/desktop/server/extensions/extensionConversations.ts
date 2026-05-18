@@ -15,6 +15,8 @@ import {
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
+import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
+import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 
 export interface ExtensionConversationDetailOptions {
   tailBlocks?: number;
@@ -70,6 +72,7 @@ export interface ExtensionConversationSubscriptionOptions {
  */
 export function createExtensionConversationsCapability(
   serverContext?: Pick<ServerRouteContext, 'getCurrentProfile'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>,
+  extensionId = 'extension',
 ) {
   const findLiveEntry = (conversationId: string) => {
     const entry = liveSessionRegistry.get(conversationId);
@@ -135,6 +138,38 @@ export function createExtensionConversationsCapability(
       return readConversationSessionSearchIndexCapability({ sessionIds });
     },
 
+    metadata: {
+      async get(input: { conversationId: string; namespace?: string }): Promise<Record<string, unknown>> {
+        return readConversationMetadata({
+          conversationId: input.conversationId,
+          namespace: input.namespace,
+          extensionId,
+          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+        });
+      },
+      async set(input: { conversationId: string; namespace?: string; values: Record<string, unknown> }): Promise<Record<string, unknown>> {
+        return writeConversationMetadata({
+          conversationId: input.conversationId,
+          namespace: input.namespace,
+          values: input.values,
+          extensionId,
+          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+        });
+      },
+      async query(input: {
+        namespace?: string;
+        where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
+        limit?: number;
+      }): Promise<Array<{ conversationId: string; metadata: Record<string, unknown> }>> {
+        return queryConversationMetadata({
+          namespace: input.namespace?.trim() || extensionId,
+          where: input.where,
+          limit: input.limit,
+          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+        });
+      },
+    },
+
     async getWorkspace(): Promise<unknown> {
       if (!serverContext?.getSettingsFile) {
         throw new Error('Conversation workspace is unavailable.');
@@ -194,6 +229,13 @@ export function createExtensionConversationsCapability(
         before.activeConversationId !== saved.activeConversationId
       ) {
         invalidateAppTopics('sessions');
+        await publishExtensionHostEvent('conversationSessions', {
+          type: 'session.workspace.updated',
+          openConversationIds: saved.openConversationIds,
+          pinnedConversationIds: saved.pinnedConversationIds,
+          archivedConversationIds: saved.archivedConversationIds,
+          activeConversationId: saved.activeConversationId ?? null,
+        });
       }
       if (input.workspacePaths !== undefined || before.workspacePaths.join('\0') !== saved.workspacePaths.join('\0')) {
         invalidateAppTopics('workspace');
@@ -241,6 +283,7 @@ export function createExtensionConversationsCapability(
       }
 
       invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', { type: 'session.created', conversationId: created.id, cwd });
       return { id: created.id, conversationId: created.id };
     },
 
@@ -250,6 +293,7 @@ export function createExtensionConversationsCapability(
     async resume(sessionFile: string, cwd?: string): Promise<{ id: string }> {
       const result = await resumeSession(sessionFile, cwd ? { cwdOverride: cwd } : undefined);
       invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', { type: 'session.resumed', conversationId: result.id, sessionFile });
       return result;
     },
 
@@ -270,6 +314,11 @@ export function createExtensionConversationsCapability(
 
       const resumed = await resumeSession(sessionFile, options?.cwd ? { cwdOverride: options.cwd } : undefined);
       invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', {
+        type: 'session.resumed',
+        conversationId: resumed.id,
+        sourceConversationId: conversationId,
+      });
       return { id: resumed.id, conversationId: resumed.id };
     },
 
@@ -397,6 +446,7 @@ export function createExtensionConversationsCapability(
           invalidateAppTopics('sessions');
         },
       });
+      await publishExtensionHostEvent('conversationSessions', { type: 'session.renamed', conversationId, title });
       return { ok: true };
     },
 
@@ -436,6 +486,11 @@ export function createExtensionConversationsCapability(
         }
       }
       invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', {
+        type: 'session.forked',
+        conversationId: result.id,
+        sourceConversationId: conversationId,
+      });
       return { id: result.id, conversationId: result.id };
     },
 

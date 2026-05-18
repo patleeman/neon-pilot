@@ -195,6 +195,21 @@ export interface ExtensionPromptReferenceContribution {
   title?: string;
 }
 
+export interface ExtensionTurnContextProviderContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+  scope?: Array<'global' | 'workspace' | 'conversation'>;
+}
+
+export interface ExtensionRuntimeProviderContribution {
+  id: string;
+  handler: string;
+  title: string;
+  description?: string;
+}
+
 export interface ExtensionQuickOpenContribution {
   id: string;
   provider: string;
@@ -517,6 +532,10 @@ export interface ExtensionContributions {
   tools?: ExtensionToolContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
+  /** Per-turn context providers. Returned blocks are injected as prompt context before each turn. */
+  turnContextProviders?: ExtensionTurnContextProviderContribution[];
+  /** Remote/local runtime providers that can advertise conversation execution targets. */
+  runtimeProviders?: ExtensionRuntimeProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
@@ -697,6 +716,7 @@ export interface ExtensionConversationCreateInput {
   initialPrompt?: string;
   model?: string;
   metadata?: Record<string, unknown>;
+  runtimeId?: string;
 }
 
 export interface ExtensionConversationForkInput {
@@ -850,6 +870,27 @@ export interface ExtensionScopedFileSystem {
   createTempWorkspace(options?: { prefix?: string }): Promise<ExtensionScopedFileSystem>;
 }
 
+export interface RuntimeSummary {
+  id: string;
+  providerId: string;
+  extensionId: string;
+  title: string;
+  kind: 'local' | 'remote' | string;
+  status: 'unknown' | 'installing' | 'healthy' | 'degraded' | 'offline' | string;
+  version?: string;
+  workspaceRoots?: Array<{ id: string; path: string; label?: string }>;
+  capabilities?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface RuntimeHealth {
+  runtimeId: string;
+  status: RuntimeSummary['status'];
+  message?: string;
+  checkedAt: string;
+  details?: Record<string, unknown>;
+}
+
 export interface ExtensionBackendContext {
   extensionId: string;
   profile: string;
@@ -900,10 +941,19 @@ export interface ExtensionBackendContext {
     setTitle(conversationId: string, title: string): Promise<unknown>;
     compact(conversationId: string): Promise<unknown>;
     create(input?: ExtensionConversationCreateInput): Promise<ExtensionConversationResult>;
-    ensureLive(conversationId: string, options?: { cwd?: string }): Promise<ExtensionConversationResult>;
+    ensureLive(conversationId: string, options?: { cwd?: string; runtimeId?: string }): Promise<ExtensionConversationResult>;
     fork(input: ExtensionConversationForkInput): Promise<ExtensionConversationResult>;
     appendTranscriptBlock(input: ExtensionTranscriptBlockWriteInput): Promise<{ blockId: string }>;
     updateTranscriptBlock(input: ExtensionTranscriptBlockWriteInput & { blockId: string }): Promise<{ blockId: string }>;
+    metadata: {
+      get(input: { conversationId: string; namespace?: string }): Promise<Record<string, unknown>>;
+      set(input: { conversationId: string; namespace?: string; values: Record<string, unknown> }): Promise<Record<string, unknown>>;
+      query(input: {
+        namespace?: string;
+        where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
+        limit?: number;
+      }): Promise<Array<{ conversationId: string; metadata: Record<string, unknown> }>>;
+    };
   };
   filesystem: {
     requestRoot(input: { kind?: 'workspace'; cwd?: string; access?: string[]; reason?: string }): Promise<ExtensionScopedFileSystem>;
@@ -989,6 +1039,11 @@ export interface ExtensionBackendContext {
       value?: number;
       metadata?: Record<string, unknown>;
     }): void;
+  };
+  runtimes: {
+    list(): Promise<RuntimeSummary[]>;
+    get(runtimeId: string): Promise<RuntimeSummary>;
+    healthCheck(runtimeId: string): Promise<RuntimeHealth>;
   };
   log: {
     info(message: string, fields?: Record<string, unknown>): void;

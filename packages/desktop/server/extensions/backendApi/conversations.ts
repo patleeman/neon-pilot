@@ -146,6 +146,18 @@ export async function persistTraceSuggestedContext(...args: unknown[]) {
   return callModuleExport<void>('../../traces/tracePersistence.js', 'persistTraceSuggestedContext', ...args);
 }
 
+export async function readConversationMetadata(...args: unknown[]) {
+  return callModuleExport('../extensionConversationMetadata.js', 'readConversationMetadata', ...args);
+}
+
+export async function writeConversationMetadata(...args: unknown[]) {
+  return callModuleExport('../extensionConversationMetadata.js', 'writeConversationMetadata', ...args);
+}
+
+export async function queryConversationMetadata(...args: unknown[]) {
+  return callModuleExport('../extensionConversationMetadata.js', 'queryConversationMetadata', ...args);
+}
+
 export async function buildLiveSessionExtensionFactoriesForRuntime(...args: unknown[]) {
   return callModuleExport('../runtimeAgentHooks.js', 'buildLiveSessionExtensionFactoriesForRuntime', ...args);
 }

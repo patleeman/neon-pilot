@@ -559,12 +559,24 @@ async function buildPromptContextMessagesForSubmit(input: {
           allWarnings.push(`${provider.title ?? provider.id} context failed; sent without it.`);
           return;
         }
-        const { contextMessages: providerMessages, warnings: providerWarnings } = invokeResult.result as {
+        const {
+          contextMessages: providerMessages,
+          blocks: providerBlocks,
+          warnings: providerWarnings,
+        } = invokeResult.result as {
           contextMessages: Array<{ customType: string; content: string }>;
+          blocks?: Array<{ id?: string; title?: string; content: string; visibility?: 'hidden' | 'debug' | 'visible' }>;
           warnings?: string[];
         };
         if (Array.isArray(providerMessages) && providerMessages.length > 0) {
           contextMessages.push(...providerMessages);
+        }
+        if (Array.isArray(providerBlocks) && providerBlocks.length > 0) {
+          for (const block of providerBlocks) {
+            if (!block || typeof block.content !== 'string' || !block.content.trim()) continue;
+            const title = typeof block.title === 'string' && block.title.trim() ? block.title.trim() : (provider.title ?? provider.id);
+            contextMessages.push({ customType: 'extension_turn_context', content: [`${title}:`, block.content.trim()].join('\n') });
+          }
         }
         if (Array.isArray(providerWarnings) && providerWarnings.length > 0) {
           allWarnings.push(...providerWarnings);

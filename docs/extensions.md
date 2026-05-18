@@ -138,8 +138,10 @@ The manifest declares what your extension contributes:
 | `backend.protocolEntrypoints` | Extension-owned stdio protocols launched by the host CLI    | [See below](#protocol-entrypoints-backendprotocolentrypoints)                             |
 | `transcriptRenderers`         | Custom tool result rendering                                |                                                                                           |
 | `promptReferences`            | @-mention resolvers                                         |                                                                                           |
+| `turnContextProviders`        | Ordered per-turn context injection                          | [See below](#turn-context-providers-turncontextproviders)                                 |
 | `quickOpen`                   | Command palette surfaces/tabs backed by extension providers | [See below](#quick-open-surfaces-quickopen)                                               |
 | `searchProviders`             | Backend-powered global search providers                     | [See below](#global-search-providers-searchproviders)                                     |
+| `runtimeProviders`            | Extension-advertised local/remote runtime targets           | [See below](#runtime-providers-runtimeproviders)                                          |
 | `settings`                    | Settings schema contributions                               | [See below](#settings)                                                                    |
 | `settingsComponent`           | Component panel in Settings                                 | [See below](#settings-component-settingscomponent)                                        |
 | `topBarElements`              | Top bar indicator icons                                     | [See below](#top-bar-elements-topbarelements)                                             |
@@ -274,6 +276,34 @@ Add React UI for conversation state transitions such as waiting for user input, 
 Components receive `{ pa, lifecycleContext }`, where `lifecycleContext` includes `conversationId`, `cwd`, `event`, `isStreaming`, `hasGoal`, `isCompacting`, and optional `error`.
 
 For backend automation, subscribe to `source: "conversation"` and patterns like `tool.started`, `tool.ended`, `tool.failed`, `run.started`, `run.ended`, `model.error`, `compaction.started`, or `compaction.ended`. Handlers receive `{ subscriptionId, event, payload, sourceExtensionId }`; `payload.type` is the lifecycle event name.
+
+### Turn Context Providers (`turnContextProviders`)
+
+Use `turnContextProviders` when an extension needs to add scoped hidden context before each submitted turn without mutating the system prompt. Providers are ordered by `priority` and invoked during prompt preparation.
+
+```json
+{
+  "contributes": {
+    "turnContextProviders": [{ "id": "reminders", "handler": "provideTurnReminders", "title": "Turn reminders", "priority": 50 }]
+  }
+}
+```
+
+Handlers receive `{ prompt, conversationId, currentCwd, relatedConversationIds }` and may return legacy `{ contextMessages }` or `{ blocks }`. Blocks are converted into extension turn-context messages.
+
+### Runtime Providers (`runtimeProviders`)
+
+Runtime providers advertise conversation execution targets such as SSH remotes. This is the registry/health boundary only; routing a conversation to a non-local runtime still requires host runtime support.
+
+```json
+{
+  "contributes": {
+    "runtimeProviders": [{ "id": "ssh", "title": "SSH Remote Runtime", "handler": "listSshRuntimes" }]
+  }
+}
+```
+
+Handlers return `{ runtimes: [...] }`, where each runtime includes `id`, `title`, `kind`, `status`, optional `version`, `workspaceRoots`, `capabilities`, and `metadata`. Backend actions can inspect providers through `ctx.runtimes.list()`, `ctx.runtimes.get(id)`, and `ctx.runtimes.healthCheck(id)`.
 
 ### Composer Attachments
 

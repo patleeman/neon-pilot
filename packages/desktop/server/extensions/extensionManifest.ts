@@ -109,6 +109,8 @@ export interface ExtensionContributions {
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   promptContextProviders?: ExtensionPromptContextProviderContribution[];
+  turnContextProviders?: ExtensionTurnContextProviderContribution[];
+  runtimeProviders?: ExtensionRuntimeProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
@@ -380,6 +382,21 @@ export interface ExtensionPromptContextProviderContribution {
   id: string;
   handler: string;
   title?: string;
+}
+
+export interface ExtensionTurnContextProviderContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+  scope?: Array<'global' | 'workspace' | 'conversation'>;
+}
+
+export interface ExtensionRuntimeProviderContribution {
+  id: string;
+  handler: string;
+  title: string;
+  description?: string;
 }
 
 export interface ExtensionPromptReferenceContribution {
