@@ -7,29 +7,29 @@ metadata:
   summary: Built-in routing guide for follow-up queues, owning surfaces, and later attention.
   status: active
 tools:
-  - deferred_resume
+  - conversation action `deferred_resume`
   - activity
   - scheduled_task
 ---
 
 # Async Attention and Wakeups
 
-Use the smallest scheduling surface that matches the owner of the work. For wait-then-continue requests, use `deferred_resume`; do not run `sleep` in bash.
+Use the smallest scheduling surface that matches the owner of the work. For wait-then-continue requests, use `conversation` action `deferred_resume`; do not run `sleep` in bash.
 
 ## Choose the right surface
 
-| Need                                               | Use                                  | Durable home                  |
-| -------------------------------------------------- | ------------------------------------ | ----------------------------- |
-| Agent should continue this conversation later      | `deferred_resume`                    | live queue or deferred resume |
-| Unattended automation should run later or recur    | `scheduled_task`                     | automation store + run logs   |
-| Passive async result tied to a thread              | surface the owning conversation      | conversation/activity         |
-| Scheduled task result should come back to a thread | scheduled task conversation callback | task log + optional wakeup    |
+| Need                                               | Use                                     | Durable home                  |
+| -------------------------------------------------- | --------------------------------------- | ----------------------------- |
+| Agent should continue this conversation later      | `conversation` action `deferred_resume` | live queue or deferred resume |
+| Unattended automation should run later or recur    | `scheduled_task`                        | automation store + run logs   |
+| Passive async result tied to a thread              | surface the owning conversation         | conversation/activity         |
+| Scheduled task result should come back to a thread | scheduled task conversation callback    | task log + optional wakeup    |
 
 There is no standalone tell-me-later tool. Human “tell me later” requests are same-thread follow-ups unless they need a true app-wide automation.
 
-## `deferred_resume`
+## `conversation` action `deferred_resume`
 
-Use `deferred_resume` when this same conversation should continue later.
+Use `conversation` action `deferred_resume` when this same conversation should continue later.
 
 Actions:
 
@@ -56,9 +56,9 @@ Example:
 }
 ```
 
-Use `deferred_resume` with `action: "list"` before assuming no wakeups are pending.
+Use `conversation` action `deferred_resume` with `action: "list"` before assuming no wakeups are pending.
 
-Do **not** schedule a `deferred_resume` just to poll a running background command/subagent that was started with `deliverResultToConversation: true`. That run already owns completion/failure delivery. Only schedule a wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
+Do **not** schedule a `conversation` action `deferred_resume` just to poll a running background command/subagent that was started with `deliverResultToConversation: true`. That run already owns completion/failure delivery. Only schedule a wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
 
 ## `scheduled_task`
 

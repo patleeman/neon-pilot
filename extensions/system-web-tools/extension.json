@@ -13,7 +13,7 @@
     "tools": [
       {
         "id": "web-fetch",
-        "name": "web_fetch",
+        "name": "web.fetch",
         "title": "Fetch URL",
         "description": "Fetch a URL and extract its readable content as markdown.",
         "action": "webFetch",

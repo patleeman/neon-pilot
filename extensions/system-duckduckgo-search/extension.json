@@ -13,10 +13,11 @@
     "tools": [
       {
         "id": "duckduckgo-search",
-        "name": "duckduckgo_search",
-        "title": "Search DuckDuckGo",
+        "name": "web.search",
+        "title": "Search web",
         "description": "Search DuckDuckGo's HTML results and return titles, URLs, and snippets.",
         "action": "duckDuckGoSearch",
+        "priority": 10,
         "inputSchema": {
           "type": "object",
           "properties": {

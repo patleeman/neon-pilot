@@ -1548,7 +1548,11 @@ function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWo
 }
 
 function readLegacyToolWorkspaceMetadata(line: RawMessage): LegacyToolWorkspaceMetadata | null {
-  if (line.message.role !== 'toolResult' || line.message.toolName !== 'change_working_directory') {
+  if (line.message.role !== 'toolResult') {
+    return null;
+  }
+  const toolName = line.message.toolName;
+  if (toolName !== 'change_working_directory' && toolName !== 'conversation') {
     return null;
   }
 

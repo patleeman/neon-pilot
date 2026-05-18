@@ -202,7 +202,7 @@ function assertRunKind(run: Record<string, unknown>, expected: 'background comma
   if (matches) return;
 
   const actual = describeRunKind(run);
-  const alternateTool = expected === 'background command' ? 'subagent' : 'background_command';
+  const alternateTool = expected === 'background command' ? 'subagent' : 'background_bash';
   throw new Error(`Run ${readRunId(run)} is a ${actual}, not a ${expected}. Use ${alternateTool} for this execution.`);
 }
 
@@ -314,7 +314,7 @@ export async function bash(input: unknown, ctx: NativeBackendContext) {
   return { text, ...(result.details ? { details: result.details } : {}), ...(result.isError ? { isError: true } : {}) };
 }
 
-export async function background_command(input: unknown, ctx: NativeBackendContext) {
+export async function background_bash(input: unknown, ctx: NativeBackendContext) {
   const params = isRecord(input) ? input : {};
   const action = readRequiredString(params.action, 'action');
   if (action === 'start') {
@@ -439,3 +439,5 @@ export async function subagent(input: unknown, ctx: NativeBackendContext) {
 
   throw new Error(`Unsupported subagent action: ${action}`);
 }
+
+export const background_command = background_bash;

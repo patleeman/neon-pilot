@@ -196,8 +196,14 @@ function normalizeStructuredQuestions(source: Record<string, unknown>): AskUserQ
   };
 }
 
+function isAskUserQuestionToolBlock(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  if (block.tool === 'ask_user_question') return true;
+  if (block.tool !== 'conversation' || !isRecord(block.input)) return false;
+  return block.input.action === 'ask';
+}
+
 export function readAskUserQuestionPresentation(block: Extract<MessageBlock, { type: 'tool_use' }>): AskUserQuestionPresentation | null {
-  if (block.tool !== 'ask_user_question') {
+  if (!isAskUserQuestionToolBlock(block)) {
     return null;
   }
 
@@ -226,7 +232,7 @@ export function describeAskUserQuestionState(messages: MessageBlock[] | undefine
       return { status: 'answered', answerBlock: candidate };
     }
 
-    if (candidate.type === 'tool_use' && candidate.tool === 'ask_user_question') {
+    if (candidate.type === 'tool_use' && isAskUserQuestionToolBlock(candidate)) {
       return { status: 'superseded' };
     }
   }
@@ -304,7 +310,7 @@ export function findPendingAskUserQuestion(messages: MessageBlock[] | undefined)
       return null;
     }
 
-    if (block.type !== 'tool_use' || block.tool !== 'ask_user_question' || block.status === 'error' || block.error) {
+    if (block.type !== 'tool_use' || !isAskUserQuestionToolBlock(block) || block.status === 'error' || block.error) {
       continue;
     }
 

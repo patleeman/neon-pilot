@@ -193,6 +193,13 @@ function summarizeParallelToolOutput(block: Extract<DisplayBlock, { type: 'tool_
   return truncateParallelPreviewText(firstLine, 200);
 }
 
+function readParallelToolInputAction(block: Extract<DisplayBlock, { type: 'tool_use' }>): string {
+  const input = block.input;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return '';
+  const action = (input as { action?: unknown }).action;
+  return typeof action === 'string' ? action : '';
+}
+
 function isParallelSideEffectBlock(block: Extract<DisplayBlock, { type: 'tool_use' }>): boolean {
   const action = readParallelToolAction(block);
 
@@ -204,7 +211,7 @@ function isParallelSideEffectBlock(block: Extract<DisplayBlock, { type: 'tool_us
     return action === 'save';
   }
 
-  if (block.tool === 'deferred_resume') {
+  if (block.tool === 'deferred_resume' || (block.tool === 'conversation' && readParallelToolInputAction(block) === 'deferred_resume')) {
     return action === 'add' || action === 'cancel';
   }
 
@@ -216,7 +223,10 @@ function isParallelSideEffectBlock(block: Extract<DisplayBlock, { type: 'tool_us
     return action === 'start' || action === 'start_agent' || action === 'rerun' || action === 'follow_up' || action === 'cancel';
   }
 
-  if (block.tool === 'change_working_directory') {
+  if (
+    block.tool === 'change_working_directory' ||
+    (block.tool === 'conversation' && readParallelToolInputAction(block) === 'change_working_directory')
+  ) {
     return action === 'queue';
   }
 

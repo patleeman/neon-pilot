@@ -99,6 +99,7 @@ export interface ExtensionToolRegistration {
   inputSchema: Record<string, unknown>;
   promptSnippet?: string;
   promptGuidelines?: string[];
+  priority?: number;
   when?: {
     providers?: string[];
     models?: string[];
@@ -674,6 +675,7 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
         inputSchema: tool.inputSchema ?? { type: 'object', properties: {}, additionalProperties: false },
         ...(tool.promptSnippet ? { promptSnippet: tool.promptSnippet } : {}),
         ...(tool.promptGuidelines ? { promptGuidelines: tool.promptGuidelines } : {}),
+        ...(Number.isInteger(tool.priority) ? { priority: tool.priority } : {}),
         ...(tool.when ? { when: tool.when } : {}),
         ...(replaces ? { replaces } : {}),
       },
@@ -2276,7 +2278,15 @@ export function listExtensionSkillRegistrations(stateRoot: string = getStateRoot
 }
 
 export function listExtensionToolRegistrations(stateRoot: string = getStateRoot()): ExtensionToolRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolRegistrations);
+  const registrations = listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolRegistrations);
+  const byName = new Map<string, ExtensionToolRegistration>();
+  for (const registration of registrations) {
+    const existing = byName.get(registration.name);
+    if (!existing || (registration.priority ?? 0) > (existing.priority ?? 0)) {
+      byName.set(registration.name, registration);
+    }
+  }
+  return [...byName.values()];
 }
 
 export function listExtensionAgentRegistrations(stateRoot: string = getStateRoot()): ExtensionAgentRegistration[] {

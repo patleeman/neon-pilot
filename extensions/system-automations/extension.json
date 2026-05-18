@@ -108,51 +108,6 @@
           "required": ["action"],
           "additionalProperties": false
         }
-      },
-      {
-        "id": "deferred-resume",
-        "name": "deferred_resume",
-        "title": "Deferred resume",
-        "description": "Schedule, list, or cancel a future resume for the current conversation. Use this for waiting instead of bash sleep.",
-        "action": "deferredResume",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "action": {
-              "type": "string",
-              "enum": ["add", "list", "cancel"]
-            },
-            "id": {
-              "type": "string"
-            },
-            "prompt": {
-              "type": "string"
-            },
-            "trigger": {
-              "type": "string",
-              "enum": ["after_turn", "delay", "at"]
-            },
-            "delay": {
-              "type": "string"
-            },
-            "at": {
-              "type": "string"
-            },
-            "deliverAs": {
-              "type": "string",
-              "enum": ["steer", "followUp"]
-            },
-            "title": {
-              "type": "string"
-            },
-            "reason": {
-              "type": "string",
-              "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
-            }
-          },
-          "required": ["action"],
-          "additionalProperties": false
-        }
       }
     ],
     "nav": [

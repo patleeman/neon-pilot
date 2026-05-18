@@ -6,10 +6,7 @@ import {
   requestConversationWorkingDirectoryChange,
 } from '@personal-agent/extensions/backend/conversations';
 
-import { createAskUserQuestionAgentExtension } from './askUserQuestionAgentExtension.js';
-import { createChangeWorkingDirectoryAgentExtension } from './changeWorkingDirectoryAgentExtension.js';
-import { createConversationInspectAgentExtension } from './conversationInspectAgentExtension.js';
-import { createConversationTitleAgentExtension } from './conversationTitleAgentExtension.js';
+import { createConversationAgentExtension } from './conversationAgentExtension.js';
 
 type ConversationContextMenuInput = { conversationId?: string; sessionTitle?: string; cwd?: string };
 
@@ -47,10 +44,7 @@ export async function copyDeeplink(input: ConversationContextMenuInput, ctx: Ext
 
 export function createConversationToolsAgentExtension(): (pi: ExtensionAPI) => void {
   return (pi) => {
-    createAskUserQuestionAgentExtension()(pi);
-    createConversationInspectAgentExtension()(pi);
-    createConversationTitleAgentExtension()(pi);
-    createChangeWorkingDirectoryAgentExtension({
+    createConversationAgentExtension({
       requestConversationWorkingDirectoryChange: (input) =>
         requestConversationWorkingDirectoryChange(input, {
           ...buildLiveSessionResourceOptionsForRuntime(),

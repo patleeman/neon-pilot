@@ -22,10 +22,11 @@
     "tools": [
       {
         "id": "exa-search",
-        "name": "exa_search",
-        "title": "Search Exa",
+        "name": "web.search",
+        "title": "Search web",
         "description": "Search Exa and return titles, URLs, and snippets.",
         "action": "exaSearch",
+        "priority": 100,
         "inputSchema": {
           "type": "object",
           "properties": {

@@ -18,9 +18,9 @@
         "title": "Bash"
       },
       {
-        "id": "background_command",
-        "handler": "background_command",
-        "title": "Background Command"
+        "id": "background_bash",
+        "handler": "background_bash",
+        "title": "Background Bash"
       },
       {
         "id": "subagent",
@@ -33,7 +33,7 @@
     "tools": [
       {
         "id": "bash-background",
-        "name": "background_bash",
+        "name": "bash",
         "title": "Bash",
         "description": "Execute a bash command. Set background=true to start it as a durable background command.",
         "action": "bash",
@@ -65,11 +65,11 @@
         }
       },
       {
-        "id": "background_command",
-        "name": "background_command",
-        "title": "Background Command",
-        "description": "Start, inspect, log, rerun, or cancel daemon-backed shell commands.",
-        "action": "background_command",
+        "id": "background-bash",
+        "name": "background_bash",
+        "title": "Background Bash",
+        "description": "Start, inspect, log, rerun, or cancel durable background bash commands.",
+        "action": "background_bash",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -148,7 +148,7 @@
               "type": "number"
             },
             "allowedTools": {
-              "description": "Optional comma-separated string or array of actual agent tool names. Common names: bash, read, edit, write, artifact, scheduled_task, deferred_resume, checkpoint, probe_image, web_fetch, exa_search, duckduckgo_search, goal, browser_snapshot, browser_cdp, browser_screenshot, ask_user_question, conversation_inspect, set_conversation_title, change_working_directory, mcp, background_command, subagent. Shell commands like rg/grep/find/ls are not tool names; allow bash instead.",
+              "description": "Optional comma-separated string or array of actual agent tool names. Common names: bash, read, edit, write, artifact, scheduled_task, conversation, checkpoint, probe_image, web.fetch, web.search, web.search, goal, browser_snapshot, browser_cdp, browser_screenshot, conversation, conversation, conversation, conversation, mcp, background_bash, subagent. Shell commands like rg/grep/find/ls are not tool names; allow bash instead.",
               "oneOf": [
                 {
                   "type": "string"

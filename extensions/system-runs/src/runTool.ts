@@ -79,7 +79,7 @@ const RunToolParams = Type.Object({
   allowedTools: Type.Optional(
     Type.Union(
       [
-        Type.String({ description: 'Comma-separated list of tool names to allow, e.g. "web_fetch,exa_search,duckduckgo_search".' }),
+        Type.String({ description: 'Comma-separated list of tool names to allow, e.g. "web.search,web.fetch,conversation".' }),
         Type.Array(Type.String(), { description: 'Array of tool names to allow.' }),
       ],
       { description: 'When set, only these tool names are exposed to the subagent. All other tools are unavailable.' },
@@ -215,12 +215,12 @@ export function createRunAgentExtension(options: {
     const backgroundWorkTool = {
       name: 'background_work_internal',
       label: 'Background Work Internal',
-      description: 'Internal executor for background_command and subagent.',
+      description: 'Internal executor for background_bash and subagent.',
       promptSnippet: '',
       promptGuidelines: [
         'Runs are detached by default. Only set deliverResultToConversation=true when the result should flow back to this conversation.',
         'For persistent time-based automations, prefer scheduled_task.',
-        'For pure conversation follow-up later, prefer deferred_resume with trigger="after_turn", "delay", or "at" instead.',
+        'For pure conversation follow-up later, prefer conversation action deferred_resume with trigger="after_turn", "delay", or "at" instead.',
       ],
       parameters: RunToolParams,
       async execute(
@@ -693,11 +693,11 @@ export function createRunAgentExtension(options: {
     };
 
     pi.registerTool({
-      name: 'background_command',
+      name: 'background_bash',
       label: 'Background Command',
       description: 'Start, inspect, log, rerun, or cancel daemon-backed shell commands.',
-      promptSnippet: 'Use background_command for shell commands that should run durably outside the current turn.',
-      promptGuidelines: ['Use background_command for durable shell work; use subagent for delegated agent work.'],
+      promptSnippet: 'Use background_bash for shell commands that should run durably outside the current turn.',
+      promptGuidelines: ['Use background_bash for durable shell work; use subagent for delegated agent work.'],
       parameters: Type.Object({
         action: Type.Union(['list', 'get', 'logs', 'start', 'rerun', 'cancel'].map((value) => Type.Literal(value))),
         runId: Type.Optional(Type.String({ description: 'Background command id for get/logs/rerun/cancel actions.' })),
@@ -718,7 +718,7 @@ export function createRunAgentExtension(options: {
       description: 'Start, inspect, follow up, rerun, or cancel daemon-backed subagent tasks.',
       promptSnippet: 'Use subagent for delegated agent work that should run durably outside the current turn.',
       promptGuidelines: [
-        'Use subagent for durable delegated agent work; use background_command for shell and scheduled_task for recurring automation.',
+        'Use subagent for durable delegated agent work; use background_bash for shell and scheduled_task for recurring automation.',
         `allowedTools must contain agent tool names, not shell commands. Common names: ${COMMON_AGENT_TOOL_NAMES}. For rg/grep/find/ls, allow bash and run the command inside bash.`,
       ],
       parameters: Type.Object({

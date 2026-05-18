@@ -527,6 +527,8 @@ export interface ExtensionToolContribution {
   inputSchema?: Record<string, unknown>;
   promptSnippet?: string;
   promptGuidelines?: string[];
+  /** Higher priority wins when multiple enabled tools provide the same explicit name. */
+  priority?: number;
   /** Explicit agent tool name. Defaults to extension_{extensionId}_{toolId}. */
   name?: string;
   /**

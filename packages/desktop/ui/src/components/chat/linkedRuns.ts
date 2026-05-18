@@ -431,7 +431,7 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
   scope: 'listed' | 'mentioned';
   runs: LinkedRunPresentation[];
 } {
-  if (block.tool === 'background_command' || isBackgroundShellStart(block)) {
+  if (block.tool === 'background_command' || block.tool === 'background_bash' || isBackgroundShellStart(block)) {
     return { scope: 'mentioned', runs: [] };
   }
 

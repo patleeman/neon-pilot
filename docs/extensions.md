@@ -732,7 +732,7 @@ When set, the tool registers under the built-in tool's name, overriding it.
 }
 ```
 
-Supported overridable tools: `bash`, `read`, `write`, `edit`, `grep`, `find`, `ls`, `notify`, `web_fetch`, `web_search`.
+Supported overridable tools: `bash`, `read`, `write`, `edit`, `grep`, `find`, `ls`, `notify`, `web.fetch`, `web_search`.
 
 Use `when` to only register a tool for specific providers or models. This is the right shape for model-specific tool replacements, because unsupported models never see the replacement tool.
 

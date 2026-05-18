@@ -195,7 +195,7 @@ function buildGenericSingleRunPrompt(run: EligibleBackgroundRun): string {
     lines.push(`Command: ${command}`);
   }
 
-  lines.push('', 'Continue from this result. Use background_command get/logs only if you need details.');
+  lines.push('', 'Continue from this result. Use background_bash get/logs only if you need details.');
 
   return lines.join('\n');
 }
@@ -216,7 +216,7 @@ function buildGenericBatchPrompt(runs: EligibleBackgroundRun[]): string {
     }
   }
 
-  lines.push('', 'Continue from these results. Use background_command get/logs only if you need details.');
+  lines.push('', 'Continue from these results. Use background_bash get/logs only if you need details.');
 
   return lines.join('\n');
 }

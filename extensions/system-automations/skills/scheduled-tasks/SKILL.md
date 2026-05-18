@@ -36,7 +36,7 @@ Do not confuse scheduled tasks with:
 
 - **project tasks** in `state.yaml` — those are planning/checklist items
 - **follow-up queue entries** — those are conversation-bound wakeups
-- **durable background runs** — those are detached jobs launched on demand with `background_command` or `subagent`
+- **durable background runs** — those are detached jobs launched on demand with `background_bash` or `subagent`
 
 ## Where automations live
 
@@ -163,7 +163,7 @@ This is the right fit for:
 - "run this later and tell me what happened"
 - "watch for deployment gates and bring this thread back when it matters"
 
-It is **not** the same as a same-thread follow-up. For direct human tell-me-later requests, prefer `deferred_resume`.
+It is **not** the same as a same-thread follow-up. For direct human tell-me-later requests, prefer `conversation` action `deferred_resume`.
 
 ## Managing tasks from the web UI
 

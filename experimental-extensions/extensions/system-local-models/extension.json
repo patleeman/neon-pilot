@@ -6,29 +6,107 @@
   "version": "0.1.0",
   "packageType": "system",
   "defaultEnabled": false,
-  "frontend": { "entry": "dist/frontend.js" },
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "localModelsStatus", "handler": "status", "title": "Local models status" },
-      { "id": "localModelsMlxSetModel", "handler": "mlxSetModel", "title": "Set MLX model" },
-      { "id": "localModelsMlxSetup", "handler": "mlxSetup", "title": "Set up MLX model" },
-      { "id": "localModelsMlxUpdateRuntime", "handler": "mlxUpdateRuntime", "title": "Update MLX runtime" },
-      { "id": "localModelsMlxStart", "handler": "mlxStart", "title": "Start MLX runtime" },
-      { "id": "localModelsMlxStop", "handler": "mlxStop", "title": "Stop MLX runtime" },
-      { "id": "localModelsMlxSearch", "handler": "mlxSearch", "title": "Search MLX models" },
-      { "id": "localModelsSearch", "handler": "searchModels", "title": "Search local-compatible models" },
-      { "id": "localModelsModelDetails", "handler": "modelDetails", "title": "Get Hugging Face model details" },
-      { "id": "localModelsGgufDownload", "handler": "ggufDownload", "title": "Download GGUF model" },
-      { "id": "localModelsGgufCancelDownload", "handler": "ggufCancelDownload", "title": "Cancel GGUF download" },
-      { "id": "localModelsGgufSetModel", "handler": "ggufSetModel", "title": "Set GGUF model" },
-      { "id": "localModelsGgufReveal", "handler": "ggufReveal", "title": "Reveal GGUF model" },
-      { "id": "localModelsMlxDelete", "handler": "mlxDelete", "title": "Delete MLX model" },
-      { "id": "localModelsGgufDelete", "handler": "ggufDelete", "title": "Delete GGUF model" },
-      { "id": "localModelsGgufInstallRuntime", "handler": "ggufInstallRuntime", "title": "Install llama.cpp runtime" },
-      { "id": "localModelsGgufStart", "handler": "ggufStart", "title": "Start llama.cpp server" },
-      { "id": "localModelsGgufStop", "handler": "ggufStop", "title": "Stop llama.cpp server" },
-      { "id": "localModelsGgufRunPrompt", "handler": "ggufRunPrompt", "title": "Run GGUF prompt" }
+      {
+        "id": "localModelsStatus",
+        "handler": "status",
+        "title": "Local models status"
+      },
+      {
+        "id": "localModelsMlxSetModel",
+        "handler": "mlxSetModel",
+        "title": "Set MLX model"
+      },
+      {
+        "id": "localModelsMlxSetup",
+        "handler": "mlxSetup",
+        "title": "Set up MLX model"
+      },
+      {
+        "id": "localModelsMlxUpdateRuntime",
+        "handler": "mlxUpdateRuntime",
+        "title": "Update MLX runtime"
+      },
+      {
+        "id": "localModelsMlxStart",
+        "handler": "mlxStart",
+        "title": "Start MLX runtime"
+      },
+      {
+        "id": "localModelsMlxStop",
+        "handler": "mlxStop",
+        "title": "Stop MLX runtime"
+      },
+      {
+        "id": "localModelsMlxSearch",
+        "handler": "mlxSearch",
+        "title": "Search MLX models"
+      },
+      {
+        "id": "localModelsSearch",
+        "handler": "searchModels",
+        "title": "Search local-compatible models"
+      },
+      {
+        "id": "localModelsModelDetails",
+        "handler": "modelDetails",
+        "title": "Get Hugging Face model details"
+      },
+      {
+        "id": "localModelsGgufDownload",
+        "handler": "ggufDownload",
+        "title": "Download GGUF model"
+      },
+      {
+        "id": "localModelsGgufCancelDownload",
+        "handler": "ggufCancelDownload",
+        "title": "Cancel GGUF download"
+      },
+      {
+        "id": "localModelsGgufSetModel",
+        "handler": "ggufSetModel",
+        "title": "Set GGUF model"
+      },
+      {
+        "id": "localModelsGgufReveal",
+        "handler": "ggufReveal",
+        "title": "Reveal GGUF model"
+      },
+      {
+        "id": "localModelsMlxDelete",
+        "handler": "mlxDelete",
+        "title": "Delete MLX model"
+      },
+      {
+        "id": "localModelsGgufDelete",
+        "handler": "ggufDelete",
+        "title": "Delete GGUF model"
+      },
+      {
+        "id": "localModelsGgufInstallRuntime",
+        "handler": "ggufInstallRuntime",
+        "title": "Install llama.cpp runtime"
+      },
+      {
+        "id": "localModelsGgufStart",
+        "handler": "ggufStart",
+        "title": "Start llama.cpp server"
+      },
+      {
+        "id": "localModelsGgufStop",
+        "handler": "ggufStop",
+        "title": "Stop llama.cpp server"
+      },
+      {
+        "id": "localModelsGgufRunPrompt",
+        "handler": "ggufRunPrompt",
+        "title": "Run GGUF prompt"
+      }
     ]
   },
   "contributes": {
@@ -41,16 +119,15 @@
         "component": "LocalModelsPage"
       }
     ],
-    "nav": [{ "id": "system-local-models", "label": "Local Models", "icon": "sparkle", "route": "/ext/system-local-models" }],
-    "tools": [
+    "nav": [
       {
-        "id": "local_models_status",
-        "name": "local_models_status",
-        "description": "Check selected, installed, and running local MLX and GGUF models.",
-        "action": "localModelsStatus",
-        "inputSchema": { "type": "object", "properties": {} }
+        "id": "system-local-models",
+        "label": "Local Models",
+        "icon": "sparkle",
+        "route": "/ext/system-local-models"
       }
-    ]
+    ],
+    "tools": []
   },
   "permissions": ["network:read", "network:write", "network:listen"]
 }

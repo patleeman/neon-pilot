@@ -191,7 +191,7 @@ Tasks are managed through the `scheduled_task` agent tool or the Automations UI.
 
 Follow-up queue entries resume the current conversation later. They are conversation-bound and are the only user-facing tool for same-thread delayed continuation.
 
-Use the `deferred_resume` tool from within a conversation for explicit wait/resume requests. Do not use `bash` + `sleep` as a timer.
+Use the `conversation` action `deferred_resume` tool from within a conversation for explicit wait/resume requests. Do not use `bash` + `sleep` as a timer.
 
 ## Actions
 
@@ -246,4 +246,4 @@ Supported time formats match scheduled tasks: ISO timestamps, natural language, 
 | Target      | Always this conversation | Background agent or conversation |
 | Persistence | Deferred resume state    | Automation store                 |
 
-Use `deferred_resume` when this conversation should continue later. Use `scheduled_task` when unattended work should run on a schedule.
+Use `conversation` action `deferred_resume` when this conversation should continue later. Use `scheduled_task` when unattended work should run on a schedule.
