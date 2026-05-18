@@ -9,6 +9,7 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
 import { listExtensionSkillRegistrations } from './extensionRegistry.js';
 import { createManifestToolAgentExtensions } from './manifestToolAgentExtension.js';
+import { buildFilteredSkillPaths } from './skillsRegistry.js';
 
 let buildResourceOptions: (() => LiveSessionResourceOptions) | null = null;
 let buildExtensionFactories: (() => ExtensionFactory[]) | null = null;
@@ -28,7 +29,10 @@ function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
-    additionalSkillPaths: [...new Set([...resolved.skillDirs, ...listExtensionSkillRegistrations().map((skill) => dirname(skill.path))])],
+    additionalSkillPaths: buildFilteredSkillPaths(
+      resolved.skillDirs,
+      listExtensionSkillRegistrations().map((skill) => dirname(skill.path)),
+    ),
     additionalPromptTemplatePaths: resolved.promptEntries,
     additionalThemePaths: resolved.themeEntries,
   };

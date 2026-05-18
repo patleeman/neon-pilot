@@ -11,6 +11,7 @@ import { createManifestAgentExtensions } from '../extensions/extensionAgentExten
 import { isExtensionEnabled, listExtensionEntries, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
+import { buildFilteredSkillPaths } from '../extensions/skillsRegistry.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
@@ -218,7 +219,10 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
     return {
       additionalExtensionPaths: resolved.extensionEntries,
-      additionalSkillPaths: [...new Set([...resolved.skillDirs, ...listExtensionSkillRegistrations().map((skill) => dirname(skill.path))])],
+      additionalSkillPaths: buildFilteredSkillPaths(
+        resolved.skillDirs,
+        listExtensionSkillRegistrations().map((skill) => dirname(skill.path)),
+      ),
       additionalPromptTemplatePaths: resolved.promptEntries,
       additionalThemePaths: resolved.themeEntries,
     };
