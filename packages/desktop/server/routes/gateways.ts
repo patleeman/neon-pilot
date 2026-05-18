@@ -131,7 +131,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     },
     getCurrentModel: () => null,
     setModel: async (conversationId, model) => {
-      await updateLiveSessionModelPreferences(conversationId, { model }, getAvailableModelObjects());
+      await updateLiveSessionModelPreferences(conversationId, { model }, await getAvailableModelObjects());
     },
   });
   return telegramRuntime;

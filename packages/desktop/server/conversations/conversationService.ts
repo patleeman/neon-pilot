@@ -501,7 +501,7 @@ export async function readConversationModelPreferenceStateById(
   }
 
   const sessionManager = SessionManager.open(sessionFile);
-  const availableModels = getAvailableModelObjects();
+  const availableModels = await getAvailableModelObjects();
   return resolveConversationModelPreferenceState(
     readConversationModelPreferenceSnapshot(sessionManager),
     readSavedModelPreferences(SETTINGS_FILE, availableModels),

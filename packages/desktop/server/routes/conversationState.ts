@@ -368,7 +368,7 @@ export function registerConversationStateRoutes(
 
       if (isLocalLive(req.params.id)) {
         ensureRequestControlsLocalLiveConversation(req.params.id, req.body);
-        const availableModels = getAvailableModelObjects();
+        const availableModels = await getAvailableModelObjects();
         const state = await updateLiveSessionModelPreferences(req.params.id, input, availableModels);
         res.json(state);
         return;
@@ -381,7 +381,7 @@ export function registerConversationStateRoutes(
       }
 
       const sessionManager = SessionManager.open(sessionFile);
-      const availableModels = getAvailableModelObjects();
+      const availableModels = await getAvailableModelObjects();
       const state = applyConversationModelPreferencesToSessionManager(
         sessionManager,
         input,

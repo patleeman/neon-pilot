@@ -143,6 +143,13 @@ export interface ExtensionContributions {
   secrets?: Record<string, ExtensionSecretContribution>;
   secretBackends?: ExtensionSecretBackendContribution[];
   settingsComponent?: ExtensionSettingsComponentContribution;
+  /** Dynamic model discovery. The named action is called at model-list query time. */
+  modelDiscovery?: ExtensionModelDiscoveryContribution;
+}
+
+export interface ExtensionModelDiscoveryContribution {
+  /** Backend action id. Called with no input; returns DiscoveredProvider | null. */
+  action: string;
 }
 
 export interface ExtensionTopBarElementContribution {

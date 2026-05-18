@@ -169,3 +169,57 @@ export async function ggufStop(input: unknown, ctx: ExtensionBackendContext) {
 export async function ggufRunPrompt(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.runPrompt(input as never, ctx);
 }
+
+/**
+ * Model discovery action — called by the desktop server at model-list query time.
+ * Probes local runtimes and returns a provider descriptor if any are reachable,
+ * or null if nothing is running. MLX takes priority over GGUF.
+ */
+export async function localModelsDiscover(_input: unknown, ctx: ExtensionBackendContext) {
+  const [mlxStatus, ggufStatus] = await Promise.all([mlx.status({}, ctx), gguf.runtimeStatus({}, ctx)]);
+
+  const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
+  const GGUF_BASE_URL = ggufStatus.baseUrl || 'http://127.0.0.1:8012/v1';
+
+  if (mlxStatus.server.reachable && mlxStatus.server.models.length > 0) {
+    const modelId = mlxStatus.loadedModelId || mlxStatus.selectedModelId;
+    return {
+      provider: 'local',
+      baseUrl: MLX_BASE_URL,
+      api: 'openai-completions',
+      apiKey: 'local',
+      models: [
+        {
+          id: modelId,
+          name: modelId.split('/').pop() || modelId,
+          reasoning: true,
+          input: ['text'],
+          contextWindow: mlxStatus.recommendedContextSize || 32768,
+        },
+      ],
+    };
+  }
+
+  if (ggufStatus.server.reachable && ggufStatus.server.models.length > 0) {
+    const ggufSelected =
+      ggufStatus.models.find((model: { path: string; name: string }) => model.path === ggufStatus.selectedModelPath) ?? null;
+    if (!ggufSelected) return null;
+    return {
+      provider: 'local',
+      baseUrl: GGUF_BASE_URL,
+      api: 'openai-completions',
+      apiKey: 'local',
+      models: [
+        {
+          id: ggufSelected.name,
+          name: ggufSelected.name,
+          reasoning: true,
+          input: ['text'],
+          contextWindow: ggufStatus.recommendedContextSize || 32768,
+        },
+      ],
+    };
+  }
+
+  return null;
+}

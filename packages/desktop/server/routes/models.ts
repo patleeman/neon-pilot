@@ -94,53 +94,53 @@ export function registerModelRoutes(
   // ── Models ────────────────────────────────────────────────────────────────
 
   router.get('/api/models', (_req, res) => {
-    try {
-      res.json(readModelState(SETTINGS_FILE));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
+    readModelState(SETTINGS_FILE)
+      .then((state) => res.json(state))
+      .catch((err) => {
+        logError('request handler error', {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        res.status(500).json({ error: String(err) });
       });
-      res.status(500).json({ error: String(err) });
-    }
   });
 
   router.patch('/api/models/current', (req, res) => {
-    try {
-      const { model, visionModel, thinkingLevel, serviceTier } = req.body as {
-        model?: string;
-        visionModel?: string;
-        thinkingLevel?: string;
-        serviceTier?: string;
-      };
-      if (
-        typeof model !== 'string' &&
-        typeof visionModel !== 'string' &&
-        typeof thinkingLevel !== 'string' &&
-        typeof serviceTier !== 'string'
-      ) {
-        res.status(400).json({ error: 'model, visionModel, thinkingLevel, or serviceTier required' });
-        return;
-      }
-
-      const models = listModelDefinitions();
-      persistSettingsWrite(
-        (settingsFile) => {
-          writeSavedModelPreferences({ model, visionModel, thinkingLevel, serviceTier }, settingsFile, models);
-        },
-        {
-          runtimeSettingsFile: SETTINGS_FILE,
-        },
-      );
-
-      res.json({ ok: true });
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
+    const { model, visionModel, thinkingLevel, serviceTier } = req.body as {
+      model?: string;
+      visionModel?: string;
+      thinkingLevel?: string;
+      serviceTier?: string;
+    };
+    if (
+      typeof model !== 'string' &&
+      typeof visionModel !== 'string' &&
+      typeof thinkingLevel !== 'string' &&
+      typeof serviceTier !== 'string'
+    ) {
+      res.status(400).json({ error: 'model, visionModel, thinkingLevel, or serviceTier required' });
+      return;
     }
+
+    listModelDefinitions()
+      .then((models) => {
+        persistSettingsWrite(
+          (settingsFile) => {
+            writeSavedModelPreferences({ model, visionModel, thinkingLevel, serviceTier }, settingsFile, models);
+          },
+          {
+            runtimeSettingsFile: SETTINGS_FILE,
+          },
+        );
+        res.json({ ok: true });
+      })
+      .catch((err) => {
+        logError('request handler error', {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        res.status(500).json({ error: String(err) });
+      });
   });
 
   router.get('/api/default-cwd', (_req, res) => {

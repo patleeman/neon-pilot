@@ -106,10 +106,16 @@
         "id": "localModelsGgufRunPrompt",
         "handler": "ggufRunPrompt",
         "title": "Run GGUF prompt"
+      },
+      {
+        "id": "localModelsDiscover",
+        "handler": "localModelsDiscover",
+        "title": "Discover local models"
       }
     ]
   },
   "contributes": {
+    "modelDiscovery": { "action": "localModelsDiscover" },
     "views": [
       {
         "id": "main",

@@ -395,14 +395,14 @@ export function getLiveSessionForkEntries(sessionId: string): unknown[] | null {
   return readLiveSessionForkEntries(registry.get(sessionId));
 }
 
-export function getAvailableModelObjects() {
+export async function getAvailableModelObjects() {
   const auth = makeFactoryAuth(AGENT_DIR);
   const registry = makeRegistry(auth);
   return registry.getAvailable();
 }
 
-export function getAvailableModels() {
-  return formatAvailableModels(getAvailableModelObjects());
+export async function getAvailableModels() {
+  return formatAvailableModels(await getAvailableModelObjects());
 }
 
 export async function inspectAvailableTools(
@@ -726,6 +726,7 @@ export async function startParallelPromptSession(
   if (!entry) {
     throw new Error(`Session ${sessionId} is not live`);
   }
+  const availableModelsForTier = await getAvailableModelObjects();
   return startParallelPromptSessionWithCallbacks(entry, input, options, {
     createJobId: createParallelPromptJobId,
     createSession,
@@ -734,7 +735,7 @@ export async function startParallelPromptSession(
     submitPromptSession,
     resolveDefaultServiceTier: (candidate) =>
       buildConversationServiceTierPreferenceInput(
-        resolveConversationPreferenceStateForSession(candidate.session.sessionManager, getAvailableModelObjects()),
+        resolveConversationPreferenceStateForSession(candidate.session.sessionManager, availableModelsForTier),
       ),
     hasQueuedOrActiveStaleTurn,
     persistParallelJobs,
@@ -941,12 +942,12 @@ export function renameSession(sessionId: string, name: string): void {
 export async function updateLiveSessionModelPreferences(
   sessionId: string,
   input: ConversationModelPreferenceInput,
-  availableModels?: ReturnType<typeof getAvailableModelObjects>,
+  availableModels?: Awaited<ReturnType<typeof getAvailableModelObjects>>,
 ): Promise<ConversationModelPreferenceState> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
 
-  const models = availableModels ?? getAvailableModelObjects();
+  const models = availableModels ?? (await getAvailableModelObjects());
   return updateLiveSessionModelPreferencesWithCallbacks({
     entry,
     preferences: input,
@@ -980,13 +981,14 @@ export async function forkSession(
 ): Promise<{ newSessionId: string; sessionFile: string }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
+  const availableModelsForTier = await getAvailableModelObjects();
   return forkLiveSession(entry, entryId, options, {
     createSession,
     resumeSession,
     destroySession,
     resolveDefaultServiceTier: (candidate) =>
       buildConversationServiceTierPreferenceInput(
-        resolveConversationPreferenceStateForSession(candidate.session.sessionManager, getAvailableModelObjects()),
+        resolveConversationPreferenceStateForSession(candidate.session.sessionManager, availableModelsForTier),
       ),
   });
 }

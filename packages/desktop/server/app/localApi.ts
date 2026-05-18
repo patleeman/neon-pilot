@@ -1103,7 +1103,7 @@ export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
 }
 
 export async function readDesktopModels() {
-  return readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
+  return await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
 }
 
 export async function updateDesktopModelPreferences(input: {
@@ -1121,7 +1121,7 @@ export async function updateDesktopModelPreferences(input: {
     throw new Error('model, visionModel, thinkingLevel, or serviceTier required');
   }
 
-  const models = readModelState(DEFAULT_RUNTIME_SETTINGS_FILE).models;
+  const models = (await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
   persistSettingsWrite(
     (settingsFile) => {
       writeSavedModelPreferences(
@@ -1829,7 +1829,7 @@ export async function updateDesktopConversationModelPreferences(input: {
   };
 
   if (isLiveSession(conversationId)) {
-    return updateLiveSessionModelPreferences(conversationId, nextInput, getAvailableModelObjects());
+    return updateLiveSessionModelPreferences(conversationId, nextInput, await getAvailableModelObjects());
   }
 
   const sessionFile = resolveConversationSessionFile(conversationId);
@@ -1837,7 +1837,7 @@ export async function updateDesktopConversationModelPreferences(input: {
     throw new Error('Conversation not found');
   }
 
-  const availableModels = getAvailableModelObjects();
+  const availableModels = await getAvailableModelObjects();
   const sessionManager = SessionManager.open(sessionFile);
   const state = applyConversationModelPreferencesToSessionManager(
     sessionManager,

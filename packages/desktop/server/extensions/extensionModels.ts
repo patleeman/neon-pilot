@@ -21,7 +21,7 @@ export function createExtensionModelsCapability() {
           })().catch(() => ''));
         if (!settingsFile) return [];
 
-        const state = readModelState(settingsFile);
+        const state = await readModelState(settingsFile);
         return (state.models ?? []).map(
           (m: {
             id?: string;

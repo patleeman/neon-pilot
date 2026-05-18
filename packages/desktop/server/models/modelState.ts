@@ -1,4 +1,5 @@
 import { getAvailableModels } from '../conversations/liveSessions.js';
+import { runModelDiscovery } from './modelDiscovery.js';
 import { normalizeSavedModelPreferences } from './modelPreferences.js';
 import { getSupportedServiceTiersForModel, modelSupportsServiceTier } from './modelServiceTiers.js';
 
@@ -29,17 +30,10 @@ function readModelReasoning(model: unknown): boolean | undefined {
   return typeof reasoning === 'boolean' ? reasoning : undefined;
 }
 
-export function listModelDefinitions() {
+export async function listModelDefinitions() {
+  let registryModels: Awaited<ReturnType<typeof getAvailableModels>>;
   try {
-    return getAvailableModels().map((model) => ({
-      id: model.id,
-      provider: model.provider,
-      name: model.name,
-      context: model.contextWindow ?? model.context ?? 128_000,
-      input: readModelInput(model),
-      reasoning: readModelReasoning(model),
-      supportedServiceTiers: getSupportedServiceTiersForModel(model),
-    }));
+    registryModels = await getAvailableModels();
   } catch {
     // Fall back to built-ins only when the live registry cannot be materialized.
     return BUILT_IN_MODELS.map((model) => ({
@@ -47,10 +41,48 @@ export function listModelDefinitions() {
       supportedServiceTiers: getSupportedServiceTiersForModel(model),
     }));
   }
+
+  const base = registryModels.map((model) => ({
+    id: model.id,
+    provider: model.provider,
+    name: model.name,
+    context: model.contextWindow ?? model.context ?? 128_000,
+    input: readModelInput(model),
+    reasoning: readModelReasoning(model),
+    supportedServiceTiers: getSupportedServiceTiersForModel(model),
+  }));
+
+  // Merge in models discovered from extensions (e.g. local MLX/GGUF runtimes).
+  // Discovery is best-effort — failures are swallowed so a broken extension
+  // never prevents the picker from loading.
+  let discovered: Awaited<ReturnType<typeof runModelDiscovery>> = [];
+  try {
+    discovered = await runModelDiscovery();
+  } catch {
+    // ignore
+  }
+
+  const discoveredModels = discovered.flatMap((p) =>
+    p.models.map((m) => ({
+      id: m.id,
+      provider: p.provider,
+      name: m.name,
+      context: m.contextWindow,
+      input: m.input,
+      reasoning: m.reasoning,
+      supportedServiceTiers: getSupportedServiceTiersForModel({ provider: p.provider } as never),
+    })),
+  );
+
+  // Discovered models are appended; registry models take precedence on id collisions.
+  const registryIds = new Set(base.map((m) => `${m.provider}:${m.id}`));
+  const merged = [...base, ...discoveredModels.filter((m) => !registryIds.has(`${m.provider}:${m.id}`))];
+
+  return merged;
 }
 
-export function readModelState(settingsFile: string) {
-  const models = listModelDefinitions();
+export async function readModelState(settingsFile: string) {
+  const models = await listModelDefinitions();
   const saved = normalizeSavedModelPreferences(settingsFile, models);
   const modelIds = new Set(models.map((model) => model.id));
   const currentModel = saved.currentModel && modelIds.has(saved.currentModel) ? saved.currentModel : models[0]?.id || '';

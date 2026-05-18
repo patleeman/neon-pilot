@@ -91,8 +91,6 @@ type ModelDetails = {
 type PageId = 'server' | 'library';
 
 const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
-const LOCAL_PROVIDER_ID = 'local';
-const LEGACY_LOCAL_PROVIDER_IDS = ['mlx-local', 'llama-cpp-local'];
 
 function formatBytes(bytes?: number) {
   if (!bytes) return '';
@@ -112,68 +110,6 @@ function detectFormat(modelId: string, tags: string[] = []): 'mlx' | 'gguf' | 'u
   if (lower.includes('gguf')) return 'gguf';
   if (lower.includes('mlx')) return 'mlx';
   return 'unknown';
-}
-
-async function postJson(path: string, body: unknown) {
-  const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-}
-
-async function deleteJson(path: string) {
-  const response = await fetch(path, { method: 'DELETE' });
-  if (!response.ok && response.status !== 404) throw new Error(await response.text());
-  return response.ok ? response.json() : null;
-}
-
-async function registerLocalProviderModel(runtime: 'mlx' | 'gguf', modelId: string, baseUrl: string, contextWindow: number) {
-  await postJson('/api/model-providers/providers', {
-    provider: LOCAL_PROVIDER_ID,
-    api: 'openai-completions',
-    baseUrl,
-    apiKey: 'local',
-    authHeader: false,
-    compat: { stream: true },
-  });
-  await postJson(`/api/model-providers/providers/${encodeURIComponent(LOCAL_PROVIDER_ID)}/models`, {
-    modelId,
-    name: modelId.split('/').pop() || modelId,
-    api: 'openai-completions',
-    baseUrl,
-    reasoning: true,
-    input: ['text'],
-    contextWindow,
-  });
-}
-
-async function syncLocalProviderModel(activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string; contextWindow: number } | null) {
-  const state = (await getJson('/api/model-providers')) as { providers?: Array<{ id?: string; models?: Array<{ id?: string }> }> };
-  const currentModels = state.providers?.find((candidate) => candidate.id === LOCAL_PROVIDER_ID)?.models ?? [];
-  const activeModelId = activeModel?.id ?? null;
-
-  if (activeModel) {
-    await registerLocalProviderModel(activeModel.runtime, activeModel.id, activeModel.baseUrl, activeModel.contextWindow);
-  }
-
-  await Promise.all([
-    ...currentModels
-      .map((model) => model.id)
-      .filter((modelId): modelId is string => Boolean(modelId && modelId !== activeModelId))
-      .map((modelId) =>
-        deleteJson(`/api/model-providers/providers/${encodeURIComponent(LOCAL_PROVIDER_ID)}/models/${encodeURIComponent(modelId)}`),
-      ),
-    ...LEGACY_LOCAL_PROVIDER_IDS.map((provider) => deleteJson(`/api/model-providers/providers/${encodeURIComponent(provider)}`)),
-  ]);
-}
-
-async function trySyncLocalProviderModel(
-  activeModel: { runtime: 'mlx' | 'gguf'; id: string; baseUrl: string; contextWindow: number } | null,
-) {
-  try {
-    await syncLocalProviderModel(activeModel);
-  } catch {
-    // Preview/testing contexts may not expose provider APIs.
-  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -350,7 +286,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [selectedSearchId, setSelectedSearchId] = useState<string>('');
   const [details, setDetails] = useState<ModelDetails | null>(null);
   const [selectedFile, setSelectedFile] = useState('');
-  const providerSyncKeyRef = useRef('');
   const contextInitKeyRef = useRef('');
 
   async function refresh() {
@@ -387,31 +322,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     }, 5000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (!status) return;
-    const ggufBaseUrl = status.gguf.baseUrl || 'http://127.0.0.1:8012/v1';
-    const ggufSelected = status.gguf.models.find((model) => model.path === status.gguf.selectedModelPath) ?? null;
-    const activeModel = status.mlx.server.reachable
-      ? {
-          runtime: 'mlx' as const,
-          id: status.mlx.loadedModelId || status.mlx.selectedModelId,
-          baseUrl: MLX_BASE_URL,
-          contextWindow: status.mlx.recommendedContextSize || 131072,
-        }
-      : status.gguf.server.reachable && ggufSelected
-        ? {
-            runtime: 'gguf' as const,
-            id: ggufSelected.name,
-            baseUrl: ggufBaseUrl,
-            contextWindow: status.gguf.recommendedContextSize || 131072,
-          }
-        : null;
-    const syncKey = activeModel ? `${activeModel.runtime}|${activeModel.id}|${activeModel.baseUrl}|${activeModel.contextWindow}` : 'off';
-    if (providerSyncKeyRef.current === syncKey) return;
-    providerSyncKeyRef.current = syncKey;
-    void trySyncLocalProviderModel(activeModel);
-  }, [status]);
 
   const downloadedModels = useMemo<DownloadedModel[]>(() => {
     const models: DownloadedModel[] = [];
@@ -541,12 +451,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         if (reload) {
           if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
           await pa.extension.invoke('localModelsMlxStart', { maxTokens: Number(maxTokens) });
-          await trySyncLocalProviderModel({
-            runtime: 'mlx',
-            id: selectedModel.subtitle,
-            baseUrl: MLX_BASE_URL,
-            contextWindow: status?.mlx?.recommendedContextSize || Number(contextSize) || 131072,
-          });
         }
       } else if (selectedModel.path) {
         await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
@@ -587,12 +491,6 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             extraArgs,
             ...ggufSpeculativeSettings(),
           });
-          await trySyncLocalProviderModel({
-            runtime: 'gguf',
-            id: selectedModel.title,
-            baseUrl: status?.gguf?.baseUrl || endpoint,
-            contextWindow: status?.gguf?.recommendedContextSize || Number(contextSize) || 131072,
-          });
         }
       }
       setDirty(false);
@@ -603,10 +501,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     await runAction('Stopping…', async () => {
       if (activeRuntime === 'mlx') {
         await pa.extension.invoke('localModelsMlxStop', {});
-        await trySyncLocalProviderModel(null);
       } else {
         await pa.extension.invoke('localModelsGgufStop', {});
-        await trySyncLocalProviderModel(null);
       }
     });
   }
