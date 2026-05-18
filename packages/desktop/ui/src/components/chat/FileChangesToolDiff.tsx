@@ -65,8 +65,13 @@ function readStatus(value: unknown): FileChange['status'] | undefined {
 }
 
 export function readFileChanges(details: unknown): FileChange[] {
-  if (!isRecord(details) || !Array.isArray(details.fileChanges)) return [];
-  return details.fileChanges.flatMap((candidate): FileChange[] => {
+  if (!isRecord(details)) return [];
+  const rawFileChanges = Array.isArray(details.fileChanges)
+    ? details.fileChanges
+    : isRecord(details.result) && Array.isArray(details.result.fileChanges)
+      ? details.result.fileChanges
+      : [];
+  return rawFileChanges.flatMap((candidate): FileChange[] => {
     if (!isRecord(candidate)) return [];
     const path = readString(candidate, 'path');
     const status = readStatus(candidate.status);
@@ -83,6 +88,43 @@ export function readFileChanges(details: unknown): FileChange[] {
       },
     ];
   });
+}
+
+function countContentLines(content: string): number {
+  if (!content) return 0;
+  return content.endsWith('\n') ? content.slice(0, -1).split('\n').length : content.split('\n').length;
+}
+
+function buildAddedPatch(path: string, content: string): string {
+  const lines = content ? content.replace(/\n$/, '').split('\n') : [];
+  return [
+    'diff --git a/' + path + ' b/' + path,
+    '--- /dev/null',
+    '+++ b/' + path,
+    `@@ -1,0 +1,${countContentLines(content)} @@`,
+    ...lines.map((line) => `+${line}`),
+  ].join('\n');
+}
+
+export function readFileChangesForToolBlock(block: { tool?: string; input?: unknown; details?: unknown }): FileChange[] {
+  const fileChanges = readFileChanges(block.details);
+  if (fileChanges.length > 0) return fileChanges;
+
+  if (block.tool !== 'write' || !isRecord(block.input)) return [];
+  const path = readString(block.input, 'path');
+  const content = typeof block.input.content === 'string' ? block.input.content : undefined;
+  if (!path || content === undefined) return [];
+
+  return [
+    {
+      path,
+      status: 'added',
+      additions: countContentLines(content),
+      deletions: 0,
+      patch: buildAddedPatch(path, content),
+      truncated: false,
+    },
+  ];
 }
 
 function resolveDiffThemeType(theme: string, availableThemes: ColorTheme[]): 'light' | 'dark' {

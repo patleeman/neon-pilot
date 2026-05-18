@@ -9,7 +9,7 @@ import type { DurableRunListResult, MessageBlock } from '../../shared/types';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
-import { FileChangesToolDiff, readFileChanges } from './FileChangesToolDiff.js';
+import { FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
@@ -88,7 +88,7 @@ export function ToolBlock({
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
-  const fileChanges = useMemo(() => readFileChanges(block.details), [block.details]);
+  const fileChanges = useMemo(() => readFileChangesForToolBlock(block), [block]);
   const isRunning = block.status === 'running' || !!block.running;
   const isError = block.status === 'error' || !!block.error;
 
