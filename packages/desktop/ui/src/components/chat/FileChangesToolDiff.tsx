@@ -180,7 +180,6 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
 
   return (
     <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 font-sans text-[11px]">
-      <p className="mb-2 uppercase tracking-[0.14em] text-dim">File changes</p>
       <div className="space-y-2">
         {fileChanges.map((change) => {
           const key = displayPath(change);
