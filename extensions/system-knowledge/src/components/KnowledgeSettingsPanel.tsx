@@ -91,6 +91,10 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
       setRepoUrlDraft(saved.repoUrl);
       setBranchDraft(saved.branch);
       await refetchKnowledgeBase({ resetLoading: false });
+      if (isOnboarding && saved.configured) {
+        window.location.reload();
+        return;
+      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     } finally {

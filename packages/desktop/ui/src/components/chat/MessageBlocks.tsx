@@ -3,7 +3,6 @@ import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { cx } from '../ui';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -12,6 +11,7 @@ import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
 import { renderMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
+import { cx } from '../ui.js';
 
 function formatSystemEventLabel(customType?: string): string {
   switch (customType) {
@@ -418,8 +418,8 @@ export const AssistantMessage = memo(function AssistantMessage({
   onSelectionGesture,
   isInlineRunExpanded,
   onToggleInlineRun,
-  showCursor = false,
   layout = 'default',
+  showCursor = false,
 }: {
   block: Extract<MessageBlock, { type: 'text' }>;
   messageIndex?: number;
@@ -430,8 +430,8 @@ export const AssistantMessage = memo(function AssistantMessage({
   onSelectionGesture?: ReplySelectionGestureHandler;
   isInlineRunExpanded?: (inlineRunKey: string) => boolean;
   onToggleInlineRun?: (inlineRunKey: string) => void;
-  showCursor?: boolean;
   layout?: ChatViewLayout;
+  showCursor?: boolean;
 }) {
   const shouldShowCursor = showCursor || !!block.streaming;
   const blockId = block.id?.trim() || undefined;
