@@ -9,6 +9,12 @@ const {
   markDeferredResumeConversationRunReadyMock,
   markDeferredResumeConversationRunRetryScheduledMock,
   surfaceReadyDeferredResumeMock,
+  activateDueAttentionEventsMock,
+  completeAttentionEventsMock,
+  getReadySessionAttentionEventsMock,
+  loadAttentionEventsStateMock,
+  retryAttentionEventsMock,
+  saveAttentionEventsStateMock,
   getLiveSessionsMock,
   promptSessionMock,
   queuePromptContextMock,
@@ -23,6 +29,12 @@ const {
   markDeferredResumeConversationRunReadyMock: vi.fn(),
   markDeferredResumeConversationRunRetryScheduledMock: vi.fn(),
   surfaceReadyDeferredResumeMock: vi.fn(),
+  activateDueAttentionEventsMock: vi.fn(),
+  completeAttentionEventsMock: vi.fn(),
+  getReadySessionAttentionEventsMock: vi.fn(),
+  loadAttentionEventsStateMock: vi.fn(),
+  retryAttentionEventsMock: vi.fn(),
+  saveAttentionEventsStateMock: vi.fn(),
   getLiveSessionsMock: vi.fn(),
   promptSessionMock: vi.fn(),
   queuePromptContextMock: vi.fn(),
@@ -45,6 +57,15 @@ vi.mock('../automation/deferredResumes.js', () => ({
   completeDeferredResumeForSessionFile: completeDeferredResumeForSessionFileMock,
   listDeferredResumesForSessionFile: listDeferredResumesForSessionFileMock,
   retryDeferredResumeForSessionFile: retryDeferredResumeForSessionFileMock,
+}));
+
+vi.mock('@personal-agent/core', () => ({
+  activateDueAttentionEvents: activateDueAttentionEventsMock,
+  completeAttentionEvents: completeAttentionEventsMock,
+  getReadySessionAttentionEvents: getReadySessionAttentionEventsMock,
+  loadAttentionEventsState: loadAttentionEventsStateMock,
+  retryAttentionEvents: retryAttentionEventsMock,
+  saveAttentionEventsState: saveAttentionEventsStateMock,
 }));
 
 vi.mock('@personal-agent/daemon', () => ({
@@ -102,6 +123,12 @@ beforeEach(() => {
   markDeferredResumeConversationRunReadyMock.mockReset();
   markDeferredResumeConversationRunRetryScheduledMock.mockReset();
   surfaceReadyDeferredResumeMock.mockReset();
+  activateDueAttentionEventsMock.mockReset();
+  completeAttentionEventsMock.mockReset();
+  getReadySessionAttentionEventsMock.mockReset();
+  loadAttentionEventsStateMock.mockReset();
+  retryAttentionEventsMock.mockReset();
+  saveAttentionEventsStateMock.mockReset();
   getLiveSessionsMock.mockReset();
   promptSessionMock.mockReset();
   queuePromptContextMock.mockReset();
@@ -115,6 +142,9 @@ beforeEach(() => {
   queuePromptContextMock.mockResolvedValue(undefined);
   syncWebLiveConversationRunMock.mockResolvedValue(undefined);
   retryDeferredResumeForSessionFileMock.mockReturnValue(undefined);
+  activateDueAttentionEventsMock.mockReturnValue([]);
+  getReadySessionAttentionEventsMock.mockReturnValue([]);
+  loadAttentionEventsStateMock.mockReturnValue({ version: 1, events: {} });
 });
 
 describe('createLiveDeferredResumeFlusher', () => {
@@ -372,6 +402,63 @@ describe('createLiveDeferredResumeFlusher', () => {
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' });
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-2' });
     expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('delivers extension attention events without deferred resume records', async () => {
+    const attentionEvent = {
+      id: 'attention-1',
+      sessionFile: '/tmp/session-1.jsonl',
+      prompt: 'Extension event is ready.',
+      dueAt: '2026-04-15T10:00:00.000Z',
+      createdAt: '2026-04-15T09:59:00.000Z',
+      attempts: 0,
+      status: 'ready' as const,
+      readyAt: '2026-04-15T10:00:00.000Z',
+      source: { kind: 'extension', id: 'ext-1' },
+      delivery: {
+        mode: 'batchable' as const,
+        priority: 'normal' as const,
+        autoResumeIfOpen: true,
+        requireAck: false,
+      },
+    };
+    getLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conv-1',
+        cwd: '/repo',
+        sessionFile: '/tmp/session-1.jsonl',
+        title: 'Conversation 1',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+    ]);
+    liveRegistry.set('conv-1', {
+      cwd: '/repo',
+      title: 'Conversation 1',
+      session: {
+        sessionFile: '/tmp/session-1.jsonl',
+        isStreaming: false,
+      },
+    });
+    activateDueDeferredResumesForSessionFileMock.mockReturnValue([]);
+    listDeferredResumesForSessionFileMock.mockReturnValue([]);
+    getReadySessionAttentionEventsMock.mockReturnValue([attentionEvent]);
+
+    const flush = createLiveDeferredResumeFlusher({
+      getCurrentProfile: () => 'shared',
+      getStateRoot: () => '/state',
+      resolveDaemonRoot: () => '/daemon',
+      publishConversationSessionMetaChanged: vi.fn(),
+    });
+
+    await flush();
+
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', 'Extension event is ready.', undefined);
+    expect(completeAttentionEventsMock).toHaveBeenCalledWith(expect.any(Object), {
+      ids: ['attention-1'],
+      completedAt: expect.any(String),
+    });
+    expect(completeDeferredResumeForSessionFileMock).not.toHaveBeenCalled();
   });
 
   it('schedules a retry when prompt delivery fails', async () => {

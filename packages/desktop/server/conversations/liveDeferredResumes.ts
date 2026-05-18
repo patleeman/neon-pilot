@@ -1,4 +1,13 @@
 import {
+  activateDueAttentionEvents,
+  type AttentionEventRecord,
+  completeAttentionEvents,
+  getReadySessionAttentionEvents,
+  loadAttentionEventsState,
+  retryAttentionEvents,
+  saveAttentionEventsState,
+} from '@personal-agent/core';
+import {
   completeDeferredResumeConversationRun,
   markDeferredResumeConversationRunReady,
   markDeferredResumeConversationRunRetryScheduled,
@@ -130,6 +139,27 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
   };
 }
 
+function attentionEventToDeferredResumeLike(event: AttentionEventRecord): DeferredResumeLike {
+  return {
+    id: event.id,
+    sessionFile: event.sessionFile,
+    prompt: event.prompt,
+    dueAt: event.dueAt,
+    createdAt: event.createdAt,
+    readyAt: event.readyAt,
+    title: event.title,
+    behavior: event.delivery.behavior,
+    delivery: {
+      mode: event.delivery.mode,
+      requireAck: event.delivery.requireAck,
+    },
+    source: {
+      kind: event.source.kind,
+      id: event.source.id,
+    },
+  };
+}
+
 function groupReadyEntries(entries: DeferredResumeLike[]): DeferredResumeLike[][] {
   const groups: DeferredResumeLike[][] = [];
   let batch: DeferredResumeLike[] = [];
@@ -214,6 +244,7 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
         }
 
         const readyEntries = listDeferredResumesForSessionFile(session.sessionFile).filter((entry) => entry.status === 'ready');
+        const mirroredDeferredResumeIds = new Set(readyEntries.map((entry) => entry.id));
         for (const readyGroup of groupReadyEntries(readyEntries)) {
           const liveEntry = liveRegistry.get(session.id);
           if (!liveEntry) {
@@ -324,6 +355,105 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
               }
             }
             options.warn?.(`Deferred resume delivery failed for ${session.id}: ${message}`);
+            break;
+          }
+        }
+
+        const attentionState = loadAttentionEventsState();
+        const activatedAttentionEvents = activateDueAttentionEvents(attentionState, {
+          at: now,
+          sessionFile: session.sessionFile,
+        });
+        if (activatedAttentionEvents.length > 0) {
+          saveAttentionEventsState(attentionState);
+          mutated = true;
+          mutatedConversationIds.add(session.id);
+        }
+
+        const readyAttentionEntries = getReadySessionAttentionEvents(attentionState, session.sessionFile)
+          .filter((entry) => !mirroredDeferredResumeIds.has(entry.id))
+          .map(attentionEventToDeferredResumeLike);
+
+        for (const readyGroup of groupReadyEntries(readyAttentionEntries)) {
+          const liveEntry = liveRegistry.get(session.id);
+          if (!liveEntry) {
+            break;
+          }
+
+          const primaryEntry = readyGroup[0] as DeferredResumeLike;
+
+          try {
+            const requestedDeferredResumeBehavior =
+              readyGroup.length === 1
+                ? (primaryEntry.behavior ?? (liveEntry.session.isStreaming ? ('followUp' as const) : undefined))
+                : undefined;
+            const deferredResumeBehavior =
+              requestedDeferredResumeBehavior === 'followUp' && !liveEntry.session.isStreaming
+                ? undefined
+                : requestedDeferredResumeBehavior;
+            const promptDelivery = buildPromptDeliveryForDeferredResumeBatch(readyGroup);
+            for (const message of promptDelivery.contextMessages) {
+              await queuePromptContext(session.id, message.customType, message.content);
+            }
+
+            if (liveEntry.session.sessionFile) {
+              await syncWebLiveConversationRun({
+                conversationId: session.id,
+                sessionFile: liveEntry.session.sessionFile,
+                cwd: liveEntry.cwd,
+                title: liveEntry.title,
+                profile: options.getCurrentProfile(),
+                state: 'running',
+                pendingOperation: {
+                  type: 'prompt',
+                  text: promptDelivery.visiblePrompt,
+                  ...(deferredResumeBehavior ? { behavior: deferredResumeBehavior } : {}),
+                  ...(promptDelivery.contextMessages.length > 0 ? { contextMessages: promptDelivery.contextMessages } : {}),
+                  enqueuedAt: new Date().toISOString(),
+                },
+              });
+            }
+
+            if (deferredResumeBehavior === 'followUp') {
+              const { completion } = await submitPromptSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
+              await completion;
+            } else {
+              await promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
+            }
+
+            const completionState = loadAttentionEventsState();
+            completeAttentionEvents(completionState, {
+              ids: readyGroup.map((entry) => entry.id),
+              completedAt: new Date().toISOString(),
+            });
+            saveAttentionEventsState(completionState);
+            mutated = true;
+            mutatedConversationIds.add(session.id);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (liveEntry.session.sessionFile) {
+              await syncWebLiveConversationRun({
+                conversationId: session.id,
+                sessionFile: liveEntry.session.sessionFile,
+                cwd: liveEntry.cwd,
+                title: liveEntry.title,
+                profile: options.getCurrentProfile(),
+                state: 'failed',
+                lastError: message,
+              });
+            }
+
+            const retryDueAt = new Date(Date.now() + (options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS)).toISOString();
+            const retryState = loadAttentionEventsState();
+            retryAttentionEvents(retryState, {
+              ids: readyGroup.map((entry) => entry.id),
+              dueAt: retryDueAt,
+              lastError: message,
+            });
+            saveAttentionEventsState(retryState);
+            mutated = true;
+            mutatedConversationIds.add(session.id);
+            options.warn?.(`Attention event delivery failed for ${session.id}: ${message}`);
             break;
           }
         }
