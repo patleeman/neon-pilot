@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -91,6 +91,51 @@ describe('durable run reads', () => {
     expect(normalizeDurableRunLogTail(25.5)).toBe(120);
     expect(normalizeDurableRunLogTail(Number.MAX_SAFE_INTEGER + 1)).toBe(120);
     expect(normalizeDurableRunLogTail(5000)).toBe(1000);
+  });
+
+  it('repairs active background command status from terminal output markers', async () => {
+    const stateRoot = createTempDir('pa-web-durable-runs-terminal-repair-state-');
+    const daemonSocketDir = createTempDir('pa-web-durable-runs-terminal-repair-sock-');
+    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+
+    process.env = {
+      ...originalEnv,
+      PERSONAL_AGENT_STATE_ROOT: stateRoot,
+      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+    };
+
+    const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths().root);
+    const runPaths = resolveDurableRunPaths(runsRoot, 'run-terminal-repair');
+    saveDurableRunManifest(
+      runPaths.manifestPath,
+      createDurableRunManifest({
+        id: 'run-terminal-repair',
+        kind: 'raw-shell',
+        resumePolicy: 'manual',
+        createdAt: '2026-05-17T22:46:04.000Z',
+      }),
+    );
+    saveDurableRunStatus(
+      runPaths.statusPath,
+      createInitialDurableRunStatus({
+        runId: 'run-terminal-repair',
+        status: 'running',
+        createdAt: '2026-05-17T22:46:04.000Z',
+        updatedAt: '2026-05-17T22:46:05.000Z',
+        activeAttempt: 1,
+        startedAt: '2026-05-17T22:46:04.000Z',
+      }),
+    );
+    mkdirSync(runPaths.root, { recursive: true });
+    writeFileSync(runPaths.outputLogPath, 'boom\n__PA_RUN_EXIT_CODE=1\n# endedAt=2026-05-17T22:51:15.965Z\n# status=failed\n');
+
+    const result = await getDurableRun('run-terminal-repair');
+
+    expect(result?.run.status).toMatchObject({
+      status: 'failed',
+      completedAt: '2026-05-17T22:51:15.965Z',
+      lastError: 'Run failed with exit code 1.',
+    });
   });
 
   it('reports cache telemetry when durable runs fall back to filesystem scanning', async () => {

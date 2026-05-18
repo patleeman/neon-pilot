@@ -20,6 +20,8 @@ import {
   summarizeScannedDurableRuns,
 } from '@personal-agent/daemon';
 
+import type { DurableRunStatus } from '../runs/store.js';
+import { createInitialDurableRunStatus, saveDurableRunStatus } from '../runs/store.js';
 import { decorateDurableRunAttention, decorateDurableRunsAttention } from './durableRunAttention.js';
 
 const LIST_DURABLE_RUNS_CACHE_TTL_MS = 10_000;
@@ -70,11 +72,62 @@ function resolveRunsRoot(): string {
 }
 
 function decorateRuns<T extends ScannedDurableRun>(runs: T[]) {
-  return decorateDurableRunsAttention(runs);
+  return decorateDurableRunsAttention(runs.map(reconcileTerminalOutputStatus));
+}
+
+function isActiveRunStatus(status: string | undefined): boolean {
+  return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
+}
+
+function parseTerminalStatusFromOutput(
+  log: string,
+): { exitCode: number; endedAt?: string; status: Extract<DurableRunStatus, 'completed' | 'failed'> } | null {
+  const exitMatch = /(?:^|\n)__PA_RUN_EXIT_CODE=(-?\d+)\s*(?:\n|$)/.exec(log);
+  if (!exitMatch) return null;
+
+  const exitCode = Number.parseInt(exitMatch[1] ?? '', 10);
+  if (!Number.isSafeInteger(exitCode)) return null;
+
+  const endedAtMatch = /(?:^|\n)# endedAt=([^\n]+)(?:\n|$)/.exec(log);
+  const statusMatch = /(?:^|\n)# status=(completed|failed)(?:\n|$)/.exec(log);
+  const status = statusMatch?.[1] === 'completed' ? 'completed' : exitCode === 0 ? 'completed' : 'failed';
+  return { exitCode, ...(endedAtMatch?.[1] ? { endedAt: endedAtMatch[1].trim() } : {}), status };
+}
+
+function reconcileTerminalOutputStatus<T extends ScannedDurableRun>(run: T): T {
+  if (!isActiveRunStatus(run.status?.status)) {
+    return run;
+  }
+
+  const terminal = parseTerminalStatusFromOutput(readTailText(run.paths.outputLogPath, 40, 16 * 1024));
+  if (!terminal) {
+    return run;
+  }
+
+  const completedAt = terminal.endedAt ?? new Date().toISOString();
+  const nextStatus = createInitialDurableRunStatus({
+    runId: run.runId,
+    status: terminal.status,
+    createdAt: run.status?.createdAt ?? run.manifest?.createdAt,
+    updatedAt: completedAt,
+    activeAttempt: run.status?.activeAttempt ?? 1,
+    startedAt: run.status?.startedAt,
+    completedAt,
+    checkpointKey: terminal.status,
+    ...(terminal.status === 'failed' ? { lastError: `Run failed with exit code ${terminal.exitCode}.` } : {}),
+  });
+
+  try {
+    saveDurableRunStatus(run.paths.statusPath, nextStatus);
+  } catch {
+    // Projection should still be correct even if the repair write fails.
+  }
+
+  return { ...run, status: nextStatus };
 }
 
 function decorateRun<T extends ScannedDurableRun>(run: T) {
-  return decorateDurableRunAttention(run);
+  return decorateDurableRunAttention(reconcileTerminalOutputStatus(run));
 }
 
 export function normalizeDurableRunLogTail(value: number | undefined): number {
