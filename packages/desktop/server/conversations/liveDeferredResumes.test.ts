@@ -92,7 +92,7 @@ vi.mock('./conversationRuns.js', () => ({
   syncWebLiveConversationRun: syncWebLiveConversationRunMock,
 }));
 
-import { createLiveDeferredResumeFlusher } from './liveDeferredResumes.js';
+import { createAttentionEventFlusher } from './liveDeferredResumes.js';
 
 function createReadyResume(id = 'resume-1') {
   return {
@@ -147,7 +147,7 @@ beforeEach(() => {
   loadAttentionEventsStateMock.mockReturnValue({ version: 1, events: {} });
 });
 
-describe('createLiveDeferredResumeFlusher', () => {
+describe('createAttentionEventFlusher', () => {
   it('activates and delivers ready deferred resumes for live sessions', async () => {
     const ready = createReadyResume();
     getLiveSessionsMock.mockReturnValue([
@@ -174,7 +174,7 @@ describe('createLiveDeferredResumeFlusher', () => {
 
     const publishConversationSessionMetaChanged = vi.fn();
     const warn = vi.fn();
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'datadog',
       getRepoRoot: () => '/repo-root',
       getStateRoot: () => '/state',
@@ -249,7 +249,7 @@ describe('createLiveDeferredResumeFlusher', () => {
     listDeferredResumesForSessionFileMock.mockReturnValue([ready]);
     completeDeferredResumeForSessionFileMock.mockReturnValue(ready);
 
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'datadog',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
@@ -305,7 +305,7 @@ describe('createLiveDeferredResumeFlusher', () => {
     listDeferredResumesForSessionFileMock.mockReturnValue([ready]);
     completeDeferredResumeForSessionFileMock.mockReturnValue(ready);
 
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'shared',
       getRepoRoot: () => '/repo-root',
       getStateRoot: () => '/state',
@@ -386,7 +386,7 @@ describe('createLiveDeferredResumeFlusher', () => {
     listDeferredResumesForSessionFileMock.mockReturnValue([first, second]);
     completeDeferredResumeForSessionFileMock.mockImplementation(({ id }: { id: string }) => (id === 'resume-1' ? first : second));
 
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'shared',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
@@ -444,7 +444,7 @@ describe('createLiveDeferredResumeFlusher', () => {
     listDeferredResumesForSessionFileMock.mockReturnValue([]);
     getReadySessionAttentionEventsMock.mockReturnValue([attentionEvent]);
 
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'shared',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
@@ -493,7 +493,7 @@ describe('createLiveDeferredResumeFlusher', () => {
 
     const publishConversationSessionMetaChanged = vi.fn();
     const warn = vi.fn();
-    const flush = createLiveDeferredResumeFlusher({
+    const flush = createAttentionEventFlusher({
       getCurrentProfile: () => 'datadog',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',

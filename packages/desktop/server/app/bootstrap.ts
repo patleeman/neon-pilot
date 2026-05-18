@@ -77,30 +77,34 @@ export function startBootstrapMonitors(options: {
   }).start();
 }
 
-export function startDeferredResumeLoop(options: { flushLiveDeferredResumes: () => Promise<void>; pollMs: number }): void {
+export function startAttentionDispatchLoop(options: { flushAttentionEvents: () => Promise<void>; pollMs: number }): void {
   const pollMs = normalizeDeferredResumePollMs(options.pollMs);
-  persistAppTelemetryEvent({ source: 'system', category: 'system_health', name: 'deferred_resume_loop_start', value: pollMs });
-  void options.flushLiveDeferredResumes().catch((error) => {
+  persistAppTelemetryEvent({ source: 'system', category: 'system_health', name: 'attention_dispatch_loop_start', value: pollMs });
+  void options.flushAttentionEvents().catch((error) => {
     persistAppTelemetryEvent({
       source: 'system',
       category: 'system_health',
-      name: 'deferred_resume_flush_failed',
+      name: 'attention_dispatch_failed',
       metadata: { message: (error as Error).message },
     });
-    logWarn(`Deferred resume loop failed: ${(error as Error).message}`);
+    logWarn(`Attention dispatch loop failed: ${(error as Error).message}`);
   });
 
   setInterval(() => {
-    void options.flushLiveDeferredResumes().catch((error) => {
+    void options.flushAttentionEvents().catch((error) => {
       persistAppTelemetryEvent({
         source: 'system',
         category: 'system_health',
-        name: 'deferred_resume_flush_failed',
+        name: 'attention_dispatch_failed',
         metadata: { message: (error as Error).message },
       });
-      logWarn(`Deferred resume loop failed: ${(error as Error).message}`);
+      logWarn(`Attention dispatch loop failed: ${(error as Error).message}`);
     });
   }, pollMs);
+}
+
+export function startDeferredResumeLoop(options: { flushLiveDeferredResumes: () => Promise<void>; pollMs: number }): void {
+  startAttentionDispatchLoop({ flushAttentionEvents: options.flushLiveDeferredResumes, pollMs: options.pollMs });
 }
 
 export function normalizeDeferredResumePollMs(value: number): number {

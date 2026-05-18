@@ -92,7 +92,7 @@ import {
   type DesktopConversationState,
   readDesktopConversationState,
 } from '../conversations/desktopConversationState.js';
-import { createLiveDeferredResumeFlusher } from '../conversations/liveDeferredResumes.js';
+import { createAttentionEventFlusher } from '../conversations/liveDeferredResumes.js';
 import {
   abortLiveSessionCapability,
   branchLiveSessionCapability,
@@ -163,7 +163,7 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/setti
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
-import { startDeferredResumeLoop } from './bootstrap.js';
+import { startAttentionDispatchLoop } from './bootstrap.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -443,7 +443,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     },
   });
 
-  const flushLiveDeferredResumes = createLiveDeferredResumeFlusher({
+  const flushAttentionEvents = createAttentionEventFlusher({
     getCurrentProfile: runtimeState.getRuntimeScope,
     getRepoRoot: () => repoRoot,
     getStateRoot,
@@ -452,8 +452,8 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
   });
 
   if (isMainThread) {
-    startDeferredResumeLoop({
-      flushLiveDeferredResumes,
+    startAttentionDispatchLoop({
+      flushAttentionEvents,
       pollMs: LOCAL_API_DEFERRED_RESUME_POLL_MS,
     });
   }
@@ -470,7 +470,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     resolveRequestedCwd,
     buildLiveSessionResourceOptions: runtimeState.buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories: runtimeState.buildLiveSessionExtensionFactories,
-    flushLiveDeferredResumes,
+    flushLiveDeferredResumes: flushAttentionEvents,
     getSavedUiPreferences: () => readSavedUiPreferences(settingsFile),
     listTasksForCurrentProfile: () => {
       const loaded = loadScheduledTasksForProfile(runtimeState.getRuntimeScope());

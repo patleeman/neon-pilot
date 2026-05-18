@@ -13,6 +13,13 @@ function isExecutionCommand(execution: ExecutionRecord): boolean {
   return execution.kind === 'background-command';
 }
 
+function formatDeferredResumeDeliveryLabel(resume: DeferredResumeSummary): string {
+  if (resume.delivery?.requireAck || resume.delivery?.mode === 'isolated') return 'Isolated attention';
+  if (resume.delivery?.mode === 'sequential' || resume.behavior === 'followUp') return 'Sequential follow-up';
+  if (resume.kind === 'task-callback') return 'Task callback';
+  return 'Batchable wakeup';
+}
+
 export function ConversationActivityShelf({
   backgroundExecutions,
   backgroundExecutionIndicatorText,
@@ -169,8 +176,7 @@ export function ConversationActivityShelf({
                       <span className="truncate text-primary">{resume.title ?? resume.prompt}</span>
                     </div>
                     <div className="mt-0.5 text-[11px] text-dim">
-                      {resume.kind === 'task-callback' ? 'Task callback' : resume.delivery?.mode === 'sequential' ? 'Follow-up' : 'Wakeup'}
-                      {resume.behavior === 'followUp' ? ' · follow-up' : ''} · {resume.status === 'ready' ? 'Ready' : 'Due'}{' '}
+                      {formatDeferredResumeDeliveryLabel(resume)} · {resume.status === 'ready' ? 'Ready' : 'Due'}{' '}
                       {formatDeferredResumeWhen(resume)}
                       {resume.attempts > 0 ? ` · retries ${resume.attempts}` : ''}
                     </div>

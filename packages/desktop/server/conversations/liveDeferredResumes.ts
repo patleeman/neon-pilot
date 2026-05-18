@@ -16,6 +16,7 @@ import {
 
 import {
   activateDueDeferredResumesForSessionFile,
+  backfillDeferredResumesToAttentionEvents,
   completeDeferredResumeForSessionFile,
   listDeferredResumesForSessionFile,
   retryDeferredResumeForSessionFile,
@@ -186,7 +187,7 @@ function groupReadyEntries(entries: DeferredResumeLike[]): DeferredResumeLike[][
   return groups;
 }
 
-export interface CreateLiveDeferredResumeFlusherOptions {
+export interface CreateAttentionEventFlusherOptions {
   getCurrentProfile: () => string;
   getRepoRoot?: () => string | undefined;
   getStateRoot: () => string;
@@ -196,10 +197,10 @@ export interface CreateLiveDeferredResumeFlusherOptions {
   warn?: (message: string) => void;
 }
 
-export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResumeFlusherOptions): () => Promise<void> {
+export function createAttentionEventFlusher(options: CreateAttentionEventFlusherOptions): () => Promise<void> {
   let processingDeferredResumes = false;
 
-  return async function flushLiveDeferredResumes(): Promise<void> {
+  return async function flushAttentionEvents(): Promise<void> {
     if (processingDeferredResumes) {
       return;
     }
@@ -210,6 +211,7 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
       const liveSessions = getLiveSessions().filter((session) => session.sessionFile);
       const now = new Date();
       const daemonRoot = options.resolveDaemonRoot();
+      backfillDeferredResumesToAttentionEvents();
       let mutated = false;
       const mutatedConversationIds = new Set<string>();
 
@@ -467,3 +469,7 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
     }
   };
 }
+
+export type CreateLiveDeferredResumeFlusherOptions = CreateAttentionEventFlusherOptions;
+
+export const createLiveDeferredResumeFlusher = createAttentionEventFlusher;

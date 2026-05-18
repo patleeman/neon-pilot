@@ -183,6 +183,23 @@ function retryMirroredAttentionEvent(id: string, dueAt: string): void {
   saveAttentionEventsState(state);
 }
 
+export function backfillDeferredResumesToAttentionEvents(): number {
+  const deferredState = loadDeferredResumeState();
+  const attentionState = loadAttentionEventsState();
+  let mirrored = 0;
+
+  for (const record of Object.values(deferredState.resumes)) {
+    if (attentionState.events[record.id]) {
+      continue;
+    }
+
+    mirrorDeferredResumeToAttentionEvent(record, readSessionConversationId(record.sessionFile));
+    mirrored += 1;
+  }
+
+  return mirrored;
+}
+
 export function toDeferredResumeSummary(record: DeferredResumeRecord): DeferredResumeSummary {
   return {
     id: record.id,

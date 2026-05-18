@@ -96,7 +96,7 @@ describe('bootstrap monitor helpers', () => {
     expect(logWarnMock).toHaveBeenCalledWith('monitor warning', { area: 'attention' });
   });
 
-  it('logs deferred resume loop failures for the initial flush and interval retries', async () => {
+  it('logs attention dispatch loop failures for the initial flush and interval retries', async () => {
     vi.useFakeTimers();
     const flushLiveDeferredResumes = vi.fn().mockRejectedValue(new Error('boom'));
 
@@ -107,7 +107,7 @@ describe('bootstrap monitor helpers', () => {
     await Promise.resolve();
 
     expect(flushLiveDeferredResumes).toHaveBeenCalledTimes(1);
-    expect(logWarnMock).toHaveBeenCalledWith('Deferred resume loop failed: boom');
+    expect(logWarnMock).toHaveBeenCalledWith('Attention dispatch loop failed: boom');
 
     await vi.advanceTimersByTimeAsync(1_000);
     expect(flushLiveDeferredResumes).toHaveBeenCalledTimes(2);

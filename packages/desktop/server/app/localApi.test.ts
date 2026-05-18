@@ -9,6 +9,7 @@ vi.mock('./bootstrap.js', async () => {
   return {
     ...actual,
     startDeferredResumeLoop: vi.fn(),
+    startAttentionDispatchLoop: vi.fn(),
   };
 });
 
