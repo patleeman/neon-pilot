@@ -72,6 +72,27 @@ const modelCacheRoot = join(runtimeCacheRoot, 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'gguf/process/serverPid';
 const MODEL_PATH_KEY = 'gguf/settings/modelPath';
+const SERVING_SETTINGS_KEY = 'gguf/settings/serving';
+
+type ServingSettings = {
+  contextSize?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  minP?: number;
+  repeatPenalty?: number;
+  seed?: number;
+  threads?: number;
+  batchSize?: number;
+  ubatchSize?: number;
+  parallel?: number;
+  flashAttention?: boolean;
+  extraArgs?: string;
+  specType?: 'none' | 'draft-mtp';
+  specDraftNMax?: number;
+  maxTokens?: number;
+};
 const MODEL_PORT = 8012;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
 const downloadJobs = new Map<string, DownloadJob>();
@@ -187,6 +208,16 @@ async function isPidRunning(ctx: ExtensionBackendContext, pid: number | null) {
 async function selectedModelPath(ctx: ExtensionBackendContext) {
   const stored = await ctx.storage.get(MODEL_PATH_KEY).catch(() => null);
   return typeof stored === 'string' && stored.trim() ? stored.trim() : '';
+}
+
+async function loadServingSettings(ctx: ExtensionBackendContext): Promise<ServingSettings> {
+  const stored = await ctx.storage.get(SERVING_SETTINGS_KEY).catch(() => null);
+  if (stored && typeof stored === 'object') return stored as ServingSettings;
+  return {};
+}
+
+async function saveServingSettings(ctx: ExtensionBackendContext, settings: ServingSettings) {
+  await ctx.storage.put(SERVING_SETTINGS_KEY, settings);
 }
 
 async function setSelectedModelPath(ctx: ExtensionBackendContext, modelPath: string) {
@@ -310,6 +341,12 @@ async function readServerHealth() {
   }
 }
 
+export async function saveSettings(input: unknown, ctx: ExtensionBackendContext) {
+  const settings = input as ServingSettings;
+  await saveServingSettings(ctx, settings);
+  return { ok: true };
+}
+
 export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContext) {
   const [cliAvailable, serverAvailable, modelPath, pid] = await Promise.all([
     exists(bundledCli),
@@ -365,6 +402,7 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     models: listGgufFiles(modelCacheRoot),
     download: download ? serializeDownloadJob(download) : null,
     log: readLog(),
+    savedServingSettings: await loadServingSettings(ctx),
   };
 }
 
@@ -551,6 +589,24 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
   await mkdir(dirname(LOG_FILE), { recursive: true });
   await chmod(bundledServer, 0o755).catch(() => undefined);
   await setSelectedModelPath(ctx, modelPath);
+  await saveServingSettings(ctx, {
+    contextSize: input.contextSize,
+    gpuLayers: input.gpuLayers,
+    temperature: input.temperature,
+    topP: input.topP,
+    topK: input.topK,
+    minP: input.minP,
+    repeatPenalty: input.repeatPenalty,
+    seed: input.seed,
+    threads: input.threads,
+    batchSize: input.batchSize,
+    ubatchSize: input.ubatchSize,
+    parallel: input.parallel,
+    flashAttention: input.flashAttention,
+    extraArgs: input.extraArgs,
+    specType: input.specType,
+    specDraftNMax: input.specDraftNMax,
+  });
   const metadata = await readModelMetadata(ctx, modelPath).catch(() => ({
     detectedContextLength: null,
     recommendedContextSize: FALLBACK_CONTEXT,

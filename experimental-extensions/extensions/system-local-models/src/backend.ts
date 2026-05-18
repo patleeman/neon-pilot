@@ -154,6 +154,10 @@ export async function ggufInstallRuntime(input: unknown, ctx: ExtensionBackendCo
   return gguf.installRuntime(input, ctx);
 }
 
+export async function ggufSaveSettings(input: unknown, ctx: ExtensionBackendContext) {
+  return gguf.saveSettings(input, ctx);
+}
+
 export async function ggufStart(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.startServer(input as never, ctx);
 }

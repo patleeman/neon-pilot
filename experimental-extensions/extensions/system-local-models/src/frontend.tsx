@@ -459,8 +459,33 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     const contextInitKey = `${activeRuntime}:${selectedModel.id}`;
     if (contextInitKeyRef.current === contextInitKey) return;
     contextInitKeyRef.current = contextInitKey;
-    const recommended = activeRuntime === 'mlx' ? status.mlx.recommendedContextSize : status.gguf.recommendedContextSize;
-    if (recommended) setContextSize(String(recommended));
+    if (activeRuntime === 'gguf') {
+      const saved = status.gguf.savedServingSettings as Record<string, unknown> | undefined;
+      if (saved && typeof saved === 'object') {
+        if (saved.contextSize != null) setContextSize(String(saved.contextSize));
+        else if (status.gguf.recommendedContextSize) setContextSize(String(status.gguf.recommendedContextSize));
+        if (saved.gpuLayers != null) setGpuLayers(String(saved.gpuLayers));
+        if (saved.temperature != null) setTemperature(String(saved.temperature));
+        if (saved.topP != null) setTopP(String(saved.topP));
+        if (saved.topK != null) setTopK(String(saved.topK));
+        if (saved.minP != null) setMinP(String(saved.minP));
+        if (saved.repeatPenalty != null) setRepeatPenalty(String(saved.repeatPenalty));
+        if (saved.seed != null) setSeed(String(saved.seed));
+        if (saved.threads != null) setThreads(String(saved.threads));
+        if (saved.batchSize != null) setBatchSize(String(saved.batchSize));
+        if (saved.ubatchSize != null) setUbatchSize(String(saved.ubatchSize));
+        if (saved.parallel != null) setParallel(String(saved.parallel));
+        if (saved.flashAttention != null) setFlashAttention(Boolean(saved.flashAttention));
+        if (saved.extraArgs != null) setExtraArgs(String(saved.extraArgs));
+        if (saved.specType === 'draft-mtp') setMtpEnabled(true);
+        if (saved.specDraftNMax != null) setMtpDraftTokens(String(saved.specDraftNMax));
+      } else if (status.gguf.recommendedContextSize) {
+        setContextSize(String(status.gguf.recommendedContextSize));
+      }
+    } else {
+      const recommended = status.mlx.recommendedContextSize;
+      if (recommended) setContextSize(String(recommended));
+    }
   }, [activeRuntime, selectedModel, status]);
 
   const ggufDownload = status?.gguf?.download?.status === 'running' ? status.gguf.download : null;
@@ -525,6 +550,23 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         }
       } else if (selectedModel.path) {
         await pa.extension.invoke('localModelsGgufSetModel', { modelPath: selectedModel.path });
+        await pa.extension.invoke('localModelsGgufSaveSettings', {
+          contextSize: Number(contextSize),
+          gpuLayers: Number(gpuLayers),
+          temperature: Number(temperature),
+          topP: Number(topP),
+          topK: Number(topK),
+          minP: Number(minP),
+          repeatPenalty: Number(repeatPenalty),
+          seed: Number(seed),
+          threads: Number(threads),
+          batchSize: Number(batchSize),
+          ubatchSize: Number(ubatchSize),
+          parallel: Number(parallel),
+          flashAttention,
+          extraArgs,
+          ...ggufSpeculativeSettings(),
+        });
         if (reload) {
           if (status?.gguf?.server.reachable) await pa.extension.invoke('localModelsGgufStop', {});
           await pa.extension.invoke('localModelsGgufStart', {
