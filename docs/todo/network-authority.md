@@ -29,7 +29,7 @@ The important design choice: keep one policy/grant/audit vocabulary, but use dif
 
 ## Surfaces to route through it
 
-- First-class agent tools such as `web_fetch` and `web_search`.
+- First-class agent tools such as `web_fetch`, `duckduckgo_search`, and `exa_search`.
 - Extension SDK network APIs, for example future `ctx.network.fetch(...)` and `ctx.network.download(...)`.
 - Built-in Workbench Browser traffic through Electron session hooks.
 - Downloads through a Network Authority approval plus Filesystem Authority-managed staging root.
@@ -87,7 +87,7 @@ For Chromium/Playwright child processes, wrappers may also need to inject browse
 1. Finish Filesystem Authority.
 2. Tighten process launcher and sandbox grant plumbing.
 3. Add `NetworkAuthority` core types and permissive in-process implementation.
-4. Route `web_fetch` / `web_search` through it.
+4. Route `web_fetch`, `duckduckgo_search`, and `exa_search` through it.
 5. Add extension `ctx.network` and manifest permission validation.
 6. Add built-in browser Electron session adapter.
 7. Add download staging through Filesystem Authority.

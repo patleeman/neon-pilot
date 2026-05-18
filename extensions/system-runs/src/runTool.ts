@@ -79,7 +79,7 @@ const RunToolParams = Type.Object({
   allowedTools: Type.Optional(
     Type.Union(
       [
-        Type.String({ description: 'Comma-separated list of tool names to allow, e.g. "web.search,web.fetch,conversation".' }),
+        Type.String({ description: 'Comma-separated list of tool names to allow, e.g. "duckduckgo_search,web_fetch,conversation".' }),
         Type.Array(Type.String(), { description: 'Array of tool names to allow.' }),
       ],
       { description: 'When set, only these tool names are exposed to the subagent. All other tools are unavailable.' },

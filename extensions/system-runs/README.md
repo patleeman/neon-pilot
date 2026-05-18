@@ -25,7 +25,7 @@ Created -> Queued -> Running -> Completed
 
 - Use `bash` for shell commands. Set `background: true` when the command should run durably outside the current turn.
 - Prefer the dedicated `subagent` tool for delegated agent work, including `get`, `logs`, `rerun`, `follow_up`, and `cancel` on subagent IDs.
-- `subagent.allowedTools` accepts agent tool names, not shell commands. Use names like `bash`, `read`, `edit`, `web.fetch`, `conversation` action `inspect`, or `checkpoint`; for `rg`, `grep`, `find`, or `ls`, allow `bash` and run the command inside bash.
+- `subagent.allowedTools` accepts agent tool names, not shell commands. Use names like `bash`, `read`, `edit`, `web_fetch`, `conversation` action `inspect`, or `checkpoint`; for `rg`, `grep`, `find`, or `ls`, allow `bash` and run the command inside bash.
 - Keep `scheduled_task` separate for persistent automations.
 - `background_bash` is shell-only; it lists/inspects background commands and rejects subagent IDs with a hint to use `subagent`.
 - Use `conversation` action `deferred_resume` for “wait, then continue this conversation” requests. Do not use foreground `bash` with `sleep` as a timer.

@@ -148,7 +148,7 @@
               "type": "number"
             },
             "allowedTools": {
-              "description": "Optional comma-separated string or array of actual agent tool names. Common names: bash, read, edit, write, artifact, scheduled_task, conversation, checkpoint, probe_image, web.fetch, web.search, web.search, goal, browser_snapshot, browser_cdp, browser_screenshot, conversation, conversation, conversation, conversation, mcp, background_bash, subagent. Shell commands like rg/grep/find/ls are not tool names; allow bash instead.",
+              "description": "Optional comma-separated string or array of actual agent tool names. Common names: bash, read, edit, write, artifact, scheduled_task, conversation, checkpoint, probe_image, web_fetch, duckduckgo_search, exa_search, goal, browser_snapshot, browser_cdp, browser_screenshot, conversation, conversation, conversation, conversation, mcp, background_bash, subagent. Shell commands like rg/grep/find/ls are not tool names; allow bash instead.",
               "oneOf": [
                 {
                   "type": "string"

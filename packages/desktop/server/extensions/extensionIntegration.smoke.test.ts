@@ -270,7 +270,19 @@ describe('extension manifests - structural validation', () => {
   });
 
   it('no tool declares a replaces field that references a non-existent built-in tool', () => {
-    const validBuiltInTools = ['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web.fetch', 'web.search'];
+    const validBuiltInTools = [
+      'bash',
+      'read',
+      'write',
+      'edit',
+      'grep',
+      'find',
+      'ls',
+      'notify',
+      'web_fetch',
+      'duckduckgo_search',
+      'exa_search',
+    ];
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
       const tools = ext.manifest.contributes?.tools ?? [];
@@ -642,15 +654,14 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
-  it('exposes the consolidated default agent tool surface', () => {
+  it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of ['web.search', 'web.fetch', 'background_bash', 'subagent']) {
-      expect(toolNames.has(expected), `missing consolidated tool ${expected}`).toBe(true);
+    for (const expected of ['duckduckgo_search', 'exa_search', 'web_fetch', 'background_bash', 'subagent']) {
+      expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     for (const legacy of [
-      'duckduckgo_search',
-      'exa_search',
-      'web_fetch',
+      'web.search',
+      'web.fetch',
       'ask_user_question',
       'conversation_inspect',
       'set_conversation_title',
