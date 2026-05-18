@@ -224,6 +224,25 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
     }
   }
 
+  // Validate backend lifecycle handler references.
+  for (const [field, exportName] of [
+    ['backend.startupAction', manifest.backend?.startupAction],
+    ['backend.onEnableAction', manifest.backend?.onEnableAction],
+    ['backend.onDisableAction', manifest.backend?.onDisableAction],
+    ['backend.onUninstallAction', manifest.backend?.onUninstallAction],
+    ['backend.agentExtension', manifest.backend?.agentExtension],
+  ] as const) {
+    if (exportName && backendContent && !hasExport(backendContent, exportName)) {
+      add(
+        findings,
+        'error',
+        'missing-backend-export',
+        `${field} references "${exportName}" but it is not exported from the backend.`,
+        backendSource,
+      );
+    }
+  }
+
   for (const tool of manifest.contributes?.tools ?? []) {
     if (!tool.id?.trim()) add(findings, 'error', 'invalid-tool', 'Tool contribution is missing id.');
     if (!tool.description?.trim()) add(findings, 'error', 'invalid-tool', `Tool "${tool.id}" is missing description.`);
