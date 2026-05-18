@@ -56,6 +56,8 @@ export const EXTENSION_PERMISSIONS = [
   'executions:read',
   'executions:start',
   'executions:cancel',
+  'attention:read',
+  'attention:write',
   'storage:read',
   'storage:write',
   'storage:readwrite',

@@ -46,6 +46,8 @@ export type ExtensionPermission =
   | 'executions:read'
   | 'executions:start'
   | 'executions:cancel'
+  | 'attention:read'
+  | 'attention:write'
   | 'storage:read'
   | 'storage:write'
   | 'storage:readwrite'

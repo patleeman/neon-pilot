@@ -35,6 +35,19 @@ export function parseDeferredResumeDelayMs(value: string): number | undefined {
 export async function scheduleDeferredResumeForSessionFile(input: unknown) {
   return callModuleExport<Record<string, unknown>>('../../automation/deferredResumes.js', 'scheduleDeferredResumeForSessionFile', input);
 }
+export async function enqueueAttentionEventForSessionFile(input: unknown) {
+  return callModuleExport<Record<string, unknown>>('../../automation/attentionEvents.js', 'enqueueAttentionEventForSessionFile', input);
+}
+export async function listAttentionEventsForSessionFile(input: unknown) {
+  return callModuleExport<Array<Record<string, unknown>>>(
+    '../../automation/attentionEvents.js',
+    'listAttentionEventsForSessionFile',
+    input,
+  );
+}
+export async function cancelAttentionEventForSessionFile(input: unknown) {
+  return callModuleExport<Record<string, unknown>>('../../automation/attentionEvents.js', 'cancelAttentionEventForSessionFile', input);
+}
 export async function cancelDeferredResumeForSessionFile(input: unknown) {
   return callModuleExport<Record<string, unknown>>('../../automation/deferredResumes.js', 'cancelDeferredResumeForSessionFile', input);
 }
