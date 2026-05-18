@@ -694,7 +694,8 @@ describe('Sidebar', () => {
     });
 
     expect(html.indexOf('Parent conversation')).toBeLessThan(html.indexOf('Child subagent conversation'));
-    expect(html).toContain('style="padding-left:1.5rem"');
+    expect(html).toContain('aria-label="Collapse Parent conversation"');
+    expect(html).toContain('style="padding-left:1rem"');
   });
 
   it('keeps the sidebar focused on chat and system surfaces', () => {
@@ -741,6 +742,6 @@ describe('Sidebar', () => {
   it('renders the settings nav section at the bottom with extension-contributed items', () => {
     const html = renderSidebar('/settings');
     expect(html).toContain('Threads');
-    expect(html).toContain('<div class="border-t border-border-subtle px-2 py-2 space-y-0.5">');
+    expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 });

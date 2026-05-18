@@ -1919,6 +1919,51 @@ describe('sessions', () => {
     );
   });
 
+  it('preserves nested session lineage in the persisted metadata index', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'indexed-parent-session',
+      title: 'Indexed parent session',
+      assistantTexts: ['Parent reply'],
+    });
+
+    writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-indexed-subagent',
+      sessionId: 'indexed-child-session',
+      title: 'Indexed child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    expect(listSessions()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'indexed-child-session',
+          parentSessionFile,
+          parentSessionId: 'indexed-parent-session',
+          sourceRunId: 'run-indexed-subagent',
+        }),
+      ]),
+    );
+
+    clearSessionCaches();
+
+    expect(listSessions()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'indexed-child-session',
+          parentSessionFile,
+          parentSessionId: 'indexed-parent-session',
+          sourceRunId: 'run-indexed-subagent',
+        }),
+      ]),
+    );
+  });
+
   it('refreshes persisted metadata after a restart when the file changes', () => {
     const sessionsDir = createTempSessionsDir();
     const indexFile = configureSessionEnv(sessionsDir);

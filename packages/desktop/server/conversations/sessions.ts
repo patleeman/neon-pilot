@@ -1846,6 +1846,13 @@ function loadPersistentSessionIndexEntry(value: unknown): PersistentSessionIndex
       title: meta.title,
       messageCount: meta.messageCount,
       ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
+      ...(typeof meta.parentSessionFile === 'string' && meta.parentSessionFile.trim().length > 0
+        ? { parentSessionFile: meta.parentSessionFile.trim() }
+        : {}),
+      ...(typeof meta.parentSessionId === 'string' && meta.parentSessionId.trim().length > 0
+        ? { parentSessionId: meta.parentSessionId.trim() }
+        : {}),
+      ...(typeof meta.sourceRunId === 'string' && meta.sourceRunId.trim().length > 0 ? { sourceRunId: meta.sourceRunId.trim() } : {}),
     },
   };
 }

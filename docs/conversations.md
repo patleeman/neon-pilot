@@ -44,6 +44,8 @@ Long saved conversations open on their latest transcript segment. When earlier h
 
 Conversations support tree-style branching. Each turn creates a node in the conversation tree.
 
+Conversation files also keep file-level lineage. When a saved thread is branched, forked, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available.
+
 ### /fork
 
 Create a new conversation from a previous user message. The new conversation starts fresh but carries the context up to that point.

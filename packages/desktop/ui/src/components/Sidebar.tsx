@@ -3816,6 +3816,8 @@ export function Sidebar() {
                 renderContextMenu={(item, context) => {
                   const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
                   const conversationItem = conversationId ? conversationItemBySessionId.get(conversationId) : null;
+                  const parentConversationId = conversationItem?.session.parentSessionId;
+                  const parentConversation = parentConversationId ? conversationItemBySessionId.get(parentConversationId) : null;
                   const groupKey = typeof item.metadata?.groupKey === 'string' ? item.metadata.groupKey : null;
                   const conversationGroup = groupKey ? conversationGroupByKey.get(groupKey) : null;
                   const isConversation = item.kind === 'conversation' && conversationId && conversationItem;
@@ -3901,6 +3903,19 @@ export function Sidebar() {
                         </>
                       ) : isConversation ? (
                         <>
+                          {parentConversation ? (
+                            <button
+                              type="button"
+                              className="ui-context-menu-item"
+                              role="menuitem"
+                              onClick={() => {
+                                context.close();
+                                navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
+                              }}
+                            >
+                              Go to Parent Thread
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             className="ui-context-menu-item"

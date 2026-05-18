@@ -19,11 +19,14 @@ The adapter lives at `packages/desktop/ui/src/activity/activityTree.ts` and curr
 
 - workspace/CWD group items
 - conversation items
+- conversation lineage via `parentSessionId`, rendered as expandable branches under the parent conversation
 - execution items projected by `packages/desktop/server/executions/executionService.ts`
 - execution nesting via `execution.conversationId`
 - normalized status values: `idle`, `running`, `queued`, `failed`, `done`
 
-`packages/desktop/ui/src/activity/activityTreePaths.ts` converts activity items into stable tree paths, and `ActivityTreeView.tsx` is the reusable native React renderer. The Threads sidebar renders workspace groups, conversations, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes workspace actions plus conversation actions for open, pin/unpin, close, archive, copy, duplicate, and extension-provided conversation-list context menu items.
+`packages/desktop/ui/src/activity/activityTreePaths.ts` converts activity items into stable tree paths, and `ActivityTreeView.tsx` is the reusable native React renderer. The Threads sidebar renders workspace groups, conversations, child conversation branches, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes workspace actions plus conversation actions for open, parent navigation, pin/unpin, close, archive, copy, duplicate, and extension-provided conversation-list context menu items.
+
+Conversation branches are intentionally shown inline in the existing Threads sidebar instead of a separate graph view. Parent threads with children get a compact expander; selected descendants auto-reveal through the current tree path, while collapsed parents show a small child count so branchy conversations stay discoverable without eating horizontal space.
 
 ## Execution boundary
 

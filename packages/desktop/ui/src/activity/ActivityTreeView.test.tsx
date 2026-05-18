@@ -20,7 +20,7 @@ const items: ActivityTreeItem[] = [
   },
 ];
 
-function renderTree() {
+function renderTree(renderItems: ActivityTreeItem[] = items) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -28,7 +28,7 @@ function renderTree() {
   act(() => {
     root.render(
       <ActivityTreeView
-        items={items}
+        items={renderItems}
         renderContextMenu={(item) => (
           <div role="menu" aria-label={`${item.title} actions`}>
             <button type="button" role="menuitem">
@@ -75,6 +75,37 @@ describe('ActivityTreeView', () => {
         document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
       });
       expect(container.querySelector('[role="menu"]')).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+
+  it('renders expandable conversation branches in the tree', () => {
+    const nestedItems: ActivityTreeItem[] = [
+      { id: 'conversation:parent', kind: 'conversation', title: 'Parent thread', status: 'idle', metadata: { conversationId: 'parent' } },
+      {
+        id: 'conversation:child',
+        kind: 'conversation',
+        parentId: 'conversation:parent',
+        title: 'Child branch',
+        status: 'idle',
+        metadata: { conversationId: 'child' },
+      },
+    ];
+    const { container, unmount } = renderTree(nestedItems);
+
+    try {
+      expect(container.textContent).toContain('Parent thread');
+      expect(container.textContent).not.toContain('Child branch');
+
+      const expander = container.querySelector<HTMLElement>('[aria-label="Expand Parent thread"]');
+      expect(expander).not.toBeNull();
+
+      act(() => {
+        expander?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      expect(container.textContent).toContain('Child branch');
     } finally {
       unmount();
     }

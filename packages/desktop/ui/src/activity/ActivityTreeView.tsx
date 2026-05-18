@@ -104,6 +104,14 @@ export function ActivityTreeView({
     }
     return counts;
   }, [items]);
+  const conversationChildCountByParentId = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      if (!item.parentId || item.kind !== 'conversation') continue;
+      counts.set(item.parentId, (counts.get(item.parentId) ?? 0) + 1);
+    }
+    return counts;
+  }, [items]);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<ActivityTreeContextMenuState | null>(null);
@@ -197,6 +205,7 @@ export function ActivityTreeView({
           const accentColor = sanitizeCssColor(item.accentColor);
           const backgroundColor = sanitizeCssColor(item.backgroundColor);
           const childCount = childCountByParentId.get(item.id) ?? 0;
+          const conversationChildCount = conversationChildCountByParentId.get(item.id) ?? 0;
           const expanded =
             item.kind === 'group'
               ? !(collapsedGroupItemIds ?? collapsedGroupIds).has(item.id)
@@ -210,6 +219,7 @@ export function ActivityTreeView({
           const conversationHasPendingRuns = item.kind === 'conversation' && item.metadata?.hasPendingRuns === true;
           const conversationIsPinned = item.kind === 'conversation' && item.metadata?.isPinned === true;
           const showConversationStatus = conversationIsRunning || conversationHasPendingRuns || conversationNeedsAttention;
+          const showExpander = childCount > 0 && item.kind !== 'group';
           const rowPaddingLeft = getActivityTreeRowPaddingLeftRem(item, depth);
           return (
             <button
@@ -312,15 +322,7 @@ export function ActivityTreeView({
                   ].join(' ')}
                 />
               ) : null}
-              {showConversationStatus ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
-                  <ConversationStatusText
-                    isRunning={conversationIsRunning}
-                    hasPendingRuns={conversationHasPendingRuns}
-                    needsAttention={conversationNeedsAttention}
-                  />
-                </span>
-              ) : item.kind === 'group' ? (
+              {item.kind === 'group' ? (
                 <span
                   role="button"
                   tabIndex={-1}
@@ -334,12 +336,21 @@ export function ActivityTreeView({
                 >
                   {expanded ? '▾' : '▸'}
                 </span>
-              ) : childCount > 0 && item.kind !== 'conversation' ? (
+              ) : showExpander ? (
                 <span
                   role="button"
                   tabIndex={-1}
                   className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
-                  aria-label={expanded ? 'Collapse runs' : 'Expand runs'}
+                  aria-label={expanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
+                  title={
+                    conversationChildCount > 0
+                      ? expanded
+                        ? 'Collapse branches'
+                        : 'Expand branches'
+                      : expanded
+                        ? 'Collapse children'
+                        : 'Expand children'
+                  }
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -348,11 +359,28 @@ export function ActivityTreeView({
                 >
                   {expanded ? '▾' : '▸'}
                 </span>
+              ) : showConversationStatus ? (
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+                  <ConversationStatusText
+                    isRunning={conversationIsRunning}
+                    hasPendingRuns={conversationHasPendingRuns}
+                    needsAttention={conversationNeedsAttention}
+                  />
+                </span>
               ) : depth > 0 && item.kind !== 'conversation' ? (
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-border-subtle" aria-hidden="true" />
               ) : (
                 <span className="h-4 w-4 shrink-0" aria-hidden="true" />
               )}
+              {showConversationStatus && showExpander ? (
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+                  <ConversationStatusText
+                    isRunning={conversationIsRunning}
+                    hasPendingRuns={conversationHasPendingRuns}
+                    needsAttention={conversationNeedsAttention}
+                  />
+                </span>
+              ) : null}
               {conversationIsPinned ? (
                 <span className="ui-sidebar-pinned-icon shrink-0" title="Pinned chat" aria-label="Pinned chat">
                   <PinIcon />
@@ -403,7 +431,14 @@ export function ActivityTreeView({
                   +
                 </span>
               ) : null}
-              {item.kind === 'conversation' && item.updatedAt ? (
+              {item.kind === 'conversation' && !expanded && conversationChildCount > 0 ? (
+                <span
+                  className="ui-sidebar-session-meta shrink-0 whitespace-nowrap"
+                  title={`${conversationChildCount} child branch${conversationChildCount === 1 ? '' : 'es'}`}
+                >
+                  {conversationChildCount}
+                </span>
+              ) : item.kind === 'conversation' && item.updatedAt ? (
                 <span className="ui-sidebar-session-meta ui-sidebar-session-time shrink-0 whitespace-nowrap">
                   {timeAgoCompact(item.updatedAt)}
                 </span>
