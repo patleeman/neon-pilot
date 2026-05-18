@@ -1,6 +1,6 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
 import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@personal-agent/extensions/ui';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type RuntimeUpdateStatus = {
   name: string;
@@ -222,6 +222,101 @@ function Pill({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 
     >
       {children}
     </span>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
+      <circle cx="3" cy="8" r="1.2" />
+      <circle cx="8" cy="8" r="1.2" />
+      <circle cx="13" cy="8" r="1.2" />
+    </svg>
+  );
+}
+
+type RowAction = {
+  label: string;
+  disabled?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+};
+
+function RowActionsMenu({ label, disabled, actions }: { label: string; disabled?: boolean; actions: RowAction[] }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+
+  const positionMenu = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPosition({ top: rect.bottom + 8, right: Math.max(12, window.innerWidth - rect.right) });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    positionMenu();
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (target instanceof Node && rootRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+    };
+  }, [open, positionMenu]);
+
+  const menuButtonClass =
+    'w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50';
+
+  return (
+    <div ref={rootRef} className="relative flex justify-end" onClick={(event) => event.stopPropagation()}>
+      <button
+        type="button"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-subtle/70 bg-surface text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={disabled}
+        title={label}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+      >
+        <MoreIcon />
+      </button>
+      {open ? (
+        <div
+          className="fixed z-50 w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
+          role="menu"
+          style={menuPosition ? { top: menuPosition.top, right: menuPosition.right } : undefined}
+        >
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              className={cx(menuButtonClass, action.danger && 'text-danger hover:text-danger')}
+              disabled={action.disabled}
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                action.onClick();
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1107,19 +1202,21 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                             <td className="hidden px-3 py-3 text-secondary 2xl:table-cell">{model.likes.toLocaleString()}</td>
                             <td className="hidden px-3 py-3 text-secondary 2xl:table-cell">{formatDate(model.lastModified)}</td>
                             <td className="px-3 py-3">
-                              <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
-                                <ToolbarButton onClick={() => void selectSearchModel(model.id)}>Select</ToolbarButton>
-                                <ToolbarButton
-                                  disabled={model.format === 'unknown'}
-                                  onClick={() => {
-                                    void selectSearchModel(model.id).then(() => {
-                                      if (model.format === 'mlx') void downloadMlxModel(model.id);
-                                    });
-                                  }}
-                                >
-                                  Download
-                                </ToolbarButton>
-                              </div>
+                              <RowActionsMenu
+                                label={`More actions for ${model.id}`}
+                                actions={[
+                                  { label: 'Select', onClick: () => void selectSearchModel(model.id) },
+                                  {
+                                    label: 'Download',
+                                    disabled: model.format === 'unknown',
+                                    onClick: () => {
+                                      void selectSearchModel(model.id).then(() => {
+                                        if (model.format === 'mlx') void downloadMlxModel(model.id);
+                                      });
+                                    },
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         ))}
@@ -1167,27 +1264,34 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                             <td className="px-3 py-3 text-secondary">{model.size || '—'}</td>
                             <td className="px-3 py-3 text-secondary">{formatDate(model.modified)}</td>
                             <td className="px-3 py-3">
-                              <div className="flex gap-2">
-                                <ToolbarButton
-                                  onClick={() => {
-                                    setSelectedModelId(model.id);
-                                    setPage('server');
-                                    setDirty(true);
-                                  }}
-                                >
-                                  Use on Server
-                                </ToolbarButton>
-                                {model.path ? (
-                                  <ToolbarButton
-                                    onClick={() => void pa.extension.invoke('localModelsGgufReveal', { modelPath: model.path })}
-                                  >
-                                    Reveal
-                                  </ToolbarButton>
-                                ) : null}
-                                <ToolbarButton disabled={Boolean(busy)} onClick={() => void deleteDownloadedModel(model)}>
-                                  Delete
-                                </ToolbarButton>
-                              </div>
+                              <RowActionsMenu
+                                label={`More actions for ${model.title}`}
+                                disabled={Boolean(busy)}
+                                actions={[
+                                  {
+                                    label: 'Use on Server',
+                                    onClick: () => {
+                                      setSelectedModelId(model.id);
+                                      setPage('server');
+                                      setDirty(true);
+                                    },
+                                  },
+                                  ...(model.path
+                                    ? [
+                                        {
+                                          label: 'Reveal',
+                                          onClick: () => void pa.extension.invoke('localModelsGgufReveal', { modelPath: model.path }),
+                                        },
+                                      ]
+                                    : []),
+                                  {
+                                    label: 'Delete',
+                                    danger: true,
+                                    disabled: Boolean(busy),
+                                    onClick: () => void deleteDownloadedModel(model),
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         ))}
