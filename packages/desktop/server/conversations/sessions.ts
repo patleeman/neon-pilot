@@ -2162,6 +2162,10 @@ function summarizeRawContent(content: RawMessageContent | undefined): string {
   return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
+function rawContentIsOnlyToolCalls(content: RawMessageContent | undefined): boolean {
+  return Array.isArray(content) && content.length > 0 && content.every((block) => block.type === 'toolCall');
+}
+
 function buildSessionTreeNode(line: RawLine, index: number): ConversationSessionTreeNode | null {
   if (line.type === 'session') {
     return {
@@ -2182,11 +2186,12 @@ function buildSessionTreeNode(line: RawLine, index: number): ConversationSession
   if (line.type === 'message') {
     const role = line.message.role;
     const text = summarizeRawContent(line.message.content);
+    const isToolCall = role === 'assistant' && rawContentIsOnlyToolCalls(line.message.content);
     const title = role === 'toolResult' ? `${line.message.toolName ?? 'tool'} result` : text || `${role} message`;
     return {
       id,
       parentId,
-      kind: 'message',
+      kind: isToolCall ? 'tool_call' : 'message',
       role,
       title,
       subtitle: role,

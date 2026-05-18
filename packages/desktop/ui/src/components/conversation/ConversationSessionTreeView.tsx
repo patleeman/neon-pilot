@@ -36,11 +36,13 @@ function formatNodeTime(timestamp: string | undefined): string | null {
 }
 
 function formatNodeMeta(node: ConversationSessionTreeNode): string {
-  return [node.subtitle ?? node.kind, node.status, formatNodeTime(node.timestamp)].filter(Boolean).join(' · ');
+  return [node.status, formatNodeTime(node.timestamp)].filter(Boolean).join(' · ');
 }
 
 function buildTreeRows(nodes: ConversationSessionTreeNode[]): Array<{ node: ConversationSessionTreeNode; depth: number }> {
-  const visibleNodes = nodes.filter((node) => ['session', 'message', 'custom_message', 'compaction', 'branch_summary'].includes(node.kind));
+  const visibleNodes = nodes.filter(
+    (node) => ['session', 'message', 'custom_message', 'compaction', 'branch_summary'].includes(node.kind) && node.role !== 'toolResult',
+  );
   const visibleIdSet = new Set(visibleNodes.map((node) => node.id));
   const rawNodeById = new Map(nodes.map((node) => [node.id, node] as const));
   const childrenByParentId = new Map<string, ConversationSessionTreeNode[]>();
@@ -175,20 +177,14 @@ export function ConversationSessionTreeView({ conversationId, onOpenNode }: Conv
                 aria-selected={index === selectedIndex}
                 className={[
                   'group flex h-6 w-full items-center gap-2 rounded-md px-1.5 text-left text-[12px] leading-6 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
-                  index === selectedIndex
-                    ? 'bg-accent/14 text-primary shadow-[inset_2px_0_0_rgb(var(--color-accent)/0.65)]'
-                    : 'text-secondary',
+                  index === selectedIndex ? 'bg-surface-hover/80 text-primary' : 'text-secondary',
                 ].join(' ')}
                 style={{ paddingLeft: `${0.25 + depth * 1.125}rem` }}
                 onFocus={() => setSelectedIndex(index)}
                 onClick={() => onOpenNode?.(node.id)}
                 title={node.id}
               >
-                <span
-                  className={`grid h-4 w-4 shrink-0 place-items-center rounded border border-border-subtle/80 text-[9px] ${nodeTone(node)}`}
-                >
-                  {nodeGlyph(node)}
-                </span>
+                <span className={`grid h-4 w-4 shrink-0 place-items-center rounded text-[10px] ${nodeTone(node)}`}>{nodeGlyph(node)}</span>
                 <span className="min-w-0 flex-1 truncate text-primary">{node.title || node.kind}</span>
                 <span className={`shrink-0 truncate text-[10px] uppercase tracking-[0.1em] ${nodeTone(node)}`}>{formatNodeMeta(node)}</span>
               </button>
