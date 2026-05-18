@@ -178,8 +178,8 @@ async function trySyncLocalProviderModel(
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-1.5 text-sm text-secondary">
-      <span>{label}</span>
+    <label className="block space-y-1 text-xs text-secondary">
+      <span className="font-medium">{label}</span>
       {children}
     </label>
   );
@@ -190,7 +190,7 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cx(
-        'w-full rounded-lg border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80',
+        'w-full rounded-md border border-border-subtle/60 bg-surface px-2.5 py-1.5 text-sm text-primary outline-none focus-visible:border-accent/80',
         props.className,
       )}
     />
@@ -202,7 +202,7 @@ function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={cx(
-        'w-full rounded-lg border border-border-subtle/60 bg-surface px-3 py-2 text-sm text-primary outline-none focus-visible:border-accent/80',
+        'w-full rounded-md border border-border-subtle/60 bg-surface px-2.5 py-1.5 text-sm text-primary outline-none focus-visible:border-accent/80',
         props.className,
       )}
     />
@@ -236,6 +236,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [maxTokens, setMaxTokens] = useState('1024');
   const [contextSize, setContextSize] = useState('131072');
   const [gpuLayers, setGpuLayers] = useState('999');
+  const [topK, setTopK] = useState('40');
+  const [minP, setMinP] = useState('0.05');
+  const [repeatPenalty, setRepeatPenalty] = useState('1.1');
+  const [seed, setSeed] = useState('-1');
+  const [threads, setThreads] = useState('');
+  const [batchSize, setBatchSize] = useState('2048');
+  const [ubatchSize, setUbatchSize] = useState('512');
+  const [parallel, setParallel] = useState('1');
+  const [flashAttention, setFlashAttention] = useState(false);
+  const [extraArgs, setExtraArgs] = useState('');
   const [mtpEnabled, setMtpEnabled] = useState(false);
   const [mtpDraftTokens, setMtpDraftTokens] = useState('6');
   const [dirty, setDirty] = useState(false);
@@ -410,7 +420,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
         await pa.extension.invoke('localModelsMlxSetModel', { modelId: selectedModel.subtitle });
         if (reload) {
           if (status?.mlx?.server.reachable) await pa.extension.invoke('localModelsMlxStop', {});
-          await pa.extension.invoke('localModelsMlxStart', {});
+          await pa.extension.invoke('localModelsMlxStart', { maxTokens: Number(maxTokens) });
           await trySyncLocalProviderModel({
             runtime: 'mlx',
             id: selectedModel.subtitle,
@@ -426,6 +436,18 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
             modelPath: selectedModel.path,
             contextSize: Number(contextSize),
             gpuLayers: Number(gpuLayers),
+            temperature: Number(temperature),
+            topP: Number(topP),
+            topK: Number(topK),
+            minP: Number(minP),
+            repeatPenalty: Number(repeatPenalty),
+            seed: Number(seed),
+            threads: Number(threads),
+            batchSize: Number(batchSize),
+            ubatchSize: Number(ubatchSize),
+            parallel: Number(parallel),
+            flashAttention,
+            extraArgs,
             ...ggufSpeculativeSettings(),
           });
           await trySyncLocalProviderModel({
@@ -803,11 +825,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <section className="rounded-xl border border-border-subtle bg-surface/25 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-primary">Serving Settings</h2>
-                      <p className="mt-1 text-sm text-secondary">Tune runtime parameters, then start or reload the server.</p>
+                      <h2 className="text-lg font-semibold text-primary">Serving Settings</h2>
+                      <p className="mt-0.5 text-xs text-secondary">Tune runtime parameters, then start or reload the server.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
@@ -822,7 +844,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Field label="Context length">
                       <TextInput value={contextSize} onChange={(event) => markDirty(setContextSize, event.target.value)} />
                       <input
@@ -857,8 +879,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <Field label="Max tokens">
                       <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
                     </Field>
-                    <div className="space-y-2 sm:col-span-2">
-                      <div className="flex flex-col gap-3 rounded-lg bg-surface/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                      <div className="flex flex-col gap-3 rounded-lg bg-surface/45 p-3 sm:flex-row sm:items-center sm:justify-between">
                         <label className="flex items-start gap-3 text-sm text-secondary">
                           <input
                             type="checkbox"
@@ -884,10 +906,92 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <div className="rounded-lg bg-surface/50 p-3">
+                    <details className="sm:col-span-2 lg:col-span-4">
+                      <summary className="cursor-pointer rounded-lg bg-surface/45 px-3 py-2 text-sm font-medium text-primary hover:bg-surface/70">
+                        Advanced runtime options
+                      </summary>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <Field label="Top K">
+                          <TextInput
+                            value={topK}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setTopK, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Min P">
+                          <TextInput
+                            value={minP}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setMinP, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Repeat penalty">
+                          <TextInput
+                            value={repeatPenalty}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setRepeatPenalty, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Seed">
+                          <TextInput
+                            value={seed}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setSeed, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Threads">
+                          <TextInput
+                            value={threads}
+                            disabled={activeRuntime !== 'gguf'}
+                            placeholder="auto"
+                            onChange={(event) => markDirty(setThreads, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Batch size">
+                          <TextInput
+                            value={batchSize}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setBatchSize, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Micro batch">
+                          <TextInput
+                            value={ubatchSize}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setUbatchSize, event.target.value)}
+                          />
+                        </Field>
+                        <Field label="Parallel slots">
+                          <TextInput
+                            value={parallel}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markDirty(setParallel, event.target.value)}
+                          />
+                        </Field>
+                        <label className="flex items-center gap-2 text-sm text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={flashAttention}
+                            disabled={activeRuntime !== 'gguf'}
+                            onChange={(event) => markBooleanDirty(setFlashAttention, event.target.checked)}
+                            className="accent-accent"
+                          />
+                          Flash attention
+                        </label>
+                        <Field label="Extra llama.cpp args">
+                          <TextInput
+                            value={extraArgs}
+                            disabled={activeRuntime !== 'gguf'}
+                            placeholder="--cache-type-k q8_0 --cache-type-v q8_0"
+                            onChange={(event) => markDirty(setExtraArgs, event.target.value)}
+                          />
+                        </Field>
+                      </div>
+                    </details>
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+                      <div className="rounded-lg bg-surface/45 p-3">
                         <div className="mb-3 text-sm font-medium text-primary">Supported backends</div>
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="grid gap-2 lg:grid-cols-2">
                           <div className="flex items-start justify-between gap-3 rounded-lg border border-border-subtle/50 p-3">
                             <div>
                               <div className="flex items-center gap-2 text-sm font-medium text-primary">

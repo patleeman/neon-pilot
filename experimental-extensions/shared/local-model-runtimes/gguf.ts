@@ -36,6 +36,18 @@ type ServerInput = {
   modelPath?: string;
   contextSize?: number;
   gpuLayers?: number;
+  threads?: number;
+  batchSize?: number;
+  ubatchSize?: number;
+  topK?: number;
+  topP?: number;
+  minP?: number;
+  temperature?: number;
+  repeatPenalty?: number;
+  seed?: number;
+  parallel?: number;
+  flashAttention?: boolean;
+  extraArgs?: string;
   specType?: 'none' | 'draft-mtp';
   specDraftNMax?: number;
 };
@@ -83,6 +95,28 @@ async function exists(path: string): Promise<boolean> {
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function finitePositiveInt(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : null;
+}
+
+function finiteNumber(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function appendOptionalArg(args: string[], flag: string, value: unknown) {
+  const number = finiteNumber(value);
+  if (number === null) return;
+  args.push(flag, String(number));
+}
+
+function appendOptionalPositiveIntArg(args: string[], flag: string, value: unknown) {
+  const number = finitePositiveInt(value);
+  if (number === null) return;
+  args.push(flag, String(number));
 }
 
 async function runProcess(
@@ -522,6 +556,7 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
     recommendedContextSize: FALLBACK_CONTEXT,
   }));
   const contextSize = input.contextSize && input.contextSize > 0 ? input.contextSize : metadata.recommendedContextSize;
+  const parallel = finitePositiveInt(input.parallel) ?? 1;
   const args = [
     '-m',
     shellQuote(modelPath),
@@ -530,14 +565,25 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
     '--port',
     String(MODEL_PORT),
     '--parallel',
-    '1',
+    String(parallel),
     '-ngl',
     String(input.gpuLayers ?? 999),
     '-c',
     String(contextSize),
   ];
+  appendOptionalPositiveIntArg(args, '--threads', input.threads);
+  appendOptionalPositiveIntArg(args, '--batch-size', input.batchSize);
+  appendOptionalPositiveIntArg(args, '--ubatch-size', input.ubatchSize);
+  appendOptionalPositiveIntArg(args, '--top-k', input.topK);
+  appendOptionalArg(args, '--top-p', input.topP);
+  appendOptionalArg(args, '--min-p', input.minP);
+  appendOptionalArg(args, '--temp', input.temperature);
+  appendOptionalArg(args, '--repeat-penalty', input.repeatPenalty);
+  appendOptionalArg(args, '--seed', input.seed);
+  if (input.flashAttention) args.push('--flash-attn');
   appendSpeculativeDecodingArgs(args, input);
-  const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const extraArgs = input.extraArgs?.trim();
+  const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')}${extraArgs ? ` ${extraArgs}` : ''} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
   await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
   return { ok: true, started: true, pid: Number(result.stdout.trim()), status: await runtimeStatus({}, ctx) };
