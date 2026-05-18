@@ -59,7 +59,7 @@
         "kinds": ["text", "transcriptRange"],
         "icon": "✅",
         "priority": 50,
-        "args": { "draftText": "Do it" }
+        "args": { "draftText": "✅ Do it" }
       }
     ]
   }
