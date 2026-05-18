@@ -558,7 +558,6 @@ export interface ExtensionManifest {
   schemaVersion: typeof EXTENSION_MANIFEST_VERSION;
   id: string;
   name: string;
-  packageType?: ExtensionPackageType;
   description?: string;
   version?: string;
   frontend?: ExtensionFrontend;

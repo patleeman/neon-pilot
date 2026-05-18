@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { type ExtensionManifest } from './extensionManifest.js';
+import { type ExtensionManifest, type ExtensionPackageType } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 
+type LoadedSystemExtensionManifest = ExtensionManifest & { packageType: ExtensionPackageType };
+
 export interface SystemExtensionEntry {
-  manifest: ExtensionManifest;
+  manifest: LoadedSystemExtensionManifest;
   packageRoot: string;
 }
 
@@ -16,7 +18,7 @@ function readExtensionEntries(source: 'bundled' | 'experimental'): SystemExtensi
       try {
         const manifest = JSON.parse(readFileSync(join(entry.packageRoot, 'extension.json'), 'utf-8')) as ExtensionManifest;
         if (!manifest.id || !manifest.name) return [];
-        return [{ manifest: { ...manifest, packageType: manifest.packageType ?? 'system' }, packageRoot: entry.packageRoot }];
+        return [{ manifest: { ...manifest, packageType: 'system' }, packageRoot: entry.packageRoot }];
       } catch {
         return [];
       }
@@ -33,4 +35,4 @@ export function readExperimentalExtensionEntries(): SystemExtensionEntry[] {
 
 export const SYSTEM_EXTENSION_ENTRIES: SystemExtensionEntry[] = readBundledExtensionEntries();
 export const EXPERIMENTAL_EXTENSION_ENTRIES: SystemExtensionEntry[] = readExperimentalExtensionEntries();
-export const SYSTEM_EXTENSIONS: ExtensionManifest[] = SYSTEM_EXTENSION_ENTRIES.map((entry) => entry.manifest);
+export const SYSTEM_EXTENSIONS: LoadedSystemExtensionManifest[] = SYSTEM_EXTENSION_ENTRIES.map((entry) => entry.manifest);

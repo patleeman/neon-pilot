@@ -124,7 +124,7 @@ describe('extension registry', () => {
     ).toThrow(/contributes\.themes\[0\]\.tokens\.*/);
   });
 
-  it('loads runtime extension manifests from the state root', () => {
+  it('loads runtime extension manifests from the state root as user extensions', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
@@ -134,6 +134,7 @@ describe('extension registry', () => {
         schemaVersion: 2,
         id: 'agent-board',
         name: 'Agent Board',
+        packageType: 'system',
         frontend: { entry: 'dist/frontend.js' },
         contributes: {
           views: [{ id: 'page', title: 'Agent Board', location: 'main', route: '/ext/agent-board', component: 'AgentBoardPage' }],

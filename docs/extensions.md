@@ -83,7 +83,6 @@ The manifest declares what your extension contributes:
   "name": "My Extension",
   "description": "What it does",
   "version": "0.1.0",
-  "packageType": "user",
   "permissions": ["storage:readwrite"],
   "frontend": {
     "entry": "dist/frontend.js",
@@ -117,7 +116,7 @@ The manifest declares what your extension contributes:
 }
 ```
 
-**`packageType`**: `"user"` (your own extension) or `"system"` (bundled with the app).
+**`packageType`**: derived by the loader from install location: repo/app-bundled extensions are `"system"`; runtime-installed extensions are `"user"`. The manifest field is accepted for compatibility but is not authoritative.
 
 **`defaultEnabled`**: set to `false` for experimental extensions that should ship installed but disabled until the user explicitly enables them.
 

@@ -109,6 +109,8 @@ const electronBuilderConfig = {
     'node_modules/better-sqlite3/**/*',
     'node_modules/bindings/**/*',
     'node_modules/file-uri-to-path/**/*',
+    'node_modules/whisper-cpp-node/**/*',
+    'node_modules/@whisper-cpp-node/**/*',
   ],
   extraMetadata: {
     main: './dist/main.js',
@@ -138,6 +140,14 @@ const electronBuilderConfig = {
     ...optionalExtraResource({
       from: 'prompt-catalog',
       to: 'prompt-catalog',
+    }),
+    ...optionalExtraResource({
+      from: 'node_modules/whisper-cpp-node',
+      to: 'node_modules/whisper-cpp-node',
+    }),
+    ...optionalExtraResource({
+      from: 'node_modules/@whisper-cpp-node',
+      to: 'node_modules/@whisper-cpp-node',
     }),
   ],
   mac: {

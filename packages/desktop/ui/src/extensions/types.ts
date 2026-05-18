@@ -441,7 +441,6 @@ export interface ExtensionManifest {
   schemaVersion: 1 | 2;
   id: string;
   name: string;
-  packageType?: ExtensionPackageType;
   defaultEnabled?: boolean;
   description?: string;
   version?: string;

@@ -74,7 +74,6 @@ export interface ExtensionManifest {
   schemaVersion: 1 | typeof EXTENSION_MANIFEST_VERSION;
   id: string;
   name: string;
-  packageType?: ExtensionPackageType;
   /** If false, the extension starts disabled until explicitly enabled. */
   defaultEnabled?: boolean;
   description?: string;

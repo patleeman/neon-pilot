@@ -9,3 +9,5 @@ The composer button keeps microphone capture in the extension frontend while rec
 The Settings panel lets users pick a curated Whisper.cpp model (`tiny`, `base`, `small`, or `medium`, with English-only `.en` variants) or enter a custom direct Hugging Face `/resolve/` URL to a Whisper.cpp-compatible `ggml-*.bin` file. Curated models download from `ggerganov/whisper.cpp`; custom URLs are cached in the same `transcription-models` directory by file name.
 
 The backend loads `whisper-cpp-node` from the desktop package dependency, not from the extension folder. Keep this explicit resolver in place because bundled system extension backends run from `extensions/<id>/dist`, where normal Node resolution will not find `packages/desktop/node_modules`.
+
+Release packaging must include `node_modules/whisper-cpp-node` and `node_modules/@whisper-cpp-node` as unpacked resources. The backend loads the native binding at runtime via `createRequire`, so a working waveform with no transcript usually means the release app is missing those native dictation dependencies.

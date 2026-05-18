@@ -6,6 +6,7 @@ import { getStateRoot } from '@personal-agent/core';
 import type {
   ExtensionManifest,
   ExtensionMentionContribution,
+  ExtensionPackageType,
   ExtensionSecretBackendContribution,
   ExtensionSecretContribution,
   ExtensionSkillContribution,
@@ -16,7 +17,6 @@ import type {
 import {
   EXTENSION_HOST_VIEW_COMPONENTS,
   EXTENSION_ICON_NAMES,
-  EXTENSION_PACKAGE_TYPES,
   EXTENSION_PLACEMENTS,
   EXTENSION_RIGHT_SURFACE_SCOPES,
   EXTENSION_ROUTE_CAPABILITIES,
@@ -49,24 +49,26 @@ export function clearExtensionHealthError(extensionId: string): void {
   healthErrors.delete(extensionId);
 }
 
+export type LoadedExtensionManifest = ExtensionManifest & { packageType: ExtensionPackageType };
+
 export interface InvalidExtensionEntry {
   id: string;
   name: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   packageRoot: string;
   source: 'runtime';
   errors: string[];
 }
 
 export interface ExtensionRegistryEntry {
-  manifest: ExtensionManifest;
+  manifest: LoadedExtensionManifest;
   packageRoot?: string;
   source: 'system' | 'runtime';
 }
 
 export interface ExtensionSkillRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   id: string;
   name: string;
   title?: string;
@@ -77,7 +79,7 @@ export interface ExtensionSkillRegistration {
 
 export interface ExtensionMentionRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   id: string;
   title: string;
   description?: string;
@@ -87,7 +89,7 @@ export interface ExtensionMentionRegistration {
 
 export interface ExtensionToolRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   id: string;
   name: string;
   action: string;
@@ -107,14 +109,14 @@ export interface ExtensionToolRegistration {
 
 export interface ExtensionAgentRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   exportName: string;
 }
 
 export interface ExtensionInstallSummary {
   id: string;
   name: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   enabled: boolean;
   status: 'enabled' | 'disabled' | 'invalid';
   errors?: string[];
@@ -139,12 +141,12 @@ export interface ExtensionInstallSummary {
 
 export interface ExtensionRegistrySnapshot {
   extensions: ExtensionManifest[];
-  routes: Array<{ route: string; extensionId: string; surfaceId: string; packageType: ExtensionManifest['packageType'] }>;
-  surfaces: Array<ExtensionSurface & { extensionId: string; packageType: ExtensionManifest['packageType'] }>;
+  routes: Array<{ route: string; extensionId: string; surfaceId: string; packageType: ExtensionPackageType }>;
+  surfaces: Array<ExtensionSurface & { extensionId: string; packageType: ExtensionPackageType }>;
   views: Array<
     ExtensionViewContribution & {
       extensionId: string;
-      packageType: ExtensionManifest['packageType'];
+      packageType: ExtensionPackageType;
       frontend?: ExtensionManifest['frontend'];
     }
   >;
@@ -153,7 +155,7 @@ export interface ExtensionRegistrySnapshot {
 export interface ExtensionCommandRegistration {
   extensionId: string;
   surfaceId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   action: string;
   args?: unknown;
@@ -166,7 +168,7 @@ export interface ExtensionCommandRegistration {
 export interface ExtensionKeybindingRegistration {
   extensionId: string;
   surfaceId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   keys: string[];
   command: string;
@@ -180,7 +182,7 @@ export interface ExtensionKeybindingRegistration {
 export interface ExtensionSlashCommandRegistration {
   extensionId: string;
   surfaceId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   name: string;
   description: string;
   action: string;
@@ -189,7 +191,7 @@ export interface ExtensionSlashCommandRegistration {
 export interface ExtensionPromptContextProviderRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   handler: string;
   title?: string;
 }
@@ -197,7 +199,7 @@ export interface ExtensionPromptContextProviderRegistration {
 export interface ExtensionPromptReferenceRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   handler: string;
   title?: string;
 }
@@ -205,7 +207,7 @@ export interface ExtensionPromptReferenceRegistration {
 export interface ExtensionQuickOpenRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   provider: string;
   title?: string;
   section?: string;
@@ -215,7 +217,7 @@ export interface ExtensionQuickOpenRegistration {
 export interface ExtensionSearchProviderRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   action: string;
   kinds?: string[];
@@ -225,7 +227,7 @@ export interface ExtensionSearchProviderRegistration {
 export interface ExtensionComposerShelfRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   title?: string;
   placement: 'top' | 'bottom';
@@ -235,7 +237,7 @@ export interface ExtensionComposerShelfRegistration {
 export interface ExtensionNewConversationPanelRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   title?: string;
   priority?: number;
@@ -245,7 +247,7 @@ export interface ExtensionNewConversationPanelRegistration {
 export interface ExtensionToolbarActionRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   icon: string;
   action: string;
@@ -256,7 +258,7 @@ export interface ExtensionToolbarActionRegistration {
 export interface ExtensionComposerButtonRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   title?: string;
   slot?: 'leading' | 'preferences' | 'actions';
@@ -268,7 +270,7 @@ export interface ExtensionComposerButtonRegistration {
 export interface ExtensionComposerInputToolRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   title?: string;
   when?: string;
@@ -279,7 +281,7 @@ export interface ExtensionComposerInputToolRegistration {
 export interface ExtensionConversationDecoratorRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   position: 'before-title' | 'after-title' | 'subtitle';
   priority?: number;
@@ -289,7 +291,7 @@ export interface ExtensionConversationDecoratorRegistration {
 export interface ExtensionStatusBarItemRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   label: string;
   action?: string;
   component?: string;
@@ -301,7 +303,7 @@ export interface ExtensionStatusBarItemRegistration {
 export interface ExtensionConversationHeaderRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   label?: string;
   frontendEntry?: string;
@@ -310,7 +312,7 @@ export interface ExtensionConversationHeaderRegistration {
 export interface ExtensionContextMenuRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   action: string;
   surface: 'message' | 'conversationList' | 'selection' | 'fileSelection' | 'transcriptSelection';
@@ -321,7 +323,7 @@ export interface ExtensionContextMenuRegistration {
 export interface ExtensionMessageActionRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   title: string;
   action: string;
   when?: string;
@@ -330,7 +332,7 @@ export interface ExtensionMessageActionRegistration {
 
 export interface ExtensionSettingsRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   key: string;
   type: string;
   default?: unknown;
@@ -343,7 +345,7 @@ export interface ExtensionSettingsRegistration {
 
 export interface ExtensionSecretRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   id: string;
   key: string;
   label: string;
@@ -355,7 +357,7 @@ export interface ExtensionSecretRegistration {
 
 export interface ExtensionSecretBackendRegistration {
   extensionId: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   id: string;
   label: string;
   description?: string;
@@ -366,7 +368,7 @@ export interface ExtensionSecretBackendRegistration {
 export interface ExtensionSettingsComponentRegistration {
   extensionId: string;
   id: string;
-  packageType: ExtensionManifest['packageType'];
+  packageType: ExtensionPackageType;
   component: string;
   sectionId: string;
   label: string;
@@ -1455,7 +1457,6 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
   }
   requireString(value.id, 'id');
   requireString(value.name, 'name');
-  if (value.packageType !== undefined) validateEnum(value.packageType, EXTENSION_PACKAGE_TYPES, 'packageType');
   if (value.defaultEnabled !== undefined && typeof value.defaultEnabled !== 'boolean') {
     throw new Error('Extension manifest defaultEnabled must be a boolean.');
   }
@@ -1539,9 +1540,7 @@ export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()):
       const manifestPath = join(entry.packageRoot, 'extension.json');
       try {
         const manifest = parseExtensionManifest(JSON.parse(readFileSync(manifestPath, 'utf-8')));
-        return [
-          { manifest: { ...manifest, packageType: manifest.packageType ?? 'user' }, packageRoot: entry.packageRoot, source: 'runtime' },
-        ];
+        return [{ manifest: { ...manifest, packageType: 'user' }, packageRoot: entry.packageRoot, source: 'runtime' }];
       } catch {
         return [];
       }

@@ -84,7 +84,7 @@ Every extension package has an `extension.json` manifest. The desktop runtime va
 Supported top-level fields:
 
 - `schemaVersion`: currently `2`.
-- `id`, `name`, `description`, `version`, `packageType`.
+- `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
 - `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, secrets, and settings metadata.
