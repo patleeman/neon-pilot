@@ -1,6 +1,6 @@
 {
   "name": "@personal-agent/desktop",
-  "version": "0.8.0-rc.18",
+  "version": "0.8.0-rc.19",
   "license": "MIT",
   "description": "Personal Agent Electron desktop shell",
   "repository": "github:user/personal-agent",
@@ -21,8 +21,8 @@
     "clean": "rm -rf dist ui/dist server/dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@earendil-works/pi-agent-core": "^0.75.0",
-    "@earendil-works/pi-coding-agent": "^0.75.0",
+    "@earendil-works/pi-agent-core": "^0.75.3",
+    "@earendil-works/pi-coding-agent": "^0.75.3",
     "@excalidraw/excalidraw": "0.18.1",
     "@personal-agent/core": "workspace:*",
     "@personal-agent/extensions": "workspace:*",

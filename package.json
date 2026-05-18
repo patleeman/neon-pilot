@@ -1,6 +1,6 @@
 {
   "name": "personal-agent",
-  "version": "0.8.0-rc.18",
+  "version": "0.8.0-rc.19",
   "private": false,
   "license": "MIT",
   "description": "Personal agent monorepo",
@@ -84,8 +84,8 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.21.1",
-    "@earendil-works/pi-ai": "^0.75.0",
-    "@earendil-works/pi-coding-agent": "^0.75.0",
+    "@earendil-works/pi-ai": "^0.75.3",
+    "@earendil-works/pi-coding-agent": "^0.75.3",
     "@excalidraw/excalidraw": "^0.18.1",
     "@pierre/trees": "^1.0.0-beta.3",
     "@sinclair/typebox": "^0.34.49",

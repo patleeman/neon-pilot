@@ -2,6 +2,20 @@
 
 - fix: isolate dev/test daemon invocations with per-launch namespaces and ephemeral ports
 
+## 0.8.0-rc.19 — 2026-05-18
+
+### Highlights
+
+- Added the main conversation session tree view, including sidebar branch rendering and denser, calmer row styling.
+- Improved transcript navigation with a disclosure setting and tighter conversation view toggle alignment.
+- Render file change diffs inline for wrapped tool calls and emit write-file changes from the source operation.
+- Consolidated and hardened the agent tool surface, including provider-safe web tool names and object-shaped schemas.
+- Fixed release quality gates so Settings and extension smoke checks run before desktop RC publishing.
+
+### Notes
+
+- 31 commits since the previous release.
+
 ## 0.8.0-rc.18 — 2026-05-17
 
 - fix: restore unified node migration build
