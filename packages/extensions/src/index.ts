@@ -1,11 +1,126 @@
+/**
+ * Client surface available to native extension frontend components via the `pa` prop.
+ *
+ * Every capability here is stable and available in both desktop and web runtimes
+ * unless noted otherwise.
+ */
 export interface NativeExtensionClient {
+  /** Call backend actions and inspect this extension's own manifest/surfaces. */
   extension: {
     invoke(actionId: string, input?: unknown): Promise<unknown>;
     getManifest(): Promise<unknown>;
     listSurfaces(): Promise<unknown>;
   };
+  /** Automations (scheduled tasks). */
+  automations: {
+    list(): Promise<unknown[]>;
+    readSchedulerHealth(): Promise<unknown>;
+    get(taskId: string): Promise<unknown>;
+    create(input: unknown): Promise<unknown>;
+    update(taskId: string, input: unknown): Promise<unknown>;
+    delete(taskId: string): Promise<unknown>;
+    run(taskId: string): Promise<unknown>;
+    readLog(taskId: string): Promise<unknown>;
+  };
+  /** Conversation list access. */
+  conversations: {
+    list(): Promise<unknown>;
+  };
+  /** List available models. */
+  models(): Promise<unknown>;
+  /**
+   * Open a native OS folder picker dialog.
+   * Desktop-only; falls back to a HTTP endpoint on web.
+   *
+   * @param input.cwd  Starting directory for the picker.
+   * @param input.prompt  Label shown in the dialog title bar.
+   * @returns `{ path: string | null; cancelled: boolean }`
+   */
+  pickFolder(input?: { cwd?: string | null; prompt?: string | null }): Promise<{ path: string | null; cancelled: boolean }>;
+  /** Background execution management. */
+  executions: {
+    start(input: unknown): Promise<unknown>;
+    get(executionId: string): Promise<unknown>;
+    list(input?: { conversationId?: string | null }): Promise<unknown[]>;
+    readLog(executionId: string, tail?: number): Promise<unknown>;
+    cancel(executionId: string): Promise<unknown>;
+  };
+  /** @deprecated Use `executions`. */
+  runs: {
+    start(input: unknown): Promise<unknown>;
+    get(runId: string): Promise<unknown>;
+    list(): Promise<unknown[]>;
+    readLog(runId: string, tail?: number): Promise<unknown>;
+    cancel(runId: string): Promise<unknown>;
+  };
+  /** Extension-scoped key/value storage. Persisted across sessions. */
+  storage: {
+    get<T = unknown>(key: string): Promise<T | null>;
+    put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<unknown>;
+    delete(key: string): Promise<unknown>;
+    list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
+  };
+  /** Workspace filesystem helpers. */
+  workspace: {
+    tree(cwd: string, path?: string): Promise<unknown>;
+    readFile(cwd: string, path: string, opts?: { force?: boolean }): Promise<unknown>;
+    writeFile(cwd: string, path: string, content: string): Promise<unknown>;
+    createFile(cwd: string, path: string, content?: string): Promise<unknown>;
+    createFolder(cwd: string, path: string): Promise<unknown>;
+    deletePath(cwd: string, path: string): Promise<unknown>;
+    renamePath(cwd: string, path: string, newName: string): Promise<unknown>;
+    movePath(cwd: string, path: string, targetDir: string): Promise<unknown>;
+    diff(cwd: string, path: string): Promise<unknown>;
+    uncommittedDiff(cwd: string): Promise<unknown>;
+  };
+  /** Workbench split-pane state sharing between a right-rail view and its paired detail view. */
+  workbench: {
+    getDetailState<T = unknown>(surfaceId: string): T | null;
+    setDetailState(surfaceId: string, state: unknown): void;
+  };
+  /** Embedded browser control. Desktop-only. */
+  browser: {
+    isAvailable(): boolean;
+    getState(input?: { tabId?: string | null }): Promise<unknown>;
+    open(input: { url: string; tabId?: string | null }): Promise<unknown>;
+    goBack(input?: { tabId?: string | null }): Promise<unknown>;
+    goForward(input?: { tabId?: string | null }): Promise<unknown>;
+    reload(input?: { tabId?: string | null }): Promise<unknown>;
+    stop(input?: { tabId?: string | null }): Promise<unknown>;
+    snapshot(input?: { tabId?: string | null }): Promise<unknown>;
+  };
+  /** Command palette and app command execution. */
+  commands: {
+    execute(command: string, args?: unknown): Promise<boolean>;
+    list(): Promise<unknown[]>;
+    setContext(key: string, value: string | number | boolean | null | undefined): void;
+  };
+  /** Inter-extension event bus. */
+  events: {
+    /** Publish an event to all subscribers. */
+    publish(event: string, payload: unknown): void;
+    /** Subscribe to events matching a pattern. Supports `*` (all) and `namespace:*` (prefix). */
+    subscribe(pattern: string, handler: (event: { event: string; payload: unknown }) => void): { unsubscribe: () => void };
+  };
+  /** Cross-extension action invocation. */
+  extensions: {
+    callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown>;
+    listActions(): Promise<
+      Array<{ extensionId: string; extensionName: string; actions: Array<{ id: string; title?: string; description?: string }> }>
+    >;
+    getStatus(extensionId: string): Promise<{ enabled: boolean; healthy: boolean; errors?: string[] }>;
+  };
+  /** Selection state shared across surfaces. */
+  selection: {
+    get(): unknown;
+    set(selection: unknown): void;
+    subscribe(handler: (selection: unknown) => void): { unsubscribe: () => void };
+  };
+  /** UI utilities. */
   ui: {
-    toast(message: string): void;
+    toast(message: string, type?: 'info' | 'warning' | 'error'): void;
+    /** Post a richer notification with optional details and source attribution. */
+    notify(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
     confirm(options: { title?: string; message: string }): Promise<boolean>;
     openModal(options: {
       title?: string;
