@@ -2284,6 +2284,40 @@ describe('sessions', () => {
     ]);
   });
 
+  it('preserves execution wrapper annotations on persisted bash execution messages', () => {
+    const blocks = buildDisplayBlocksFromEntries([
+      {
+        id: 'bash-1',
+        timestamp: '2026-03-12T16:02:00.000Z',
+        message: {
+          role: 'bashExecution',
+          command: 'git status --short',
+          output: ' M src/index.ts',
+          details: {
+            executionWrappers: [
+              { id: 'shadowfax', label: 'Shadowfax' },
+              { id: 'repo-guard', label: 'Repo Guard' },
+            ],
+          },
+        },
+      },
+    ]);
+
+    expect(blocks).toEqual([
+      expect.objectContaining({
+        type: 'tool_use',
+        tool: 'bash',
+        details: expect.objectContaining({
+          displayMode: 'terminal',
+          executionWrappers: [
+            { id: 'shadowfax', label: 'Shadowfax' },
+            { id: 'repo-guard', label: 'Repo Guard' },
+          ],
+        }),
+      }),
+    ]);
+  });
+
   it('surfaces assistant error messages as error blocks', () => {
     const blocks = buildDisplayBlocksFromEntries([
       {

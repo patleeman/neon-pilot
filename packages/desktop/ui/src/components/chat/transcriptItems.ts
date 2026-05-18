@@ -1,5 +1,6 @@
 import type { MessageBlock } from '../../shared/types';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
+import { formatToolExecutionWrapperChain, readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers.js';
 import { isBackgroundShellStart } from './toolPresentation.js';
 
 export type TraceConversationBlock = Extract<MessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>;
@@ -74,10 +75,14 @@ function summarizeTraceCluster(blocks: TraceConversationBlock[]): TraceClusterSu
         break;
       case 'tool_use': {
         const backgroundShellStart = isBackgroundShellStart(block);
+        const wrapperChain = formatToolExecutionWrapperChain(readToolExecutionWrappers(block));
+        const toolLabel = backgroundShellStart ? 'bash · background task' : block.tool;
+        const label = wrapperChain ? `${wrapperChain} · ${toolLabel}` : toolLabel;
+        const key = `${backgroundShellStart ? 'tool:bash:background' : `tool:${block.tool}`}${wrapperChain ? `:wrappers:${wrapperChain}` : ''}`;
         addSummaryCategory(categories, {
-          key: backgroundShellStart ? 'tool:bash:background' : `tool:${block.tool}`,
+          key,
           kind: 'tool',
-          label: backgroundShellStart ? 'bash · background task' : block.tool,
+          label,
           tool: backgroundShellStart ? 'bash' : block.tool,
         });
         if (block.status === 'running' || block.running) {

@@ -765,6 +765,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function readExecutionWrappers(details: unknown): Array<{ id: string; label?: string }> {
+  if (!isRecord(details) || !Array.isArray(details.executionWrappers)) {
+    return [];
+  }
+
+  return details.executionWrappers.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const id = typeof item.id === 'string' && item.id.trim().length > 0 ? item.id.trim() : '';
+    if (!id) return [];
+    const label = typeof item.label === 'string' && item.label.trim().length > 0 ? item.label.trim() : undefined;
+    return [{ id, ...(label ? { label } : {}) }];
+  });
+}
+
 function resolveProviderCompactionLabel(details: unknown): string | undefined {
   if (!isRecord(details)) {
     return undefined;
@@ -1147,8 +1161,10 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
     if (role === 'bashExecution') {
       const commandText = typeof msg.message.command === 'string' ? msg.message.command : '';
       const outputText = typeof msg.message.output === 'string' ? msg.message.output : '';
+      const executionWrappers = readExecutionWrappers(msg.message.details);
       const bashDetails = {
         displayMode: 'terminal',
+        ...(executionWrappers.length > 0 ? { executionWrappers } : {}),
         ...(typeof msg.message.exitCode === 'number' ? { exitCode: msg.message.exitCode } : {}),
         ...(msg.message.cancelled === true ? { cancelled: true } : {}),
         ...(msg.message.truncated === true ? { truncated: true } : {}),

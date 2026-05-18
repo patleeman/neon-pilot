@@ -137,4 +137,53 @@ describe('chat transcript items', () => {
       },
     });
   });
+
+  it('includes chained execution wrappers in internal-work tool summaries', () => {
+    const items = buildChatRenderItems([
+      {
+        type: 'tool_use',
+        ts: '2026-03-12T18:00:01.000Z',
+        tool: 'bash',
+        input: {},
+        output: 'ok',
+        status: 'ok',
+        details: {
+          executionWrappers: [
+            { id: 'shadowfax', label: 'Shadowfax' },
+            { id: 'repo-guard', label: 'Repo Guard' },
+          ],
+        },
+      },
+      {
+        type: 'tool_use',
+        ts: '2026-03-12T18:00:02.000Z',
+        tool: 'bash',
+        input: {},
+        output: 'ok again',
+        status: 'ok',
+        details: {
+          executionWrappers: [
+            { id: 'shadowfax', label: 'Shadowfax' },
+            { id: 'repo-guard', label: 'Repo Guard' },
+          ],
+        },
+      },
+    ]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'trace_cluster',
+      summary: {
+        categories: [
+          {
+            key: 'tool:bash:wrappers:Shadowfax → Repo Guard',
+            kind: 'tool',
+            label: 'Shadowfax → Repo Guard · bash',
+            tool: 'bash',
+            count: 2,
+          },
+        ],
+      },
+    });
+  });
 });

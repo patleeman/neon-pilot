@@ -1,4 +1,5 @@
 import type { MessageBlock } from '../shared/types';
+import { readToolExecutionWrappers } from './toolExecutionWrappers.js';
 
 const TERMINAL_BASH_DISPLAY_MODE = 'terminal';
 
@@ -34,21 +35,6 @@ function readBoolean(value: Record<string, unknown> | null, key: string): boolea
   return value?.[key] === true;
 }
 
-function readExecutionWrappers(value: Record<string, unknown> | null): Array<{ id: string; label?: string }> {
-  const candidate = value?.executionWrappers;
-  if (!Array.isArray(candidate)) {
-    return [];
-  }
-
-  return candidate.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const id = readTrimmedString(item, 'id');
-    if (!id) return [];
-    const label = readTrimmedString(item, 'label');
-    return [{ id, ...(label ? { label } : {}) }];
-  });
-}
-
 export function readTerminalBashToolPresentation(block: MessageBlock | null | undefined): TerminalBashToolPresentation | null {
   if (!block || block.type !== 'tool_use' || block.tool !== 'bash') {
     return null;
@@ -78,9 +64,7 @@ export function readTerminalBashToolPresentation(block: MessageBlock | null | un
     truncated: readBoolean(details, 'truncated'),
     fullOutputPath: readTrimmedString(details, 'fullOutputPath'),
     excludeFromContext: readBoolean(details, 'excludeFromContext') || readBoolean(input, 'excludeFromContext'),
-    executionWrappers: readExecutionWrappers(details).concat(
-      readExecutionWrappers(input).filter((wrapper) => !readExecutionWrappers(details).some((item) => item.id === wrapper.id)),
-    ),
+    executionWrappers: readToolExecutionWrappers(block),
   };
 }
 

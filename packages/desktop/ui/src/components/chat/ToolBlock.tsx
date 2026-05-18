@@ -7,6 +7,7 @@ import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionTo
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import type { DurableRunListResult, MessageBlock } from '../../shared/types';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
+import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
@@ -84,6 +85,7 @@ export function ToolBlock({
   }, [block.tool, extensionRegistry.extensions]);
   const backgroundShellStart = isBackgroundShellStart(block);
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
+  const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
 
   if (terminalBashBlock) {
@@ -152,6 +154,11 @@ export function ToolBlock({
             background task
           </Pill>
         )}
+        {executionWrappers.map((wrapper) => (
+          <Pill key={wrapper.id} tone="accent" mono className="shrink-0">
+            {wrapper.label ?? wrapper.id}
+          </Pill>
+        ))}
         <span className="flex-1 truncate opacity-70 font-normal">{preview}</span>
         {block.durationMs && !isRunning && <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>}
         {isRunning ? (
