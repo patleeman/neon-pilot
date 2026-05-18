@@ -20,6 +20,7 @@ function nodeGlyph(node: ConversationSessionTreeNode): string {
   if (node.kind === 'session') return '◎';
   if (node.kind === 'message' && node.role === 'user') return 'u';
   if (node.kind === 'message' && node.role === 'assistant') return 'a';
+  if (node.kind === 'tool_call') return '⌁';
   if (node.kind === 'message' && node.role === 'toolResult') return '↳';
   if (node.kind === 'custom_message') return '◆';
   if (node.kind === 'branch_summary') return '⑂';
@@ -40,52 +41,13 @@ function formatNodeMeta(node: ConversationSessionTreeNode): string {
 }
 
 function buildTreeRows(nodes: ConversationSessionTreeNode[]): Array<{ node: ConversationSessionTreeNode; depth: number }> {
-  const visibleNodes = nodes.filter(
-    (node) => ['session', 'message', 'custom_message', 'compaction', 'branch_summary'].includes(node.kind) && node.role !== 'toolResult',
-  );
-  const visibleIdSet = new Set(visibleNodes.map((node) => node.id));
-  const rawNodeById = new Map(nodes.map((node) => [node.id, node] as const));
-  const childrenByParentId = new Map<string, ConversationSessionTreeNode[]>();
-  const roots: ConversationSessionTreeNode[] = [];
-
-  function nearestVisibleParentId(node: ConversationSessionTreeNode): string | null {
-    let parentId = node.parentId;
-    const seen = new Set<string>();
-    while (parentId && !seen.has(parentId)) {
-      if (visibleIdSet.has(parentId)) return parentId;
-      seen.add(parentId);
-      parentId = rawNodeById.get(parentId)?.parentId ?? null;
-    }
-    return null;
-  }
-
-  for (const node of visibleNodes) {
-    const parentId = nearestVisibleParentId(node);
-    if (!parentId) {
-      roots.push(node);
-      continue;
-    }
-    const children = childrenByParentId.get(parentId) ?? [];
-    children.push(node);
-    childrenByParentId.set(parentId, children);
-  }
-
-  const rows: Array<{ node: ConversationSessionTreeNode; depth: number }> = [];
-  const visited = new Set<string>();
-  function visit(node: ConversationSessionTreeNode, depth: number) {
-    if (visited.has(node.id)) return;
-    visited.add(node.id);
-    rows.push({ node, depth });
-    const children = childrenByParentId.get(node.id) ?? [];
-    const childDepth = children.length > 1 ? depth + 1 : depth;
-    for (const child of children) {
-      visit(child, childDepth);
-    }
-  }
-
-  for (const root of roots) visit(root, 0);
-  for (const node of visibleNodes) visit(node, 0);
-  return rows;
+  return nodes
+    .filter(
+      (node) =>
+        ['session', 'message', 'custom_message', 'tool_call', 'compaction', 'branch_summary'].includes(node.kind) &&
+        node.role !== 'toolResult',
+    )
+    .map((node) => ({ node, depth: 0 }));
 }
 
 export function ConversationSessionTreeView({ conversationId, onOpenNode }: ConversationSessionTreeViewProps) {

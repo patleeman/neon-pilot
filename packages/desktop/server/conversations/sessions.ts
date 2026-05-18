@@ -2166,6 +2166,16 @@ function rawContentIsOnlyToolCalls(content: RawMessageContent | undefined): bool
   return Array.isArray(content) && content.length > 0 && content.every((block) => block.type === 'toolCall');
 }
 
+function summarizeToolCalls(content: RawMessageContent | undefined): string | null {
+  if (!Array.isArray(content)) return null;
+  const names = content.flatMap((block) => (block.type === 'toolCall' && block.name ? [block.name] : []));
+  if (names.length === 0) return null;
+  const uniqueNames = [...new Set(names)];
+  const visibleNames = uniqueNames.slice(0, 6).join(', ');
+  const suffix = uniqueNames.length > 6 ? ` +${uniqueNames.length - 6}` : '';
+  return `${names.length} tool call${names.length === 1 ? '' : 's'} · ${visibleNames}${suffix}`;
+}
+
 function buildSessionTreeNode(line: RawLine, index: number): ConversationSessionTreeNode | null {
   if (line.type === 'session') {
     return {
@@ -2187,7 +2197,11 @@ function buildSessionTreeNode(line: RawLine, index: number): ConversationSession
     const role = line.message.role;
     const text = summarizeRawContent(line.message.content);
     const isToolCall = role === 'assistant' && rawContentIsOnlyToolCalls(line.message.content);
-    const title = role === 'toolResult' ? `${line.message.toolName ?? 'tool'} result` : text || `${role} message`;
+    const title = isToolCall
+      ? (summarizeToolCalls(line.message.content) ?? 'tool calls')
+      : role === 'toolResult'
+        ? `${line.message.toolName ?? 'tool'} result`
+        : text || `${role} message`;
     return {
       id,
       parentId,
