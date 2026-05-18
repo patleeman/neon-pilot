@@ -527,6 +527,38 @@ export interface SessionMeta {
   attachedContextDocs?: ConversationContextDocRef[];
 }
 
+export type ConversationSessionTreeNodeKind =
+  | 'session'
+  | 'message'
+  | 'custom_message'
+  | 'tool_call'
+  | 'compaction'
+  | 'branch_summary'
+  | 'model_change'
+  | 'thinking_level_change'
+  | 'session_info'
+  | 'custom'
+  | 'unknown';
+
+export interface ConversationSessionTreeNode {
+  id: string;
+  parentId: string | null;
+  kind: ConversationSessionTreeNodeKind;
+  role?: string;
+  title: string;
+  subtitle?: string;
+  timestamp?: string;
+  status?: string;
+  route?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConversationSessionTree {
+  conversationId: string;
+  title: string;
+  nodes: ConversationSessionTreeNode[];
+}
+
 // ── Gateways ─────────────────────────────────────────────────────────────────
 
 export type GatewayProviderId = 'telegram' | 'slack_mcp';

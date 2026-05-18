@@ -15,6 +15,7 @@ import {
   readSessionBlocksWithTelemetry,
   readSessionImageAsset,
   readSessionSearchText,
+  readSessionTree,
   renameStoredSession,
 } from './sessions.js';
 
@@ -1916,6 +1917,32 @@ describe('sessions', () => {
           sourceRunId: 'run-subagent-123',
         }),
       ]),
+    );
+  });
+
+  it('reads a normalized session tree from the session graph', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    writeSessionFile({
+      sessionsDir,
+      sessionId: 'tree-session',
+      title: 'Tree session',
+      assistantTexts: ['Assistant reply'],
+    });
+
+    const tree = readSessionTree('tree-session');
+
+    expect(tree).toEqual(
+      expect.objectContaining({
+        conversationId: 'tree-session',
+        title: 'Tree session',
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ kind: 'session', title: 'Session start' }),
+          expect.objectContaining({ kind: 'message', role: 'user', title: 'Tree session' }),
+          expect.objectContaining({ kind: 'message', role: 'assistant', title: 'Assistant reply' }),
+        ]),
+      }),
     );
   });
 

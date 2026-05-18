@@ -367,8 +367,6 @@ export function ActivityTreeView({
                     needsAttention={conversationNeedsAttention}
                   />
                 </span>
-              ) : depth > 0 && item.kind !== 'conversation' ? (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-border-subtle" aria-hidden="true" />
               ) : (
                 <span className="h-4 w-4 shrink-0" aria-hidden="true" />
               )}

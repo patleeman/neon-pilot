@@ -35,6 +35,7 @@ import type {
   ConversationContextDocRef,
   ConversationCwdChangeResult,
   ConversationRecoveryResult,
+  ConversationSessionTree,
   ConversationSummaryRecord,
   DaemonState,
   DefaultCwdState,
@@ -398,6 +399,7 @@ export const api = {
     }
     return get<SessionMeta>(`/sessions/${encodeURIComponent(id)}/meta`);
   },
+  sessionTree: async (id: string) => get<ConversationSessionTree>(`/sessions/${encodeURIComponent(id)}/tree`),
   sessionDetail: async (
     id: string,
     options?: {

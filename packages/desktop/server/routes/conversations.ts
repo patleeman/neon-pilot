@@ -41,7 +41,12 @@ import {
   readConversationSessionSearchIndexCapability,
 } from '../conversations/conversationSessionCapability.js';
 import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
-import { buildAppendOnlySessionDetailResponse, readSessionBlock, readSessionImageAsset } from '../conversations/sessions.js';
+import {
+  buildAppendOnlySessionDetailResponse,
+  readSessionBlock,
+  readSessionImageAsset,
+  readSessionTree,
+} from '../conversations/sessions.js';
 import { invalidateAppTopics, logError, logSlowConversationPerf, setServerTimingHeaders } from '../middleware/index.js';
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
 import type { ServerRouteContext } from './context.js';
@@ -152,6 +157,24 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
       }
 
       res.json(session);
+    } catch (err) {
+      logError('request handler error', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  router.get('/api/sessions/:id/tree', (req, res) => {
+    try {
+      const tree = readSessionTree(req.params.id);
+      if (!tree) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+      }
+
+      res.json(tree);
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),

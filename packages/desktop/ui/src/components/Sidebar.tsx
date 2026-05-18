@@ -2296,7 +2296,6 @@ export function Sidebar() {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({
       conversations: activityTreeSessions,
-      executions: executions?.executions ?? [],
     }).map((item) => {
       const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
       if (!conversationId) return item;
@@ -2351,7 +2350,6 @@ export function Sidebar() {
     return [...groupItems, ...groupedItems];
   }, [
     activityTreeSessions,
-    executions,
     groupedConversationRows,
     pendingExecutionConversationIdSet,
     pinnedIds,

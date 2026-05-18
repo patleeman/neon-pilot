@@ -26,7 +26,7 @@ The adapter lives at `packages/desktop/ui/src/activity/activityTree.ts` and curr
 
 `packages/desktop/ui/src/activity/activityTreePaths.ts` converts activity items into stable tree paths, and `ActivityTreeView.tsx` is the reusable native React renderer. The Threads sidebar renders workspace groups, conversations, child conversation branches, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes workspace actions plus conversation actions for open, parent navigation, pin/unpin, close, archive, copy, duplicate, and extension-provided conversation-list context menu items.
 
-Conversation branches are intentionally shown inline in the existing Threads sidebar instead of a separate graph view. Parent threads with children get a compact expander; selected descendants auto-reveal through the current tree path, while collapsed parents show a small child count so branchy conversations stay discoverable without eating horizontal space.
+Conversation branches are shown shallowly in the existing Threads sidebar. Parent threads with children get a compact expander; selected descendants auto-reveal through the current tree path, while collapsed parents show a small child count so branchy conversations stay discoverable without eating horizontal space. Detailed per-session topology lives in the main conversation panel's **Tree** view, which renders the session file graph directly instead of crowding the global sidebar.
 
 ## Execution boundary
 

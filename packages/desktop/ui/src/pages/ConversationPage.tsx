@@ -20,6 +20,7 @@ import {
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { ConversationQuestionShelf } from '../components/conversation/ConversationQuestionShelf';
 import { ConversationQueueShelf } from '../components/conversation/ConversationQueueShelf';
+import { ConversationSessionTreeView } from '../components/conversation/ConversationSessionTreeView';
 import { ConversationSavedHeader } from '../components/ConversationSavedHeader';
 import { addNotification } from '../components/notifications/notificationStore';
 import { AppPageEmptyState, cx, EmptyState, LoadingState, PageHeader, Pill } from '../components/ui';
@@ -1240,6 +1241,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [titleSaving, setTitleSaving] = useState(false);
+  const [conversationViewMode, setConversationViewMode] = useState<'chat' | 'tree'>('chat');
+  const showConversationTreeView = conversationViewMode === 'tree' && Boolean(id) && !draft;
+
+  const selectConversationViewMode = useCallback((mode: 'chat' | 'tree') => {
+    setConversationViewMode(mode);
+    if (mode === 'tree') {
+      setAppLayoutMode('compact');
+      writeAppLayoutMode('compact');
+    }
+  }, []);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const conversationHeaderRef = useRef<HTMLDivElement>(null);
@@ -5573,99 +5584,129 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         >
           <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-base/95 px-4 pt-3 backdrop-blur sm:px-6 sm:pt-4">
             <div className="mx-auto w-full max-w-6xl pb-3 pt-1">
-              <div className="max-w-4xl">
-                {isEditingTitle && !draft ? (
-                  <form
-                    className="-ml-3 flex max-w-4xl items-center gap-2 pr-4"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void saveTitleEdit();
-                    }}
-                  >
-                    <input
-                      ref={titleInputRef}
-                      value={titleDraft}
-                      onChange={(event) => setTitleDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          event.preventDefault();
-                          cancelTitleEdit();
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1 max-w-4xl">
+                  {isEditingTitle && !draft ? (
+                    <form
+                      className="-ml-3 flex max-w-4xl items-center gap-2 pr-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveTitleEdit();
+                      }}
+                    >
+                      <input
+                        ref={titleInputRef}
+                        value={titleDraft}
+                        onChange={(event) => setTitleDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            event.preventDefault();
+                            cancelTitleEdit();
+                          }
+                        }}
+                        placeholder="Name this conversation"
+                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
+                        disabled={titleSaving}
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={titleSaving}
+                        title={titleSaving ? 'Saving…' : 'Save title'}
+                        aria-label={titleSaving ? 'Saving title' : 'Save title'}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={cancelTitleEdit}
+                        disabled={titleSaving}
+                        title="Cancel title edit"
+                        aria-label="Cancel title edit"
+                      >
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="m18 6-12 12" />
+                          <path d="m6 6 12 12" />
+                        </svg>
+                      </button>
+                    </form>
+                  ) : draft ? (
+                    <h1 className="max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
+                      {title}
+                    </h1>
+                  ) : (
+                    <ConversationSavedHeader
+                      title={title}
+                      cwd={currentCwd}
+                      onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
+                      cwdEditing={false}
+                      cwdDraft={conversationCwdDraft}
+                      cwdError={null}
+                      cwdSaveBusy={conversationCwdBusy}
+                      onCwdDraftChange={(value) => {
+                        setConversationCwdDraft(value);
+                        if (conversationCwdError) {
+                          setConversationCwdError(null);
                         }
                       }}
-                      placeholder="Name this conversation"
-                      className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
-                      disabled={titleSaving}
+                      onCancelEditingCwd={cancelConversationCwdEdit}
+                      onSaveCwd={() => {
+                        void submitConversationCwdChange();
+                      }}
                     />
+                  )}
+                </div>
+                {!draft && id ? (
+                  <div className="mt-1 inline-flex shrink-0 rounded-lg border border-border-subtle bg-surface/70 p-0.5 text-[11px] text-secondary shadow-sm">
                     <button
-                      type="submit"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={titleSaving}
-                      title={titleSaving ? 'Saving…' : 'Save title'}
-                      aria-label={titleSaving ? 'Saving title' : 'Save title'}
+                      type="button"
+                      className={cx(
+                        'rounded-md px-2 py-1 transition-colors hover:text-primary',
+                        conversationViewMode === 'chat' ? 'bg-accent/20 text-primary' : 'hover:bg-surface-hover',
+                      )}
+                      onClick={() => selectConversationViewMode('chat')}
+                      title="Show transcript"
+                      aria-pressed={conversationViewMode === 'chat'}
                     >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
+                      Chat
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={cancelTitleEdit}
-                      disabled={titleSaving}
-                      title="Cancel title edit"
-                      aria-label="Cancel title edit"
+                      className={cx(
+                        'rounded-md px-2 py-1 transition-colors hover:text-primary',
+                        conversationViewMode === 'tree' ? 'bg-accent/20 text-primary' : 'hover:bg-surface-hover',
+                      )}
+                      onClick={() => selectConversationViewMode('tree')}
+                      title="Show session tree"
+                      aria-pressed={conversationViewMode === 'tree'}
                     >
-                      <svg
-                        width="17"
-                        height="17"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="m18 6-12 12" />
-                        <path d="m6 6 12 12" />
-                      </svg>
+                      Tree
                     </button>
-                  </form>
-                ) : draft ? (
-                  <h1 className="max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
-                    {title}
-                  </h1>
-                ) : (
-                  <ConversationSavedHeader
-                    title={title}
-                    cwd={currentCwd}
-                    onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
-                    cwdEditing={false}
-                    cwdDraft={conversationCwdDraft}
-                    cwdError={null}
-                    cwdSaveBusy={conversationCwdBusy}
-                    onCwdDraftChange={(value) => {
-                      setConversationCwdDraft(value);
-                      if (conversationCwdError) {
-                        setConversationCwdError(null);
-                      }
-                    }}
-                    onCancelEditingCwd={cancelConversationCwdEdit}
-                    onSaveCwd={() => {
-                      void submitConversationCwdChange();
-                    }}
-                  />
-                )}
+                  </div>
+                ) : null}
               </div>
               {conversationHeaderElements.length > 0 && (
                 <div className="flex items-center gap-2 pt-1">
@@ -5707,7 +5748,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               )}
             </div>
           </div>
-          {showBlockingConversationLoadingState ? (
+          {showConversationTreeView ? (
+            <ConversationSessionTreeView
+              conversationId={id}
+              onOpenNode={(nodeId) => {
+                const index = visibleTranscriptMessages?.findIndex((message) => 'id' in message && message.id === nodeId) ?? -1;
+                if (index >= 0) {
+                  selectConversationViewMode('chat');
+                  jumpToMessage(index);
+                }
+              }}
+            />
+          ) : showBlockingConversationLoadingState ? (
             <LoadingState label="Loading messages…" className="justify-center h-full" />
           ) : visibleTranscriptMessages ? (
             <>
@@ -5852,7 +5904,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             />
           )}
         </div>
-        {!showConversationLoadingState && showScrollToBottomControl && (
+        {!showConversationTreeView && !showConversationLoadingState && showScrollToBottomControl && (
           <button
             onClick={() => {
               scrollToBottom({ behavior: 'smooth', force: true });
@@ -5923,6 +5975,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       conversationCwdDraft,
       conversationCwdError,
       conversationHeaderOffset,
+      conversationViewMode,
+      selectConversationViewMode,
+      showConversationTreeView,
       currentCwd,
       isEditingTitle,
       renameConversationDisabled,
@@ -5978,7 +6033,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       {transcriptPane}
 
       {/* Input area */}
-      {!keyboardOpen && (
+      {!keyboardOpen && !showConversationTreeView && (
         <div
           className={`px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+1rem)] transition-colors ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}

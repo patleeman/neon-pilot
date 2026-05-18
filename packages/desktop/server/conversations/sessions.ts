@@ -2115,6 +2115,162 @@ export function buildDisplayMessageEntriesFromSessionEntries(entries: SessionEnt
   return displayEntries;
 }
 
+export interface ConversationSessionTreeNode {
+  id: string;
+  parentId: string | null;
+  kind:
+    | 'session'
+    | 'message'
+    | 'custom_message'
+    | 'tool_call'
+    | 'compaction'
+    | 'branch_summary'
+    | 'model_change'
+    | 'thinking_level_change'
+    | 'session_info'
+    | 'custom'
+    | 'unknown';
+  role?: string;
+  title: string;
+  subtitle?: string;
+  timestamp?: string;
+  status?: string;
+  route?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConversationSessionTree {
+  conversationId: string;
+  title: string;
+  nodes: ConversationSessionTreeNode[];
+}
+
+function summarizeRawContent(content: RawMessageContent | undefined): string {
+  if (typeof content === 'string') {
+    return content.replace(/\s+/g, ' ').trim().slice(0, 120);
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  const parts = content.flatMap((block) => {
+    if (block.type === 'text' && block.text) return [block.text];
+    if (block.type === 'thinking' && block.thinking) return [block.thinking];
+    if (block.type === 'toolCall') return [`${block.name ?? 'tool'} call`];
+    if (block.type === 'image') return ['image'];
+    return [];
+  });
+  return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+
+function buildSessionTreeNode(line: RawLine, index: number): ConversationSessionTreeNode | null {
+  if (line.type === 'session') {
+    return {
+      id: `session:${line.id}`,
+      parentId: null,
+      kind: 'session',
+      title: 'Session start',
+      subtitle: line.cwd,
+      timestamp: line.timestamp,
+      metadata: { sessionId: line.id, parentSession: line.parentSession },
+    };
+  }
+
+  const id = 'id' in line && typeof line.id === 'string' && line.id.trim() ? line.id.trim() : `line-${index}`;
+  const parentId = 'parentId' in line && typeof line.parentId === 'string' && line.parentId.trim() ? line.parentId.trim() : null;
+  const timestamp = 'timestamp' in line && line.timestamp !== undefined ? String(line.timestamp) : undefined;
+
+  if (line.type === 'message') {
+    const role = line.message.role;
+    const text = summarizeRawContent(line.message.content);
+    const title = role === 'toolResult' ? `${line.message.toolName ?? 'tool'} result` : text || `${role} message`;
+    return {
+      id,
+      parentId,
+      kind: 'message',
+      role,
+      title,
+      subtitle: role,
+      timestamp,
+      status: line.message.errorMessage ? 'failed' : line.message.stopReason,
+      metadata: { toolCallId: line.message.toolCallId, toolName: line.message.toolName, details: line.message.details },
+    };
+  }
+
+  if (line.type === 'custom_message') {
+    return {
+      id,
+      parentId,
+      kind: 'custom_message',
+      role: 'custom',
+      title: summarizeRawContent(line.content) || line.customType || 'custom message',
+      subtitle: line.customType,
+      timestamp,
+      metadata: { details: line.details, display: line.display },
+    };
+  }
+
+  if (line.type === 'compaction') {
+    return { id, parentId, kind: 'compaction', title: line.summary.slice(0, 120), subtitle: 'compaction', timestamp };
+  }
+
+  if (line.type === 'branch_summary') {
+    return {
+      id,
+      parentId,
+      kind: 'branch_summary',
+      title: line.summary.slice(0, 120),
+      subtitle: 'branch summary',
+      timestamp,
+      metadata: { fromId: line.fromId },
+    };
+  }
+
+  if (line.type === 'model_change') {
+    return { id, parentId, kind: 'model_change', title: line.modelId ?? 'model change', subtitle: 'model', timestamp };
+  }
+
+  if (line.type === 'thinking_level_change') {
+    return { id, parentId, kind: 'thinking_level_change', title: line.thinkingLevel ?? 'thinking level', subtitle: 'thinking', timestamp };
+  }
+
+  if (line.type === 'session_info') {
+    return { id, parentId, kind: 'session_info', title: normalizeSessionName(line.name) ?? 'session info', subtitle: 'name', timestamp };
+  }
+
+  if (line.type === 'custom') {
+    return {
+      id,
+      parentId,
+      kind: 'custom',
+      title: line.customType ?? 'custom event',
+      subtitle: 'custom',
+      timestamp,
+      metadata: { data: line.data },
+    };
+  }
+
+  return null;
+}
+
+export function readSessionTree(sessionId: string): ConversationSessionTree | null {
+  const meta = resolveSessionMeta(sessionId);
+  if (!meta) return null;
+
+  const raw = readFileSync(meta.file, 'utf-8');
+  const nodes: ConversationSessionTreeNode[] = [];
+  let index = 0;
+  for (const rawLine of raw.split('\n')) {
+    if (!rawLine.trim()) continue;
+    const line = parseJsonLine(rawLine);
+    if (!line) continue;
+    const node = buildSessionTreeNode(line, index);
+    if (node) nodes.push(node);
+    index += 1;
+  }
+
+  return { conversationId: meta.id, title: meta.title, nodes };
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export function listSessions(): SessionMeta[] {
