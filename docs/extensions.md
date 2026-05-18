@@ -163,6 +163,26 @@ The manifest declares what your extension contributes:
 | `composerAttachmentResolvers` | Backend resolvers for extension-owned attachment refs       | [See below](#composer-attachments)                                                        |
 | `activityTreeItemActions`     | Inline action buttons on thread/activity tree rows          | [See below](#activity-tree-item-actions-activitytreeitemactions)                          |
 
+### Standard file change metadata
+
+File-mutating tools should return standard `details.fileChanges` metadata when they can identify the exact mutation they performed. The desktop transcript renders this shape as an inline Pierre diff for any tool block, without requiring a tool-specific renderer.
+
+```ts
+type FileChange = {
+  path: string;
+  previousPath?: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'typechange' | 'unmerged' | 'changed';
+  additions: number;
+  deletions: number;
+  patch?: string; // unified diff for this exact tool call
+  truncated?: boolean;
+};
+
+return { text: 'Updated file.', details: { fileChanges: [change] } };
+```
+
+Omit `patch` and set `truncated: true` when the inline diff would bloat transcript state.
+
 ### Views
 
 Views are the primary way to add UI. Three locations:

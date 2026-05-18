@@ -9,6 +9,7 @@ import type { DurableRunListResult, MessageBlock } from '../../shared/types';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
+import { FileChangesToolDiff, readFileChanges } from './FileChangesToolDiff.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
@@ -87,6 +88,9 @@ export function ToolBlock({
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
+  const fileChanges = useMemo(() => readFileChanges(block.details), [block.details]);
+  const isRunning = block.status === 'running' || !!block.running;
+  const isError = block.status === 'error' || !!block.error;
 
   if (terminalBashBlock) {
     return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;
@@ -96,30 +100,31 @@ export function ToolBlock({
     // ask_user_question is handled as a local fallback below so the question
     // submit callback stays wired even when the extension isn't loaded yet.
     return (
-      <NativeExtensionToolBlockHost
-        extension={extensionRenderer.extension}
-        renderer={extensionRenderer.renderer}
-        block={block}
-        context={{
-          onOpenArtifact,
-          activeArtifactId,
-          onOpenCheckpoint,
-          activeCheckpointId,
-          onOpenBrowser,
-          messages,
-          messageIndex,
-          onSubmitAskUserQuestion,
-          askUserQuestionDisplayMode,
-          onHydrateMessage,
-          hydratingMessageBlockIds,
-        }}
-      />
+      <>
+        <NativeExtensionToolBlockHost
+          extension={extensionRenderer.extension}
+          renderer={extensionRenderer.renderer}
+          block={block}
+          context={{
+            onOpenArtifact,
+            activeArtifactId,
+            onOpenCheckpoint,
+            activeCheckpointId,
+            onOpenBrowser,
+            messages,
+            messageIndex,
+            onSubmitAskUserQuestion,
+            askUserQuestionDisplayMode,
+            onHydrateMessage,
+            hydratingMessageBlockIds,
+          }}
+        />
+        {fileChanges.length > 0 && !isRunning && !isError ? <FileChangesToolDiff fileChanges={fileChanges} /> : null}
+      </>
     );
   }
 
   // Normalise tool state across streamed and persisted entries.
-  const isRunning = block.status === 'running' || !!block.running;
-  const isError = block.status === 'error' || !!block.error;
   const output = block.output ?? '';
   const blockId = block.id?.trim();
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
@@ -228,6 +233,8 @@ export function ToolBlock({
           </div>
         </div>
       )}
+
+      {fileChanges.length > 0 && !isRunning && !isError ? <FileChangesToolDiff fileChanges={fileChanges} /> : null}
 
       {open && (
         <div className="border-t border-border-subtle/70">

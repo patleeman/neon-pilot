@@ -44,6 +44,39 @@ describe('applyPatch', () => {
     );
 
     expect(result.text).toContain('Applied patch to 4 files.');
+    expect(result.details.fileChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'app.txt',
+          status: 'modified',
+          additions: 1,
+          deletions: 1,
+          patch: expect.stringMatching(/diff --git a\/app\.txt b\/app\.txt[\s\S]* one\n-two\n\+TWO\n three/),
+        }),
+        expect.objectContaining({
+          path: 'added.txt',
+          status: 'added',
+          additions: 2,
+          deletions: 0,
+          patch: expect.stringContaining('+++ b/added.txt'),
+        }),
+        expect.objectContaining({
+          path: 'old.txt',
+          status: 'deleted',
+          additions: 0,
+          deletions: 1,
+          patch: expect.stringContaining('--- a/old.txt'),
+        }),
+        expect.objectContaining({
+          path: 'moved.txt',
+          previousPath: 'app.txt',
+          status: 'renamed',
+          additions: 1,
+          deletions: 1,
+          patch: expect.stringContaining('diff --git a/app.txt b/moved.txt'),
+        }),
+      ]),
+    );
     expect(readFileSync(join(cwd, 'moved.txt'), 'utf-8')).toBe('ONE\nTWO\nthree\n');
     expect(readFileSync(join(cwd, 'added.txt'), 'utf-8')).toBe('hello\nworld\n');
   });

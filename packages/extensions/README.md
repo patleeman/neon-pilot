@@ -362,6 +362,28 @@ Do not import backend handlers directly into frontend components. Browser/Node b
 
 Backend actions receive capability namespaces through `ctx`, including extension storage and backend-only capabilities such as workspace, git, shell, executions, automations, conversations, transcript block writing, and secrets where available. Use those seams instead of importing app internals. Frontend surfaces also receive `pa.selection` for shared text/message/file/transcript-range selection state.
 
+File-mutating actions should return standard `details.fileChanges` metadata when they can identify the exact mutation. The host transcript renders this shape as an inline Pierre diff for any tool result:
+
+```ts
+return {
+  text: 'Updated src/app.ts.',
+  details: {
+    fileChanges: [
+      {
+        path: 'src/app.ts',
+        previousPath: 'src/old-app.ts', // only for renames/moves
+        status: 'renamed',
+        additions: 4,
+        deletions: 2,
+        patch: 'diff --git a/src/old-app.ts b/src/app.ts\n...',
+      },
+    ],
+  },
+};
+```
+
+Use `truncated: true` and omit `patch` for huge diffs instead of stuffing giant blobs into transcript state.
+
 Use `ctx.executions` / `pa.executions` for durable async work. An execution is the product/API object for background commands, subagents, scheduled attempts, and other durable work. Durable runs are runtime storage plumbing; `ctx.runs` / `pa.runs` remain compatibility aliases for older extensions and should not be used for new code. Declare `executions:read`, `executions:start`, and/or `executions:cancel` permissions for new extension features.
 
 ## Composer slash commands

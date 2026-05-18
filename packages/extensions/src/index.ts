@@ -176,6 +176,23 @@ export type ExtensionPermission =
   | 'ui:notify'
   | `${string}:${string}`;
 
+export type ExtensionFileChangeStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'typechange' | 'unmerged' | 'changed';
+
+export interface ExtensionFileChangeMetadata {
+  path: string;
+  previousPath?: string;
+  status: ExtensionFileChangeStatus;
+  additions: number;
+  deletions: number;
+  /** Unified diff patch for this exact tool mutation. May be omitted when too large or unavailable. */
+  patch?: string;
+  truncated?: boolean;
+}
+
+export interface ExtensionFileChangesMetadata {
+  fileChanges: ExtensionFileChangeMetadata[];
+}
+
 export interface ExtensionFrontend {
   entry: string;
   styles?: string[];
