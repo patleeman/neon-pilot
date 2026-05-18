@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../client/api';
 import type { ConversationSessionTree, ConversationSessionTreeNode } from '../../shared/types';
@@ -26,6 +26,17 @@ function nodeGlyph(node: ConversationSessionTreeNode): string {
   if (node.kind === 'compaction') return '◌';
   if (node.kind === 'model_change') return 'm';
   return '•';
+}
+
+function formatNodeTime(timestamp: string | undefined): string | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatNodeMeta(node: ConversationSessionTreeNode): string {
+  return [node.subtitle ?? node.kind, node.status, formatNodeTime(node.timestamp)].filter(Boolean).join(' · ');
 }
 
 function buildTreeRows(nodes: ConversationSessionTreeNode[]): Array<{ node: ConversationSessionTreeNode; depth: number }> {
@@ -79,6 +90,7 @@ export function ConversationSessionTreeView({ conversationId, onOpenNode }: Conv
   const [tree, setTree] = useState<ConversationSessionTree | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +114,39 @@ export function ConversationSessionTreeView({ conversationId, onOpenNode }: Conv
 
   const rows = useMemo(() => buildTreeRows(tree?.nodes ?? []), [tree?.nodes]);
 
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [conversationId, rows.length]);
+
+  function handleTreeKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (rows.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.min(rows.length - 1, index + 1));
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelectedIndex((index) => Math.max(0, index - 1));
+      return;
+    }
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setSelectedIndex(0);
+      return;
+    }
+    if (event.key === 'End') {
+      event.preventDefault();
+      setSelectedIndex(rows.length - 1);
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const selected = rows[selectedIndex]?.node;
+      if (selected) onOpenNode?.(selected.id);
+    }
+  }
+
   if (loading) {
     return <div className="px-6 py-8 text-[13px] text-secondary">Loading session tree…</div>;
   }
@@ -111,42 +156,41 @@ export function ConversationSessionTreeView({ conversationId, onOpenNode }: Conv
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:px-6">
-      <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Session Tree</div>
-          <h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-primary">{tree?.title ?? 'Conversation'}</h2>
-        </div>
-        <div className="text-[11px] text-dim">{rows.length} nodes</div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-3 sm:px-6">
+      <div className="mb-2 flex items-center justify-between text-[11px] text-dim">
+        <div className="font-semibold uppercase tracking-[0.18em] text-accent">Session Tree</div>
+        <div>{rows.length} nodes · ↑↓ select · Enter open</div>
       </div>
 
-      <div className="rounded-2xl border border-border-subtle bg-surface/35 p-2">
+      <div>
         {rows.length === 0 ? (
           <div className="px-4 py-8 text-center text-[13px] text-secondary">No session tree nodes yet.</div>
         ) : (
-          <div role="tree" aria-label="Session tree" className="space-y-1">
-            {rows.map(({ node, depth }) => (
+          <div role="tree" aria-label="Session tree" tabIndex={0} className="outline-none" onKeyDown={handleTreeKeyDown}>
+            {rows.map(({ node, depth }, index) => (
               <button
                 key={node.id}
                 type="button"
                 role="treeitem"
-                className="group flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}
+                aria-selected={index === selectedIndex}
+                className={[
+                  'group flex h-6 w-full items-center gap-2 rounded-md px-1.5 text-left text-[12px] leading-6 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
+                  index === selectedIndex
+                    ? 'bg-accent/14 text-primary shadow-[inset_2px_0_0_rgb(var(--color-accent)/0.65)]'
+                    : 'text-secondary',
+                ].join(' ')}
+                style={{ paddingLeft: `${0.25 + depth * 1.125}rem` }}
+                onFocus={() => setSelectedIndex(index)}
                 onClick={() => onOpenNode?.(node.id)}
                 title={node.id}
               >
                 <span
-                  className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border border-border-subtle text-[9px] ${nodeTone(node)}`}
+                  className={`grid h-4 w-4 shrink-0 place-items-center rounded border border-border-subtle/80 text-[9px] ${nodeTone(node)}`}
                 >
                   {nodeGlyph(node)}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] leading-5 text-primary">{node.title || node.kind}</span>
-                  <span className="mt-0.5 flex min-w-0 items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-dim">
-                    <span>{node.subtitle ?? node.kind}</span>
-                    {node.status ? <span className={nodeTone(node)}>{node.status}</span> : null}
-                  </span>
-                </span>
+                <span className="min-w-0 flex-1 truncate text-primary">{node.title || node.kind}</span>
+                <span className={`shrink-0 truncate text-[10px] uppercase tracking-[0.1em] ${nodeTone(node)}`}>{formatNodeMeta(node)}</span>
               </button>
             ))}
           </div>
