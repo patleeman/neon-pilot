@@ -636,13 +636,20 @@ export function registerExtensionRoutes(
           return;
         }
       }
-      setExtensionEnabled(entry.manifest.id, enabled);
-      if (!enabled) {
+      let actionResult: Awaited<ReturnType<typeof invokeExtensionAction>> | undefined;
+      if (enabled) {
+        setExtensionEnabled(entry.manifest.id, true);
+        const onEnableAction = entry.manifest.backend?.onEnableAction;
+        actionResult = onEnableAction ? await invokeExtensionAction(entry.manifest.id, onEnableAction, {}, context) : undefined;
+      } else {
         const { stopExtensionServices } = await import('../extensions/extensionServices.js');
         await stopExtensionServices(entry.manifest.id);
+        const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
+        unregisterBashProcessWrapper(entry.manifest.id);
+        const onDisableAction = entry.manifest.backend?.onDisableAction;
+        actionResult = onDisableAction ? await invokeExtensionAction(entry.manifest.id, onDisableAction, {}, context) : undefined;
+        setExtensionEnabled(entry.manifest.id, false);
       }
-      const onEnableAction = enabled ? entry.manifest.backend?.onEnableAction : entry.manifest.backend?.onDisableAction;
-      const actionResult = onEnableAction ? await invokeExtensionAction(entry.manifest.id, onEnableAction, {}, context) : undefined;
       if (enabled) {
         const { startExtensionServices } = await import('../extensions/extensionServices.js');
         await startExtensionServices(context);

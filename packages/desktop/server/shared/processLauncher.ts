@@ -41,6 +41,12 @@ export function registerProcessWrapper(id: string, wrap: ProcessWrapper, options
   processWrappers.set(normalizedId, { id: normalizedId, label: options.label, wrap });
 }
 
+export function unregisterProcessWrapper(id: string): void {
+  const normalizedId = id.trim();
+  if (!normalizedId) return;
+  processWrappers.delete(normalizedId);
+}
+
 export function clearProcessWrappers(): void {
   processWrappers.clear();
 }

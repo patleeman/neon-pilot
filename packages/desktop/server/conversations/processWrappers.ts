@@ -5,4 +5,5 @@ export {
   clearProcessWrappers as clearBashProcessWrappers,
   listProcessWrappers as listBashProcessWrappers,
   registerProcessWrapper as registerBashProcessWrapper,
+  unregisterProcessWrapper as unregisterBashProcessWrapper,
 } from '../shared/processLauncher.js';
