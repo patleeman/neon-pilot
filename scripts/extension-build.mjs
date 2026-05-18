@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
-import { cpSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,10 +34,16 @@ if (manifest.schemaVersion !== 2) {
   process.exit(1);
 }
 
-// dist is generated. Clear it first so stale chunks, maps, and backend helper
-// files do not survive rebuilds and accidentally ship in packaged releases.
-rmSync(join(packageRoot, 'dist'), { recursive: true, force: true });
-mkdirSync(join(packageRoot, 'dist'), { recursive: true });
+// dist is generated, but build it atomically. Native sidecars and bundlers can
+// fail after doing real work; never delete the last good packaged extension
+// until the replacement dist is complete.
+const distPath = join(packageRoot, 'dist');
+const tempDistPath = join(packageRoot, `.dist.tmp-${process.pid}-${Date.now()}`);
+rmSync(tempDistPath, { recursive: true, force: true });
+mkdirSync(tempDistPath, { recursive: true });
+process.on('exit', () => {
+  rmSync(tempDistPath, { recursive: true, force: true });
+});
 
 const buildOutputs = [];
 buildNativeSidecarIfPresent();
@@ -45,7 +51,7 @@ copyStaticDirectoryIfPresent('bin', buildOutputs);
 
 const frontendSource = join(packageRoot, 'src', 'frontend.tsx');
 if (manifest.frontend?.entry && existsSync(frontendSource)) {
-  const outfile = join(packageRoot, manifest.frontend.entry);
+  const outfile = toBuildOutputPath(String(manifest.frontend.entry));
   mkdirSync(dirname(outfile), { recursive: true });
   const result = await build({
     entryPoints: [frontendSource],
@@ -78,7 +84,7 @@ if (manifest.frontend?.entry && existsSync(frontendSource)) {
 const backendSource = join(packageRoot, 'src', 'backend.ts');
 if (manifest.backend?.entry && existsSync(backendSource)) {
   const backendEntry = String(manifest.backend.entry);
-  const outfile = backendEntry.startsWith('src/') ? join(packageRoot, 'dist', 'backend.mjs') : join(packageRoot, backendEntry);
+  const outfile = backendEntry.startsWith('src/') ? join(tempDistPath, 'backend.mjs') : toBuildOutputPath(backendEntry);
   mkdirSync(dirname(outfile), { recursive: true });
   const result = await build({
     entryPoints: [backendSource],
@@ -124,6 +130,7 @@ if (manifest.backend?.entry && existsSync(backendSource)) {
 }
 
 writeBuildManifest(buildOutputs);
+commitTempDist();
 
 function platformBinarySuffix() {
   const platform = process.platform === 'darwin' ? 'macos' : process.platform;
@@ -155,9 +162,21 @@ function buildNativeSidecarIfPresent() {
 function copyStaticDirectoryIfPresent(name, buildOutputs) {
   const source = join(packageRoot, name);
   if (!existsSync(source)) return;
-  const destination = join(packageRoot, 'dist', name);
+  const destination = join(tempDistPath, name);
   cpSync(source, destination, { recursive: true });
   buildOutputs.push({ path: relativeToPackage(destination), bytes: 0, imports: [] });
+}
+
+function toBuildOutputPath(manifestRelativePath) {
+  const normalized = manifestRelativePath.replace(/^\.\//, '');
+  if (normalized === 'dist') return tempDistPath;
+  if (normalized.startsWith('dist/')) return join(tempDistPath, normalized.slice('dist/'.length));
+  return join(packageRoot, normalized);
+}
+
+function commitTempDist() {
+  rmSync(distPath, { recursive: true, force: true });
+  renameSync(tempDistPath, distPath);
 }
 
 function createFrontendRawCssPlugin() {
@@ -397,7 +416,7 @@ function recordBuildOutputs(buildOutputs, metafile) {
 }
 
 function writeBuildManifest(buildOutputs) {
-  writeJson(join(packageRoot, 'dist', 'build-manifest.json'), {
+  writeJson(join(tempDistPath, 'build-manifest.json'), {
     extensionId: manifest.id,
     builtAt: new Date().toISOString(),
     frontendEntry: manifest.frontend?.entry ?? null,
@@ -411,6 +430,8 @@ function writeJson(path, value) {
 }
 
 function relativeToPackage(path) {
+  if (path === tempDistPath) return 'dist';
+  if (path.startsWith(`${tempDistPath}/`)) return `dist/${path.slice(tempDistPath.length + 1)}`;
   return path.startsWith(`${packageRoot}/`) ? path.slice(packageRoot.length + 1) : path;
 }
 
