@@ -950,6 +950,13 @@ export async function invokeExtensionAction(
         message: `Cannot invoke action "${actionId}": extension "${extensionId}" is not installed.`,
       });
     }
+    if (!isExtensionEnabled(extensionId)) {
+      throw new ExtensionLoadError({
+        extensionId,
+        code: 'extension_disabled',
+        message: `Cannot invoke action "${actionId}": extension "${extensionId}" is disabled.`,
+      });
+    }
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
     const backend = await loadExtensionBackend(extensionId);

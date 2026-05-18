@@ -1,16 +1,54 @@
-import { dirname, resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
+import { invokeExtensionAction } from './extensionBackend.js';
 import {
   isPrebuiltOnlyExtensionRuntime,
   resolveExtensionBackendLoadTarget,
   resolvePrebuiltSystemExtensionBackend,
   shouldPreferPrebuiltSystemExtensionBackend,
 } from './extensionBackendLoadTarget.js';
+import { setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
+
+const ORIGINAL_STATE_ROOT = process.env.PERSONAL_AGENT_STATE_ROOT;
+
+afterEach(() => {
+  if (ORIGINAL_STATE_ROOT === undefined) delete process.env.PERSONAL_AGENT_STATE_ROOT;
+  else process.env.PERSONAL_AGENT_STATE_ROOT = ORIGINAL_STATE_ROOT;
+});
+
+describe('extension backend action invocation', () => {
+  it('refuses to invoke actions from disabled extensions before loading backend code', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'disabled-action-ext');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'disabled-action-ext',
+        name: 'Disabled Action Ext',
+        backend: {
+          entry: 'missing-backend.js',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    setExtensionEnabled('disabled-action-ext', false, stateRoot);
+
+    await expect(invokeExtensionAction('disabled-action-ext', 'doThing', {})).resolves.toEqual({
+      ok: false,
+      error: 'Cannot invoke action "doThing": extension "disabled-action-ext" is disabled.',
+    });
+  });
+});
 
 describe('extension backend load targeting', () => {
   it('prefers prebuilt system backends unless extension authoring mode is explicit', () => {
