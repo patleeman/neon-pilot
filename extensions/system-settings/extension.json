@@ -18,6 +18,14 @@
         "description": "Secret storage backend. Keychain is recommended on macOS; file is for dev/headless; env-only disables writes.",
         "group": "Security",
         "order": 1
+      },
+      "conversation.transcriptDisclosure": {
+        "type": "select",
+        "default": "auto",
+        "enum": ["auto", "expanded"],
+        "description": "Conversation transcript details. Auto keeps completed tool and thinking blocks collapsed; Expanded keeps them open.",
+        "group": "Conversation",
+        "order": 10
       }
     },
     "nav": [

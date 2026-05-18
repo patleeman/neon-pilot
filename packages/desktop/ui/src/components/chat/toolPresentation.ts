@@ -43,6 +43,14 @@ export function isBackgroundShellStart(block: Extract<MessageBlock, { type: 'too
 
 export type DisclosurePreference = 'auto' | 'open' | 'closed';
 
+export type ConversationTranscriptDisclosureMode = 'auto' | 'expanded';
+
+export const CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY = 'conversation.transcriptDisclosure';
+
+export function normalizeConversationTranscriptDisclosureMode(value: unknown): ConversationTranscriptDisclosureMode {
+  return value === 'expanded' ? 'expanded' : 'auto';
+}
+
 export function resolveDisclosureOpen(autoOpen: boolean, preference: DisclosurePreference): boolean {
   if (preference === 'open') return true;
   if (preference === 'closed') return false;
@@ -64,6 +72,20 @@ export function toggleDisclosurePreference(autoOpen: boolean, preference: Disclo
 
 export function shouldAutoOpenTraceCluster(live: boolean, hasRunning: boolean): boolean {
   return live || hasRunning;
+}
+
+export function resolveConversationBlockAutoOpen(
+  block: MessageBlock,
+  index: number,
+  total: number,
+  isStreaming: boolean,
+  mode: ConversationTranscriptDisclosureMode,
+): boolean {
+  if (mode === 'expanded' && (block.type === 'tool_use' || block.type === 'thinking')) {
+    return true;
+  }
+
+  return shouldAutoOpenConversationBlock(block, index, total, isStreaming);
 }
 
 export function shouldAutoOpenConversationBlock(block: MessageBlock, index: number, total: number, isStreaming: boolean): boolean {

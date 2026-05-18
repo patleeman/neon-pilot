@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { MessageBlock } from '../../shared/types';
 import {
   getStreamingStatusLabel,
+  normalizeConversationTranscriptDisclosureMode,
+  resolveConversationBlockAutoOpen,
   resolveDisclosureOpen,
   shouldAutoOpenConversationBlock,
   shouldAutoOpenTraceCluster,
@@ -47,6 +49,26 @@ describe('toolPresentation', () => {
     expect(shouldAutoOpenConversationBlock(runningTool, 0, 2, false)).toBe(true);
     expect(shouldAutoOpenConversationBlock(thinking, 1, 2, true)).toBe(true);
     expect(shouldAutoOpenConversationBlock(thinking, 0, 2, true)).toBe(false);
+  });
+
+  it('can force transcript tool and thinking details expanded', () => {
+    const completedTool: MessageBlock = {
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:00.000Z',
+      tool: 'bash',
+      input: {},
+      output: 'done',
+      status: 'done',
+    };
+    const thinking: MessageBlock = { type: 'thinking', ts: '2026-04-26T00:00:00.000Z', text: 'thinking' };
+    const text: MessageBlock = { type: 'text', ts: '2026-04-26T00:00:00.000Z', text: 'answer' };
+
+    expect(normalizeConversationTranscriptDisclosureMode('expanded')).toBe('expanded');
+    expect(normalizeConversationTranscriptDisclosureMode('bogus')).toBe('auto');
+    expect(resolveConversationBlockAutoOpen(completedTool, 0, 3, false, 'auto')).toBe(false);
+    expect(resolveConversationBlockAutoOpen(completedTool, 0, 3, false, 'expanded')).toBe(true);
+    expect(resolveConversationBlockAutoOpen(thinking, 0, 3, false, 'expanded')).toBe(true);
+    expect(resolveConversationBlockAutoOpen(text, 2, 3, false, 'expanded')).toBe(false);
   });
 
   it('describes streaming state from the latest block', () => {

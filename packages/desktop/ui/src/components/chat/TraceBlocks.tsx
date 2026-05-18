@@ -7,9 +7,10 @@ import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
 import {
+  type ConversationTranscriptDisclosureMode,
   type DisclosurePreference,
+  resolveConversationBlockAutoOpen,
   resolveDisclosureOpen,
-  shouldAutoOpenConversationBlock,
   shouldAutoOpenTraceCluster,
   toggleDisclosurePreference,
   toolMeta,
@@ -159,6 +160,7 @@ export function TraceClusterBlock({
   resumeBusy,
   resumeTitle,
   resumeLabel,
+  transcriptDisclosureMode,
 }: {
   blocks: TraceConversationBlock[];
   summary: TraceClusterSummary;
@@ -173,6 +175,7 @@ export function TraceClusterBlock({
   resumeBusy?: boolean;
   resumeTitle?: string | null;
   resumeLabel?: string;
+  transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllBlocks, setShowAllBlocks] = useState(false);
@@ -183,7 +186,7 @@ export function TraceClusterBlock({
   const stableActive = useGracefulTraceClusterActive(isActive);
   const throughputLabel = useMemo(() => getStreamingThroughputLabel(blocks, stableActive), [blocks, stableActive]);
   const title = stableActive ? 'Working' : 'Internal work';
-  const autoOpen = shouldAutoOpenTraceCluster(stableActive, false);
+  const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const runningBlockIndex = useMemo(
     () => blocks.findIndex((block) => block.type === 'tool_use' && (block.status === 'running' || !!block.running)),
@@ -273,7 +276,7 @@ export function TraceClusterBlock({
           )}
           {visibleBlocks.map((block, index) => {
             const blockIndex = open ? visibleStartIndex + index : runningBlockIndex;
-            const autoOpen = shouldAutoOpenConversationBlock(block, blockIndex, blocks.length, stableActive);
+            const autoOpen = resolveConversationBlockAutoOpen(block, blockIndex, blocks.length, stableActive, transcriptDisclosureMode);
 
             switch (block.type) {
               case 'thinking':

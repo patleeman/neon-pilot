@@ -84,6 +84,10 @@ Knowledge setup lives in the Knowledge extension and is surfaced in Settings
 through its component-backed Knowledge Base panel. Manifest-declared extension
 settings render in the Settings page's Extension Settings section.
 
+The first-party Conversation extension setting `conversation.transcriptDisclosure`
+controls whether transcript tool/thinking details use auto-collapse or stay
+expanded by default.
+
 ## Usage
 
 ### Accessing settings from a backend action

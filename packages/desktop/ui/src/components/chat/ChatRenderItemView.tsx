@@ -7,7 +7,7 @@ import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
 import { AssistantMessage, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
 import type { ReplySelectionGestureHandler } from './replySelection.js';
 import { ToolBlock } from './ToolBlock.js';
-import { shouldAutoOpenConversationBlock } from './toolPresentation.js';
+import { type ConversationTranscriptDisclosureMode, resolveConversationBlockAutoOpen } from './toolPresentation.js';
 import { ErrorBlock, SubagentBlock, ThinkingBlock, TraceClusterBlock } from './TraceBlocks.js';
 import type { ChatRenderItem } from './transcriptItems.js';
 
@@ -42,6 +42,7 @@ export function ChatRenderItemView({
   onToggleInlineRun,
   onInspectImage,
   onSelectionGesture,
+  transcriptDisclosureMode,
 }: {
   item: ChatRenderItem;
   itemIndex: number;
@@ -73,6 +74,7 @@ export function ChatRenderItemView({
   onToggleInlineRun: (inlineRunKey: string) => void;
   onInspectImage: (image: InspectableImage) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
+  transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
 }) {
   const isTailItem = itemIndex === renderItemsLength - 1;
 
@@ -103,6 +105,7 @@ export function ChatRenderItemView({
           resumeBusy={resumeConversationBusy}
           resumeTitle={resumeConversationTitle}
           resumeLabel={resumeConversationLabel}
+          transcriptDisclosureMode={transcriptDisclosureMode}
         />
       </div>
     );
@@ -110,7 +113,7 @@ export function ChatRenderItemView({
 
   const block = item.block;
   const absoluteIndex = messageIndexOffset + item.index;
-  const autoOpen = shouldAutoOpenConversationBlock(block, item.index, messages.length, isStreaming);
+  const autoOpen = resolveConversationBlockAutoOpen(block, item.index, messages.length, isStreaming, transcriptDisclosureMode);
   const showStreamingCursor = isStreaming && block.type === 'text' && item.index === messages.length - 1;
 
   const el = (() => {

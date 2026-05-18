@@ -1,7 +1,9 @@
 import React, { memo, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
+import { api } from '../../client/api';
 import { recordChatRenderTiming } from '../../client/perfDiagnostics';
 import { type ExtensionSelectionActionRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import { useApi } from '../../hooks/useApi';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import { ChatRenderItemView } from './ChatRenderItemView.js';
@@ -10,7 +12,11 @@ import type { ChatViewLayout } from './chatViewTypes.js';
 import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChatChunk } from './chatWindowing.js';
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
 import { SystemPromptMessage } from './MessageBlocks.js';
-import { getStreamingStatusLabel } from './toolPresentation.js';
+import {
+  CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY,
+  getStreamingStatusLabel,
+  normalizeConversationTranscriptDisclosureMode,
+} from './toolPresentation.js';
 import { buildChatRenderItems, type ChatRenderItem } from './transcriptItems.js';
 import { type TranscriptSelectionAction, useChatReplySelection } from './useChatReplySelection.js';
 import { useChatWindowing } from './useChatWindowing.js';
@@ -138,6 +144,10 @@ export const ChatView = memo(function ChatView({
   const renderStartedAtRef = useRef(performance.now());
   renderStartedAtRef.current = performance.now();
   const extensionRegistry = useExtensionRegistry();
+  const { data: settingsValues } = useApi<Record<string, unknown>>(api.settings as never, undefined, { notifyOnError: false });
+  const transcriptDisclosureMode = normalizeConversationTranscriptDisclosureMode(
+    settingsValues?.[CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY],
+  );
   const standaloneTools = useMemo(() => {
     const tools = new Set<string>();
     for (const extension of extensionRegistry.extensions) {
@@ -306,6 +316,7 @@ export const ChatView = memo(function ChatView({
       onToggleInlineRun={toggleInlineRun}
       onInspectImage={setSelectedImage}
       onSelectionGesture={scheduleReplySelectionSync}
+      transcriptDisclosureMode={transcriptDisclosureMode}
     />
   );
 
