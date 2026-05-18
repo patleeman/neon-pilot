@@ -13,10 +13,36 @@
     "entry": "dist/backend.mjs",
     "agentExtension": "skillsManagerAgentExtension",
     "actions": [
-      { "id": "listSkills", "handler": "listSkills", "title": "List all skills" },
-      { "id": "toggleSkill", "handler": "toggleSkill", "title": "Toggle skill enabled/disabled" },
-      { "id": "readSkillFile", "handler": "readSkillFile", "title": "Read skill file content" },
-      { "id": "writeSkillFile", "handler": "writeSkillFile", "title": "Write skill file content" }
+      {
+        "id": "listSkills",
+        "handler": "listSkills",
+        "title": "List all skills"
+      },
+      {
+        "id": "toggleSkill",
+        "handler": "toggleSkill",
+        "title": "Toggle skill enabled/disabled"
+      },
+      {
+        "id": "readSkillFile",
+        "handler": "readSkillFile",
+        "title": "Read skill file content"
+      },
+      {
+        "id": "writeSkillFile",
+        "handler": "writeSkillFile",
+        "title": "Write skill file content"
+      },
+      {
+        "id": "readSkillFolders",
+        "handler": "readSkillFolders",
+        "title": "Read skill folder paths"
+      },
+      {
+        "id": "writeSkillFolders",
+        "handler": "writeSkillFolders",
+        "title": "Write skill folder paths"
+      }
     ]
   },
   "contributes": {

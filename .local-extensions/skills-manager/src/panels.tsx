@@ -15,6 +15,11 @@ interface SkillEntry {
   enabled: boolean;
 }
 
+interface SkillFoldersState {
+  configFile: string;
+  skillDirs: string[];
+}
+
 type FilterTab = 'all' | 'extension' | 'vault' | 'enabled' | 'disabled';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -52,6 +57,29 @@ function SaveIcon() {
   );
 }
 
+function FolderIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 2H13a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 14H3.5A1.5 1.5 0 0 1 2 12.5v-8Z" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={cx('h-3.5 w-3.5 transition-transform', open && 'rotate-90')}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="M6 4l4 4-4 4" />
+    </svg>
+  );
+}
+
 // ── Status toggle ─────────────────────────────────────────────────────────────
 
 function StatusToggle({ enabled, busy, onToggle }: { enabled: boolean; busy: boolean; onToggle: () => void }) {
@@ -81,6 +109,189 @@ function StatusToggle({ enabled, busy, onToggle }: { enabled: boolean; busy: boo
       </span>
       <span>{enabled ? 'Enabled' : 'Disabled'}</span>
     </button>
+  );
+}
+
+// ── Skill folders panel ───────────────────────────────────────────────────────
+
+function SkillFoldersPanel({ pa }: { pa: ExtensionSurfaceProps['pa'] }) {
+  const [open, setOpen] = useState(false);
+  const [state, setState] = useState<SkillFoldersState | null>(null);
+  const [draft, setDraft] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = (await pa.extension.invoke('readSkillFolders', {})) as SkillFoldersState & { ok: boolean };
+      setState(result);
+      setDraft(result.skillDirs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load skill folders');
+    } finally {
+      setLoading(false);
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    if (open && !state) void load();
+  }, [open, state, load]);
+
+  const save = useCallback(
+    async (dirs: string[]) => {
+      setSaving(true);
+      setError(null);
+      try {
+        const result = (await pa.extension.invoke('writeSkillFolders', { skillDirs: dirs })) as SkillFoldersState & {
+          ok: boolean;
+        };
+        setState(result);
+        setDraft(result.skillDirs);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save skill folders');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [pa],
+  );
+
+  const handleAdd = useCallback(() => {
+    setDraft((prev) => [...prev, '']);
+  }, []);
+
+  const handleChange = useCallback((index: number, value: string) => {
+    setDraft((prev) => prev.map((d, i) => (i === index ? value : d)));
+  }, []);
+
+  const handleRemove = useCallback(
+    (index: number) => {
+      const next = draft.filter((_, i) => i !== index);
+      setDraft(next);
+      void save(next);
+    },
+    [draft, save],
+  );
+
+  const handleMove = useCallback(
+    (index: number, direction: -1 | 1) => {
+      const next = [...draft];
+      const swap = index + direction;
+      if (swap < 0 || swap >= next.length) return;
+      [next[index], next[swap]] = [next[swap], next[index]];
+      setDraft(next);
+      void save(next);
+    },
+    [draft, save],
+  );
+
+  const handleBlur = useCallback(
+    (index: number) => {
+      const trimmed = draft[index]?.trim();
+      if (!trimmed) {
+        // Remove empty entry on blur
+        const next = draft.filter((_, i) => i !== index);
+        setDraft(next);
+        void save(next);
+      } else {
+        void save(draft);
+      }
+    },
+    [draft, save],
+  );
+
+  return (
+    <div className="border-t border-border-subtle">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 px-6 py-3 text-left transition-colors hover:bg-base/40"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <ChevronIcon open={open} />
+        <FolderIcon />
+        <span className="text-[13px] font-medium text-primary">Skill source folders</span>
+        <span className="ml-1 text-[12px] text-dim">
+          {state ? `${state.skillDirs.length} extra ${state.skillDirs.length === 1 ? 'folder' : 'folders'}` : ''}
+        </span>
+      </button>
+
+      {open ? (
+        <div className="border-t border-border-subtle bg-base/30 px-6 py-4">
+          {loading ? (
+            <p className="text-[12px] text-dim">Loading…</p>
+          ) : (
+            <>
+              <p className="mb-3 text-[12px] text-secondary">
+                Extra folders scanned for skills alongside the root vault directory. Configured in{' '}
+                <span className="font-mono text-[11px] text-dim">{state?.configFile ?? '…'}</span>.
+              </p>
+
+              {draft.length === 0 ? (
+                <p className="mb-3 text-[12px] text-dim">No extra skill folders configured.</p>
+              ) : (
+                <div className="mb-3 space-y-2">
+                  {draft.map((path, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={path}
+                        onChange={(e) => handleChange(index, e.target.value)}
+                        onBlur={() => handleBlur(index)}
+                        placeholder="/path/to/skills"
+                        className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[12px] text-primary outline-none focus:border-border focus:ring-1 focus:ring-border"
+                        disabled={saving}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleMove(index, -1)}
+                        disabled={saving || index === 0}
+                        className="text-[12px] text-dim disabled:opacity-30 hover:text-primary"
+                        title="Move up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(index, 1)}
+                        disabled={saving || index === draft.length - 1}
+                        className="text-[12px] text-dim disabled:opacity-30 hover:text-primary"
+                        title="Move down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(index)}
+                        disabled={saving}
+                        className="text-[12px] text-dim disabled:opacity-30 hover:text-danger"
+                        title="Remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={saving}
+                  className="rounded-lg border border-border-subtle px-3 py-1.5 text-[12px] text-secondary transition-colors hover:bg-base hover:text-primary disabled:opacity-50"
+                >
+                  Add folder
+                </button>
+                {saving ? <span className="text-[12px] text-dim">Saving…</span> : null}
+                {error ? <span className="text-[12px] text-danger">{error}</span> : null}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -296,7 +507,6 @@ export function SkillsManagerPage({ pa }: ExtensionSurfaceProps) {
     async (skill: SkillEntry) => {
       setBusyId(skill.id);
       const nextEnabled = !skill.enabled;
-      // Optimistic update
       setSkills((prev) => prev.map((s) => (s.id === skill.id ? { ...s, enabled: nextEnabled } : s)));
       if (selectedSkill?.id === skill.id) {
         setSelectedSkill((s) => (s ? { ...s, enabled: nextEnabled } : s));
@@ -304,7 +514,6 @@ export function SkillsManagerPage({ pa }: ExtensionSurfaceProps) {
       try {
         await pa.extension.invoke('toggleSkill', { skillId: skill.id, enabled: nextEnabled });
       } catch {
-        // Revert on failure
         setSkills((prev) => prev.map((s) => (s.id === skill.id ? { ...s, enabled: skill.enabled } : s)));
         if (selectedSkill?.id === skill.id) {
           setSelectedSkill((s) => (s ? { ...s, enabled: skill.enabled } : s));
@@ -358,72 +567,80 @@ export function SkillsManagerPage({ pa }: ExtensionSurfaceProps) {
           selectedSkill ? 'w-[480px] min-w-[320px] border-r border-border-subtle' : 'flex-1',
         )}
       >
-        <div className="h-full overflow-y-auto">
-          <AppPageLayout contentClassName="flex min-h-full flex-col gap-6">
-            <div className="flex items-start justify-between">
-              <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent's context." />
-            </div>
-
-            {/* Filter tabs */}
-            <div className="flex items-center gap-1 border-b border-border-subtle pb-0">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setFilter(tab.id)}
-                  className={cx(
-                    'rounded-t px-3 py-1.5 text-[12px] font-medium transition-colors',
-                    filter === tab.id ? 'border-b-2 border-primary text-primary' : 'text-secondary hover:text-primary',
-                  )}
-                >
-                  {tab.label}
-                  {counts[tab.id] > 0 ? <span className="ml-1.5 text-[11px] text-dim">{counts[tab.id]}</span> : null}
-                </button>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="relative">
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search skills…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-border-subtle bg-base px-3 py-2 text-[12px] text-primary placeholder-dim outline-none focus:border-border focus:ring-1 focus:ring-border"
-              />
-            </div>
-
-            {/* List */}
-            {loading ? (
-              <div className="flex flex-1 items-center justify-center py-12 text-[12px] text-dim">Loading skills…</div>
-            ) : error ? (
-              <div className="rounded-lg bg-danger/10 px-4 py-3 text-[12px] text-danger">{error}</div>
-            ) : filteredSkills.length === 0 ? (
-              <div className="py-12 text-center text-[12px] text-dim">
-                {search ? `No skills match "${search}"` : 'No skills in this category.'}
+        <div className="flex h-full flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <AppPageLayout contentClassName="flex min-h-full flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <AppPageIntro
+                  title="Skills"
+                  summary="Enable or disable agent skills. Disabled skills are hidden from the agent's context."
+                />
               </div>
-            ) : (
-              <div className="-mx-6 -mb-6">
-                {/* Table header */}
-                <div className="grid grid-cols-[1fr_auto] border-b border-border-subtle px-6 py-2">
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-dim">Name</span>
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-dim">Status</span>
-                </div>
-                {filteredSkills.map((skill) => (
-                  <SkillRow
-                    key={skill.id}
-                    skill={skill}
-                    selected={selectedSkill?.id === skill.id}
-                    busy={busyId === skill.id}
-                    onSelect={() => setSelectedSkill((prev) => (prev?.id === skill.id ? null : skill))}
-                    onToggle={() => void handleToggle(skill)}
-                    onEdit={() => setSelectedSkill(skill)}
-                  />
+
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1 border-b border-border-subtle pb-0">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setFilter(tab.id)}
+                    className={cx(
+                      'rounded-t px-3 py-1.5 text-[12px] font-medium transition-colors',
+                      filter === tab.id ? 'border-b-2 border-primary text-primary' : 'text-secondary hover:text-primary',
+                    )}
+                  >
+                    {tab.label}
+                    {counts[tab.id] > 0 ? <span className="ml-1.5 text-[11px] text-dim">{counts[tab.id]}</span> : null}
+                  </button>
                 ))}
               </div>
-            )}
-          </AppPageLayout>
+
+              {/* Search */}
+              <div className="relative">
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder="Search skills…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full rounded-lg border border-border-subtle bg-base px-3 py-2 text-[12px] text-primary placeholder-dim outline-none focus:border-border focus:ring-1 focus:ring-border"
+                />
+              </div>
+
+              {/* List */}
+              {loading ? (
+                <div className="flex flex-1 items-center justify-center py-12 text-[12px] text-dim">Loading skills…</div>
+              ) : error ? (
+                <div className="rounded-lg bg-danger/10 px-4 py-3 text-[12px] text-danger">{error}</div>
+              ) : filteredSkills.length === 0 ? (
+                <div className="py-12 text-center text-[12px] text-dim">
+                  {search ? `No skills match "${search}"` : 'No skills in this category.'}
+                </div>
+              ) : (
+                <div className="-mx-6 -mb-6">
+                  {/* Table header */}
+                  <div className="grid grid-cols-[1fr_auto] border-b border-border-subtle px-6 py-2">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-dim">Name</span>
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-dim">Status</span>
+                  </div>
+                  {filteredSkills.map((skill) => (
+                    <SkillRow
+                      key={skill.id}
+                      skill={skill}
+                      selected={selectedSkill?.id === skill.id}
+                      busy={busyId === skill.id}
+                      onSelect={() => setSelectedSkill((prev) => (prev?.id === skill.id ? null : skill))}
+                      onToggle={() => void handleToggle(skill)}
+                      onEdit={() => setSelectedSkill(skill)}
+                    />
+                  ))}
+                </div>
+              )}
+            </AppPageLayout>
+          </div>
+
+          {/* Skill source folders — pinned to bottom of list column */}
+          <SkillFoldersPanel pa={pa} />
         </div>
       </div>
 

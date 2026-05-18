@@ -1442,12 +1442,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const { settingsComponents } = useExtensionRegistry();
   const { theme, themePreference, lightTheme, darkTheme, availableThemes, setThemePreference, setLightTheme, setDarkTheme } = useTheme();
   const {
-    data: skillFoldersState,
-    loading: skillFoldersLoading,
-    error: skillFoldersError,
-    refetch: refetchSkillFolders,
-  } = useApi(api.skillFolders);
-  const {
     data: instructionFilesState,
     loading: instructionFilesLoading,
     error: instructionFilesError,
@@ -1472,9 +1466,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     error: providerAuthError,
     refetch: refetchProviderAuth,
   } = useApi(api.providerAuth);
-  const [skillFoldersDraft, setSkillFoldersDraft] = useState<string[]>([]);
-  const [savingSkillFolders, setSavingSkillFolders] = useState(false);
-  const [skillFoldersSaveError, setSkillFoldersSaveError] = useState<string | null>(null);
   const [instructionFilesDraft, setInstructionFilesDraft] = useState<string[]>([]);
   const [savingInstructionFiles, setSavingInstructionFiles] = useState(false);
   const [instructionFilesSaveError, setInstructionFilesSaveError] = useState<string | null>(null);
@@ -1483,7 +1474,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [defaultCwdDraft, setDefaultCwdDraft] = useState('');
   const [savingDefaultCwd, setSavingDefaultCwd] = useState(false);
   const [defaultCwdSaveError, setDefaultCwdSaveError] = useState<string | null>(null);
-  const [pathPickerTarget, setPathPickerTarget] = useState<'default-cwd' | 'skill-folders' | 'instruction-files' | null>(null);
+  const [pathPickerTarget, setPathPickerTarget] = useState<'default-cwd' | 'instruction-files' | null>(null);
   const [selectedModelProviderId, setSelectedModelProviderId] = useState('');
   const [providerEditorMode, setProviderEditorMode] = useState<'provider' | 'custom'>('custom');
   const [modelProviderPickerId, setModelProviderPickerId] = useState('');
@@ -1763,16 +1754,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, [editableModelProviderId, providerAuthState]);
 
   const defaultCwdDirty = defaultCwdState ? defaultCwdDraft.trim() !== defaultCwdState.currentCwd : false;
-  const skillFoldersDirty = skillFoldersState
-    ? skillFoldersDraft.length !== skillFoldersState.skillDirs.length ||
-      skillFoldersDraft.some((value, index) => value !== skillFoldersState.skillDirs[index])
-    : false;
   const instructionFilesDirty = instructionFilesState
     ? instructionFilesDraft.length !== instructionFilesState.instructionFiles.length ||
       instructionFilesDraft.some((value, index) => value !== instructionFilesState.instructionFiles[index])
     : false;
   const pickingDefaultCwd = pathPickerTarget === 'default-cwd';
-  const pickingSkillFolders = pathPickerTarget === 'skill-folders';
   const pickingInstructionFiles = pathPickerTarget === 'instruction-files';
 
   useEffect(() => {
@@ -1780,12 +1766,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setDefaultCwdDraft(defaultCwdState.currentCwd);
     }
   }, [defaultCwdState?.currentCwd]);
-
-  useEffect(() => {
-    if (skillFoldersState) {
-      setSkillFoldersDraft(skillFoldersState.skillDirs);
-    }
-  }, [skillFoldersState?.configFile, skillFoldersState?.skillDirs]);
 
   useEffect(() => {
     if (instructionFilesState) {
@@ -1938,70 +1918,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
   const selectedProviderLogin =
     oauthLoginState && selectedProvider && oauthLoginState.provider === selectedProvider.id ? oauthLoginState : null;
-
-  async function handleAddSkillFolder() {
-    if (!skillFoldersState || savingSkillFolders || pickingSkillFolders) {
-      return;
-    }
-
-    setSkillFoldersSaveError(null);
-    setPathPickerTarget('skill-folders');
-
-    try {
-      const result = await api.pickFolder({
-        cwd: defaultCwdState?.effectiveCwd,
-        prompt: 'Choose skill folder',
-      });
-      if (result.cancelled || !result.path) {
-        return;
-      }
-
-      setSkillFoldersDraft((current) => (current.includes(result.path) ? current : [...current, result.path]));
-    } catch (error) {
-      setSkillFoldersSaveError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setPathPickerTarget((current) => (current === 'skill-folders' ? null : current));
-    }
-  }
-
-  function handleMoveSkillFolder(index: number, direction: -1 | 1) {
-    setSkillFoldersDraft((current) => {
-      const nextIndex = index + direction;
-      if (index < 0 || index >= current.length || nextIndex < 0 || nextIndex >= current.length) {
-        return current;
-      }
-
-      const next = [...current];
-      const [entry] = next.splice(index, 1);
-      next.splice(nextIndex, 0, entry as string);
-      return next;
-    });
-    setSkillFoldersSaveError(null);
-  }
-
-  function handleRemoveSkillFolder(index: number) {
-    setSkillFoldersDraft((current) => current.filter((_, currentIndex) => currentIndex !== index));
-    setSkillFoldersSaveError(null);
-  }
-
-  async function handleSaveSkillFolders() {
-    if (!skillFoldersState || savingSkillFolders || !skillFoldersDirty) {
-      return;
-    }
-
-    setSkillFoldersSaveError(null);
-    setSavingSkillFolders(true);
-
-    try {
-      const saved = await api.updateSkillFolders(skillFoldersDraft);
-      setSkillFoldersDraft(saved.skillDirs);
-      await refetchSkillFolders({ resetLoading: false });
-    } catch (error) {
-      setSkillFoldersSaveError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setSavingSkillFolders(false);
-    }
-  }
 
   async function handleAddInstructionFiles() {
     if (!instructionFilesState || savingInstructionFiles || pickingInstructionFiles) {
@@ -2158,20 +2074,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setPathPickerTarget((current) => (current === 'default-cwd' ? null : current));
     }
   }
-
-  useEffect(() => {
-    if (!skillFoldersState || !skillFoldersDirty || savingSkillFolders || pickingSkillFolders) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void handleSaveSkillFolders();
-    }, 350);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [pickingSkillFolders, savingSkillFolders, skillFoldersDirty, skillFoldersDraft, skillFoldersState]);
 
   useEffect(() => {
     if (!instructionFilesState || !instructionFilesDirty || savingInstructionFiles || pickingInstructionFiles) {
@@ -2875,83 +2777,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               description="Skill discovery, MCP wrappers, and extension settings."
             >
               <div className="space-y-0">
-                <SettingsPanel title="Skill folders" description="Load extra skill folders alongside the root skills directory.">
-                  {skillFoldersLoading && !skillFoldersState ? (
-                    <p className="ui-card-meta">Loading skill folders…</p>
-                  ) : skillFoldersError && !skillFoldersState ? (
-                    <p className="text-[12px] text-danger">Failed to load skill folders: {skillFoldersError}</p>
-                  ) : skillFoldersState ? (
-                    <div className="space-y-3">
-                      <p className="ui-card-meta break-all">
-                        Configured in <span className="font-mono text-[11px]">{skillFoldersState.configFile}</span>.
-                      </p>
-                      {skillFoldersDraft.length === 0 ? (
-                        <p className="ui-card-meta">No extra skill folders configured.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {skillFoldersDraft.map((path, index) => (
-                            <div key={`${path}:${index}`} className="flex items-start gap-2">
-                              <div className="min-w-0 flex-1 rounded-xl border border-border-subtle/70 bg-surface/50 px-3 py-2 font-mono text-[12px] text-primary break-all">
-                                {path}
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleMoveSkillFolder(index, -1);
-                                  }}
-                                  disabled={savingSkillFolders || index === 0}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleMoveSkillFolder(index, 1);
-                                  }}
-                                  disabled={savingSkillFolders || index === skillFoldersDraft.length - 1}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  ↓
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleRemoveSkillFolder(index);
-                                  }}
-                                  disabled={savingSkillFolders}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleAddSkillFolder();
-                          }}
-                          disabled={savingSkillFolders || pickingSkillFolders}
-                          className={ACTION_BUTTON_CLASS}
-                        >
-                          {pickingSkillFolders ? 'Picking…' : 'Add folder'}
-                        </button>
-                        <span className="ui-card-meta">
-                          {savingSkillFolders ? 'Saving…' : skillFoldersDirty ? 'Auto-save pending…' : 'Auto-saved'}
-                        </span>
-                      </div>
-                      <p className="ui-card-meta">Folders load in the saved order after the root skills directory.</p>
-                    </div>
-                  ) : null}
-
-                  {skillFoldersSaveError && <p className="text-[12px] text-danger">{skillFoldersSaveError}</p>}
-                </SettingsPanel>
-
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (
                     <p className="ui-card-meta">Loading AGENTS.md files…</p>
