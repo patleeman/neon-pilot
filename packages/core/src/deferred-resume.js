@@ -39,22 +39,28 @@ function normalizeAlertLevel(value, fallback = 'none') {
 function normalizeBehavior(value) {
   return value === 'steer' || value === 'followUp' ? value : undefined;
 }
+function normalizeDeliveryMode(value, fallback) {
+  return value === 'batchable' || value === 'sequential' || value === 'isolated' ? value : fallback;
+}
 function parseDelivery(value, kind) {
   const defaultsByKind = {
     continue: {
       alertLevel: 'none',
       autoResumeIfOpen: true,
       requireAck: false,
+      mode: 'batchable',
     },
     reminder: {
       alertLevel: 'disruptive',
       autoResumeIfOpen: true,
       requireAck: true,
+      mode: 'isolated',
     },
     'task-callback': {
       alertLevel: 'disruptive',
       autoResumeIfOpen: true,
       requireAck: true,
+      mode: 'isolated',
     },
   };
   const defaults = defaultsByKind[kind];
@@ -65,6 +71,7 @@ function parseDelivery(value, kind) {
     alertLevel: normalizeAlertLevel(value.alertLevel, defaults.alertLevel),
     autoResumeIfOpen: typeof value.autoResumeIfOpen === 'boolean' ? value.autoResumeIfOpen : defaults.autoResumeIfOpen,
     requireAck: typeof value.requireAck === 'boolean' ? value.requireAck : defaults.requireAck,
+    mode: normalizeDeliveryMode(value.mode, defaults.mode),
   };
 }
 function parseSource(value) {

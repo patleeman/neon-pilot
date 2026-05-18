@@ -1,18 +1,26 @@
 import {
   activateDeferredResume,
   activateDueDeferredResumes,
+  cancelAttentionEvent,
+  completeAttentionEvents,
+  createReadyAttentionEvent,
   createReadyDeferredResume,
   type DeferredResumeAlertLevel,
   type DeferredResumeBehavior,
+  type DeferredResumeDeliveryMode,
   type DeferredResumeKind,
   type DeferredResumeRecord,
   getSessionDeferredResumeEntries,
+  loadAttentionEventsState,
   loadDeferredResumeState,
   parseDeferredResumeDelayMs,
   readSessionConversationId,
   removeDeferredResume,
+  retryAttentionEvents,
   retryDeferredResume,
+  saveAttentionEventsState,
   saveDeferredResumeState,
+  scheduleAttentionEvent,
   scheduleDeferredResume,
 } from '@personal-agent/core';
 import {
@@ -116,11 +124,63 @@ export interface DeferredResumeSummary {
     alertLevel: DeferredResumeAlertLevel;
     autoResumeIfOpen: boolean;
     requireAck: boolean;
+    mode: DeferredResumeDeliveryMode;
   };
 }
 
 function createDeferredResumeId(now: Date): string {
   return `resume_${now.getTime()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function mirrorDeferredResumeToAttentionEvent(record: DeferredResumeRecord, conversationId?: string): void {
+  const state = loadAttentionEventsState();
+  const source = record.source ?? { kind: 'deferred-resume', id: record.id };
+  const eventInput = {
+    id: record.id,
+    sessionFile: record.sessionFile,
+    ...(conversationId ? { conversationId } : {}),
+    prompt: record.prompt,
+    ...(record.title ? { title: record.title } : {}),
+    dueAt: record.dueAt,
+    createdAt: record.createdAt,
+    attempts: record.attempts,
+    source,
+    delivery: {
+      mode: record.delivery.mode,
+      requireAck: record.delivery.requireAck,
+      autoResumeIfOpen: record.delivery.autoResumeIfOpen,
+      behavior: record.behavior,
+      priority: record.delivery.requireAck || record.delivery.alertLevel === 'disruptive' ? ('high' as const) : ('normal' as const),
+    },
+  };
+
+  if (record.status === 'ready') {
+    createReadyAttentionEvent(state, {
+      ...eventInput,
+      readyAt: record.readyAt ?? record.dueAt,
+    });
+  } else {
+    scheduleAttentionEvent(state, eventInput);
+  }
+  saveAttentionEventsState(state);
+}
+
+function cancelMirroredAttentionEvent(id: string): void {
+  const state = loadAttentionEventsState();
+  cancelAttentionEvent(state, { id });
+  saveAttentionEventsState(state);
+}
+
+function completeMirroredAttentionEvent(id: string): void {
+  const state = loadAttentionEventsState();
+  completeAttentionEvents(state, { ids: [id] });
+  saveAttentionEventsState(state);
+}
+
+function retryMirroredAttentionEvent(id: string, dueAt: string): void {
+  const state = loadAttentionEventsState();
+  retryAttentionEvents(state, { ids: [id], dueAt });
+  saveAttentionEventsState(state);
 }
 
 export function toDeferredResumeSummary(record: DeferredResumeRecord): DeferredResumeSummary {
@@ -168,6 +228,7 @@ export function completeDeferredResumeForSessionFile(input: { sessionFile: strin
 
   removeDeferredResume(state, input.id);
   saveDeferredResumeState(state);
+  completeMirroredAttentionEvent(record.id);
   return toDeferredResumeSummary(record);
 }
 
@@ -191,6 +252,7 @@ export function retryDeferredResumeForSessionFile(input: {
   }
 
   saveDeferredResumeState(state);
+  retryMirroredAttentionEvent(retried.id, retried.dueAt);
   return toDeferredResumeSummary(retried);
 }
 
@@ -215,6 +277,7 @@ export async function fireDeferredResumeNowForSessionFile(input: {
   }
 
   saveDeferredResumeState(state);
+  mirrorDeferredResumeToAttentionEvent(activated, readSessionConversationId(activated.sessionFile));
   if (!wasReady) {
     await markDeferredResumeConversationRunReady({
       daemonRoot: resolveDaemonRoot(),
@@ -243,6 +306,7 @@ export async function scheduleDeferredResumeForSessionFile(input: {
   notify?: DeferredResumeAlertLevel;
   requireAck?: boolean;
   autoResumeIfOpen?: boolean;
+  deliveryMode?: DeferredResumeDeliveryMode;
   source?: { kind: string; id?: string };
   now?: Date;
 }): Promise<DeferredResumeSummary> {
@@ -265,10 +329,12 @@ export async function scheduleDeferredResumeForSessionFile(input: {
       alertLevel: input.notify,
       autoResumeIfOpen: input.autoResumeIfOpen,
       requireAck: input.requireAck,
+      mode: input.deliveryMode,
     },
   });
 
   saveDeferredResumeState(state);
+  mirrorDeferredResumeToAttentionEvent(record, input.conversationId?.trim() || readSessionConversationId(record.sessionFile));
   try {
     await scheduleDeferredResumeConversationRun({
       daemonRoot: resolveDaemonRoot(),
@@ -283,6 +349,7 @@ export async function scheduleDeferredResumeForSessionFile(input: {
     // Daemon scheduling failed — roll back the persisted state
     removeDeferredResume(state, record.id);
     saveDeferredResumeState(state);
+    cancelMirroredAttentionEvent(record.id);
     throw error;
   }
   return toDeferredResumeSummary(record);
@@ -296,6 +363,7 @@ export function createReadyDeferredResumeForSessionFile(input: {
   notify?: DeferredResumeAlertLevel;
   requireAck?: boolean;
   autoResumeIfOpen?: boolean;
+  deliveryMode?: DeferredResumeDeliveryMode;
   source?: { kind: string; id?: string };
   dueAt?: string;
   readyAt?: string;
@@ -323,9 +391,11 @@ export function createReadyDeferredResumeForSessionFile(input: {
       alertLevel: input.notify,
       autoResumeIfOpen: input.autoResumeIfOpen,
       requireAck: input.requireAck,
+      mode: input.deliveryMode,
     },
   });
   saveDeferredResumeState(state);
+  mirrorDeferredResumeToAttentionEvent(record, readSessionConversationId(record.sessionFile));
   return toDeferredResumeSummary(record);
 }
 
@@ -338,6 +408,7 @@ export async function cancelDeferredResumeForSessionFile(input: { sessionFile: s
 
   removeDeferredResume(state, input.id);
   saveDeferredResumeState(state);
+  cancelMirroredAttentionEvent(record.id);
   await cancelDeferredResumeConversationRun({
     daemonRoot: resolveDaemonRoot(),
     deferredResumeId: record.id,

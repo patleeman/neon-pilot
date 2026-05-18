@@ -797,6 +797,7 @@ export interface DeferredResumeSummary {
     alertLevel: 'none' | 'passive' | 'disruptive';
     autoResumeIfOpen: boolean;
     requireAck: boolean;
+    mode?: 'batchable' | 'sequential' | 'isolated';
   };
 }
 

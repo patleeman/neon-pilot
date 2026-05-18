@@ -27,6 +27,9 @@ export * from './activity.js';
 // Activity ↔ conversation link exports
 export * from './activity-conversation-links.js';
 
+// Attention event exports
+export * from './attention-events.js';
+
 // Conversation attention exports
 export * from './conversation-attention.js';
 

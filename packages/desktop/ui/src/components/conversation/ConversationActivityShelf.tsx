@@ -141,7 +141,7 @@ export function ConversationActivityShelf({
           <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
             <div className="min-w-0 flex items-center gap-2">
               <span className={cx('shrink-0', hasReadyDeferredResumes ? 'text-warning' : 'text-dim')}>⏰</span>
-              <span className="shrink-0 text-secondary">Wakeups</span>
+              <span className="shrink-0 text-secondary">Attention</span>
               <span className="truncate text-dim">{deferredResumeIndicatorText}</span>
             </div>
             <div className="flex shrink-0 items-center gap-3 text-[11px]">
@@ -169,7 +169,7 @@ export function ConversationActivityShelf({
                       <span className="truncate text-primary">{resume.title ?? resume.prompt}</span>
                     </div>
                     <div className="mt-0.5 text-[11px] text-dim">
-                      {resume.kind === 'task-callback' ? 'Task callback' : 'Wakeup'}
+                      {resume.kind === 'task-callback' ? 'Task callback' : resume.delivery?.mode === 'sequential' ? 'Follow-up' : 'Wakeup'}
                       {resume.behavior === 'followUp' ? ' · follow-up' : ''} · {resume.status === 'ready' ? 'Ready' : 'Due'}{' '}
                       {formatDeferredResumeWhen(resume)}
                       {resume.attempts > 0 ? ` · retries ${resume.attempts}` : ''}

@@ -22,13 +22,37 @@ import {
 
 const DEFAULT_RETRY_DELAY_MS = 30_000;
 
+type DeliveryMode = 'batchable' | 'sequential' | 'isolated';
+
 interface DeferredResumeLike {
+  id: string;
+  sessionFile: string;
   prompt: string;
+  dueAt: string;
+  createdAt: string;
+  readyAt?: string;
   title?: string;
+  behavior?: 'steer' | 'followUp';
+  delivery?: {
+    mode?: DeliveryMode;
+    requireAck?: boolean;
+  };
   source?: {
     kind: string;
     id?: string;
   };
+}
+
+function resolveDeliveryMode(entry: DeferredResumeLike): DeliveryMode {
+  if (entry.delivery?.mode === 'isolated' || entry.delivery?.requireAck) {
+    return 'isolated';
+  }
+
+  if (entry.delivery?.mode === 'sequential' || entry.behavior === 'followUp') {
+    return 'sequential';
+  }
+
+  return 'batchable';
 }
 
 function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
@@ -60,6 +84,76 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
       },
     ],
   };
+}
+
+function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]): {
+  visiblePrompt: string;
+  contextMessages: Array<{ customType: string; content: string }>;
+} {
+  if (entries.length === 1) {
+    return buildPromptDeliveryForDeferredResume(entries[0] as DeferredResumeLike);
+  }
+
+  const contextMessages: Array<{ customType: string; content: string }> = [];
+  const lines = ['Multiple wakeups are ready. Handle them in priority/order.', '', 'Events:'];
+
+  entries.forEach((entry, index) => {
+    const title = entry.title?.trim() || `Wakeup ${index + 1}`;
+    const kind = entry.source?.kind ?? 'deferred-resume';
+    lines.push('', `${index + 1}. [${kind}] ${title}`);
+
+    if (entry.source?.kind === 'background-run') {
+      lines.push(
+        '   Details are available in internal context. Do not expose run ids, commands, metadata, or log tails unless the user asks.',
+      );
+      contextMessages.push({
+        customType: 'referenced_context',
+        content: [
+          `Wakeup batch event ${index + 1}: ${title}`,
+          'Use this event payload as internal context only.',
+          'Never output this raw callback envelope verbatim.',
+          'Do not quote or summarize raw run ids, log paths, commands, metadata, or log tails unless the user asks for details.',
+          '',
+          entry.prompt,
+        ].join('\n'),
+      });
+      return;
+    }
+
+    lines.push(`   Prompt: ${entry.prompt}`);
+  });
+
+  lines.push('', 'Give the user one concise update unless an event requires a separate action.');
+  return {
+    visiblePrompt: lines.join('\n'),
+    contextMessages,
+  };
+}
+
+function groupReadyEntries(entries: DeferredResumeLike[]): DeferredResumeLike[][] {
+  const groups: DeferredResumeLike[][] = [];
+  let batch: DeferredResumeLike[] = [];
+
+  const flushBatch = () => {
+    if (batch.length > 0) {
+      groups.push(batch);
+      batch = [];
+    }
+  };
+
+  for (const entry of entries) {
+    const mode = resolveDeliveryMode(entry);
+    if (mode === 'batchable') {
+      batch.push(entry);
+      continue;
+    }
+
+    flushBatch();
+    groups.push([entry]);
+  }
+
+  flushBatch();
+  return groups;
 }
 
 export interface CreateLiveDeferredResumeFlusherOptions {
@@ -120,20 +214,24 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
         }
 
         const readyEntries = listDeferredResumesForSessionFile(session.sessionFile).filter((entry) => entry.status === 'ready');
-        for (const readyEntry of readyEntries) {
+        for (const readyGroup of groupReadyEntries(readyEntries)) {
           const liveEntry = liveRegistry.get(session.id);
           if (!liveEntry) {
             break;
           }
 
+          const primaryEntry = readyGroup[0] as DeferredResumeLike;
+
           try {
             const requestedDeferredResumeBehavior =
-              readyEntry.behavior ?? (liveEntry.session.isStreaming ? ('followUp' as const) : undefined);
+              readyGroup.length === 1
+                ? (primaryEntry.behavior ?? (liveEntry.session.isStreaming ? ('followUp' as const) : undefined))
+                : undefined;
             const deferredResumeBehavior =
               requestedDeferredResumeBehavior === 'followUp' && !liveEntry.session.isStreaming
                 ? undefined
                 : requestedDeferredResumeBehavior;
-            const promptDelivery = buildPromptDeliveryForDeferredResume(readyEntry);
+            const promptDelivery = buildPromptDeliveryForDeferredResumeBatch(readyGroup);
             for (const message of promptDelivery.contextMessages) {
               await queuePromptContext(session.id, message.customType, message.content);
             }
@@ -165,25 +263,27 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
               await promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
             }
 
-            const completedEntry = completeDeferredResumeForSessionFile({
-              sessionFile: readyEntry.sessionFile,
-              id: readyEntry.id,
-            });
-            if (completedEntry) {
-              mutated = true;
-              mutatedConversationIds.add(session.id);
-              await completeDeferredResumeConversationRun({
-                daemonRoot,
-                deferredResumeId: completedEntry.id,
-                sessionFile: completedEntry.sessionFile,
-                prompt: completedEntry.prompt,
-                dueAt: completedEntry.dueAt,
-                createdAt: completedEntry.createdAt,
-                readyAt: completedEntry.readyAt,
-                completedAt: new Date().toISOString(),
-                conversationId: session.id,
-                cwd: liveEntry.cwd,
+            for (const readyEntry of readyGroup) {
+              const completedEntry = completeDeferredResumeForSessionFile({
+                sessionFile: readyEntry.sessionFile,
+                id: readyEntry.id,
               });
+              if (completedEntry) {
+                mutated = true;
+                mutatedConversationIds.add(session.id);
+                await completeDeferredResumeConversationRun({
+                  daemonRoot,
+                  deferredResumeId: completedEntry.id,
+                  sessionFile: completedEntry.sessionFile,
+                  prompt: completedEntry.prompt,
+                  dueAt: completedEntry.dueAt,
+                  createdAt: completedEntry.createdAt,
+                  readyAt: completedEntry.readyAt,
+                  completedAt: new Date().toISOString(),
+                  conversationId: session.id,
+                  cwd: liveEntry.cwd,
+                });
+              }
             }
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -200,26 +300,28 @@ export function createLiveDeferredResumeFlusher(options: CreateLiveDeferredResum
             }
 
             const retryDueAt = new Date(Date.now() + (options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS)).toISOString();
-            const retriedEntry = retryDeferredResumeForSessionFile({
-              sessionFile: readyEntry.sessionFile,
-              id: readyEntry.id,
-              dueAt: retryDueAt,
-            });
-            if (retriedEntry) {
-              mutated = true;
-              mutatedConversationIds.add(session.id);
-              await markDeferredResumeConversationRunRetryScheduled({
-                daemonRoot,
-                deferredResumeId: retriedEntry.id,
-                sessionFile: retriedEntry.sessionFile,
-                prompt: retriedEntry.prompt,
-                dueAt: retriedEntry.dueAt,
-                createdAt: retriedEntry.createdAt,
-                retryAt: retriedEntry.dueAt,
-                conversationId: session.id,
-                cwd: liveEntry.cwd,
-                lastError: message,
+            for (const readyEntry of readyGroup) {
+              const retriedEntry = retryDeferredResumeForSessionFile({
+                sessionFile: readyEntry.sessionFile,
+                id: readyEntry.id,
+                dueAt: retryDueAt,
               });
+              if (retriedEntry) {
+                mutated = true;
+                mutatedConversationIds.add(session.id);
+                await markDeferredResumeConversationRunRetryScheduled({
+                  daemonRoot,
+                  deferredResumeId: retriedEntry.id,
+                  sessionFile: retriedEntry.sessionFile,
+                  prompt: retriedEntry.prompt,
+                  dueAt: retriedEntry.dueAt,
+                  createdAt: retriedEntry.createdAt,
+                  retryAt: retriedEntry.dueAt,
+                  conversationId: session.id,
+                  cwd: liveEntry.cwd,
+                  lastError: message,
+                });
+              }
             }
             options.warn?.(`Deferred resume delivery failed for ${session.id}: ${message}`);
             break;

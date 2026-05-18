@@ -3,10 +3,12 @@ export type DeferredResumeStatus = 'scheduled' | 'ready';
 export type DeferredResumeKind = 'continue' | 'reminder' | 'task-callback';
 export type DeferredResumeAlertLevel = 'none' | 'passive' | 'disruptive';
 export type DeferredResumeBehavior = 'steer' | 'followUp';
+export type DeferredResumeDeliveryMode = 'batchable' | 'sequential' | 'isolated';
 export interface DeferredResumeDelivery {
   alertLevel: DeferredResumeAlertLevel;
   autoResumeIfOpen: boolean;
   requireAck: boolean;
+  mode: DeferredResumeDeliveryMode;
 }
 export interface DeferredResumeSource {
   kind: string;

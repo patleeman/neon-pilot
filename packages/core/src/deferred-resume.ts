@@ -9,11 +9,13 @@ export type DeferredResumeStatus = 'scheduled' | 'ready';
 export type DeferredResumeKind = 'continue' | 'task-callback';
 export type DeferredResumeAlertLevel = 'none' | 'passive' | 'disruptive';
 export type DeferredResumeBehavior = 'steer' | 'followUp';
+export type DeferredResumeDeliveryMode = 'batchable' | 'sequential' | 'isolated';
 
 export interface DeferredResumeDelivery {
   alertLevel: DeferredResumeAlertLevel;
   autoResumeIfOpen: boolean;
   requireAck: boolean;
+  mode: DeferredResumeDeliveryMode;
 }
 
 export interface DeferredResumeSource {
@@ -100,17 +102,23 @@ function normalizeBehavior(value: unknown): DeferredResumeBehavior | undefined {
   return value === 'steer' || value === 'followUp' ? value : undefined;
 }
 
+function normalizeDeliveryMode(value: unknown, fallback: DeferredResumeDeliveryMode): DeferredResumeDeliveryMode {
+  return value === 'batchable' || value === 'sequential' || value === 'isolated' ? value : fallback;
+}
+
 function parseDelivery(value: unknown, kind: DeferredResumeKind): DeferredResumeDelivery {
   const defaultsByKind: Record<DeferredResumeKind, DeferredResumeDelivery> = {
     continue: {
       alertLevel: 'none',
       autoResumeIfOpen: true,
       requireAck: false,
+      mode: 'batchable',
     },
     'task-callback': {
       alertLevel: 'disruptive',
       autoResumeIfOpen: true,
       requireAck: true,
+      mode: 'isolated',
     },
   };
 
@@ -123,6 +131,7 @@ function parseDelivery(value: unknown, kind: DeferredResumeKind): DeferredResume
     alertLevel: normalizeAlertLevel(value.alertLevel, defaults.alertLevel),
     autoResumeIfOpen: typeof value.autoResumeIfOpen === 'boolean' ? value.autoResumeIfOpen : defaults.autoResumeIfOpen,
     requireAck: typeof value.requireAck === 'boolean' ? value.requireAck : defaults.requireAck,
+    mode: normalizeDeliveryMode(value.mode, defaults.mode),
   };
 }
 

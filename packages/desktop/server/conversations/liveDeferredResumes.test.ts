@@ -319,6 +319,61 @@ describe('createLiveDeferredResumeFlusher', () => {
     );
   });
 
+  it('batches batchable ready wakeups into one prompt', async () => {
+    const first = createReadyResume('resume-1');
+    const second = {
+      ...createReadyResume('resume-2'),
+      prompt: 'Check the second thing.',
+      title: 'Second check',
+      dueAt: '2026-04-15T10:01:00.000Z',
+      readyAt: '2026-04-15T10:01:00.000Z',
+      delivery: {
+        alertLevel: 'passive' as const,
+        autoResumeIfOpen: true,
+        requireAck: false,
+        mode: 'batchable' as const,
+      },
+    };
+    getLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conv-1',
+        cwd: '/repo',
+        sessionFile: '/tmp/session-1.jsonl',
+        title: 'Conversation 1',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+    ]);
+    liveRegistry.set('conv-1', {
+      cwd: '/repo',
+      title: 'Conversation 1',
+      session: {
+        sessionFile: '/tmp/session-1.jsonl',
+        isStreaming: false,
+      },
+    });
+    activateDueDeferredResumesForSessionFileMock.mockReturnValue([]);
+    listDeferredResumesForSessionFileMock.mockReturnValue([first, second]);
+    completeDeferredResumeForSessionFileMock.mockImplementation(({ id }: { id: string }) => (id === 'resume-1' ? first : second));
+
+    const flush = createLiveDeferredResumeFlusher({
+      getCurrentProfile: () => 'shared',
+      getStateRoot: () => '/state',
+      resolveDaemonRoot: () => '/daemon',
+      publishConversationSessionMetaChanged: vi.fn(),
+    });
+
+    await flush();
+
+    expect(promptSessionMock).toHaveBeenCalledTimes(1);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Multiple wakeups are ready'), undefined);
+    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Continue from here.');
+    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Check the second thing.');
+    expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' });
+    expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-2' });
+    expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledTimes(2);
+  });
+
   it('schedules a retry when prompt delivery fails', async () => {
     const ready = createReadyResume();
     const retried = {

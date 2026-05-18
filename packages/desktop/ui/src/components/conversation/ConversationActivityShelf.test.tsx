@@ -114,7 +114,7 @@ describe('ConversationActivityShelf', () => {
       />,
     );
 
-    expect(html).toContain('Wakeups');
+    expect(html).toContain('Attention');
     expect(html).toContain('1 scheduled');
     expect(html).toContain('wake me');
     expect(html).toContain('fire now');
