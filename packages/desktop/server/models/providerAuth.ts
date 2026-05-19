@@ -80,6 +80,7 @@ const BUILT_IN_API_KEY_PROVIDERS: string[] = [
 const BUILT_IN_API_KEY_PROVIDER_SET = new Set<string>(BUILT_IN_API_KEY_PROVIDERS);
 const NON_MODEL_SECRET_PROVIDERS = new Set(['telegram']);
 const OAUTH_LOGIN_RETENTION_MS = 30 * 60_000;
+const OAUTH_LOGIN_TIMEOUT_MS = 5 * 60_000;
 const oauthLoginRuns = new Map<string, ProviderOAuthLoginRun>();
 const oauthLoginListeners = new Map<string, Set<(state: ProviderOAuthLoginState) => void>>();
 const oauthLoginGlobalListeners = new Set<(state: ProviderOAuthLoginState) => void>();
@@ -398,6 +399,17 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
 
   oauthLoginRuns.set(run.id, run);
 
+  const loginTimeout = setTimeout(() => {
+    if (run.status === 'running') {
+      run.abortController.abort();
+      finalizeOAuthLogin(
+        run,
+        'failed',
+        'Login timed out — the browser callback was not received. If you completed login in the browser, try removing the provider and re-adding it.',
+      );
+    }
+  }, OAUTH_LOGIN_TIMEOUT_MS);
+
   void authStorage
     .login(provider, {
       onAuth: (info) => {
@@ -439,6 +451,9 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
       }
 
       finalizeOAuthLogin(run, 'failed', message);
+    })
+    .finally(() => {
+      clearTimeout(loginTimeout);
     });
 
   return toPublicLoginState(run);
