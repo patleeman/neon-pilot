@@ -85,6 +85,14 @@ describe('linkedRuns', () => {
       'Tool Preview Polish',
     );
     expect(buildToolPreview({ ...base, tool: 'mcp', input: { server: 'github', tool: 'create_issue' } })).toBe('github.create_issue');
+    expect(buildToolPreview({ ...base, tool: 'background_bash', input: { action: 'start', command: 'pnpm test' } })).toBe(
+      'start pnpm test',
+    );
+    expect(buildToolPreview({ ...base, tool: 'conversation', input: { action: 'ask', question: 'Which target?' } })).toBe(
+      'ask Which target?',
+    );
+    expect(buildToolPreview({ ...base, tool: 'browser_snapshot', input: {} })).toBe('snapshot active tab');
+    expect(buildToolPreview({ ...base, tool: 'browser_screenshot', input: { tabId: 'tab-1' } })).toBe('tab tab-1');
   });
 
   it('presents listed durable runs with kind and status detail', () => {

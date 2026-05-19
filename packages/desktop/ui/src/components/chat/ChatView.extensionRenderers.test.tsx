@@ -56,7 +56,7 @@ import { ChatView } from './ChatView.js';
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 
 describe('chat view extension transcript renderers', () => {
-  it('renders standalone artifact transcript cards outside internal-work clusters', () => {
+  it('renders artifact transcript cards inside internal-work clusters', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
@@ -83,7 +83,7 @@ describe('chat view extension transcript renderers', () => {
       }),
     );
 
-    expect(html).toContain('artifact transcript card');
-    expect(html).not.toContain('Internal work');
+    expect(html).toContain('Internal work');
+    expect(html).toContain('artifact');
   });
 });

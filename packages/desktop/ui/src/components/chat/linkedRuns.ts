@@ -223,7 +223,8 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
   const excerpt = (key: string, maxLength = 72): string | null => excerptLinkedRunText(read(key), maxLength);
 
   switch (block.tool) {
-    case 'background_command': {
+    case 'background_command':
+    case 'background_bash': {
       const action = read('action');
       const subject = excerpt('command') ?? read('taskSlug') ?? summarizeLinkedRunTail(read('runId') ?? '');
       return [action, subject].filter(Boolean).join(' ');
@@ -273,6 +274,11 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const subject = excerpt('query') ?? excerpt('text') ?? read('conversationId');
       return [action, subject].filter(Boolean).join(' ');
     }
+    case 'conversation': {
+      const action = read('action');
+      const subject = excerpt('question') ?? excerpt('query') ?? excerpt('title') ?? excerpt('prompt') ?? read('cwd');
+      return [action, subject].filter(Boolean).join(' ');
+    }
     case 'set_conversation_title':
       return excerpt('title') ?? '';
     case 'change_working_directory':
@@ -284,6 +290,14 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const tool = read('tool');
       const action = read('action');
       return [server, tool, action].filter(Boolean).join('.');
+    }
+    case 'browser_snapshot': {
+      const tab = read('tabId');
+      return tab ? `tab ${tab}` : 'snapshot active tab';
+    }
+    case 'browser_screenshot': {
+      const tab = read('tabId');
+      return tab ? `tab ${tab}` : 'capture browser screenshot';
     }
     case 'local_models_status':
       return 'check local models';

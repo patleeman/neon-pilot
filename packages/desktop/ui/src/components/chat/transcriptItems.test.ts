@@ -52,7 +52,7 @@ describe('chat transcript items', () => {
     expect(items[2]).toMatchObject({ type: 'message', index: 4 });
   });
 
-  it('keeps artifact tool blocks visible as standalone message items', () => {
+  it('keeps artifact tool blocks inside internal-work even when extension marks them standalone', () => {
     const standaloneTools = new Set(['artifact']);
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-12T18:00:00.000Z', text: 'Show me the mockup' },
@@ -70,7 +70,17 @@ describe('chat transcript items', () => {
     const items = buildChatRenderItems(messages, standaloneTools);
 
     expect(items).toHaveLength(3);
-    expect(items.every((item) => item.type === 'message')).toBe(true);
+    expect(items[0]).toMatchObject({ type: 'message', index: 0 });
+    expect(items[1]).toMatchObject({
+      type: 'trace_cluster',
+      startIndex: 1,
+      endIndex: 1,
+      summary: {
+        stepCount: 1,
+        categories: [{ key: 'tool:artifact', kind: 'tool', label: 'artifact', tool: 'artifact', count: 1 }],
+      },
+    });
+    expect(items[2]).toMatchObject({ type: 'message', index: 2 });
   });
 
   it('keeps terminal-style bash blocks visible as standalone message items even without extension registration', () => {
