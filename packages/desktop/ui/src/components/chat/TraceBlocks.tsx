@@ -35,11 +35,10 @@ export const ThinkingBlock = memo(function ThinkingBlock({
         onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
         className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-elevated transition-colors"
       >
-        <span className="text-dim select-none">💭</span>
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
         {autoOpen && <span className="text-[10px] uppercase tracking-[0.14em] text-dim/55">live</span>}
-        <span className="text-dim text-[10px]">{open ? '▲ hide' : '▼ show'}</span>
+        <span className="text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
       </button>
       {open && (
         <div className="border-t border-border-subtle/70 px-2.5 pb-2.5 pt-1.5 text-secondary italic leading-relaxed space-y-1">
@@ -70,15 +69,12 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-black/5 transition-colors"
       >
-        {block.status === 'running' ? (
-          <span className="w-4 h-4 border-[1.5px] border-current border-t-transparent rounded-full animate-spin shrink-0" />
-        ) : null}
         <Pill tone={tone} mono>
           subagent
         </Pill>
         <span className="flex-1 truncate opacity-70 font-normal">{block.name}</span>
         <Pill tone={tone}>{block.status}</Pill>
-        <span className="shrink-0 ml-1 opacity-30 text-[10px]">{open ? '▲' : '▼'}</span>
+        <span className="shrink-0 ml-1 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
       </button>
       {open && (
         <div className="border-t border-border-subtle/70 px-2.5 py-2 space-y-2 bg-black/5">
@@ -292,13 +288,6 @@ export function TraceClusterBlock({
           className={panelClassName}
         >
           <div className="flex items-center gap-2 text-[12px]">
-            {stableActive ? (
-              <span className="h-4 w-4 shrink-0 rounded-full border-[1.5px] border-current border-t-transparent animate-spin text-accent" />
-            ) : (
-              <span className={cx('w-4 shrink-0 text-center text-[11px] select-none', summary.hasError ? 'text-danger' : 'text-dim')}>
-                ⋯
-              </span>
-            )}
             <span className="font-medium text-primary">{title}</span>
             <span className="text-secondary">
               · {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
@@ -314,7 +303,7 @@ export function TraceClusterBlock({
               </span>
             )}
             {durationLabel && !isActive && <span className="text-[11px] text-dim">{durationLabel}</span>}
-            <span className="text-[10px] text-dim">{open ? '▲ hide' : '▼ show'}</span>
+            <span className="text-[10px] text-dim">{open ? 'hide' : 'show'}</span>
           </div>
           {summary.categories.length > 0 && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -427,35 +416,6 @@ function ResumeConversationAction({
       title={title ?? 'Resume this conversation'}
       className={variant === 'inline' ? inlineClassName : compactClassName}
     >
-      {variant === 'inline' &&
-        (busy ? (
-          <span
-            aria-hidden
-            className="h-3.5 w-3.5 shrink-0 rounded-full border-[1.5px] border-current border-t-transparent animate-spin text-dim"
-          />
-        ) : (
-          <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            fill="none"
-            className="h-3.5 w-3.5 shrink-0 text-accent/75 transition-colors group-hover:text-accent"
-          >
-            <path
-              d="M12.75 4.75V1.75M12.75 1.75H9.75M12.75 1.75L10.25 4.25"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M12.1 7.1C12.1 9.91665 9.81665 12.2 7 12.2C4.18335 12.2 1.9 9.91665 1.9 7.1C1.9 4.28335 4.18335 2 7 2C8.31638 2 9.5163 2.49883 10.4201 3.31798"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        ))}
       {busy ? 'opening…' : label}
     </button>
   );
@@ -486,9 +446,8 @@ export const ErrorBlock = memo(function ErrorBlock({
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
 
   return (
-    <SurfacePanel className="border-danger/30 bg-danger/5 px-3 py-2.5 text-[12px] font-mono flex gap-2 items-start">
-      <span className="text-danger font-bold shrink-0 mt-0.5 select-none">✕</span>
-      <div className="flex-1 min-w-0 space-y-2">
+    <SurfacePanel className="border-danger/30 bg-danger/5 px-3 py-2.5 text-[12px] font-mono">
+      <div className="min-w-0 space-y-2">
         <div {...replySelectionScopeProps}>
           {block.tool && <span className="text-danger/70 font-semibold">{block.tool} ·</span>}
           <span className="text-danger/85 leading-relaxed">{block.message}</span>

@@ -225,9 +225,6 @@ export function ToolBlock({
         }}
         className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left"
       >
-        {isRunning ? (
-          <span className="w-4 h-4 border-[1.5px] border-current border-t-transparent rounded-full animate-spin shrink-0 opacity-70" />
-        ) : null}
         <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
           {meta.label}
         </Pill>
@@ -292,10 +289,10 @@ export function ToolBlock({
         {isRunning ? (
           <>
             <span className="shrink-0 text-[10px] opacity-60 ml-2">running…</span>
-            <span className="shrink-0 opacity-30 text-[10px]">{open ? '▲' : '▼'}</span>
+            <span className="shrink-0 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
           </>
         ) : (
-          <span className="shrink-0 opacity-30 text-[10px]">{open ? '▲' : '▼'}</span>
+          <span className="shrink-0 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
         )}
       </div>
 
