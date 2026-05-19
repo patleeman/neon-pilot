@@ -1017,12 +1017,14 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                 description="Choose a human-readable schedule. The app handles the scheduler syntax."
               >
                 <div className="grid gap-4">
-                  <div className="inline-flex w-fit rounded-lg border border-border-subtle bg-surface/40 p-1">
+                  <div className="inline-flex w-fit rounded-md border border-border-subtle bg-elevated p-1">
                     <button
                       type="button"
                       className={cx(
                         'rounded-md px-3 py-1.5 text-[12px]',
-                        form.scheduleType === 'cron' ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+                        form.scheduleType === 'cron'
+                          ? 'bg-accent/10 text-accent ring-1 ring-accent/25'
+                          : 'text-secondary hover:text-primary',
                       )}
                       onClick={() => setForm({ ...form, scheduleType: 'cron', cron: form.cron || '0 9 * * 1-5' })}
                     >
@@ -1032,7 +1034,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       type="button"
                       className={cx(
                         'rounded-md px-3 py-1.5 text-[12px]',
-                        form.scheduleType === 'at' ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+                        form.scheduleType === 'at' ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:text-primary',
                       )}
                       onClick={() => setForm({ ...form, scheduleType: 'at' })}
                     >
@@ -1045,7 +1047,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       {form.cron && !CRON_PRESETS.some((preset) => preset.cron === form.cron) ? (
                         <button
                           type="button"
-                          className="rounded-lg border border-accent/60 bg-surface px-3 py-3 text-left text-primary transition-colors"
+                          className="rounded-md border border-accent/60 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
                           onClick={() => setForm({ ...form, cron: form.cron })}
                         >
                           <span className="block text-[13px] font-semibold">Custom saved schedule</span>
@@ -1057,10 +1059,10 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           key={preset.cron}
                           type="button"
                           className={cx(
-                            'rounded-lg border px-3 py-3 text-left transition-colors',
+                            'rounded-md border px-3 py-3 text-left transition-colors',
                             form.cron === preset.cron
-                              ? 'border-accent/60 bg-surface text-primary'
-                              : 'border-border-subtle bg-surface/30 text-secondary hover:border-border-default hover:text-primary',
+                              ? 'border-accent/45 bg-accent/10 text-primary shadow-[0_0_0_1px_rgb(var(--color-accent)/0.18)]'
+                              : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:text-primary',
                           )}
                           onClick={() => setForm({ ...form, cron: preset.cron })}
                         >
@@ -1082,7 +1084,8 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </Field>
                   )}
 
-                  <div className="border-l-2 border-accent/60 pl-3 text-[13px] leading-6 text-secondary">
+                  <div className="flex items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] leading-6 text-secondary">
+                    <span className="h-2 w-2 rounded-full bg-accent shadow-[0_0_8px_rgb(var(--color-accent)/0.7)]" />
                     <span className="font-medium text-primary">{schedulePreview(form)}</span>
                   </div>
                 </div>
