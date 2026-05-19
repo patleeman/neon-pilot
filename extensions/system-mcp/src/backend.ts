@@ -110,17 +110,33 @@ function buildMcpCallbackUrl(input: { callbackHost?: string; callbackPort?: numb
   return `http://${host}:${port}${path}`;
 }
 
-function getExplicitMcpDocument(ctx: McpRuntimeContext): ReturnType<typeof buildMergedMcpConfigDocument> {
+function getExplicitMcpDocument(ctx: McpRuntimeContext): {
+  baseConfigPath: string;
+  baseConfigExists: boolean;
+  searchedPaths: string[];
+  document: { mcpServers: Record<string, unknown> };
+  baseServerNames: string[];
+} {
   const resourceOptions = ctx.runtime.getLiveSessionResourceOptions();
   const skillDirs = resourceOptions.additionalSkillPaths ?? [];
   const cwd = resourceOptions.cwd ?? ctx.runtime.getRepoRoot();
   const configDiscoveryEnv = { ...process.env };
   delete configDiscoveryEnv.MCP_CONFIG_PATH;
-  return buildMergedMcpConfigDocument({
+  const result = buildMergedMcpConfigDocument({
     cwd,
     env: configDiscoveryEnv,
     skillDirs,
   });
+  if (!result || typeof result !== 'object' || typeof (result as Record<string, unknown>).baseConfigPath !== 'string') {
+    throw new Error('MCP config backend returned an invalid config object');
+  }
+  return result as {
+    baseConfigPath: string;
+    baseConfigExists: boolean;
+    searchedPaths: string[];
+    document: { mcpServers: Record<string, unknown> };
+    baseServerNames: string[];
+  };
 }
 
 function parseExplicitMcpConfigJson(input: unknown): { mcpServers: Record<string, unknown> } {
