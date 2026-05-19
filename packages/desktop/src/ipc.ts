@@ -75,6 +75,13 @@ export function registerDesktopIpc(options: {
       };
 
       const unsubscribe = await input.subscribe(deliver);
+
+      // If the sender was destroyed during subscribe, clean up immediately.
+      if (input.sender.isDestroyed()) {
+        unsubscribe();
+        return;
+      }
+
       const cleanup = () => {
         if (!active) {
           return;
