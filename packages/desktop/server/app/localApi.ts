@@ -469,6 +469,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     getDefaultWebCwd: () => process.cwd(),
     resolveRequestedCwd,
     buildLiveSessionResourceOptions: runtimeState.buildLiveSessionResourceOptions,
+    buildLiveSessionResourceOptionsAsync: runtimeState.buildLiveSessionResourceOptionsAsync,
     buildLiveSessionExtensionFactories: runtimeState.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: flushAttentionEvents,
     getSavedUiPreferences: () => readSavedUiPreferences(settingsFile),

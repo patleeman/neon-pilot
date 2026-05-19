@@ -60,6 +60,7 @@ export interface ServerRouteContext {
   getDefaultWebCwd: () => string;
   resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined;
   buildLiveSessionResourceOptions: (profile?: string) => LiveSessionResourceOptions;
+  buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<LiveSessionResourceOptions>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
   getSavedUiPreferences: () => SavedUiPreferences;

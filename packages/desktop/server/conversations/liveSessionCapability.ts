@@ -54,6 +54,7 @@ export interface LiveSessionCapabilityContext {
   getRepoRoot: () => string;
   getDefaultWebCwd: () => string;
   buildLiveSessionResourceOptions: (profile?: string) => Record<string, unknown>;
+  buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<Record<string, unknown>>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
   listTasksForCurrentProfile: () => Array<{
@@ -196,9 +197,14 @@ export interface ForkLiveSessionCapabilityInput {
 
 export class LiveSessionCapabilityInputError extends Error {}
 
-function buildLiveSessionOptions(context: LiveSessionCapabilityContext, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+async function buildLiveSessionOptionsAsync(
+  context: LiveSessionCapabilityContext,
+  overrides: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
   return {
-    ...context.buildLiveSessionResourceOptions(context.getCurrentProfile()),
+    ...(context.buildLiveSessionResourceOptionsAsync
+      ? await context.buildLiveSessionResourceOptionsAsync(context.getCurrentProfile())
+      : context.buildLiveSessionResourceOptions(context.getCurrentProfile())),
     extensionFactories: context.buildLiveSessionExtensionFactories(),
     ...overrides,
   };
@@ -447,7 +453,7 @@ async function ensureConversationPromptTargetLive(conversationId: string, contex
     throw new Error(`Session ${conversationId} is not live`);
   }
 
-  const resumed = await resumeLocalSession(sessionFile, buildLiveSessionOptions(context));
+  const resumed = await resumeLocalSession(sessionFile, await buildLiveSessionOptionsAsync(context));
   await context.flushLiveDeferredResumes();
   return resumed.id;
 }
@@ -469,7 +475,7 @@ export async function createLiveSessionCapability(
 
   const created = await createLocalSession(
     cwd,
-    buildLiveSessionOptions(context, {
+    await buildLiveSessionOptionsAsync(context, {
       ...(input.model !== undefined ? { initialModel: input.model } : {}),
       ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
       ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
@@ -500,7 +506,7 @@ export async function resumeLiveSessionCapability(
   const cwd = typeof input.cwd === 'string' && input.cwd.trim().length > 0 ? input.cwd.trim() : undefined;
 
   const result = await resumeLocalSession(sessionFile, {
-    ...buildLiveSessionOptions(context),
+    ...(await buildLiveSessionOptionsAsync(context)),
     ...(cwd ? { cwdOverride: cwd } : {}),
   });
   await context.flushLiveDeferredResumes();
@@ -870,7 +876,7 @@ export async function submitLiveSessionParallelPromptCapability(
       attachmentRefs: prepared.referencedAttachments.map((attachment) => `${attachment.attachmentId} (rev ${attachment.revision})`),
       contextMessages: promptContextMessages,
     },
-    buildLiveSessionOptions(context),
+    await buildLiveSessionOptionsAsync(context),
   );
 
   return {
@@ -989,7 +995,7 @@ export async function branchLiveSessionCapability(
     throw new LiveSessionCapabilityInputError('entryId required');
   }
 
-  return branchLiveSession(conversationId, entryId, buildLiveSessionOptions(context));
+  return branchLiveSession(conversationId, entryId, await buildLiveSessionOptionsAsync(context));
 }
 
 export async function forkLiveSessionCapability(
@@ -1009,7 +1015,7 @@ export async function forkLiveSessionCapability(
   return forkLiveSession(conversationId, entryId, {
     preserveSource: input.preserveSource,
     beforeEntry: input.beforeEntry,
-    ...buildLiveSessionOptions(context),
+    ...(await buildLiveSessionOptionsAsync(context)),
   });
 }
 

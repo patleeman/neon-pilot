@@ -12,7 +12,7 @@ import { isExtensionEnabled, listExtensionEntries } from '../extensions/extensio
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
-import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
+import { buildPromptAssemblyPlan, buildPromptAssemblyPlanAsync } from '../prompt-assembly/promptAssembly.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
@@ -31,6 +31,7 @@ export interface RuntimeState {
   materializeRuntimeResources: () => void;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   buildLiveSessionResourceOptions: () => LiveSessionResourceOptions;
+  buildLiveSessionResourceOptionsAsync: () => Promise<LiveSessionResourceOptions>;
   withTemporaryRuntimeAgentDir: <T>(run: (agentDir: string) => Promise<T>) => Promise<T>;
 }
 
@@ -283,6 +284,25 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     };
   }
 
+  async function buildLiveSessionResourceOptionsAsync(): Promise<LiveSessionResourceOptions> {
+    const resolved = resolveRuntimeResources(runtimeScope, {
+      repoRoot,
+      extensionEntries: resolveRuntimeExtensionEntries(),
+    });
+    const assembly = await buildPromptAssemblyPlanAsync({
+      profile: runtimeScope,
+      repoRoot,
+      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+    });
+
+    return {
+      additionalExtensionPaths: resolved.extensionEntries,
+      additionalSkillPaths: assembly.skills.skillPaths,
+      additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
+      additionalThemePaths: resolved.themeEntries,
+    };
+  }
+
   function withTemporaryRuntimeAgentDir<T>(run: (runtimeAgentDir: string) => Promise<T>): Promise<T> {
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
@@ -301,6 +321,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     materializeRuntimeResources,
     buildLiveSessionExtensionFactories,
     buildLiveSessionResourceOptions,
+    buildLiveSessionResourceOptionsAsync,
     withTemporaryRuntimeAgentDir,
   };
 }

@@ -1,3 +1,5 @@
+import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { listExtensionPromptAssemblyHookRegistrations } from '../extensions/extensionRegistry.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { buildToolInjectionPlan, buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
@@ -62,5 +64,27 @@ export async function buildPromptAssemblyPlanAsync(
     plan.context = { blocks: context.blocks, diagnostics: context.diagnostics };
     plan.diagnostics = [...plan.diagnostics, ...context.diagnostics];
   }
+  await runPromptAssemblyHooks(plan, ctx);
   return plan;
+}
+
+async function runPromptAssemblyHooks(plan: PromptAssemblyPlan, ctx: AssemblyRuntimeContext): Promise<void> {
+  const hooks = listExtensionPromptAssemblyHookRegistrations();
+  await Promise.allSettled(
+    hooks.map(async (hook) => {
+      const result = await invokeExtensionAction(hook.extensionId, hook.handler, { plan, context: ctx, phase: hook.phase });
+      if (!result.ok) {
+        plan.diagnostics.push({
+          severity: 'warning',
+          code: 'prompt-assembly-hook-failed',
+          message: `${hook.title ?? hook.id} hook failed; prompt assembly continued without it.`,
+          sourceId: `${hook.extensionId}/${hook.id}`,
+        });
+        return;
+      }
+      const payload = result.result as { plan?: PromptAssemblyPlan; diagnostics?: PromptAssemblyPlan['diagnostics'] } | undefined;
+      if (payload?.plan) Object.assign(plan, payload.plan);
+      if (Array.isArray(payload?.diagnostics)) plan.diagnostics.push(...payload.diagnostics);
+    }),
+  );
 }

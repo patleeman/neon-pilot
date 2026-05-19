@@ -19,6 +19,7 @@ interface CreateServerRouteContextOptions {
   getDefaultWebCwd: () => string;
   resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined;
   buildLiveSessionResourceOptions: ServerRouteContext['buildLiveSessionResourceOptions'];
+  buildLiveSessionResourceOptionsAsync?: ServerRouteContext['buildLiveSessionResourceOptionsAsync'];
   buildLiveSessionExtensionFactories: ServerRouteContext['buildLiveSessionExtensionFactories'];
   flushLiveDeferredResumes: () => Promise<void>;
   getSavedUiPreferences: ServerRouteContext['getSavedUiPreferences'];
@@ -43,6 +44,9 @@ export function createServerRouteContext(options: CreateServerRouteContextOption
     getDefaultWebCwd: options.getDefaultWebCwd,
     resolveRequestedCwd: options.resolveRequestedCwd,
     buildLiveSessionResourceOptions: options.buildLiveSessionResourceOptions,
+    ...(options.buildLiveSessionResourceOptionsAsync
+      ? { buildLiveSessionResourceOptionsAsync: options.buildLiveSessionResourceOptionsAsync }
+      : {}),
     buildLiveSessionExtensionFactories: options.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: options.flushLiveDeferredResumes,
     getSavedUiPreferences: options.getSavedUiPreferences,
