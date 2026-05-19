@@ -11,7 +11,7 @@ import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChatChunk } from './chatWindowing.js';
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
-import { SystemPromptMessage } from './MessageBlocks.js';
+import { ContextShelf, SystemPromptMessage } from './MessageBlocks.js';
 import {
   CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY,
   getStreamingStatusLabel,
@@ -101,7 +101,7 @@ function shouldFocusComposerFromTranscriptPointerDown(event: React.PointerEvent<
 }
 
 function isLeadingContextItem(item: ChatRenderItem): boolean {
-  return item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary');
+  return item.type === 'context_cluster' || (item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary'));
 }
 
 export const ChatView = memo(function ChatView({
@@ -337,6 +337,11 @@ export const ChatView = memo(function ChatView({
   const shouldGroupIntroContext = !shouldWindowTranscript && (hasSystemPromptContext || leadingContextItemCount > 0);
   const introContextItems = shouldGroupIntroContext ? renderItems.slice(0, leadingContextItemCount) : [];
   const transcriptItems = shouldGroupIntroContext ? renderItems.slice(leadingContextItemCount) : renderItems;
+  const introContextBlocks = introContextItems.flatMap((item) => {
+    if (item.type === 'context_cluster') return item.blocks;
+    if (item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary')) return [item.block];
+    return [];
+  });
 
   const fullTranscript = (
     <div className="space-y-4">{transcriptItems.map((item, itemIndex) => renderChatItem(item, itemIndex + leadingContextItemCount))}</div>
@@ -428,8 +433,15 @@ export const ChatView = memo(function ChatView({
         ) : null}
         {shouldGroupIntroContext ? (
           <div className={transcriptItems.length > 0 || transcriptBoundary ? 'mb-7 space-y-1.5' : 'space-y-1.5'}>
-            {hasSystemPromptContext ? <SystemPromptMessage text={systemPrompt ?? ''} toolDefinitions={toolDefinitions} /> : null}
-            {introContextItems.map((item, itemIndex) => renderChatItem(item, itemIndex))}
+            <ContextShelf
+              blocks={introContextBlocks}
+              messageIndexOffset={0}
+              systemPrompt={systemPrompt ?? ''}
+              toolDefinitions={toolDefinitions}
+              onOpenFilePath={onOpenFilePath}
+              onOpenCheckpoint={onOpenCheckpoint}
+              onSelectionGesture={onReplyToSelection ? scheduleReplySelectionSync : undefined}
+            />
           </div>
         ) : hasSystemPromptContext ? (
           <div className="mb-1.5">

@@ -89,17 +89,26 @@ function contextShelfPreview(block: Extract<MessageBlock, { type: 'context' | 's
 export const ContextShelf = memo(function ContextShelf({
   blocks,
   messageIndexOffset,
+  systemPrompt,
+  toolDefinitions = [],
   onOpenFilePath,
   onOpenCheckpoint,
   onSelectionGesture,
 }: {
   blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[];
   messageIndexOffset?: number;
+  systemPrompt?: string | null;
+  toolDefinitions?: LiveSessionToolDefinition[];
   onOpenFilePath?: (path: string) => void;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
+  const normalizedSystemPrompt = systemPrompt?.trim() ?? '';
+  const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitions.length > 0;
   const counts = new Map<string, number>();
+  if (hasSystemPrompt) {
+    counts.set('System prompt', 1);
+  }
   for (const block of blocks) {
     const label = contextShelfLabel(block);
     counts.set(label, (counts.get(label) ?? 0) + 1);
@@ -116,13 +125,39 @@ export const ContextShelf = memo(function ContextShelf({
           ›
         </span>
         <span className="shrink-0 font-medium text-secondary/85">Context</span>
-        <span className="text-dim">· {blocks.length}</span>
+        <span className="text-dim">
+          · {blocks.length + (hasSystemPrompt ? 1 : 0)} item{blocks.length + (hasSystemPrompt ? 1 : 0) === 1 ? '' : 's'}
+        </span>
         {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
         {blocks[blocks.length - 1]?.ts ? (
           <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
         ) : null}
       </summary>
       <div className="mt-2 space-y-1.5 pl-5">
+        {hasSystemPrompt ? (
+          <details
+            className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+            data-context-type="system_prompt"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+              <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
+              <span className="min-w-0 flex-1 truncate text-dim/90">
+                {toolDefinitions.length > 0
+                  ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
+                  : 'Runtime instructions available for inspection.'}
+              </span>
+            </summary>
+            <div className="space-y-4 pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+              {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
+              {toolDefinitions.length > 0 ? (
+                <div>
+                  <div className="mb-2 font-medium text-primary">Available tool definitions</div>
+                  {renderText(formatToolDefinitions(toolDefinitions))}
+                </div>
+              ) : null}
+            </div>
+          </details>
+        ) : null}
         {blocks.map((block, index) => {
           const blockId = block.id?.trim() || undefined;
           const replySelectionScopeProps = buildReplySelectionScopeProps(
