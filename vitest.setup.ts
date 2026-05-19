@@ -6,6 +6,46 @@ import { afterEach } from 'vitest';
 
 import { closeActivityDbs } from './packages/core/src/activity.js';
 import { closeAutomationDbs } from './packages/desktop/server/automation/store.js';
+
+// JSDOM doesn't provide EventSource; provide a minimal mock for components
+// that create EventSource instances during render (e.g. VaultFileTree).
+if (typeof globalThis.EventSource !== 'function') {
+  class EventSourceMock {
+    static readonly CONNECTING = 0;
+    static readonly OPEN = 1;
+    static readonly CLOSED = 2;
+    readonly CONNECTING = 0;
+    readonly OPEN = 1;
+    readonly CLOSED = 2;
+    readyState = EventSourceMock.CONNECTING;
+    url: string;
+    withCredentials = false;
+    onopen: ((event: Event) => void) | null = null;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onerror: ((event: Event) => void) | null = null;
+    constructor(url: string | URL) {
+      this.url = String(url);
+      queueMicrotask(() => {
+        this.readyState = EventSourceMock.OPEN;
+        this.dispatchEvent(new Event('open'));
+      });
+    }
+    close() {
+      this.readyState = EventSourceMock.CLOSED;
+    }
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent(event: Event) {
+      const handler = this[`on${event.type}` as keyof this];
+      if (typeof handler === 'function') {
+        (handler as (event: Event) => void).call(this, event);
+      }
+      return true;
+    }
+  }
+  globalThis.EventSource = EventSourceMock as unknown as typeof EventSource;
+}
+
 const GLOBAL_KEY = '__PERSONAL_AGENT_VITEST_STATE_ROOT__' as const;
 
 const globalForTestStateRoot = globalThis as typeof globalThis & {
