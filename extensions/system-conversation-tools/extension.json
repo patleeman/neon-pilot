@@ -14,8 +14,7 @@
       {
         "id": "ask-user-question-tool-block",
         "tool": "ask_user_question",
-        "component": "AskUserQuestionTranscriptRenderer",
-        "standalone": true
+        "component": "AskUserQuestionTranscriptRenderer"
       },
       {
         "id": "terminal-bash-tool-block",

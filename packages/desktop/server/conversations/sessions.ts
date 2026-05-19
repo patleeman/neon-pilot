@@ -1268,7 +1268,13 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
         const startMs = new Date(existing.ts).getTime();
         const endMs = new Date(ts).getTime();
         const duration = endMs > startMs ? endMs - startMs : undefined;
-        blocks[idx] = { ...existing, output: resultText, durationMs: duration, details };
+        const imageCount = contentBlocks.filter((block) => block.type === 'image' && imageSrc(block) && imageMimeType(block)).length;
+        blocks[idx] = {
+          ...existing,
+          output: resultText,
+          durationMs: duration,
+          details: imageCount > 0 ? { ...(details && typeof details === 'object' ? details : {}), imageCount } : details,
+        };
       } else if (resultText) {
         recordAnchor();
         blocks.push({
@@ -1307,7 +1313,14 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             },
           ];
         });
-      blocks.push(...resultImages);
+      const normalizedToolName = normalizeTranscriptToolName(toolName ?? 'unknown');
+      const hasOriginalToolCall = idx !== undefined;
+      if (
+        !hasOriginalToolCall ||
+        (normalizedToolName !== 'image' && normalizedToolName !== 'browser_screenshot' && normalizedToolName !== 'screenshot')
+      ) {
+        blocks.push(...resultImages);
+      }
     }
   }
 
@@ -1383,7 +1396,10 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
 function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[] {
   const children = scanSessionMetas()
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
-    .filter((child) => (child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side')) !== 'subagent')
+    .filter((child) => {
+      const kind = child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side');
+      return kind === 'fork' || kind === 'rewind' || kind === 'duplicate';
+    })
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   return children.map((child) => {

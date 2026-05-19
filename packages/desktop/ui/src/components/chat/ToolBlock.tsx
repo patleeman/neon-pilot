@@ -55,6 +55,28 @@ function readCheckpointId(block: Extract<MessageBlock, { type: 'tool_use' }>): s
   );
 }
 
+function readArtifactId(block: Extract<MessageBlock, { type: 'tool_use' }>): string | undefined {
+  return (
+    readToolInputString(block.input, 'artifactId') ??
+    readToolDetailString(block.details, 'artifactId') ??
+    (/\bartifact\s+([A-Za-z0-9_.:-]+)\b/i.exec(block.output ?? '')?.[1]?.trim() || undefined)
+  );
+}
+
+function readArtifactTitle(block: Extract<MessageBlock, { type: 'tool_use' }>): string | undefined {
+  return readToolInputString(block.input, 'title') ?? readToolDetailString(block.details, 'title') ?? readArtifactId(block);
+}
+
+function isDurableArtifactTool(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  if (block.tool !== 'artifact') return false;
+  const action = readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action');
+  return action !== 'list' && action !== 'delete' && Boolean(readArtifactTitle(block));
+}
+
+function isPinnedVisualTool(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  return block.tool === 'image' || block.tool === 'browser_screenshot' || block.tool === 'screenshot';
+}
+
 export function ToolBlock({
   block,
   autoOpen,
@@ -116,7 +138,20 @@ export function ToolBlock({
     return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;
   }
 
-  if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question') {
+  const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;
+  const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
+  const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
+  const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
+  const checkpointId = block.tool === 'checkpoint' ? readCheckpointId(block) : undefined;
+  const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
+  const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
+  const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
+  const pinnedCheckpoint = block.tool === 'checkpoint';
+  const pinnedArtifact = isDurableArtifactTool(block);
+  const pinnedVisual = isPinnedVisualTool(block);
+  const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual;
+
+  if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && !pinnedTool) {
     // ask_user_question is handled as a local fallback below so the question
     // submit callback stays wired even when the extension isn't loaded yet.
     return (
@@ -151,15 +186,15 @@ export function ToolBlock({
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
 
   const preview = buildToolPreview(block);
-  const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;
-  const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
-  const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
-  const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
-  const checkpointId = block.tool === 'checkpoint' ? readCheckpointId(block) : undefined;
-  const displayPreview = block.tool === 'subagent' ? (subagentTitle ?? subagentPrompt ?? preview) : preview;
-  const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
-  const pinnedCheckpoint = block.tool === 'checkpoint';
-  const pinnedTool = pinnedSubagent || pinnedCheckpoint;
+  const visualPreview = readToolInputString(block.input, 'prompt') ?? readToolInputString(block.input, 'tabId') ?? preview;
+  const displayPreview =
+    block.tool === 'subagent'
+      ? (subagentTitle ?? subagentPrompt ?? preview)
+      : block.tool === 'artifact'
+        ? (artifactTitle ?? preview)
+        : pinnedVisual
+          ? visualPreview
+          : preview;
   const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
 
@@ -211,6 +246,18 @@ export function ToolBlock({
             onClick={(event) => {
               event.stopPropagation();
               onOpenCheckpoint(checkpointId);
+            }}
+          >
+            View
+          </button>
+        ) : null}
+        {pinnedArtifact && artifactId && onOpenArtifact ? (
+          <button
+            type="button"
+            className="ui-action-button shrink-0 text-[10px] font-sans"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenArtifact(artifactId);
             }}
           >
             View

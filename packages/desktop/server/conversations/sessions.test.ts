@@ -1920,7 +1920,7 @@ describe('sessions', () => {
     );
   });
 
-  it('renders non-subagent child conversations as transcript topology events', () => {
+  it('does not render tool-created side conversations as loose transcript topology events', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
 
@@ -1947,15 +1947,7 @@ describe('sessions', () => {
 
     const detail = readSessionBlocks('topology-parent-session');
 
-    expect(detail?.blocks).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'context',
-          customType: 'child_conversation_topology',
-          text: expect.stringContaining('Side conversation created: Topology child session'),
-        }),
-      ]),
-    );
+    expect(detail?.blocks).not.toEqual(expect.arrayContaining([expect.objectContaining({ customType: 'child_conversation_topology' })]));
   });
 
   it('pins subagent child conversations onto the subagent tool block instead of a separate topology event', () => {
@@ -2079,7 +2071,7 @@ describe('sessions', () => {
     });
     appendConversationOffshootMetadata({
       sessionFile: childSessionFile,
-      kind: 'side',
+      kind: 'fork',
       parentSessionFile,
       parentSessionId: 'cached-topology-parent-session',
     });

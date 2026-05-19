@@ -59,8 +59,7 @@
       {
         "id": "checkpoint-tool-block",
         "tool": "checkpoint",
-        "component": "CheckpointTranscriptRenderer",
-        "standalone": true
+        "component": "CheckpointTranscriptRenderer"
       }
     ],
     "views": [

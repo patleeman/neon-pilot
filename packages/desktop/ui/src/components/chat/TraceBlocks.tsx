@@ -115,10 +115,29 @@ function traceSummaryTone(category: TraceClusterSummaryCategory) {
 const MAX_VISIBLE_TRACE_BLOCKS = 5;
 const TRACE_CLUSTER_INACTIVE_GRACE_MS = 900;
 
+function readToolRecordString(source: unknown, key: string): string | undefined {
+  if (!source || typeof source !== 'object') return undefined;
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function hasArtifactPresentation(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  if (block.tool !== 'artifact') return false;
+  const action = readToolRecordString(block.input, 'action') ?? readToolRecordString(block.details, 'action');
+  const artifactId = readToolRecordString(block.input, 'artifactId') ?? readToolRecordString(block.details, 'artifactId');
+  const title = readToolRecordString(block.input, 'title') ?? readToolRecordString(block.details, 'title');
+  return action !== 'list' && action !== 'delete' && Boolean(artifactId || title);
+}
+
 function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<MessageBlock, { type: 'tool_use' }> {
   return (
     block.type === 'tool_use' &&
     (block.tool === 'checkpoint' ||
+      block.tool === 'ask_user_question' ||
+      block.tool === 'image' ||
+      block.tool === 'browser_screenshot' ||
+      block.tool === 'screenshot' ||
+      hasArtifactPresentation(block) ||
       (block.tool === 'subagent' &&
         !!block.details &&
         typeof block.details === 'object' &&
@@ -126,7 +145,7 @@ function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<Mes
   );
 }
 
-function PinnedSubagentToolBlocks({
+function PinnedToolBlocks({
   blocks,
   onOpenArtifact,
   activeArtifactId,
@@ -150,7 +169,7 @@ function PinnedSubagentToolBlocks({
     <div className="ml-2.5 mt-1.5 space-y-1.5 border-l border-border-subtle pl-2.5">
       {pinned.map((block, index) => (
         <ToolBlock
-          key={`pinned-subagent-${block.id ?? index}`}
+          key={`pinned-tool-${block.id ?? index}`}
           block={block}
           autoOpen={false}
           onOpenArtifact={onOpenArtifact}
@@ -310,7 +329,7 @@ export function TraceClusterBlock({
       </div>
 
       {!open && (
-        <PinnedSubagentToolBlocks
+        <PinnedToolBlocks
           blocks={blocks}
           onOpenArtifact={onOpenArtifact}
           activeArtifactId={activeArtifactId}

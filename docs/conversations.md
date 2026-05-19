@@ -44,7 +44,9 @@ Long saved conversations open on their latest transcript segment. When earlier h
 
 Conversations support tree-style branching. Each turn creates a node in the conversation tree.
 
-Conversation files also keep file-level lineage. When a saved thread is branched, forked, rewound, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session and source message. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available. The transcript also renders offshoot conversations as timeline events anchored after the source message when known, with child transcripts showing a backlink to the parent. Low-level tool-call plumbing remains collapsed in internal-work shelves.
+Conversation files also keep file-level lineage. When a saved thread is branched, forked, rewound, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session and source message. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available.
+
+The transcript treats explicit branch actions (`fork`, `rewind`, `duplicate`) as timeline landmarks anchored after the source message when known. Tool-created side work stays with the tool call that created it: subagents, artifacts, checkpoints, prompts, and visual captures are pinned as compact rows inside the **Internal work** shelf so they remain visible even when low-level tool-call plumbing is collapsed.
 
 ### /fork
 

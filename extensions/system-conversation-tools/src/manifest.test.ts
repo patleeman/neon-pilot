@@ -48,13 +48,18 @@ describe('system-conversation-tools manifest', () => {
     );
   });
 
-  it('keeps question prompts standalone and groups normal bash tool calls into internal work', () => {
+  it('keeps question prompts and normal bash tool calls grouped into internal work', () => {
     expect(manifest.contributes.transcriptRenderers).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'ask-user-question-tool-block', tool: 'ask_user_question', standalone: true }),
+        expect.objectContaining({ id: 'ask-user-question-tool-block', tool: 'ask_user_question' }),
         expect.objectContaining({ id: 'terminal-bash-tool-block', tool: 'bash', component: 'TerminalBashTranscriptRenderer' }),
       ]),
     );
+
+    const askRenderer = manifest.contributes.transcriptRenderers.find(
+      (renderer: { id: string }) => renderer.id === 'ask-user-question-tool-block',
+    );
+    expect(askRenderer).not.toHaveProperty('standalone');
 
     const bashRenderer = manifest.contributes.transcriptRenderers.find(
       (renderer: { id: string }) => renderer.id === 'terminal-bash-tool-block',
