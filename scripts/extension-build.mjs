@@ -79,6 +79,9 @@ if (manifest.frontend?.entry && existsSync(frontendSource)) {
     metafile: true,
   });
   recordBuildOutputs(buildOutputs, result.metafile);
+  if (!manifest.backend?.entry || !existsSync(join(packageRoot, 'src', 'backend.ts'))) {
+    writeBundledRuntimePackageJson(outfile, buildOutputs);
+  }
 }
 
 const backendSource = join(packageRoot, 'src', 'backend.ts');

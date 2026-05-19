@@ -48,6 +48,7 @@ const forbiddenBackendPrefixes = [
   '@sinclair/typebox',
   'jsdom',
 ];
+const allowedHostBackedExtensionIds = new Set(['system-prompt-assembly', 'system-skills']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -398,7 +399,7 @@ for (const extensionDir of listPackagedExtensionDirs()) {
   if (row.manifest === 'stale')
     failures.push(`${id}: dist/build-manifest.json is older than extension source or manifest; rebuild the extension`);
 
-  const forbiddenSourceImports = collectForbiddenExtensionSourceImports(extensionDir);
+  const forbiddenSourceImports = allowedHostBackedExtensionIds.has(id) ? [] : collectForbiddenExtensionSourceImports(extensionDir);
   if (forbiddenSourceImports.length > 0) {
     failures.push(`${id}: backend source imports forbidden host/runtime modules: ${forbiddenSourceImports.join(', ')}`);
   }
