@@ -1,4 +1,9 @@
-import { type ExtensionToolRegistration, listExtensionToolRegistrations } from '../extensions/extensionRegistry.js';
+import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import {
+  type ExtensionToolRegistration,
+  listExtensionAssemblyProviderRegistrations,
+  listExtensionToolRegistrations,
+} from '../extensions/extensionRegistry.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
 
 export interface ToolDefinition {
@@ -62,8 +67,37 @@ export function listToolDefinitions(ctx: AssemblyRuntimeContext): ToolDefinition
   return tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
 }
 
+export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Promise<ToolDefinition[]> {
+  const tools = listToolDefinitions(ctx);
+  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'tools');
+  await Promise.allSettled(
+    providers.map(async (provider) => {
+      const result = await invokeExtensionAction(provider.extensionId, provider.handler, ctx);
+      if (!result.ok) return;
+      const payload = result.result as { tools?: ToolDefinition[] } | ToolDefinition[];
+      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.tools) ? payload.tools : [];
+      tools.push(
+        ...provided.map((tool) => ({
+          ...tool,
+          providerId: tool.providerId || `extension-provider:${provider.extensionId}/${provider.id}`,
+          source: tool.source || { kind: 'extension', label: provider.title ?? provider.id, extensionId: provider.extensionId },
+        })),
+      );
+    }),
+  );
+  return tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+}
+
 export function buildToolInjectionPlan(ctx: AssemblyRuntimeContext): ToolInjectionPlan {
-  let tools = listToolDefinitions(ctx).map((tool): RuntimeTool => {
+  return buildToolInjectionPlanFromDefinitions(listToolDefinitions(ctx), ctx);
+}
+
+export async function buildToolInjectionPlanAsync(ctx: AssemblyRuntimeContext): Promise<ToolInjectionPlan> {
+  return buildToolInjectionPlanFromDefinitions(await listToolDefinitionsAsync(ctx), ctx);
+}
+
+function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ctx: AssemblyRuntimeContext): ToolInjectionPlan {
+  let tools = definitions.map((tool): RuntimeTool => {
     const diagnostics = validateTool(tool);
     const condition = toolConditionMatches(tool, ctx);
     const replacementValid = !tool.replaces || OVERRIDABLE_TOOLS.has(tool.replaces);

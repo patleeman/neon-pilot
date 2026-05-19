@@ -74,8 +74,9 @@ describe('buildPromptAssemblyPlan', () => {
     mkdirSync(join(root, 'prompts'), { recursive: true });
     writeFileSync(promptTemplatePath, '# Summary\n');
 
-    const { buildPromptAssemblyPlan } = await import('./promptAssembly.js');
+    const { buildPromptAssemblyPlan, buildPromptAssemblyPlanAsync } = await import('./promptAssembly.js');
     const plan = buildPromptAssemblyPlan({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+    const asyncPlan = await buildPromptAssemblyPlanAsync({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
 
     expect(plan.skills.skillPaths).toEqual(
       expect.arrayContaining([
@@ -87,5 +88,7 @@ describe('buildPromptAssemblyPlan', () => {
     expect(plan.tools.activeToolNames).toContain('hello_tool');
     expect(plan.promptTemplates.templatePaths).toEqual([promptTemplatePath]);
     expect(plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
+    expect(asyncPlan.skills.skillPaths).toEqual(plan.skills.skillPaths);
+    expect(asyncPlan.tools.activeToolNames).toEqual(plan.tools.activeToolNames);
   });
 });

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "id": "system-prompt-assembly",
+  "name": "Prompt Assembly",
+  "packageType": "system",
+  "description": "Inspect prompt assembly inputs, policies, providers, hooks, and diagnostics.",
+  "version": "0.1.0",
+  "frontend": { "entry": "dist/frontend.js", "styles": [] },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [{ "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" }]
+  },
+  "contributes": {
+    "nav": [
+      { "id": "prompt-assembly-nav", "label": "Prompt Assembly", "route": "/prompt-assembly", "icon": "skills", "section": "settings" }
+    ],
+    "views": [
+      {
+        "id": "prompt-assembly-page",
+        "title": "Prompt Assembly",
+        "location": "main",
+        "route": "/prompt-assembly",
+        "component": "PromptAssemblyPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ]
+  },
+  "permissions": ["extensions:read"]
+}

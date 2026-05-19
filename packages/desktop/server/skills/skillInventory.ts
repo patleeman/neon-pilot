@@ -3,7 +3,8 @@ import { basename, dirname, join } from 'node:path';
 
 import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
 
-import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
+import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { listExtensionAssemblyProviderRegistrations, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 
 const REGISTRY_FILE = 'skills-registry.json';
 
@@ -98,6 +99,27 @@ export function listSkillDefinitions(ctx: SkillRuntimeContext): SkillDefinition[
   return dedupeSkills(skills);
 }
 
+export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promise<SkillDefinition[]> {
+  const skills = listSkillDefinitions(ctx);
+  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'skills');
+  await Promise.allSettled(
+    providers.map(async (provider) => {
+      const result = await invokeExtensionAction(provider.extensionId, provider.handler, { profile: ctx.profile, repoRoot: ctx.repoRoot });
+      if (!result.ok) return;
+      const payload = result.result as { skills?: SkillDefinition[] } | SkillDefinition[];
+      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.skills) ? payload.skills : [];
+      skills.push(
+        ...provided.map((skill) => ({
+          ...skill,
+          providerId: skill.providerId || `extension-provider:${provider.extensionId}/${provider.id}`,
+          source: skill.source || { kind: 'extension', label: provider.title ?? provider.id, extensionId: provider.extensionId },
+        })),
+      );
+    }),
+  );
+  return dedupeSkills(skills);
+}
+
 export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
   const disabled = readDisabledSkillIds();
   const skills = listSkillDefinitions(ctx).map((skill, index): RuntimeSkill => {
@@ -115,8 +137,33 @@ export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
   return skills;
 }
 
+export async function buildSkillInventoryAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkill[]> {
+  const disabled = readDisabledSkillIds();
+  const skills = (await listSkillDefinitionsAsync(ctx)).map((skill, index): RuntimeSkill => {
+    const diagnostics = validateSkill(skill);
+    return {
+      ...skill,
+      enabled: !disabled.has(skill.id) && !diagnostics.some((item) => item.severity === 'error'),
+      priority: index,
+      diagnostics,
+    };
+  });
+  for (const hook of runtimeHooks) {
+    if (hook.beforeSkillInjection) return hook.beforeSkillInjection(skills, ctx);
+  }
+  return skills;
+}
+
 export function buildSkillInjectionPlan(ctx: SkillRuntimeContext): RuntimeSkillInjectionPlan {
-  const skills = buildSkillInventory(ctx);
+  return buildSkillInjectionPlanFromRuntimeSkills(buildSkillInventory(ctx), ctx);
+}
+
+export async function buildSkillInjectionPlanAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkillInjectionPlan> {
+  const skills = await buildSkillInventoryAsync(ctx);
+  return buildSkillInjectionPlanFromRuntimeSkills(skills, ctx);
+}
+
+function buildSkillInjectionPlanFromRuntimeSkills(skills: RuntimeSkill[], ctx: SkillRuntimeContext): RuntimeSkillInjectionPlan {
   const diagnostics = skills.flatMap((skill) => skill.diagnostics);
   const skillPaths = [
     ...new Set(skills.filter((skill) => skill.enabled && skill.location?.kind === 'file').map((skill) => dirname(skill.location!.path))),

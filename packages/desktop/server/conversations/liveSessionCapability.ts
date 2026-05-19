@@ -10,8 +10,6 @@ import {
   resolveDurableRunsRoot,
 } from '@personal-agent/daemon';
 
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
-import { listExtensionPromptContextProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { resolveExtensionPromptReferences } from '../extensions/promptReferenceResolvers.js';
 import {
   buildReferencedMemoryDocsContext,
@@ -22,6 +20,7 @@ import {
   resolvePromptReferences,
 } from '../knowledge/promptReferences.js';
 import { invalidateAppTopics, logError, logWarn } from '../middleware/index.js';
+import { buildPromptContextPlan } from '../prompt-assembly/promptContextInventory.js';
 import type { MemoryDocSummary } from '../routes/context.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { buildAttachedConversationContextDocsContext, readConversationContextDocs } from './conversationContextDocs.js';
@@ -543,57 +542,17 @@ async function buildPromptContextMessagesForSubmit(input: {
   contextMessages: Array<{ customType: string; content: string }>;
 }): Promise<{ contextMessages: Array<{ customType: string; content: string }>; warnings: string[] }> {
   const contextMessages = withoutLegacyRelatedThreadSummaries(input.contextMessages);
-  const allWarnings: string[] = [];
-
-  const providers = listExtensionPromptContextProviderRegistrations();
-  await Promise.allSettled(
-    providers.map(async (provider) => {
-      try {
-        const invokeResult = await invokeExtensionAction(provider.extensionId, provider.handler, {
-          prompt: input.prompt,
-          conversationId: input.conversationId,
-          currentCwd: input.currentCwd,
-          relatedConversationIds: input.selectedSessionIds,
-        });
-        if (!invokeResult.ok) {
-          allWarnings.push(`${provider.title ?? provider.id} context failed; sent without it.`);
-          return;
-        }
-        const {
-          contextMessages: providerMessages,
-          blocks: providerBlocks,
-          warnings: providerWarnings,
-        } = invokeResult.result as {
-          contextMessages: Array<{ customType: string; content: string }>;
-          blocks?: Array<{ id?: string; title?: string; content: string; visibility?: 'hidden' | 'debug' | 'visible' }>;
-          warnings?: string[];
-        };
-        if (Array.isArray(providerMessages) && providerMessages.length > 0) {
-          contextMessages.push(...providerMessages);
-        }
-        if (Array.isArray(providerBlocks) && providerBlocks.length > 0) {
-          for (const block of providerBlocks) {
-            if (!block || typeof block.content !== 'string' || !block.content.trim()) continue;
-            const title = typeof block.title === 'string' && block.title.trim() ? block.title.trim() : (provider.title ?? provider.id);
-            contextMessages.push({ customType: 'extension_turn_context', content: [`${title}:`, block.content.trim()].join('\n') });
-          }
-        }
-        if (Array.isArray(providerWarnings) && providerWarnings.length > 0) {
-          allWarnings.push(...providerWarnings);
-        }
-      } catch (error) {
-        logWarn(`prompt context provider ${provider.extensionId}/${provider.id} failed`, {
-          conversationId: input.conversationId,
-          message: error instanceof Error ? error.message : String(error),
-        });
-        allWarnings.push(`${provider.title ?? provider.id} context failed; sent without it.`);
-      }
-    }),
-  );
+  const plan = await buildPromptContextPlan({
+    prompt: input.prompt,
+    conversationId: input.conversationId,
+    currentCwd: input.currentCwd,
+    selectedSessionIds: input.selectedSessionIds,
+    contextMessages,
+  });
 
   return {
-    contextMessages,
-    warnings: allWarnings,
+    contextMessages: plan.contextMessages,
+    warnings: plan.diagnostics.map((diagnostic) => diagnostic.message),
   };
 }
 

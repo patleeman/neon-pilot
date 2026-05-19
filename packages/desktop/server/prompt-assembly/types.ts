@@ -36,5 +36,9 @@ export interface PromptAssemblyPlan {
     templatePaths: string[];
     diagnostics: AssemblyDiagnostic[];
   };
+  context: {
+    blocks: unknown[];
+    diagnostics: AssemblyDiagnostic[];
+  };
   diagnostics: AssemblyDiagnostic[];
 }

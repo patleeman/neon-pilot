@@ -3,6 +3,8 @@ import { basename } from 'node:path';
 
 import { resolveRuntimeResources } from '@personal-agent/core';
 
+import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
 
 export interface PromptTemplateDefinition {
@@ -64,8 +66,37 @@ export function listPromptTemplateDefinitions(ctx: AssemblyRuntimeContext): Prom
   return templates;
 }
 
+export async function listPromptTemplateDefinitionsAsync(ctx: AssemblyRuntimeContext): Promise<PromptTemplateDefinition[]> {
+  const templates = listPromptTemplateDefinitions(ctx);
+  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'promptTemplates');
+  await Promise.allSettled(
+    providers.map(async (provider) => {
+      const result = await invokeExtensionAction(provider.extensionId, provider.handler, ctx);
+      if (!result.ok) return;
+      const payload = result.result as { templates?: PromptTemplateDefinition[] } | PromptTemplateDefinition[];
+      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.templates) ? payload.templates : [];
+      templates.push(
+        ...provided.map((template) => ({
+          ...template,
+          providerId: template.providerId || `extension-provider:${provider.extensionId}/${provider.id}`,
+          source: template.source || { kind: 'extension', label: provider.title ?? provider.id, extensionId: provider.extensionId },
+        })),
+      );
+    }),
+  );
+  return templates;
+}
+
 export function buildPromptTemplatePlan(ctx: AssemblyRuntimeContext): PromptTemplatePlan {
-  let templates = listPromptTemplateDefinitions(ctx).map((template): RuntimePromptTemplate => {
+  return buildPromptTemplatePlanFromDefinitions(listPromptTemplateDefinitions(ctx), ctx);
+}
+
+export async function buildPromptTemplatePlanAsync(ctx: AssemblyRuntimeContext): Promise<PromptTemplatePlan> {
+  return buildPromptTemplatePlanFromDefinitions(await listPromptTemplateDefinitionsAsync(ctx), ctx);
+}
+
+function buildPromptTemplatePlanFromDefinitions(definitions: PromptTemplateDefinition[], ctx: AssemblyRuntimeContext): PromptTemplatePlan {
+  let templates = definitions.map((template): RuntimePromptTemplate => {
     const diagnostics = validateTemplate(template);
     return { ...template, enabled: diagnostics.every((diagnostic) => diagnostic.severity !== 'error'), diagnostics };
   });
