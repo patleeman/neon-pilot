@@ -309,6 +309,20 @@ function preflightFilePatch(filePatch: FilePatch, cwd: string): void {
   }
 }
 
+function preflightPatchSet(filePatches: FilePatch[], cwd: string): void {
+  const touched = new Map<string, string>();
+  for (const filePatch of filePatches) {
+    const paths = [filePatch.path, ...(filePatch.type === 'update' && filePatch.moveTo ? [filePatch.moveTo] : [])];
+    for (const path of paths) {
+      const resolved = resolveInsideCwd(cwd, path);
+      const previous = touched.get(resolved);
+      if (previous) throw new Error(`Patch touches the same file more than once: ${previous} and ${path}`);
+      touched.set(resolved, path);
+    }
+    preflightFilePatch(filePatch, cwd);
+  }
+}
+
 function applyFilePatch(filePatch: FilePatch, cwd: string): { result: ApplyResult; fileChange: FileChangeMetadata } {
   const target = resolveInsideCwd(cwd, filePatch.path);
   if (filePatch.type === 'add') {
@@ -417,9 +431,7 @@ function applyPatchesFromInput(input: ApplyPatchInput, ctx: ToolContext): ApplyP
   // Preflight: validate every operation before applying any.
   // This ensures atomicity — if one file fails validation, no changes
   // are written to disk.
-  for (const filePatch of filePatches) {
-    preflightFilePatch(filePatch, cwd);
-  }
+  preflightPatchSet(filePatches, cwd);
 
   // Apply phase: now safe to write since preflight passed.
   const applied = filePatches.map((filePatch) => applyFilePatch(filePatch, cwd));

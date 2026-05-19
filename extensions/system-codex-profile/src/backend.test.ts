@@ -124,6 +124,28 @@ describe('applyPatch', () => {
 
     expect(readFileSync(join(cwd, 'space.txt'), 'utf-8')).toBe('ALPHA\nbeta\n');
   });
+
+  it('rejects repeated file operations before mutating disk', async () => {
+    const cwd = tempCwd();
+    writeFileSync(join(cwd, 'app.txt'), 'one\n');
+
+    await expect(
+      applyPatch(
+        {
+          patch: `*** Begin Patch
+*** Delete File: app.txt
+*** Update File: app.txt
+@@
+-one
++two
+*** End Patch`,
+        },
+        ctx(cwd),
+      ),
+    ).rejects.toThrow('Patch touches the same file more than once');
+
+    expect(readFileSync(join(cwd, 'app.txt'), 'utf-8')).toBe('one\n');
+  });
 });
 
 describe('applyPatchEdit', () => {
