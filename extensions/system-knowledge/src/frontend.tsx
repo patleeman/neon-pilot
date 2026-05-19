@@ -121,21 +121,27 @@ export function KnowledgePageSurface() {
       <div className="h-full overflow-y-auto">
         <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="flex min-h-full flex-col gap-10">
           <AppPageIntro title="Knowledge" summary="Durable notes, skills, and project context for the agent." />
-          <section className="mx-auto flex w-full max-w-3xl flex-col gap-7 pt-[12vh] text-left">
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Set Up Knowledge</p>
-              <h2 className="text-3xl font-semibold tracking-[-0.03em] text-primary text-balance">Give the agent a durable memory.</h2>
-              <p className="max-w-2xl text-[14px] leading-7 text-secondary">
-                Knowledge is a git-backed folder for notes, skills, project context, and instructions. Neon Pilot clones the repo locally,
-                watches for edits, and syncs changes in the background. Less ceremony, more brain.
-              </p>
-            </div>
+          <section className="grid w-full gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
+            <div className="space-y-7">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Set Up Knowledge</p>
+                <h2 className="font-serif text-[34px] font-normal italic leading-tight tracking-[-0.02em] text-primary text-balance">
+                  Give the agent a durable memory.
+                </h2>
+                <p className="max-w-2xl text-[14px] leading-7 text-secondary">
+                  Knowledge is a git-backed folder for notes, skills, project context, and instructions. Neon Pilot clones the repo locally,
+                  watches for edits, and syncs changes in the background. Less ceremony, more brain.
+                </p>
+              </div>
 
-            <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-2xl border border-border-subtle bg-elevated/60 p-5 shadow-sm">
+              <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
                 <KnowledgeSettingsPanelComponent variant="onboarding" />
               </div>
-              <div className="space-y-4 py-1 text-[13px] leading-6 text-secondary">
+            </div>
+
+            <aside className="space-y-5 border-t border-border-subtle pt-5 lg:border-t-0 lg:pt-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dim/85">On this page</div>
+              <div className="space-y-3 text-[13px] leading-6 text-secondary">
                 <div>
                   <h3 className="text-[13px] font-semibold text-primary">What Goes In Here</h3>
                   <p className="mt-1">Reusable skills, durable notes, project docs, and instructions the agent should actually remember.</p>
@@ -151,7 +157,7 @@ export function KnowledgePageSurface() {
                   <p className="mt-1">Paste the clone URL. Empty repo is fine too — Neon Pilot will populate it as you build memory.</p>
                 </div>
               </div>
-            </div>
+            </aside>
           </section>
         </AppPageLayout>
       </div>

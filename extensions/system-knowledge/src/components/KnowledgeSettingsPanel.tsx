@@ -5,8 +5,8 @@ import { knowledgeApi } from '../lib/knowledgeApi';
 import { getKnowledgeBaseSyncPresentation } from '../lib/knowledgeBaseSyncStatus';
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
-const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-lg px-3 py-1.5 text-[12px] shadow-none';
+  'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
+const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 
 export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'settings' | 'onboarding' } = {}) {
   const {
@@ -229,7 +229,7 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
             <button
               type="submit"
               disabled={action !== null || repoUrlDraft.trim().length === 0}
-              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:bg-dim/45 disabled:text-white/80"
+              className="rounded-md bg-accent px-4 py-2 text-[13px] font-semibold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.5)] transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:bg-dim/45 disabled:text-white/80"
             >
               {action === 'save' ? 'Connecting…' : 'Connect Repository'}
             </button>
@@ -237,12 +237,9 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
           </div>
         ) : null}
         {isOnboarding && actionProgressText ? (
-          <div
-            className="rounded-lg border border-border-subtle bg-surface/60 px-3 py-2 text-[12px] leading-5 text-secondary"
-            role="status"
-          >
-            <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-border-subtle">
-              <div className="h-full w-1/2 animate-pulse rounded-full bg-accent/80" />
+          <div className="rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[12px] leading-5 text-secondary" role="status">
+            <div className="mb-1 h-1.5 overflow-hidden rounded-md bg-border-subtle">
+              <div className="h-full w-1/2 animate-pulse rounded-md bg-accent/80" />
             </div>
             {actionProgressText}
           </div>
