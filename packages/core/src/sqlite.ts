@@ -98,6 +98,11 @@ function wrapTransaction<TArgs extends unknown[]>(db: RawSqliteDatabase, fn: (..
       } catch {
         // Ignore rollback failures so the original error wins.
       }
+      try {
+        db.exec(`RELEASE "${sp}"`);
+      } catch {
+        // Ignore release failures so the original error wins.
+      }
       throw error;
     }
   };
