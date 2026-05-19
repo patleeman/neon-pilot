@@ -19,6 +19,35 @@ function formatArtifactLoadError(error: string | null): string | null {
   return /Artifact not found/i.test(error) ? 'Artifact not found.' : error;
 }
 
+const ICON_PATHS = {
+  check: 'M20 6 9 17l-5-5',
+  code: 'm16 18 6-6-6-6M8 6l-6 6 6 6',
+  copy: 'M8 8h10v12H8zM6 16H4V4h12v2',
+  eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff:
+    'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a17.9 17.9 0 0 1-3.1 4.4M6.6 6.6C3.7 8.5 2 12 2 12s3.5 8 10 8c1.4 0 2.7-.4 3.8-1',
+  maximize: 'M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5',
+  minimize: 'M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5',
+  x: 'M6 6l12 12M18 6 6 18',
+};
+
+function ToolbarIcon({ name }: { name: keyof typeof ICON_PATHS }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={ICON_PATHS[name]} />
+    </svg>
+  );
+}
+
 export function ConversationArtifactModal({ conversationId, artifactId }: { conversationId: string; artifactId: string }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,26 +186,42 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                     onClick={() => {
                       void copySource();
                     }}
-                    className="ui-toolbar-button px-2 py-1 text-[10px]"
+                    className="ui-toolbar-button h-7 w-7 justify-center p-0"
+                    aria-label={copied ? 'Copied' : artifact.kind === 'latex' ? 'Copy LaTeX' : 'Copy source'}
+                    title={copied ? 'Copied' : artifact.kind === 'latex' ? 'Copy LaTeX' : 'Copy source'}
                   >
-                    {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
+                    <ToolbarIcon name={copied ? 'check' : 'copy'} />
                   </button>
                   {artifact.kind !== 'latex' ? (
                     <button
                       type="button"
                       onClick={() => setShowSource((current) => !current)}
-                      className="ui-toolbar-button px-2 py-1 text-[10px]"
+                      className="ui-toolbar-button h-7 w-7 justify-center p-0"
+                      aria-label={showSource ? 'Hide source' : 'Show source'}
+                      title={showSource ? 'Hide source' : 'Show source'}
                     >
-                      {showSource ? 'hide source' : 'show source'}
+                      <ToolbarIcon name={showSource ? 'eyeOff' : 'code'} />
                     </button>
                   ) : null}
                 </>
               ) : null}
-              <button type="button" onClick={() => setExpanded((current) => !current)} className="ui-toolbar-button px-2 py-1 text-[10px]">
-                {expanded ? 'restore' : 'fullscreen'}
+              <button
+                type="button"
+                onClick={() => setExpanded((current) => !current)}
+                className="ui-toolbar-button h-7 w-7 justify-center p-0"
+                aria-label={expanded ? 'Restore' : 'Fullscreen'}
+                title={expanded ? 'Restore' : 'Fullscreen'}
+              >
+                <ToolbarIcon name={expanded ? 'minimize' : 'maximize'} />
               </button>
-              <button type="button" onClick={closeArtifact} className="ui-toolbar-button px-2 py-1 text-[10px]">
-                close
+              <button
+                type="button"
+                onClick={closeArtifact}
+                className="ui-toolbar-button h-7 w-7 justify-center p-0"
+                aria-label="Close"
+                title="Close"
+              >
+                <ToolbarIcon name="x" />
               </button>
             </div>
           </div>

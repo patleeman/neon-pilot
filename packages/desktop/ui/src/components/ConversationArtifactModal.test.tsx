@@ -116,8 +116,8 @@ describe('ConversationArtifactModal', () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('Product draft');
     expect(html).toContain('Architecture diagram');
-    expect(html).toContain('copy source');
-    expect(html).toContain('show source');
+    expect(html).toContain('aria-label="Copy source"');
+    expect(html).toContain('aria-label="Show source"');
     expect(html).toContain('iframe');
   });
 
@@ -137,6 +137,6 @@ describe('ConversationArtifactModal', () => {
     const html = renderModal();
 
     expect(html).toContain('Artifact not found.');
-    expect(html).toContain('close');
+    expect(html).toContain('aria-label="Close"');
   });
 });
