@@ -184,6 +184,61 @@ return { text: 'Updated file.', details: { fileChanges: [change] } };
 
 Omit `patch` and set `truncated: true` when the inline diff would bloat transcript state.
 
+### Model Profiles
+
+Model profiles let an enabled extension declare that it provides model-specific runtime behavior. They are intentionally small: the profile only says which provider/model refs it matches. The extension implements behavior through normal extension mechanisms such as agent hooks, tools, tool replacements, context providers, or backend actions.
+
+Models do **not** declare profiles. Disabled extensions do **not** secretly activate for matching models. If no enabled profile matches, the session uses normal default behavior.
+
+```json
+{
+  "backend": {
+    "entry": "src/backend.ts",
+    "agentExtension": "default"
+  },
+  "contributes": {
+    "modelProfiles": [
+      {
+        "id": "codex-compatible",
+        "title": "Codex Compatible",
+        "description": "Codex-shaped runtime behavior for GPT coding models.",
+        "match": ["openai-codex/*", "*/gpt-5.5"],
+        "priority": 100
+      }
+    ],
+    "tools": [
+      {
+        "id": "apply-patch",
+        "name": "apply_patch",
+        "description": "Apply a Codex-style patch.",
+        "action": "applyPatch"
+      }
+    ]
+  }
+}
+```
+
+`match` patterns are simple `*` globs over the canonical ref:
+
+```text
+<provider>/<model>
+```
+
+Examples:
+
+- `openai-codex/*` matches every model from the `openai-codex` provider.
+- `*/gpt-5.5` matches `gpt-5.5` from any provider.
+- `opencode-go/qwen*-coder*` matches Qwen Coder-like models from `opencode-go`.
+
+Profile resolution is deliberately boring:
+
+1. Only enabled extensions contribute model profiles.
+2. Matching profiles are sorted by `priority` descending; missing priority is `0`.
+3. Exactly one highest-priority profile wins.
+4. If multiple profiles tie at the highest priority, the match is ambiguous and no profile behavior should be assumed.
+
+The profile contribution itself does not define tools or instructions. For example, the Codex Compatibility extension contributes a `modelProfiles` match for `openai-codex/*`, contributes the `apply_patch` tool, and uses its `backend.agentExtension` hooks to switch active tools to `bash` and `apply_patch` when a matching model is active. Explicit per-run tool allowlists still take precedence over extension profile behavior.
+
 ### Views
 
 Views are the primary way to add UI. Three locations:
