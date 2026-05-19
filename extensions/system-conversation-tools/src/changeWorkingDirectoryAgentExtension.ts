@@ -44,7 +44,7 @@ export async function executeChangeWorkingDirectory(
     input: RequestConversationWorkingDirectoryChangeInput,
   ) => Promise<RequestConversationWorkingDirectoryChangeResult>,
 ) {
-  const conversationId = readRequiredString(ctx.sessionManager.getSessionId?.(), 'conversationId');
+  const conversationId = readRequiredString(ctx.sessionManager.getSessionId(), 'conversationId');
   const nextCwd = await resolveRequestedCwd(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
   if (!nextCwd) {
     throw new Error('cwd is required.');
