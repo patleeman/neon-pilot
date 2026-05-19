@@ -688,7 +688,6 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
           ) {
             navigate('/extensions', { replace: true });
           }
-          return load({ showLoading: false });
         })
         .catch((err: Error) => {
           setExtensions((items) => items.map((item) => (item.id === extension.id ? extension : item)));
