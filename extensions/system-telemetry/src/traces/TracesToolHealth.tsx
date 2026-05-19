@@ -7,9 +7,9 @@ import type { TraceToolHealth } from '@personal-agent/extensions/data';
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🔧 Tool Telemetry</span>
+          <span className="text-[12px] font-semibold">Tool Telemetry</span>
           <span className="ml-auto text-[10px] text-dim">No tool data yet</span>
         </div>
         <div className="p-6 text-center text-[12px] text-dim">Tool calls will appear here as agents execute tools.</div>
@@ -21,10 +21,10 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   const totalErrors = tools.reduce((a, t) => a + t.errors, 0);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🔧 Tool Telemetry</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">
+        <span className="text-[12px] font-semibold">Tool Telemetry</span>
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
           {totalCalls} calls · {totalErrors} errors ({((totalErrors / Math.max(totalCalls, 1)) * 100).toFixed(1)}%)
         </span>
       </div>
@@ -67,7 +67,7 @@ function BashBreakdown({ tools }: { tools: TraceToolHealth[] }) {
               return (
                 <div key={row.command} className="grid grid-cols-[90px_1fr_76px_64px_64px] items-center gap-3 text-[11px]">
                   <span className="truncate font-mono text-primary">{row.command}</span>
-                  <div className="h-2 overflow-hidden rounded-full bg-elevated">
+                  <div className="h-2 overflow-hidden rounded-md bg-elevated">
                     <div className={hasErrors ? 'h-full bg-warning/80' : 'h-full bg-success/70'} style={{ width: `${pct}%` }} />
                   </div>
                   <span className="text-right font-mono text-secondary">{row.calls} calls</span>
@@ -97,7 +97,7 @@ function BashComplexity({ complexity, totalCalls }: { complexity: NonNullable<Tr
         {complexity.shapeBreakdown.map((row) => (
           <div key={row.shape} className="grid grid-cols-[78px_1fr_54px] items-center gap-2 text-[10px]">
             <span className="capitalize text-secondary">{row.shape}</span>
-            <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
+            <div className="h-1.5 overflow-hidden rounded-md bg-elevated">
               <div className="h-full bg-accent/70" style={{ width: `${Math.max((row.calls / shapeTotal) * 100, 2)}%` }} />
             </div>
             <span className="text-right font-mono text-dim">{row.calls}</span>
@@ -135,9 +135,9 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
   return (
     <div className={`rounded-lg p-3 border ${hasTrouble ? 'border-danger/20 bg-danger/[0.03]' : 'border-transparent bg-elevated'}`}>
       <div className="flex items-center gap-2 mb-2.5">
-        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+        <span className={`w-1.5 h-1.5 rounded-md ${dotClass}`} />
         <span className="text-[13px] font-semibold">{tool.toolName}</span>
-        <span className="ml-auto text-[10px] text-dim bg-surface px-1.5 py-0.5 rounded-full">{tool.calls} calls</span>
+        <span className="ml-auto text-[10px] text-dim bg-surface px-1.5 py-0.5 rounded-md">{tool.calls} calls</span>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
         <Stat
@@ -150,7 +150,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
         <Stat label="Max Latency" value={formatDuration(tool.maxLatencyMs)} />
       </div>
       <div className="mt-2.5 pt-2 border-t border-border-subtle/50">
-        <div className="flex h-2 overflow-hidden rounded-full bg-surface">
+        <div className="flex h-2 overflow-hidden rounded-md bg-surface">
           <div className="bg-success/70" style={{ width: `${tool.calls > 0 ? (okCalls / tool.calls) * 100 : 0}%` }} />
           {tool.errors > 0 && <div className="bg-danger" style={{ width: `${(tool.errors / tool.calls) * 100}%` }} />}
         </div>

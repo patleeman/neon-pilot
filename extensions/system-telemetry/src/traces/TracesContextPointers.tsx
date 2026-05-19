@@ -10,7 +10,7 @@ import type { ContextPointerUsageResult } from '@personal-agent/extensions/data'
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
           <span className="text-[12px] font-semibold">🔍 Suggested Context Usage</span>
           <span className="ml-auto text-[10px] text-dim">No data yet</span>
@@ -24,10 +24,10 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
   const usageRateColor = summary.usageRate >= 50 ? 'text-success' : summary.usageRate >= 20 ? 'text-warning' : 'text-danger';
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
         <span className="text-[12px] font-semibold">🔍 Suggested Context Usage</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
           {summary.usageRate}% of sessions used suggestions
         </span>
       </div>

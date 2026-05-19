@@ -7,7 +7,7 @@ import type { TraceAgentLoop } from '@personal-agent/extensions/data';
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
           <span className="text-[12px] font-semibold">🔄 Agent Loop Health</span>
           <span className="ml-auto text-[10px] text-dim">No data yet</span>
@@ -18,10 +18,10 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
         <span className="text-[12px] font-semibold">🔄 Agent Loop Health</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">Selected range</span>
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">Selected range</span>
       </div>
       <div className="p-4">
         {/* Loop stats grid */}
@@ -74,7 +74,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
               <DurBar label="P99" pct={100} val={formatDuration(loop.durationP99Ms)} color="bg-danger" />
             </>
           ) : (
-            <div className="rounded-lg bg-elevated px-3 py-4 text-center text-[11px] text-dim">
+            <div className="rounded-md border border-border-subtle bg-elevated px-3 py-4 text-center text-[11px] text-dim">
               Duration percentiles need completed runs with timings.
             </div>
           )}

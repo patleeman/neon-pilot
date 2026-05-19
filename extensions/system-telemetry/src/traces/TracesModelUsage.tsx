@@ -35,10 +35,10 @@ export function TracesModelUsage({
   const cacheHitRateLabel = formatPercent(cacheHitRate);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">📊 Model Usage &amp; Cost</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">Last 24h</span>
+        <span className="text-[12px] font-semibold">Model Usage & Cost</span>
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">Last 24h</span>
       </div>
 
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">

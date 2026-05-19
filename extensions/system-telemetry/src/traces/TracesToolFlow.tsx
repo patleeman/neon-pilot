@@ -7,7 +7,7 @@ import type { ToolFlowResult } from '@personal-agent/extensions/data';
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
           <span className="text-[12px] font-semibold">🔀 Tool Flow &amp; Trajectories</span>
           <span className="ml-auto text-[10px] text-dim">No tool sequences yet</span>
@@ -18,10 +18,10 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
         <span className="text-[12px] font-semibold">🔀 Tool Flow &amp; Trajectories</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
           {data.transitions.length} transitions · {data.coOccurrences.length} co-occurrences
         </span>
       </div>
@@ -42,8 +42,8 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
                   <span className="text-[11px] text-primary w-[90px] font-mono truncate" title={t.toTool}>
                     {t.toTool}
                   </span>
-                  <div className="flex-1 h-2 bg-elevated rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden">
+                    <div className="h-full rounded-md bg-accent" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="text-[10px] font-mono text-dim w-[30px] text-right">{t.count}</span>
                 </div>
@@ -64,8 +64,8 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
                   <span className="text-[11px] text-secondary w-[55px] text-right font-mono truncate">{c.toolA}</span>
                   <span className="text-dim text-[9px]">+</span>
                   <span className="text-[11px] text-primary w-[55px] font-mono truncate">{c.toolB}</span>
-                  <div className="flex-1 h-2 bg-elevated rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden">
+                    <div className="h-full rounded-md bg-success" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="text-[10px] font-mono text-dim w-[24px] text-right">{c.sessions}</span>
                 </div>

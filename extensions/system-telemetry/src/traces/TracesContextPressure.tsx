@@ -15,9 +15,9 @@ export function TracesContextPressure({
 }) {
   if ((!sessions || sessions.length === 0) && (!compactions || compactions.length === 0)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🧠 Context Pressure</span>
+          <span className="text-[12px] font-semibold">Context Pressure</span>
           <span className="ml-auto text-[10px] text-dim">Waiting for data</span>
         </div>
         <div className="p-6 text-center text-[12px] text-dim">Context snapshots appear after agent turns complete.</div>
@@ -30,10 +30,10 @@ export function TracesContextPressure({
   const lowCount = sessions.filter((s) => s.pct <= 70).length;
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🧠 Context Pressure &amp; Session Activity</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">
+        <span className="text-[12px] font-semibold">Context Pressure &amp; Session Activity</span>
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
           {sessions.length} sessions · {highCount + medCount} above 70%
         </span>
       </div>
@@ -74,8 +74,8 @@ export function TracesContextPressure({
                 <span className="w-[100px] text-[11px] text-secondary truncate shrink-0">
                   {s.sessionId.length > 12 ? s.sessionId.slice(0, 12) + '…' : s.sessionId}
                 </span>
-                <div className="flex-1 h-2 bg-elevated rounded-full overflow-hidden flex">
-                  <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.max(s.pct, 2)}%` }} />
+                <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden flex">
+                  <div className="h-full bg-accent rounded-md transition-all" style={{ width: `${Math.max(s.pct, 2)}%` }} />
                   <div className="h-full bg-elevated-hover flex-1" />
                 </div>
                 <span

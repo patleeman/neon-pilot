@@ -7,7 +7,7 @@ import type { TraceTokenDaily } from '@personal-agent/extensions/data';
 export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length < 2) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
           <span className="text-[12px] font-semibold">🧶 Time Series — Last {data?.length ?? 0} Days</span>
           <span className="ml-auto text-[10px] text-dim">Need 2+ data points</span>
@@ -47,7 +47,7 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   const errPath = line(errorSeries, scaleErr);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
         <span className="text-[12px] font-semibold">🧶 Time Series — Last {data.length} Days</span>
         <span className="ml-auto text-[10px] text-dim">{hasErrors ? '4' : '3'} metrics overlaid</span>

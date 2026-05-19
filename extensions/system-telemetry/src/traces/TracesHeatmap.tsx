@@ -7,9 +7,9 @@ import type { TraceTokenDaily } from '@personal-agent/extensions/data';
 export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🔥 Token Activity — All Retained History</span>
+          <span className="text-[12px] font-semibold">Token Activity — All Retained History</span>
           <span className="ml-auto text-[10px] text-dim">No data yet</span>
         </div>
         <div className="p-6 text-center text-[12px] text-dim">Data accumulates after sessions produce tokens.</div>
@@ -44,10 +44,10 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   const dateRange = firstDate && lastDate ? `${firstDate} → ${lastDate}` : 'All retained history';
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🔥 Token Activity — All Retained History</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-full">
+        <span className="text-[12px] font-semibold">Token Activity — All Retained History</span>
+        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
           {dateRange} · {formatNumber(total)} total · {formatNumber(avg)} avg/active day
         </span>
       </div>
