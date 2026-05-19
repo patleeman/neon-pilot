@@ -291,9 +291,9 @@ export async function listDurableRunsWithTelemetry(): Promise<{
 
   durableRunsListCache = {
     expiresAt: now + LIST_DURABLE_RUNS_CACHE_TTL_MS,
-    value: durableRunsListCache?.value ?? null,
+    value: null,
     promise: request,
-    source: durableRunsListCache?.source ?? null,
+    source: null,
   };
 
   try {
