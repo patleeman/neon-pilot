@@ -239,6 +239,20 @@ Profile resolution is deliberately boring:
 
 The profile contribution itself does not define tools or instructions. For example, the Codex Compatibility extension contributes a `modelProfiles` match for `openai-codex/*`, contributes the `apply_patch` tool, and uses its `backend.agentExtension` hooks to switch active tools to `bash` and `apply_patch` when a matching model is active. Explicit per-run tool allowlists still take precedence over extension profile behavior.
 
+For `session_start` and `model_select` handlers, the desktop host augments the lifecycle context with:
+
+```ts
+type ModelProfileContext =
+  | { kind: 'none'; modelRef: string | null }
+  | { kind: 'resolved'; modelRef: string; profile: { id: string; extensionId: string; title?: string; match: string[]; priority: number } }
+  | { kind: 'ambiguous'; modelRef: string; profiles: Array<{ id: string; extensionId: string; match: string[]; priority: number }> };
+
+ctx.modelProfile: ModelProfileContext;
+ctx.setActiveTools(toolNames: string[]): void;
+```
+
+`ctx.setActiveTools` is only available on these lifecycle contexts. Global `pi.setActiveTools` is blocked by the desktop runtime.
+
 ### Views
 
 Views are the primary way to add UI. Three locations:

@@ -188,9 +188,13 @@ describe('createRuntimeState', () => {
 
     expect(guardedPi).not.toBeNull();
     expect(() => guardedPi?.setActiveTools(['read'])).toThrow('pi.setActiveTools is unsupported');
-    guardedPi?.on('session_start', (_event, ctx: { setActiveTools?: (tools: string[]) => void }) => {
-      ctx.setActiveTools?.(['read']);
-    });
+    guardedPi?.on(
+      'session_start',
+      (_event, ctx: { setActiveTools?: (tools: string[]) => void; modelProfile?: { modelRef: string | null } }) => {
+        expect(ctx.modelProfile?.modelRef).toBe('test/model');
+        ctx.setActiveTools?.(['read']);
+      },
+    );
     const registered = pi.on.mock.calls[0];
     expect(registered?.[0]).toBe('session_start');
     (registered?.[1] as (...args: unknown[]) => unknown)({}, { model: { provider: 'test', id: 'model' } });

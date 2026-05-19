@@ -8,7 +8,7 @@ import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
-import { isExtensionEnabled, listExtensionEntries } from '../extensions/extensionRegistry.js';
+import { isExtensionEnabled, listExtensionEntries, resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
@@ -171,6 +171,25 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
    * allowlist over already-registered tools.
    */
   function guardExtensionApi(factory: ExtensionFactory): ExtensionFactory {
+    const warnedAmbiguousProfileRefs = new Set<string>();
+
+    function resolveLifecycleModelProfile(ctx: Record<string, unknown>) {
+      const model = ctx.model as { provider?: unknown; id?: unknown } | undefined;
+      const provider = typeof model?.provider === 'string' ? model.provider : '';
+      const modelId = typeof model?.id === 'string' ? model.id : '';
+      if (!provider || !modelId) return { kind: 'none' as const, modelRef: null };
+      const modelRef = `${provider}/${modelId}`;
+      const resolution = resolveExtensionModelProfile({ provider, model: modelId });
+      if (resolution.kind === 'ambiguous' && !warnedAmbiguousProfileRefs.has(modelRef)) {
+        warnedAmbiguousProfileRefs.add(modelRef);
+        logger.warn('ambiguous model profile match', {
+          modelRef,
+          profiles: resolution.profiles.map((profile) => `${profile.extensionId}/${profile.id}`),
+        });
+      }
+      return { ...resolution, modelRef };
+    }
+
     return (pi: ExtensionAPI) => {
       const apiWithProcessWrappers = pi as ExtensionAPI & {
         registerBashProcessWrapper?: (id: string, wrap: BashProcessWrapper, options?: { label?: string }) => void;
@@ -194,6 +213,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
                   args[0],
                   {
                     ...(ctx as Record<string, unknown>),
+                    modelProfile: resolveLifecycleModelProfile(ctx as Record<string, unknown>),
                     setActiveTools: (toolNames: string[]) => target.setActiveTools(toolNames),
                   },
                   ...args.slice(2),

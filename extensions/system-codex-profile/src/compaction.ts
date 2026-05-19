@@ -114,8 +114,17 @@ function isCodexResponsesModel(model: unknown): model is ModelLike {
   return hostnameFromBaseUrl(model.baseUrl) === 'chatgpt.com';
 }
 
-function supportsNativeCompaction(model: unknown): model is ModelLike {
-  return isDirectOpenAIResponsesModel(model) || isCodexResponsesModel(model);
+function hasCodexModelProfile(ctx: { modelProfile?: { kind?: string; profile?: { id?: string } } }): boolean {
+  return ctx.modelProfile?.kind === 'resolved' && ctx.modelProfile.profile?.id === 'codex-compatible';
+}
+
+function shouldUseNativeCompaction(
+  model: unknown,
+  ctx: { modelProfile?: { kind?: string; profile?: { id?: string } } },
+): model is ModelLike {
+  if (isDirectOpenAIResponsesModel(model)) return true;
+  if (isCodexResponsesModel(model)) return hasCodexModelProfile(ctx);
+  return false;
 }
 
 function describeProviderCompaction(model: ModelLike): string {
@@ -667,7 +676,7 @@ export default function openaiNativeCompactionExtension(pi: ExtensionAPI): void 
 
   pi.on('before_provider_request', (event, ctx) => {
     const model = ctx.model;
-    if (!supportsNativeCompaction(model)) return undefined;
+    if (!shouldUseNativeCompaction(model, ctx)) return undefined;
     if (!looksLikeResponsesPayload(event.payload)) return undefined;
 
     const sessionId = getSessionId(ctx);
@@ -692,7 +701,7 @@ export default function openaiNativeCompactionExtension(pi: ExtensionAPI): void 
 
   pi.on('session_before_compact', async (event, ctx) => {
     const model = ctx.model;
-    if (!supportsNativeCompaction(model)) return undefined;
+    if (!shouldUseNativeCompaction(model, ctx)) return undefined;
 
     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
     if (!auth.ok || !auth.apiKey) return undefined;

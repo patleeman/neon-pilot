@@ -1381,6 +1381,20 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
                 )}
               </DetailBlock>
 
+              {extension.modelProfiles?.length ? (
+                <DetailBlock title="Model Profiles">
+                  <div className="space-y-3 text-[12px]">
+                    {extension.modelProfiles.map((profile) => (
+                      <div key={`${profile.extensionId}-${profile.id}`}>
+                        <div className="font-medium text-primary">{profile.title ?? profile.id}</div>
+                        <div className="text-secondary">{profile.match.join(', ')}</div>
+                        {profile.description ? <div className="mt-1 text-dim">{profile.description}</div> : null}
+                      </div>
+                    ))}
+                  </div>
+                </DetailBlock>
+              ) : null}
+
               <DetailBlock title="Capabilities">
                 <dl className="space-y-3 text-[12px]">
                   <DetailRow label="UI" value={`Frontend: ${formatFrontendSummary(extension)}`} />

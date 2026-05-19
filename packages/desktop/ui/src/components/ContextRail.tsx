@@ -938,6 +938,7 @@ function LiveSessionContextPanel({ id }: { id: string }) {
   const { versions } = useAppEvents();
   const { sessions } = useAppData();
   const [detectedRunMentions, setDetectedRunMentions] = useState<ReturnType<typeof collectConversationRunMentions>>([]);
+  const [sessionDebug, setSessionDebug] = useState<{ modelProfile?: unknown } | null>(null);
   const [runsExpanded, setRunsExpanded] = useState(false);
   const [conversationExecutions, setConversationExecutions] = useState<ConversationExecutionsResult | null>(null);
 
@@ -1000,10 +1001,12 @@ function LiveSessionContextPanel({ id }: { id: string }) {
           return;
         }
 
+        setSessionDebug({ modelProfile: (detail as { modelProfile?: unknown }).modelProfile });
         setDetectedRunMentions(collectConversationRunMentions(detail.blocks.map(displayBlockToMessageBlock)));
       })
       .catch(() => {
         if (!cancelled) {
+          setSessionDebug(null);
           setDetectedRunMentions([]);
         }
       });
@@ -1106,8 +1109,30 @@ function LiveSessionContextPanel({ id }: { id: string }) {
     });
   }
 
+  const modelProfile = sessionDebug?.modelProfile as
+    | {
+        kind?: string;
+        modelRef?: string | null;
+        profile?: { id?: string; title?: string; extensionId?: string };
+        profiles?: Array<{ id?: string; extensionId?: string }>;
+      }
+    | undefined;
+  const modelProfileValue = modelProfile
+    ? modelProfile.kind === 'resolved'
+      ? `${modelProfile.profile?.title ?? modelProfile.profile?.id ?? 'Profile'}${modelProfile.profile?.extensionId ? ` · ${modelProfile.profile.extensionId}` : ''}`
+      : modelProfile.kind === 'ambiguous'
+        ? `Ambiguous: ${(modelProfile.profiles ?? []).map((profile) => `${profile.extensionId}/${profile.id}`).join(', ')}`
+        : 'None'
+    : 'Loading…';
+
   return (
     <div className="space-y-4">
+      <Section title="Runtime">
+        <div className="space-y-2 text-[12px]">
+          <RailMetadataRow label="Model" value={modelProfile?.modelRef ?? 'Unknown'} />
+          <RailMetadataRow label="Profile" value={modelProfileValue} />
+        </div>
+      </Section>
       <Section title="Background Work">
         <button
           type="button"

@@ -60,14 +60,11 @@ interface ApplyPatchOutcome {
 
 type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd?: string } };
 
-function isCodexProfileModel(model: unknown): boolean {
-  if (!model || typeof model !== 'object') return false;
-  const candidate = model as { provider?: unknown; id?: unknown };
-  return candidate.provider === 'openai-codex' && typeof candidate.id === 'string';
-}
-
-function activateCodexTools(ctx: { model?: unknown; setActiveTools?: (toolNames: string[]) => void }): void {
-  if (!isCodexProfileModel(ctx.model)) return;
+function activateCodexTools(ctx: {
+  modelProfile?: { kind?: string; profile?: { id?: string } };
+  setActiveTools?: (toolNames: string[]) => void;
+}): void {
+  if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') return;
   ctx.setActiveTools?.(['bash', 'apply_patch']);
 }
 

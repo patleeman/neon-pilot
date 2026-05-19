@@ -323,6 +323,19 @@ export interface ExtensionModelProfileContribution {
   priority?: number;
 }
 
+export type ExtensionModelProfileRuntimeContext =
+  | { kind: 'none'; modelRef: string | null }
+  | {
+      kind: 'resolved';
+      modelRef: string;
+      profile: { id: string; extensionId: string; title?: string; match: string[]; priority: number };
+    }
+  | {
+      kind: 'ambiguous';
+      modelRef: string;
+      profiles: Array<{ id: string; extensionId: string; title?: string; match: string[]; priority: number }>;
+    };
+
 export interface ExtensionTranscriptRendererContribution {
   id: string;
   tool: string;
