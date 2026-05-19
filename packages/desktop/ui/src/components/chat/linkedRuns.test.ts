@@ -65,6 +65,13 @@ describe('linkedRuns', () => {
     expect(
       buildToolPreview({ ...base, tool: 'deferred_resume', input: { action: 'add', delay: '30m', prompt: 'Check build status' } }),
     ).toBe('add 30m · Check build status');
+    expect(
+      buildToolPreview({
+        ...base,
+        tool: 'conversation_queue',
+        input: { action: 'add', title: 'Deferred resume smoke test', delay: '1 minute', prompt: 'Confirm the queued continuation fired.' },
+      }),
+    ).toBe('add Deferred resume smoke test · 1 minute · Confirm the queued continuation fired.');
     expect(buildToolPreview({ ...base, tool: 'artifact', input: { action: 'save', title: 'Architecture diagram' } })).toBe(
       'save Architecture diagram',
     );

@@ -240,6 +240,13 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const prompt = excerpt('prompt');
       return [action, when, prompt ? `· ${prompt}` : null].filter(Boolean).join(' ');
     }
+    case 'conversation_queue': {
+      const action = read('action');
+      const title = excerpt('title');
+      const when = read('delay') ?? read('at') ?? read('cron');
+      const prompt = excerpt('prompt');
+      return [action, title ?? when, title && when ? `· ${when}` : null, prompt ? `· ${prompt}` : null].filter(Boolean).join(' ');
+    }
     case 'artifact': {
       const action = read('action');
       const title = excerpt('title') ?? read('artifactId');
