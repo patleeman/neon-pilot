@@ -40,10 +40,14 @@ export async function duckDuckGoSearch(input: { query: string; count?: number; p
   let results = await parseDuckDuckGoHtml({ html, maxResults }, ctx);
 
   if (results.length === 0) {
+    // Lite endpoint doesn't use HTML pagination params; clone and strip them.
+    const liteParams = new URLSearchParams(searchParams);
+    liteParams.delete('s');
+    liteParams.delete('dc');
     const liteResponse = await fetch('https://lite.duckduckgo.com/lite/', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: searchParams,
+      body: liteParams,
       signal: createRequestSignal(10000),
     });
     if (!liteResponse.ok) throw new Error(`DuckDuckGo search failed: HTTP ${liteResponse.status}`);
