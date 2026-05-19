@@ -20,6 +20,7 @@ import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
 import {
+  clearBuildError,
   clearExtensionHealthError,
   findExtensionCommandRegistration,
   findExtensionEntry,
@@ -27,7 +28,6 @@ import {
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
   listExtensionRuntimeProviderRegistrations,
-  setBuildError,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -931,7 +931,7 @@ export async function reloadExtensionBackend(extensionId: string): Promise<{ ok:
   backendModuleCache.delete(extensionId);
   await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
-  setBuildError(extensionId, undefined);
+  clearBuildError(extensionId);
   await startExtensionServices();
   return { ok: true, extensionId, rebuilt: false };
 }
