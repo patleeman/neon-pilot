@@ -47,7 +47,7 @@ export const ConversationToolParams = Type.Object(
     ...Object.fromEntries(Object.entries(inspectProperties).map(([key, value]) => [key, Type.Optional(value as never)])),
     ...optionalProperties(ConversationTitleToolParams),
     ...optionalProperties(ChangeWorkingDirectoryToolParams),
-    ...optionalProperties(DeferredResumeParams, new Set(['action'])),
+    ...optionalProperties(DeferredResumeParams),
   },
   { additionalProperties: false },
 );
