@@ -255,6 +255,7 @@ export async function deferredResume(input: QueueFollowupInput, ctx: QueueFollow
       if (trigger === 'after_turn') {
         if (!sessionId) throw new Error('trigger="after_turn" requires a live conversation.');
         await promptSession(sessionId, prompt, deliverAs ?? 'followUp');
+        ctx.ui?.invalidate?.(['sessions', 'runs']);
         return {
           text: `Queued follow-up after the current turn (${deliverAs ?? 'followUp'}).`,
           action: 'add',
@@ -304,6 +305,7 @@ export async function deferredResume(input: QueueFollowupInput, ctx: QueueFollow
       if (liveQueueId) {
         if (!sessionId) throw new Error('Live queue cancellation requires a live conversation.');
         const cancelled = await cancelQueuedPrompt(sessionId, liveQueueId.behavior, liveQueueId.previewId);
+        ctx.ui?.invalidate?.(['sessions']);
         return { text: `Cancelled queued ${liveQueueId.behavior} follow-up.`, action: 'cancel', sessionId, id, cancelled };
       }
       if (!sessionFile) throw new Error('Deferred queue cancellation requires a persisted session file.');
