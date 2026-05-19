@@ -90,6 +90,10 @@ Skill packages can ship MCP server definitions alongside their workflow docs:
 
 Skill-bundled servers are useful when a skill depends on a specific MCP server. Keep secrets out of `mcp.json`; pass credentials through environment variables, OAuth, or local machine config instead.
 
+Discovery is file-based, not name-based: any active skill directory with an adjacent `mcp.json` is included, regardless of whether the skill name ends in `-mcp`. When a skill parent directory is configured, the runtime scans its immediate child skill directories for `mcp.json` files. Keep reusable MCP server definitions in the skill package so the workflow docs and server config move together instead of drifting into machine-local config.
+
+The desktop runtime materializes the effective MCP config into the agent runtime directory and watches active skill directories for `mcp.json` changes. Editing, adding, or deleting a skill-local `mcp.json` refreshes that materialized config without requiring a full app restart; explicit server entries still override bundled skill entries with the same server name.
+
 ## MCP Tool Reference
 
 The `mcp` tool provides access to configured MCP servers:

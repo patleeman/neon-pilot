@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 
 import { resolveMcpConfig } from './mcp.js';
@@ -28,6 +28,51 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function discoverSkillMcpManifestPaths(skillDirs: readonly string[]): string[] {
+  const manifestPaths: string[] = [];
+  const seen = new Set<string>();
+
+  const addIfPresent = (skillDir: string) => {
+    const resolvedSkillDir = resolve(skillDir);
+    const manifestPath = join(resolvedSkillDir, 'mcp.json');
+    if (!existsSync(manifestPath) || seen.has(manifestPath)) return;
+    seen.add(manifestPath);
+    manifestPaths.push(manifestPath);
+  };
+
+  for (const rawDir of skillDirs) {
+    const dir = resolve(rawDir);
+    if (!isDirectory(dir)) continue;
+
+    // Accept either an individual skill directory or a parent directory that
+    // contains skill subdirectories. Discovery is based only on adjacent
+    // mcp.json files, not on skill names like "*-mcp".
+    addIfPresent(dir);
+
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.startsWith('.')) continue;
+      const childDir = join(dir, entry);
+      if (isDirectory(childDir)) addIfPresent(childDir);
+    }
+  }
+
+  return manifestPaths.sort((left, right) => left.localeCompare(right));
+}
+
 function readRawMcpServersRecord(path: string): Record<string, unknown> | null {
   if (!existsSync(path)) {
     return {};
@@ -51,13 +96,8 @@ function readRawMcpServersRecord(path: string): Record<string, unknown> | null {
 export function readBundledSkillMcpManifests(skillDirs: readonly string[]): BundledSkillMcpManifest[] {
   const manifests: BundledSkillMcpManifest[] = [];
 
-  for (const skillDir of skillDirs) {
-    const resolvedSkillDir = resolve(skillDir);
-    const manifestPath = join(resolvedSkillDir, 'mcp.json');
-    if (!existsSync(manifestPath)) {
-      continue;
-    }
-
+  for (const manifestPath of discoverSkillMcpManifestPaths(skillDirs)) {
+    const resolvedSkillDir = dirname(manifestPath);
     const entries = readRawMcpServersRecord(manifestPath);
     if (!entries) {
       continue;

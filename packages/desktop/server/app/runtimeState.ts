@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, type FSWatcher, mkdtempSync, rmSync, watch } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -39,6 +39,8 @@ const DEFAULT_RUNTIME_SCOPE = 'shared';
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
   const { repoRoot, agentDir, logger } = options;
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
+  const mcpConfigWatchers: FSWatcher[] = [];
+  let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
     process.env.PERSONAL_AGENT_ACTIVE_PROFILE = runtimeScope;
@@ -72,20 +74,56 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       });
   }
 
+  function writeRuntimeMcpConfig(skillDirs: readonly string[]): void {
+    const materializedMcpConfigPath = join(agentDir, 'mcp_servers.json');
+    const mergedMcpConfig = writeMergedMcpConfigFile({
+      outputPath: materializedMcpConfigPath,
+      cwd: process.cwd(),
+      env: process.env,
+      skillDirs,
+    });
+    applyRuntimeEnvironment(mergedMcpConfig.bundledServerCount > 0 ? materializedMcpConfigPath : null);
+  }
+
+  function watchRuntimeMcpConfig(skillDirs: readonly string[]): void {
+    for (const watcher of mcpConfigWatchers.splice(0)) {
+      watcher.close();
+    }
+
+    const scheduleReload = () => {
+      if (mcpConfigReloadTimer) clearTimeout(mcpConfigReloadTimer);
+      mcpConfigReloadTimer = setTimeout(() => {
+        try {
+          writeRuntimeMcpConfig(skillDirs);
+        } catch (error) {
+          logger.warn('failed to refresh runtime MCP config', { message: (error as Error).message });
+        }
+      }, 250);
+    };
+
+    const watchDirs = [...new Set(skillDirs.flatMap((dir) => [dir, dirname(dir)]))];
+    for (const dir of watchDirs) {
+      if (!existsSync(dir)) continue;
+      try {
+        const watcher = watch(dir, { recursive: true }, (_event, filename) => {
+          if (!filename || String(filename).endsWith('mcp.json')) scheduleReload();
+        });
+        watcher.on('error', (error) => logger.warn('runtime MCP config watcher failed', { dir, message: error.message }));
+        mcpConfigWatchers.push(watcher);
+      } catch (error) {
+        logger.warn('failed to watch runtime MCP config directory', { dir, message: (error as Error).message });
+      }
+    }
+  }
+
   function materializeRuntimeResources(): void {
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
     materializeRuntimeResourcesToAgentDir(resolved, agentDir);
-    const materializedMcpConfigPath = join(agentDir, 'mcp_servers.json');
-    const mergedMcpConfig = writeMergedMcpConfigFile({
-      outputPath: materializedMcpConfigPath,
-      cwd: process.cwd(),
-      env: process.env,
-      skillDirs: resolved.skillDirs,
-    });
-    applyRuntimeEnvironment(mergedMcpConfig.bundledServerCount > 0 ? materializedMcpConfigPath : null);
+    writeRuntimeMcpConfig(resolved.skillDirs);
+    watchRuntimeMcpConfig(resolved.skillDirs);
   }
 
   setRuntimeAgentHookBuilders({

@@ -31,4 +31,27 @@ describe('mcp bundled config', () => {
 
     expect(readBundledSkillMcpManifests([good, bad]).map((manifest) => manifest.skillName)).toEqual(['good-skill']);
   });
+
+  it('auto-discovers mcp manifests in skill parent directories without naming conventions', () => {
+    const root = createTempDir();
+    const plainSkill = join(root, 'jira-helper');
+    const nonMcpSkill = join(root, 'notes');
+    mkdirSync(plainSkill, { recursive: true });
+    mkdirSync(nonMcpSkill, { recursive: true });
+    writeFileSync(join(plainSkill, 'SKILL.md'), '# Jira Helper');
+    writeFileSync(
+      join(plainSkill, 'mcp.json'),
+      JSON.stringify({ mcpServers: { jira: { type: 'remote', url: 'https://example.test/mcp' } } }),
+    );
+    writeFileSync(join(nonMcpSkill, 'SKILL.md'), '# Notes');
+
+    expect(readBundledSkillMcpManifests([root])).toEqual([
+      {
+        skillName: 'jira-helper',
+        skillDir: plainSkill,
+        manifestPath: join(plainSkill, 'mcp.json'),
+        serverNames: ['jira'],
+      },
+    ]);
+  });
 });
