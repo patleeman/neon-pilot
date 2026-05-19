@@ -1,9 +1,9 @@
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
-import { buildSkillInventory, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
+import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
-  const skills = buildSkillInventory({ profile: ctx.profile, repoRoot: process.cwd() }).map((skill) => ({
+  const skills = (await buildSkillInventoryAsync({ profile: ctx.profile, repoRoot: process.cwd() })).map((skill) => ({
     id: skill.id,
     name: skill.title,
     description: skill.description,
