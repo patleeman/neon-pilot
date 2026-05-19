@@ -86,6 +86,17 @@ describe('setProviderApiKey', () => {
     expect(state.providers.some((entry) => entry.id === 'telegram')).toBe(false);
   });
 
+  it('hides the obsolete legacy provider bucket', () => {
+    const dir = createTempDir();
+    const authFile = join(dir, 'auth.json');
+
+    setProviderApiKey(authFile, 'legacy', 'stale-secret');
+
+    const state = readProviderAuthState(authFile);
+
+    expect(state.providers.some((entry) => entry.id === 'legacy')).toBe(false);
+  });
+
   it('preserves existing provider credentials when adding another key', () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
