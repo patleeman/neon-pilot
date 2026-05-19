@@ -131,7 +131,7 @@ describe('system-diffs backend', () => {
           if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
           if (command.startsWith('add --all --')) return { stdout: '' };
           if (command.startsWith('diff --cached --name-only --')) return { stdout: 'src/file.ts\n' };
-          if (command.startsWith('commit --only -m msg --')) return { stdout: '' };
+          if (command.startsWith('commit --only -m msg --')) return { stdout: '[main abc1234] msg\n' };
           if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
           if (command.startsWith('show -s --format=')) {
             return {
