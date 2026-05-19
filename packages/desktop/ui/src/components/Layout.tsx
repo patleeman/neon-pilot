@@ -1905,7 +1905,7 @@ export function Layout() {
             {effectiveSidebarOpen ? (
               <div
                 style={{ width: sidebar.width }}
-                className="flex-shrink-0 flex flex-col overflow-hidden bg-surface border-r border-border-subtle"
+                className="flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
               >
                 <Sidebar />
               </div>

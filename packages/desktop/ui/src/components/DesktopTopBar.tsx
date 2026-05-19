@@ -183,7 +183,7 @@ export function DesktopTopBar({
   const launchBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : null;
 
   return (
-    <div className="ui-desktop-top-bar border-b-0 bg-base/80">
+    <div className="ui-desktop-top-bar border-b-0 bg-panel/95">
       <div className="ui-desktop-top-bar__leading">
         <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>

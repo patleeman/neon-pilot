@@ -20,7 +20,7 @@
   }
 
   .ui-desktop-top-bar {
-    @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-base/95 px-3 backdrop-blur-md;
+    @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel/95 px-3 backdrop-blur-md;
   }
 
   .ui-desktop-top-bar--remote {
@@ -49,7 +49,9 @@
     @apply grid place-items-center rounded w-[18px] h-[18px] text-[11px] font-bold font-mono shrink-0;
     background: rgb(var(--color-accent));
     color: rgb(var(--color-base));
-    box-shadow: 0 0 0 1px rgb(var(--color-accent) / 0.45), 0 0 14px -2px rgb(var(--color-accent) / 0.35);
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.45),
+      0 0 14px -2px rgb(var(--color-accent) / 0.35);
   }
 
   .ui-desktop-top-bar__brand-name {
@@ -196,6 +198,9 @@
 
   .ui-panel {
     @apply rounded-xl border border-border-subtle bg-elevated;
+    box-shadow:
+      0 1px 2px rgb(var(--color-primary) / 0.04),
+      0 0 0 1px rgb(var(--color-border-subtle) / 0.6);
   }
 
   .ui-panel-muted {
@@ -418,9 +423,13 @@
   }
 
   .ui-sidebar-nav-item-active {
-    @apply text-primary;
-    background-color: rgb(var(--color-steel) / 0.08);
-    box-shadow: inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.9);
+    background-color: rgb(var(--color-accent) / 0.09);
+    box-shadow: inset 0 0 0 1px rgb(var(--color-accent) / 0.22);
+  }
+
+  /* Two-class specificity beats single-class utilities (text-secondary etc) */
+  .ui-sidebar-nav-item.ui-sidebar-nav-item-active {
+    color: rgb(var(--color-accent));
   }
 
   .ui-browser-entry-selected::before,
@@ -438,7 +447,7 @@
 
   .ui-sidebar-nav-item-active svg {
     opacity: 1;
-    color: rgb(var(--color-steel));
+    color: rgb(var(--color-accent));
   }
 
   .ui-sidebar-nav-badge {
@@ -450,8 +459,11 @@
   }
 
   .ui-sidebar-subnav-item-active {
-    @apply text-primary;
-    background-color: rgb(var(--color-steel) / 0.1);
+    background-color: rgb(var(--color-accent) / 0.09);
+  }
+
+  .ui-sidebar-subnav-item.ui-sidebar-subnav-item-active {
+    color: rgb(var(--color-accent));
   }
 
   .ui-sidebar-session-row {
@@ -562,7 +574,7 @@
   }
 
   .ui-app-page-title {
-    @apply text-[32px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px];
+    @apply text-[30px] font-normal leading-[1.05] tracking-[-0.015em] text-primary sm:text-[34px] font-serif italic;
   }
 
   .ui-app-page-summary {
@@ -586,7 +598,7 @@
   }
 
   .ui-app-page-toc-link-active {
-    @apply border-accent text-primary;
+    @apply border-accent text-accent;
   }
 
   .ui-app-page-empty-shell {
@@ -602,13 +614,11 @@
   }
 
   .ui-section-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider;
-    color: rgb(var(--color-teal) / 0.88);
+    @apply text-[10px] font-semibold uppercase tracking-wider text-dim;
   }
 
   .ui-section-count {
-    @apply text-[10px] tabular-nums;
-    color: rgb(var(--color-steel) / 0.55);
+    @apply text-[10px] tabular-nums text-dim/60;
   }
 
   .ui-settings-quick-links {
@@ -620,10 +630,13 @@
   }
 
   .ui-settings-quick-link-active {
-    @apply text-primary ring-1 ring-accent/15;
+    @apply ring-1 ring-accent/20;
     background-color: rgb(var(--color-accent) / 0.1);
-    background-image: linear-gradient(135deg, rgb(var(--color-accent) / 0.16), rgb(var(--color-steel) / 0.1));
-    box-shadow: inset 0 1px 0 rgb(var(--color-steel) / 0.12);
+    box-shadow: inset 0 1px 0 rgb(var(--color-accent) / 0.12);
+  }
+
+  .ui-settings-quick-link.ui-settings-quick-link-active {
+    color: rgb(var(--color-accent));
   }
 
   .ui-segmented-control {
@@ -660,8 +673,7 @@
   }
 
   .ui-browser-entry-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.12em];
-    color: rgb(var(--color-teal) / 0.88);
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-dim;
   }
 
   .ui-browser-entry-aside {
@@ -783,7 +795,7 @@
   }
 
   .ui-node-title-input {
-    @apply w-full rounded-2xl border border-transparent bg-transparent -mx-3 px-3 py-2 text-[32px] font-semibold leading-none tracking-tight text-primary transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 focus:outline-none;
+    @apply w-full rounded-2xl border border-transparent bg-transparent -mx-3 px-3 py-2 text-[32px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 focus:outline-none;
   }
 
   .ui-node-summary-input {
@@ -808,7 +820,7 @@
   }
 
   .ui-note-title-input {
-    @apply w-full border-0 bg-transparent p-0 text-[34px] font-semibold tracking-tight text-primary outline-none placeholder:text-dim;
+    @apply w-full border-0 bg-transparent p-0 text-[34px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary outline-none placeholder:text-dim;
   }
 
   .ui-note-inline-meta {
@@ -928,11 +940,11 @@
   }
 
   .ui-rich-editor .ProseMirror h1 {
-    @apply mt-1 mb-3 text-[21px] font-semibold tracking-tight text-primary;
+    @apply mt-1 mb-3 text-[21px] font-normal font-serif italic leading-[1.1] tracking-[-0.015em] text-primary;
   }
 
   .ui-rich-editor .ProseMirror h2 {
-    @apply mt-5 mb-2 text-[18px] font-semibold text-primary;
+    @apply mt-5 mb-2 text-[18px] font-normal font-serif italic leading-[1.15] tracking-[-0.01em] text-primary;
   }
 
   .ui-rich-editor .ProseMirror h3 {
@@ -1142,8 +1154,7 @@
   }
 
   .ui-detail-label {
-    @apply w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wider;
-    color: rgb(var(--color-teal) / 0.84);
+    @apply w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-dim;
   }
 
   .ui-detail-value {
@@ -1164,11 +1175,11 @@
   }
 
   .ui-markdown h1 {
-    @apply mt-1 mb-3 text-[18px] font-semibold tracking-tight text-primary;
+    @apply mt-1 mb-3 text-[18px] font-normal font-serif italic leading-[1.15] tracking-[-0.012em] text-primary;
   }
 
   .ui-markdown h2 {
-    @apply mt-5 mb-2 text-[15px] font-semibold text-primary;
+    @apply mt-5 mb-2 text-[15px] font-normal font-serif italic leading-[1.2] text-primary;
   }
 
   .ui-markdown h3 {
@@ -1337,8 +1348,7 @@
   }
 
   .ui-skill-invocation-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.14em];
-    color: rgb(var(--color-teal) / 0.88);
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-dim;
   }
 
   .ui-skill-invocation-name {
@@ -1542,4 +1552,20 @@ body {
 .animate-notification-dropdown-in {
   animation: notification-dropdown-in 0.14s ease-out;
   transform-origin: top right;
+}
+
+/* ── Active state color overrides ────────────────────────────────────────────
+   These must live OUTSIDE @layer so they beat Tailwind utility classes
+   (e.g. text-secondary on nav items) via the unlayered cascade. */
+.ui-sidebar-nav-item-active,
+.ui-sidebar-subnav-item-active {
+  color: rgb(var(--color-accent));
+}
+
+.ui-settings-quick-link-active {
+  color: rgb(var(--color-accent));
+}
+
+.ui-app-page-toc-link-active {
+  color: rgb(var(--color-accent));
 }

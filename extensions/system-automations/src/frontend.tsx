@@ -956,7 +956,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                   <button type="button" className="text-[13px] text-secondary hover:text-primary" onClick={closeEditor}>
                     ← Automations
                   </button>
-                  <h2 className="mt-6 text-[32px] font-semibold tracking-tight text-primary">
+                  <h2 className="mt-6 text-[32px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary">
                     {editingId ? 'Edit automation' : 'New automation'}
                   </h2>
                   <p className="mt-2 text-[13px] text-secondary">
