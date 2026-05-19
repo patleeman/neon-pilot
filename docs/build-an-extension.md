@@ -45,7 +45,7 @@ For a new extension, the agent should:
 3. Keep editable source files in `src/`; do not create dist-only extensions.
 4. Declare surfaces, commands, tools, settings, skills, and permissions in `extension.json`.
 5. Use `@personal-agent/extensions` as the SDK seam; do not import app internals.
-6. Build using the app/repo-owned extension build path.
+6. Build outside the desktop app using repo or CLI extension tooling.
 7. Validate and fix Extension Manager diagnostics.
 8. Reload extensions.
 9. Open the contributed page/panel and visually inspect UI changes.
@@ -79,7 +79,7 @@ my-extension/
     backend.mjs
 ```
 
-`src/` is the source of truth. `dist/` is generated output that packaged app releases load.
+`src/` is the source of truth. `dist/` is generated output that every desktop runtime loads.
 
 ## Good extension requests
 
@@ -101,17 +101,18 @@ Build a theme-only extension with a calm dark palette. Install it, reload extens
 
 ## Build, reload, validate
 
-In a repo checkout, the build command is:
+Build outside the desktop app:
 
 ```bash
 pnpm run extension:build -- /path/to/my-extension
+# or, when linked/installed:
+pa-extension build /path/to/my-extension
 ```
 
-In the packaged app, use Extension Manager actions or the matching API endpoints:
+In the packaged app, use Extension Manager actions or endpoints to create, validate, and reload built artifacts:
 
 ```text
 POST /api/extensions
-POST /api/extensions/{id}/build
 POST /api/extensions/{id}/validate
 POST /api/extensions/{id}/reload
 ```
@@ -123,7 +124,7 @@ Validation is not optional. The extension doctor catches missing bundles, stale 
 - **The page or panel does not appear** — reload extensions and check manifest `contributes.views` / `contributes.nav`.
 - **The UI opens blank** — check frontend export names and Extension Manager diagnostics.
 - **Backend action/tool is missing** — check backend import errors and handler export names.
-- **Works in dev but not packaged app** — build `dist/`; packaged releases do not compile extensions at runtime.
+- **Works from source but not in the app** — build `dist/`; the app does not compile extensions at runtime.
 - **Need an app capability the SDK lacks** — add the smallest reusable API to `@personal-agent/extensions`; do not import desktop/server internals.
 
 ## Reference

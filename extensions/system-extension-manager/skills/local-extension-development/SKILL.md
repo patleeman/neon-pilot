@@ -1,6 +1,6 @@
 ---
 name: local-extension-development
-description: Use when creating, editing, building, validating, reloading, importing, or debugging Personal Agent native extensions from inside the built app.
+description: Use when creating, editing, externally building, validating, reloading, importing, or debugging Personal Agent native extensions.
 metadata:
   id: local-extension-development
   title: Local Extension Development
@@ -14,7 +14,7 @@ Use this skill when an agent is asked to build, fix, or inspect a Personal Agent
 
 ## Fast rule
 
-When a user asks how to create an extension, lead with: describe the feature you want and ask your agent to build it. The point of extensions is that the agent can create, build, validate, reload, and test them for the user.
+When a user asks how to create an extension, lead with: describe the feature you want and ask your agent to build it. The point of extensions is that the agent can create the package, build it outside the app with extension tooling, validate, reload, and test it for the user.
 
 Build native extensions: a folder with `extension.json`, optional `src/frontend.tsx`, optional `src/backend.ts`, and generated `dist/` bundles. The app loads manifest-declared `dist/*` entries. Do not create iframe/webview extensions.
 
@@ -23,7 +23,7 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 1. Inspect installed extensions through Extension Manager or `GET /api/extensions/installed`.
 2. If editing an existing user extension, snapshot it first from Extension Manager or `POST /api/extensions/{id}/snapshot`.
 3. If creating a new extension, use Extension Manager **Create** or `POST /api/extensions`.
-4. Edit `src/` files and `extension.json`, then build from Extension Manager or `POST /api/extensions/{id}/build`.
+4. Edit `src/` files and `extension.json`, then build outside the app with `pa-extension build <extension-dir>` or repo tooling.
 5. Validate from Extension Manager or `POST /api/extensions/{id}/validate` and fix every error.
 6. Reload from Extension Manager or `POST /api/extensions/{id}/reload`.
 7. Open the declared route/surface and visually inspect UI changes.
@@ -87,18 +87,11 @@ If tools are unavailable but the app API is reachable, use the same operations o
 GET  /api/extensions/installed
 POST /api/extensions
 POST /api/extensions/{id}/snapshot
-POST /api/extensions/{id}/build
 POST /api/extensions/{id}/validate
 POST /api/extensions/validate          # body: { id | extensionId | packageRoot }
 POST /api/extensions/{id}/reload
 POST /api/extensions/{id}/self-test
 POST /api/extensions/{id}/export
-```
-
-Successful build response:
-
-```json
-{ "ok": true, "extensionId": "my-extension", "outputs": ["dist/frontend.js", "dist/backend.mjs"] }
 ```
 
 Successful reload response:
@@ -339,7 +332,7 @@ Never import app internals like `packages/desktop/server/*`, `packages/desktop/u
 
 Built app path:
 
-1. Build with Extension Manager **Build** or `POST /api/extensions/{id}/build`.
+1. Build outside the app with `pa-extension build /path/to/extension` or repo tooling.
 2. Validate with Extension Manager **Validate** or `POST /api/extensions/{id}/validate`. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
 3. Reload with Extension Manager **Reload** or `POST /api/extensions/{id}/reload`.
 4. Inspect diagnostics in Extension Manager.
@@ -369,7 +362,7 @@ Before reporting done:
 - `dist/frontend.js` exists when `frontend.entry` is declared.
 - `dist/backend.mjs` exists when `backend.entry` is declared.
 - Extension Manager validation returns `ok: true`, or every finding is understood and explicitly reported.
-- Build/reload succeeded without Extension Manager diagnostics.
+- External build and Extension Manager reload succeeded without diagnostics.
 - Backend imports at module scope without throwing.
 - No absolute, `file:`, release-temp, or machine-local imports remain in `dist/`.
 - No direct process APIs are imported by backend source.

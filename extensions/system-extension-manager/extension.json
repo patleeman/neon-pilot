@@ -3,7 +3,7 @@
   "id": "system-extension-manager",
   "name": "Extension Manager",
   "packageType": "system",
-  "description": "Inspect, build, reload, enable, disable, snapshot, import, and export extensions.",
+  "description": "Inspect, validate, reload, enable, disable, snapshot, import, and export extensions.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -15,7 +15,6 @@
       { "id": "listExtensions", "handler": "listExtensions", "title": "List extensions" },
       { "id": "createExtension", "handler": "createExtension", "title": "Create extension" },
       { "id": "snapshotExtension", "handler": "snapshotExtension", "title": "Snapshot extension" },
-      { "id": "buildExtension", "handler": "buildExtension", "title": "Build extension" },
       { "id": "reloadExtension", "handler": "reloadExtension", "title": "Reload extension" },
       { "id": "validateExtension", "handler": "validateExtension", "title": "Validate extension" },
       { "id": "listHostViewComponents", "handler": "listHostViewComponents", "title": "List host view components" },
@@ -64,7 +63,7 @@
       {
         "id": "local-extension-development",
         "title": "Local Extension Development",
-        "description": "Workflow for creating, building, validating, reloading, and debugging native extensions from the built app.",
+        "description": "Workflow for creating, externally building, validating, reloading, and debugging native extensions.",
         "path": "skills/local-extension-development/SKILL.md"
       }
     ]

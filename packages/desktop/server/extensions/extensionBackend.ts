@@ -1,12 +1,8 @@
-import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import { dirname, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@personal-agent/core';
-import type { Plugin } from 'esbuild';
+import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@personal-agent/core';
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
@@ -16,11 +12,7 @@ import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
-import {
-  isPrebuiltOnlyExtensionRuntime,
-  isSourceExtensionBackendEntry,
-  resolveExtensionBackendLoadTarget,
-} from './extensionBackendLoadTarget.js';
+import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
@@ -35,6 +27,7 @@ import {
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
   listExtensionRuntimeProviderRegistrations,
+  setBuildError,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -317,25 +310,7 @@ export function listExtensionActionTelemetry(extensionId?: string): ExtensionAct
   return actionTelemetry.filter((entry) => !extensionId || entry.extensionId === extensionId);
 }
 
-const EXTENSION_BACKEND_BUILD_CACHE_VERSION = 'bundle-host-runtime-externals-v4-process-policy';
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
-
-// Deduplicate concurrent builds for the same extension.
-// Map values are cleaned up in the finally block of loadExtensionBackend.
-const inflightBackendBuilds = new Map<string, Promise<ExtensionBackendBuildResult>>();
-const HOST_RUNTIME_EXTERNAL_IMPORT_RE =
-  /^(@personal-agent\/(core|daemon)|@earendil-works\/pi-coding-agent|@xenova\/transformers|better-sqlite3|esbuild|jsdom|@sinclair\/typebox)(\/.*)?$/;
-const FORBIDDEN_BACKEND_IMPORTS = new Set([
-  'child_process',
-  'node:child_process',
-  'cluster',
-  'node:cluster',
-  'worker_threads',
-  'node:worker_threads',
-  '@personal-agent/core',
-  '@personal-agent/daemon',
-  'better-sqlite3',
-]);
 
 export class ExtensionLoadError extends Error {
   readonly extensionId: string;
@@ -353,18 +328,6 @@ export class ExtensionLoadError extends Error {
 }
 
 export type ExtensionActionInvokeResult = { ok: true; result: unknown } | { ok: false; error: string };
-
-function getExtensionCacheRoot(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'extension-cache');
-}
-
-function assertInside(root: string, candidate: string): void {
-  const resolvedRoot = resolve(root);
-  const resolvedCandidate = resolve(candidate);
-  if (resolvedCandidate !== resolvedRoot && !resolvedCandidate.startsWith(`${resolvedRoot}${sep}`)) {
-    throw new Error('Path escapes extension root.');
-  }
-}
 
 function isHostCommandAction(action: string): boolean {
   return (
@@ -574,223 +537,12 @@ export function createProtocolContext(
   };
 }
 
-function hashFileInto(hash: ReturnType<typeof createHash>, root: string, entryPath: string, namespace: string): void {
-  const relativePath = relative(root, entryPath);
-  if (relativePath.startsWith('..')) {
-    return;
-  }
-
-  hash.update(namespace);
-  hash.update('\0');
-  hash.update(relativePath);
-  hash.update('\0');
-  hash.update(readFileSync(entryPath));
-  hash.update('\0');
-}
-
-function hashDirectoryInto(hash: ReturnType<typeof createHash>, root: string, directory: string, namespace: string): void {
-  for (const entryName of readdirSync(directory).sort((left, right) => left.localeCompare(right))) {
-    if (entryName === 'node_modules' || entryName === '.git') {
-      continue;
-    }
-
-    const entryPath = join(directory, entryName);
-    const stat = readdirSafeStat(entryPath);
-    if (!stat) {
-      continue;
-    }
-
-    if (stat.isDirectory()) {
-      hashDirectoryInto(hash, root, entryPath, namespace);
-      continue;
-    }
-    if (!stat.isFile()) {
-      continue;
-    }
-
-    hashFileInto(hash, root, entryPath, namespace);
-  }
-}
-
-function hashExtensionBackendInputs(packageRoot: string): string {
-  const hash = createHash('sha256');
-  hash.update(EXTENSION_BACKEND_BUILD_CACHE_VERSION);
-  hash.update('\0');
-  hashDirectoryInto(hash, packageRoot, packageRoot, 'extension');
-
-  const backendApiPath = resolveExtensionBackendApiPath();
-  const backendApiRoot = dirname(backendApiPath);
-
-  // Directory-based backend API (refactored to backendApi/index.ts): hash the whole directory
-  // Flat file backend API (backendApi.ts): hash the file and check for sibling backendApi/ dir
-  if (backendApiPath.endsWith(`${sep}index.ts`) || backendApiPath.endsWith(`${sep}index.js`)) {
-    hashDirectoryInto(hash, backendApiRoot, backendApiRoot, 'backend-api');
-  } else {
-    hashFileInto(hash, backendApiRoot, backendApiPath, 'backend-api');
-    const backendApiDirectory = resolve(backendApiRoot, 'backendApi');
-    if (existsSync(backendApiDirectory)) {
-      hashDirectoryInto(hash, backendApiRoot, backendApiDirectory, 'backend-api');
-    }
-  }
-
-  return hash.digest('hex');
-}
-
-function readdirSafeStat(entryPath: string) {
-  try {
-    return statSync(entryPath);
-  } catch {
-    return null;
-  }
-}
-
-function resolveExtensionBackendApiPath(): string {
-  // When loaded from source: import.meta.url points to extensionBackend.ts, same dir as backendApi.ts
-  // When bundled into dist/app/localApi.js: import.meta.url points to dist/app/
-  // so we try multiple candidate paths.
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    resolve(currentDir, 'backendApi.ts'),
-    resolve(currentDir, '../../extensions/backendApi.ts'),
-    resolve(currentDir, '../extensions/backendApi.ts'),
-    // When running from the development repo, resolve relative to CWD
-    ...(process.env.PERSONAL_AGENT_REPO_ROOT
-      ? [resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/server/extensions/backendApi.ts')]
-      : []),
-    resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi.ts'),
-  ];
-
-  // Check flat .ts files
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  // Flat .js fallbacks
-  for (const candidate of candidates) {
-    const jsPath = candidate.replace(/\.ts$/, '.js');
-    if (existsSync(jsPath)) {
-      return jsPath;
-    }
-  }
-
-  // Check directory-based backendApi/index.ts (refactored from flat file to directory)
-  for (const candidate of candidates) {
-    const dirPath = candidate.replace(/\.ts$/, '');
-    const indexPath = resolve(dirPath, 'index.ts');
-    if (existsSync(indexPath)) {
-      return indexPath;
-    }
-  }
-
-  // Directory-based backendApi/index.js
-  for (const candidate of candidates) {
-    const dirPath = candidate.replace(/\.ts$/, '');
-    const indexJsPath = resolve(dirPath, 'index.js');
-    if (existsSync(indexJsPath)) {
-      return indexJsPath;
-    }
-  }
-
-  throw new Error(
-    'Could not find extension backend API source (backendApi.ts). ' +
-      'Ensure the server source files are available, or set PERSONAL_AGENT_REPO_ROOT.',
-  );
-}
-
-function resolveExtensionBackendApiSubpath(subpath: string): string {
-  const backendApiRoot = dirname(resolveExtensionBackendApiPath());
-  const normalized = subpath.replace(/^\/+/, '').replace(/\.js$/, '');
-  if (!normalized || normalized.includes('..')) throw new Error(`Invalid extension backend API subpath: ${subpath}`);
-  const candidates = [resolve(backendApiRoot, `${normalized}.ts`), resolve(backendApiRoot, normalized, 'index.ts')];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  for (const candidate of candidates) {
-    const jsPath = candidate.replace(/\.ts$/, '.js');
-    if (existsSync(jsPath)) return jsPath;
-  }
-  throw new Error(`Could not find extension backend API subpath: ${subpath}`);
-}
-
-function createForbiddenBackendImportPlugin(packageRoot: string): Plugin {
-  const sourceRoot = `${resolve(packageRoot, 'src')}/`;
-  return {
-    name: 'personal-agent-forbidden-backend-imports',
-    setup(buildContext) {
-      buildContext.onResolve({ filter: /.*/ }, (args) => {
-        if (!FORBIDDEN_BACKEND_IMPORTS.has(args.path)) return;
-        if (!args.importer || !resolve(args.importer).startsWith(sourceRoot)) return;
-        return {
-          errors: [
-            {
-              text: `Extension backend cannot import ${args.path}. Use ctx.shell so PA can apply execution wrappers and sandbox policy.`,
-            },
-          ],
-        };
-      });
-    },
-  };
-}
-
-function createExtensionBackendApiPlugin(): Plugin {
-  const backendApiPath = resolveExtensionBackendApiPath();
-  return {
-    name: 'personal-agent-extension-backend-api',
-    setup(buildContext) {
-      buildContext.onResolve({ filter: /^@personal-agent\/extensions\/backend$/ }, () => ({ path: backendApiPath }));
-      buildContext.onResolve({ filter: /^@personal-agent\/extensions\/backend\/(.+)$/ }, (args) => {
-        const match = args.path.match(/^@personal-agent\/extensions\/backend\/(.+)$/);
-        return { path: resolveExtensionBackendApiSubpath(match?.[1] ?? '') };
-      });
-    },
-  };
-}
-
-function findAppNodeModules(): string[] {
-  const paths: string[] = [resolve(process.cwd(), 'node_modules')];
-  if (typeof process.resourcesPath === 'string') {
-    paths.push(resolve(process.resourcesPath, 'app.asar.unpacked/node_modules'));
-  }
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  for (let depth = 2; depth <= 5; depth++) {
-    paths.push(resolve(currentDir, ...Array(depth).fill('..'), 'node_modules'));
-  }
-  return paths;
-}
-
-function createHostRuntimeExternalPlugin(): Plugin {
-  return {
-    name: 'personal-agent-extension-host-runtime-externals',
-    setup(buildContext) {
-      buildContext.onResolve({ filter: HOST_RUNTIME_EXTERNAL_IMPORT_RE }, async (args) => {
-        if (args.path === '@personal-agent/daemon' && process.env.PERSONAL_AGENT_REPO_ROOT) {
-          const daemonBundlePath = resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/server/dist/daemon/index.js');
-          if (existsSync(daemonBundlePath)) {
-            return { path: daemonBundlePath, external: true };
-          }
-        }
-
-        const resolveImport = (import.meta as ImportMeta & { resolve(specifier: string): string | Promise<string> }).resolve;
-        const resolvedUrl = await Promise.resolve(resolveImport(args.path));
-        return { path: fileURLToPath(resolvedUrl), external: true };
-      });
-    },
-  };
-}
-
-interface ExtensionBackendBuildResult {
+interface ExtensionBackendLoadTarget {
   path: string;
   hash: string;
-  rebuilt: boolean;
-  stale: boolean;
 }
 
-function loadCompiledExtensionBackendModule(
-  extensionId: string,
-  compiled: Pick<ExtensionBackendBuildResult, 'path' | 'hash'>,
-): Promise<ExtensionBackendModule> {
+function loadCompiledExtensionBackendModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule> {
   const cacheKey = `${compiled.path}:${compiled.hash}`;
   const cached = backendModuleCache.get(extensionId);
   if (cached?.cacheKey === cacheKey) {
@@ -802,79 +554,21 @@ function loadCompiledExtensionBackendModule(
   return module;
 }
 
-function renderPackagedExtensionBackendExpectation(
-  entry: { source: 'system' | 'runtime'; packageRoot: string },
-  backendEntry: string,
-): string {
-  if (isSourceExtensionBackendEntry(backendEntry)) {
+function renderRequiredBackendArtifact(entry: { packageRoot: string }, backendEntry: string): string {
+  if (/^(src\/|.*\.(ts|tsx|mts|cts)$)/i.test(backendEntry)) {
     return resolve(entry.packageRoot, 'dist', 'backend.mjs');
   }
 
   return resolve(entry.packageRoot, backendEntry);
 }
 
-function createPackagedPrebuiltBackendError(
-  extensionId: string,
-  entry: { source: 'system' | 'runtime'; packageRoot: string },
-  backendEntry: string,
-): ExtensionLoadError {
-  const expectedPath = renderPackagedExtensionBackendExpectation(entry, backendEntry);
+function createPrebuiltBackendRequiredError(extensionId: string, entry: { packageRoot: string }, backendEntry: string): ExtensionLoadError {
+  const expectedPath = renderRequiredBackendArtifact(entry, backendEntry);
   return new ExtensionLoadError({
     extensionId,
     code: 'build_failure',
-    message:
-      `Packaged desktop builds do not compile extensions at runtime. ` +
-      `Extension "${extensionId}" must ship a prebuilt backend bundle at ${expectedPath}.`,
+    message: `Extension "${extensionId}" backend artifact is missing: ${expectedPath}. Build the extension outside the app, for example \`pnpm run extension:build -- <extension-dir>\`, then reload it.`,
   });
-}
-
-async function buildExtensionBackend(
-  extensionId: string,
-  packageRoot: string,
-  entryPath: string,
-  options: { allowStaleOnFailure?: boolean } = {},
-): Promise<ExtensionBackendBuildResult> {
-  const cacheDir = join(getExtensionCacheRoot(), extensionId);
-  const outfile = join(cacheDir, 'backend.mjs');
-  const hashFile = join(cacheDir, 'backend.hash');
-  const packageHash = hashExtensionBackendInputs(packageRoot);
-  await mkdir(cacheDir, { recursive: true });
-
-  if (existsSync(outfile) && existsSync(hashFile) && readFileSync(hashFile, 'utf-8').trim() === packageHash) {
-    return { path: outfile, hash: packageHash, rebuilt: false, stale: false };
-  }
-
-  const candidate = join(cacheDir, `backend.${packageHash}.candidate.mjs`);
-  try {
-    rmSync(candidate, { force: true });
-    const { build } = await import('esbuild');
-    await build({
-      entryPoints: [entryPath],
-      outfile: candidate,
-      bundle: true,
-      platform: 'node',
-      format: 'esm',
-      target: 'node20',
-      sourcemap: 'inline',
-      logLevel: 'silent',
-      banner: {
-        js: 'import { createRequire as __paCreateRequire } from "node:module"; const require = __paCreateRequire(import.meta.url);',
-      },
-      external: ['electron'],
-      nodePaths: findAppNodeModules(),
-      plugins: [createForbiddenBackendImportPlugin(packageRoot), createExtensionBackendApiPlugin(), createHostRuntimeExternalPlugin()],
-    });
-    renameSync(candidate, outfile);
-    writeFileSync(hashFile, `${packageHash}\n`);
-    return { path: outfile, hash: packageHash, rebuilt: true, stale: false };
-  } catch (error) {
-    rmSync(candidate, { force: true });
-    if (options.allowStaleOnFailure && existsSync(outfile)) {
-      const staleHash = existsSync(hashFile) ? readFileSync(hashFile, 'utf-8').trim() : `stale-${statSync(outfile).mtimeMs}`;
-      return { path: outfile, hash: staleHash, rebuilt: false, stale: true };
-    }
-    throw error;
-  }
 }
 
 export async function loadExtensionBackend(extensionId: string): Promise<ExtensionBackendModule> {
@@ -902,55 +596,11 @@ export async function loadExtensionBackend(extensionId: string): Promise<Extensi
     });
   }
 
-  const directLoadTarget = resolveExtensionBackendLoadTarget(entry, backendEntry);
-  if (directLoadTarget) {
-    return loadCompiledExtensionBackendModule(extensionId, directLoadTarget);
+  const loadTarget = resolveExtensionBackendLoadTarget(entry, backendEntry);
+  if (!loadTarget) {
+    throw createPrebuiltBackendRequiredError(extensionId, { packageRoot: entry.packageRoot }, backendEntry);
   }
-  if (isPrebuiltOnlyExtensionRuntime()) {
-    throw createPackagedPrebuiltBackendError(extensionId, { source: entry.source, packageRoot: entry.packageRoot }, backendEntry);
-  }
-
-  const packageRoot = resolve(entry.packageRoot);
-  const entryPath = resolve(packageRoot, backendEntry);
-  assertInside(packageRoot, entryPath);
-  // Deduplicate concurrent builds: if another caller is already building
-  // this extension, wait for their result instead of building again.
-  const existingBuild = inflightBackendBuilds.get(extensionId);
-  if (existingBuild) {
-    return loadCompiledExtensionBackendModule(extensionId, await existingBuild);
-  }
-
-  const buildPromise = buildExtensionBackend(extensionId, packageRoot, entryPath, { allowStaleOnFailure: true });
-  inflightBackendBuilds.set(extensionId, buildPromise);
-
-  let compiled: ExtensionBackendBuildResult;
-  try {
-    compiled = await buildPromise;
-    if (compiled.stale) {
-      logWarn('extension backend build failed; using previous compiled backend', { extensionId });
-    }
-  } catch (buildError) {
-    // Rebuild from source failed and no stale cache available.
-    // Fall back to pre-built dist file if one exists (system extensions).
-    const preBuiltEntry = resolve(packageRoot, 'dist', 'backend.mjs');
-    if (existsSync(preBuiltEntry)) {
-      logWarn('extension backend rebuild failed; falling back to pre-built dist/backend.mjs', { extensionId });
-      compiled = { path: preBuiltEntry, hash: `prebuilt-${Date.now()}`, rebuilt: false, stale: false };
-    } else {
-      const causeMsg = buildError instanceof Error ? buildError.message : String(buildError);
-      throw new ExtensionLoadError({
-        extensionId,
-        code: 'build_failure',
-        message: `Extension "${extensionId}" failed to compile. This is usually because its source files or dependencies are missing. Error: ${causeMsg}`,
-        cause: buildError,
-      });
-    }
-  } finally {
-    // Clear the inflight marker so future calls can rebuild
-    inflightBackendBuilds.delete(extensionId);
-  }
-
-  return loadCompiledExtensionBackendModule(extensionId, compiled);
+  return loadCompiledExtensionBackendModule(extensionId, loadTarget);
 }
 
 export async function loadExtensionAgentFactory(extensionId: string, exportName = 'default'): Promise<ExtensionFactory> {
@@ -1266,34 +916,22 @@ export async function reloadExtensionBackend(extensionId: string): Promise<{ ok:
   if (!entry) {
     throw new Error('Extension not found.');
   }
-  if (!entry.packageRoot) {
-    throw new Error('Extension backend code is only available for runtime extensions.');
-  }
   const backendEntry = entry.manifest.backend?.entry;
-  if (!backendEntry) {
-    throw new Error('Extension has no backend entry.');
+  if (!backendEntry || !entry.packageRoot) {
+    return { ok: true, extensionId, rebuilt: false };
+  }
+
+  const loadTarget = resolveExtensionBackendLoadTarget(entry, backendEntry);
+  if (!loadTarget) {
+    throw createPrebuiltBackendRequiredError(extensionId, { packageRoot: entry.packageRoot }, backendEntry);
   }
 
   const { stopExtensionServices, startExtensionServices } = await import('./extensionServices.js');
   await stopExtensionServices(extensionId);
-
-  const directLoadTarget = resolveExtensionBackendLoadTarget(entry, backendEntry);
-  if (directLoadTarget) {
-    await loadCompiledExtensionBackendModule(extensionId, directLoadTarget);
-    clearExtensionHealthError(extensionId);
-    await startExtensionServices();
-    return { ok: true, extensionId, rebuilt: false };
-  }
-  if (isPrebuiltOnlyExtensionRuntime()) {
-    throw createPackagedPrebuiltBackendError(extensionId, { source: entry.source, packageRoot: entry.packageRoot }, backendEntry);
-  }
-
-  const packageRoot = resolve(entry.packageRoot);
-  const entryPath = resolve(packageRoot, backendEntry);
-  assertInside(packageRoot, entryPath);
-  const compiled = await buildExtensionBackend(extensionId, packageRoot, entryPath, { allowStaleOnFailure: false });
-  await loadCompiledExtensionBackendModule(extensionId, compiled);
+  backendModuleCache.delete(extensionId);
+  await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
+  setBuildError(extensionId, undefined);
   await startExtensionServices();
-  return { ok: true, extensionId, rebuilt: compiled.rebuilt };
+  return { ok: true, extensionId, rebuilt: false };
 }

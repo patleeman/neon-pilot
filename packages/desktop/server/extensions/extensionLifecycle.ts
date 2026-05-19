@@ -1,13 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename, join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@personal-agent/core';
-import type { Plugin } from 'esbuild';
 
-import { isPrebuiltOnlyExtensionRuntime } from './extensionBackendLoadTarget.js';
 import {
   findExtensionEntry,
   getRuntimeExtensionsRoot,
@@ -73,16 +70,6 @@ function assertInside(root: string, candidate: string): void {
 
 function createSafeTimestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');
-}
-
-function assertRuntimeExtensionBuildSupported(): void {
-  if (!isPrebuiltOnlyExtensionRuntime()) {
-    return;
-  }
-
-  throw new Error(
-    'Packaged desktop builds do not compile extensions at runtime. Prebuild dist/frontend.js and dist/backend.mjs before importing or enabling the extension.',
-  );
 }
 
 function starterHelpText(): string {
@@ -308,61 +295,13 @@ export async function buildRuntimeExtension(extensionId: string) {
     throw new Error('Extension package root is unavailable.');
   }
   if (entry.manifest.schemaVersion !== 2) {
-    throw new Error('Only native extension manifest schemaVersion 2 can be built.');
+    throw new Error('Only native extension manifest schemaVersion 2 can be validated/reloaded.');
   }
 
-  assertRuntimeExtensionBuildSupported();
-
-  const packageRoot = resolve(entry.packageRoot);
-  const { build } = await import('esbuild');
-  const outputs: string[] = [];
-  const frontendSource = join(packageRoot, 'src', 'frontend.tsx');
-  if (entry.manifest.frontend?.entry && existsSync(frontendSource)) {
-    const outfile = resolve(packageRoot, entry.manifest.frontend.entry);
-    assertInside(packageRoot, outfile);
-    mkdirSync(dirname(outfile), { recursive: true });
-    const result = await build({
-      entryPoints: [frontendSource],
-      outdir: dirname(outfile),
-      entryNames: '[name]',
-      chunkNames: 'chunks/[name]-[hash]',
-      assetNames: 'assets/[name]-[hash]',
-      bundle: true,
-      splitting: true,
-      platform: 'browser',
-      format: 'esm',
-      target: 'es2022',
-      jsx: 'automatic',
-      sourcemap: true,
-      metafile: true,
-      plugins: [createFrontendRawCssPlugin(), createFrontendExtensionSdkPlugin()],
-      nodePaths: findAppNodeModules(),
-    });
-    outputs.push(...Object.keys(result.metafile.outputs ?? {}));
-  }
-
-  const backendSource = join(packageRoot, 'src', 'backend.ts');
-  if (entry.manifest.backend?.entry && existsSync(backendSource)) {
-    const outfile = resolve(packageRoot, entry.manifest.backend.entry);
-    assertInside(packageRoot, outfile);
-    if (outfile !== backendSource) {
-      mkdirSync(dirname(outfile), { recursive: true });
-      await build({
-        entryPoints: [backendSource],
-        outfile,
-        bundle: true,
-        platform: 'node',
-        format: 'esm',
-        target: 'node20',
-        sourcemap: true,
-        external: ['@personal-agent/*', 'electron'],
-        nodePaths: findAppNodeModules(),
-      });
-      outputs.push(outfile);
-    }
-  }
-
-  return { ok: true as const, extensionId, outputs };
+  throw new Error(
+    `The app no longer builds extensions at runtime. Build "${extensionId}" outside the app with ` +
+      '`pnpm run extension:build -- <extension-dir>` or `pa-extension build <extension-dir>`, then validate/reload it.',
+  );
 }
 
 export function exportRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
@@ -418,88 +357,6 @@ function findExtractedManifestRoot(extractRoot: string): string {
   }
 
   return candidates[0] as string;
-}
-
-function findAppNodeModules(): string[] {
-  const paths: string[] = [resolve(process.cwd(), 'node_modules')];
-  if (typeof process.resourcesPath === 'string') {
-    paths.push(resolve(process.resourcesPath, 'app.asar.unpacked/node_modules'));
-  }
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  for (let depth = 2; depth <= 5; depth++) {
-    paths.push(resolve(currentDir, ...Array(depth).fill('..'), 'node_modules'));
-  }
-  return paths;
-}
-
-function resolveDesktopUiExtensionModule(moduleName: string): string | null {
-  const moduleFiles: Record<string, string> = {
-    '@personal-agent/extensions/host': 'host.ts',
-    '@personal-agent/extensions/ui': 'ui.ts',
-    '@personal-agent/extensions/workbench': 'workbench.ts',
-    '@personal-agent/extensions/host-view-components': 'host-view-components.ts',
-    '@personal-agent/extensions/data': 'data.ts',
-    '@personal-agent/extensions/settings': 'settings.ts',
-    '@personal-agent/extensions/workbench-artifacts': 'workbench-artifacts.ts',
-    '@personal-agent/extensions/workbench-browser': 'workbench-browser.ts',
-    '@personal-agent/extensions/workbench-diffs': 'workbench-diffs.ts',
-    '@personal-agent/extensions/workbench-files': 'workbench-files.ts',
-    '@personal-agent/extensions/workbench-runs': 'workbench-runs.ts',
-    '@personal-agent/extensions/workbench-transcript': 'workbench-transcript.ts',
-  };
-  const moduleFile = moduleFiles[moduleName];
-  if (!moduleFile) {
-    return null;
-  }
-
-  const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    ...(repoRoot ? [resolve(repoRoot, 'packages', 'desktop', 'ui', 'src', 'extensions', moduleFile)] : []),
-    resolve(currentDir, '..', '..', 'ui', 'src', 'extensions', moduleFile),
-    resolve(currentDir, '..', '..', '..', 'ui', 'src', 'extensions', moduleFile),
-  ];
-
-  return candidates.find((candidate) => existsSync(candidate)) ?? null;
-}
-
-function createFrontendRawCssPlugin(): Plugin {
-  return {
-    name: 'personal-agent-frontend-raw-css',
-    setup(build) {
-      build.onResolve({ filter: /\.css\?raw$/ }, async (args) => {
-        const cssPath = args.path.slice(0, -'?raw'.length);
-        const resolved = await build.resolve(cssPath, { importer: args.importer, kind: args.kind, resolveDir: args.resolveDir });
-        if (resolved.errors.length > 0) return { errors: resolved.errors };
-        return { path: resolved.path, namespace: 'pa-raw-css' };
-      });
-      build.onLoad({ filter: /\.css$/, namespace: 'pa-raw-css' }, (args) => ({
-        contents: readFileSync(args.path, 'utf8'),
-        loader: 'text',
-      }));
-    },
-  };
-}
-
-function createFrontendExtensionSdkPlugin(): Plugin {
-  return {
-    name: 'personal-agent-frontend-extension-sdk',
-    setup(build) {
-      build.onResolve(
-        {
-          filter:
-            /^@personal-agent\/extensions\/(host|ui|workbench|host-view-components|workbench-artifacts|workbench-browser|workbench-diffs|workbench-files|workbench-runs|workbench-transcript|data|settings)$/,
-        },
-        (args) => {
-          const resolved = resolveDesktopUiExtensionModule(args.path);
-          if (!resolved) {
-            return { errors: [{ text: `Could not resolve ${args.path} for frontend extension build.` }] };
-          }
-          return { path: resolved };
-        },
-      );
-    },
-  };
 }
 
 export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot()) {

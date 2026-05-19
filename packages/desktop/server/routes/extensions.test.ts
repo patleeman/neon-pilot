@@ -523,18 +523,18 @@ describe('registerExtensionRoutes', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
-    mkdirSync(join(extensionRoot, 'backend'), { recursive: true });
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
       join(extensionRoot, 'extension.json'),
       JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         id: 'agent-board',
         name: 'Agent Board',
-        backend: { entry: 'backend/index.ts', actions: [{ id: 'saveTask', handler: 'saveTask' }] },
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'saveTask', handler: 'saveTask' }] },
       }),
     );
     writeFileSync(
-      join(extensionRoot, 'backend', 'index.ts'),
+      join(extensionRoot, 'dist', 'backend.mjs'),
       `export async function saveTask(input, ctx) { await ctx.storage.put('tasks/one', input); return { saved: await ctx.storage.get('tasks/one'), automationsList: typeof ctx.automations.list, runsStart: typeof ctx.runs.start, vaultRead: typeof ctx.vault.read, conversationsList: typeof ctx.conversations.list }; }`,
     );
 
@@ -556,7 +556,7 @@ describe('registerExtensionRoutes', () => {
       },
     });
 
-    writeFileSync(join(extensionRoot, 'backend', 'index.ts'), `export async function saveTask(`);
+    writeFileSync(join(extensionRoot, 'src-backend.ts'), `export async function saveTask(`);
     const staleRes = createResponse();
     await harness.postHandler('/api/extensions/:id/actions/:actionId')(
       { params: { id: 'agent-board', actionId: 'saveTask' }, body: { title: 'Still works from cache' } },
@@ -569,7 +569,7 @@ describe('registerExtensionRoutes', () => {
     });
   });
 
-  it('rejects runtime extension builds in packaged desktop mode', async () => {
+  it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -594,7 +594,7 @@ describe('registerExtensionRoutes', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      error: expect.stringContaining('Packaged desktop builds do not compile extensions at runtime.'),
+      error: expect.stringContaining('The app no longer builds extensions at runtime.'),
     });
   });
 

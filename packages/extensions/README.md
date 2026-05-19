@@ -733,7 +733,7 @@ Useful files to inspect when the schema or SDK shape matters:
 - `packages/extensions/src/index.ts` — public SDK types.
 - `packages/desktop/server/extensions/extensionManifest.ts` — manifest parsing/types.
 - `packages/desktop/server/extensions/extensionRegistry.ts` — loading and registry behavior.
-- `packages/desktop/server/extensions/extensionLifecycle.ts` — create/build/import/export lifecycle.
+- `packages/desktop/server/extensions/extensionLifecycle.ts` — create/import/export lifecycle.
 - `extensions/system-extension-manager/README.md` — product-level extension manager behavior.
 - `extensions/system-*` — first-party examples using the same contract.
 

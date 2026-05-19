@@ -6,12 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { invokeExtensionAction } from './extensionBackend.js';
-import {
-  isPrebuiltOnlyExtensionRuntime,
-  resolveExtensionBackendLoadTarget,
-  resolvePrebuiltSystemExtensionBackend,
-  shouldPreferPrebuiltSystemExtensionBackend,
-} from './extensionBackendLoadTarget.js';
+import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
@@ -51,37 +46,8 @@ describe('extension backend action invocation', () => {
 });
 
 describe('extension backend load targeting', () => {
-  it('prefers prebuilt system backends unless extension authoring mode is explicit', () => {
-    expect(shouldPreferPrebuiltSystemExtensionBackend({ resourcesPath: undefined, env: {} })).toBe(true);
-    expect(isPrebuiltOnlyExtensionRuntime({ resourcesPath: undefined, env: {} })).toBe(false);
-    expect(
-      shouldPreferPrebuiltSystemExtensionBackend({
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: { PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1' },
-      }),
-    ).toBe(true);
-    expect(
-      shouldPreferPrebuiltSystemExtensionBackend({
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: { PERSONAL_AGENT_EXTENSION_AUTHORING: '1' },
-      }),
-    ).toBe(false);
-    expect(
-      isPrebuiltOnlyExtensionRuntime({
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: {},
-      }),
-    ).toBe(true);
-  });
-
-  it('resolves prebuilt dist/backend.mjs for packaged bundled system extensions', () => {
-    const target = resolvePrebuiltSystemExtensionBackend(
-      { source: 'system', packageRoot: TEST_EXTENSION_ROOT },
-      {
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: {},
-      },
-    );
+  it('resolves prebuilt dist/backend.mjs for bundled system extensions', () => {
+    const target = resolvePrebuiltSystemExtensionBackend({ source: 'system', packageRoot: TEST_EXTENSION_ROOT });
 
     expect(target).toMatchObject({
       path: resolve(TEST_EXTENSION_ROOT, 'dist/backend.mjs'),
@@ -89,47 +55,17 @@ describe('extension backend load targeting', () => {
     expect(target?.hash).toMatch(/^prebuilt:/);
   });
 
-  it('loads built-output backend entries directly in dev and packaged runtimes', () => {
+  it('loads built-output backend entries directly', () => {
     expect(resolveExtensionBackendLoadTarget({ source: 'runtime', packageRoot: TEST_EXTENSION_ROOT }, 'dist/backend.mjs')).toMatchObject({
-      path: resolve(TEST_EXTENSION_ROOT, 'dist/backend.mjs'),
-    });
-
-    expect(
-      resolveExtensionBackendLoadTarget({ source: 'runtime', packageRoot: TEST_EXTENSION_ROOT }, 'dist/backend.mjs', {
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: {},
-      }),
-    ).toMatchObject({
       path: resolve(TEST_EXTENSION_ROOT, 'dist/backend.mjs'),
     });
   });
 
-  it('does not bypass source rebuilds for source-backed runtime extensions or extension authoring mode', () => {
-    expect(
-      resolveExtensionBackendLoadTarget({ source: 'runtime', packageRoot: TEST_EXTENSION_ROOT }, 'src/backend.ts', {
-        resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-        env: {},
-      }),
-    ).toBeNull();
+  it('resolves source manifest entries to built dist/backend.mjs artifacts', () => {
+    expect(resolveExtensionBackendLoadTarget({ source: 'runtime', packageRoot: TEST_EXTENSION_ROOT }, 'src/backend.ts')).toMatchObject({
+      path: resolve(TEST_EXTENSION_ROOT, 'dist/backend.mjs'),
+    });
 
-    expect(
-      resolvePrebuiltSystemExtensionBackend(
-        { source: 'runtime', packageRoot: TEST_EXTENSION_ROOT },
-        {
-          resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-          env: {},
-        },
-      ),
-    ).toBeNull();
-
-    expect(
-      resolvePrebuiltSystemExtensionBackend(
-        { source: 'system', packageRoot: TEST_EXTENSION_ROOT },
-        {
-          resourcesPath: '/Applications/Personal Agent.app/Contents/Resources',
-          env: { PERSONAL_AGENT_EXTENSION_AUTHORING: '1' },
-        },
-      ),
-    ).toBeNull();
+    expect(resolvePrebuiltSystemExtensionBackend({ source: 'runtime', packageRoot: TEST_EXTENSION_ROOT })).toBeNull();
   });
 });

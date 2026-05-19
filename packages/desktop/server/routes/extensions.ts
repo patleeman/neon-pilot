@@ -694,7 +694,7 @@ export function registerExtensionRoutes(
       setBuildError(req.params.id, message);
       const status = /not found/i.test(message)
         ? 404
-        : /package root|schemaVersion|manifest|contributes|frontend|backend|surfaces|permissions|compile extensions at runtime|prebuild dist\/frontend\.js and dist\/backend\.mjs/i.test(
+        : /package root|schemaVersion|manifest|contributes|frontend|backend|surfaces|permissions|no longer builds|outside the app|compile extensions at runtime|prebuild dist\/frontend\.js and dist\/backend\.mjs/i.test(
               message,
             )
           ? 400
@@ -755,7 +755,10 @@ export function registerExtensionRoutes(
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const status = /compile extensions at runtime|prebuilt backend bundle/i.test(message) ? 400 : 500;
+      const status =
+        /no longer builds|outside the app|backend artifact is missing|compile extensions at runtime|prebuilt backend bundle/i.test(message)
+          ? 400
+          : 500;
       logError('extension reload error', { message, stack: err instanceof Error ? err.stack : undefined });
       res.status(status).json({ error: message });
     }

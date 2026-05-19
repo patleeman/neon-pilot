@@ -18,7 +18,7 @@ const FORBIDDEN_BACKEND_IMPORTS = new Set([
 ]);
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter((arg) => arg !== '--');
 const emitSourceMaps = args.includes('--sourcemap');
 const packageArg = args.find((arg) => arg !== '--sourcemap');
 const packageRoot = resolve(packageArg || process.cwd());

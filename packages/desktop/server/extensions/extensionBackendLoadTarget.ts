@@ -38,34 +38,9 @@ export function isSourceExtensionBackendEntry(backendEntry: string): boolean {
   );
 }
 
-export function isPrebuiltOnlyExtensionRuntime(
-  options: {
-    resourcesPath?: string;
-    env?: NodeJS.ProcessEnv;
-  } = {},
-): boolean {
-  const resourcesPath = options.resourcesPath ?? process.resourcesPath;
-  const env = options.env ?? process.env;
-  return typeof resourcesPath === 'string' && resourcesPath.trim().length > 0 && env.PERSONAL_AGENT_DESKTOP_DEV_BUNDLE !== '1';
-}
-
-export function shouldPreferPrebuiltSystemExtensionBackend(
-  options: {
-    resourcesPath?: string;
-    env?: NodeJS.ProcessEnv;
-  } = {},
-): boolean {
-  const env = options.env ?? process.env;
-  return env.PERSONAL_AGENT_EXTENSION_AUTHORING !== '1';
-}
-
 export function resolveExtensionBackendLoadTarget(
   entry: ExtensionBackendLoadTargetEntry,
   backendEntry: string,
-  options: {
-    resourcesPath?: string;
-    env?: NodeJS.ProcessEnv;
-  } = {},
 ): PrebuiltExtensionBackendLoadTarget | null {
   if (!entry.packageRoot) {
     return null;
@@ -76,29 +51,15 @@ export function resolveExtensionBackendLoadTarget(
     return null;
   }
 
-  if (
-    entry.source === 'system' &&
-    isSourceExtensionBackendEntry(normalizedBackendEntry) &&
-    shouldPreferPrebuiltSystemExtensionBackend(options)
-  ) {
-    return buildPrebuiltExtensionBackendLoadTarget(resolve(entry.packageRoot, 'dist', 'backend.mjs'));
-  }
-
   if (isSourceExtensionBackendEntry(normalizedBackendEntry)) {
-    return null;
+    return buildPrebuiltExtensionBackendLoadTarget(resolve(entry.packageRoot, 'dist', 'backend.mjs'));
   }
 
   return buildPrebuiltExtensionBackendLoadTarget(resolve(entry.packageRoot, normalizedBackendEntry));
 }
 
-export function resolvePrebuiltSystemExtensionBackend(
-  entry: ExtensionBackendLoadTargetEntry,
-  options: {
-    resourcesPath?: string;
-    env?: NodeJS.ProcessEnv;
-  } = {},
-): PrebuiltExtensionBackendLoadTarget | null {
-  if (!shouldPreferPrebuiltSystemExtensionBackend(options) || entry.source !== 'system' || !entry.packageRoot) {
+export function resolvePrebuiltSystemExtensionBackend(entry: ExtensionBackendLoadTargetEntry): PrebuiltExtensionBackendLoadTarget | null {
+  if (entry.source !== 'system' || !entry.packageRoot) {
     return null;
   }
 

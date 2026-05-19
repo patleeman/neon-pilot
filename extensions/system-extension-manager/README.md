@@ -18,14 +18,13 @@ The Extension Manager should make that loop boring:
 - list installed system and user extensions
 - show manifest, surfaces, routes, protocol entrypoints, build status, and permissions
 - expose host and extension command/keybinding inspection in a separate Commands tab
-- build/rebuild an extension
 - reload extension registry/runtime
 - keep per-extension actions visibly acknowledged with inline progress and result notices even when the list is scrolled
 - enable/disable user extensions without replacing the Extension Manager page; registry-backed navigation and surfaces refresh in place
 - export/import extension packages
 - snapshot a user extension before agent edits
 - open an extension folder in Finder/editor
-- expose build/reload/validate operations through the Extension Manager UI and backend actions
+- expose validate/reload operations through the Extension Manager UI and backend actions
 - show build/runtime errors in a way an agent can fix
 
 ## Operational model
@@ -42,7 +41,7 @@ The loader also includes repo-local experimental extensions from `experimental-e
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `PERSONAL_AGENT_EXTENSION_PATHS` for process-level overrides.
 
-Extension Manager can build runtime extensions in-app when running from an unpackaged/dev desktop bundle. Use the per-extension **Build** action to compile `src/frontend.tsx` and `src/backend.ts` into manifest-declared `dist/*` entries, then **Reload** to refresh backend modules, restart services, and registry surfaces. Use **Validate** after each build; the extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Packaged desktop releases are prebuilt-only: they load existing `dist` bundles and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
+Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `pa-extension build <extension-dir>`, then use **Validate** and **Reload** in Extension Manager. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
 
 ## Agent workflow for this extension
 
@@ -52,7 +51,7 @@ When modifying Extension Manager itself:
 2. Inspect `packages/desktop/server/extensions/*` before changing lifecycle, registry, manifest, import/export, or build behavior.
 3. Inspect `packages/desktop/ui/src/extensions/*` before changing native surface hosting, registry state, or extension UI.
 4. If a first-party extension needs a new stable host primitive, add it deliberately to `packages/extensions` instead of importing app internals.
-5. Validate create/build/reload flows after changes.
+5. Validate create/validate/reload flows after changes.
 6. Visually inspect the Extension Manager UI before reporting done.
 
 ## Migration stance
@@ -96,5 +95,5 @@ Target order:
 6. Wire manifest `views`, `nav`, commands, slash commands, skills, tools, and settings through registry surfaces.
 7. Migrate system product surfaces to native extensions.
 8. Remove legacy iframe extension UI runtime and starter HTML templates when no longer needed.
-9. Keep Extension Manager build/reload/status flows agent-fixable.
+9. Keep Extension Manager validate/reload/status flows agent-fixable.
 10. Backfill tests around manifest parsing, lazy loading, action invocation, CSS scoping, and system extension migrations.

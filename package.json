@@ -8,7 +8,8 @@
   "bugs": "https://github.com/patleeman/personal-agent/issues",
   "homepage": "https://github.com/patleeman/personal-agent",
   "bin": {
-    "personal-agent": "./scripts/personal-agent-cli.mjs"
+    "personal-agent": "./scripts/personal-agent-cli.mjs",
+    "pa-extension": "./scripts/pa-extension-cli.mjs"
   },
   "scripts": {
     "build": "pnpm run build:ts && pnpm run build:web && pnpm run build:extensions && node scripts/verify-build-artifacts.mjs",

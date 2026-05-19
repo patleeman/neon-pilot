@@ -3,7 +3,6 @@ import { dirname, join, resolve } from 'node:path';
 
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 import {
-  buildRuntimeExtension,
   createRuntimeExtension,
   listExtensionInstallSummaries,
   reloadExtensionBackend,
@@ -45,12 +44,6 @@ export async function createExtension(input: unknown, _ctx: ExtensionBackendCont
 export async function snapshotExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
   const extensionId = requireExtensionId(input);
   return { ok: true, ...((await snapshotRuntimeExtension(extensionId)) as object) };
-}
-
-export async function buildExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
-  const extensionId = requireExtensionId(input);
-  const result = await buildRuntimeExtension(extensionId);
-  return { ok: true, ...result };
 }
 
 export async function reloadExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
@@ -99,7 +92,6 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'list') return listExtensions(input, ctx);
   if (action === 'create') return createExtension(input, ctx);
   if (action === 'snapshot') return snapshotExtension(input as ExtensionIdInput, ctx);
-  if (action === 'build') return buildExtension(input as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(input as ExtensionIdInput, ctx);
   if (action === 'validate') return validateExtension(input, ctx);
   if (action === 'hostViewComponents') return listHostViewComponents(input, ctx);
