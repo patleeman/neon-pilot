@@ -2,6 +2,7 @@ import { getAvailableModels } from '../conversations/liveSessions.js';
 import { runModelDiscovery } from './modelDiscovery.js';
 import { normalizeSavedModelPreferences } from './modelPreferences.js';
 import { getSupportedServiceTiersForModel, modelSupportsServiceTier } from './modelServiceTiers.js';
+import { defaultToolProfileForProvider, readModelToolProfileId } from './modelToolProfiles.js';
 
 const BUILT_IN_MODELS = [
   { id: 'claude-opus-4-6', provider: 'anthropic', name: 'Claude Opus 4.6', context: 200_000, input: ['text', 'image'] },
@@ -30,6 +31,11 @@ function readModelReasoning(model: unknown): boolean | undefined {
   return typeof reasoning === 'boolean' ? reasoning : undefined;
 }
 
+function readModelToolProfile(model: unknown): ReturnType<typeof readModelToolProfileId> {
+  const explicit = readModelToolProfileId((model as { toolProfile?: unknown } | undefined)?.toolProfile);
+  return explicit ?? defaultToolProfileForProvider((model as { provider?: unknown } | undefined)?.provider as string | undefined);
+}
+
 export async function listModelDefinitions() {
   let registryModels: Awaited<ReturnType<typeof getAvailableModels>>;
   try {
@@ -49,6 +55,7 @@ export async function listModelDefinitions() {
     context: model.contextWindow ?? model.context ?? 128_000,
     input: readModelInput(model),
     reasoning: readModelReasoning(model),
+    toolProfile: readModelToolProfile(model),
     supportedServiceTiers: getSupportedServiceTiersForModel(model),
   }));
 
@@ -70,6 +77,7 @@ export async function listModelDefinitions() {
       context: m.contextWindow,
       input: m.input,
       reasoning: m.reasoning,
+      toolProfile: defaultToolProfileForProvider(p.provider),
       supportedServiceTiers: getSupportedServiceTiersForModel({ provider: p.provider } as never),
     })),
   );

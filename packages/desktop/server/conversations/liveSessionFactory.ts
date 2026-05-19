@@ -12,6 +12,7 @@ import { resolveChildProcessEnv } from '@personal-agent/core';
 
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
+import { defaultToolProfileForProvider, readModelToolProfileId, toolNamesForModelToolProfile } from '../models/modelToolProfiles.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
@@ -81,6 +82,22 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
+function resolveToolNamesForInitialModel(input: {
+  modelRegistry: ModelRegistry;
+  settingsFile: string;
+  initialModel?: string | null;
+}): string[] | undefined {
+  if (input.initialModel === null) return undefined;
+
+  const availableModels = input.modelRegistry.getAvailable();
+  const savedModel = readSavedModelPreferences(input.settingsFile, availableModels).currentModel;
+  const modelId = input.initialModel ?? savedModel;
+  const model = availableModels.find((candidate) => candidate.id === modelId);
+  const explicitProfile = readModelToolProfileId((model as { toolProfile?: unknown } | undefined)?.toolProfile);
+  const providerDefaultProfile = defaultToolProfileForProvider(model?.provider);
+  return toolNamesForModelToolProfile(explicitProfile ?? providerDefaultProfile);
+}
+
 export async function createPreparedLiveAgentSession(input: {
   cwd: string;
   agentDir: string;
@@ -94,6 +111,11 @@ export async function createPreparedLiveAgentSession(input: {
   const agentDir = options.agentDir ?? input.agentDir;
   const auth = makeAuth(agentDir);
   const modelRegistry = makeRegistry(auth, options.extensionFactories);
+  const profileToolNames = resolveToolNamesForInitialModel({
+    modelRegistry,
+    settingsFile: input.settingsFile,
+    initialModel: options.initialModel,
+  });
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const resourceLoader = await makeLoader(input.cwd, options);
   const { session } = await createAgentSession({
@@ -104,7 +126,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(options.allowedToolNames ? { tools: options.allowedToolNames } : {}),
+    ...(options.allowedToolNames ? { tools: options.allowedToolNames } : profileToolNames ? { tools: profileToolNames } : {}),
   });
 
   patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session));

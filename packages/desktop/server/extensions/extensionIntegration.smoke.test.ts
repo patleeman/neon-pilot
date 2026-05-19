@@ -659,6 +659,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
     for (const expected of ['duckduckgo_search', 'exa_search', 'web_fetch', 'background_bash', 'subagent']) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
+    expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);
     for (const legacy of [
       'web.search',
       'web.fetch',
@@ -668,7 +669,6 @@ describe('extension manifests - cross-extension conflict detection', () => {
       'change_working_directory',
       'deferred_resume',
       'background_command',
-      'apply_patch',
       'local_models_status',
     ]) {
       expect(toolNames.has(legacy), `legacy tool should not be model-visible: ${legacy}`).toBe(false);

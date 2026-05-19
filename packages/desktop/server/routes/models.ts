@@ -401,7 +401,7 @@ export function registerModelRoutes(
   router.post('/api/model-providers/providers/:provider/models', (req, res) => {
     try {
       const { provider } = req.params;
-      const { modelId, name, api, baseUrl, reasoning, input, contextWindow, maxTokens, headers, cost, compat } = req.body as {
+      const { modelId, name, api, baseUrl, reasoning, input, contextWindow, maxTokens, toolProfile, headers, cost, compat } = req.body as {
         modelId?: string;
         name?: string;
         api?: string;
@@ -410,6 +410,7 @@ export function registerModelRoutes(
         input?: Array<'text' | 'image'>;
         contextWindow?: number;
         maxTokens?: number;
+        toolProfile?: Parameters<typeof upsertModelProviderModel>[3]['toolProfile'];
         headers?: Record<string, string>;
         cost?: {
           input?: number;
@@ -438,6 +439,7 @@ export function registerModelRoutes(
         input,
         contextWindow,
         maxTokens,
+        toolProfile,
         headers,
         cost,
         compat,

@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path';
 
 import { getDurableModelsDir, getDurableProfilesDir } from '@personal-agent/core';
 
+import { type ModelToolProfileId, readModelToolProfileId } from './modelToolProfiles.js';
+
 export type ModelProviderApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages' | 'google-generative-ai';
 export type ModelProviderInputType = 'text' | 'image';
 
@@ -22,6 +24,7 @@ export interface ModelProviderModelConfig {
   input: ModelProviderInputType[];
   contextWindow?: number;
   maxTokens?: number;
+  toolProfile?: ModelToolProfileId;
   headers?: Record<string, string>;
   cost?: ModelProviderCostConfig;
   compat?: Record<string, unknown>;
@@ -62,6 +65,7 @@ export interface EditableModelProviderModelConfig {
   input?: ModelProviderInputType[];
   contextWindow?: number;
   maxTokens?: number;
+  toolProfile?: ModelToolProfileId;
   headers?: Record<string, string>;
   cost?: Partial<ModelProviderCostConfig>;
   compat?: Record<string, unknown>;
@@ -271,6 +275,7 @@ function readModelConfig(modelId: string, value: unknown): ModelProviderModelCon
     input: readModelInputs(value.input),
     contextWindow: readOptionalPositiveInteger(value.contextWindow),
     maxTokens: readOptionalPositiveInteger(value.maxTokens),
+    toolProfile: readModelToolProfileId(value.toolProfile),
     headers: readOptionalStringRecord(value.headers),
     cost: readCost(value.cost),
     compat: readOptionalObject(value.compat),
@@ -365,6 +370,7 @@ function applyModelUpdate(target: JsonRecord, modelId: string, update: EditableM
   const input = readModelInputs(update.input);
   const contextWindow = readOptionalPositiveInteger(update.contextWindow);
   const maxTokens = readOptionalPositiveInteger(update.maxTokens);
+  const toolProfile = readModelToolProfileId(update.toolProfile);
   const headers = readOptionalStringRecord(update.headers);
   const compat = readOptionalObject(update.compat);
   const cost = readCost(update.cost);
@@ -390,6 +396,9 @@ function applyModelUpdate(target: JsonRecord, modelId: string, update: EditableM
 
   if (maxTokens !== undefined) target.maxTokens = maxTokens;
   else delete target.maxTokens;
+
+  if (toolProfile) target.toolProfile = toolProfile;
+  else delete target.toolProfile;
 
   if (headers) target.headers = headers;
   else delete target.headers;

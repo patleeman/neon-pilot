@@ -29,6 +29,29 @@
   "contributes": {
     "tools": [
       {
+        "id": "apply-patch",
+        "name": "apply_patch",
+        "title": "Apply Patch",
+        "description": "Apply a Codex-style patch. Supports Add File, Update File, Delete File, and Move to when present in the patch.",
+        "action": "applyPatch",
+        "when": {
+          "providers": ["openai", "openai-codex"]
+        },
+        "promptSnippet": "Apply Codex-style patches for file changes, including creating new files.",
+        "promptGuidelines": ["Use apply_patch for repository file changes."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "patch": {
+              "type": "string",
+              "description": "Codex-style patch text."
+            }
+          },
+          "required": ["patch"],
+          "additionalProperties": false
+        }
+      },
+      {
         "id": "write-file",
         "title": "Write",
         "description": "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
