@@ -126,8 +126,8 @@ export function KnowledgePageSurface() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Set Up Knowledge</p>
               <h2 className="text-3xl font-semibold tracking-[-0.03em] text-primary text-balance">Give the agent a durable memory.</h2>
               <p className="max-w-2xl text-[14px] leading-7 text-secondary">
-                Knowledge is a git-backed folder for notes, skills, project context, and instructions. PA clones the repo locally, watches
-                for edits, and syncs changes in the background. Less ceremony, more brain.
+                Knowledge is a git-backed folder for notes, skills, project context, and instructions. Neon Pilot clones the repo locally,
+                watches for edits, and syncs changes in the background. Less ceremony, more brain.
               </p>
             </div>
 
@@ -143,12 +143,12 @@ export function KnowledgePageSurface() {
                 <div>
                   <h3 className="text-[13px] font-semibold text-primary">How Sync Works</h3>
                   <p className="mt-1">
-                    Git is the backing store. PA keeps a local mirror under runtime state and reads files from that mirror.
+                    Git is the backing store. Neon Pilot keeps a local mirror under runtime state and reads files from that mirror.
                   </p>
                 </div>
                 <div>
                   <h3 className="text-[13px] font-semibold text-primary">Already Have One?</h3>
-                  <p className="mt-1">Paste the clone URL. Empty repo is fine too — PA will populate it as you build memory.</p>
+                  <p className="mt-1">Paste the clone URL. Empty repo is fine too — Neon Pilot will populate it as you build memory.</p>
                 </div>
               </div>
             </div>

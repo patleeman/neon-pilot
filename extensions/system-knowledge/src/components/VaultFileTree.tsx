@@ -438,7 +438,7 @@ function ImportUrlModal({
         onClick={(event) => event.stopPropagation()}
       >
         <h3 className="text-[13px] font-semibold text-primary mb-1">Import URL</h3>
-        <p className="text-[11px] text-dim mb-3">Paste a web URL and Personal Agent will fetch readable content into a new vault note.</p>
+        <p className="text-[11px] text-dim mb-3">Paste a web URL and Neon Pilot will fetch readable content into a new vault note.</p>
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -914,7 +914,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
         url: input.url,
         ...(input.title ? { title: input.title } : {}),
         ...(input.directoryId ? { directoryId: input.directoryId } : {}),
-        sourceApp: 'Personal Agent Knowledge UI',
+        sourceApp: 'Neon Pilot Knowledge UI',
       });
       emitKBEvent('kb:entries-changed');
       onFileSelect(imported.note.id);
@@ -1567,7 +1567,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
             <div className="space-y-2 text-[12px] leading-5 text-secondary">
               <p className="font-medium text-primary">Connect a git repo to use Knowledge.</p>
               <p>
-                PA needs a git repo to store and sync durable docs. Add a repo URL in{' '}
+                Neon Pilot needs a git repo to store and sync durable docs. Add a repo URL in{' '}
                 <Link to="/settings#settings-knowledge-base" className="text-accent hover:underline">
                   Settings
                 </Link>{' '}

@@ -317,7 +317,7 @@ describe('VaultFileTree', () => {
     await flushAsyncWork();
 
     expect(container.textContent).toContain('Connect a git repo to use Knowledge');
-    expect(container.textContent).toContain('PA needs a git repo to store and sync durable docs.');
+    expect(container.textContent).toContain('Neon Pilot needs a git repo to store and sync durable docs.');
     expect(queryInShadowRoots(container, 'button[aria-label="New file"]')).toBeNull();
     expect(apiMocks.vaultFiles).not.toHaveBeenCalled();
   });

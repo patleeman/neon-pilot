@@ -345,7 +345,7 @@ function SchedulerHealthDot({ health }: { health: ScheduledTaskSchedulerHealth |
       tabIndex={0}
       title={label}
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-secondary outline-none transition-colors hover:bg-surface/40 focus:bg-surface/40"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-secondary outline-none transition-colors hover:bg-elevated focus:bg-elevated"
     >
       <span className={cx('h-2.5 w-2.5 rounded-full', statusClass)} />
     </span>
@@ -376,7 +376,7 @@ function FormSection({
   return (
     <section id={id} className="grid scroll-mt-8 gap-6 border-t border-border-subtle py-7 md:grid-cols-[13rem_minmax(0,1fr)]">
       <div className="space-y-2">
-        <h3 className="text-[16px] font-semibold tracking-tight text-primary">{title}</h3>
+        <h3 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">{title}</h3>
         <p className="text-[13px] leading-6 text-secondary">{description}</p>
       </div>
       <div className="min-w-0">{children}</div>
@@ -385,7 +385,7 @@ function FormSection({
 }
 
 function fieldClass() {
-  return 'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
+  return 'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
 }
 
 function schedulePreview(form: AutomationFormState) {

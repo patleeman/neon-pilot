@@ -276,8 +276,8 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         )}
         {isOnboarding ? null : (
           <p className="ui-card-meta">
-            PA keeps a local clone under runtime state, syncs it in the background, and treats git as the backing store. Use an SSH/HTTPS
-            remote or a local git repository path. Folder and file @ mentions read from the local mirror.
+            Neon Pilot keeps a local clone under runtime state, syncs it in the background, and treats git as the backing store. Use an
+            SSH/HTTPS remote or a local git repository path. Folder and file @ mentions read from the local mirror.
           </p>
         )}
       </form>

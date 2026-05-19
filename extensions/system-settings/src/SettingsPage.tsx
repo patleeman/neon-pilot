@@ -61,8 +61,8 @@ import {
 } from 'react';
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
-const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-lg px-3 py-1.5 text-[12px] shadow-none';
+  'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
+const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-general', label: 'General', summary: 'Appearance, workspace, and conversation defaults' },
@@ -80,7 +80,7 @@ type ModelOption = ModelState['models'][number];
 type DesktopKeyboardShortcutId = keyof DesktopAppPreferencesState['keyboardShortcuts'];
 
 const DESKTOP_KEYBOARD_SHORTCUT_LABELS: Record<DesktopKeyboardShortcutId, { label: string; description: string }> = {
-  showApp: { label: 'Show Personal Agent', description: 'Bring the desktop window forward.' },
+  showApp: { label: 'Show Neon Pilot', description: 'Bring the desktop window forward.' },
   newConversation: { label: 'New conversation', description: 'Start a fresh chat.' },
   closeTab: { label: 'Close tab', description: 'Close the active conversation tab.' },
   reopenClosedTab: { label: 'Reopen closed tab', description: 'Restore the most recently closed conversation tab.' },
@@ -408,17 +408,15 @@ function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): s
     case 'checking':
       return 'Checking for updates…';
     case 'downloading':
-      return update.availableVersion
-        ? `Downloading Personal Agent ${update.availableVersion}…`
-        : 'Downloading the latest Personal Agent build…';
+      return update.availableVersion ? `Downloading Neon Pilot ${update.availableVersion}…` : 'Downloading the latest Neon Pilot build…';
     case 'ready':
       return update.downloadedVersion
         ? state.autoInstallUpdates
-          ? `Personal Agent ${update.downloadedVersion} is ready and will install automatically.`
-          : `Personal Agent ${update.downloadedVersion} is ready. Quit the app to finish installing it.`
+          ? `Neon Pilot ${update.downloadedVersion} is ready and will install automatically.`
+          : `Neon Pilot ${update.downloadedVersion} is ready. Quit the app to finish installing it.`
         : `Current version: ${update.currentVersion}.`;
     case 'installing':
-      return update.downloadedVersion ? `Installing Personal Agent ${update.downloadedVersion}…` : 'Installing the downloaded update…';
+      return update.downloadedVersion ? `Installing Neon Pilot ${update.downloadedVersion}…` : 'Installing the downloaded update…';
     case 'error':
       return update.lastError ? `Update error: ${update.lastError}` : 'The last update action failed.';
     case 'idle':
@@ -437,8 +435,8 @@ function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | nul
   }
 
   return state.startOnSystemStart
-    ? 'Personal Agent will launch in the background when you sign in to this Mac.'
-    : 'Personal Agent only starts when you open it manually.';
+    ? 'Neon Pilot will launch in the background when you sign in to this Mac.'
+    : 'Neon Pilot only starts when you open it manually.';
 }
 
 const SHORTCUT_KEY_LABELS: Record<string, string> = {
@@ -1115,7 +1113,7 @@ export function DesktopConnectionsSettingsPanel() {
                 disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
                 className={CHECKBOX_CLASS}
               />
-              <span>Start Personal Agent when you sign in</span>
+              <span>Start Neon Pilot when you sign in</span>
             </label>
             <p className="ui-card-meta break-words">{formatStartOnSystemStartSummary(appPreferencesState)}</p>
           </div>

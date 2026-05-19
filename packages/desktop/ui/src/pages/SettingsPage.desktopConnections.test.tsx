@@ -115,7 +115,7 @@ describe('DesktopConnectionsSettingsPanel', () => {
     await flushAsyncWork();
 
     expect(container.textContent).toContain('Install downloaded updates automatically');
-    expect(container.textContent).toContain('Start Personal Agent when you sign in');
+    expect(container.textContent).toContain('Start Neon Pilot when you sign in');
   });
 });
 
@@ -202,7 +202,7 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(mocks.updateDesktopAppPreferences).toHaveBeenCalledWith({
       keyboardShortcuts: expect.objectContaining({ conversationMode: 'CommandOrControl+Alt+K' }),
     });
-    expect(container.textContent).toContain('Show Personal Agent');
+    expect(container.textContent).toContain('Show Neon Pilot');
     expect(container.textContent).toContain('Find on page');
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');

@@ -146,8 +146,8 @@ function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
-            value === opt.value ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:bg-surface/45 hover:text-primary'
+          className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+            value === opt.value ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:bg-elevated hover:text-primary'
           }`}
         >
           {opt.label}
@@ -196,15 +196,15 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
   ];
 
   return (
-    <section className="grid grid-cols-1 border-y border-border-subtle sm:grid-cols-2 lg:grid-cols-5">
+    <section className="grid grid-cols-1 overflow-hidden rounded-xl border border-border-subtle bg-surface sm:grid-cols-2 lg:grid-cols-5">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="relative flex min-w-0 flex-col gap-2 border-border-subtle py-4 sm:px-4 sm:[&:not(:first-child)]:border-l max-sm:border-t max-sm:first:border-t-0"
+          className="relative flex min-w-0 flex-col gap-2 border-border-subtle px-4 py-4 sm:[&:not(:first-child)]:border-l max-sm:border-t max-sm:first:border-t-0"
         >
           {card.dot && <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-accent animate-pulse" />}
           <span className="text-[10px] uppercase tracking-[0.1em] text-dim">{card.label}</span>
-          <span className={`text-[24px] font-semibold leading-none tracking-tight ${card.cls}`}>{card.value}</span>
+          <span className={`font-mono text-[24px] font-semibold leading-none tracking-tight ${card.cls}`}>{card.value}</span>
           <span className="text-[11px] text-dim">{card.trend}</span>
         </div>
       ))}
