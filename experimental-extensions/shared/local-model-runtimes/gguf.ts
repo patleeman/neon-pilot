@@ -66,8 +66,14 @@ function bundledRuntimePath(name: string) {
   if (existsSync(localPath)) return localPath;
   return join(sourceRuntimeRoot, 'bin', 'darwin-arm64', name);
 }
-const bundledCli = bundledRuntimePath('llama-cli');
-const bundledServer = bundledRuntimePath('llama-server');
+// Computed lazily on each call so that binaries installed at runtime (into runtimeBinDir)
+// are picked up without requiring a module reload.
+function bundledCli() {
+  return bundledRuntimePath('llama-cli');
+}
+function bundledServer() {
+  return bundledRuntimePath('llama-server');
+}
 const modelCacheRoot = join(runtimeCacheRoot, 'models');
 const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'gguf/process/serverPid';
@@ -267,10 +273,10 @@ async function readModelMetadata(ctx: ExtensionBackendContext, modelPath: string
   const cached = metadataCache.get(modelPath);
   if (cached) return cached;
   const fallback = { detectedContextLength: null, recommendedContextSize: FALLBACK_CONTEXT };
-  if (!modelPath || !(await exists(modelPath)) || !(await exists(bundledCli))) return fallback;
+  if (!modelPath || !(await exists(modelPath)) || !(await exists(bundledCli()))) return fallback;
 
-  await chmod(bundledCli, 0o755).catch(() => undefined);
-  const result = await runProcess(ctx, bundledCli, ['-m', modelPath, '-p', 'metadata', '-n', '1', '-c', '128', '--verbose'], {
+  await chmod(bundledCli(), 0o755).catch(() => undefined);
+  const result = await runProcess(ctx, bundledCli(), ['-m', modelPath, '-p', 'metadata', '-n', '1', '-c', '128', '--verbose'], {
     timeoutMs: 10_000,
     maxBuffer: 4 * 1024 * 1024,
   });
@@ -349,17 +355,17 @@ export async function saveSettings(input: unknown, ctx: ExtensionBackendContext)
 
 export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContext) {
   const [cliAvailable, serverAvailable, modelPath, pid] = await Promise.all([
-    exists(bundledCli),
-    exists(bundledServer),
+    exists(bundledCli()),
+    exists(bundledServer()),
     selectedModelPath(ctx),
     readPid(ctx),
   ]);
   const [serverRunning, health] = await Promise.all([isPidRunning(ctx, pid), readServerHealth()]);
   const runtimeAvailable = cliAvailable || serverAvailable;
-  const version = cliAvailable ? await runProcess(ctx, bundledCli, ['--version']) : null;
+  const version = cliAvailable ? await runProcess(ctx, bundledCli(), ['--version']) : null;
 
-  if (cliAvailable) await chmod(bundledCli, 0o755).catch(() => undefined);
-  if (serverAvailable) await chmod(bundledServer, 0o755).catch(() => undefined);
+  if (cliAvailable) await chmod(bundledCli(), 0o755).catch(() => undefined);
+  if (serverAvailable) await chmod(bundledServer(), 0o755).catch(() => undefined);
 
   const latestRelease = runtimeAvailable ? await readLlamaLatestRelease() : { latestTag: null, error: null };
   const installedBuild = parseLlamaBuild(version?.stdout.trim() || version?.stderr.trim());
@@ -376,8 +382,8 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     available: runtimeAvailable,
     serverAvailable,
     cliAvailable,
-    cliPath: bundledCli,
-    serverPath: bundledServer,
+    cliPath: bundledCli(),
+    serverPath: bundledServer(),
     modelCacheRoot,
     selectedModelPath: modelPath,
     detectedContextLength: metadata.detectedContextLength,
@@ -531,7 +537,7 @@ export async function revealModel(input: RevealInput, ctx: ExtensionBackendConte
 
 export async function installRuntime(input: unknown, ctx: ExtensionBackendContext) {
   const force = typeof input === 'object' && input !== null && 'force' in input ? Boolean((input as { force?: unknown }).force) : false;
-  if (!force && (await exists(bundledCli)) && (await exists(bundledServer)))
+  if (!force && (await exists(bundledCli())) && (await exists(bundledServer())))
     return { ok: true, installed: false, status: await runtimeStatus({}, ctx) };
 
   const releaseResponse = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
@@ -560,8 +566,8 @@ cli=$(find "$workdir" -name llama-cli -type f | head -1)
 server=$(find "$workdir" -name llama-server -type f | head -1)
 test -n "$cli"
 test -n "$server"
-install -m 755 "$cli" ${shellQuote(bundledCli)}
-install -m 755 "$server" ${shellQuote(bundledServer)}
+install -m 755 "$cli" ${shellQuote(join(runtimeBinDir, 'llama-cli'))}
+install -m 755 "$server" ${shellQuote(join(runtimeBinDir, 'llama-server'))}
 dylibs=$(find "$workdir" -name '*.dylib')
 test -n "$dylibs"
 while IFS= read -r dylib; do
@@ -578,7 +584,7 @@ EOF
 export async function startServer(input: ServerInput, ctx: ExtensionBackendContext) {
   const modelPath = input.modelPath?.trim() || (await selectedModelPath(ctx));
   if (!modelPath) throw new Error('Select or download a GGUF model before starting the runtime.');
-  if (!(await exists(bundledServer))) throw new Error(`Bundled llama-server is missing at ${bundledServer}`);
+  if (!(await exists(bundledServer()))) throw new Error(`Bundled llama-server is missing at ${bundledServer()}`);
   if (!(await exists(modelPath))) throw new Error(`Model file does not exist: ${modelPath}`);
 
   const health = await readServerHealth();
@@ -587,7 +593,7 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
   if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, status: await runtimeStatus({}, ctx) };
 
   await mkdir(dirname(LOG_FILE), { recursive: true });
-  await chmod(bundledServer, 0o755).catch(() => undefined);
+  await chmod(bundledServer(), 0o755).catch(() => undefined);
   await setSelectedModelPath(ctx, modelPath);
   await saveServingSettings(ctx, {
     contextSize: input.contextSize,
@@ -639,7 +645,7 @@ export async function startServer(input: ServerInput, ctx: ExtensionBackendConte
   if (input.flashAttention) args.push('--flash-attn');
   appendSpeculativeDecodingArgs(args, input);
   const extraArgs = input.extraArgs?.trim();
-  const command = `exec ${shellQuote(bundledServer)} ${args.join(' ')}${extraArgs ? ` ${extraArgs}` : ''} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const command = `exec ${shellQuote(bundledServer())} ${args.join(' ')}${extraArgs ? ` ${extraArgs}` : ''} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`] });
   await ctx.storage.put(SERVER_PID_KEY, Number(result.stdout.trim()));
   return { ok: true, started: true, pid: Number(result.stdout.trim()), status: await runtimeStatus({}, ctx) };
@@ -678,8 +684,8 @@ export async function runPrompt(input: RunPromptInput, ctx: ExtensionBackendCont
     return { output: result.choices?.[0]?.message?.content || JSON.stringify(result, null, 2), source: 'server' };
   }
 
-  if (!(await exists(bundledCli))) throw new Error(`Bundled llama-cli is missing at ${bundledCli}`);
-  await chmod(bundledCli, 0o755).catch(() => undefined);
+  if (!(await exists(bundledCli()))) throw new Error(`Bundled llama-cli is missing at ${bundledCli()}`);
+  await chmod(bundledCli(), 0o755).catch(() => undefined);
   const metadata = await readModelMetadata(ctx, modelPath).catch(() => ({
     detectedContextLength: null,
     recommendedContextSize: FALLBACK_CONTEXT,
