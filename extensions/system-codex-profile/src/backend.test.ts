@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { applyPatch, applyPatchEdit, writeFile } from './backend.js';
+import codexCompatibilityExtension, { applyPatch, applyPatchEdit, writeFile } from './backend.js';
 
 function tempCwd(): string {
   return mkdtempSync(join(tmpdir(), 'pa-apply-patch-'));
@@ -13,6 +13,30 @@ function tempCwd(): string {
 function ctx(cwd: string) {
   return { toolContext: { cwd } } as never;
 }
+
+describe('codex tool activation', () => {
+  it('restores the previous active tools when switching away from Codex', () => {
+    const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
+    codexCompatibilityExtension({
+      on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
+    } as never);
+
+    const calls: string[][] = [];
+    const ctx = {
+      getActiveTools: () => ['read', 'write'],
+      setActiveTools: (tools: string[]) => calls.push(tools),
+      modelProfile: { kind: 'resolved', profile: { id: 'codex-compatible' } },
+    };
+
+    handlers.get('session_start')?.({}, ctx);
+    handlers.get('model_select')?.({}, { ...ctx, modelProfile: { kind: 'none' } });
+
+    expect(calls).toEqual([
+      ['bash', 'apply_patch'],
+      ['read', 'write'],
+    ]);
+  });
+});
 
 describe('applyPatch', () => {
   it('adds updates deletes and moves files', async () => {

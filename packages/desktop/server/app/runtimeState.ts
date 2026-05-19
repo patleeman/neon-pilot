@@ -214,6 +214,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
                   {
                     ...(ctx as Record<string, unknown>),
                     modelProfile: resolveLifecycleModelProfile(ctx as Record<string, unknown>),
+                    getActiveTools: () => target.getActiveTools(),
                     setActiveTools: (toolNames: string[]) => target.setActiveTools(toolNames),
                   },
                   ...args.slice(2),

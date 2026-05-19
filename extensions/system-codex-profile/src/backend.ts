@@ -63,9 +63,22 @@ type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd
 function activateCodexTools(ctx: {
   modelProfile?: { kind?: string; profile?: { id?: string } };
   setActiveTools?: (toolNames: string[]) => void;
+  getActiveTools?: () => string[];
 }): void {
-  if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') return;
+  if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
+    restoreNonCodexTools(ctx);
+    return;
+  }
+  lastNonCodexActiveTools = ctx.getActiveTools?.() ?? lastNonCodexActiveTools;
   ctx.setActiveTools?.(['bash', 'apply_patch']);
+}
+
+let lastNonCodexActiveTools: string[] | undefined;
+
+function restoreNonCodexTools(ctx: { setActiveTools?: (toolNames: string[]) => void }): void {
+  if (!lastNonCodexActiveTools) return;
+  ctx.setActiveTools?.(lastNonCodexActiveTools);
+  lastNonCodexActiveTools = undefined;
 }
 
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
