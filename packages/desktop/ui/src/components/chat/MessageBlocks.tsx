@@ -28,7 +28,9 @@ function formatSystemEventLabel(customType?: string): string {
     case 'conversation_workspace_change':
       return 'Workspace changed';
     case 'child_conversation_topology':
-      return 'Child conversation';
+      return 'Conversation offshoot';
+    case 'parent_conversation_backlink':
+      return 'Parent conversation';
     case 'parallel_result':
       return 'Parallel response imported';
     case 'conversation_automation_review':

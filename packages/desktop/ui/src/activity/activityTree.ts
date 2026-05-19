@@ -39,6 +39,24 @@ export function buildExecutionActivityId(executionId: string): string {
   return `execution:${executionId}`;
 }
 
+function formatConversationActivityTitle(session: SessionMeta): string {
+  const title = session.title || 'Untitled thread';
+  switch (session.offshootKind) {
+    case 'subagent':
+      return `subagent: ${title}`;
+    case 'fork':
+      return `fork: ${title}`;
+    case 'rewind':
+      return `rewind: ${title}`;
+    case 'duplicate':
+      return `duplicate: ${title}`;
+    case 'side':
+      return `side: ${title}`;
+    default:
+      return title;
+  }
+}
+
 export function buildActivityTreeItems({ conversations, executions = [] }: BuildActivityTreeInput): ActivityTreeItem[] {
   const conversationIds = new Set(conversations.map((session) => session.id));
   const activeExecutionConversationIds = new Set(
@@ -58,7 +76,7 @@ export function buildActivityTreeItems({ conversations, executions = [] }: Build
       session.parentSessionId && conversationIds.has(session.parentSessionId)
         ? buildConversationActivityId(session.parentSessionId)
         : undefined,
-    title: session.title || 'Untitled thread',
+    title: formatConversationActivityTitle(session),
     subtitle: session.cwd || undefined,
     status: session.isRunning ? 'running' : 'idle',
     route: `/conversations/${encodeURIComponent(session.id)}`,

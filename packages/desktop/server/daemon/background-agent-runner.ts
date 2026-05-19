@@ -7,6 +7,8 @@ import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot } from '@personal-agent/core';
 
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
+import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
+import { appendConversationOffshootMetadata } from '../conversations/sessions.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';
@@ -193,6 +195,15 @@ export async function main(): Promise<void> {
     applyInitialPreferences: true,
     ensureSessionFile: !args.noSession,
   });
+
+  const sessionFile = resolveLiveSessionFile(session, { ensurePersisted: !args.noSession });
+  if (parentSessionFile && sessionFile) {
+    appendConversationOffshootMetadata({
+      sessionFile,
+      kind: 'subagent',
+      parentSessionFile,
+    });
+  }
 
   try {
     console.warn(

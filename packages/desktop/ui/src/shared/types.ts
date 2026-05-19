@@ -515,6 +515,8 @@ export interface SessionMeta {
   lastActivityAt?: string;
   parentSessionFile?: string;
   parentSessionId?: string;
+  parentMessageId?: string;
+  offshootKind?: 'fork' | 'rewind' | 'subagent' | 'duplicate' | 'side';
   sourceRunId?: string;
   automationTaskId?: string;
   automationTitle?: string;

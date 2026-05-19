@@ -1100,13 +1100,13 @@ describe('chat view streaming disclosure', () => {
             id: 'topology-child-1',
             ts: '2026-03-11T18:00:00.000Z',
             customType: 'child_conversation_topology',
-            text: 'Child conversation started: Research branch\nConversation: child-1',
+            text: 'Fork conversation created: Research branch\nOpen: /conversations/child-1\nConversation: child-1',
           },
         ],
       }),
     );
 
-    expect(html).toContain('Child conversation');
+    expect(html).toContain('Conversation offshoot');
     expect(html).toContain('data-context-type="child_conversation_topology"');
     expect(html).toContain('Research branch');
   });

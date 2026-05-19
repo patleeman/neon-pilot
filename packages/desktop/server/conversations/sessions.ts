@@ -51,6 +51,16 @@ interface RawSessionRecord {
   parentSession?: string;
 }
 
+export type ConversationOffshootKind = 'fork' | 'rewind' | 'subagent' | 'duplicate' | 'side';
+
+interface ConversationOffshootMetadata {
+  kind: ConversationOffshootKind;
+  parentSessionFile?: string;
+  parentSessionId?: string;
+  parentMessageId?: string;
+  sourceRunId?: string;
+}
+
 interface RawModelChange {
   type: 'model_change';
   id?: string;
@@ -194,6 +204,8 @@ export interface SessionMeta {
   lastActivityAt?: string;
   parentSessionFile?: string;
   parentSessionId?: string;
+  parentMessageId?: string;
+  offshootKind?: ConversationOffshootKind;
   sourceRunId?: string;
 }
 
@@ -623,7 +635,7 @@ function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tai
 
   const rebasedBlocks = rebaseDisplayBlockIds(buildDisplayBlocksFromEntries(detailEntries), droppedVisibleBlockCount);
   const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
-  const blocksWithTopology = mergeTopologyBlocks(blocksWithAssets, meta);
+  const blocksWithTopology = addParentConversationBacklink(mergeTopologyBlocks(blocksWithAssets, meta), meta);
   const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
   const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
   const blocks =
@@ -823,6 +835,8 @@ const RELATED_THREADS_CONTEXT_CUSTOM_TYPE = 'related_threads_context';
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
 const GOAL_CONTINUATION_CUSTOM_TYPE = 'goal-continuation';
 const CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE = 'child_conversation_topology';
+const PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE = 'parent_conversation_backlink';
+const CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE = 'conversation_offshoot_metadata';
 
 function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): boolean {
   return (
@@ -830,6 +844,7 @@ function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): 
     (message.customType === 'referenced_context' ||
       message.customType === CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE ||
       message.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE ||
+      message.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE ||
       message.customType === GOAL_CONTINUATION_CUSTOM_TYPE)
   );
 }
@@ -1368,6 +1383,8 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[]
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   return children.map((child) => {
+    const kind = child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side');
+    const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
     const sourceRun = child.sourceRunId ? `\nSource run: ${child.sourceRunId}` : '';
     const cwd = child.cwd && child.cwd !== meta.cwd ? `\nWorking directory: ${child.cwd}` : '';
     return {
@@ -1375,28 +1392,63 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[]
       id: `topology-child-${child.id}`,
       ts: child.timestamp,
       customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
-      text: `Child conversation started: ${child.title || child.id}\nConversation: ${child.id}${sourceRun}${cwd}`,
+      text: `${label} conversation created: ${child.title || child.id}\nOpen: /conversations/${child.id}\nConversation: ${child.id}${sourceRun}${cwd}`,
     } satisfies DisplayBlock;
   });
 }
 
 function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  const children = scanSessionMetas()
+    .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  const childById = new Map(children.map((child) => [child.id, child] as const));
   const topologyBlocks = buildChildConversationTopologyBlocks(meta);
   if (topologyBlocks.length === 0) {
     return blocks;
   }
 
-  return [...blocks, ...topologyBlocks].sort((left, right) => left.ts.localeCompare(right.ts));
+  const remainingTopologyBlocks = [...topologyBlocks];
+  const merged: DisplayBlock[] = [];
+  for (const block of blocks) {
+    merged.push(block);
+    const anchoredForBlock = remainingTopologyBlocks.filter(
+      (topologyBlock) => childById.get(topologyBlock.id.replace(/^topology-child-/, ''))?.parentMessageId === block.id,
+    );
+    for (const anchored of anchoredForBlock) {
+      merged.push(anchored);
+      remainingTopologyBlocks.splice(remainingTopologyBlocks.indexOf(anchored), 1);
+    }
+  }
+
+  return [...merged, ...remainingTopologyBlocks];
 }
 
 function isTopologyBlock(block: DisplayBlock): boolean {
-  return block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE;
+  return (
+    block.type === 'context' &&
+    (block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE || block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE)
+  );
+}
+
+function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  const parentId = meta.parentSessionId?.trim();
+  if (!parentId) return blocks;
+  const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
+  const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
+  const backlink: DisplayBlock = {
+    type: 'context',
+    id: `topology-parent-${meta.id}`,
+    ts: meta.timestamp,
+    customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+    text: `${label} conversation from parent: ${parentId}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
+  };
+  return [backlink, ...blocks];
 }
 
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
   const blocksWithoutTopology = detail.blocks.filter((block) => !isTopologyBlock(block));
   const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
-  const blocks = mergeTopologyBlocks(blocksWithoutTopology, detail.meta);
+  const blocks = addParentConversationBacklink(mergeTopologyBlocks(blocksWithoutTopology, detail.meta), detail.meta);
   const topologyBlockCount = blocks.length - blocksWithoutTopology.length;
 
   if (previousTopologyBlockCount === topologyBlockCount && blocks === detail.blocks) {
@@ -1602,6 +1654,53 @@ function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWo
   };
 }
 
+function readConversationOffshootMetadata(line: RawCustomEntry): ConversationOffshootMetadata | null {
+  if (line.customType !== CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE || !line.data || typeof line.data !== 'object') return null;
+  const data = line.data as Record<string, unknown>;
+  const kind = typeof data.kind === 'string' ? data.kind.trim() : '';
+  if (!['fork', 'rewind', 'subagent', 'duplicate', 'side'].includes(kind)) return null;
+  const parentSessionFile = typeof data.parentSessionFile === 'string' ? normalizeOptionalPath(data.parentSessionFile) : undefined;
+  const parentSessionId = typeof data.parentSessionId === 'string' && data.parentSessionId.trim() ? data.parentSessionId.trim() : undefined;
+  const parentMessageId = typeof data.parentMessageId === 'string' && data.parentMessageId.trim() ? data.parentMessageId.trim() : undefined;
+  const sourceRunId = typeof data.sourceRunId === 'string' && data.sourceRunId.trim() ? data.sourceRunId.trim() : undefined;
+  return {
+    kind: kind as ConversationOffshootKind,
+    ...(parentSessionFile ? { parentSessionFile } : {}),
+    ...(parentSessionId ? { parentSessionId } : {}),
+    ...(parentMessageId ? { parentMessageId } : {}),
+    ...(sourceRunId ? { sourceRunId } : {}),
+  };
+}
+
+export function appendConversationOffshootMetadata(input: {
+  sessionFile: string;
+  kind: ConversationOffshootKind;
+  parentSessionFile?: string;
+  parentSessionId?: string;
+  parentMessageId?: string;
+  sourceRunId?: string;
+}): void {
+  appendFileSync(
+    input.sessionFile,
+    `${JSON.stringify({
+      type: 'custom',
+      id: randomUUID(),
+      parentId: null,
+      timestamp: new Date().toISOString(),
+      customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
+      data: {
+        kind: input.kind,
+        ...(input.parentSessionFile ? { parentSessionFile: input.parentSessionFile } : {}),
+        ...(input.parentSessionId ? { parentSessionId: input.parentSessionId } : {}),
+        ...(input.parentMessageId ? { parentMessageId: input.parentMessageId } : {}),
+        ...(input.sourceRunId ? { sourceRunId: input.sourceRunId } : {}),
+      },
+    })}\n`,
+    'utf-8',
+  );
+  clearSessionCaches();
+}
+
 function readLegacyToolWorkspaceMetadata(line: RawMessage): LegacyToolWorkspaceMetadata | null {
   if (line.message.role !== 'toolResult') {
     return null;
@@ -1748,6 +1847,7 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
   let sawSessionInfo = false;
   let messageCount = 0;
   let workspaceMetadata: ConversationWorkspaceMetadata | null = null;
+  let offshootMetadata: ConversationOffshootMetadata | null = null;
   let legacyToolWorkspaceMetadata: LegacyToolWorkspaceMetadata | null = null;
 
   for (const rawLine of raw.split('\n')) {
@@ -1780,6 +1880,7 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
 
     if (line.type === 'custom') {
       workspaceMetadata = readConversationWorkspaceMetadata(line as RawCustomEntry) ?? workspaceMetadata;
+      offshootMetadata = readConversationOffshootMetadata(line as RawCustomEntry) ?? offshootMetadata;
       continue;
     }
 
@@ -1805,8 +1906,8 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     return null;
   }
 
-  const parentSessionFile = normalizeOptionalPath(sessionRecord.parentSession);
-  const sourceRunId = readSourceRunIdFromSessionFilePath(filePath);
+  const parentSessionFile = offshootMetadata?.parentSessionFile ?? normalizeOptionalPath(sessionRecord.parentSession);
+  const sourceRunId = offshootMetadata?.sourceRunId ?? readSourceRunIdFromSessionFilePath(filePath);
   const headerCwd = sessionRecord.cwd ?? slugToCwd(cwdSlug);
   const inferredLegacyWorkspaceMetadata =
     workspaceMetadata?.workspaceCwd === null && legacyToolWorkspaceMetadata ? legacyToolWorkspaceMetadata : null;
@@ -1834,6 +1935,9 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     title: (sawSessionInfo ? namedTitle : null) ?? fallbackTitle ?? 'New Conversation',
     messageCount,
     ...(parentSessionFile ? { parentSessionFile } : {}),
+    ...(offshootMetadata?.parentSessionId ? { parentSessionId: offshootMetadata.parentSessionId } : {}),
+    ...(offshootMetadata?.parentMessageId ? { parentMessageId: offshootMetadata.parentMessageId } : {}),
+    ...(offshootMetadata?.kind ? { offshootKind: offshootMetadata.kind } : sourceRunId ? { offshootKind: 'subagent' as const } : {}),
     ...(sourceRunId ? { sourceRunId } : {}),
   };
 }
@@ -2471,7 +2575,10 @@ export function readSessionBlocksByFileWithTelemetry(
 
   const manager = SessionManager.open(meta.file);
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
-  const allBlocks = mergeTopologyBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta);
+  const allBlocks = addParentConversationBacklink(
+    mergeTopologyBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta),
+    meta,
+  );
   const totalBlocks = allBlocks.length;
   const tailBlockLimit = resolveTailBlockLimit(requestedTailBlocks, totalBlocks);
   const blockOffset = tailBlockLimit === null ? 0 : Math.max(0, totalBlocks - tailBlockLimit);

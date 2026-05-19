@@ -5,6 +5,7 @@ import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
   buildAppendOnlySessionDetailResponse,
   buildDisplayBlocksFromEntries,
@@ -1946,9 +1947,55 @@ describe('sessions', () => {
         expect.objectContaining({
           type: 'context',
           customType: 'child_conversation_topology',
-          text: expect.stringContaining('Topology child session'),
+          text: expect.stringContaining('Subagent conversation created: Topology child session'),
         }),
       ]),
+    );
+  });
+
+  it('anchors fork offshoot events after their source message and adds a child backlink', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'fork-parent-session',
+      title: 'Fork parent session',
+      assistantTexts: ['Parent reply'],
+    });
+    const childSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'fork-child-session',
+      title: 'Fork child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+    const parentMessageId = readSessionBlocks('fork-parent-session')?.blocks.find((block) => block.type === 'user')?.id;
+    expect(parentMessageId).toBeTruthy();
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'fork-parent-session',
+      parentMessageId,
+    });
+
+    const parentBlocks = readSessionBlocks('fork-parent-session')?.blocks ?? [];
+    const userIndex = parentBlocks.findIndex((block) => block.id === parentMessageId);
+    expect(parentBlocks[userIndex + 1]).toEqual(
+      expect.objectContaining({
+        type: 'context',
+        customType: 'child_conversation_topology',
+        text: expect.stringContaining('Fork conversation created: Fork child session'),
+      }),
+    );
+
+    expect(readSessionBlocks('fork-child-session')?.blocks[0]).toEqual(
+      expect.objectContaining({
+        type: 'context',
+        customType: 'parent_conversation_backlink',
+        text: expect.stringContaining('Fork conversation from parent: fork-parent-session'),
+      }),
     );
   });
 

@@ -12,6 +12,7 @@ function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'tit
     timestamp: overrides.timestamp ?? '2026-05-12T10:00:00.000Z',
     isRunning: overrides.isRunning ?? false,
     parentSessionId: overrides.parentSessionId,
+    offshootKind: overrides.offshootKind,
     sourceRunId: overrides.sourceRunId,
   };
 }
@@ -132,6 +133,19 @@ describe('buildActivityTreeItems', () => {
         metadata: expect.objectContaining({ conversationId: 'subagent-conv' }),
       }),
     );
+  });
+
+  it('labels conversation offshoot rows by kind', () => {
+    const items = buildActivityTreeItems({
+      conversations: [
+        session({ id: 'conv-1', title: 'Build the thing' }),
+        session({ id: 'subagent-conv', title: 'Smoke test', parentSessionId: 'conv-1', offshootKind: 'subagent' }),
+        session({ id: 'fork-conv', title: 'Alternate path', parentSessionId: 'conv-1', offshootKind: 'fork' }),
+      ],
+    });
+
+    expect(items.find((item) => item.id === buildConversationActivityId('subagent-conv'))?.title).toBe('subagent: Smoke test');
+    expect(items.find((item) => item.id === buildConversationActivityId('fork-conv'))?.title).toBe('fork: Alternate path');
   });
 
   it('skips hidden and unlinked executions', () => {

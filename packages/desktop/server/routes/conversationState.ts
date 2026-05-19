@@ -26,7 +26,12 @@ import {
   setLiveSessionAutoModeState,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { appendConversationWorkspaceMetadata, readSessionBlocks, renameStoredSession } from '../conversations/sessions.js';
+import {
+  appendConversationOffshootMetadata,
+  appendConversationWorkspaceMetadata,
+  readSessionBlocks,
+  renameStoredSession,
+} from '../conversations/sessions.js';
 import { logError, logSlowConversationPerf, setServerTimingHeaders } from '../middleware/index.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { publishAppEvent } from '../shared/appEvents.js';
@@ -481,6 +486,12 @@ export function registerConversationStateRoutes(
       const result = await createSessionFromExisting(source.sessionFile, source.cwd, {
         ...buildLiveSessionResourceOptionsFn(),
         extensionFactories: buildLiveSessionExtensionFactoriesFn(),
+      });
+      appendConversationOffshootMetadata({
+        sessionFile: result.sessionFile,
+        kind: 'duplicate',
+        parentSessionFile: source.sessionFile,
+        parentSessionId: conversationId,
       });
 
       publishConversationSessionMetaChanged(conversationId, result.id);

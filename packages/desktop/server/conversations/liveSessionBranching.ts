@@ -1,6 +1,7 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
 import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
+import { appendConversationOffshootMetadata } from './sessions.js';
 
 export interface LiveSessionBranchHost {
   sessionId: string;
@@ -84,6 +85,14 @@ export async function forkLiveSession(
       callbacks.destroySession(entry.sessionId);
     }
 
+    appendConversationOffshootMetadata({
+      sessionFile: created.sessionFile,
+      kind: 'rewind',
+      parentSessionFile: sourceSessionFile,
+      parentSessionId: entry.sessionId,
+      parentMessageId: entryId,
+    });
+
     return { newSessionId: created.id, sessionFile: created.sessionFile };
   }
 
@@ -105,6 +114,14 @@ export async function forkLiveSession(
   if (!preserveSource) {
     callbacks.destroySession(entry.sessionId);
   }
+
+  appendConversationOffshootMetadata({
+    sessionFile: forkedSessionFile,
+    kind: beforeEntry ? 'rewind' : 'fork',
+    parentSessionFile: sourceSessionFile,
+    parentSessionId: entry.sessionId,
+    parentMessageId: entryId,
+  });
 
   return { newSessionId: resumed.id, sessionFile: forkedSessionFile };
 }
