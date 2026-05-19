@@ -284,7 +284,7 @@ export function mergeConversationSessionMeta(
   return detailMeta ?? sessionSnapshot ?? null;
 }
 
-export function formatConversationBackgroundRunStatusLabel(status: string | undefined): string {
+function formatConversationBackgroundRunStatusLabel(status: string | undefined): string {
   if (status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering') {
     return status;
   }

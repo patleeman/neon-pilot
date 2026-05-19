@@ -136,7 +136,7 @@ let externalAdd: AddFn | null = null;
  */
 let preMountBuffer: AddNotificationPayload[] = [];
 
-export function flushPreMountBuffer(dispatch: (payload: AddNotificationPayload) => void): void {
+function flushPreMountBuffer(dispatch: (payload: AddNotificationPayload) => void): void {
   const pending = preMountBuffer;
   preMountBuffer = [];
   for (const payload of pending) {

@@ -57,7 +57,7 @@ export function getChatRenderItemAbsoluteRange(item: ChatRenderItem, messageInde
   };
 }
 
-export function getChatRenderItemSpanCount(item: ChatRenderItem, messageIndexOffset: number): number {
+function getChatRenderItemSpanCount(item: ChatRenderItem, messageIndexOffset: number): number {
   const range = getChatRenderItemAbsoluteRange(item, messageIndexOffset);
   return range.end - range.start + 1;
 }
