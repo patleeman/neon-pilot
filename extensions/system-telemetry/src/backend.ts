@@ -175,8 +175,7 @@ function eventsSince(since: string): TraceTelemetryLogEvent[] {
     if (existsSync(dir)) {
       for (const name of readdirSync(dir)
         .filter((f) => f.startsWith('trace-telemetry-') && f.endsWith('.jsonl'))
-        .sort()
-        .slice(0, 3)) {
+        .sort()) {
         const mtime = statSync(join(dir, name)).mtimeMs;
         dirState.push(name, String(mtime));
       }
