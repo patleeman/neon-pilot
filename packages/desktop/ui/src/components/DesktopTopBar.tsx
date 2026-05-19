@@ -218,6 +218,12 @@ export function DesktopTopBar({
             →
           </ToolbarButton>
         </div>
+        <div className="ui-desktop-top-bar__brand" aria-label="pi">
+          <div className="ui-desktop-top-bar__brand-mark" aria-hidden="true">
+            π
+          </div>
+          <span className="ui-desktop-top-bar__brand-name">pi</span>
+        </div>
         {launchBadgeLabel ? (
           <div className="ui-desktop-top-bar__mode-badge" title="Launched from the command line">
             {launchBadgeLabel}

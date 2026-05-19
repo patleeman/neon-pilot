@@ -34,8 +34,9 @@ export default {
         steel: v('--color-steel'),
       },
       fontFamily: {
-        sans: ['DM Sans Variable', 'DM Sans', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'Menlo', 'monospace'],
+        sans: ['Geist Variable', 'Geist', 'DM Sans Variable', 'DM Sans', 'system-ui', 'sans-serif'],
+        serif: ['Instrument Serif', 'Georgia', 'serif'],
+        mono: ['Geist Mono Variable', 'Geist Mono', '"JetBrains Mono"', 'Menlo', 'monospace'],
       },
       fontSize: {
         '2xs': ['0.65rem', { lineHeight: '1rem' }],

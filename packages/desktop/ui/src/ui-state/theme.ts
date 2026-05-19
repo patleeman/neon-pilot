@@ -17,13 +17,15 @@ export interface ColorTheme {
 }
 
 const BUILT_IN_THEMES: ColorTheme[] = [
+  { id: 'studio-light', label: 'Studio Light', appearance: 'light' },
+  { id: 'studio-dark', label: 'Studio Dark', appearance: 'dark' },
   { id: 'tokyo-night-light', label: 'Tokyo Night Light', appearance: 'light' },
   { id: 'tokyo-night-dark', label: 'Tokyo Night Dark', appearance: 'dark' },
 ];
 
 const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
-const DEFAULT_LIGHT_THEME: Theme = 'tokyo-night-light';
-const DEFAULT_DARK_THEME: Theme = 'tokyo-night-dark';
+const DEFAULT_LIGHT_THEME: Theme = 'studio-light';
+const DEFAULT_DARK_THEME: Theme = 'studio-dark';
 const SYSTEM_THEME_QUERY = '(prefers-color-scheme: dark)';
 
 interface ThemeContextValue {
@@ -41,8 +43,8 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function normalizeThemeId(theme: Theme): Theme {
-  if (theme === 'light') return 'tokyo-night-light';
-  if (theme === 'dark') return 'tokyo-night-dark';
+  if (theme === 'light') return 'studio-light';
+  if (theme === 'dark') return 'studio-dark';
   return theme;
 }
 
@@ -125,8 +127,8 @@ function readStoredThemePreference(): ThemePreference {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'system') return 'system';
-    if (stored === 'light' || stored === 'tokyo-night-light') return 'light';
-    if (stored === 'dark' || stored === 'tokyo-night-dark') return 'dark';
+    if (stored === 'light' || stored === 'tokyo-night-light' || stored === 'studio-light') return 'light';
+    if (stored === 'dark' || stored === 'tokyo-night-dark' || stored === 'studio-dark') return 'dark';
   } catch {
     // ignore
   }

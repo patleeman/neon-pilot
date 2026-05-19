@@ -41,6 +41,22 @@
     @apply flex items-center gap-0.5;
   }
 
+  .ui-desktop-top-bar__brand {
+    @apply flex items-center gap-2 pl-2 ml-1 border-l border-border-subtle;
+  }
+
+  .ui-desktop-top-bar__brand-mark {
+    @apply grid place-items-center rounded w-[18px] h-[18px] text-[11px] font-bold font-mono shrink-0;
+    background: rgb(var(--color-accent));
+    color: rgb(var(--color-base));
+    box-shadow: 0 0 0 1px rgb(var(--color-accent) / 0.45), 0 0 14px -2px rgb(var(--color-accent) / 0.35);
+  }
+
+  .ui-desktop-top-bar__brand-name {
+    @apply text-[12.5px] font-semibold tracking-tight text-primary;
+    letter-spacing: -0.01em;
+  }
+
   .ui-desktop-top-bar__mode-badge {
     @apply rounded-md border border-accent/25 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent;
   }
@@ -1339,7 +1355,69 @@
   }
 }
 
-/* ─── Adapted Tokyo Night light theme (default) ───────────────────────────── */
+/* ─── Studio Light ───────────────────────────────────────────────────────── */
+:root[data-theme='studio-light'] {
+  color-scheme: light;
+  --color-base: 247 246 241;
+  --color-surface: 251 250 245;
+  --color-elevated: 240 238 229;
+  --color-panel: 255 255 255;
+  --color-border-subtle: 236 235 226;
+  --color-border-default: 227 224 212;
+  --color-primary: 20 20 15;
+  --color-secondary: 78 77 68;
+  --color-dim: 138 136 123;
+  --color-accent: 62 184 0;
+  --color-accent-bg: 62 184 0;
+  --color-success: 58 122 58;
+  --color-warning: 184 115 10;
+  --color-danger: 196 58 58;
+  --color-teal: 54 110 15;
+  --color-steel: 46 120 0;
+  --color-selection: 195 235 160;
+  --color-hover: 240 238 230;
+  --color-active: 230 227 218;
+  --color-auto-mode-glow: 62 184 0;
+  --color-mission-glow: 150 90 220;
+  --color-loop-glow: 0 140 160;
+  --color-streaming-glow: 62 184 0;
+  --color-terminal-surface: 251 250 245;
+  --color-terminal-chrome: 247 246 241;
+  --color-terminal-border: 227 224 212;
+}
+
+/* ─── Studio Dark ────────────────────────────────────────────────────────── */
+:root[data-theme='studio-dark'] {
+  color-scheme: dark;
+  --color-base: 12 12 8;
+  --color-surface: 36 36 28;
+  --color-elevated: 46 46 36;
+  --color-panel: 26 26 19;
+  --color-border-subtle: 44 44 36;
+  --color-border-default: 61 61 49;
+  --color-primary: 245 243 232;
+  --color-secondary: 188 185 168;
+  --color-dim: 124 121 102;
+  --color-accent: 202 255 51;
+  --color-accent-bg: 202 255 51;
+  --color-success: 142 214 142;
+  --color-warning: 242 184 90;
+  --color-danger: 242 114 114;
+  --color-teal: 150 200 100;
+  --color-steel: 168 215 80;
+  --color-selection: 50 60 20;
+  --color-hover: 50 50 40;
+  --color-active: 60 60 48;
+  --color-auto-mode-glow: 202 255 51;
+  --color-mission-glow: 200 160 255;
+  --color-loop-glow: 140 230 255;
+  --color-streaming-glow: 202 255 51;
+  --color-terminal-surface: 20 20 14;
+  --color-terminal-chrome: 26 26 19;
+  --color-terminal-border: 61 61 49;
+}
+
+/* ─── Adapted Tokyo Night light theme ────────────────────────────────────── */
 :root,
 :root[data-theme='light'],
 :root[data-theme='tokyo-night-light'] {
@@ -1420,7 +1498,7 @@ body,
 }
 
 body {
-  font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Geist Variable', 'Geist', 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
   background-color: rgb(var(--color-base));
   color: rgb(var(--color-primary));
   -webkit-font-smoothing: antialiased;
