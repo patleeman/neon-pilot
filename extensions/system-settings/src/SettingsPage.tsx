@@ -441,12 +441,34 @@ function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | nul
     : 'Personal Agent only starts when you open it manually.';
 }
 
+const SHORTCUT_KEY_LABELS: Record<string, string> = {
+  Plus: '+',
+  Space: 'Space',
+  Minus: '-',
+  Comma: ',',
+  Period: '.',
+  Semicolon: ';',
+  Quote: "'",
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\\\',
+  Slash: '/',
+  Backquote: '`',
+  IntlBackslash: '\\',
+};
+
 function formatKeyboardShortcutLabel(shortcut: string): string {
-  return shortcut
-    .replace(/CommandOrControl/g, '⌘/Ctrl')
-    .replace(/Command/g, '⌘')
-    .replace(/Control/g, 'Ctrl')
-    .replace(/\+/g, ' + ');
+  const labels = shortcut.split('+').map((part) => {
+    const trimmed = part.trim();
+    if (trimmed === 'CommandOrControl') return '⌘/Ctrl';
+    if (trimmed === 'Command') return '⌘';
+    if (trimmed === 'Control') return 'Ctrl';
+    if (trimmed === 'Shift') return 'Shift';
+    if (trimmed === 'Alt') return 'Alt';
+    if (trimmed === 'Meta') return 'Meta';
+    return SHORTCUT_KEY_LABELS[trimmed] ?? trimmed;
+  });
+  return labels.join(' + ');
 }
 
 function normalizeKeyboardShortcutKey(event: ReactKeyboardEvent): string | null {
