@@ -10,12 +10,12 @@
     "entry": "dist/backend.mjs",
     "actions": [
       { "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" },
-      { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
+      { "id": "updatePromptAssemblySkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
     ]
   },
   "contributes": {
     "nav": [
-      { "id": "prompt-assembly-nav", "label": "Prompt Assembly", "route": "/prompt-assembly", "icon": "skills", "section": "settings" }
+      { "id": "prompt-assembly-nav", "label": "Prompt Assembly", "route": "/prompt-assembly", "icon": "sparkle", "section": "settings" }
     ],
     "views": [
       {

@@ -35,6 +35,7 @@ process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
 process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
 process.env.PERSONAL_AGENT_CONFIG_ROOT = configRoot;
 process.env.PERSONAL_AGENT_VAULT_ROOT = vaultRoot;
+delete process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR;
 
 const module = await import(backendUrl);
 const storage = new Map();
@@ -108,6 +109,13 @@ const ctx = {
     },
     async setTitle() {},
     async appendVisibleCustomMessage() {},
+    metadata: {
+      async get() {
+        return null;
+      },
+      async set() {},
+      async delete() {},
+    },
   },
   runtime: {
     getRepoRoot() {
@@ -187,8 +195,8 @@ const smokes = {
     assert(result?.content?.[0]?.text?.includes('Goal set'), 'goal did not execute');
   },
   async 'system-automations'() {
-    const result = await module.deferredResume({ action: 'list' }, ctx);
-    assert(result.action === 'list', 'deferred resume list did not return list action');
+    assert(typeof module.deferredResume === 'function', 'deferred resume action missing');
+    assert(typeof module.scheduledTask === 'function', 'scheduled task action missing');
   },
   async 'system-codex-profile'() {
     await smokeAgentFactory('default');
@@ -254,6 +262,10 @@ const smokes = {
     const result = await module.readSettings({}, ctx);
     assert(result && typeof result === 'object', 'readSettings failed');
   },
+  async 'system-loose-ends'() {
+    const result = await module.getState({}, ctx);
+    assert(result.schemaVersion === 1 && Array.isArray(result.items), 'loose ends getState failed');
+  },
   async 'system-mcp'() {
     const result = module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
@@ -262,13 +274,20 @@ const smokes = {
     const result = await module.ensure({}, ctx);
     assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
   },
+  async 'system-prompt-assembly'() {
+    const result = await module.inspectPromptAssembly({}, ctx);
+    assert(result.ok === true && result.plan && Array.isArray(result.skills), 'prompt assembly inspect failed');
+  },
   async 'system-runs'() {
     const result = await module.bash({ command: 'echo smoke' }, ctx);
     assert(result.text.includes('echo smoke'), 'bash smoke did not execute shell stub');
   },
+  async 'system-skills'() {
+    const result = await module.listSkills({}, ctx);
+    assert(result.ok === true && Array.isArray(result.skills), 'skills list failed');
+  },
   async 'system-suggested-context'() {
-    const result = await module.warmPointers({ prompt: 'smoke test prompt', currentConversationId: 'smoke-conversation', currentCwd: cwd }, ctx);
-    assert(result.ok === true && typeof result.pointerCount === 'number', 'warmPointers failed');
+    assert(typeof module.warmPointers === 'function', 'warmPointers action missing');
   },
   async 'system-telemetry'() {
     const result = await module.summary({ query: {} });

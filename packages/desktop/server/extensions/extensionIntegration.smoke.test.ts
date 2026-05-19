@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -34,6 +35,8 @@ import {
   readExtensionRegistrySnapshot,
 } from './extensionRegistry.js';
 import { listExtensionAgentRegistrations } from './extensionRegistry.js';
+
+process.env.PERSONAL_AGENT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'pa-extension-integration-state-'));
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
