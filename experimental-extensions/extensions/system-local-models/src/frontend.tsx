@@ -656,7 +656,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 ) : null}
               </>
             ) : (
-              <div className="rounded-lg bg-surface/45 p-3 text-xs leading-5 text-secondary">
+              <div className="rounded-md border border-border-subtle bg-elevated p-3 text-xs leading-5 text-secondary">
                 {selectedSearch.format === 'gguf'
                   ? 'Selecting a GGUF model loads its file list automatically.'
                   : 'MLX models can download directly. Use the Hugging Face link for full model details.'}
@@ -672,7 +672,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-8">
         <AppPageIntro
           title="Local Models"
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
@@ -721,7 +721,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
         {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
-        <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
+        <div className="inline-flex w-fit rounded-md border border-border-subtle bg-elevated p-1">
           {[
             ['server', 'Server'],
             ['library', 'Library'],
@@ -731,8 +731,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               type="button"
               onClick={() => setPage(id as PageId)}
               className={cx(
-                'rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
-                page === id ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-surface/70 hover:text-primary',
+                'rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors',
+                page === id ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:bg-surface hover:text-primary',
               )}
             >
               {label}
@@ -744,10 +744,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           {page === 'server' ? (
             <>
               <main className="min-w-0 flex-1 space-y-5">
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-primary">Model Settings</h2>
+                      <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
+                        Model Settings
+                      </h2>
                       <p className="mt-1 text-sm text-secondary">Choose which downloaded model the server should use.</p>
                     </div>
                     <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
@@ -757,19 +759,19 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
                   {selectedModel ? (
                     <div className="mt-5 grid gap-2 text-xs sm:grid-cols-4">
-                      <div className="rounded-lg bg-surface/50 p-2">
+                      <div className="rounded-md border border-border-subtle bg-elevated p-2">
                         <div className="text-dim">Selected</div>
                         <div className="mt-1 truncate text-primary">{selectedModel.title}</div>
                       </div>
-                      <div className="rounded-lg bg-surface/50 p-2">
+                      <div className="rounded-md border border-border-subtle bg-elevated p-2">
                         <div className="text-dim">Format</div>
                         <div className="mt-1 text-primary">{selectedModel.format}</div>
                       </div>
-                      <div className="rounded-lg bg-surface/50 p-2">
+                      <div className="rounded-md border border-border-subtle bg-elevated p-2">
                         <div className="text-dim">Size</div>
                         <div className="mt-1 text-primary">{selectedModel.size || '—'}</div>
                       </div>
-                      <div className="rounded-lg bg-surface/50 p-2">
+                      <div className="rounded-md border border-border-subtle bg-elevated p-2">
                         <div className="text-dim">Loaded</div>
                         <div className="mt-1 text-primary">{selectedModel.loaded ? 'Yes' : 'No'}</div>
                       </div>
@@ -852,10 +854,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-4">
+                <section className="rounded-xl border border-border-subtle bg-surface p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-primary">Serving Settings</h2>
+                      <h2 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
+                        Serving Settings
+                      </h2>
                       <p className="mt-0.5 text-xs text-secondary">Tune runtime parameters, then start or reload the server.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -907,7 +911,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       <TextInput value={maxTokens} onChange={(event) => markDirty(setMaxTokens, event.target.value)} />
                     </Field>
                     <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                      <div className="flex flex-col gap-3 rounded-lg bg-surface/45 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 rounded-md border border-border-subtle bg-elevated p-3 sm:flex-row sm:items-center sm:justify-between">
                         <label className="flex items-start gap-3 text-sm text-secondary">
                           <input
                             type="checkbox"
@@ -1016,7 +1020,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       </div>
                     </details>
                     <div className="space-y-2 sm:col-span-2 lg:col-span-4">
-                      <div className="rounded-lg bg-surface/45 p-3">
+                      <div className="rounded-md border border-border-subtle bg-elevated p-3">
                         <div className="mb-3 text-sm font-medium text-primary">Supported backends</div>
                         <div className="grid gap-2 lg:grid-cols-2">
                           <div className="flex items-start justify-between gap-3 rounded-lg border border-border-subtle/50 p-3">
@@ -1054,18 +1058,22 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                       </div>
                       <div className="space-y-1">
                         <div className="text-sm text-secondary">Endpoint</div>
-                        <div className="rounded-lg bg-surface/50 p-2 font-mono text-xs text-primary">{endpoint}</div>
+                        <div className="rounded-md border border-border-subtle bg-elevated p-2 font-mono text-xs text-primary">
+                          {endpoint}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div>
-                    <h2 className="text-xl font-semibold text-primary">Runtime Logs</h2>
+                    <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
+                      Runtime Logs
+                    </h2>
                     <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically.</p>
                   </div>
-                  <pre className="mt-5 max-h-96 overflow-auto rounded-lg bg-background/25 p-4 text-xs leading-5 text-secondary">
+                  <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
                     {activeRuntime === 'mlx'
                       ? status?.mlx?.log || 'No logs yet.'
                       : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
@@ -1076,9 +1084,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           ) : (
             <>
               <main className="min-w-0 flex-1 space-y-5">
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div>
-                    <h2 className="text-xl font-semibold text-primary">Model Library</h2>
+                    <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
+                      Model Library
+                    </h2>
                     <p className="mt-1 text-sm text-secondary">
                       Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
                     </p>
@@ -1170,10 +1180,12 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+                <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-semibold text-primary">Downloaded Models</h2>
+                      <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
+                        Downloaded Models
+                      </h2>
                       <p className="mt-1 text-sm text-secondary">Models already available to the server page.</p>
                     </div>
                     <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
