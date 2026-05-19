@@ -8,7 +8,10 @@
   "frontend": { "entry": "dist/frontend.js", "styles": [] },
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" }]
+    "actions": [
+      { "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" },
+      { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
+    ]
   },
   "contributes": {
     "nav": [

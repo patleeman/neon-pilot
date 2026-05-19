@@ -1,9 +1,9 @@
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
 import {
   type ExtensionToolRegistration,
   listExtensionAssemblyProviderRegistrations,
   listExtensionToolRegistrations,
 } from '../extensions/extensionRegistry.js';
+import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
 
 export interface ToolDefinition {
@@ -72,10 +72,12 @@ export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Pro
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'tools');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const result = await invokeExtensionAction(provider.extensionId, provider.handler, ctx);
-      if (!result.ok) return;
-      const payload = result.result as { tools?: ToolDefinition[] } | ToolDefinition[];
-      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.tools) ? payload.tools : [];
+      const { items: provided } = await invokePromptAssemblyProvider<ToolDefinition>({
+        provider,
+        payload: ctx,
+        resultKey: 'tools',
+        validateItem: isToolDefinitionLike,
+      });
       tools.push(
         ...provided.map((tool) => ({
           ...tool,
@@ -86,6 +88,16 @@ export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Pro
     }),
   );
   return tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+}
+
+function isToolDefinitionLike(value: unknown): value is ToolDefinition {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.description === 'string' &&
+    isRecord(value.inputSchema)
+  );
 }
 
 export function buildToolInjectionPlan(ctx: AssemblyRuntimeContext): ToolInjectionPlan {

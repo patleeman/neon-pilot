@@ -132,6 +132,10 @@ The manifest declares what your extension contributes:
 | `keybindings`                 | Keyboard shortcuts that execute commands                           | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `slashCommands`               | `/command` in composer                                             |                                                                                           |
 | `tools`                       | Agent-callable tools                                               |                                                                                           |
+| `skillProviders`              | Dynamic Prompt Assembly skill providers                            | [See below](#prompt-assembly)                                                             |
+| `toolProviders`               | Dynamic Prompt Assembly tool providers                             | [See below](#prompt-assembly)                                                             |
+| `promptTemplateProviders`     | Dynamic Prompt Assembly template providers                         | [See below](#prompt-assembly)                                                             |
+| `promptAssemblyHooks`         | Privileged Prompt Assembly hooks                                   | [See below](#prompt-assembly)                                                             |
 | `modelProfiles`               | Enabled extension runtime profiles matched by provider/model globs |                                                                                           |
 | `mentions`                    | @-mention providers                                                |                                                                                           |
 | `skills`                      | Agent Skills (markdown)                                            |                                                                                           |
@@ -540,6 +544,47 @@ Add component-backed tools beside the attachment button in the composer input ro
 ```
 
 The component receives `pa` and `toolContext`. `toolContext.addFiles(files)` routes files through the normal composer attachment pipeline. `toolContext.upsertDrawingAttachment(payload)` adds an Excalidraw-compatible drawing payload to the composer. Excalidraw tools should import shared serialization helpers from `@personal-agent/extensions/excalidraw` instead of duplicating preview/source generation.
+
+### Prompt Assembly
+
+Prompt Assembly is the single runtime surface for deciding what the agent sees before a turn starts. It inventories and explains skills, tools, prompt templates, prompt context provider blocks, and diagnostics from providers, hooks, validation, and runtime policy. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
+
+Use static manifest contributions first:
+
+```json
+{
+  "contributes": {
+    "skills": [{ "id": "agent-board", "path": "skills/agent-board/SKILL.md" }],
+    "tools": [{ "id": "create-task", "description": "Create a task.", "action": "createTask" }]
+  }
+}
+```
+
+Use dynamic providers only when a contribution is generated, external, or conditional at runtime:
+
+```json
+{
+  "contributes": {
+    "skillProviders": [{ "id": "generated-skills", "handler": "listGeneratedSkills", "title": "Generated Skills" }],
+    "toolProviders": [{ "id": "generated-tools", "handler": "listGeneratedTools" }],
+    "promptTemplateProviders": [{ "id": "generated-prompts", "handler": "listGeneratedPrompts" }]
+  }
+}
+```
+
+Provider handlers may return either an array or an object keyed by the contribution kind, for example `{ "skills": [...] }`, `{ "tools": [...] }`, or `{ "templates": [...] }`. Providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly.
+
+`promptAssemblyHooks` are the break-glass escape hatch for filtering or mutating the assembled plan:
+
+```json
+{
+  "contributes": {
+    "promptAssemblyHooks": [{ "id": "filter-runtime-context", "handler": "filterRuntimeContext", "phase": "before-injection" }]
+  }
+}
+```
+
+Hooks are powerful. Prefer providers. Do not silently rewrite system instructions through hooks; use instruction/context providers once available, and expose clear diagnostics for any mutation.
 
 ### Toolbar Actions (`toolbarActions`)
 

@@ -2,7 +2,7 @@ import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
 import { buildPromptAssemblyPlanAsync } from '../../../packages/desktop/server/prompt-assembly/promptAssembly.js';
 import { buildPromptTemplatePlanAsync } from '../../../packages/desktop/server/prompts/promptTemplateInventory.js';
-import { buildSkillInventoryAsync } from '../../../packages/desktop/server/skills/skillInventory.js';
+import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
 import { buildToolInjectionPlanAsync } from '../../../packages/desktop/server/tools/toolInventory.js';
 
 export async function inspectPromptAssembly(input: unknown, ctx: ExtensionBackendContext) {
@@ -17,6 +17,15 @@ export async function inspectPromptAssembly(input: unknown, ctx: ExtensionBacken
     buildPromptTemplatePlanAsync(runtimeCtx),
   ]);
   return { ok: true, plan, skills, tools: tools.tools, promptTemplates: promptTemplates.templates };
+}
+
+export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const id = typeof body.id === 'string' ? body.id.trim() : '';
+  if (!id) throw new Error('skill id is required.');
+  const enabled = body.enabled !== false;
+  setSkillEnabled(id, enabled);
+  return { ok: true, id, enabled };
 }
 
 function asRecord(input: unknown): Record<string, unknown> {

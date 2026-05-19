@@ -3,7 +3,7 @@
   "id": "system-skills",
   "name": "Skills",
   "packageType": "system",
-  "description": "Manage agent skills from vault, project, and extension sources.",
+  "description": "Backend compatibility actions for agent skills. The user-facing management surface lives in Prompt Assembly.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -16,28 +16,6 @@
       { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
     ]
   },
-  "contributes": {
-    "nav": [
-      {
-        "id": "skills-nav",
-        "label": "Skills",
-        "route": "/skills",
-        "icon": "skills",
-        "section": "settings"
-      }
-    ],
-    "views": [
-      {
-        "id": "skills-page",
-        "title": "Skills",
-        "location": "main",
-        "route": "/skills",
-        "component": "SkillsPage",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
-      }
-    ]
-  },
+  "contributes": {},
   "permissions": ["extensions:read"]
 }

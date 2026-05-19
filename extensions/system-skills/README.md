@@ -1,11 +1,7 @@
 # Skills Extension
 
-System extension that owns the `/skills` page and backend actions for listing and enabling/disabling agent skills.
+Compatibility backend for listing and enabling/disabling agent skills.
 
-It aggregates skills from:
+The user-facing management surface is `system-prompt-assembly` at `/prompt-assembly`, which shows skills alongside tools, prompt templates, context, and diagnostics.
 
-- extension manifests
-- configured runtime skill directories
-- the durable knowledge-base `skills/` folder
-
-Disabled skill IDs are stored in `<state-root>/skills-registry.json`; the runtime skill filter reads the same registry before injecting `<available_skills>` into agent context.
+Disabled skill IDs are stored in `<state-root>/skills-registry.json`; prompt assembly reads the same registry before injecting skills into agent context.

@@ -45,7 +45,7 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
   const [data, setData] = useState<InspectResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     let cancelled = false;
     pa.extension
       .invoke('inspectPromptAssembly', {})
@@ -58,7 +58,15 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [pa]);
+  };
+
+  useEffect(() => load(), [pa]);
+
+  async function toggleSkill(id: string, enabled: boolean) {
+    await pa.extension.invoke('updateSkillEnabled', { id, enabled });
+    const result = (await pa.extension.invoke('inspectPromptAssembly', {})) as InspectResult;
+    setData(result);
+  }
 
   const counts = useMemo(
     () => ({
@@ -102,6 +110,14 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
           rows={data.skills}
           titleKey="title"
           meta={(row) => `${row.enabled ? 'Enabled' : 'Disabled'} · ${row.source?.kind ?? ''} · ${row.source?.label ?? ''}`}
+          action={(row) => (
+            <button
+              className="rounded-full border border-subtle px-3 py-1 text-[12px]"
+              onClick={() => void toggleSkill(String(row.id), !row.enabled)}
+            >
+              {row.enabled ? 'Disable' : 'Enable'}
+            </button>
+          )}
         />
       ) : null}
       {activeTab === 'tools' ? (
@@ -144,12 +160,25 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Rows<T extends Record<string, unknown>>({ rows, titleKey, meta }: { rows: T[]; titleKey: keyof T; meta: (row: T) => string }) {
+function Rows<T extends Record<string, unknown>>({
+  rows,
+  titleKey,
+  meta,
+  action,
+}: {
+  rows: T[];
+  titleKey: keyof T;
+  meta: (row: T) => string;
+  action?: (row: T) => React.ReactNode;
+}) {
   return (
     <div className="divide-y divide-subtle border-y border-subtle">
       {rows.map((row, index) => (
         <div key={String(row.id ?? index)} className="py-3">
-          <div className="text-[13px] font-semibold">{String(row[titleKey] ?? row.id)}</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[13px] font-semibold">{String(row[titleKey] ?? row.id)}</div>
+            {action?.(row)}
+          </div>
           <div className="text-[12px] text-secondary">{meta(row)}</div>
           {typeof row.description === 'string' ? <div className="mt-1 text-[12px] text-dim">{row.description}</div> : null}
         </div>

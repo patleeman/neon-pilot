@@ -3,8 +3,8 @@ import { basename } from 'node:path';
 
 import { resolveRuntimeResources } from '@personal-agent/core';
 
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
+import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
 
 export interface PromptTemplateDefinition {
@@ -71,10 +71,12 @@ export async function listPromptTemplateDefinitionsAsync(ctx: AssemblyRuntimeCon
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'promptTemplates');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const result = await invokeExtensionAction(provider.extensionId, provider.handler, ctx);
-      if (!result.ok) return;
-      const payload = result.result as { templates?: PromptTemplateDefinition[] } | PromptTemplateDefinition[];
-      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.templates) ? payload.templates : [];
+      const { items: provided } = await invokePromptAssemblyProvider<PromptTemplateDefinition>({
+        provider,
+        payload: ctx,
+        resultKey: 'templates',
+        validateItem: isPromptTemplateDefinitionLike,
+      });
       templates.push(
         ...provided.map((template) => ({
           ...template,
@@ -85,6 +87,10 @@ export async function listPromptTemplateDefinitionsAsync(ctx: AssemblyRuntimeCon
     }),
   );
   return templates;
+}
+
+function isPromptTemplateDefinitionLike(value: unknown): value is PromptTemplateDefinition {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.title === 'string' && isRecord(value.location);
 }
 
 export function buildPromptTemplatePlan(ctx: AssemblyRuntimeContext): PromptTemplatePlan {

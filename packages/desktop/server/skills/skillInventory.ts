@@ -3,8 +3,8 @@ import { basename, dirname, join } from 'node:path';
 
 import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
 
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
 import { listExtensionAssemblyProviderRegistrations, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
+import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 
 const REGISTRY_FILE = 'skills-registry.json';
 
@@ -104,10 +104,12 @@ export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promi
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'skills');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const result = await invokeExtensionAction(provider.extensionId, provider.handler, { profile: ctx.profile, repoRoot: ctx.repoRoot });
-      if (!result.ok) return;
-      const payload = result.result as { skills?: SkillDefinition[] } | SkillDefinition[];
-      const provided = Array.isArray(payload) ? payload : Array.isArray(payload.skills) ? payload.skills : [];
+      const { items: provided } = await invokePromptAssemblyProvider<SkillDefinition>({
+        provider,
+        payload: { profile: ctx.profile, repoRoot: ctx.repoRoot },
+        resultKey: 'skills',
+        validateItem: isSkillDefinitionLike,
+      });
       skills.push(
         ...provided.map((skill) => ({
           ...skill,
@@ -118,6 +120,10 @@ export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promi
     }),
   );
   return dedupeSkills(skills);
+}
+
+function isSkillDefinitionLike(value: unknown): value is SkillDefinition {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.title === 'string' && typeof value.description === 'string';
 }
 
 export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {

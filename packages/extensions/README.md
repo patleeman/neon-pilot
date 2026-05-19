@@ -592,7 +592,7 @@ Prompt assembly providers and hooks are the advanced escape hatch for extensions
 }
 ```
 
-Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead.
+Prompt assembly providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly. Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
 
 ## Surfaces and contribution choices
 
