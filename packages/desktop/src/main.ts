@@ -582,36 +582,35 @@ async function shutdownAndQuit(): Promise<void> {
 }
 
 async function requestAppQuit(): Promise<void> {
-  if (quitting) {
-    if (quitRequestPromise) {
-      await quitRequestPromise;
-    }
-    return;
-  }
-
+  // Set the promise before any async work so concurrent calls
+  // share the same in-flight operation instead of showing two dialogs.
   if (quitRequestPromise) {
     await quitRequestPromise;
     return;
   }
 
-  quitRequestPromise = (async () => {
-    try {
-      const confirmed = await confirmDesktopQuit(dialog, app.name, resolveDesktopRuntimePaths().colorIconFile, {
-        keepsExternalDaemonRunning: false,
-      });
-      if (!confirmed) {
-        return;
-      }
+  let resolveSentinel: () => void;
+  quitRequestPromise = new Promise<void>((resolve) => {
+    resolveSentinel = resolve;
+  });
 
-      await shutdownAndQuit();
-    } finally {
-      if (!quitting) {
-        quitRequestPromise = null;
-      }
+  try {
+    const confirmed = await confirmDesktopQuit(dialog, app.name, resolveDesktopRuntimePaths().colorIconFile, {
+      keepsExternalDaemonRunning: false,
+    });
+
+    if (!confirmed) {
+      quitRequestPromise = null;
+      return;
     }
-  })();
 
-  await quitRequestPromise;
+    await shutdownAndQuit();
+  } finally {
+    resolveSentinel!();
+    if (!quitting) {
+      quitRequestPromise = null;
+    }
+  }
 }
 
 if (hasDesktopSingleInstanceLock) {
