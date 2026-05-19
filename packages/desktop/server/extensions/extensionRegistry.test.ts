@@ -9,6 +9,7 @@ import {
   listExtensionAssemblyProviderRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
+  listExtensionModelProfileRegistrations,
   listExtensionPromptAssemblyHookRegistrations,
   listExtensionSkillRegistrations,
   listExtensionToolRegistrations,
@@ -16,10 +17,72 @@ import {
   readExtensionRegistrySnapshot,
   readExtensionSchema,
   readRuntimeExtensionEntries,
+  resolveExtensionModelProfile,
   setExtensionEnabled,
 } from './extensionRegistry.js';
 
 describe('extension registry', () => {
+  it('resolves enabled model profiles by provider/model glob and priority', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const registryRoot = join(stateRoot, 'extensions');
+    const first = join(registryRoot, 'first-profile');
+    const second = join(registryRoot, 'second-profile');
+    mkdirSync(first, { recursive: true });
+    mkdirSync(second, { recursive: true });
+    writeFileSync(
+      join(first, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'first-profile',
+        name: 'First Profile',
+        contributes: { modelProfiles: [{ id: 'gpt-anywhere', match: ['*/gpt-5.5'], priority: 10 }] },
+      }),
+    );
+    writeFileSync(
+      join(second, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'second-profile',
+        name: 'Second Profile',
+        contributes: { modelProfiles: [{ id: 'codex-provider', match: ['openai-codex/*'], priority: 20 }] },
+      }),
+    );
+    setExtensionEnabled('first-profile', true, stateRoot);
+    setExtensionEnabled('second-profile', true, stateRoot);
+
+    expect(listExtensionModelProfileRegistrations(stateRoot).map((profile) => profile.id)).toEqual(['gpt-anywhere', 'codex-provider']);
+    expect(resolveExtensionModelProfile({ provider: 'openai-codex', model: 'gpt-5.5' }, stateRoot)).toMatchObject({
+      kind: 'resolved',
+      profile: { id: 'codex-provider' },
+    });
+  });
+
+  it('treats same-priority model profile matches as ambiguous and ignores disabled profiles', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const registryRoot = join(stateRoot, 'extensions');
+    for (const id of ['profile-a', 'profile-b', 'profile-disabled']) {
+      const root = join(registryRoot, id);
+      mkdirSync(root, { recursive: true });
+      writeFileSync(
+        join(root, 'extension.json'),
+        JSON.stringify({
+          schemaVersion: 2,
+          id,
+          name: id,
+          contributes: { modelProfiles: [{ id, match: ['opencode-go/qwen*-coder*'], priority: 10 }] },
+        }),
+      );
+    }
+    setExtensionEnabled('profile-a', true, stateRoot);
+    setExtensionEnabled('profile-b', true, stateRoot);
+    setExtensionEnabled('profile-disabled', false, stateRoot);
+
+    expect(resolveExtensionModelProfile({ provider: 'opencode-go', model: 'qwen3-coder' }, stateRoot)).toMatchObject({
+      kind: 'ambiguous',
+      profiles: [{ id: 'profile-a' }, { id: 'profile-b' }],
+    });
+  });
+
   it('exposes the automations system extension route and surface', () => {
     const snapshot = readExtensionRegistrySnapshot();
 

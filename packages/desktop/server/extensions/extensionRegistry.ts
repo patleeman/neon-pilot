@@ -148,6 +148,7 @@ export interface ExtensionInstallSummary {
   skills: ExtensionSkillRegistration[];
   mentions: ExtensionMentionRegistration[];
   tools: ExtensionToolRegistration[];
+  modelProfiles: ExtensionModelProfileRegistration[];
   routes: Array<{ route: string; surfaceId: string }>;
 }
 
@@ -1741,6 +1742,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       skills: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionSkillRegistrations(entry) : [],
       mentions: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionMentionRegistrations(entry) : [],
       tools: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionToolRegistrations(entry) : [],
+      modelProfiles: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionModelProfileRegistrations(entry) : [],
       routes: [
         ...surfaces.flatMap((surface) =>
           surface.kind === 'page' && 'route' in surface ? [{ route: surface.route, surfaceId: surface.id }] : [],
@@ -1771,6 +1773,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
         skills: [],
         mentions: [],
         tools: [],
+        modelProfiles: [],
         routes: [],
       }),
     );

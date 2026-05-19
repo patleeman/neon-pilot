@@ -155,7 +155,7 @@ describe('createRuntimeState', () => {
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
   });
 
-  it('blocks extensions from mutating the active tool set', () => {
+  it('allows extensions to set session-scoped active tools', () => {
     let guardedPi: { setActiveTools: (tools: string[]) => void } | null = null;
     createManifestAgentExtensionsMock.mockReturnValueOnce({
       factories: [
@@ -181,8 +181,8 @@ describe('createRuntimeState', () => {
     factory?.(pi as never);
 
     expect(guardedPi).not.toBeNull();
-    expect(() => guardedPi?.setActiveTools(['read'])).toThrow('setActiveTools is deprecated and unsupported');
-    expect(pi.setActiveTools).not.toHaveBeenCalled();
+    guardedPi?.setActiveTools(['read']);
+    expect(pi.setActiveTools).toHaveBeenCalledWith(['read']);
   });
 
   it('adds extension skill directories to live session resources', () => {

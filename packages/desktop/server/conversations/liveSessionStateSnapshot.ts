@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
+import { type ExtensionModelProfileResolution, resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
 import type { LiveContextUsage, LiveSessionToolDefinition } from './liveSessionEvents.js';
 import { type ParallelPromptJob, type ParallelPromptPreview, readParallelState } from './liveSessionParallelJobs.js';
 import { buildLiveSessionPresenceState, type LiveSessionPresenceHost, type LiveSessionPresenceState } from './liveSessionPresence.js';
@@ -46,6 +47,7 @@ export interface LiveSessionStateSnapshot {
   goalState: ThreadGoal | null;
   systemPrompt: string | null;
   toolDefinitions: LiveSessionToolDefinition[];
+  modelProfile: ExtensionModelProfileResolution & { modelRef: string | null };
   presence: LiveSessionPresenceState;
   cwdChange: { newConversationId: string; cwd: string; autoContinued: boolean } | null;
 }
@@ -61,6 +63,14 @@ export interface LiveSessionSnapshot {
   blockOffset: number;
   totalBlocks: number;
   isStreaming: boolean;
+}
+
+function readSessionModelProfile(session: AgentSession): LiveSessionStateSnapshot['modelProfile'] {
+  const model = session.model;
+  const provider = typeof model?.provider === 'string' ? model.provider : '';
+  const modelId = typeof model?.id === 'string' ? model.id : '';
+  if (!provider || !modelId) return { kind: 'none', modelRef: null };
+  return { ...resolveExtensionModelProfile({ provider, model: modelId }), modelRef: `${provider}/${modelId}` };
 }
 
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {
@@ -137,6 +147,7 @@ export function readLiveSessionStateSnapshotFromEntry(
       description: tool.description,
       parameters: tool.parameters as Record<string, unknown>,
     })),
+    modelProfile: readSessionModelProfile(entry.session),
     error: entry.currentTurnError ?? null,
     title,
     tokens,

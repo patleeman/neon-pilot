@@ -3,7 +3,7 @@
   "id": "system-codex-profile",
   "name": "Codex Compatibility",
   "packageType": "system",
-  "defaultEnabled": false,
+  "defaultEnabled": true,
   "description": "Codex-compatible tool profile and apply_patch support for GPT coding models.",
   "version": "0.1.0",
   "backend": {

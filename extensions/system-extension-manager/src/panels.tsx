@@ -124,6 +124,7 @@ function contributionCounts(extension: ExtensionInstallSummary) {
     rails: views.filter((view) => view.location === 'rightRail').length,
     workbench: views.filter((view) => view.location === 'workbench').length,
     tools: extension.tools?.length ?? 0,
+    modelProfiles: extension.modelProfiles?.length ?? 0,
     keybindings: extension.manifest?.contributes?.keybindings?.length ?? 0,
     backend: extension.backendActions?.length ?? 0,
     skills: extension.skills?.length ?? 0,
@@ -412,6 +413,12 @@ function formatAgentHookSummary(extension: ExtensionInstallSummary): string {
 
 function formatToolSummary(extension: ExtensionInstallSummary): string {
   return extension.tools?.length ? extension.tools.map((tool) => tool.name).join(', ') : 'None';
+}
+
+function formatModelProfileSummary(extension: ExtensionInstallSummary): string {
+  return extension.modelProfiles?.length
+    ? extension.modelProfiles.map((profile) => `${profile.id} (${profile.match.join(', ')})`).join('; ')
+    : 'None';
 }
 
 function formatKeybindingSummary(extension: ExtensionInstallSummary): string {
@@ -764,6 +771,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
               <CompactCount icon={<RailIcon />} count={counts.rails} title="Right rail panels" />
               <CompactCount icon={<WorkbenchIcon />} count={counts.workbench} title="Workbench details" />
               <CompactCount icon={<ToolIcon />} count={counts.tools} title="Agent tools" />
+              <CompactCount icon={<AgentHookIcon />} count={counts.modelProfiles} title="Model profiles" />
               <CompactCount icon={<KeybindingIcon />} count={counts.keybindings} title="Keyboard shortcuts" />
               <CompactCount icon={<AgentHookIcon />} count={counts.agentHooks} title="Agent lifecycle hooks" />
               <CompactCount icon={<BackendIcon />} count={counts.backend} title="Backend actions" />
@@ -1378,7 +1386,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
                   <DetailRow label="UI" value={`Frontend: ${formatFrontendSummary(extension)}`} />
                   <DetailRow
                     label="Agent"
-                    value={`Tools: ${formatToolSummary(extension)} · Hook: ${formatAgentHookSummary(extension)} · Skills: ${formatSkillSummary(extension)}`}
+                    value={`Tools: ${formatToolSummary(extension)} · Model profiles: ${formatModelProfileSummary(extension)} · Hook: ${formatAgentHookSummary(extension)} · Skills: ${formatSkillSummary(extension)}`}
                   />
                   <DetailRow label="Shortcuts" value={formatKeybindingSummary(extension)} />
                   <DetailRow

@@ -564,6 +564,7 @@ export interface ExtensionInstallSummary {
   skills?: ExtensionSkillRegistration[];
   mentions?: ExtensionMentionRegistration[];
   tools?: ExtensionToolRegistration[];
+  modelProfiles?: Array<{ id: string; title?: string; description?: string; match: string[]; priority: number; extensionId: string }>;
   routes: Array<{ route: string; surfaceId: string }>;
 }
 
