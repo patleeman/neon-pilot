@@ -90,7 +90,7 @@ async function runPromptAssemblyHooks(plan: PromptAssemblyPlan, ctx: AssemblyRun
       const payload = result.result as { plan?: PromptAssemblyPlan; diagnostics?: PromptAssemblyPlan['diagnostics'] } | undefined;
       const returnedPlanDiagnostics = Array.isArray(payload?.plan?.diagnostics) ? payload.plan.diagnostics : [];
       if (payload?.plan) {
-        const nextPlan = { ...payload.plan };
+        const nextPlan: Partial<PromptAssemblyPlan> = { ...payload.plan };
         delete nextPlan.diagnostics;
         Object.assign(plan, nextPlan);
       }

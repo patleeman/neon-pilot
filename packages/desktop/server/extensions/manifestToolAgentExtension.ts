@@ -1,6 +1,5 @@
 import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-import { listModelDefinitions } from '../models/modelState.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { invokeExtensionAction } from './extensionBackend.js';
@@ -39,10 +38,12 @@ function parseModelRef(modelRef: string): { provider: string; model: string; ful
 
 function modelSupportsImages(modelRef: string): boolean {
   const current = parseModelRef(modelRef);
-  return listModelDefinitions().some(
-    (model) =>
-      model.provider === current.provider && model.id === current.model && Array.isArray(model.input) && model.input.includes('image'),
-  );
+  if (!current.provider || !current.model) return false;
+  if (current.provider === 'anthropic') return true;
+  if (current.provider === 'google') return true;
+  if (current.provider === 'openai') return current.model.includes('gpt-4o') || current.model.includes('gpt-5');
+  if (current.provider === 'openai-codex') return /^gpt-5\.(?:[245]|4-mini)$/.test(current.model);
+  return false;
 }
 
 function shouldExposeManifestTool(tool: { name: string }, modelRef: string): boolean {
