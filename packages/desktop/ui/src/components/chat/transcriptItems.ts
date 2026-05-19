@@ -42,6 +42,9 @@ function isTraceConversationBlock(block: MessageBlock, standaloneTools: Set<stri
     case 'error':
       return true;
     case 'tool_use':
+      if (block.tool === 'ask_user_question') {
+        return true;
+      }
       return !isTerminalBashToolBlock(block) && !standaloneTools.has(block.tool);
     default:
       return false;

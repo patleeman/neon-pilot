@@ -93,7 +93,7 @@ describe('chat transcript items', () => {
     expect(items.every((item) => item.type === 'message')).toBe(true);
   });
 
-  it('keeps ask_user_question tool blocks as standalone message items (not inside internal-work)', () => {
+  it('keeps ask_user_question tool blocks inside internal-work even when extension marks them standalone', () => {
     const standaloneTools = new Set(['ask_user_question']);
     const messages: MessageBlock[] = [
       { type: 'text', ts: '2026-03-12T18:00:00.000Z', text: 'I need one clarification.' },
@@ -110,7 +110,16 @@ describe('chat transcript items', () => {
     const items = buildChatRenderItems(messages, standaloneTools);
 
     expect(items).toHaveLength(2);
-    expect(items.every((item) => item.type === 'message')).toBe(true);
+    expect(items[0]).toMatchObject({ type: 'message', index: 0 });
+    expect(items[1]).toMatchObject({
+      type: 'trace_cluster',
+      startIndex: 1,
+      endIndex: 1,
+      summary: {
+        stepCount: 1,
+        categories: [{ key: 'tool:ask_user_question', kind: 'tool', label: 'ask_user_question', tool: 'ask_user_question', count: 1 }],
+      },
+    });
   });
 
   it('summarizes trace categories, duration, and running/error state inside trace clusters', () => {
