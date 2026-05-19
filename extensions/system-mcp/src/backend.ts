@@ -186,8 +186,8 @@ export async function authMcpServer(input: unknown): Promise<{ ok: boolean; mess
 export async function logoutMcpServer(input: unknown): Promise<{ ok: boolean; message: string }> {
   const server = readServerName(input);
   const result = await clearMcpServerAuth(server, {});
-  if (result.error || result.exitCode !== 0) {
-    return { ok: false, message: result.error ?? result.stderr ?? `Failed to clear OAuth state for ${server}.` };
+  if (result?.error || result?.exitCode !== 0) {
+    return { ok: false, message: result?.error ?? result?.stderr ?? `Failed to clear OAuth state for ${server}.` };
   }
   return { ok: true, message: `Cleared stored OAuth state for ${server}.` };
 }
