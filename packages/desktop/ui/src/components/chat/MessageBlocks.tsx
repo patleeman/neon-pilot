@@ -284,7 +284,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
 
   return (
-    <div className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5' : 'gap-3')}>
+    <div className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5 pr-3 sm:pr-6' : 'gap-3 pr-8 sm:pr-14')}>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div {...replySelectionScopeProps} className="ui-message-card-assistant space-y-1 text-primary">
           {showRawRunCallbackCard ? (
