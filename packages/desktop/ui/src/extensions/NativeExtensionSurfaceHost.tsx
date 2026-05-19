@@ -22,7 +22,25 @@ type ExtensionComponent = ComponentType<ExtensionHostViewComponentProps>;
 function loadExtensionModule(surface: NativeExtensionViewSummary, revision: number, retryNonce?: number): Promise<Record<string, unknown>> {
   ensureExtensionFrontendReactGlobals();
   const systemLoader = systemExtensionModules.get(surface.extensionId);
-  if (systemLoader) return systemLoader();
+  if (systemLoader) {
+    return systemLoader().catch((error: unknown) => {
+      if (!isRecoverableDynamicImportError(error)) throw error;
+      return loadExtensionDistModule(surface, revision, retryNonce);
+    });
+  }
+  return loadExtensionDistModule(surface, revision, retryNonce);
+}
+
+function isRecoverableDynamicImportError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Failed to fetch dynamically imported module') || message.includes('Importing a module script failed');
+}
+
+function loadExtensionDistModule(
+  surface: NativeExtensionViewSummary,
+  revision: number,
+  retryNonce?: number,
+): Promise<Record<string, unknown>> {
   const entry = surface.frontend?.entry;
   if (!entry) throw new Error(`Extension ${surface.extensionId} has no frontend entry.`);
   const query = retryNonce === undefined ? `v=${revision}` : `v=${revision}&retry=${retryNonce}`;
