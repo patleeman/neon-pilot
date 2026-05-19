@@ -128,7 +128,7 @@ function isSkillDefinitionLike(value: unknown): value is SkillDefinition {
 
 export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
   const disabled = readDisabledSkillIds();
-  const skills = listSkillDefinitions(ctx).map((skill, index): RuntimeSkill => {
+  let skills = listSkillDefinitions(ctx).map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
     return {
       ...skill,
@@ -138,14 +138,14 @@ export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
     };
   });
   for (const hook of runtimeHooks) {
-    if (hook.beforeSkillInjection) return hook.beforeSkillInjection(skills, ctx);
+    if (hook.beforeSkillInjection) skills = hook.beforeSkillInjection(skills, ctx);
   }
   return skills;
 }
 
 export async function buildSkillInventoryAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkill[]> {
   const disabled = readDisabledSkillIds();
-  const skills = (await listSkillDefinitionsAsync(ctx)).map((skill, index): RuntimeSkill => {
+  let skills = (await listSkillDefinitionsAsync(ctx)).map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
     return {
       ...skill,
@@ -155,7 +155,7 @@ export async function buildSkillInventoryAsync(ctx: SkillRuntimeContext): Promis
     };
   });
   for (const hook of runtimeHooks) {
-    if (hook.beforeSkillInjection) return hook.beforeSkillInjection(skills, ctx);
+    if (hook.beforeSkillInjection) skills = hook.beforeSkillInjection(skills, ctx);
   }
   return skills;
 }
