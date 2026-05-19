@@ -1266,7 +1266,10 @@ export async function clearMcpServerAuth(
  */
 export function hasStoredMcpServerTokens(server: McpServerConfig): boolean {
   if (server.transport !== 'remote' || !server.url) return false;
-  const hash = getMcpServerUrlHash(server.url, server.authorizeResource, server.headers);
+  const resolvedHeaders = Object.fromEntries(
+    Object.entries(server.headers ?? {}).map(([key, value]) => [key, substituteEnvVars(value, process.env)]),
+  );
+  const hash = getMcpServerUrlHash(server.url, server.authorizeResource, resolvedHeaders);
   return existsSync(join(getMcpAuthConfigDir(), `${hash}_tokens.json`));
 }
 
@@ -1278,7 +1281,10 @@ export async function clearMcpServerAuthDirect(server: McpServerConfig): Promise
     throw new Error(`MCP server ${server.name} does not use remote OAuth auth state`);
   }
 
-  const serverUrlHash = getMcpServerUrlHash(server.url, server.authorizeResource, server.headers);
+  const resolvedHeaders = Object.fromEntries(
+    Object.entries(server.headers ?? {}).map(([key, value]) => [key, substituteEnvVars(value, process.env)]),
+  );
+  const serverUrlHash = getMcpServerUrlHash(server.url, server.authorizeResource, resolvedHeaders);
   await Promise.all([
     deleteConfigFile(serverUrlHash, 'tokens.json'),
     deleteConfigFile(serverUrlHash, 'client_info.json'),
