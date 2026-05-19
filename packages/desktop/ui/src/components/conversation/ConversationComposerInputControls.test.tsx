@@ -91,7 +91,6 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       models={models}
       currentModel="model-a"
       currentThinkingLevel="medium"
-      currentServiceTier="priority"
       savingPreference={null}
       goalEnabled={false}
       conversationNeedsTakeover={false}
@@ -112,7 +111,6 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       onUpsertDrawingAttachment={vi.fn()}
       onSelectModel={vi.fn()}
       onSelectThinkingLevel={vi.fn()}
-      onSelectServiceTier={vi.fn()}
       onToggleGoal={vi.fn()}
       onInsertComposerText={vi.fn()}
       onSubmitComposerQuestion={vi.fn()}

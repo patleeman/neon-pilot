@@ -100,48 +100,6 @@ function Chevron() {
   );
 }
 
-function FastToggle({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const model = context.models.find((candidate) => candidate.id === context.currentModel) ?? null;
-  const supportsFast = Array.isArray(model?.supportedServiceTiers) && model.supportedServiceTiers.includes('priority');
-  const enabled = context.currentServiceTier === 'priority';
-  if (!supportsFast) return null;
-  const className =
-    variant === 'menu'
-      ? 'group inline-flex w-full items-center justify-between rounded-lg border border-border-subtle bg-surface/45 px-2.5 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-40'
-      : 'group inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-1 text-[11px] font-medium text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-40';
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      aria-label={enabled ? 'Disable fast mode' : 'Enable fast mode'}
-      title={enabled ? 'Disable fast mode' : 'Enable fast mode'}
-      onClick={() => context.selectServiceTier(!enabled)}
-      disabled={context.savingPreference !== null}
-      className={className}
-    >
-      {variant === 'menu' ? <span className={cx('leading-none', enabled && 'text-primary')}>Fast</span> : null}
-      <span
-        aria-hidden="true"
-        className={cx(
-          'relative inline-flex h-[18px] w-[32px] shrink-0 rounded-full border p-[1px] transition-all',
-          enabled
-            ? 'border-accent/55 bg-accent/75 shadow-[0_0_8px_rgba(168,85,247,0.16)]'
-            : 'border-border-default bg-surface/40 group-hover:bg-surface/60',
-        )}
-      >
-        <span
-          className={cx(
-            'h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform',
-            enabled ? 'translate-x-[14px]' : 'translate-x-0',
-          )}
-        />
-      </span>
-      {variant === 'inline' ? <span className={cx('leading-none', enabled && 'text-primary')}>Fast</span> : null}
-    </button>
-  );
-}
-
 export function ModelPreferencesComposerControl({
   controlContext,
   buttonContext,
@@ -162,7 +120,6 @@ export function ModelPreferencesComposerControl({
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">Thinking</p>
           <ThinkingSelect context={context} variant="menu" />
         </div>
-        <FastToggle context={context} variant="menu" />
       </div>
     );
   }
@@ -170,7 +127,6 @@ export function ModelPreferencesComposerControl({
     <>
       <ModelSelect context={context} variant="inline" />
       <ThinkingSelect context={context} variant="inline" />
-      <FastToggle context={context} variant="inline" />
     </>
   );
 }

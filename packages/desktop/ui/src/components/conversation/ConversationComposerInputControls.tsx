@@ -30,7 +30,6 @@ export function ConversationComposerInputControls({
   models,
   currentModel,
   currentThinkingLevel,
-  currentServiceTier,
   savingPreference,
   goalEnabled,
   conversationNeedsTakeover,
@@ -52,7 +51,6 @@ export function ConversationComposerInputControls({
 
   onSelectModel,
   onSelectThinkingLevel,
-  onSelectServiceTier,
   onToggleGoal,
   onInsertComposerText,
   onSubmitComposerQuestion,
@@ -70,7 +68,6 @@ export function ConversationComposerInputControls({
   models: ModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
-  currentServiceTier: string;
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   goalEnabled: boolean;
   conversationNeedsTakeover: boolean;
@@ -92,7 +89,6 @@ export function ConversationComposerInputControls({
 
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
-  onSelectServiceTier: (enableFastMode: boolean) => void;
   onToggleGoal: () => void;
   onInsertComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
@@ -143,11 +139,9 @@ export function ConversationComposerInputControls({
     models,
     currentModel,
     currentThinkingLevel,
-    currentServiceTier,
     savingPreference,
     selectModel: onSelectModel,
     selectThinkingLevel: onSelectThinkingLevel,
-    selectServiceTier: onSelectServiceTier,
     goalEnabled,
     toggleGoal: onToggleGoal,
   };

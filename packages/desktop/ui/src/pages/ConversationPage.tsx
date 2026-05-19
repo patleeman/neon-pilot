@@ -61,7 +61,6 @@ import {
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
   resolveDraftConversationServiceTierState,
-  resolveFastModeToggleServiceTier,
 } from '../conversation/conversationInitialState';
 import {
   buildMentionItems,
@@ -70,11 +69,7 @@ import {
   type MentionItem,
   resolveMentionItems,
 } from '../conversation/conversationMentions';
-import {
-  resolveDraftModelPreferenceUpdate,
-  resolveDraftServiceTierPreferenceUpdate,
-  resolveDraftThinkingPreferenceUpdate,
-} from '../conversation/conversationModelPreferences';
+import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
 import {
   hasConversationLoadedHistoricalTailBlocks,
   mergeConversationSessionMeta,
@@ -126,7 +121,6 @@ import {
   clearDraftConversationCwd,
   clearDraftConversationModel,
   clearDraftConversationModelPreferences,
-  clearDraftConversationServiceTier,
   clearDraftConversationThinkingLevel,
   DRAFT_CONVERSATION_STATE_CHANGED_EVENT,
   isDraftConversationAttachmentsMutationCurrent,
@@ -136,7 +130,6 @@ import {
   persistDraftConversationContextDocs,
   persistDraftConversationCwd,
   persistDraftConversationModel,
-  persistDraftConversationServiceTier,
   persistDraftConversationThinkingLevel,
   readConversationAttachments,
   readDraftConversationAttachments,
@@ -3814,51 +3807,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
   }
 
-  async function saveServiceTierPreference(enableFastMode: boolean) {
-    if (savingPreference !== null) {
-      return;
-    }
-
-    const serviceTier = resolveFastModeToggleServiceTier({
-      enableFastMode,
-      defaultServiceTier,
-    });
-
-    setSavingPreference('serviceTier');
-    try {
-      let savedServiceTier = enableFastMode ? 'priority' : '';
-
-      if (draft) {
-        const update = resolveDraftServiceTierPreferenceUpdate({ enableFastMode, defaultServiceTier });
-        if (update.storage.kind === 'clear') {
-          clearDraftConversationServiceTier();
-        } else {
-          persistDraftConversationServiceTier(update.storage.value);
-        }
-        setCurrentServiceTier(update.currentServiceTier);
-        setHasExplicitServiceTier(update.hasExplicitServiceTier);
-        savedServiceTier = update.savedServiceTierLabel;
-      } else if (id) {
-        if (isLiveSession && !ensureConversationCanControl('change the service tier')) {
-          return;
-        }
-
-        const next = await api.updateConversationModelPreferences(id, { serviceTier }, currentSurfaceId);
-        setCurrentModel(next.currentModel);
-        setCurrentThinkingLevel(next.currentThinkingLevel);
-        setCurrentServiceTier(next.currentServiceTier);
-        setHasExplicitServiceTier(next.hasExplicitServiceTier);
-        savedServiceTier = next.currentServiceTier;
-      }
-
-      showNotice('accent', savedServiceTier === 'priority' ? 'Fast mode enabled.' : 'Fast mode disabled.');
-    } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-    } finally {
-      setSavingPreference(null);
-    }
-  }
-
   function selectModel(modelId: string) {
     if (showModelPicker) {
       composerController.clear();
@@ -6224,7 +6172,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 models={models}
                 currentModel={currentModel || model || defaultModel}
                 currentThinkingLevel={currentThinkingLevel}
-                currentServiceTier={currentServiceTier}
                 savingPreference={savingPreference}
                 goalEnabled={goalEnabled}
                 conversationNeedsTakeover={conversationNeedsTakeover}
@@ -6254,9 +6201,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 onSelectModel={selectModel}
                 onSelectThinkingLevel={(thinkingLevel) => {
                   void saveThinkingLevelPreference(thinkingLevel);
-                }}
-                onSelectServiceTier={(enableFastMode) => {
-                  void saveServiceTierPreference(enableFastMode);
                 }}
                 onToggleGoal={() => {
                   void toggleGoalMode();

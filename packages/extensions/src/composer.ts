@@ -25,11 +25,9 @@ export interface ComposerControlContext {
   models: ComposerModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
-  currentServiceTier: string;
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   selectModel: (modelId: string) => void;
   selectThinkingLevel: (thinkingLevel: string) => void;
-  selectServiceTier: (enableFastMode: boolean) => void;
   goalEnabled: boolean;
   toggleGoal: () => void;
 }

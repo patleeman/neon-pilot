@@ -53,14 +53,6 @@ export function buildConversationServiceTierPreferenceInput(input: { currentServ
   return { serviceTier: input.currentServiceTier.trim() || null };
 }
 
-export function resolveFastModeToggleServiceTier(input: { enableFastMode: boolean; defaultServiceTier: string }): string | null {
-  if (input.enableFastMode) {
-    return input.defaultServiceTier === 'priority' ? '' : 'priority';
-  }
-
-  return input.defaultServiceTier === 'priority' ? null : '';
-}
-
 export function buildConversationInitialModelPreferenceState(input: {
   conversationId: string;
   currentModel?: string;

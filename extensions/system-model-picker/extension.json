@@ -3,7 +3,7 @@
   "id": "system-model-picker",
   "name": "Model Picker",
   "packageType": "system",
-  "description": "Composer model, thinking, and fast-mode controls.",
+  "description": "Composer model and thinking controls.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",

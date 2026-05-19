@@ -17,7 +17,6 @@ import {
   formatContextWindowLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
-  getModelSelectableServiceTierOptions,
   groupModelsByProvider,
   isDesktopShell,
   type ModelEditorDraft,
@@ -1652,12 +1651,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     [modelState?.currentVisionModel, modelState?.models],
   );
 
-  const selectedModelServiceTierOptions = useMemo(() => getModelSelectableServiceTierOptions(selectedModel), [selectedModel]);
-  const selectedModelSupportsFastMode = useMemo(
-    () => selectedModelServiceTierOptions.some((option) => option.value === 'priority'),
-    [selectedModelServiceTierOptions],
-  );
-
   const availableModelProviderIds = useMemo(
     () => listKnownModelProviderIds(modelProviderState, providerAuthState, modelState?.models),
     [modelProviderState, providerAuthState, modelState?.models],
@@ -2661,31 +2654,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           ? 'Saving thinking level…'
                           : `Current thinking level: ${formatThinkingLevelLabel(modelState.currentThinkingLevel)}`}
                       </p>
-
-                      {selectedModelSupportsFastMode && (
-                        <>
-                          <label className="inline-flex items-center gap-3 pt-1 text-[14px] text-primary" htmlFor="settings-fast-mode">
-                            <input
-                              id="settings-fast-mode"
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none"
-                              checked={modelState.currentServiceTier === 'priority'}
-                              onChange={(event) => {
-                                void handleModelPreferenceChange({ serviceTier: event.target.checked ? 'priority' : '' }, 'serviceTier');
-                              }}
-                              disabled={savingPreference !== null}
-                            />
-                            <span>Fast mode</span>
-                          </label>
-                          <p className="ui-card-meta">
-                            {savingPreference === 'serviceTier'
-                              ? 'Saving fast mode…'
-                              : modelState.currentServiceTier === 'priority'
-                                ? 'Fast mode is on (service tier: priority).'
-                                : 'Fast mode is off.'}
-                          </p>
-                        </>
-                      )}
                     </>
                   ) : null}
 

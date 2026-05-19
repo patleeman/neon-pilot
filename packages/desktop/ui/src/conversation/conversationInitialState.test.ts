@@ -8,7 +8,6 @@ import {
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
   resolveDraftConversationServiceTierState,
-  resolveFastModeToggleServiceTier,
 } from './conversationInitialState';
 
 describe('conversation initial state helpers', () => {
@@ -50,13 +49,6 @@ describe('conversation initial state helpers', () => {
         hasExplicitServiceTier: true,
       }),
     ).toEqual({ serviceTier: null });
-  });
-
-  it('turns fast-mode toggles into the persisted service-tier override', () => {
-    expect(resolveFastModeToggleServiceTier({ enableFastMode: true, defaultServiceTier: '' })).toBe('priority');
-    expect(resolveFastModeToggleServiceTier({ enableFastMode: true, defaultServiceTier: 'priority' })).toBe('');
-    expect(resolveFastModeToggleServiceTier({ enableFastMode: false, defaultServiceTier: 'priority' })).toBeNull();
-    expect(resolveFastModeToggleServiceTier({ enableFastMode: false, defaultServiceTier: '' })).toBe('');
   });
 
   it('normalizes initial model preference state with defaults', () => {

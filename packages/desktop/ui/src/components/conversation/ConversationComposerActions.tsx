@@ -127,11 +127,9 @@ export function ConversationComposerActions({
             models: [],
             currentModel: '',
             currentThinkingLevel: '',
-            currentServiceTier: '',
             savingPreference: null,
             selectModel: () => {},
             selectThinkingLevel: () => {},
-            selectServiceTier: () => {},
             goalEnabled: false,
             toggleGoal: () => {},
           }}

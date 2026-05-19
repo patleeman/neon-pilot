@@ -339,15 +339,6 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('↻ Refresh');
   });
 
-  it('renders a fast mode toggle for models that support priority tier', () => {
-    const html = renderPage('/settings');
-
-    expect(html).toContain('id="settings-fast-mode"');
-    expect(html).toContain('Fast mode');
-    expect(html).toContain('Fast mode is off.');
-    expect(html).toContain('type="checkbox"');
-  });
-
   it('renders the same consolidated settings page for legacy query routes', () => {
     const html = renderPage('/settings?page=system-daemon');
 
