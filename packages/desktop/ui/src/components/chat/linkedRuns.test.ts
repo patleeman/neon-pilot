@@ -49,6 +49,34 @@ describe('linkedRuns', () => {
     ).toBe('Runtime.evaluate, DOM.getDocument');
   });
 
+  it('builds compact previews for common non-rendered tools', () => {
+    const base = {
+      type: 'tool_use' as const,
+      ts: '2026-04-26T00:00:00.000Z',
+      output: '',
+    };
+
+    expect(buildToolPreview({ ...base, tool: 'goal', input: { objective: 'Ship the improved tool previews.' } })).toBe(
+      'Ship the improved tool previews.',
+    );
+    expect(
+      buildToolPreview({ ...base, tool: 'scheduled_task', input: { action: 'save', title: 'Daily inbox sweep', cron: '0 9 * * *' } }),
+    ).toBe('save Daily inbox sweep · 0 9 * * *');
+    expect(
+      buildToolPreview({ ...base, tool: 'deferred_resume', input: { action: 'add', delay: '30m', prompt: 'Check build status' } }),
+    ).toBe('add 30m · Check build status');
+    expect(buildToolPreview({ ...base, tool: 'artifact', input: { action: 'save', title: 'Architecture diagram' } })).toBe(
+      'save Architecture diagram',
+    );
+    expect(buildToolPreview({ ...base, tool: 'checkpoint', input: { action: 'save', message: 'fix goal tool preview' } })).toBe(
+      'save fix goal tool preview',
+    );
+    expect(buildToolPreview({ ...base, tool: 'ask_user_question', input: { question: 'Which deployment target?' } })).toBe(
+      'Which deployment target?',
+    );
+    expect(buildToolPreview({ ...base, tool: 'mcp', input: { server: 'github', tool: 'create_issue' } })).toBe('github.create_issue');
+  });
+
   it('presents listed durable runs with kind and status detail', () => {
     const linkedRuns = readLinkedRuns(
       runToolBlock({

@@ -200,6 +200,11 @@ export function buildToolPreview(block: Extract<MessageBlock, { type: 'tool_use'
     }
   }
 
+  const specificPreview = buildSpecificToolPreview(block);
+  if (specificPreview) {
+    return specificPreview;
+  }
+
   return block.input.command !== undefined
     ? buildGenericInputPreview(block.input.command)
     : block.input.path !== undefined
@@ -209,6 +214,97 @@ export function buildToolPreview(block: Extract<MessageBlock, { type: 'tool_use'
         : block.input.query !== undefined
           ? buildGenericInputPreview(block.input.query).slice(0, 60)
           : '';
+}
+
+function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use' }>): string {
+  const input = isRecord(block.input) ? block.input : {};
+  const details = isRecord(block.details) ? block.details : {};
+  const read = (key: string): string | null => readRunField(input, key) ?? readRunField(details, key);
+  const excerpt = (key: string, maxLength = 72): string | null => excerptLinkedRunText(read(key), maxLength);
+
+  switch (block.tool) {
+    case 'background_command': {
+      const action = read('action');
+      const subject = excerpt('command') ?? read('taskSlug') ?? summarizeLinkedRunTail(read('runId') ?? '');
+      return [action, subject].filter(Boolean).join(' ');
+    }
+    case 'scheduled_task': {
+      const action = read('action');
+      const title = excerpt('title') ?? read('taskId');
+      const schedule = read('cron') ?? read('at');
+      return [action, title, schedule ? `· ${schedule}` : null].filter(Boolean).join(' ');
+    }
+    case 'deferred_resume': {
+      const action = read('action');
+      const when = read('delay') ?? read('at');
+      const prompt = excerpt('prompt');
+      return [action, when, prompt ? `· ${prompt}` : null].filter(Boolean).join(' ');
+    }
+    case 'artifact': {
+      const action = read('action');
+      const title = excerpt('title') ?? read('artifactId');
+      return [action, title].filter(Boolean).join(' ');
+    }
+    case 'checkpoint': {
+      const action = read('action');
+      const message = excerpt('message') ?? read('checkpointId');
+      return [action, message].filter(Boolean).join(' ');
+    }
+    case 'goal':
+      return excerpt('objective') ?? excerpt('status') ?? '';
+    case 'write':
+    case 'edit':
+    case 'apply_patch': {
+      return excerpt('path') ?? summarizePathList(input.paths) ?? excerpt('patch') ?? '';
+    }
+    case 'image':
+      return excerpt('prompt') ?? '';
+    case 'probe_image':
+      return excerpt('question') ?? '';
+    case 'conversation_inspect': {
+      const action = read('action');
+      const subject = excerpt('query') ?? excerpt('text') ?? read('conversationId');
+      return [action, subject].filter(Boolean).join(' ');
+    }
+    case 'change_working_directory':
+      return excerpt('cwd') ?? '';
+    case 'ask_user_question':
+      return summarizeAskUserQuestion(input);
+    case 'mcp': {
+      const server = read('server');
+      const tool = read('tool');
+      const action = read('action');
+      return [server, tool, action].filter(Boolean).join('.');
+    }
+    case 'local_models_status':
+      return 'check local models';
+    default:
+      return '';
+  }
+}
+
+function summarizePathList(value: unknown): string | null {
+  if (!Array.isArray(value)) return null;
+  const paths = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  if (paths.length === 0) return null;
+  const preview = paths.slice(0, 2).join(', ');
+  return paths.length > 2 ? `${preview}, …` : preview;
+}
+
+function summarizeAskUserQuestion(input: Record<string, unknown>): string {
+  const direct = excerptLinkedRunText(typeof input.question === 'string' ? input.question : null);
+  if (direct) return direct;
+
+  if (Array.isArray(input.questions)) {
+    const first = input.questions.find(isRecord);
+    const label = typeof first?.label === 'string' ? first.label : typeof first?.question === 'string' ? first.question : null;
+    const preview = excerptLinkedRunText(label);
+    if (preview) {
+      return input.questions.length > 1 ? `${preview} +${input.questions.length - 1}` : preview;
+    }
+  }
+
+  return '';
 }
 
 function buildGenericInputPreview(value: unknown): string {
