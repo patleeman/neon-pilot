@@ -121,16 +121,6 @@ function isLiveSessionControlError(error: unknown): boolean {
   );
 }
 
-export function normalizeSurfaceRegistrationWaitOptions(input: { timeoutMs?: number; pollMs?: number }): {
-  timeoutMs: number;
-  pollMs: number;
-} {
-  const timeoutMs =
-    Number.isSafeInteger(input.timeoutMs) && (input.timeoutMs as number) >= 0 ? Math.min(10_000, input.timeoutMs as number) : 1_500;
-  const pollMs = Number.isSafeInteger(input.pollMs) && (input.pollMs as number) >= 10 ? Math.min(1_000, input.pollMs as number) : 50;
-  return { timeoutMs, pollMs };
-}
-
 export async function retryLiveSessionActionAfterTakeover<T>(input: {
   attemptAction: () => Promise<T>;
   takeOverSessionControl: () => Promise<unknown>;
