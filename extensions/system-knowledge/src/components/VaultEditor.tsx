@@ -148,7 +148,15 @@ function useAutosave(
     scheduleSave();
 
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      // Flush pending save on cleanup (e.g. fileId change) so edits
+      // to the previous file aren't silently lost.
+      if (timer.current && dirty && fileId) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        void performSave(revision);
+      } else if (timer.current) {
+        clearTimeout(timer.current);
+      }
     };
   }, [fileId, dirty, revision, getContent, onSaved, onError]);
 }
