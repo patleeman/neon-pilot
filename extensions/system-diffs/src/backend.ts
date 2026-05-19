@@ -82,13 +82,21 @@ function parseCommitMetadata(raw: string): ParsedCommitMetadata {
   };
 }
 
+function decodeGitOctal(value: string): string {
+  // Git quotes non-ASCII bytes as \NNN octal escapes (e.g. \303\251 for é).
+  // JSON.parse rejects \NNN, so decode them to raw bytes before parsing.
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/\\d{3}/g, (match) => String.fromCharCode(parseInt(match.slice(1), 8)));
+}
+
 function unquoteGitPath(value: string): string {
   const trimmed = value.trim();
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     try {
       return JSON.parse(trimmed) as string;
     } catch {
-      return trimmed.slice(1, -1);
+      // JSON.parse chokes on git's \NNN octal escapes; decode them first.
+      return JSON.parse(decodeGitOctal(trimmed)) as string;
     }
   }
   return trimmed;
