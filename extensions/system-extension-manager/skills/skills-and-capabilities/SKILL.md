@@ -44,8 +44,7 @@ Examples in this repo:
 - `knowledge-base`
 - `web-tools`
 - `daemon-run-orchestration-prompt`
-- `openai-native-compaction`
-- `gpt-apply-patch`
+- `codex-profile`
 
 Use an extension when the change requires code and runtime integration, not just new instructions.
 

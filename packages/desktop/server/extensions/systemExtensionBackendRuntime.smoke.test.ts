@@ -191,6 +191,8 @@ const smokes = {
     assert(result.action === 'list', 'deferred resume list did not return list action');
   },
   async 'system-codex-profile'() {
+    await smokeAgentFactory('default');
+    assert(registeredEvents.some((event) => event.eventName === 'session_before_compact'), 'codex profile compaction hooks missing');
     const target = join(cwd, 'smoke.txt');
     writeFileSync(target, 'hello\n');
     const result = await module.applyPatch({ patch: '*** Begin Patch\n*** Update File: smoke.txt\n@@\n-hello\n+hello smoke\n*** End Patch' }, ctx);
@@ -259,10 +261,6 @@ const smokes = {
   async 'system-onboarding'() {
     const result = await module.ensure({}, ctx);
     assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
-  },
-  async 'system-openai-native-compaction'() {
-    await smokeAgentFactory('default');
-    assert(registeredEvents.some((event) => event.eventName === 'session_before_compact'), 'native compaction hooks missing');
   },
   async 'system-runs'() {
     const result = await module.bash({ command: 'echo smoke' }, ctx);

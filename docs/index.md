@@ -63,7 +63,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Local Dictation](../extensions/system-local-dictation/README.md)
 - [MCP](../extensions/system-mcp/README.md)
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
-- [OpenAI Native Compaction](../extensions/system-openai-native-compaction/README.md)
 - [Runs](../extensions/system-runs/README.md)
 - [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
 - [Settings](../extensions/system-settings/README.md)
