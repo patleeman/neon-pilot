@@ -11,24 +11,6 @@
     "styles": []
   },
   "contributes": {
-    "settings": {
-      "browser.defaultUrl": {
-        "type": "string",
-        "default": "https://www.google.com",
-        "description": "Default URL for new browser tabs",
-        "group": "Browser",
-        "placeholder": "https://example.com",
-        "order": 1
-      },
-      "browser.searchEngine": {
-        "type": "select",
-        "default": "google",
-        "enum": ["google", "duckduckgo", "bing", "yahoo"],
-        "description": "Default search engine for the browser location bar",
-        "group": "Browser",
-        "order": 2
-      }
-    },
     "commands": [
       {
         "id": "open-browser",
