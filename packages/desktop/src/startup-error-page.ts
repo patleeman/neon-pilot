@@ -11,7 +11,7 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Personal Agent Startup Error</title>
+    <title>Neon Pilot Startup Error</title>
     <style>
       :root {
         color-scheme: dark;
@@ -140,7 +140,7 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
   <body>
     <main class="panel">
       <p class="eyebrow">Desktop Startup Error</p>
-      <h1>Personal Agent couldn’t finish starting.</h1>
+      <h1>Neon Pilot couldn’t finish starting.</h1>
       <p>The desktop shell hit an error before it could open the normal app surface.</p>
       <div class="error">${message}</div>
       <p class="logs">Logs: <code>${logsDir}</code></p>

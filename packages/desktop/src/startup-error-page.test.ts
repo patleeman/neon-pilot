@@ -9,7 +9,7 @@ describe('startup error page helpers', () => {
       logsDir: '/tmp/logs',
     });
 
-    expect(html).toContain('Personal Agent couldn’t finish starting.');
+    expect(html).toContain('Neon Pilot couldn’t finish starting.');
     expect(html).toContain('Port 3741 &lt;busy&gt; &amp; blocked');
     expect(html).toContain('Logs: <code>/tmp/logs</code>');
     expect(html).toContain('desktop.openPath(logsDir)');

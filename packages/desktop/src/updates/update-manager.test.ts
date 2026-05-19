@@ -113,7 +113,7 @@ describe('DesktopUpdateManager', () => {
     expect(mocks.showMessageBox).toHaveBeenCalledWith(
       expect.objectContaining({
         buttons: ['Later', 'Restart to Update'],
-        message: 'Personal Agent 1.1.0 is ready to install',
+        message: 'Neon Pilot 1.1.0 is ready to install',
       }),
     );
     expect(onBeforeQuitForUpdate).toHaveBeenCalledTimes(1);

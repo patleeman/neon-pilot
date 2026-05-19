@@ -9,42 +9,42 @@ import {
 
 describe('buildDesktopQuitConfirmationOptions', () => {
   it('builds a conservative quit confirmation for the menu bar app', () => {
-    expect(buildDesktopQuitConfirmationOptions('Personal Agent')).toEqual({
+    expect(buildDesktopQuitConfirmationOptions('Neon Pilot')).toEqual({
       type: 'question',
-      buttons: ['Cancel', 'Quit Personal Agent'],
+      buttons: ['Cancel', 'Quit Neon Pilot'],
       defaultId: 0,
       cancelId: 0,
       noLink: true,
-      message: 'Quit Personal Agent?',
+      message: 'Quit Neon Pilot?',
       detail: 'Closing the window only hides it. Quitting closes the menu bar app and stops the local runtime until you reopen it.',
     });
   });
 
   it('mentions an external daemon when the desktop app is attached to one', () => {
     expect(
-      buildDesktopQuitConfirmationOptions('Personal Agent', undefined, {
+      buildDesktopQuitConfirmationOptions('Neon Pilot', undefined, {
         keepsExternalDaemonRunning: true,
       }),
     ).toEqual({
       type: 'question',
-      buttons: ['Cancel', 'Quit Personal Agent'],
+      buttons: ['Cancel', 'Quit Neon Pilot'],
       defaultId: 0,
       cancelId: 0,
       noLink: true,
-      message: 'Quit Personal Agent?',
+      message: 'Quit Neon Pilot?',
       detail:
         'Closing the window only hides it. Quitting closes the menu bar app, but an external daemon will keep running for automations until you stop it separately.',
     });
   });
 
   it('includes the app icon when one is provided', () => {
-    expect(buildDesktopQuitConfirmationOptions('Personal Agent', '/tmp/personal-agent-icon.png')).toEqual({
+    expect(buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/personal-agent-icon.png')).toEqual({
       type: 'question',
-      buttons: ['Cancel', 'Quit Personal Agent'],
+      buttons: ['Cancel', 'Quit Neon Pilot'],
       defaultId: 0,
       cancelId: 0,
       noLink: true,
-      message: 'Quit Personal Agent?',
+      message: 'Quit Neon Pilot?',
       detail: 'Closing the window only hides it. Quitting closes the menu bar app and stops the local runtime until you reopen it.',
       icon: '/tmp/personal-agent-icon.png',
     });
@@ -73,9 +73,9 @@ describe('confirmDesktopQuit', () => {
       showMessageBox: vi.fn().mockResolvedValue({ response: 1 }),
     };
 
-    await expect(confirmDesktopQuit(dialogLike, 'Personal Agent', '/tmp/personal-agent-icon.png')).resolves.toBe(true);
+    await expect(confirmDesktopQuit(dialogLike, 'Neon Pilot', '/tmp/personal-agent-icon.png')).resolves.toBe(true);
     expect(dialogLike.showMessageBox).toHaveBeenCalledWith(
-      buildDesktopQuitConfirmationOptions('Personal Agent', '/tmp/personal-agent-icon.png'),
+      buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/personal-agent-icon.png'),
     );
   });
 
@@ -84,7 +84,7 @@ describe('confirmDesktopQuit', () => {
       showMessageBox: vi.fn().mockResolvedValue({ response: 0 }),
     };
 
-    await expect(confirmDesktopQuit(dialogLike, 'Personal Agent')).resolves.toBe(false);
+    await expect(confirmDesktopQuit(dialogLike, 'Neon Pilot')).resolves.toBe(false);
   });
 
   it('passes external-daemon context through to the dialog options', async () => {
@@ -93,12 +93,12 @@ describe('confirmDesktopQuit', () => {
     };
 
     await expect(
-      confirmDesktopQuit(dialogLike, 'Personal Agent', undefined, {
+      confirmDesktopQuit(dialogLike, 'Neon Pilot', undefined, {
         keepsExternalDaemonRunning: true,
       }),
     ).resolves.toBe(false);
     expect(dialogLike.showMessageBox).toHaveBeenCalledWith(
-      buildDesktopQuitConfirmationOptions('Personal Agent', undefined, {
+      buildDesktopQuitConfirmationOptions('Neon Pilot', undefined, {
         keepsExternalDaemonRunning: true,
       }),
     );
@@ -113,7 +113,7 @@ describe('confirmDesktopQuit', () => {
         showMessageBox: vi.fn(),
       };
 
-      await expect(confirmDesktopQuit(dialogLike, 'Personal Agent')).resolves.toBe(true);
+      await expect(confirmDesktopQuit(dialogLike, 'Neon Pilot')).resolves.toBe(true);
       expect(dialogLike.showMessageBox).not.toHaveBeenCalled();
     } finally {
       process.argv = originalArgv;

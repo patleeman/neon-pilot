@@ -61,7 +61,7 @@ export function applyDesktopAboutPanelOptions(currentDir = dirname(fileURLToPath
 
   app.setAboutPanelOptions(
     buildDesktopAboutPanelOptions({
-      applicationName: app.name || 'Personal Agent',
+      applicationName: app.name || 'Neon Pilot',
       applicationVersion: versions.applicationVersion === 'Unknown' ? app.getVersion() : versions.applicationVersion,
       piVersion: versions.piVersion,
     }),

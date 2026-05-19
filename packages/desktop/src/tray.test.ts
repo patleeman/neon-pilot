@@ -46,9 +46,7 @@ describe('buildDesktopTrayMenuTemplate', () => {
       items.some((item: Electron.MenuItemConstructorOptions | Electron.MenuItem) => 'label' in item && item.label === 'Startup failed'),
     ).toBe(true);
     expect(
-      items.some(
-        (item: Electron.MenuItemConstructorOptions | Electron.MenuItem) => 'label' in item && item.label === 'Retry Personal Agent',
-      ),
+      items.some((item: Electron.MenuItemConstructorOptions | Electron.MenuItem) => 'label' in item && item.label === 'Retry Neon Pilot'),
     ).toBe(true);
     expect(
       items.some((item: Electron.MenuItemConstructorOptions | Electron.MenuItem) => 'label' in item && item.label === 'Open Desktop Logs'),
@@ -85,7 +83,7 @@ describe('buildDesktopTrayMenuTemplate', () => {
     expect(
       items.some(
         (item: Electron.MenuItemConstructorOptions | Electron.MenuItem) =>
-          ('label' in item && (item as { label?: string }).label === 'Quit Personal Agent') || item.label === 'Quit Personal Agent',
+          ('label' in item && (item as { label?: string }).label === 'Quit Neon Pilot') || item.label === 'Quit Neon Pilot',
       ),
     ).toBe(true);
   });

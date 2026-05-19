@@ -3696,6 +3696,15 @@ export function Sidebar() {
   return (
     <>
       <aside className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 pb-3 pt-3.5">
+          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent font-mono text-[14px] font-bold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45),0_0_20px_-6px_rgb(var(--color-accent)/0.75)]">
+            N
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-primary">Neon Pilot</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Studio</div>
+          </div>
+        </div>
         <div className="pt-1.5 pb-1 space-y-px">
           <div className="px-1">
             <button

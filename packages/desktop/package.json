@@ -2,11 +2,11 @@
   "name": "@personal-agent/desktop",
   "version": "0.8.0-rc.19",
   "license": "MIT",
-  "description": "Personal Agent Electron desktop shell",
+  "description": "Neon Pilot Electron desktop shell",
   "repository": "github:user/personal-agent",
   "bugs": "https://github.com/user/personal-agent/issues",
   "homepage": "https://github.com/user/personal-agent",
-  "productName": "Personal Agent",
+  "productName": "Neon Pilot",
   "type": "module",
   "main": "./dist/main.js",
   "scripts": {

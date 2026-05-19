@@ -220,7 +220,7 @@ export class DesktopUpdateManager {
         void dialog.showMessageBox({
           type: 'info',
           buttons: ['OK'],
-          message: `Personal Agent ${info.version} is downloading`,
+          message: `Neon Pilot ${info.version} is downloading`,
           detail: [
             `Current version: ${this.currentVersion}`,
             `Latest version: ${info.version}`,
@@ -244,7 +244,7 @@ export class DesktopUpdateManager {
           type: 'info',
           buttons: ['OK'],
           message: 'You’re up to date',
-          detail: `Personal Agent ${this.currentVersion} is the latest available build.`,
+          detail: `Neon Pilot ${this.currentVersion} is the latest available build.`,
         });
       }
     });
@@ -323,11 +323,11 @@ export class DesktopUpdateManager {
         buttons: ['Later', 'Restart to Update'],
         defaultId: 1,
         cancelId: 0,
-        message: `Personal Agent ${info.version} is ready to install`,
+        message: `Neon Pilot ${info.version} is ready to install`,
         detail: [
           `Current version: ${this.currentVersion}`,
           `Updated version: ${info.version}`,
-          'Restart Personal Agent now to finish installing the update.',
+          'Restart Neon Pilot now to finish installing the update.',
         ].join('\n'),
       });
 

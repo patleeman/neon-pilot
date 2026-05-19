@@ -86,7 +86,7 @@ export function buildDesktopApplicationMenuTemplate(
   options: DesktopApplicationMenuTemplateOptions = {},
 ): MenuItemConstructorOptions[] {
   const platform = options.platform ?? process.platform;
-  const appName = options.appName ?? 'Personal Agent';
+  const appName = options.appName ?? 'Neon Pilot';
   const isMac = platform === 'darwin';
   const keyboardShortcuts = options.keyboardShortcuts ?? DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS;
   assertMenuShortcutsMatchCoreRegistry();

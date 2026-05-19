@@ -25,7 +25,7 @@ function buildDesktopQuitDetail(behavior: DesktopQuitConfirmationBehavior): stri
 }
 
 export function buildDesktopQuitConfirmationOptions(
-  appName = 'Personal Agent',
+  appName = 'Neon Pilot',
   icon?: string,
   behavior: DesktopQuitConfirmationBehavior = {},
 ): MessageBoxOptions {
@@ -43,7 +43,7 @@ export function buildDesktopQuitConfirmationOptions(
 
 export async function confirmDesktopQuit(
   dialogLike: DesktopQuitDialogLike,
-  appName = 'Personal Agent',
+  appName = 'Neon Pilot',
   icon?: string,
   behavior: DesktopQuitConfirmationBehavior = {},
 ): Promise<boolean> {

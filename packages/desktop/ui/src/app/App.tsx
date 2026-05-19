@@ -84,7 +84,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
       <main className="flex min-h-screen items-center justify-center bg-base px-6">
         <div className="max-w-lg rounded-2xl border border-border-subtle bg-surface px-6 py-6 shadow-sm">
           <p className="text-[11px] uppercase tracking-[0.18em] text-dim">Something went wrong</p>
-          <h1 className="mt-2 text-[22px] font-semibold text-primary">Personal Agent encountered an error</h1>
+          <h1 className="mt-2 text-[22px] font-semibold text-primary">Neon Pilot encountered an error</h1>
           <p className="mt-2 text-[13px] leading-6 text-secondary">
             The application crashed unexpectedly. You can try reloading, or start a new conversation.
           </p>

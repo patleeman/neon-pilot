@@ -6,7 +6,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('defaults to the stable app presentation', () => {
     expect(resolveDesktopLaunchPresentation({})).toEqual({
       mode: 'stable',
-      appName: 'Personal Agent',
+      appName: 'Neon Pilot',
     });
   });
 
@@ -17,7 +17,7 @@ describe('resolveDesktopLaunchPresentation', () => {
       }),
     ).toEqual({
       mode: 'testing',
-      appName: 'Personal Agent Testing',
+      appName: 'Neon Pilot Testing',
       launchLabel: 'Testing',
     });
   });
@@ -29,7 +29,7 @@ describe('resolveDesktopLaunchPresentation', () => {
       }),
     ).toEqual({
       mode: 'testing',
-      appName: 'Personal Agent Testing',
+      appName: 'Neon Pilot Testing',
       launchLabel: 'Testing',
     });
   });
@@ -41,7 +41,7 @@ describe('resolveDesktopLaunchPresentation', () => {
       }),
     ).toEqual({
       mode: 'dev',
-      appName: 'Personal Agent Dev',
+      appName: 'Neon Pilot Dev',
       launchLabel: 'Dev',
     });
   });
@@ -53,7 +53,7 @@ describe('resolveDesktopLaunchPresentation', () => {
       }),
     ).toEqual({
       mode: 'rc',
-      appName: 'Personal Agent RC',
+      appName: 'Neon Pilot RC',
       launchLabel: 'RC',
     });
   });
@@ -61,7 +61,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('uses the RC app presentation for packaged RC versions', () => {
     expect(resolveDesktopLaunchPresentation({}, { version: '0.7.9-rc.10', packaged: true })).toEqual({
       mode: 'rc',
-      appName: 'Personal Agent RC',
+      appName: 'Neon Pilot RC',
       launchLabel: 'RC',
     });
   });
@@ -69,7 +69,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('keeps unpackaged RC versions on the stable presentation unless explicitly marked', () => {
     expect(resolveDesktopLaunchPresentation({}, { version: '0.7.9-rc.10', packaged: false })).toEqual({
       mode: 'stable',
-      appName: 'Personal Agent',
+      appName: 'Neon Pilot',
     });
   });
 });

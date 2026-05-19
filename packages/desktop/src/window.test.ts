@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
-  app: { name: 'Personal Agent' },
+  app: { name: 'Neon Pilot' },
   protocol: {
     registerSchemesAsPrivileged: vi.fn(),
     handle: vi.fn(),
@@ -129,7 +129,7 @@ describe('shouldGrantDesktopMediaPermission', () => {
 describe('buildWindowTitle', () => {
   it('uses app name for local hosts', () => {
     const title = buildWindowTitle({ kind: 'local', id: 'local' } as unknown as Parameters<typeof buildWindowTitle>[0]);
-    expect(title).toBe('Personal Agent');
+    expect(title).toBe('Neon Pilot');
   });
 });
 

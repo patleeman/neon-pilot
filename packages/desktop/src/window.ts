@@ -136,7 +136,7 @@ export function shouldOpenNavigationExternally(currentUrl: string, targetUrl: st
 }
 
 export function buildWindowTitle(_host: DesktopHostRecord): string {
-  const appName = typeof app.name === 'string' && app.name.trim().length > 0 ? app.name.trim() : 'Personal Agent';
+  const appName = typeof app.name === 'string' && app.name.trim().length > 0 ? app.name.trim() : 'Neon Pilot';
   return appName;
 }
 

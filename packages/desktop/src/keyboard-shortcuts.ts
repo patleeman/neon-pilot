@@ -32,7 +32,7 @@ export interface CoreKeyboardShortcutRegistration {
 export const CORE_KEYBOARD_SHORTCUT_REGISTRATIONS: CoreKeyboardShortcutRegistration[] = [
   {
     id: 'showApp',
-    title: 'Show Personal Agent',
+    title: 'Show Neon Pilot',
     description: 'Bring the desktop window forward.',
     command: 'core.showApp',
     defaultKeys: ['CommandOrControl+Shift+A'],

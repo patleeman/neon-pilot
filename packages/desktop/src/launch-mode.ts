@@ -8,10 +8,10 @@ export interface DesktopLaunchPresentation {
   launchLabel?: string;
 }
 
-const DEFAULT_APP_NAME = 'Personal Agent';
-const RC_APP_NAME = 'Personal Agent RC';
-const DEV_APP_NAME = 'Personal Agent Dev';
-const TESTING_APP_NAME = 'Personal Agent Testing';
+const DEFAULT_APP_NAME = 'Neon Pilot';
+const RC_APP_NAME = 'Neon Pilot RC';
+const DEV_APP_NAME = 'Neon Pilot Dev';
+const TESTING_APP_NAME = 'Neon Pilot Testing';
 
 export function resolveDesktopLaunchPresentation(
   env: NodeJS.ProcessEnv = process.env,
