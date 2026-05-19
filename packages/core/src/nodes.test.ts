@@ -254,7 +254,7 @@ status: active
     );
 
     const migration = migrateLegacyNodes({ vaultRoot });
-    expect(migration.created).toEqual([]);
+    expect(migration.created).toEqual(['agent-browser']);
     expect(migration.updated).toEqual([]);
     expect(migration.conflicts).toEqual([]);
 

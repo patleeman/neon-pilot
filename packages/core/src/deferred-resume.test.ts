@@ -153,6 +153,7 @@ describe('deferred resume state', () => {
       alertLevel: 'none',
       autoResumeIfOpen: true,
       requireAck: false,
+      mode: 'batchable',
     });
   });
 
@@ -174,6 +175,7 @@ describe('deferred resume state', () => {
       alertLevel: 'none',
       autoResumeIfOpen: true,
       requireAck: false,
+      mode: 'batchable',
     });
   });
 
@@ -277,6 +279,7 @@ describe('deferred resume state', () => {
             alertLevel: 'none',
             autoResumeIfOpen: true,
             requireAck: false,
+            mode: 'batchable',
           },
         },
         'resume-2': {
@@ -292,6 +295,7 @@ describe('deferred resume state', () => {
             alertLevel: 'none',
             autoResumeIfOpen: true,
             requireAck: false,
+            mode: 'batchable',
           },
         },
       },

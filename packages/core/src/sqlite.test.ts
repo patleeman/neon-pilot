@@ -131,7 +131,7 @@ describe('openSqliteDatabase', () => {
     });
 
     expect(() => tx()).toThrow('boom');
-    expect(calls).toEqual(['SAVEPOINT "pa_tx_0"', 'ROLLBACK TO "pa_tx_0"']);
+    expect(calls).toEqual(['SAVEPOINT "pa_tx_0"', 'ROLLBACK TO "pa_tx_0"', 'RELEASE "pa_tx_0"']);
   });
 
   it('loads better-sqlite3 from the desktop native modules dir when provided', async () => {
