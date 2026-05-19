@@ -7,14 +7,14 @@
 ### Highlights
 
 - Added the main conversation session tree view, including sidebar branch rendering and denser, calmer row styling.
-- Improved transcript navigation with a disclosure setting and tighter conversation view toggle alignment.
-- Render file change diffs inline for wrapped tool calls and emit write-file changes from the source operation.
+- Improved transcript topology rendering with branch shelves, pinned durable tool outputs, a thin context rail, and cleaner tool rows.
+- Render file change diffs inline for wrapped and file-changing tool calls, with compact pinned diff actions in Internal Work.
 - Consolidated and hardened the agent tool surface, including provider-safe web tool names and object-shaped schemas.
-- Fixed release quality gates so Settings and extension smoke checks run before desktop RC publishing.
+- Fixed session tree parenting, queued callback previews, Settings release-gate coverage, and desktop RC quality checks.
 
 ### Notes
 
-- 31 commits since the previous release.
+- 135 commits since the previous release.
 
 ## 0.8.0-rc.18 — 2026-05-17
 
