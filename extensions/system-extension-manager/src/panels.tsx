@@ -556,6 +556,11 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
         .filter(Boolean);
       try {
         await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { keys });
+        setKeybindingDraft((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
         showActionNotice(`Updated ${keybinding.title}`);
         loadCommandInspector();
       } catch (err) {
@@ -618,20 +623,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
         setNotice(`Created ${result.packageRoot}`);
         notifyExtensionRegistryChanged();
         await load();
-        // Auto-build the newly created extension so its frontend is immediately usable.
-        try {
-          const buildResult = await api.buildExtension(result.extension?.id ?? draft.id.trim());
-          setNotice(
-            buildResult.outputs.length > 0
-              ? `Created and built ${buildResult.outputs.length} bundle output${buildResult.outputs.length === 1 ? '' : 's'}.`
-              : 'Created extension with no build outputs.',
-          );
-          await api.reloadExtension(result.extension?.id ?? draft.id.trim()).catch(() => undefined);
-          notifyExtensionRegistryChanged();
-          await load();
-        } catch {
-          setNotice(`Created extension at ${result.packageRoot}. Build manually from the actions menu.`);
-        }
+        setNotice(`Created extension at ${result.packageRoot}. Build it outside the app, then reload.`);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -654,20 +646,6 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
         setNotice(`Imported ${result.packageRoot}`);
         notifyExtensionRegistryChanged();
         await load();
-        // Auto-build the imported extension.
-        try {
-          const extId = result.extension?.id;
-          if (extId) {
-            const buildResult = await api.buildExtension(extId);
-            if (buildResult.outputs.length > 0) {
-              await api.reloadExtension(extId).catch(() => undefined);
-              notifyExtensionRegistryChanged();
-              await load();
-            }
-          }
-        } catch {
-          // Imported extension may already have built outputs — that's fine.
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
