@@ -8,6 +8,8 @@ import type { DesktopEnvironmentState, DesktopNavigationState } from '../shared/
 import type { AppLayoutMode } from '../ui-state/appLayoutMode';
 import { ToolbarButton } from './ui';
 
+const OPEN_COMMAND_PALETTE_EVENT = 'pa:command-palette-open';
+
 function LeftSidebarToggleIcon({ open }: { open: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
@@ -218,6 +220,12 @@ export function DesktopTopBar({
             →
           </ToolbarButton>
         </div>
+        <div className="ml-1 flex h-6 items-center gap-1.5 border-l border-border-subtle pl-2" style={noDragStyle}>
+          <div className="grid h-[18px] w-[18px] place-items-center rounded bg-accent font-mono text-[11px] font-bold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)]">
+            N
+          </div>
+          <span className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</span>
+        </div>
         {launchBadgeLabel ? (
           <div className="ui-desktop-top-bar__mode-badge" title="Launched from the command line">
             {launchBadgeLabel}
@@ -225,10 +233,17 @@ export function DesktopTopBar({
         ) : null}
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
-        <div className="grid h-[18px] w-[18px] place-items-center rounded bg-accent font-mono text-[11px] font-bold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)]">
-          N
-        </div>
-        <div className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</div>
+        <button
+          type="button"
+          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors hover:border-accent/25 hover:bg-surface hover:text-secondary"
+          style={noDragStyle}
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: {} }))}
+          aria-label="Search threads, models, settings"
+        >
+          <span aria-hidden="true">⌕</span>
+          <span className="min-w-0 flex-1 truncate font-mono tracking-[0.05em]">Search threads, models, settings…</span>
+          <span className="ui-kbd">⌘K</span>
+        </button>
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
         {topBarElements.map((element) => (

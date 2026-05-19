@@ -378,13 +378,13 @@ function SettingsPanel({
     <section
       id={id}
       className={cx(
-        'scroll-mt-24 grid gap-5 border-t border-border-subtle/70 py-6 first:border-t-0 first:pt-0 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start lg:gap-8',
+        'scroll-mt-24 grid gap-5 border-t border-border-subtle py-7 first:border-t-0 first:pt-0 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8',
         className,
       )}
     >
       <div className="min-w-0 space-y-2">
         <div className="space-y-1.5">
-          <h3 className="text-[15px] font-medium tracking-tight text-primary">{title}</h3>
+          <h3 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">{title}</h3>
           {description ? <p className="max-w-sm text-[12px] leading-5 text-secondary">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{actions}</div> : null}

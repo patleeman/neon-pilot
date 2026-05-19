@@ -562,11 +562,11 @@
   }
 
   .ui-app-page-section {
-    @apply scroll-mt-24 space-y-5;
+    @apply scroll-mt-24 border-b border-border-subtle py-7 last:border-b-0 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8;
   }
 
   .ui-app-page-section-body {
-    @apply border-t border-border-subtle pt-5;
+    @apply min-w-0 pt-5 lg:pt-0;
   }
 
   .ui-app-page-toc-title {
