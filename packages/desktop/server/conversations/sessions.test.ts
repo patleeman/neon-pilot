@@ -15,6 +15,7 @@ import {
   readSessionBlocks,
   readSessionBlocksWithTelemetry,
   readSessionImageAsset,
+  readSessionMetaByFile,
   readSessionSearchText,
   renameStoredSession,
 } from './sessions.js';
@@ -2129,6 +2130,38 @@ describe('sessions', () => {
           sourceRunId: 'run-indexed-subagent',
         }),
       ]),
+    );
+  });
+
+  it('resolves parent ids when opening a child conversation by file from the metadata index', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'file-parent-session',
+      title: 'File parent session',
+      assistantTexts: ['Parent reply'],
+    });
+
+    const childSessionFile = writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-file-subagent',
+      sessionId: 'file-child-session',
+      title: 'File child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    expect(listSessions()).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'file-child-session' })]));
+
+    expect(readSessionMetaByFile(childSessionFile)).toEqual(
+      expect.objectContaining({
+        id: 'file-child-session',
+        parentSessionFile,
+        parentSessionId: 'file-parent-session',
+        sourceRunId: 'run-file-subagent',
+      }),
     );
   });
 

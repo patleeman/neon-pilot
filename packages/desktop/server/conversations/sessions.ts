@@ -1887,6 +1887,19 @@ function decorateSessionParentIds(metas: SessionMeta[]): SessionMeta[] {
   });
 }
 
+function resolveSessionIdByFile(filePath: string): string | undefined {
+  const normalizedFilePath = normalizeOptionalPath(filePath);
+  if (!normalizedFilePath) return undefined;
+
+  for (const [sessionId, sessionFile] of sessionFileById.entries()) {
+    if (normalizeOptionalPath(sessionFile) === normalizedFilePath) {
+      return sessionId;
+    }
+  }
+
+  return undefined;
+}
+
 function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta | null {
   const raw = readFileSync(filePath, 'utf-8');
   let sessionRecord: RawSessionRecord | null = null;
@@ -2454,7 +2467,7 @@ export function readSessionMetaByFile(filePath: string): SessionMeta | null {
   }
 
   const parentSessionFile = normalizeOptionalPath(meta.parentSessionFile);
-  const parentSessionId = parentSessionFile ? sessionFileById.get(parentSessionFile) : undefined;
+  const parentSessionId = parentSessionFile ? resolveSessionIdByFile(parentSessionFile) : undefined;
   if (meta.parentSessionFile === parentSessionFile && meta.parentSessionId === parentSessionId) {
     return meta;
   }
