@@ -1101,7 +1101,9 @@ export class KnowledgeBaseManager {
           syncStatus: 'error',
           lastError: 'Remote snapshot is empty but remote ref exists and local state has content. Skipping sync to prevent data loss.',
         });
-        return this.readState();
+        const nextState = this.readState();
+        this.notifyListeners(previousState, nextState);
+        return nextState;
       }
 
       if (hasRecentLocalChanges(root, baseSnapshot, workingSnapshot, Date.now())) {
