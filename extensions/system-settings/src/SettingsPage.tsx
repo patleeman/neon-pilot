@@ -625,6 +625,11 @@ function KeyboardShortcutCaptureInput({
       <span className={cx('block truncate', capturing && 'text-accent', invalid && 'text-danger')}>
         {capturing ? (invalid ? 'Use a modifier, or press an F-key…' : 'Press shortcut…') : formatKeyboardShortcutLabel(value)}
       </span>
+      {capturing ? (
+        <span className="mt-1 block text-[10px] leading-tight text-warning">
+          Some shortcuts (Cmd+Q, Cmd+W, Cmd+N) are reserved by the app and cannot be captured here. Use the desktop app menu to change them.
+        </span>
+      ) : null}
     </button>
   );
 }
