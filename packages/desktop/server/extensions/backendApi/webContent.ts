@@ -13,13 +13,24 @@ export interface SearchHtmlResult {
   snippet: string;
 }
 
+function extractTitle(html: string): string | undefined {
+  const match = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  if (!match || !match[1]) return undefined;
+  return match[1].trim() || undefined;
+}
+
 export async function extractReadableHtml(input: { html: string; url: string }): Promise<ReadableHtmlResult> {
+  const title = extractTitle(input.html);
   const markdown = extractTextFallback(input.html)
     .replace(/ +/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   if (!markdown) return { markdown: '(Could not extract readable content from page)' };
-  return { markdown };
+  const result: ReadableHtmlResult = { markdown };
+  if (title) {
+    result.title = title;
+  }
+  return result;
 }
 
 function extractTextFallback(html: string): string {
