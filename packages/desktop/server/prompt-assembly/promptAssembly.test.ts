@@ -46,7 +46,7 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
       title: 'Bad Templates',
     },
   ],
-  listExtensionPromptAssemblyHookRegistrations: () => [],
+  listExtensionPromptAssemblyHookRegistrations: () => promptAssemblyHooks,
   listExtensionSkillRegistrations: () => [
     {
       extensionId: 'test-extension',
@@ -100,6 +100,9 @@ vi.mock('../extensions/extensionBackend.js', () => ({
     if (action === 'provideBadTemplates') {
       return { ok: true, result: { templates: [{ id: 'bad-template', title: 'Bad Template', location: { kind: 'file' } }] } };
     }
+    if (action === 'replaceDiagnostics') {
+      return { ok: true, result: { plan: { diagnostics: [] } } };
+    }
     return { ok: false, error: new Error(`Unexpected action ${action}`) };
   }),
 }));
@@ -110,6 +113,7 @@ let configuredSkillsDir = '';
 let promptTemplatePath = '';
 let extensionRoot = '';
 let extensionSkillPath = '';
+let promptAssemblyHooks: unknown[] = [];
 
 describe('buildPromptAssemblyPlan', () => {
   it('assembles skills, tools, and prompt templates through canonical inventories', async () => {
@@ -119,6 +123,7 @@ describe('buildPromptAssemblyPlan', () => {
     configuredSkillsDir = join(root, 'configured-skills');
     extensionRoot = join(root, 'extension');
     promptTemplatePath = join(root, 'prompts', 'summary.md');
+    promptAssemblyHooks = [];
 
     mkdirSync(join(durableSkillsDir, 'vault-skill'), { recursive: true });
     writeFileSync(join(durableSkillsDir, 'vault-skill', 'SKILL.md'), '---\nname: Vault Skill\ndescription: Vault skill description\n---\n');
@@ -151,5 +156,31 @@ describe('buildPromptAssemblyPlan', () => {
     expect(plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
     expect(asyncPlan.skills.skillPaths).toEqual(plan.skills.skillPaths);
     expect(asyncPlan.tools.activeToolNames).toEqual(plan.tools.activeToolNames);
+  });
+
+  it('preserves existing diagnostics when hooks return a replacement plan', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-prompt-assembly-hooks-'));
+    stateRoot = join(root, 'state');
+    durableSkillsDir = join(root, 'vault', 'skills');
+    configuredSkillsDir = join(root, 'configured-skills');
+    extensionRoot = join(root, 'extension');
+    promptTemplatePath = join(root, 'prompts', 'summary.md');
+    promptAssemblyHooks = [
+      {
+        extensionId: 'test-extension',
+        id: 'replace-diagnostics',
+        handler: 'replaceDiagnostics',
+        phase: 'after-assembly',
+      },
+    ];
+
+    mkdirSync(join(root, 'prompts'), { recursive: true });
+    writeFileSync(promptTemplatePath, '# Summary\n');
+
+    const { buildPromptAssemblyPlanAsync } = await import('./promptAssembly.js');
+    const asyncPlan = await buildPromptAssemblyPlanAsync({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+
+    expect(asyncPlan.diagnostics.filter((diagnostic) => diagnostic.code === 'prompt-assembly-provider-invalid-item')).toHaveLength(2);
+    promptAssemblyHooks = [];
   });
 });

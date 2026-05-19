@@ -88,7 +88,13 @@ async function runPromptAssemblyHooks(plan: PromptAssemblyPlan, ctx: AssemblyRun
         return;
       }
       const payload = result.result as { plan?: PromptAssemblyPlan; diagnostics?: PromptAssemblyPlan['diagnostics'] } | undefined;
-      if (payload?.plan) Object.assign(plan, payload.plan);
+      const returnedPlanDiagnostics = Array.isArray(payload?.plan?.diagnostics) ? payload.plan.diagnostics : [];
+      if (payload?.plan) {
+        const nextPlan = { ...payload.plan };
+        delete nextPlan.diagnostics;
+        Object.assign(plan, nextPlan);
+      }
+      if (returnedPlanDiagnostics.length > 0) plan.diagnostics.push(...returnedPlanDiagnostics);
       if (Array.isArray(payload?.diagnostics)) plan.diagnostics.push(...payload.diagnostics);
     }),
   );
