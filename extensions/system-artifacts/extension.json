@@ -32,7 +32,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["save", "get", "list", "delete"]
+              "description": "Artifact operation. Use one of: save, get, list, delete."
             },
             "artifactId": {
               "type": "string",
@@ -40,7 +40,7 @@
             },
             "kind": {
               "type": "string",
-              "enum": ["html", "mermaid", "latex"]
+              "description": "Artifact type for save operations. Use one of: html, mermaid, latex."
             },
             "title": {
               "type": "string",
