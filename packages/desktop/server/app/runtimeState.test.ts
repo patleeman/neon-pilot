@@ -155,12 +155,18 @@ describe('createRuntimeState', () => {
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
   });
 
-  it('allows extensions to set session-scoped active tools', () => {
-    let guardedPi: { setActiveTools: (tools: string[]) => void } | null = null;
+  it('blocks global active tool mutation but allows lifecycle-scoped active tools', () => {
+    let guardedPi: {
+      setActiveTools: (tools: string[]) => void;
+      on: (event: string, handler: (...args: unknown[]) => unknown) => void;
+    } | null = null;
     createManifestAgentExtensionsMock.mockReturnValueOnce({
       factories: [
         vi.fn((pi) => {
-          guardedPi = pi as { setActiveTools: (tools: string[]) => void };
+          guardedPi = pi as {
+            setActiveTools: (tools: string[]) => void;
+            on: (event: string, handler: (...args: unknown[]) => unknown) => void;
+          };
         }),
       ],
       errors: [],
@@ -181,7 +187,13 @@ describe('createRuntimeState', () => {
     factory?.(pi as never);
 
     expect(guardedPi).not.toBeNull();
-    guardedPi?.setActiveTools(['read']);
+    expect(() => guardedPi?.setActiveTools(['read'])).toThrow('pi.setActiveTools is unsupported');
+    guardedPi?.on('session_start', (_event, ctx: { setActiveTools?: (tools: string[]) => void }) => {
+      ctx.setActiveTools?.(['read']);
+    });
+    const registered = pi.on.mock.calls[0];
+    expect(registered?.[0]).toBe('session_start');
+    (registered?.[1] as (...args: unknown[]) => unknown)({}, { model: { provider: 'test', id: 'model' } });
     expect(pi.setActiveTools).toHaveBeenCalledWith(['read']);
   });
 

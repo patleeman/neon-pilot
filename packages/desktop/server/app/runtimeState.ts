@@ -164,9 +164,10 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
    * need to influence the system prompt should write to those files during
    * setup, not override at runtime.
    *
-   * Tool registration is stable for the life of a session. Extensions may
-   * still use pi.setActiveTools for session-scoped model profile behavior;
-   * this only changes the active allowlist over already-registered tools.
+   * Tool registration is stable for the life of a session. Extensions may use
+   * ctx.setActiveTools from session_start/model_select handlers for
+   * session-scoped model profile behavior; this only changes the active
+   * allowlist over already-registered tools.
    */
   function guardExtensionApi(factory: ExtensionFactory): ExtensionFactory {
     return (pi: ExtensionAPI) => {
@@ -177,8 +178,26 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
       const guardedPi = new Proxy(apiWithProcessWrappers, {
         get(target, prop, receiver) {
+          if (prop === 'setActiveTools') {
+            return () => {
+              throw new Error('pi.setActiveTools is unsupported. Use ctx.setActiveTools from session_start or model_select handlers.');
+            };
+          }
           if (prop === 'on') {
             return (event: string, handler: (...args: unknown[]) => unknown) => {
+              const wrapLifecycleContext = (args: unknown[]): unknown[] => {
+                if (event !== 'session_start' && event !== 'model_select') return args;
+                const ctx = args[1];
+                if (!ctx || typeof ctx !== 'object') return args;
+                return [
+                  args[0],
+                  {
+                    ...(ctx as Record<string, unknown>),
+                    setActiveTools: (toolNames: string[]) => target.setActiveTools(toolNames),
+                  },
+                  ...args.slice(2),
+                ];
+              };
               if (event === 'before_agent_start') {
                 const wrappedHandler = async (...args: unknown[]) => {
                   const result = await handler(...args);
@@ -190,7 +209,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
                 };
                 return Reflect.apply(target.on, target, [event, wrappedHandler]);
               }
-              return Reflect.apply(target.on, target, [event, handler]);
+              return Reflect.apply(target.on, target, [event, (...args: unknown[]) => handler(...wrapLifecycleContext(args))]);
             };
           }
           return Reflect.get(target, prop, receiver);

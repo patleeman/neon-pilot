@@ -758,11 +758,12 @@ These entrypoints are intended for long-lived protocol sessions, not one-shot ac
 Extensions can register agent-callable tools. The agent sees them as
 `extension_{extensionId}_{toolId}` unless a custom `name` is given.
 
-Tool availability is intentionally stable for the life of an agent session.
-Do not mutate the active tool list at runtime; register tools once and return a
-clear validation error from the handler when the current app state does not
-support a call. The legacy `setActiveTools` API is deprecated and blocked by the
-desktop runtime.
+Tool registration is intentionally stable for the life of an agent session.
+Register tools once and return a clear validation error from the handler when
+the current app state does not support a call. Global `pi.setActiveTools` is
+blocked by the desktop runtime; model profile extensions may use
+`ctx.setActiveTools(...)` from `session_start` or `model_select` handlers to
+choose a session-scoped active tool surface over already-registered tools.
 
 The tool definition already gives the model the `description` and JSON-schema
 `inputSchema`, including parameter descriptions. Keep `promptGuidelines`

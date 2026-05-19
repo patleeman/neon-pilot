@@ -66,14 +66,14 @@ function isCodexProfileModel(model: unknown): boolean {
   return candidate.provider === 'openai-codex' && typeof candidate.id === 'string';
 }
 
-function activateCodexTools(pi: ExtensionAPI, ctx: { model?: unknown }): void {
+function activateCodexTools(ctx: { model?: unknown; setActiveTools?: (toolNames: string[]) => void }): void {
   if (!isCodexProfileModel(ctx.model)) return;
-  pi.setActiveTools(['bash', 'apply_patch']);
+  ctx.setActiveTools?.(['bash', 'apply_patch']);
 }
 
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
-  pi.on('session_start', (_event, ctx) => activateCodexTools(pi, ctx));
-  pi.on('model_select', (_event, ctx) => activateCodexTools(pi, ctx));
+  pi.on('session_start', (_event, ctx) => activateCodexTools(ctx));
+  pi.on('model_select', (_event, ctx) => activateCodexTools(ctx));
   codexCompactionExtension(pi);
 }
 
