@@ -68,9 +68,9 @@ const componentLoaders: Record<string, () => Promise<{ default: ExtensionHostVie
   }),
 };
 
-export const hostViewComponentDefinitions: HostViewComponentDefinition[] = [...HOST_VIEW_COMPONENT_DEFINITIONS];
+const hostViewComponentDefinitions: HostViewComponentDefinition[] = [...HOST_VIEW_COMPONENT_DEFINITIONS];
 
-export const hostViewComponentRegistry = new Map(
+const hostViewComponentRegistry = new Map(
   hostViewComponentDefinitions.map((definition) => [definition.id, { ...definition, load: componentLoaders[definition.id] }]),
 );
 
@@ -80,7 +80,7 @@ export function isHostViewComponentReference(
   return Boolean(value && typeof value === 'object' && !Array.isArray(value) && typeof (value as { host?: unknown }).host === 'string');
 }
 
-export function getHostViewComponentDefinition(
+function getHostViewComponentDefinition(
   id: string,
 ): (HostViewComponentDefinition & { load?: () => Promise<{ default: ExtensionHostViewComponent }> }) | undefined {
   return hostViewComponentRegistry.get(id);

@@ -55,10 +55,6 @@ export function setExtensionCommandContext(key: string, value: ExtensionCommandC
   window.dispatchEvent(new CustomEvent('pa-extension-command-context-changed', { detail: { key, value } }));
 }
 
-export function getExtensionCommandContext(): ExtensionCommandContext {
-  return Object.fromEntries(extensionCommandContext.entries());
-}
-
 export function evaluateCommandEnablement(expression: string | undefined, context: ExtensionCommandContext = {}): boolean {
   const trimmed = expression?.trim();
   if (!trimmed) return true;
