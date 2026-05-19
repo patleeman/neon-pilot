@@ -3,31 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   buildConversationInitialModelPreferenceState,
   buildConversationServiceTierPreferenceInput,
-  DRAFT_SERVICE_TIER_DISABLED_SENTINEL,
   resolveConversationDraftHydrationState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
-  resolveDraftConversationServiceTierState,
 } from './conversationInitialState';
 
 describe('conversation initial state helpers', () => {
-  it('resolves draft service-tier persistence without confusing default priority for an explicit choice', () => {
-    expect(resolveDraftConversationServiceTierState('', 'priority')).toEqual({
-      currentServiceTier: 'priority',
-      hasExplicitServiceTier: false,
-    });
-
-    expect(resolveDraftConversationServiceTierState('standard', 'priority')).toEqual({
-      currentServiceTier: 'standard',
-      hasExplicitServiceTier: true,
-    });
-
-    expect(resolveDraftConversationServiceTierState(DRAFT_SERVICE_TIER_DISABLED_SENTINEL, 'priority')).toEqual({
-      currentServiceTier: '',
-      hasExplicitServiceTier: true,
-    });
-  });
-
   it('only persists service tier when the user made an explicit choice', () => {
     expect(
       buildConversationServiceTierPreferenceInput({

@@ -8,7 +8,6 @@ import {
   clearDraftConversationCwd,
   clearDraftConversationModel,
   clearDraftConversationModelPreferences,
-  clearDraftConversationServiceTier,
   clearDraftConversationThinkingLevel,
   hasConversationAttachments,
   hasDraftConversationAttachments,
@@ -17,14 +16,12 @@ import {
   persistDraftConversationComposer,
   persistDraftConversationCwd,
   persistDraftConversationModel,
-  persistDraftConversationServiceTier,
   persistDraftConversationThinkingLevel,
   readConversationAttachments,
   readDraftConversationAttachments,
   readDraftConversationComposer,
   readDraftConversationCwd,
   readDraftConversationModel,
-  readDraftConversationServiceTier,
   readDraftConversationThinkingLevel,
 } from './draftConversation';
 
@@ -46,7 +43,6 @@ const DRAFT_CONVERSATION_CWD_STORAGE_KEY = 'pa:reload:conversation:draft:cwd';
 const DRAFT_CONVERSATION_ATTACHMENTS_STORAGE_KEY = 'pa:reload:conversation:draft:attachments';
 const DRAFT_CONVERSATION_MODEL_STORAGE_KEY = 'pa:reload:conversation:draft:model';
 const DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY = 'pa:reload:conversation:draft:thinking-level';
-const DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY = 'pa:reload:conversation:draft:service-tier';
 
 describe('draftConversation', () => {
   it('uses dedicated draft storage keys', () => {
@@ -77,14 +73,12 @@ describe('draftConversation', () => {
     );
     persistDraftConversationModel('gpt-5.4', storage);
     persistDraftConversationThinkingLevel('high', storage);
-    persistDraftConversationServiceTier('priority', storage);
 
     expect(storage.getItem(DRAFT_CONVERSATION_COMPOSER_STORAGE_KEY)).toBe(JSON.stringify('composer'));
     expect(storage.getItem(DRAFT_CONVERSATION_CWD_STORAGE_KEY)).toBe(JSON.stringify('/tmp/project'));
     expect(storage.getItem(DRAFT_CONVERSATION_ATTACHMENTS_STORAGE_KEY)).not.toBeNull();
     expect(storage.getItem(DRAFT_CONVERSATION_MODEL_STORAGE_KEY)).toBe(JSON.stringify('gpt-5.4'));
     expect(storage.getItem(DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY)).toBe(JSON.stringify('high'));
-    expect(storage.getItem(DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY)).toBe(JSON.stringify('priority'));
   });
 
   it('persists and reads the draft composer text', () => {
@@ -163,39 +157,17 @@ describe('draftConversation', () => {
     expect(storage.getItem(DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY)).toBeNull();
   });
 
-  it('persists and reads the draft service tier', () => {
-    const storage = createStorage();
-
-    persistDraftConversationServiceTier('priority', storage);
-
-    expect(readDraftConversationServiceTier(storage)).toBe('priority');
-    expect(storage.getItem(DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY)).toBe(JSON.stringify('priority'));
-  });
-
-  it('clears the stored draft service tier', () => {
-    const storage = createStorage();
-
-    persistDraftConversationServiceTier('priority', storage);
-    clearDraftConversationServiceTier(storage);
-
-    expect(readDraftConversationServiceTier(storage)).toBe('');
-    expect(storage.getItem(DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY)).toBeNull();
-  });
-
   it('clears draft model preferences together', () => {
     const storage = createStorage();
 
     persistDraftConversationModel('gpt-5.4', storage);
     persistDraftConversationThinkingLevel('high', storage);
-    persistDraftConversationServiceTier('priority', storage);
     clearDraftConversationModelPreferences(storage);
 
     expect(readDraftConversationModel(storage)).toBe('');
     expect(readDraftConversationThinkingLevel(storage)).toBe('');
-    expect(readDraftConversationServiceTier(storage)).toBe('');
     expect(storage.getItem(DRAFT_CONVERSATION_MODEL_STORAGE_KEY)).toBeNull();
     expect(storage.getItem(DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY)).toBeNull();
-    expect(storage.getItem(DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY)).toBeNull();
   });
 
   it('persists and reads draft attachments', () => {

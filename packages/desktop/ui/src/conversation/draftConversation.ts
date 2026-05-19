@@ -11,7 +11,6 @@ const DRAFT_CONVERSATION_CWD_STORAGE_KEY = 'pa:reload:conversation:draft:cwd';
 const DRAFT_CONVERSATION_ATTACHMENTS_STORAGE_KEY = 'pa:reload:conversation:draft:attachments';
 const DRAFT_CONVERSATION_MODEL_STORAGE_KEY = 'pa:reload:conversation:draft:model';
 const DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY = 'pa:reload:conversation:draft:thinking-level';
-const DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY = 'pa:reload:conversation:draft:service-tier';
 const DRAFT_CONVERSATION_CONTEXT_DOCS_STORAGE_KEY = 'pa:reload:conversation:draft:context-docs';
 
 let draftConversationAttachmentsMutationVersion = 0;
@@ -61,10 +60,6 @@ function buildDraftConversationThinkingLevelStorageKey(): string {
   return DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY;
 }
 
-function buildDraftConversationServiceTierStorageKey(): string {
-  return DRAFT_CONVERSATION_SERVICE_TIER_STORAGE_KEY;
-}
-
 function buildDraftConversationContextDocsStorageKey(): string {
   return DRAFT_CONVERSATION_CONTEXT_DOCS_STORAGE_KEY;
 }
@@ -82,10 +77,6 @@ function normalizeDraftConversationModel(value: unknown): string {
 }
 
 function normalizeDraftConversationThinkingLevel(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function normalizeDraftConversationServiceTier(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
@@ -361,34 +352,9 @@ export function clearDraftConversationThinkingLevel(storage: StorageLike | null 
   emitDraftConversationStateChanged();
 }
 
-export function readDraftConversationServiceTier(storage: StorageLike | null = getSessionStorage()): string {
-  return readStoredState<string>({
-    key: buildDraftConversationServiceTierStorageKey(),
-    fallback: '',
-    storage,
-    deserialize: (raw) => normalizeDraftConversationServiceTier(JSON.parse(raw) as unknown),
-  });
-}
-
-export function persistDraftConversationServiceTier(serviceTier: string, storage: StorageLike | null = getSessionStorage()): void {
-  persistStoredState({
-    key: buildDraftConversationServiceTierStorageKey(),
-    value: serviceTier,
-    storage,
-    shouldPersist: (value) => value.trim().length > 0,
-  });
-  emitDraftConversationStateChanged();
-}
-
-export function clearDraftConversationServiceTier(storage: StorageLike | null = getSessionStorage()): void {
-  clearStoredState(storage, buildDraftConversationServiceTierStorageKey());
-  emitDraftConversationStateChanged();
-}
-
 export function clearDraftConversationModelPreferences(storage: StorageLike | null = getSessionStorage()): void {
   clearStoredState(storage, buildDraftConversationModelStorageKey());
   clearStoredState(storage, buildDraftConversationThinkingLevelStorageKey());
-  clearStoredState(storage, buildDraftConversationServiceTierStorageKey());
   emitDraftConversationStateChanged();
 }
 

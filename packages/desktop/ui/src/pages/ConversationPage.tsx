@@ -60,7 +60,6 @@ import {
   resolveConversationDraftHydrationState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
-  resolveDraftConversationServiceTierState,
 } from '../conversation/conversationInitialState';
 import {
   buildMentionItems,
@@ -136,7 +135,6 @@ import {
   readDraftConversationContextDocs,
   readDraftConversationCwd,
   readDraftConversationModel,
-  readDraftConversationServiceTier,
   readDraftConversationThinkingLevel,
 } from '../conversation/draftConversation';
 import {
@@ -1398,7 +1396,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
 
     const syncDraftPreferences = () => {
-      const serviceTierState = resolveDraftConversationServiceTierState(readDraftConversationServiceTier(), defaultServiceTier);
       setCurrentModel(
         resolveSelectableModelId({
           requestedModel: readDraftConversationModel(),
@@ -1407,8 +1404,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         }),
       );
       setCurrentThinkingLevel(readDraftConversationThinkingLevel().trim() || defaultThinkingLevel);
-      setCurrentServiceTier(serviceTierState.currentServiceTier);
-      setHasExplicitServiceTier(serviceTierState.hasExplicitServiceTier);
+      setCurrentServiceTier(defaultServiceTier);
+      setHasExplicitServiceTier(false);
       setDraftCwdValue(readDraftConversationCwd().trim());
     };
 

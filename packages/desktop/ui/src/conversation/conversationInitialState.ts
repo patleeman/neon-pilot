@@ -22,27 +22,6 @@ interface ConversationLocationState {
   draftHydrationState?: ConversationDraftHydrationState;
 }
 
-export const DRAFT_SERVICE_TIER_DISABLED_SENTINEL = '__pa_draft_fast_mode_disabled__';
-
-export function resolveDraftConversationServiceTierState(
-  storedServiceTier: string,
-  defaultServiceTier: string,
-): { currentServiceTier: string; hasExplicitServiceTier: boolean } {
-  const normalizedStoredServiceTier = storedServiceTier.trim();
-  if (normalizedStoredServiceTier === DRAFT_SERVICE_TIER_DISABLED_SENTINEL) {
-    return { currentServiceTier: '', hasExplicitServiceTier: true };
-  }
-
-  if (normalizedStoredServiceTier) {
-    return { currentServiceTier: normalizedStoredServiceTier, hasExplicitServiceTier: true };
-  }
-
-  return {
-    currentServiceTier: defaultServiceTier.trim(),
-    hasExplicitServiceTier: false,
-  };
-}
-
 export function buildConversationServiceTierPreferenceInput(input: { currentServiceTier: string; hasExplicitServiceTier: boolean }): {
   serviceTier?: string | null;
 } {
