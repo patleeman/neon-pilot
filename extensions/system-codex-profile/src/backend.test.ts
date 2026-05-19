@@ -36,6 +36,33 @@ describe('codex tool activation', () => {
       ['read', 'write'],
     ]);
   });
+
+  it('does not restore stale Codex tools into a new non-Codex session', () => {
+    const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
+    codexCompatibilityExtension({
+      on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
+    } as never);
+    const calls: string[][] = [];
+
+    handlers.get('session_start')?.(
+      {},
+      {
+        getActiveTools: () => ['read', 'write'],
+        setActiveTools: (tools: string[]) => calls.push(tools),
+        modelProfile: { kind: 'resolved', profile: { id: 'codex-compatible' } },
+      },
+    );
+    handlers.get('session_start')?.(
+      {},
+      {
+        getActiveTools: () => ['read', 'write', 'edit'],
+        setActiveTools: (tools: string[]) => calls.push(tools),
+        modelProfile: { kind: 'none' },
+      },
+    );
+
+    expect(calls).toEqual([['bash', 'apply_patch']]);
+  });
 });
 
 describe('applyPatch', () => {

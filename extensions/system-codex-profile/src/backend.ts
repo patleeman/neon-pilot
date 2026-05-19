@@ -60,13 +60,17 @@ interface ApplyPatchOutcome {
 
 type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd?: string } };
 
-function activateCodexTools(ctx: {
-  modelProfile?: { kind?: string; profile?: { id?: string } };
-  setActiveTools?: (toolNames: string[]) => void;
-  getActiveTools?: () => string[];
-}): void {
+function activateCodexTools(
+  ctx: {
+    modelProfile?: { kind?: string; profile?: { id?: string } };
+    setActiveTools?: (toolNames: string[]) => void;
+    getActiveTools?: () => string[];
+  },
+  options: { restoreOnNonCodex: boolean },
+): void {
   if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
-    restoreNonCodexTools(ctx);
+    if (options.restoreOnNonCodex) restoreNonCodexTools(ctx);
+    else lastNonCodexActiveTools = undefined;
     return;
   }
   lastNonCodexActiveTools = ctx.getActiveTools?.() ?? lastNonCodexActiveTools;
@@ -82,8 +86,8 @@ function restoreNonCodexTools(ctx: { setActiveTools?: (toolNames: string[]) => v
 }
 
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
-  pi.on('session_start', (_event, ctx) => activateCodexTools(ctx));
-  pi.on('model_select', (_event, ctx) => activateCodexTools(ctx));
+  pi.on('session_start', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: false }));
+  pi.on('model_select', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: true }));
   codexCompactionExtension(pi);
 }
 
