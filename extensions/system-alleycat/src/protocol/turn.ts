@@ -7,7 +7,20 @@ import { mutateWorkspace, workspaceList } from './workspaceState.js';
 // Track per-turn subscriptions keyed by threadId so they can be cleaned up
 // on connection drop. Map<threadId, Set<unsubscribeFn>>
 const turnSubscriptions = new Map<string, Set<() => void>>();
-const activeTurns = new Map<string, { turnId: string; interrupted: boolean }>();
+interface ActiveTurnState {
+  turnId: string;
+  threadId: string;
+  interrupted: boolean;
+}
+
+const activeTurns = new Map<string, ActiveTurnState>();
+
+function findActiveTurnForThread(threadId: string): ActiveTurnState | undefined {
+  for (const state of activeTurns.values()) {
+    if (state.threadId === threadId) return state;
+  }
+  return undefined;
+}
 
 function uid(prefix = ''): string {
   return `${prefix}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -188,7 +201,7 @@ export const turn = {
     if (!text && images.length === 0) throw new Error('input must contain at least one text or image item');
 
     const turnId = uid('turn-');
-    const turnState = { turnId, interrupted: false };
+    const turnState: ActiveTurnState = { turnId, threadId, interrupted: false };
     // Key by turnId so interrupt can target the specific turn,
     // not whichever turn was last started on this thread.
     activeTurns.set(turnId, turnState);
@@ -443,7 +456,7 @@ export const turn = {
     // Look up by turnId when provided so we interrupt the correct turn,
     // not whichever turn was last started on this thread.
     const requestedTurnId = p?.turnId as string | undefined;
-    const turnState = requestedTurnId ? activeTurns.get(requestedTurnId) : activeTurns.get(threadId);
+    const turnState = requestedTurnId ? activeTurns.get(requestedTurnId) : findActiveTurnForThread(threadId);
     if (turnState) turnState.interrupted = true;
     conn.activeTurnThreads.delete(threadId);
 
