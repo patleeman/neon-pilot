@@ -20,8 +20,6 @@
       { "id": "listHostViewComponents", "handler": "listHostViewComponents", "title": "List host view components" },
       { "id": "readSearchPaths", "handler": "readSearchPaths", "title": "Read extension search paths" },
       { "id": "updateSearchPaths", "handler": "updateSearchPaths", "title": "Update extension search paths" },
-      { "id": "listSkills", "handler": "listSkills", "title": "List skills" },
-      { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" },
       { "id": "manageExtension", "handler": "manageExtension", "title": "Manage extension" }
     ]
   },
@@ -41,13 +39,6 @@
         "route": "/extensions",
         "icon": "sparkle",
         "section": "settings"
-      },
-      {
-        "id": "skills-nav",
-        "label": "Skills",
-        "route": "/skills",
-        "icon": "skills",
-        "section": "settings"
       }
     ],
     "views": [
@@ -57,16 +48,6 @@
         "location": "main",
         "route": "/extensions",
         "component": "ExtensionManagerPage",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
-      },
-      {
-        "id": "skills-page",
-        "title": "Skills",
-        "location": "main",
-        "route": "/skills",
-        "component": "SkillsPage",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"

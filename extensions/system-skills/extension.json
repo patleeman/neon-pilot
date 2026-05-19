@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "id": "system-skills",
+  "name": "Skills",
+  "packageType": "system",
+  "description": "Manage agent skills from vault, project, and extension sources.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "listSkills", "handler": "listSkills", "title": "List skills" },
+      { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
+    ]
+  },
+  "contributes": {
+    "nav": [
+      {
+        "id": "skills-nav",
+        "label": "Skills",
+        "route": "/skills",
+        "icon": "skills",
+        "section": "settings"
+      }
+    ],
+    "views": [
+      {
+        "id": "skills-page",
+        "title": "Skills",
+        "location": "main",
+        "route": "/skills",
+        "component": "SkillsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ]
+  },
+  "permissions": ["extensions:read"]
+}
