@@ -12,8 +12,8 @@ import { isExtensionEnabled, listExtensionEntries } from '../extensions/extensio
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
+import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
-import { buildSkillInjectionPlan } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
 export interface RuntimeStateLogger {
@@ -255,10 +255,16 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
 
+    const assembly = buildPromptAssemblyPlan({
+      profile: runtimeScope,
+      repoRoot,
+      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+    });
+
     return {
       additionalExtensionPaths: resolved.extensionEntries,
-      additionalSkillPaths: buildSkillInjectionPlan({ profile: runtimeScope, repoRoot }).skillPaths,
-      additionalPromptTemplatePaths: resolved.promptEntries,
+      additionalSkillPaths: assembly.skills.skillPaths,
+      additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
       additionalThemePaths: resolved.themeEntries,
     };
   }

@@ -2,6 +2,7 @@ import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-ag
 
 import { listModelDefinitions } from '../models/modelState.js';
 import type { ServerRouteContext } from '../routes/context.js';
+import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { invokeExtensionAction } from './extensionBackend.js';
 import { listExtensionToolRegistrations } from './extensionRegistry.js';
 
@@ -69,7 +70,15 @@ function normalizeUpdateContent(content: Array<{ type: string; text: string }> |
 
 export function createManifestToolAgentExtensions(options: ManifestToolFactoryOptions): Array<(pi: ExtensionAPI) => void> {
   const currentModelRef = options.getCurrentModelRef?.() ?? '';
+  const activeToolIds = new Set(
+    buildToolInjectionPlan({
+      profile: options.getCurrentProfile(),
+      repoRoot: options.repoRoot,
+      modelRef: currentModelRef,
+    }).registrations.map((tool) => `${tool.extensionId}/${tool.id}`),
+  );
   return listExtensionToolRegistrations()
+    .filter((tool) => activeToolIds.has(`${tool.extensionId}/${tool.id}`))
     .filter((tool) => modelConditionMatches(tool, currentModelRef) && shouldExposeManifestTool(tool, currentModelRef))
     .map((tool) => {
       // When `replaces` is set and the target tool is overridable, use that name

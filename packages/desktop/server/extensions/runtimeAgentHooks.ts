@@ -2,8 +2,8 @@ import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-ag
 import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
 
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
+import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
-import { buildSkillInjectionPlan } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from './manifestToolAgentExtension.js';
@@ -24,13 +24,14 @@ function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
     ...(process.env.PERSONAL_AGENT_REPO_ROOT ? { repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT } : {}),
   });
 
+  const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared';
+  const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
+  const assembly = buildPromptAssemblyPlan({ profile, repoRoot, modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE) });
+
   return {
     additionalExtensionPaths: resolved.extensionEntries,
-    additionalSkillPaths: buildSkillInjectionPlan({
-      profile: process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
-      repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
-    }).skillPaths,
-    additionalPromptTemplatePaths: resolved.promptEntries,
+    additionalSkillPaths: assembly.skills.skillPaths,
+    additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
     additionalThemePaths: resolved.themeEntries,
   };
 }

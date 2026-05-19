@@ -1008,6 +1008,35 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     }
   }
 
+  for (const providerField of ['skillProviders', 'toolProviders', 'promptTemplateProviders'] as const) {
+    if (contributes[providerField] !== undefined) {
+      for (const [index, provider] of assertRecordArray(contributes[providerField], `contributes.${providerField}`).entries()) {
+        requireString(provider.id, `contributes.${providerField}[${index}].id`);
+        requireString(provider.handler, `contributes.${providerField}[${index}].handler`);
+        validateOptionalString(provider.title, `contributes.${providerField}[${index}].title`);
+        if (provider.priority !== undefined && !Number.isInteger(provider.priority)) {
+          throw new Error(`Extension manifest contributes.${providerField}[${index}].priority must be an integer.`);
+        }
+      }
+    }
+  }
+
+  if (contributes.promptAssemblyHooks !== undefined) {
+    for (const [index, hook] of assertRecordArray(contributes.promptAssemblyHooks, 'contributes.promptAssemblyHooks').entries()) {
+      requireString(hook.id, `contributes.promptAssemblyHooks[${index}].id`);
+      requireString(hook.handler, `contributes.promptAssemblyHooks[${index}].handler`);
+      validateOptionalString(hook.title, `contributes.promptAssemblyHooks[${index}].title`);
+      validateEnum(
+        requireString(hook.phase, `contributes.promptAssemblyHooks[${index}].phase`),
+        ['after-discovery', 'before-policy', 'after-policy', 'before-injection', 'after-assembly'],
+        `contributes.promptAssemblyHooks[${index}].phase`,
+      );
+      if (hook.priority !== undefined && !Number.isInteger(hook.priority)) {
+        throw new Error(`Extension manifest contributes.promptAssemblyHooks[${index}].priority must be an integer.`);
+      }
+    }
+  }
+
   if (contributes.quickOpen !== undefined) {
     for (const [index, provider] of assertRecordArray(contributes.quickOpen, 'contributes.quickOpen').entries()) {
       requireString(provider.id, `contributes.quickOpen[${index}].id`);
