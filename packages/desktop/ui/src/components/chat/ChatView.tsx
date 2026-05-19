@@ -420,7 +420,7 @@ export const ChatView = memo(function ChatView({
             onFocusComposerRequest?.();
           }
         }}
-        className={layout === 'compact' ? 'px-2.5 py-3 sm:px-4 sm:py-4' : 'mx-auto w-full max-w-6xl pl-6 pr-10 pt-5 pb-24'}
+        className={layout === 'compact' ? 'px-2.5 py-3 sm:px-4 sm:py-4' : 'mx-auto w-full max-w-6xl px-10 pt-5 pb-24'}
       >
         {/* Bottom padding (pb-24) keeps the last message clear of the input area
             when the user is scrolled to the bottom and the textarea grows

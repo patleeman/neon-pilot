@@ -218,7 +218,10 @@
   }
 
   .ui-input-shell {
-    @apply rounded-xl border border-border-subtle bg-elevated transition-[border-color,background-color,box-shadow];
+    @apply rounded-xl border border-border-subtle bg-surface transition-[border-color,background-color,box-shadow];
+    box-shadow:
+      0 8px 30px rgb(20 20 15 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 0.42);
   }
 
   .ui-truncate-start {
@@ -339,11 +342,11 @@
   }
 
   .ui-message-card-user {
-    @apply min-w-0 max-w-full overflow-hidden rounded-xl rounded-br-sm border border-accent/20 bg-accent/10 p-2.5;
+    @apply min-w-0 max-w-full overflow-hidden rounded-xl border border-accent/20 bg-accent/10 px-4 py-3 text-[14px] leading-relaxed;
   }
 
   .ui-message-card-assistant {
-    @apply min-w-0 max-w-full overflow-hidden rounded-xl border border-border-subtle bg-surface px-3.5 py-3;
+    @apply min-w-0 max-w-full overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 text-[14.5px] leading-relaxed shadow-none;
   }
 
   .ui-terminal-block {
@@ -358,7 +361,7 @@
   }
 
   .ui-message-meta {
-    @apply text-[10px] text-dim;
+    @apply font-mono text-[10.5px] tracking-[0.02em] text-dim;
   }
 
   .ui-action-button {
@@ -366,7 +369,7 @@
   }
 
   .ui-message-action-button {
-    @apply inline-flex select-none items-center gap-1 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[10px] font-medium text-dim transition-colors hover:border-steel/15 hover:bg-steel/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-steel/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex select-none items-center gap-1 rounded-none border border-transparent bg-transparent px-0 py-0.5 font-mono text-[11px] font-medium text-dim underline decoration-transparent underline-offset-4 transition-colors hover:decoration-current focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .ui-message-action-button:hover,

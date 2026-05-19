@@ -2105,12 +2105,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [id, realMessages, scrollToBottom, showInitialHistoricalWarmupLoader]);
 
   const loadOlderMessages = useCallback(
-    (targetMessageIndex?: number, options?: { automatic?: boolean; tailBlockStep?: number; scrollRestore?: boolean }) => {
+    (targetMessageIndex?: number, options?: { automatic?: boolean; tailBlockStep?: number }) => {
       if (!id || sessionLoading || historicalTotalBlocks <= 0) {
         return;
       }
 
-      if (targetMessageIndex === undefined && options?.scrollRestore !== false) {
+      if (targetMessageIndex === undefined) {
         capturePrependRestore();
       }
 
@@ -5515,8 +5515,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           className="conversation-scroll-shell h-full overflow-y-auto overflow-x-hidden"
           style={{ scrollPaddingTop: `${conversationHeaderOffset + 16}px` }}
         >
-          <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-panel/95 px-4 pt-3 backdrop-blur sm:px-6 sm:pt-4">
-            <div className="mx-auto w-full max-w-6xl pb-3 pt-1">
+          <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-base/90 px-8 pt-6 backdrop-blur sm:px-10">
+            <div className="mx-auto w-full max-w-6xl pb-4 pt-1">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1 max-w-4xl">
                   {isEditingTitle && !draft ? (
@@ -5538,7 +5538,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                           }
                         }}
                         placeholder="Name this conversation"
-                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
+                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
                         disabled={titleSaving}
                       />
                       <button
@@ -5587,7 +5587,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                       </button>
                     </form>
                   ) : draft ? (
-                    <h1 className="max-w-4xl break-words pr-4 text-[30px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary sm:text-[34px]">
+                    <h1 className="max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
                       {title}
                     </h1>
                   ) : (
@@ -5717,7 +5717,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         </span>
                         <button
                           type="button"
-                          onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep, scrollRestore: false })}
+                          onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
                           disabled={sessionLoading}
                           className="font-medium text-accent hover:text-primary disabled:pointer-events-none disabled:text-secondary/60"
                         >
@@ -5926,7 +5926,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       {/* Input area */}
       {!keyboardOpen && (
         <div
-          className={`px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors ${dragOver ? 'bg-accent/5' : ''}`}
+          className={`bg-gradient-to-t from-base via-base to-transparent px-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

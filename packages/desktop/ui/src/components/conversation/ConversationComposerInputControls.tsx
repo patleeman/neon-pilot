@@ -166,7 +166,7 @@ export function ConversationComposerInputControls({
       />
 
       <div className="flex flex-col gap-0">
-        <div className="px-3 pt-1">
+        <div className="px-1 pt-1">
           <textarea
             ref={textareaRef}
             value={input}
@@ -189,8 +189,10 @@ export function ConversationComposerInputControls({
             onPaste={onPaste}
             rows={1}
             disabled={composerDisabled}
-            className="w-full resize-none overscroll-contain bg-transparent text-sm leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
-            placeholder={pendingAskUserQuestion ? 'Answer 1-9, or type to skip…' : 'Message… / commands, @ notes'}
+            className="w-full resize-none overscroll-contain bg-transparent text-[14px] leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
+            placeholder={
+              pendingAskUserQuestion ? 'Answer 1-9, or type to skip…' : 'Message Neon Pilot…   /  commands · @ notes · ⇧↵ newline'
+            }
             title={
               pendingAskUserQuestion
                 ? '1-9 selects the current answer. Tab/Shift+Tab or ←/→ moves between questions. Enter selects or submits. Ctrl+C clears the composer.'
@@ -200,7 +202,7 @@ export function ConversationComposerInputControls({
           />
         </div>
 
-        <div className="flex flex-nowrap items-center gap-1.5 px-3 py-1.5 border-t border-dashed border-border-subtle/70 mt-0.5">
+        <div className="flex flex-nowrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost
