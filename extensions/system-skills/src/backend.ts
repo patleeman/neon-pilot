@@ -35,7 +35,9 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
 async function refreshSkillMcpConfig(ctx: ExtensionBackendContext): Promise<void> {
   const plan = await buildSkillInjectionPlanAsync({ profile: ctx.profile, repoRoot: process.cwd() });
   const outputPath = `${ctx.runtimeDir}/mcp_servers.json`;
-  const merged = writeMergedMcpConfigFile({ outputPath, cwd: process.cwd(), env: process.env, skillDirs: plan.skillPaths });
+  const env = { ...process.env };
+  if (env.MCP_CONFIG_PATH === outputPath) delete env.MCP_CONFIG_PATH;
+  const merged = writeMergedMcpConfigFile({ outputPath, cwd: process.cwd(), env, skillDirs: plan.skillPaths });
   if (merged.bundledServerCount > 0) process.env.MCP_CONFIG_PATH = outputPath;
   else delete process.env.MCP_CONFIG_PATH;
 }

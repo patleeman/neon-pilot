@@ -77,10 +77,12 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function writeRuntimeMcpConfig(skillDirs: readonly string[]): void {
     const materializedMcpConfigPath = join(agentDir, 'mcp_servers.json');
+    const env = { ...process.env };
+    if (env.MCP_CONFIG_PATH === materializedMcpConfigPath) delete env.MCP_CONFIG_PATH;
     const mergedMcpConfig = writeMergedMcpConfigFile({
       outputPath: materializedMcpConfigPath,
       cwd: process.cwd(),
-      env: process.env,
+      env,
       skillDirs,
     });
     applyRuntimeEnvironment(mergedMcpConfig.bundledServerCount > 0 ? materializedMcpConfigPath : null);

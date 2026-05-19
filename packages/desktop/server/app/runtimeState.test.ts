@@ -119,6 +119,7 @@ describe('createRuntimeState', () => {
   });
 
   it('materializes the shared runtime and builds live session helpers', async () => {
+    process.env.MCP_CONFIG_PATH = '/agent-dir/mcp_servers.json';
     const logger = createLogger();
     const state = createRuntimeState({
       repoRoot: '/repo-root',
@@ -127,7 +128,12 @@ describe('createRuntimeState', () => {
     });
 
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
-    expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(expect.objectContaining({ skillDirs: ['/skills/shared'] }));
+    expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skillDirs: ['/skills/shared'],
+        env: expect.not.objectContaining({ MCP_CONFIG_PATH: '/agent-dir/mcp_servers.json' }),
+      }),
+    );
     expect(state.getRuntimeScope()).toBe('shared');
     expect(process.env.PERSONAL_AGENT_ACTIVE_PROFILE).toBe('shared');
     expect(process.env.PERSONAL_AGENT_PROFILE).toBe('shared');

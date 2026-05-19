@@ -60,32 +60,27 @@ interface ApplyPatchOutcome {
 
 type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd?: string } };
 
-function activateCodexTools(
-  ctx: {
-    modelProfile?: { kind?: string; profile?: { id?: string } };
-    setActiveTools?: (toolNames: string[]) => void;
-    getActiveTools?: () => string[];
-  },
-  options: { restoreOnNonCodex: boolean },
-): void {
-  if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
-    if (options.restoreOnNonCodex) restoreNonCodexTools(ctx);
-    else lastNonCodexActiveTools = undefined;
-    return;
-  }
-  lastNonCodexActiveTools = ctx.getActiveTools?.() ?? lastNonCodexActiveTools;
-  ctx.setActiveTools?.(['bash', 'apply_patch']);
-}
-
-let lastNonCodexActiveTools: string[] | undefined;
-
-function restoreNonCodexTools(ctx: { setActiveTools?: (toolNames: string[]) => void }): void {
-  if (!lastNonCodexActiveTools) return;
-  ctx.setActiveTools?.(lastNonCodexActiveTools);
-  lastNonCodexActiveTools = undefined;
-}
-
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
+  let lastNonCodexActiveTools: string[] | undefined;
+  const activateCodexTools = (
+    ctx: {
+      modelProfile?: { kind?: string; profile?: { id?: string } };
+      setActiveTools?: (toolNames: string[]) => void;
+      getActiveTools?: () => string[];
+    },
+    options: { restoreOnNonCodex: boolean },
+  ): void => {
+    if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
+      if (options.restoreOnNonCodex && lastNonCodexActiveTools) {
+        ctx.setActiveTools?.(lastNonCodexActiveTools);
+      }
+      lastNonCodexActiveTools = undefined;
+      return;
+    }
+    lastNonCodexActiveTools = ctx.getActiveTools?.() ?? lastNonCodexActiveTools;
+    ctx.setActiveTools?.(['bash', 'apply_patch']);
+  };
+
   pi.on('session_start', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: false }));
   pi.on('model_select', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: true }));
   codexCompactionExtension(pi);
