@@ -29,6 +29,14 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
       handler: 'provideTools',
       title: 'Dynamic Tools',
     },
+    {
+      extensionId: 'test-extension',
+      packageType: 'system',
+      id: 'bad-skills',
+      kind: 'skills',
+      handler: 'provideBadSkills',
+      title: 'Bad Skills',
+    },
   ],
   listExtensionPromptAssemblyHookRegistrations: () => [],
   listExtensionSkillRegistrations: () => [
@@ -74,6 +82,9 @@ vi.mock('../extensions/extensionBackend.js', () => ({
           ],
         },
       };
+    }
+    if (action === 'provideBadSkills') {
+      return { ok: true, result: { skills: [{ id: 'missing-required-fields' }] } };
     }
     return { ok: false, error: new Error(`Unexpected action ${action}`) };
   }),
@@ -121,6 +132,9 @@ describe('buildPromptAssemblyPlan', () => {
     );
     expect(plan.tools.activeToolNames).toContain('hello_tool');
     expect(asyncPlan.tools.activeToolNames).toEqual(expect.arrayContaining(['hello_tool', 'dynamic_tool']));
+    expect(asyncPlan.diagnostics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'prompt-assembly-provider-invalid-item' })]),
+    );
     expect(plan.promptTemplates.templatePaths).toEqual([promptTemplatePath]);
     expect(plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
     expect(asyncPlan.skills.skillPaths).toEqual(plan.skills.skillPaths);

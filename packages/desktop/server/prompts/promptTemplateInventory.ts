@@ -67,16 +67,24 @@ export function listPromptTemplateDefinitions(ctx: AssemblyRuntimeContext): Prom
 }
 
 export async function listPromptTemplateDefinitionsAsync(ctx: AssemblyRuntimeContext): Promise<PromptTemplateDefinition[]> {
+  return (await listPromptTemplateDefinitionsWithDiagnosticsAsync(ctx)).definitions;
+}
+
+async function listPromptTemplateDefinitionsWithDiagnosticsAsync(
+  ctx: AssemblyRuntimeContext,
+): Promise<{ definitions: PromptTemplateDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
   const templates = listPromptTemplateDefinitions(ctx);
+  const diagnostics: AssemblyDiagnostic[] = [];
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'promptTemplates');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const { items: provided } = await invokePromptAssemblyProvider<PromptTemplateDefinition>({
+      const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<PromptTemplateDefinition>({
         provider,
         payload: ctx,
         resultKey: 'templates',
         validateItem: isPromptTemplateDefinitionLike,
       });
+      diagnostics.push(...providerDiagnostics);
       templates.push(
         ...provided.map((template) => ({
           ...template,
@@ -86,7 +94,7 @@ export async function listPromptTemplateDefinitionsAsync(ctx: AssemblyRuntimeCon
       );
     }),
   );
-  return templates;
+  return { definitions: templates, diagnostics };
 }
 
 function isPromptTemplateDefinitionLike(value: unknown): value is PromptTemplateDefinition {
@@ -98,7 +106,10 @@ export function buildPromptTemplatePlan(ctx: AssemblyRuntimeContext): PromptTemp
 }
 
 export async function buildPromptTemplatePlanAsync(ctx: AssemblyRuntimeContext): Promise<PromptTemplatePlan> {
-  return buildPromptTemplatePlanFromDefinitions(await listPromptTemplateDefinitionsAsync(ctx), ctx);
+  const { definitions, diagnostics } = await listPromptTemplateDefinitionsWithDiagnosticsAsync(ctx);
+  const plan = buildPromptTemplatePlanFromDefinitions(definitions, ctx);
+  plan.diagnostics.push(...diagnostics);
+  return plan;
 }
 
 function buildPromptTemplatePlanFromDefinitions(definitions: PromptTemplateDefinition[], ctx: AssemblyRuntimeContext): PromptTemplatePlan {

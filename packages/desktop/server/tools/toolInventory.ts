@@ -68,16 +68,24 @@ export function listToolDefinitions(ctx: AssemblyRuntimeContext): ToolDefinition
 }
 
 export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Promise<ToolDefinition[]> {
+  return (await listToolDefinitionsWithDiagnosticsAsync(ctx)).definitions;
+}
+
+async function listToolDefinitionsWithDiagnosticsAsync(
+  ctx: AssemblyRuntimeContext,
+): Promise<{ definitions: ToolDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
   const tools = listToolDefinitions(ctx);
+  const diagnostics: AssemblyDiagnostic[] = [];
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'tools');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const { items: provided } = await invokePromptAssemblyProvider<ToolDefinition>({
+      const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<ToolDefinition>({
         provider,
         payload: ctx,
         resultKey: 'tools',
         validateItem: isToolDefinitionLike,
       });
+      diagnostics.push(...providerDiagnostics);
       tools.push(
         ...provided.map((tool) => ({
           ...tool,
@@ -106,7 +114,7 @@ export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Pro
       );
     }),
   );
-  return tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+  return { definitions: tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id)), diagnostics };
 }
 
 function isToolDefinitionLike(value: unknown): value is ToolDefinition {
@@ -124,7 +132,10 @@ export function buildToolInjectionPlan(ctx: AssemblyRuntimeContext): ToolInjecti
 }
 
 export async function buildToolInjectionPlanAsync(ctx: AssemblyRuntimeContext): Promise<ToolInjectionPlan> {
-  return buildToolInjectionPlanFromDefinitions(await listToolDefinitionsAsync(ctx), ctx);
+  const { definitions, diagnostics } = await listToolDefinitionsWithDiagnosticsAsync(ctx);
+  const plan = buildToolInjectionPlanFromDefinitions(definitions, ctx);
+  plan.diagnostics.push(...diagnostics);
+  return plan;
 }
 
 function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ctx: AssemblyRuntimeContext): ToolInjectionPlan {

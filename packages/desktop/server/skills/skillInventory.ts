@@ -100,16 +100,24 @@ export function listSkillDefinitions(ctx: SkillRuntimeContext): SkillDefinition[
 }
 
 export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promise<SkillDefinition[]> {
+  return (await listSkillDefinitionsWithDiagnosticsAsync(ctx)).definitions;
+}
+
+async function listSkillDefinitionsWithDiagnosticsAsync(
+  ctx: SkillRuntimeContext,
+): Promise<{ definitions: SkillDefinition[]; diagnostics: SkillDiagnostic[] }> {
   const skills = listSkillDefinitions(ctx);
+  const diagnostics: SkillDiagnostic[] = [];
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'skills');
   await Promise.allSettled(
     providers.map(async (provider) => {
-      const { items: provided } = await invokePromptAssemblyProvider<SkillDefinition>({
+      const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<SkillDefinition>({
         provider,
         payload: { profile: ctx.profile, repoRoot: ctx.repoRoot },
         resultKey: 'skills',
         validateItem: isSkillDefinitionLike,
       });
+      diagnostics.push(...providerDiagnostics);
       skills.push(
         ...provided.map((skill) => ({
           ...skill,
@@ -119,7 +127,7 @@ export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promi
       );
     }),
   );
-  return dedupeSkills(skills);
+  return { definitions: dedupeSkills(skills), diagnostics };
 }
 
 function isSkillDefinitionLike(value: unknown): value is SkillDefinition {
@@ -145,7 +153,8 @@ export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
 
 export async function buildSkillInventoryAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkill[]> {
   const disabled = readDisabledSkillIds();
-  let skills = (await listSkillDefinitionsAsync(ctx)).map((skill, index): RuntimeSkill => {
+  const { definitions } = await listSkillDefinitionsWithDiagnosticsAsync(ctx);
+  let skills = definitions.map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
     return {
       ...skill,
@@ -165,8 +174,23 @@ export function buildSkillInjectionPlan(ctx: SkillRuntimeContext): RuntimeSkillI
 }
 
 export async function buildSkillInjectionPlanAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkillInjectionPlan> {
-  const skills = await buildSkillInventoryAsync(ctx);
-  return buildSkillInjectionPlanFromRuntimeSkills(skills, ctx);
+  const { definitions, diagnostics } = await listSkillDefinitionsWithDiagnosticsAsync(ctx);
+  const disabled = readDisabledSkillIds();
+  let skills = definitions.map((skill, index): RuntimeSkill => {
+    const diagnostics = validateSkill(skill);
+    return {
+      ...skill,
+      enabled: !disabled.has(skill.id) && !diagnostics.some((item) => item.severity === 'error'),
+      priority: index,
+      diagnostics,
+    };
+  });
+  for (const hook of runtimeHooks) {
+    if (hook.beforeSkillInjection) skills = hook.beforeSkillInjection(skills, ctx);
+  }
+  const plan = buildSkillInjectionPlanFromRuntimeSkills(skills, ctx);
+  plan.diagnostics.push(...diagnostics);
+  return plan;
 }
 
 function buildSkillInjectionPlanFromRuntimeSkills(skills: RuntimeSkill[], ctx: SkillRuntimeContext): RuntimeSkillInjectionPlan {
