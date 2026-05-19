@@ -83,6 +83,25 @@ export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Pro
           ...tool,
           providerId: tool.providerId || `extension-provider:${provider.extensionId}/${provider.id}`,
           source: tool.source || { kind: 'extension', label: provider.title ?? provider.id, extensionId: provider.extensionId },
+          raw:
+            tool.raw || typeof tool.action !== 'string'
+              ? tool.raw
+              : {
+                  extensionId: provider.extensionId,
+                  packageType: provider.packageType,
+                  id: tool.id,
+                  name: tool.name,
+                  action: tool.action,
+                  title: tool.title,
+                  label: tool.label,
+                  description: tool.description,
+                  inputSchema: tool.inputSchema,
+                  promptSnippet: tool.promptSnippet,
+                  promptGuidelines: tool.promptGuidelines,
+                  priority: tool.priority,
+                  when: tool.when,
+                  replaces: tool.replaces,
+                },
         })),
       );
     }),

@@ -20,6 +20,17 @@ vi.mock('@personal-agent/core', async () => {
 });
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
+  listExtensionAssemblyProviderRegistrations: () => [
+    {
+      extensionId: 'test-extension',
+      packageType: 'system',
+      id: 'dynamic-tools',
+      kind: 'tools',
+      handler: 'provideTools',
+      title: 'Dynamic Tools',
+    },
+  ],
+  listExtensionPromptAssemblyHookRegistrations: () => [],
   listExtensionSkillRegistrations: () => [
     {
       extensionId: 'test-extension',
@@ -43,6 +54,29 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
       inputSchema: { type: 'object' },
     },
   ],
+}));
+
+vi.mock('../extensions/extensionBackend.js', () => ({
+  invokeExtensionAction: vi.fn(async (_extensionId: string, action: string) => {
+    if (action === 'provideTools') {
+      return {
+        ok: true,
+        result: {
+          tools: [
+            {
+              id: 'dynamic-tool',
+              name: 'dynamic_tool',
+              action: 'dynamicTool',
+              description: 'Dynamic tool',
+              inputSchema: { type: 'object' },
+              priority: 1,
+            },
+          ],
+        },
+      };
+    }
+    return { ok: false, error: new Error(`Unexpected action ${action}`) };
+  }),
 }));
 
 let stateRoot = '';
@@ -86,6 +120,7 @@ describe('buildPromptAssemblyPlan', () => {
       ]),
     );
     expect(plan.tools.activeToolNames).toContain('hello_tool');
+    expect(asyncPlan.tools.activeToolNames).toEqual(expect.arrayContaining(['hello_tool', 'dynamic_tool']));
     expect(plan.promptTemplates.templatePaths).toEqual([promptTemplatePath]);
     expect(plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
     expect(asyncPlan.skills.skillPaths).toEqual(plan.skills.skillPaths);
