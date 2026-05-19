@@ -133,6 +133,7 @@ async function trackContextPointerInspect(currentSessionId: string, targetConver
 
 export async function executeConversationInspectTool(params: Record<string, unknown>, ctx: { sessionManager: { getSessionId(): string } }) {
   const workerParams: Record<string, unknown> = { ...params };
+  delete workerParams.action;
   const currentSessionId = ctx.sessionManager.getSessionId();
   const targetConversationId = typeof params.conversationId === 'string' ? params.conversationId.trim() : '';
 

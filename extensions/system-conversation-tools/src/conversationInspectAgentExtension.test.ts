@@ -184,7 +184,6 @@ describe('conversation inspect agent extension', () => {
 
     // list: includes currentConversationId from ctx, passes scope through
     expect(executeConversationInspectMock).toHaveBeenCalledWith('list', {
-      action: 'list',
       scope: 'running',
       currentConversationId: 'conv-self',
       sessionSnapshot: [
@@ -217,7 +216,6 @@ describe('conversation inspect agent extension', () => {
 
     // search: includes currentConversationId from ctx
     expect(executeConversationInspectMock).toHaveBeenCalledWith('search', {
-      action: 'search',
       query: 'chrono',
       currentConversationId: 'conv-self',
       sessionSnapshot: [
@@ -250,7 +248,6 @@ describe('conversation inspect agent extension', () => {
 
     // query: passes params through
     expect(executeConversationInspectMock).toHaveBeenCalledWith('query', {
-      action: 'query',
       conversationId: 'conv-2',
       text: 'chrono',
       sessionSnapshot: [
@@ -272,7 +269,6 @@ describe('conversation inspect agent extension', () => {
 
     // outline: passes params through
     expect(executeConversationInspectMock).toHaveBeenCalledWith('outline', {
-      action: 'outline',
       conversationId: 'conv-2',
       sessionSnapshot: [
         {
@@ -293,7 +289,6 @@ describe('conversation inspect agent extension', () => {
 
     // read_window: passes params through
     expect(executeConversationInspectMock).toHaveBeenCalledWith('read_window', {
-      action: 'read_window',
       conversationId: 'conv-2',
       aroundBlockId: 'block-1',
       sessionSnapshot: [
@@ -315,7 +310,6 @@ describe('conversation inspect agent extension', () => {
 
     // diff: passes params through
     expect(executeConversationInspectMock).toHaveBeenCalledWith('diff', {
-      action: 'diff',
       conversationId: 'conv-2',
       afterBlockId: 'block-1',
       sessionSnapshot: [
@@ -352,7 +346,6 @@ describe('conversation inspect agent extension', () => {
     await tool.execute('tool-1', { action: 'list', scope: 'live' }, undefined, undefined, ctx);
 
     expect(executeConversationInspectMock).toHaveBeenCalledWith('list', {
-      action: 'list',
       scope: 'live',
       currentConversationId: 'conv-self',
     });
