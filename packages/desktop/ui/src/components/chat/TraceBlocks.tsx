@@ -3,6 +3,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
 import { cx, Pill, SurfacePanel } from '../ui';
+import { readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
@@ -131,6 +132,10 @@ function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<Mes
   return (
     block.type === 'tool_use' &&
     (block.tool === 'checkpoint' ||
+      block.tool === 'write' ||
+      block.tool === 'edit' ||
+      block.tool === 'apply_patch' ||
+      readFileChangesForToolBlock(block).length > 0 ||
       block.tool === 'ask_user_question' ||
       block.tool === 'image' ||
       block.tool === 'browser_screenshot' ||

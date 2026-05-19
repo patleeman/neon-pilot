@@ -10,7 +10,7 @@ import { timeAgo } from '../../shared/utils';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
-import { FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
+import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
@@ -77,6 +77,10 @@ function isPinnedVisualTool(block: Extract<MessageBlock, { type: 'tool_use' }>):
   return block.tool === 'image' || block.tool === 'browser_screenshot' || block.tool === 'screenshot';
 }
 
+function isFileChangingTool(block: Extract<MessageBlock, { type: 'tool_use' }>, fileChanges: readonly FileChange[]): boolean {
+  return fileChanges.length > 0 || block.tool === 'write' || block.tool === 'edit' || block.tool === 'apply_patch';
+}
+
 export function ToolBlock({
   block,
   autoOpen,
@@ -110,6 +114,7 @@ export function ToolBlock({
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllRuns, setShowAllRuns] = useState(false);
+  const [pinnedDiffOpen, setPinnedDiffOpen] = useState(false);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();
@@ -149,7 +154,8 @@ export function ToolBlock({
   const pinnedCheckpoint = block.tool === 'checkpoint';
   const pinnedArtifact = isDurableArtifactTool(block);
   const pinnedVisual = isPinnedVisualTool(block);
-  const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual;
+  const pinnedFileChange = isFileChangingTool(block, fileChanges);
+  const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual || pinnedFileChange;
 
   if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && !pinnedTool) {
     // ask_user_question is handled as a local fallback below so the question
@@ -206,8 +212,16 @@ export function ToolBlock({
         isError && 'border border-danger/40 bg-danger/5 text-danger',
       )}
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+          }
+        }}
         className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left"
       >
         {isRunning ? (
@@ -261,6 +275,18 @@ export function ToolBlock({
             View
           </button>
         ) : null}
+        {pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError ? (
+          <button
+            type="button"
+            className="ui-action-button shrink-0 text-[10px] font-sans"
+            onClick={(event) => {
+              event.stopPropagation();
+              setPinnedDiffOpen((current) => !current);
+            }}
+          >
+            {pinnedDiffOpen ? 'Hide diff' : 'View diff'}
+          </button>
+        ) : null}
         {block.durationMs && !isRunning && !pinnedTool && (
           <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
         )}
@@ -272,7 +298,7 @@ export function ToolBlock({
         ) : (
           <span className="shrink-0 opacity-30 text-[10px]">{open ? '▲' : '▼'}</span>
         )}
-      </button>
+      </div>
 
       {linkedRuns.runs.length > 0 && !pinnedTool && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
@@ -332,7 +358,9 @@ export function ToolBlock({
         </div>
       )}
 
-      {fileChanges.length > 0 && !isRunning && !isError ? <FileChangesToolDiff fileChanges={fileChanges} /> : null}
+      {fileChanges.length > 0 && !isRunning && !isError && (!pinnedTool || pinnedDiffOpen) ? (
+        <FileChangesToolDiff fileChanges={fileChanges} />
+      ) : null}
 
       {open && !pinnedTool && (
         <div className="border-t border-border-subtle/70">

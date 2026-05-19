@@ -603,7 +603,6 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('cat packages/desktop/ui/src/app/App.tsx');
     expect(html).toContain('Updated packages/desktop/ui/src/app/App.tsx');
     expect(html).not.toContain('data-file-path-link=');
-    expect(html).not.toContain('role="button"');
   });
 
   it('shows a clean preview for collapsed thinking steps inside an open internal-work cluster', () => {
@@ -1111,7 +1110,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Research branch');
   });
 
-  it('renders remote control state as UI-only transcript chrome', () => {
+  it('renders remote control state inside the context shelf', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         remoteControlled: true,
@@ -1126,7 +1125,9 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('data-remote-control-indicator="kitty-litter"');
+    expect(html).toContain('data-context-shelf="1"');
+    expect(html).toContain('data-context-type="remote_control"');
+    expect(html).toContain('remote control');
     expect(html).toContain('Controlled remotely from Kitty Litter');
     expect(html).not.toContain('data-context-type="referenced_context"');
     expect(html).not.toContain('ui-message-card-assistant');

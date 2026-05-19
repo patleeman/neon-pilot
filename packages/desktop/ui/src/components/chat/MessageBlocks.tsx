@@ -86,11 +86,28 @@ function contextShelfPreview(block: Extract<MessageBlock, { type: 'context' | 's
   return summarizeSystemEventText(block.text);
 }
 
+function normalizeContextChipLabel(label: string): string {
+  switch (label) {
+    case 'System prompt':
+      return 'system prompt';
+    case 'Remote control':
+      return 'remote control';
+    case 'Related conversation pointers':
+    case 'Reused thread summaries':
+      return 'related conversations';
+    case 'Context added':
+      return 'context';
+    default:
+      return label.toLowerCase();
+  }
+}
+
 export const ContextShelf = memo(function ContextShelf({
   blocks,
   messageIndexOffset,
   systemPrompt,
   toolDefinitions = [],
+  remoteControlled = false,
   onOpenFilePath,
   onOpenCheckpoint,
   onSelectionGesture,
@@ -99,6 +116,7 @@ export const ContextShelf = memo(function ContextShelf({
   messageIndexOffset?: number;
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
+  remoteControlled?: boolean;
   onOpenFilePath?: (path: string) => void;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
@@ -109,15 +127,24 @@ export const ContextShelf = memo(function ContextShelf({
   if (hasSystemPrompt) {
     counts.set('System prompt', 1);
   }
+  if (remoteControlled) {
+    counts.set('Remote control', 1);
+  }
   for (const block of blocks) {
     const label = contextShelfLabel(block);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  const preview = [...counts.entries()].map(([label, count]) => (count > 1 ? `${label} ×${count}` : label)).join(' · ');
+  const preview = [...counts.entries()]
+    .map(([label, count]) => {
+      const normalizedLabel = normalizeContextChipLabel(label);
+      return count > 1 ? `${normalizedLabel} ×${count}` : normalizedLabel;
+    })
+    .join(' · ');
+  const totalItemCount = blocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
 
   return (
     <details
-      className="group rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
+      className="group w-[78%] rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
       data-context-shelf="1"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
@@ -126,14 +153,14 @@ export const ContextShelf = memo(function ContextShelf({
         </span>
         <span className="shrink-0 font-medium text-secondary/85">Context</span>
         <span className="text-dim">
-          · {blocks.length + (hasSystemPrompt ? 1 : 0)} item{blocks.length + (hasSystemPrompt ? 1 : 0) === 1 ? '' : 's'}
+          · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
         </span>
         {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
         {blocks[blocks.length - 1]?.ts ? (
           <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
         ) : null}
       </summary>
-      <div className="mt-2 space-y-1.5 pl-5">
+      <div className="mt-2 ml-1 space-y-1.5 border-l border-border-subtle pl-4">
         {hasSystemPrompt ? (
           <details
             className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
@@ -156,6 +183,18 @@ export const ContextShelf = memo(function ContextShelf({
                 </div>
               ) : null}
             </div>
+          </details>
+        ) : null}
+        {remoteControlled ? (
+          <details
+            className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+            data-context-type="remote_control"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+              <span className="min-w-36 shrink-0 font-medium text-primary/80">Remote control</span>
+              <span className="min-w-0 flex-1 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+            </summary>
+            <div className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">Controlled remotely from Kitty Litter.</div>
           </details>
         ) : null}
         {blocks.map((block, index) => {

@@ -15,6 +15,8 @@ interface FileChange {
   truncated?: boolean;
 }
 
+export type { FileChange };
+
 const fileChangeDiffStyle = {
   '--diffs-font-family': 'var(--font-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace)',
   '--diffs-header-font-family': 'var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif)',

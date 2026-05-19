@@ -334,7 +334,7 @@ export const ChatView = memo(function ChatView({
     return count;
   })();
   const hasSystemPromptContext = Boolean(systemPrompt?.trim()) || toolDefinitions.length > 0;
-  const shouldGroupIntroContext = !shouldWindowTranscript && (hasSystemPromptContext || leadingContextItemCount > 0);
+  const shouldGroupIntroContext = !shouldWindowTranscript && (hasSystemPromptContext || leadingContextItemCount > 0 || remoteControlled);
   const introContextItems = shouldGroupIntroContext ? renderItems.slice(0, leadingContextItemCount) : [];
   const transcriptItems = shouldGroupIntroContext ? renderItems.slice(leadingContextItemCount) : renderItems;
   const introContextBlocks = introContextItems.flatMap((item) => {
@@ -425,12 +425,6 @@ export const ChatView = memo(function ChatView({
         {/* Bottom padding (pb-24) keeps the last message clear of the input area
             when the user is scrolled to the bottom and the textarea grows
             while typing (e.g. multi-line input). */}
-        {remoteControlled ? (
-          <div className="mb-3 flex items-center gap-2 text-xs text-dim" data-remote-control-indicator="kitty-litter">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
-            <span>Controlled remotely from Kitty Litter</span>
-          </div>
-        ) : null}
         {shouldGroupIntroContext ? (
           <div className={transcriptItems.length > 0 || transcriptBoundary ? 'mb-7 space-y-1.5' : 'space-y-1.5'}>
             <ContextShelf
@@ -438,6 +432,7 @@ export const ChatView = memo(function ChatView({
               messageIndexOffset={0}
               systemPrompt={systemPrompt ?? ''}
               toolDefinitions={toolDefinitions}
+              remoteControlled={remoteControlled}
               onOpenFilePath={onOpenFilePath}
               onOpenCheckpoint={onOpenCheckpoint}
               onSelectionGesture={onReplyToSelection ? scheduleReplySelectionSync : undefined}

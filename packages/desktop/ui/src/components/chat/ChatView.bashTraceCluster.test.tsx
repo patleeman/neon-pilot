@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
 
+vi.mock('@pierre/diffs/react', () => ({
+  PatchDiff: ({ patch }: { patch: string }) => <pre data-testid="patch-diff">{patch}</pre>,
+}));
+
 vi.mock('../../extensions/useExtensionRegistry', () => ({
   useExtensionRegistry: () => ({
     extensions: [
@@ -51,6 +55,17 @@ vi.mock('../../extensions/NativeExtensionToolBlockHost', () => ({
   NativeExtensionToolBlockHost: ({ block }: { block: { tool: string } }) => (
     <div data-extension-tool-host="true">{block.tool} transcript card</div>
   ),
+}));
+
+vi.mock('../../ui-state/theme', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    availableThemes: [{ id: 'dark', appearance: 'dark' }],
+  }),
+}));
+
+vi.mock('../../ui-state/theme', () => ({
+  useTheme: () => ({ theme: 'dark', availableThemes: [{ id: 'dark', appearance: 'dark' }] }),
 }));
 
 import { ChatView } from './ChatView.js';
@@ -127,5 +142,47 @@ describe('ChatView bash trace clusters', () => {
     expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
     expect(container.textContent).toContain('pwd');
     expect(container.querySelector('[data-extension-tool-host="true"]')).toBeNull();
+  });
+
+  it('keeps file-changing tools pinned while collapsed and expands inline diffs without raw tool details', () => {
+    const editBlock = {
+      id: 'tool-edit-1',
+      type: 'tool_use',
+      ts: '2026-05-13T10:56:49.000Z',
+      tool: 'edit',
+      input: { path: 'src/app.ts' },
+      output: 'edited src/app.ts',
+      status: 'ok',
+      details: {
+        fileChanges: [
+          {
+            path: 'src/app.ts',
+            status: 'modified',
+            additions: 1,
+            deletions: 1,
+            patch: 'diff --git a/src/app.ts b/src/app.ts\n@@ -1 +1 @@\n-old\n+new\n',
+          },
+        ],
+      },
+    } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
+
+    const { container } = renderChatView([editBlock]);
+
+    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('edit');
+    expect(container.textContent).toContain('src/app.ts');
+    expect(container.textContent).toContain('View diff');
+    expect(container.textContent).not.toContain('edited src/app.ts');
+
+    const viewDiffButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'View diff');
+    expect(viewDiffButton).toBeTruthy();
+
+    act(() => {
+      viewDiffButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('Hide diff');
+    expect(container.textContent).toContain('Modified');
+    expect(container.textContent).not.toContain('edited src/app.ts');
   });
 });
