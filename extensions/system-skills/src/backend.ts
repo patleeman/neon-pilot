@@ -1,6 +1,11 @@
+import { writeMergedMcpConfigFile } from '@personal-agent/core';
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
-import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
+import {
+  buildSkillInjectionPlanAsync,
+  buildSkillInventoryAsync,
+  setSkillEnabled,
+} from '../../../packages/desktop/server/skills/skillInventory.js';
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
   const skills = (await buildSkillInventoryAsync({ profile: ctx.profile, repoRoot: process.cwd() })).map((skill) => ({
@@ -23,7 +28,16 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   if (!id) throw new Error('skill id is required.');
   const enabled = body.enabled !== false;
   setSkillEnabled(id, enabled);
+  await refreshSkillMcpConfig(_ctx);
   return { ok: true, id, enabled };
+}
+
+async function refreshSkillMcpConfig(ctx: ExtensionBackendContext): Promise<void> {
+  const plan = await buildSkillInjectionPlanAsync({ profile: ctx.profile, repoRoot: process.cwd() });
+  const outputPath = `${ctx.runtimeDir}/mcp_servers.json`;
+  const merged = writeMergedMcpConfigFile({ outputPath, cwd: process.cwd(), env: process.env, skillDirs: plan.skillPaths });
+  if (merged.bundledServerCount > 0) process.env.MCP_CONFIG_PATH = outputPath;
+  else delete process.env.MCP_CONFIG_PATH;
 }
 
 function asRecord(input: unknown): Record<string, unknown> {
