@@ -1111,16 +1111,36 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
     }
   }, [values]);
 
-  // Debounced auto-save
+  // Debounced auto-save — queues latest changes after edits settle.
+  // Uses a ref to accumulate changes incrementally so edits made during
+  // an in-flight save are not lost.
+  const pendingChangesRef = useRef<Record<string, unknown> | null>(null);
   useEffect(() => {
-    if (!values || !draft || saving) return;
-    const changes: Record<string, unknown> = {};
+    if (!values || !draft) return;
+
+    // Accumulate incremental changes rather than re-diffing against values
+    // so edits made during an in-flight save are preserved.
     for (const [key, value] of Object.entries(draft)) {
-      if (value !== values[key]) changes[key] = value;
+      if (value !== values[key]) {
+        if (!pendingChangesRef.current) pendingChangesRef.current = {};
+        pendingChangesRef.current[key] = value;
+      }
     }
-    if (Object.keys(changes).length === 0) return;
+
+    const pending = pendingChangesRef.current;
+    if (!pending || Object.keys(pending).length === 0) return;
+
+    if (saving) {
+      // Save is in-flight; accumulated changes will be picked up when it
+      // completes via the saving dependency change.
+      return;
+    }
 
     const timeout = window.setTimeout(async () => {
+      const changes = pendingChangesRef.current;
+      if (!changes || Object.keys(changes).length === 0) return;
+      pendingChangesRef.current = null;
+
       setSaving(true);
       setSaveError(null);
       try {
@@ -1128,6 +1148,8 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
         setSaveNotice('Saved.');
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : String(err));
+        // Re-queue failed changes so they can be retried.
+        pendingChangesRef.current = changes;
       } finally {
         setSaving(false);
       }
