@@ -12,7 +12,7 @@
 
 @layer components {
   .ui-page-header {
-    @apply sticky top-0 z-10 bg-panel/95 backdrop-blur-sm border-b border-border-subtle px-6 py-4 flex items-center gap-4;
+    @apply sticky top-0 z-10 border-b border-border-subtle bg-base/90 px-6 py-4 backdrop-blur-sm flex items-center gap-4;
   }
 
   .ui-page-title {
@@ -20,7 +20,7 @@
   }
 
   .ui-desktop-top-bar {
-    @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel/95 px-3 backdrop-blur-md;
+    @apply relative z-[100] flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel px-3 backdrop-blur-md;
   }
 
   .ui-desktop-top-bar--remote {
@@ -39,24 +39,6 @@
 
   .ui-desktop-top-bar__controls {
     @apply flex items-center gap-0.5;
-  }
-
-  .ui-desktop-top-bar__brand {
-    @apply flex items-center gap-2 pl-2 ml-1 border-l border-border-subtle;
-  }
-
-  .ui-desktop-top-bar__brand-mark {
-    @apply grid place-items-center rounded w-[18px] h-[18px] text-[11px] font-bold font-mono shrink-0;
-    background: rgb(var(--color-accent));
-    color: rgb(var(--color-base));
-    box-shadow:
-      0 0 0 1px rgb(var(--color-accent) / 0.45),
-      0 0 14px -2px rgb(var(--color-accent) / 0.35);
-  }
-
-  .ui-desktop-top-bar__brand-name {
-    @apply text-[12.5px] font-semibold tracking-tight text-primary;
-    letter-spacing: -0.01em;
   }
 
   .ui-desktop-top-bar__mode-badge {
@@ -124,8 +106,8 @@
   }
 
   .ui-toolbar-button {
-    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-md border border-steel/20 bg-surface/80 px-2.5 py-1.5 text-[11px] font-medium text-secondary shadow-sm transition-colors hover:border-steel/35 hover:bg-steel/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/25 focus-visible:ring-offset-2 focus-visible:ring-offset-base active:border-steel/40 active:bg-steel/15 disabled:cursor-not-allowed disabled:opacity-40;
-    box-shadow: inset 0 1px 0 rgb(var(--color-steel) / 0.08);
+    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-secondary shadow-sm transition-colors hover:border-accent/35 hover:bg-accent/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-2 focus-visible:ring-offset-base active:border-accent/40 active:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.38);
   }
 
   .ui-toolbar-button.text-accent,
@@ -197,14 +179,15 @@
   }
 
   .ui-panel {
-    @apply rounded-xl border border-border-subtle bg-elevated;
+    @apply rounded-xl border border-border-subtle bg-surface;
     box-shadow:
       0 1px 2px rgb(var(--color-primary) / 0.04),
-      0 0 0 1px rgb(var(--color-border-subtle) / 0.6);
+      inset 0 1px 0 rgb(255 255 255 / 0.5);
   }
 
   .ui-panel-muted {
-    @apply rounded-xl border border-border-subtle bg-elevated/60;
+    @apply rounded-xl border border-border-subtle bg-elevated/70;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.38);
   }
 
   .ui-menu-shell {
@@ -228,15 +211,14 @@
   }
 
   .ui-dialog-shell {
-    @apply w-full rounded-2xl overflow-hidden flex flex-col bg-panel border border-border-subtle;
+    @apply w-full overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl flex flex-col;
     box-shadow:
-      0 8px 40px -4px rgb(var(--color-primary) / 0.12),
-      0 0 0 1px rgb(var(--color-border-subtle) / 0.8);
+      0 30px 80px rgb(20 20 15 / 0.22),
+      0 0 0 1px rgb(var(--color-accent) / 0.18);
   }
 
   .ui-input-shell {
-    @apply rounded-xl border border-border-subtle bg-panel transition-[border-color,background-color,box-shadow];
-    box-shadow: 0 4px 20px -2px rgb(var(--color-primary) / 0.07), 0 1px 4px rgb(var(--color-primary) / 0.04);
+    @apply rounded-xl border border-border-subtle bg-elevated transition-[border-color,background-color,box-shadow];
   }
 
   .ui-truncate-start {
@@ -357,12 +339,11 @@
   }
 
   .ui-message-card-user {
-    @apply min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-sm border border-accent/20 px-3.5 py-3;
-    background-color: rgb(var(--color-accent) / 0.08);
+    @apply min-w-0 max-w-full overflow-hidden rounded-xl rounded-br-sm border border-accent/20 bg-accent/10 p-2.5;
   }
 
   .ui-message-card-assistant {
-    @apply min-w-0 max-w-full overflow-hidden rounded-2xl border border-border-subtle bg-panel px-3.5 py-3;
+    @apply min-w-0 max-w-full overflow-hidden rounded-xl border border-border-subtle bg-surface px-3.5 py-3;
   }
 
   .ui-terminal-block {
@@ -424,17 +405,13 @@
   }
 
   .ui-sidebar-nav-item {
-    @apply relative flex min-h-7 items-center gap-2 px-2.5 py-1 mx-1 rounded-md text-[13px] font-medium leading-5 text-secondary transition-colors hover:bg-steel/10 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-steel/25 focus-visible:bg-steel/10 focus-visible:text-primary active:bg-steel/10 active:text-primary;
+    @apply relative mx-1 flex min-h-7 items-center gap-2 rounded-md px-2.5 py-1 text-[13.5px] font-medium leading-5 text-secondary transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:bg-accent/10 focus-visible:text-primary active:bg-accent/10 active:text-primary;
   }
 
   .ui-sidebar-nav-item-active {
-    background-color: rgb(var(--color-accent) / 0.09);
+    @apply text-accent;
+    background-color: rgb(var(--color-accent) / 0.1);
     box-shadow: inset 0 0 0 1px rgb(var(--color-accent) / 0.22);
-  }
-
-  /* Two-class specificity beats single-class utilities (text-secondary etc) */
-  .ui-sidebar-nav-item.ui-sidebar-nav-item-active {
-    color: rgb(var(--color-accent));
   }
 
   .ui-browser-entry-selected::before,
@@ -452,7 +429,7 @@
 
   .ui-sidebar-nav-item-active svg {
     opacity: 1;
-    color: rgb(var(--color-accent));
+    color: rgb(var(--color-steel));
   }
 
   .ui-sidebar-nav-badge {
@@ -464,15 +441,12 @@
   }
 
   .ui-sidebar-subnav-item-active {
-    background-color: rgb(var(--color-accent) / 0.09);
-  }
-
-  .ui-sidebar-subnav-item.ui-sidebar-subnav-item-active {
-    color: rgb(var(--color-accent));
+    @apply text-primary;
+    background-color: rgb(var(--color-steel) / 0.1);
   }
 
   .ui-sidebar-session-row {
-    @apply relative mx-1 flex min-h-7 items-center gap-1.5 px-2 py-1 rounded-md text-secondary transition-colors hover:bg-steel/5 hover:text-primary;
+    @apply relative mx-1 flex min-h-7 items-center gap-1.5 rounded-md px-2 py-1 text-secondary transition-colors hover:bg-elevated hover:text-primary;
   }
 
   .ui-sidebar-pinned-icon {
@@ -480,12 +454,9 @@
   }
 
   .ui-sidebar-session-row-active {
-    @apply text-primary ring-1 ring-accent/20;
-    background-color: rgb(var(--color-accent) / 0.12);
-    background-image: linear-gradient(135deg, rgb(var(--color-accent) / 0.22), rgb(var(--color-steel) / 0.1));
-    box-shadow:
-      inset 0 1px 0 rgb(var(--color-steel) / 0.16),
-      0 0 0 1px rgb(var(--color-accent) / 0.06);
+    @apply text-accent ring-1 ring-accent/25;
+    background-color: rgb(var(--color-accent) / 0.1);
+    box-shadow: inset 0 0 0 1px rgb(var(--color-accent) / 0.12);
   }
 
   .ui-sidebar-session-row-active .ui-sidebar-session-meta {
@@ -543,11 +514,11 @@
   }
 
   .ui-app-page-shell {
-    @apply mx-auto w-full px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-4;
+    @apply mx-auto w-full px-5 pb-10 pt-6 sm:px-8 sm:pb-12 sm:pt-7;
   }
 
   .ui-app-page-grid {
-    @apply grid gap-10 lg:grid-cols-[minmax(0,1fr)_13.5rem] lg:items-start xl:gap-14;
+    @apply grid gap-10 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-start xl:gap-14;
   }
 
   .ui-app-page-grid-centered {
@@ -579,7 +550,8 @@
   }
 
   .ui-app-page-title {
-    @apply text-[30px] font-normal leading-[1.05] tracking-[-0.015em] text-primary sm:text-[34px] font-serif italic;
+    font-family: 'Instrument Serif', Georgia, serif;
+    @apply text-[38px] font-normal italic leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px];
   }
 
   .ui-app-page-summary {
@@ -587,11 +559,11 @@
   }
 
   .ui-app-page-section {
-    @apply scroll-mt-24 space-y-6;
+    @apply scroll-mt-24 space-y-5;
   }
 
   .ui-app-page-section-body {
-    @apply border-t border-border-subtle/65 pt-6;
+    @apply border-t border-border-subtle pt-5;
   }
 
   .ui-app-page-toc-title {
@@ -603,7 +575,7 @@
   }
 
   .ui-app-page-toc-link-active {
-    @apply border-accent text-accent;
+    @apply border-accent text-primary;
   }
 
   .ui-app-page-empty-shell {
@@ -619,43 +591,41 @@
   }
 
   .ui-section-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider text-dim;
+    @apply text-[10px] font-semibold uppercase tracking-wider;
+    color: rgb(var(--color-teal) / 0.88);
   }
 
   .ui-section-count {
-    @apply text-[10px] tabular-nums text-dim/60;
+    @apply text-[10px] tabular-nums;
+    color: rgb(var(--color-steel) / 0.55);
   }
 
   .ui-settings-quick-links {
-    @apply inline-flex flex-wrap items-center gap-1 rounded-lg border border-border-subtle/70 bg-surface/55 p-1 text-[11px];
+    @apply inline-flex flex-wrap items-center gap-1 rounded-md border border-border-subtle bg-elevated p-1 text-[11px];
   }
 
   .ui-settings-quick-link {
-    @apply rounded-md px-2.5 py-1 text-secondary transition-colors hover:bg-steel/10 hover:text-primary;
+    @apply rounded-md px-2.5 py-1 text-secondary transition-colors hover:bg-surface hover:text-primary;
   }
 
   .ui-settings-quick-link-active {
-    @apply ring-1 ring-accent/20;
+    @apply text-accent ring-1 ring-accent/25;
     background-color: rgb(var(--color-accent) / 0.1);
-    box-shadow: inset 0 1px 0 rgb(var(--color-accent) / 0.12);
-  }
-
-  .ui-settings-quick-link.ui-settings-quick-link-active {
-    color: rgb(var(--color-accent));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
   .ui-segmented-control {
-    @apply inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface/60 p-1;
+    @apply inline-flex items-center gap-1 rounded-md border border-border-subtle bg-elevated p-1;
   }
 
   .ui-segmented-button {
-    @apply inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-[11px] font-medium text-dim transition-colors hover:bg-steel/10 hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/25 focus-visible:ring-offset-1 focus-visible:ring-offset-surface;
+    @apply inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-[11px] font-medium text-dim transition-colors hover:bg-surface hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-surface;
   }
 
   .ui-segmented-button-active {
-    @apply text-accent ring-1 ring-accent/25;
+    @apply text-accent shadow-sm ring-1 ring-accent/25;
     background-color: rgb(var(--color-accent) / 0.1);
-    box-shadow: 0 1px 3px rgb(var(--color-primary) / 0.06);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
   .ui-browser-entry {
@@ -677,7 +647,8 @@
   }
 
   .ui-browser-entry-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-dim;
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em];
+    color: rgb(var(--color-teal) / 0.88);
   }
 
   .ui-browser-entry-aside {
@@ -702,7 +673,7 @@
   }
 
   .ui-list-row {
-    @apply flex items-start gap-4 px-4 py-3 -mx-2 rounded-lg transition-colors;
+    @apply -mx-2 flex items-start gap-4 rounded-md px-4 py-3 transition-colors;
   }
 
   .ui-list-row-selected {
@@ -799,7 +770,7 @@
   }
 
   .ui-node-title-input {
-    @apply w-full rounded-2xl border border-transparent bg-transparent -mx-3 px-3 py-2 text-[32px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 focus:outline-none;
+    @apply w-full rounded-2xl border border-transparent bg-transparent -mx-3 px-3 py-2 text-[32px] font-semibold leading-none tracking-tight text-primary transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 focus:outline-none;
   }
 
   .ui-node-summary-input {
@@ -824,7 +795,7 @@
   }
 
   .ui-note-title-input {
-    @apply w-full border-0 bg-transparent p-0 text-[34px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary outline-none placeholder:text-dim;
+    @apply w-full border-0 bg-transparent p-0 text-[34px] font-semibold tracking-tight text-primary outline-none placeholder:text-dim;
   }
 
   .ui-note-inline-meta {
@@ -944,11 +915,11 @@
   }
 
   .ui-rich-editor .ProseMirror h1 {
-    @apply mt-1 mb-3 text-[21px] font-normal font-serif italic leading-[1.1] tracking-[-0.015em] text-primary;
+    @apply mt-1 mb-3 text-[21px] font-semibold tracking-tight text-primary;
   }
 
   .ui-rich-editor .ProseMirror h2 {
-    @apply mt-5 mb-2 text-[18px] font-normal font-serif italic leading-[1.15] tracking-[-0.01em] text-primary;
+    @apply mt-5 mb-2 text-[18px] font-semibold text-primary;
   }
 
   .ui-rich-editor .ProseMirror h3 {
@@ -1158,7 +1129,8 @@
   }
 
   .ui-detail-label {
-    @apply w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-dim;
+    @apply w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wider;
+    color: rgb(var(--color-teal) / 0.84);
   }
 
   .ui-detail-value {
@@ -1179,11 +1151,11 @@
   }
 
   .ui-markdown h1 {
-    @apply mt-1 mb-3 text-[18px] font-normal font-serif italic leading-[1.15] tracking-[-0.012em] text-primary;
+    @apply mt-1 mb-3 text-[18px] font-semibold tracking-tight text-primary;
   }
 
   .ui-markdown h2 {
-    @apply mt-5 mb-2 text-[15px] font-normal font-serif italic leading-[1.2] text-primary;
+    @apply mt-5 mb-2 text-[15px] font-semibold text-primary;
   }
 
   .ui-markdown h3 {
@@ -1352,7 +1324,8 @@
   }
 
   .ui-skill-invocation-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-dim;
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em];
+    color: rgb(var(--color-teal) / 0.88);
   }
 
   .ui-skill-invocation-name {
@@ -1367,68 +1340,6 @@
     @apply m-0 text-[12px];
     color: rgb(var(--color-steel) / 0.76);
   }
-}
-
-/* ─── Studio Light ───────────────────────────────────────────────────────── */
-:root[data-theme='studio-light'] {
-  color-scheme: light;
-  --color-base: 247 246 241;
-  --color-surface: 251 250 245;
-  --color-elevated: 240 238 229;
-  --color-panel: 255 255 255;
-  --color-border-subtle: 236 235 226;
-  --color-border-default: 227 224 212;
-  --color-primary: 20 20 15;
-  --color-secondary: 78 77 68;
-  --color-dim: 138 136 123;
-  --color-accent: 62 184 0;
-  --color-accent-bg: 62 184 0;
-  --color-success: 58 122 58;
-  --color-warning: 184 115 10;
-  --color-danger: 196 58 58;
-  --color-teal: 54 110 15;
-  --color-steel: 46 120 0;
-  --color-selection: 195 235 160;
-  --color-hover: 240 238 230;
-  --color-active: 230 227 218;
-  --color-auto-mode-glow: 62 184 0;
-  --color-mission-glow: 150 90 220;
-  --color-loop-glow: 0 140 160;
-  --color-streaming-glow: 62 184 0;
-  --color-terminal-surface: 251 250 245;
-  --color-terminal-chrome: 247 246 241;
-  --color-terminal-border: 227 224 212;
-}
-
-/* ─── Studio Dark ────────────────────────────────────────────────────────── */
-:root[data-theme='studio-dark'] {
-  color-scheme: dark;
-  --color-base: 12 12 8;
-  --color-surface: 36 36 28;
-  --color-elevated: 46 46 36;
-  --color-panel: 26 26 19;
-  --color-border-subtle: 44 44 36;
-  --color-border-default: 61 61 49;
-  --color-primary: 245 243 232;
-  --color-secondary: 188 185 168;
-  --color-dim: 124 121 102;
-  --color-accent: 202 255 51;
-  --color-accent-bg: 202 255 51;
-  --color-success: 142 214 142;
-  --color-warning: 242 184 90;
-  --color-danger: 242 114 114;
-  --color-teal: 150 200 100;
-  --color-steel: 168 215 80;
-  --color-selection: 50 60 20;
-  --color-hover: 50 50 40;
-  --color-active: 60 60 48;
-  --color-auto-mode-glow: 202 255 51;
-  --color-mission-glow: 200 160 255;
-  --color-loop-glow: 140 230 255;
-  --color-streaming-glow: 202 255 51;
-  --color-terminal-surface: 20 20 14;
-  --color-terminal-chrome: 26 26 19;
-  --color-terminal-border: 61 61 49;
 }
 
 /* ─── Neon Pilot studio theme (default) ───────────────────────────────────── */
@@ -1512,7 +1423,7 @@ body,
 }
 
 body {
-  font-family: 'Geist Variable', 'Geist', 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Geist', 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
   background: radial-gradient(circle at 18% -8%, rgb(var(--color-accent) / 0.08), transparent 30rem), rgb(var(--color-base));
   color: rgb(var(--color-primary));
   -webkit-font-smoothing: antialiased;
@@ -1556,20 +1467,4 @@ body {
 .animate-notification-dropdown-in {
   animation: notification-dropdown-in 0.14s ease-out;
   transform-origin: top right;
-}
-
-/* ── Active state color overrides ────────────────────────────────────────────
-   These must live OUTSIDE @layer so they beat Tailwind utility classes
-   (e.g. text-secondary on nav items) via the unlayered cascade. */
-.ui-sidebar-nav-item-active,
-.ui-sidebar-subnav-item-active {
-  color: rgb(var(--color-accent));
-}
-
-.ui-settings-quick-link-active {
-  color: rgb(var(--color-accent));
-}
-
-.ui-app-page-toc-link-active {
-  color: rgb(var(--color-accent));
 }

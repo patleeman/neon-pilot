@@ -183,7 +183,7 @@ export function DesktopTopBar({
   const launchBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : null;
 
   return (
-    <div className="ui-desktop-top-bar border-b-0 bg-panel/95">
+    <div className="ui-desktop-top-bar">
       <div className="ui-desktop-top-bar__leading">
         <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>
@@ -218,19 +218,18 @@ export function DesktopTopBar({
             →
           </ToolbarButton>
         </div>
-        <div className="ui-desktop-top-bar__brand" aria-label="pi">
-          <div className="ui-desktop-top-bar__brand-mark" aria-hidden="true">
-            π
-          </div>
-          <span className="ui-desktop-top-bar__brand-name">pi</span>
-        </div>
         {launchBadgeLabel ? (
           <div className="ui-desktop-top-bar__mode-badge" title="Launched from the command line">
             {launchBadgeLabel}
           </div>
         ) : null}
       </div>
-      <div className="ui-desktop-top-bar__center" style={dragStyle} />
+      <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
+        <div className="grid h-[18px] w-[18px] place-items-center rounded bg-accent font-mono text-[11px] font-bold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)]">
+          N
+        </div>
+        <div className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</div>
+      </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
         {topBarElements.map((element) => (
           <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />

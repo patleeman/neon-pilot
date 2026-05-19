@@ -35,13 +35,13 @@ export function ConversationSavedHeader({
               onClick={onTitleClick}
               title="Rename conversation"
               aria-label={`Rename conversation: ${title}`}
-              className="max-w-full break-words text-left text-[30px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary transition-colors hover:text-accent focus-visible:outline-none focus-visible:text-accent sm:text-[34px]"
+              className="max-w-full break-words text-left font-serif text-[38px] font-normal italic leading-[1.05] tracking-[-0.02em] text-primary transition-colors hover:text-accent focus-visible:outline-none focus-visible:text-accent sm:text-[42px]"
             >
               {title}
             </button>
           </h1>
         ) : (
-          <h1 className="max-w-full break-words text-[30px] font-normal font-serif italic leading-[1.05] tracking-[-0.015em] text-primary sm:text-[34px]">
+          <h1 className="max-w-full break-words font-serif text-[38px] font-normal italic leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px]">
             {title}
           </h1>
         )}
