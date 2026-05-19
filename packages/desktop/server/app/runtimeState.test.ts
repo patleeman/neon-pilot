@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   getProfilesRootMock,
   getStateRootMock,
+  getDurableSkillsDirMock,
   writeMergedMcpConfigFileMock,
   materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResourcesMock,
@@ -25,6 +26,7 @@ const {
   return {
     getProfilesRootMock: vi.fn(() => '/profiles-root'),
     getStateRootMock: vi.fn(() => '/state-root'),
+    getDurableSkillsDirMock: vi.fn(() => '/durable-skills'),
     materializeRuntimeResourcesToAgentDirMock: vi.fn(),
     resolveRuntimeResourcesMock: vi.fn(),
     writeMergedMcpConfigFileMock: vi.fn(() => ({ bundledServerCount: 0 })),
@@ -41,6 +43,7 @@ const {
 vi.mock('@personal-agent/core', () => ({
   getProfilesRoot: getProfilesRootMock,
   getStateRoot: getStateRootMock,
+  getDurableSkillsDir: getDurableSkillsDirMock,
   materializeRuntimeResourcesToAgentDir: materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResources: resolveRuntimeResourcesMock,
   writeMergedMcpConfigFile: writeMergedMcpConfigFileMock,
@@ -66,6 +69,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
+  readSavedModelRef: vi.fn(() => 'openai/gpt-4o'),
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
@@ -91,6 +95,7 @@ describe('createRuntimeState', () => {
   beforeEach(() => {
     getProfilesRootMock.mockClear();
     getStateRootMock.mockClear();
+    getDurableSkillsDirMock.mockClear();
     materializeRuntimeResourcesToAgentDirMock.mockReset();
     resolveRuntimeResourcesMock.mockReset();
     resolveRuntimeResourcesMock.mockReturnValue(resolvedShared);
@@ -122,6 +127,7 @@ describe('createRuntimeState', () => {
     });
 
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
+    expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(expect.objectContaining({ skillDirs: ['/skills/shared'] }));
     expect(state.getRuntimeScope()).toBe('shared');
     expect(process.env.PERSONAL_AGENT_ACTIVE_PROFILE).toBe('shared');
     expect(process.env.PERSONAL_AGENT_PROFILE).toBe('shared');

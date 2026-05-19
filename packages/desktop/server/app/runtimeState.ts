@@ -122,9 +122,14 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       repoRoot,
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
+    const assembly = buildPromptAssemblyPlan({
+      profile: runtimeScope,
+      repoRoot,
+      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+    });
     materializeRuntimeResourcesToAgentDir(resolved, agentDir);
-    writeRuntimeMcpConfig(resolved.skillDirs);
-    watchRuntimeMcpConfig(resolved.skillDirs);
+    writeRuntimeMcpConfig(assembly.skills.skillPaths);
+    watchRuntimeMcpConfig(assembly.skills.skillPaths);
   }
 
   setRuntimeAgentHookBuilders({
