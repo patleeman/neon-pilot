@@ -25,10 +25,14 @@ export function destroyLiveSession<TEntry extends LiveSessionDestroyHost>(
   const entry = input.registry.get(sessionId);
   if (!entry) return;
   input.clearContextUsageTimer(entry);
-  void input.syncDurableConversationRun(entry, entry.session.isStreaming ? 'interrupted' : 'waiting', {
-    force: true,
-    ...(entry.session.isStreaming ? { lastError: 'Live session disposed while a response was active.' } : {}),
-  });
+  input
+    .syncDurableConversationRun(entry, entry.session.isStreaming ? 'interrupted' : 'waiting', {
+      force: true,
+      ...(entry.session.isStreaming ? { lastError: 'Live session disposed while a response was active.' } : {}),
+    })
+    .catch((error: unknown) => {
+      console.error('[liveSessionDestroy] sync failed', error);
+    });
   entry.session.dispose();
   input.registry.delete(sessionId);
   input.publishSessionMetaChanged(sessionId);
