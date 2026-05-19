@@ -34,8 +34,13 @@ Start here:
 Recommended first move: configure your provider, then come back and ask “what can you do in this repo?”`;
 
 function disableOnboarding(ctx: ExtensionBackendContext): void {
-  ctx.extensions?.setEnabled?.(ctx.extensionId, false);
-  ctx.ui?.invalidate?.(['extensions']);
+  // Defer disable so it doesn't run inside the enable handler.
+  // Calling setEnabled from within the enable handler could cause
+  // recursion or undefined lifecycle behavior.
+  queueMicrotask(() => {
+    ctx.extensions?.setEnabled?.(ctx.extensionId, false);
+    ctx.ui?.invalidate?.(['extensions']);
+  });
 }
 
 async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendContext): Promise<EnsureResult> {
