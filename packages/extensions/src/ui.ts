@@ -9,6 +9,8 @@ export declare const AppPageLayout: HostComponent;
 export declare const AppPageSection: HostComponent;
 export declare const AppPageToc: HostComponent;
 export declare const CheckpointInlineDiff: (...args: never[]) => unknown;
+export declare const DiffActionButton: (...args: never[]) => unknown;
+export declare const GitDiffIcon: HostComponent;
 export declare const ContextMenuWrapper: HostComponent;
 export declare const EmptyState: HostComponent;
 export declare const ErrorState: HostComponent;

@@ -5,6 +5,7 @@ import { api } from '../../client/api';
 import { useApi } from '../../hooks/useApi';
 import { CheckpointDiffSection } from '../checkpoints/CheckpointDiffView';
 import { cx, ErrorState, LoadingState } from '../ui';
+import { DiffActionButton } from './DiffActionButton.js';
 
 const COLLAPSED_INLINE_DIFF_HEIGHT = 'clamp(12rem, 24vh, 16rem)';
 const EXPANDED_INLINE_DIFF_HEIGHT = 'clamp(24rem, 56vh, 44rem)';
@@ -80,23 +81,17 @@ export function CheckpointInlineDiff({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {hasFiles ? (
-            <button
-              type="button"
-              onClick={() => setExpanded((current) => !current)}
-              aria-expanded={expanded}
-              className="ui-toolbar-button px-2 py-1 text-[10px]"
-            >
-              {expanded ? 'Collapse inline' : 'Expand inline'}
-            </button>
+            <DiffActionButton onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} className="px-2 py-1 text-[10px]">
+              {expanded ? 'Hide diff' : 'Show diff'}
+            </DiffActionButton>
           ) : null}
           {onOpenCheckpoint ? (
-            <button
-              type="button"
+            <DiffActionButton
               onClick={() => onOpenCheckpoint(checkpointId)}
-              className={cx('ui-toolbar-button px-2 py-1 text-[10px]', modalOpen ? 'text-secondary' : 'text-accent')}
+              className={cx('px-2 py-1 text-[10px]', modalOpen ? 'text-secondary' : 'text-accent')}
             >
-              {modalOpen ? 'Modal open' : 'Open modal'}
-            </button>
+              {modalOpen ? 'Viewing diff' : 'View diff'}
+            </DiffActionButton>
           ) : null}
         </div>
       </div>

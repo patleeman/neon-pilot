@@ -1,5 +1,6 @@
 export { buildApiPath } from '../client/apiBase';
 export { CheckpointInlineDiff } from '../components/chat/CheckpointInlineDiff';
+export { DiffActionButton, GitDiffIcon } from '../components/chat/DiffActionButton';
 export { ContextMenuWrapper } from '../components/shared/ContextMenuWrapper';
 export { canDropAllPaths, getTopLevelDraggedPaths, useFileTreeModel } from '../components/shared/useFileTreeModel';
 export {

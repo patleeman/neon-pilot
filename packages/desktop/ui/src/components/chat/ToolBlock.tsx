@@ -10,6 +10,7 @@ import { timeAgo } from '../../shared/utils';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
+import { DiffActionButton } from './DiffActionButton.js';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
@@ -252,16 +253,15 @@ export function ToolBlock({
         ) : null}
         {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
         {pinnedCheckpoint && checkpointId && onOpenCheckpoint ? (
-          <button
-            type="button"
-            className="ui-action-button shrink-0 text-[10px] font-sans"
+          <DiffActionButton
+            className="shrink-0 text-[10px]"
             onClick={(event) => {
               event.stopPropagation();
               onOpenCheckpoint(checkpointId);
             }}
           >
-            View
-          </button>
+            View diff
+          </DiffActionButton>
         ) : null}
         {pinnedArtifact && artifactId && onOpenArtifact ? (
           <button
@@ -276,16 +276,15 @@ export function ToolBlock({
           </button>
         ) : null}
         {pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError ? (
-          <button
-            type="button"
-            className="ui-action-button shrink-0 text-[10px] font-sans"
+          <DiffActionButton
+            className="shrink-0 text-[10px]"
             onClick={(event) => {
               event.stopPropagation();
               setPinnedDiffOpen((current) => !current);
             }}
           >
             {pinnedDiffOpen ? 'Hide diff' : 'View diff'}
-          </button>
+          </DiffActionButton>
         ) : null}
         {block.durationMs && !isRunning && !pinnedTool && (
           <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>

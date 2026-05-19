@@ -1,5 +1,5 @@
 import { timeAgo } from '@personal-agent/extensions/data';
-import { CheckpointInlineDiff, cx, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
+import { CheckpointInlineDiff, cx, DiffActionButton, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
 import type { readCheckpointPresentation } from '@personal-agent/extensions/workbench-diffs';
 import React, { memo } from 'react';
 
@@ -70,13 +70,12 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
             />
           ) : !isError && onOpenCheckpoint ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-              <button
-                type="button"
+              <DiffActionButton
                 onClick={() => onOpenCheckpoint(checkpoint.checkpointId)}
-                className={cx('ui-action-button text-[11px]', isActive ? 'text-secondary' : 'text-accent')}
+                className={cx('text-[11px]', isActive ? 'text-secondary' : 'text-accent')}
               >
-                {isActive ? 'Showing diff' : 'Show diff'}
-              </button>
+                {isActive ? 'Viewing diff' : 'View diff'}
+              </DiffActionButton>
             </div>
           ) : null}
         </div>

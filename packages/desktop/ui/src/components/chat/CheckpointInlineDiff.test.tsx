@@ -84,8 +84,8 @@ describe('CheckpointInlineDiff', () => {
 
     expect(html).toContain('Diff peek');
     expect(html).toContain('Scroll inline or click the preview to expand it.');
-    expect(html).toContain('Expand inline');
-    expect(html).toContain('Open modal');
+    expect(html).toContain('Show diff');
+    expect(html).toContain('View diff');
     expect(html).toContain('packages/desktop/ui/src/components/chat/ChatView.tsx');
     expect(html).toContain('Modified');
   });
