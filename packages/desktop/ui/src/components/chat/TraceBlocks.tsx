@@ -115,6 +115,55 @@ function traceSummaryTone(category: TraceClusterSummaryCategory) {
 const MAX_VISIBLE_TRACE_BLOCKS = 5;
 const TRACE_CLUSTER_INACTIVE_GRACE_MS = 900;
 
+function hasPinnedSubagentConversation(block: TraceConversationBlock): block is Extract<MessageBlock, { type: 'tool_use' }> {
+  return (
+    block.type === 'tool_use' &&
+    block.tool === 'subagent' &&
+    !!block.details &&
+    typeof block.details === 'object' &&
+    typeof (block.details as Record<string, unknown>).childConversationId === 'string'
+  );
+}
+
+function PinnedSubagentToolBlocks({
+  blocks,
+  onOpenArtifact,
+  activeArtifactId,
+  onOpenCheckpoint,
+  activeCheckpointId,
+  onOpenBrowser,
+  onOpenFilePath,
+}: {
+  blocks: TraceConversationBlock[];
+  onOpenArtifact?: (artifactId: string) => void;
+  activeArtifactId?: string | null;
+  onOpenCheckpoint?: (checkpointId: string) => void;
+  activeCheckpointId?: string | null;
+  onOpenBrowser?: () => void;
+  onOpenFilePath?: (path: string) => void;
+}) {
+  const pinned = blocks.filter(hasPinnedSubagentConversation);
+  if (pinned.length === 0) return null;
+
+  return (
+    <div className="ml-2.5 mt-1.5 space-y-1.5 border-l border-border-subtle pl-2.5">
+      {pinned.map((block, index) => (
+        <ToolBlock
+          key={`pinned-subagent-${block.id ?? index}`}
+          block={block}
+          autoOpen={false}
+          onOpenArtifact={onOpenArtifact}
+          activeArtifactId={activeArtifactId}
+          onOpenCheckpoint={onOpenCheckpoint}
+          activeCheckpointId={activeCheckpointId}
+          onOpenBrowser={onOpenBrowser}
+          onOpenFilePath={onOpenFilePath}
+        />
+      ))}
+    </div>
+  );
+}
+
 function useGracefulTraceClusterActive(active: boolean): boolean {
   const [stableActive, setStableActive] = useState(active);
   const inactiveTimeoutRef = useRef<number | null>(null);
@@ -258,6 +307,18 @@ export function TraceClusterBlock({
         </button>
         <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
       </div>
+
+      {!open && (
+        <PinnedSubagentToolBlocks
+          blocks={blocks}
+          onOpenArtifact={onOpenArtifact}
+          activeArtifactId={activeArtifactId}
+          onOpenCheckpoint={onOpenCheckpoint}
+          activeCheckpointId={activeCheckpointId}
+          onOpenBrowser={onOpenBrowser}
+          onOpenFilePath={onOpenFilePath}
+        />
+      )}
 
       {open && (
         <div className="ml-2.5 space-y-1.5 border-l border-border-subtle pl-2.5">
