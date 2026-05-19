@@ -3,7 +3,7 @@
   "id": "system-mcp",
   "name": "MCP",
   "packageType": "system",
-  "description": "Inspect, authenticate, and call configured MCP servers from the agent.",
+  "description": "Inspect, authenticate, and call configured MCP servers, including servers discovered from active skill-local mcp.json files.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -26,7 +26,7 @@
       "component": "McpSettingsPanel",
       "sectionId": "settings-tools",
       "label": "Tools",
-      "description": "MCP wrapper config for skills, explicit tool servers, and runtime tool orchestration.",
+      "description": "MCP wrapper config for explicit tool servers, active skill-local mcp.json detection, and runtime tool orchestration.",
       "order": 40
     }
   },
