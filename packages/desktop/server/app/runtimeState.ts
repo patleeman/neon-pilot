@@ -8,12 +8,12 @@ import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
-import { isExtensionEnabled, listExtensionEntries, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
+import { isExtensionEnabled, listExtensionEntries } from '../extensions/extensionRegistry.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
-import { buildFilteredSkillPaths } from '../extensions/skillsRegistry.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
+import { buildSkillInjectionPlan } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
 export interface RuntimeStateLogger {
@@ -257,10 +257,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
     return {
       additionalExtensionPaths: resolved.extensionEntries,
-      additionalSkillPaths: buildFilteredSkillPaths(
-        resolved.skillDirs,
-        listExtensionSkillRegistrations().map((skill) => dirname(skill.path)),
-      ),
+      additionalSkillPaths: buildSkillInjectionPlan({ profile: runtimeScope, repoRoot }).skillPaths,
       additionalPromptTemplatePaths: resolved.promptEntries,
       additionalThemePaths: resolved.themeEntries,
     };

@@ -1,15 +1,12 @@
-import { dirname } from 'node:path';
-
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
 
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
+import { buildSkillInjectionPlan } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
-import { listExtensionSkillRegistrations } from './extensionRegistry.js';
 import { createManifestToolAgentExtensions } from './manifestToolAgentExtension.js';
-import { buildFilteredSkillPaths } from './skillsRegistry.js';
 
 let buildResourceOptions: (() => LiveSessionResourceOptions) | null = null;
 let buildExtensionFactories: (() => ExtensionFactory[]) | null = null;
@@ -29,10 +26,10 @@ function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
-    additionalSkillPaths: buildFilteredSkillPaths(
-      resolved.skillDirs,
-      listExtensionSkillRegistrations().map((skill) => dirname(skill.path)),
-    ),
+    additionalSkillPaths: buildSkillInjectionPlan({
+      profile: process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
+      repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
+    }).skillPaths,
     additionalPromptTemplatePaths: resolved.promptEntries,
     additionalThemePaths: resolved.themeEntries,
   };
