@@ -81,6 +81,9 @@ describe('linkedRuns', () => {
     expect(buildToolPreview({ ...base, tool: 'ask_user_question', input: { question: 'Which deployment target?' } })).toBe(
       'Which deployment target?',
     );
+    expect(buildToolPreview({ ...base, tool: 'set_conversation_title', input: { title: 'Tool Preview Polish' } })).toBe(
+      'Tool Preview Polish',
+    );
     expect(buildToolPreview({ ...base, tool: 'mcp', input: { server: 'github', tool: 'create_issue' } })).toBe('github.create_issue');
   });
 

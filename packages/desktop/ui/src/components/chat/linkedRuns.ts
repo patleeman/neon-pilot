@@ -273,6 +273,8 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const subject = excerpt('query') ?? excerpt('text') ?? read('conversationId');
       return [action, subject].filter(Boolean).join(' ');
     }
+    case 'set_conversation_title':
+      return excerpt('title') ?? '';
     case 'change_working_directory':
       return excerpt('cwd') ?? '';
     case 'ask_user_question':
