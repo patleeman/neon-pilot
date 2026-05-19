@@ -11,6 +11,100 @@
     "styles": []
   },
   "contributes": {
+    "tools": [
+      {
+        "id": "browser_snapshot",
+        "name": "browser_snapshot",
+        "title": "Browser Snapshot",
+        "description": "Observe the built-in Workbench Browser — active tab snapshot with structured elements, plus a list of all open tabs. Use tabId to target a specific tab.",
+        "action": "browserSnapshot",
+        "promptSnippet": "Use browser_snapshot to understand the shared Workbench Browser. It returns the active tab snapshot plus a list of all open tabs with their tabId values. Pass tabId to target any tab. For development validation, use the agent-browser skill/CLI through bash instead.",
+        "promptGuidelines": [
+          "Use Workbench Browser tools only for the user's visible shared browser; start with browser_snapshot and use agent-browser CLI for autonomous dev/QA."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tabId": {
+              "type": "string",
+              "description": "Optional tab ID to target a specific tab. Get tab IDs from the Open tabs section of browser_snapshot output. Defaults to the active tab."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "browser_cdp",
+        "name": "browser_cdp",
+        "title": "Browser CDP",
+        "description": "Send one or more Chrome DevTools Protocol commands to the Workbench Browser. Use tabId to target a specific tab.",
+        "action": "browserCdp",
+        "promptSnippet": "Use browser_cdp to act on the shared Workbench Browser. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev automation/testing, use the agent-browser skill/CLI through bash instead.",
+        "promptGuidelines": [
+          "browser_cdp controls the shared Workbench Browser; get tabId from browser_snapshot, batch multiple CDP commands in one call, and use agent-browser CLI for dev/QA automation."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "description": "A single CDP command object { method, params? }, or an array of command objects.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "description": "Chrome DevTools Protocol method in Domain.command form, for example Runtime.evaluate, Page.navigate, or DOM.getDocument."
+                    },
+                    "params": { "type": "object", "description": "CDP command params object." }
+                  },
+                  "required": ["method"]
+                },
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 200,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "method": { "type": "string", "description": "Chrome DevTools Protocol method." },
+                      "params": { "type": "object", "description": "CDP command params object." }
+                    },
+                    "required": ["method"]
+                  },
+                  "description": "Multiple CDP commands to execute sequentially."
+                }
+              ]
+            },
+            "continueOnError": {
+              "type": "boolean",
+              "description": "Continue executing later commands after a protocol command fails. Defaults to false."
+            },
+            "tabId": { "type": "string", "description": "Optional tab ID to target a specific tab." }
+          },
+          "required": ["command"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "browser_screenshot",
+        "name": "browser_screenshot",
+        "title": "Browser Screenshot",
+        "description": "Capture a PNG screenshot of the Workbench Browser. Use tabId to target a specific tab.",
+        "action": "browserScreenshot",
+        "promptSnippet": "Use browser_screenshot for the shared Workbench Browser when visual communication matters. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev validation screenshots, use the agent-browser skill/CLI through bash.",
+        "promptGuidelines": [
+          "browser_screenshot captures the shared Workbench Browser for user-facing visual context; use agent-browser CLI for product-under-test screenshots."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tabId": { "type": "string", "description": "Optional tab ID to target a specific tab." }
+          },
+          "additionalProperties": false
+        }
+      }
+    ],
     "commands": [
       {
         "id": "open-browser",
@@ -115,6 +209,10 @@
   "permissions": ["browser:read", "browser:write"],
   "backend": {
     "entry": "src/backend.ts",
-    "agentExtension": "createWorkbenchBrowserAgentExtension"
+    "actions": [
+      { "id": "browserSnapshot", "handler": "browserSnapshot", "title": "Browser snapshot" },
+      { "id": "browserCdp", "handler": "browserCdp", "title": "Browser CDP" },
+      { "id": "browserScreenshot", "handler": "browserScreenshot", "title": "Browser screenshot" }
+    ]
   }
 }

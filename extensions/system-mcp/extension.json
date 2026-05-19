@@ -11,8 +11,8 @@
   },
   "backend": {
     "entry": "src/backend.ts",
-    "agentExtension": "createMcpAgentExtension",
     "actions": [
+      { "id": "mcpTool", "handler": "mcpTool", "title": "MCP tool" },
       { "id": "inspectSettings", "handler": "inspectMcpSettings", "title": "Inspect MCP settings" },
       { "id": "saveExplicitConfig", "handler": "saveExplicitMcpConfig", "title": "Save explicit MCP config" },
       { "id": "testServer", "handler": "testMcpServer", "title": "Test MCP server" },
@@ -21,6 +21,35 @@
     ]
   },
   "contributes": {
+    "tools": [
+      {
+        "id": "mcp",
+        "name": "mcp",
+        "title": "MCP",
+        "description": "Inspect and call MCP (Model Context Protocol) servers. Supports listing configured servers, inspecting tools, calling tools, searching tools, and managing OAuth authentication.",
+        "action": "mcpTool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["list", "info", "grep", "call", "auth", "logout"],
+              "description": "MCP operation to perform."
+            },
+            "server": { "type": "string", "description": "MCP server name. Required for info, grep, call, auth, logout." },
+            "tool": { "type": "string", "description": "Tool name within the server. Used with info and call actions." },
+            "pattern": { "type": "string", "description": "Glob pattern to search tools. Used with grep action. Supports * wildcards." },
+            "arguments": {
+              "type": "string",
+              "description": "JSON string of arguments to pass to the tool. Used with call action. Example: '{\"query\":\"hello\"}'"
+            },
+            "probe": { "type": "boolean", "description": "When listing servers, whether to fetch and display their tools. Default false." }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        }
+      }
+    ],
     "settingsComponent": {
       "id": "mcp-tools",
       "component": "McpSettingsPanel",

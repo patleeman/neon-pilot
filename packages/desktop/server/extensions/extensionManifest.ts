@@ -571,6 +571,12 @@ export interface ExtensionToolContribution {
    * The extension must have the same permission level as the tool it replaces.
    */
   replaces?: string;
+  /**
+   * When true, this tool is registered by the extension's agentExtension at runtime.
+   * The manifest entry is used only for prompt assembly visibility (inventory, skills page).
+   * The manifestToolAgentExtension will NOT auto-register it a second time.
+   */
+  nativeRegistration?: boolean;
 }
 
 export interface ExtensionModelProfileContribution {

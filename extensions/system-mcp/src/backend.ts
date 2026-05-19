@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import {
   authenticateMcpServer,
   buildMergedMcpConfigDocument,
@@ -268,284 +267,269 @@ export function inspectMcpSettings(_input: unknown, ctx: McpRuntimeContext): Mcp
   };
 }
 
-export function createMcpAgentExtension(): ExtensionAPI {
-  return (api: ExtensionAPI) => {
-    api.registerTool({
-      name: 'mcp',
-      description:
-        'Inspect and call MCP (Model Context Protocol) servers. Supports listing configured servers, inspecting tools, calling tools, searching tools, and managing OAuth authentication.',
-      parameters: McpToolParams,
-      execute: (async (_toolCallId: string, rawParams: unknown) => {
-        const params = rawParams as typeof McpToolParams.static;
-        const stderrLogs: string[] = [];
+export async function mcpTool(rawInput: unknown): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+  details?: Record<string, unknown>;
+}> {
+  const params = rawInput as typeof McpToolParams.static;
+  const stderrLogs: string[] = [];
 
-        const log = (message: string) => {
-          stderrLogs.push(message);
-        };
+  const log = (message: string) => {
+    stderrLogs.push(message);
+  };
 
-        const commonOptions = {
-          log,
-        };
+  const commonOptions = {
+    log,
+  };
 
-        const action = params.action as McpAction;
-        const server = params.server?.trim();
-        const tool = params.tool?.trim();
+  const action = params.action as McpAction;
+  const server = params.server?.trim();
+  const tool = params.tool?.trim();
 
-        try {
-          switch (action) {
-            case 'list': {
-              const catalog = await listMcpCatalog({
-                ...commonOptions,
-                probe: params.probe ?? false,
-                withDescriptions: params.probe ?? false,
-              });
+  try {
+    switch (action) {
+      case 'list': {
+        const catalog = await listMcpCatalog({
+          ...commonOptions,
+          probe: params.probe ?? false,
+          withDescriptions: params.probe ?? false,
+        });
 
-              let output = `MCP servers (${catalog.config.path}):\n`;
+        let output = `MCP servers (${catalog.config.path}):\n`;
 
-              if (catalog.servers.length === 0) {
-                output += 'No MCP servers are configured.\n';
-              } else {
-                for (const entry of catalog.servers) {
-                  output += `\n  ${entry.name}`;
-                  if (entry.info) {
-                    output += ` (${entry.info.transport ?? 'stdio'})`;
-                    if (entry.info.toolCount !== undefined) {
-                      output += ` — ${entry.info.toolCount} tools`;
-                    }
-                    output += '\n';
-                    if (entry.info.tools.length > 0) {
-                      for (const mcpTool of entry.info.tools.slice(0, 50)) {
-                        output += `    - ${mcpTool.name}`;
-                        if (mcpTool.description) {
-                          output += `: ${mcpTool.description}`;
-                        }
-                        output += '\n';
-                      }
-                      if (entry.info.tools.length > 50) {
-                        output += `    ... and ${entry.info.tools.length - 50} more\n`;
-                      }
-                    }
-                  } else if (entry.error) {
-                    output += ` — error: ${entry.error}\n`;
-                  } else {
-                    output += '\n';
-                  }
-                }
-              }
-
-              return {
-                content: [{ type: 'text', text: output }],
-                details: {
-                  action: 'list',
-                  serverCount: catalog.servers.length,
-                },
-              };
-            }
-
-            case 'info': {
-              const serverName = validateMcpString(server, 'Server name');
-
-              if (tool) {
-                const result = await inspectMcpTool(serverName, tool, commonOptions);
-                if (!result.data) {
-                  throw new Error(result.error ?? result.stderr ?? `Failed to inspect ${serverName}/${tool}`);
-                }
-
-                let output = `Tool: ${result.data.server}/${result.data.tool}\n`;
-                if (result.data.description) {
-                  output += `Description: ${result.data.description}\n`;
-                }
-                if (result.data.schema && Object.keys(result.data.schema).length > 0) {
-                  output += `Input schema:\n${JSON.stringify(result.data.schema, null, 2)}\n`;
-                }
-
-                return {
-                  content: [{ type: 'text', text: output }],
-                  details: {
-                    action: 'info',
-                    server: serverName,
-                    tool,
-                  },
-                };
-              }
-
-              const result = await inspectMcpServer(serverName, commonOptions);
-              if (!result.data) {
-                throw new Error(result.error ?? result.stderr ?? `Failed to inspect ${serverName}`);
-              }
-
-              let output = `Server: ${result.data.server}\n`;
-              output += `Transport: ${result.data.transport ?? 'stdio'}\n`;
-              if (result.data.commandLine) {
-                output += `Command: ${result.data.commandLine}\n`;
-              }
-              output += `\nTools (${result.data.toolCount ?? result.data.tools.length}):\n`;
-              for (const mcpTool of result.data.tools) {
-                output += `  - ${mcpTool.name}`;
-                if (mcpTool.description) {
-                  output += `: ${mcpTool.description}`;
-                }
-                output += '\n';
-              }
-
-              return {
-                content: [{ type: 'text', text: output }],
-                details: {
-                  action: 'info',
-                  server: serverName,
-                  toolCount: result.data.tools.length,
-                },
-              };
-            }
-
-            case 'grep': {
-              const grepPattern = validateMcpString(params.pattern, 'Pattern');
-              const result = await grepMcpTools(grepPattern, {
-                ...commonOptions,
-                withDescriptions: true,
-              });
-
-              // Filter by server when requested
-              const serverFilter = typeof params.server === 'string' && params.server.trim() ? params.server.trim() : undefined;
-              const matches = serverFilter ? result.matches.filter((m) => m.server === serverFilter) : result.matches;
-
-              if (matches.length === 0) {
-                return {
-                  content: [
-                    {
-                      type: 'text',
-                      text: serverFilter
-                        ? `No tools matched pattern ${grepPattern} on server ${serverFilter}.`
-                        : `No tools matched pattern: ${grepPattern}`,
-                    },
-                  ],
-                  details: {
-                    action: 'grep',
-                    pattern: grepPattern,
-                    server: serverFilter,
-                    matchCount: 0,
-                  },
-                };
-              }
-
-              const matchCount = matches.length;
-              let output = serverFilter
-                ? `Matches for "${grepPattern}" on server "${serverFilter}" (${matchCount}):\n`
-                : `Matches for "${grepPattern}" (${matchCount}):\n`;
-              for (const match of matches) {
-                output += `\n  ${match.server}/${match.tool.name}`;
-                if (match.tool.description) {
-                  output += ` — ${match.tool.description}`;
-                }
+        if (catalog.servers.length === 0) {
+          output += 'No MCP servers are configured.\n';
+        } else {
+          for (const entry of catalog.servers) {
+            output += `\n  ${entry.name}`;
+            if (entry.info) {
+              output += ` (${entry.info.transport ?? 'stdio'})`;
+              if (entry.info.toolCount !== undefined) {
+                output += ` — ${entry.info.toolCount} tools`;
               }
               output += '\n';
-
-              if (result.errors.length > 0) {
-                output += '\nErrors:\n';
-                for (const err of result.errors) {
-                  output += `  ${err.server}: ${err.error}\n`;
+              if (entry.info.tools.length > 0) {
+                for (const mcpTool of entry.info.tools.slice(0, 50)) {
+                  output += `    - ${mcpTool.name}`;
+                  if (mcpTool.description) {
+                    output += `: ${mcpTool.description}`;
+                  }
+                  output += '\n';
+                }
+                if (entry.info.tools.length > 50) {
+                  output += `    ... and ${entry.info.tools.length - 50} more\n`;
                 }
               }
-
-              return {
-                content: [{ type: 'text', text: output }],
-                details: {
-                  action: 'grep',
-                  pattern: grepPattern,
-                  server: serverFilter,
-                  matchCount: matchCount,
-                  errorCount: result.errors.length,
-                },
-              };
+            } else if (entry.error) {
+              output += ` — error: ${entry.error}\n`;
+            } else {
+              output += '\n';
             }
-
-            case 'call': {
-              const callServer = validateMcpString(server, 'Server name');
-              const callTool = validateMcpString(tool, 'Tool name');
-              let parsedInput: unknown = {};
-
-              if (params.arguments) {
-                try {
-                  parsedInput = JSON.parse(params.arguments);
-                } catch {
-                  throw new Error(`Invalid JSON in arguments: ${params.arguments}`);
-                }
-              }
-
-              const result = await callMcpTool(callServer, callTool, parsedInput, commonOptions);
-              if (result.data) {
-                const formatted =
-                  typeof result.data.parsed === 'object' ? JSON.stringify(result.data.parsed, null, 2) : String(result.data.parsed);
-
-                return {
-                  content: [{ type: 'text', text: formatted }],
-                  details: {
-                    action: 'call',
-                    server: callServer,
-                    tool: callTool,
-                  },
-                };
-              }
-
-              throw new Error(result.error ?? result.stderr ?? `Failed to call ${callServer}/${callTool}`);
-            }
-
-            case 'auth': {
-              const authServer = validateMcpString(server, 'Server name');
-              const result = await authenticateMcpServer(authServer, commonOptions);
-
-              if (!result.data) {
-                throw new Error(result.error ?? result.stderr ?? `Failed to authenticate ${authServer}`);
-              }
-
-              return {
-                content: [{ type: 'text', text: `Successfully authenticated ${authServer} (${result.data.toolCount} tools available)` }],
-                details: {
-                  action: 'auth',
-                  server: authServer,
-                  toolCount: result.data.toolCount,
-                },
-              };
-            }
-
-            case 'logout': {
-              const logoutServer = validateMcpString(server, 'Server name');
-              const result = await clearMcpServerAuth(logoutServer, commonOptions);
-              if (result?.error || result?.exitCode !== 0) {
-                throw new Error(result?.error ?? result?.stderr ?? `Failed to clear OAuth state for ${logoutServer}.`);
-              }
-
-              return {
-                content: [{ type: 'text', text: `Cleared stored OAuth state for ${logoutServer}` }],
-                details: {
-                  action: 'logout',
-                  server: logoutServer,
-                },
-              };
-            }
-
-            default:
-              throw new Error(`Unsupported MCP action: ${String(action)}`);
           }
-        } catch (error) {
+        }
+
+        return {
+          content: [{ type: 'text', text: output }],
+          details: {
+            action: 'list',
+            serverCount: catalog.servers.length,
+          },
+        };
+      }
+
+      case 'info': {
+        const serverName = validateMcpString(server, 'Server name');
+
+        if (tool) {
+          const result = await inspectMcpTool(serverName, tool, commonOptions);
+          if (!result.data) {
+            throw new Error(result.error ?? result.stderr ?? `Failed to inspect ${serverName}/${tool}`);
+          }
+
+          let output = `Tool: ${result.data.server}/${result.data.tool}\n`;
+          if (result.data.description) {
+            output += `Description: ${result.data.description}\n`;
+          }
+          if (result.data.schema && Object.keys(result.data.schema).length > 0) {
+            output += `Input schema:\n${JSON.stringify(result.data.schema, null, 2)}\n`;
+          }
+
           return {
-            content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-            isError: true,
+            content: [{ type: 'text', text: output }],
             details: {
-              action: params.action,
+              action: 'info',
+              server: serverName,
+              tool,
             },
           };
         }
-      }) as (
-        _toolCallId: string,
-        params: unknown,
-      ) => Promise<{
-        content: Array<{ type: 'text'; text: string }>;
-        isError?: boolean;
-        details?: Record<string, unknown>;
-      }>,
-    });
 
-    return api;
-  };
+        const result = await inspectMcpServer(serverName, commonOptions);
+        if (!result.data) {
+          throw new Error(result.error ?? result.stderr ?? `Failed to inspect ${serverName}`);
+        }
+
+        let output = `Server: ${result.data.server}\n`;
+        output += `Transport: ${result.data.transport ?? 'stdio'}\n`;
+        if (result.data.commandLine) {
+          output += `Command: ${result.data.commandLine}\n`;
+        }
+        output += `\nTools (${result.data.toolCount ?? result.data.tools.length}):\n`;
+        for (const mcpTool of result.data.tools) {
+          output += `  - ${mcpTool.name}`;
+          if (mcpTool.description) {
+            output += `: ${mcpTool.description}`;
+          }
+          output += '\n';
+        }
+
+        return {
+          content: [{ type: 'text', text: output }],
+          details: {
+            action: 'info',
+            server: serverName,
+            toolCount: result.data.tools.length,
+          },
+        };
+      }
+
+      case 'grep': {
+        const grepPattern = validateMcpString(params.pattern, 'Pattern');
+        const result = await grepMcpTools(grepPattern, {
+          ...commonOptions,
+          withDescriptions: true,
+        });
+
+        // Filter by server when requested
+        const serverFilter = typeof params.server === 'string' && params.server.trim() ? params.server.trim() : undefined;
+        const matches = serverFilter ? result.matches.filter((m) => m.server === serverFilter) : result.matches;
+
+        if (matches.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: serverFilter
+                  ? `No tools matched pattern ${grepPattern} on server ${serverFilter}.`
+                  : `No tools matched pattern: ${grepPattern}`,
+              },
+            ],
+            details: {
+              action: 'grep',
+              pattern: grepPattern,
+              server: serverFilter,
+              matchCount: 0,
+            },
+          };
+        }
+
+        const matchCount = matches.length;
+        let output = serverFilter
+          ? `Matches for "${grepPattern}" on server "${serverFilter}" (${matchCount}):\n`
+          : `Matches for "${grepPattern}" (${matchCount}):\n`;
+        for (const match of matches) {
+          output += `\n  ${match.server}/${match.tool.name}`;
+          if (match.tool.description) {
+            output += ` — ${match.tool.description}`;
+          }
+        }
+        output += '\n';
+
+        if (result.errors.length > 0) {
+          output += '\nErrors:\n';
+          for (const err of result.errors) {
+            output += `  ${err.server}: ${err.error}\n`;
+          }
+        }
+
+        return {
+          content: [{ type: 'text', text: output }],
+          details: {
+            action: 'grep',
+            pattern: grepPattern,
+            server: serverFilter,
+            matchCount: matchCount,
+            errorCount: result.errors.length,
+          },
+        };
+      }
+
+      case 'call': {
+        const callServer = validateMcpString(server, 'Server name');
+        const callTool = validateMcpString(tool, 'Tool name');
+        let parsedInput: unknown = {};
+
+        if (params.arguments) {
+          try {
+            parsedInput = JSON.parse(params.arguments);
+          } catch {
+            throw new Error(`Invalid JSON in arguments: ${params.arguments}`);
+          }
+        }
+
+        const result = await callMcpTool(callServer, callTool, parsedInput, commonOptions);
+        if (result.data) {
+          const formatted =
+            typeof result.data.parsed === 'object' ? JSON.stringify(result.data.parsed, null, 2) : String(result.data.parsed);
+
+          return {
+            content: [{ type: 'text', text: formatted }],
+            details: {
+              action: 'call',
+              server: callServer,
+              tool: callTool,
+            },
+          };
+        }
+
+        throw new Error(result.error ?? result.stderr ?? `Failed to call ${callServer}/${callTool}`);
+      }
+
+      case 'auth': {
+        const authServer = validateMcpString(server, 'Server name');
+        const result = await authenticateMcpServer(authServer, commonOptions);
+
+        if (!result.data) {
+          throw new Error(result.error ?? result.stderr ?? `Failed to authenticate ${authServer}`);
+        }
+
+        return {
+          content: [{ type: 'text', text: `Successfully authenticated ${authServer} (${result.data.toolCount} tools available)` }],
+          details: {
+            action: 'auth',
+            server: authServer,
+            toolCount: result.data.toolCount,
+          },
+        };
+      }
+
+      case 'logout': {
+        const logoutServer = validateMcpString(server, 'Server name');
+        const result = await clearMcpServerAuth(logoutServer, commonOptions);
+        if (result?.error || result?.exitCode !== 0) {
+          throw new Error(result?.error ?? result?.stderr ?? `Failed to clear OAuth state for ${logoutServer}.`);
+        }
+
+        return {
+          content: [{ type: 'text', text: `Cleared stored OAuth state for ${logoutServer}` }],
+          details: {
+            action: 'logout',
+            server: logoutServer,
+          },
+        };
+      }
+
+      default:
+        throw new Error(`Unsupported MCP action: ${String(action)}`);
+    }
+  } catch (error) {
+    return {
+      content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+      isError: true,
+      details: {
+        action: params.action,
+      },
+    };
+  }
 }

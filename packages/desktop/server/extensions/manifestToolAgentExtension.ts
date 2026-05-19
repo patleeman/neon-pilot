@@ -80,6 +80,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
   );
   return listExtensionToolRegistrations()
     .filter((tool) => activeToolIds.has(`${tool.extensionId}/${tool.id}`))
+    .filter((tool) => !tool.nativeRegistration)
     .filter((tool) => modelConditionMatches(tool, currentModelRef) && shouldExposeManifestTool(tool, currentModelRef))
     .map((tool) => {
       // When `replaces` is set and the target tool is overridable, use that name

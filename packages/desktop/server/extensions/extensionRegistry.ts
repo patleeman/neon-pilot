@@ -107,6 +107,8 @@ export interface ExtensionToolRegistration {
   };
   /** Built-in tool name this tool overrides. */
   replaces?: string;
+  /** Tool is registered by the extension's agentExtension; skip auto-registration in manifestToolAgentExtension. */
+  nativeRegistration?: boolean;
 }
 
 export interface ExtensionModelProfileRegistration {
@@ -710,6 +712,7 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
         ...(Number.isInteger(tool.priority) ? { priority: tool.priority } : {}),
         ...(tool.when ? { when: tool.when } : {}),
         ...(replaces ? { replaces } : {}),
+        ...(tool.nativeRegistration ? { nativeRegistration: true } : {}),
       },
     ];
   });

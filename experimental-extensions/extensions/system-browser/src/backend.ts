@@ -1,6 +1,5 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionBackendContext } from '@personal-agent/extensions';
 import { getWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '@personal-agent/extensions/backend/browser';
-import { Type } from '@sinclair/typebox';
 
 function requireHost(): WorkbenchBrowserToolHost {
   const host = getWorkbenchBrowserToolHost();
@@ -141,181 +140,105 @@ function formatSnapshot(snapshot: unknown, tabs: Array<{ sessionKey: string; url
   return lines.join('\n');
 }
 
-const TabIdParam = Type.Optional(
-  Type.String({
-    description:
-      'Optional tab ID to target a specific tab. Get tab IDs from the "Open tabs" section of browser_snapshot output. Defaults to the active tab.',
-  }),
-);
+function getToolContext(ctx: ExtensionBackendContext): { conversationId: string; signal: AbortSignal | undefined } {
+  const conversationId = ctx.toolContext?.conversationId ?? ctx.toolContext?.sessionId ?? '';
+  const signal = (ctx.agentToolContext as { signal?: AbortSignal } | undefined)?.signal;
+  return { conversationId, signal };
+}
 
-const SnapshotParams = Type.Object({
-  tabId: TabIdParam,
-});
+export async function browserSnapshot(input: unknown, ctx: ExtensionBackendContext) {
+  const { conversationId, signal } = getToolContext(ctx);
+  const tabId = (input as { tabId?: string }).tabId;
+  try {
+    const host = await requireActiveHost(conversationId, signal);
+    const tabs = await withBrowserToolDeadline('Browser tab listing', signal, host.listTabs());
+    const snapshot = await withBrowserToolDeadline('Browser snapshot', signal, host.snapshot(conversationId, tabId));
+    return {
+      content: [{ type: 'text' as const, text: formatSnapshot(snapshot, tabs, tabId) }],
+      details: { snapshot, tabs } as Record<string, unknown>,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: 'text' as const, text: `Browser snapshot failed: ${message}` }],
+      isError: true,
+      details: { action: 'snapshot', error: message },
+    };
+  }
+}
 
-const CdpCommand = Type.Object({
-  method: Type.String({
-    description: 'Chrome DevTools Protocol method in Domain.command form, for example Runtime.evaluate, Page.navigate, or DOM.getDocument.',
-  }),
-  params: Type.Optional(Type.Record(Type.String(), Type.Any(), { description: 'CDP command params object.' })),
-});
-
-const CdpParams = Type.Object({
-  command: Type.Union(
-    [CdpCommand, Type.Array(CdpCommand, { minItems: 1, maxItems: 200, description: 'Multiple CDP commands to execute sequentially.' })],
-    { description: 'A single CDP command object { method, params? }, or an array of command objects.' },
-  ),
-  continueOnError: Type.Optional(
-    Type.Boolean({ description: 'Continue executing later commands after a protocol command fails. Defaults to false.' }),
-  ),
-  tabId: TabIdParam,
-});
-
-const ScreenshotParams = Type.Object({
-  tabId: TabIdParam,
-});
-
-export function createWorkbenchBrowserAgentExtension(): (pi: ExtensionAPI) => void {
-  return (pi: ExtensionAPI) => {
-    pi.registerTool({
-      name: 'browser_snapshot',
-      label: 'Browser Snapshot',
-      description:
-        'Observe the built-in Workbench Browser — active tab snapshot with structured elements, plus a list of all open tabs. Use tabId to target a specific tab.',
-      promptSnippet:
-        'Use browser_snapshot to understand the shared Workbench Browser. It returns the active tab snapshot plus a list of all open tabs with their tabId values. Pass tabId to target any tab. For development validation, use the agent-browser skill/CLI through bash instead.',
-      promptGuidelines: [
-        "Use Workbench Browser tools only for the user's visible shared browser; start with browser_snapshot and use agent-browser CLI for autonomous dev/QA.",
+export async function browserCdp(input: unknown, ctx: ExtensionBackendContext) {
+  const { conversationId, signal } = getToolContext(ctx);
+  const params = input as { command: unknown; continueOnError?: boolean; tabId?: string };
+  try {
+    const host = await requireActiveHost(conversationId, signal);
+    const result = await withBrowserToolDeadline(
+      'Browser CDP command',
+      signal,
+      host.cdp({
+        conversationId,
+        command: params.command,
+        ...(params.continueOnError !== undefined ? { continueOnError: params.continueOnError } : {}),
+        ...(params.tabId ? { tabId: params.tabId } : {}),
+      }),
+    );
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2).slice(0, 80_000) }],
+      details: result as Record<string, unknown>,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        { type: 'text' as const, text: `Browser CDP command failed: ${message}. Try browser_snapshot first to check the browser state.` },
       ],
-      parameters: SnapshotParams,
-      async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-        const conversationId = ctx.sessionManager.getSessionId();
-        try {
-          const host = await requireActiveHost(conversationId, signal);
-          const tabs = await withBrowserToolDeadline('Browser tab listing', signal, host.listTabs());
-          const tabId = (params as { tabId?: string }).tabId;
-          const snapshot = await withBrowserToolDeadline('Browser snapshot', signal, host.snapshot(conversationId, tabId));
-          return {
-            content: [{ type: 'text' as const, text: formatSnapshot(snapshot, tabs, tabId) }],
-            details: { snapshot, tabs } as Record<string, unknown>,
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            content: [{ type: 'text' as const, text: `Browser snapshot failed: ${message}` }],
-            isError: true,
-            details: { action: 'snapshot', error: message },
-          };
-        }
-      },
-    });
+      isError: true,
+      details: { action: 'cdp', error: message },
+    };
+  }
+}
 
-    pi.registerTool({
-      name: 'browser_cdp',
-      label: 'Browser CDP',
-      description: 'Send one or more Chrome DevTools Protocol commands to the Workbench Browser. Use tabId to target a specific tab.',
-      promptSnippet:
-        'Use browser_cdp to act on the shared Workbench Browser. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev automation/testing, use the agent-browser skill/CLI through bash instead.',
-      promptGuidelines: [
-        'browser_cdp controls the shared Workbench Browser; get tabId from browser_snapshot, batch multiple CDP commands in one call, and use agent-browser CLI for dev/QA automation.',
+export async function browserScreenshot(input: unknown, ctx: ExtensionBackendContext) {
+  const { conversationId, signal } = getToolContext(ctx);
+  const tabId = (input as { tabId?: string }).tabId;
+  try {
+    const host = await requireActiveHost(conversationId, signal);
+    const screenshot = (await withBrowserToolDeadline('Browser screenshot', signal, host.screenshot(conversationId, tabId))) as {
+      dataBase64?: string;
+      mimeType?: string;
+      url?: string;
+      title?: string;
+      viewport?: unknown;
+      capturedAt?: string;
+    };
+    const image = normalizeScreenshotImage(screenshot);
+    if (!image) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: 'Browser screenshot failed: captured image data was empty or invalid. Try browser_snapshot first to check the browser state.',
+          },
+        ],
+        isError: true,
+        details: { action: 'screenshot', error: 'empty_image_data' },
+      };
+    }
+    return {
+      content: [
+        { type: 'text' as const, text: 'Captured Workbench Browser screenshot.' },
+        { type: 'image' as const, data: image.data, mimeType: image.mimeType },
       ],
-      parameters: CdpParams,
-      async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-        const conversationId = ctx.sessionManager.getSessionId();
-        try {
-          const host = await requireActiveHost(conversationId, signal);
-          const result = await withBrowserToolDeadline(
-            'Browser CDP command',
-            signal,
-            host.cdp({
-              conversationId,
-              command: params.command,
-              ...(params.continueOnError !== undefined ? { continueOnError: params.continueOnError } : {}),
-              ...((params as { tabId?: string }).tabId ? { tabId: (params as { tabId: string }).tabId } : {}),
-            }),
-          );
-          return {
-            content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2).slice(0, 80_000) }],
-            details: result as Record<string, unknown>,
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Browser CDP command failed: ${message}. Try browser_snapshot first to check the browser state.`,
-              },
-            ],
-            isError: true,
-            details: { action: 'cdp', error: message },
-          };
-        }
-      },
-    });
-
-    pi.registerTool({
-      name: 'browser_screenshot',
-      label: 'Browser Screenshot',
-      description: 'Capture a PNG screenshot of the Workbench Browser. Use tabId to target a specific tab.',
-      promptSnippet:
-        'Use browser_screenshot for the shared Workbench Browser when visual communication matters. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev validation screenshots, use the agent-browser skill/CLI through bash.',
-      promptGuidelines: [
-        'browser_screenshot captures the shared Workbench Browser for user-facing visual context; use agent-browser CLI for product-under-test screenshots.',
+      details: { url: screenshot.url, title: screenshot.title, viewport: screenshot.viewport, capturedAt: screenshot.capturedAt },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        { type: 'text' as const, text: `Browser screenshot failed: ${message}. Try browser_snapshot first to check the browser state.` },
       ],
-      parameters: ScreenshotParams,
-      async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-        const conversationId = ctx.sessionManager.getSessionId();
-        try {
-          const host = await requireActiveHost(conversationId, signal);
-          const tabId = (params as { tabId?: string }).tabId;
-          const screenshot = (await withBrowserToolDeadline('Browser screenshot', signal, host.screenshot(conversationId, tabId))) as {
-            dataBase64?: string;
-            mimeType?: string;
-            url?: string;
-            title?: string;
-            viewport?: unknown;
-            capturedAt?: string;
-          };
-          const image = normalizeScreenshotImage(screenshot);
-          if (!image) {
-            return {
-              content: [
-                {
-                  type: 'text' as const,
-                  text: 'Browser screenshot failed: captured image data was empty or invalid. Try browser_snapshot first to check the browser state.',
-                },
-              ],
-              isError: true,
-              details: { action: 'screenshot', error: 'empty_image_data' },
-            };
-          }
-
-          return {
-            content: [
-              { type: 'text' as const, text: 'Captured Workbench Browser screenshot.' },
-              { type: 'image' as const, data: image.data, mimeType: image.mimeType },
-            ],
-            details: {
-              url: screenshot.url,
-              title: screenshot.title,
-              viewport: screenshot.viewport,
-              capturedAt: screenshot.capturedAt,
-            },
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Browser screenshot failed: ${message}. Try browser_snapshot first to check the browser state.`,
-              },
-            ],
-            isError: true,
-            details: { action: 'screenshot', error: message },
-          };
-        }
-      },
-    });
-  };
+      isError: true,
+      details: { action: 'screenshot', error: message },
+    };
+  }
 }
