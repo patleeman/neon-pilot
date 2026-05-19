@@ -79,7 +79,6 @@ const BUILT_IN_API_KEY_PROVIDERS: string[] = [
 
 const BUILT_IN_API_KEY_PROVIDER_SET = new Set<string>(BUILT_IN_API_KEY_PROVIDERS);
 const NON_MODEL_SECRET_PROVIDERS = new Set(['telegram']);
-const HIDDEN_PROVIDER_IDS = new Set(['legacy']);
 const OAUTH_LOGIN_RETENTION_MS = 30 * 60_000;
 const oauthLoginRuns = new Map<string, ProviderOAuthLoginRun>();
 const oauthLoginListeners = new Map<string, Set<(state: ProviderOAuthLoginState) => void>>();
@@ -183,6 +182,11 @@ function deriveAuthType(
   return { authType: 'none', hasStoredCredential };
 }
 
+function hasUsableStoredCredential(authStorage: AuthStorage, provider: string): boolean {
+  const credential = authStorage.get(provider);
+  return credential?.type === 'oauth' || credential?.type === 'api_key' || authStorage.hasAuth(provider);
+}
+
 function makeAuthStorage(authFile: string): AuthStorage {
   return AuthStorage.create(authFile);
 }
@@ -195,12 +199,12 @@ export function readProviderAuthState(authFile: string): ProviderAuthState {
   const providers = new Set<string>([
     ...BUILT_IN_API_KEY_PROVIDER_SET,
     ...modelCounts.keys(),
-    ...authStorage.list(),
+    ...authStorage.list().filter((provider) => hasUsableStoredCredential(authStorage, provider)),
     ...oauthProvidersById.keys(),
   ]);
 
   const summaries = [...providers]
-    .filter((provider) => !NON_MODEL_SECRET_PROVIDERS.has(provider) && !HIDDEN_PROVIDER_IDS.has(provider))
+    .filter((provider) => !NON_MODEL_SECRET_PROVIDERS.has(provider))
     .sort((left, right) => left.localeCompare(right))
     .map((provider) => {
       const oauthProvider = oauthProvidersById.get(provider);

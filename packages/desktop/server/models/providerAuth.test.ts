@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -86,11 +86,11 @@ describe('setProviderApiKey', () => {
     expect(state.providers.some((entry) => entry.id === 'telegram')).toBe(false);
   });
 
-  it('hides the obsolete legacy provider bucket', () => {
+  it('ignores stale empty stored credential buckets', () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    setProviderApiKey(authFile, 'legacy', 'stale-secret');
+    writeFileSync(authFile, JSON.stringify({ legacy: {} }));
 
     const state = readProviderAuthState(authFile);
 
