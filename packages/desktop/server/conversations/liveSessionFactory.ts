@@ -3,6 +3,7 @@ import {
   AuthStorage,
   createAgentSession,
   createBashTool,
+  type DefaultResourceLoader,
   type ExtensionFactory,
   ModelRegistry,
   type SessionManager,
@@ -98,6 +99,23 @@ function resolveToolNamesForInitialModel(input: {
   return toolNamesForModelToolProfile(explicitProfile ?? providerDefaultProfile);
 }
 
+const BUILT_IN_TOOL_NAMES = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls']);
+
+function loaderHasTool(loader: DefaultResourceLoader, toolName: string): boolean {
+  if (BUILT_IN_TOOL_NAMES.has(toolName)) return true;
+
+  const extensionsResult = loader.getExtensions();
+  for (const extension of extensionsResult.extensions) {
+    if (extension.tools.has(toolName)) return true;
+  }
+  return false;
+}
+
+function resolveAvailableProfileToolNames(loader: DefaultResourceLoader, requestedToolNames: string[] | undefined): string[] | undefined {
+  if (!requestedToolNames) return undefined;
+  return requestedToolNames.every((toolName) => loaderHasTool(loader, toolName)) ? requestedToolNames : undefined;
+}
+
 export async function createPreparedLiveAgentSession(input: {
   cwd: string;
   agentDir: string;
@@ -118,6 +136,7 @@ export async function createPreparedLiveAgentSession(input: {
   });
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const resourceLoader = await makeLoader(input.cwd, options);
+  const availableProfileToolNames = resolveAvailableProfileToolNames(resourceLoader, profileToolNames);
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -126,7 +145,11 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(options.allowedToolNames ? { tools: options.allowedToolNames } : profileToolNames ? { tools: profileToolNames } : {}),
+    ...(options.allowedToolNames
+      ? { tools: options.allowedToolNames }
+      : availableProfileToolNames
+        ? { tools: availableProfileToolNames }
+        : {}),
   });
 
   patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session));
