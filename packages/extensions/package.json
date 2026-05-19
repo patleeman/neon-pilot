@@ -91,10 +91,6 @@
       "types": "./dist/backend/compaction.d.ts",
       "default": "./dist/backend/compaction.js"
     },
-    "./backend/autoMode": {
-      "types": "./dist/backend/autoMode.d.ts",
-      "default": "./dist/backend/autoMode.js"
-    },
     "./backend/events": {
       "types": "./dist/backend/events.d.ts",
       "default": "./dist/backend/events.js"

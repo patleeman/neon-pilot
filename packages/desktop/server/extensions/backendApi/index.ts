@@ -2,7 +2,6 @@ export type { ExtensionBackendContext } from '../extensionBackend.js';
 export * from './agent.js';
 export * from './artifacts.js';
 export * from './automations.js';
-export * from './autoMode.js';
 export * from './browser.js';
 export * from './checkpoints.js';
 export * from './conversations.js';
