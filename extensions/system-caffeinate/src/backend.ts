@@ -31,9 +31,13 @@ export async function start(_input: unknown, ctx: ExtensionBackendContext): Prom
     },
   });
 
+  const pid = child.pid ?? null;
+  if (!pid) {
+    child.kill();
+    throw new Error('Failed to start caffeinate: missing child pid');
+  }
   processHandle = child;
-  processPid = child.pid ?? null;
-  if (!processPid) throw new Error('Failed to start caffeinate: missing child pid');
+  processPid = pid;
   return currentStatus();
 }
 
