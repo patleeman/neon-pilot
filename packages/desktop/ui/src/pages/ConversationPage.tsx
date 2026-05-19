@@ -2105,12 +2105,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [id, realMessages, scrollToBottom, showInitialHistoricalWarmupLoader]);
 
   const loadOlderMessages = useCallback(
-    (targetMessageIndex?: number, options?: { automatic?: boolean; tailBlockStep?: number }) => {
+    (targetMessageIndex?: number, options?: { automatic?: boolean; tailBlockStep?: number; scrollRestore?: boolean }) => {
       if (!id || sessionLoading || historicalTotalBlocks <= 0) {
         return;
       }
 
-      if (targetMessageIndex === undefined) {
+      if (targetMessageIndex === undefined && options?.scrollRestore !== false) {
         capturePrependRestore();
       }
 
@@ -5717,7 +5717,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         </span>
                         <button
                           type="button"
-                          onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
+                          onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep, scrollRestore: false })}
                           disabled={sessionLoading}
                           className="font-medium text-accent hover:text-primary disabled:pointer-events-none disabled:text-secondary/60"
                         >
