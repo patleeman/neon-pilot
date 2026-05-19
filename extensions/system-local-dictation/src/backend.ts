@@ -46,11 +46,12 @@ export async function updateSettings(input: { enabled?: unknown; model?: unknown
     if (!model) throw new Error('model must be a non-empty string');
     update.model = model;
   }
-  // Write runtime first (source of truth for reads), then profile.
-  // This prevents split-brain: if the second write fails, the runtime
-  // state is consistent and reads still return the correct values.
-  writeDictationSettings(settingsFile(ctx.runtimeDir), update);
+  // Write profile first (persistent storage), then runtime.
+  // If the process crashes between writes, the profile has the latest
+  // values so the next startup loads them correctly. If runtime write
+  // fails but profile succeeds, the change is durable across restarts.
   writeDictationSettings(ctx.profileSettingsFilePath, update);
+  writeDictationSettings(settingsFile(ctx.runtimeDir), update);
   return buildDictationSettingsState(settingsFile(ctx.runtimeDir));
 }
 
