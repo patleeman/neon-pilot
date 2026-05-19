@@ -413,34 +413,6 @@ export function McpSettingsPanel() {
                 <p className="ui-card-meta">No skill-local mcp.json wrappers found in the active skill set.</p>
               )}
             </div>
-
-            <div className="space-y-3">
-              <p className="ui-card-meta">Effective MCP servers</p>
-              {mcpState.servers.length > 0 ? (
-                mcpState.servers.map((server) => (
-                  <div key={server.name} className="space-y-2 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[12px] text-primary">{server.name}</span>
-                      <Pill tone={server.transport === 'remote' ? 'teal' : 'muted'}>{server.transport}</Pill>
-                      {server.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
-                      <span className="ui-card-meta">
-                        {server.source === 'skill' && server.skillName ? `Bundled with ${server.skillName}` : 'Explicit config'}
-                      </span>
-                    </div>
-                    <p className="ui-card-meta break-all">
-                      <span className="font-mono text-[11px]">{formatMcpServerCommand(server)}</span>
-                    </p>
-                    {server.sourcePath ? (
-                      <p className="ui-card-meta break-all">
-                        <span className="font-mono text-[11px]">{server.sourcePath}</span>
-                      </p>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <p className="ui-card-meta">No MCP servers are currently available.</p>
-              )}
-            </div>
           </div>
         ) : null}
       </SettingsPanel>
