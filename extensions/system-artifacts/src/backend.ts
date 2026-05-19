@@ -112,6 +112,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
         kind: record.kind,
         revision: record.revision,
         updatedAt: record.updatedAt,
+        content: record.content,
       };
     }
 
