@@ -72,7 +72,7 @@ export function ConversationComposerMeta({
     contextUsage: sessionTokens,
   };
   return (
-    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10px] text-dim">
+    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
         {draft ? (
           <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none">

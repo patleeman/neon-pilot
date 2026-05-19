@@ -200,7 +200,7 @@ export function ConversationComposerInputControls({
           />
         </div>
 
-        <div className="flex flex-nowrap items-center gap-1.5 px-3 py-0.5">
+        <div className="flex flex-nowrap items-center gap-1.5 px-3 py-1.5 border-t border-dashed border-border-subtle/70 mt-0.5">
           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost

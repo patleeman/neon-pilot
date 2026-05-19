@@ -5515,7 +5515,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           className="conversation-scroll-shell h-full overflow-y-auto overflow-x-hidden"
           style={{ scrollPaddingTop: `${conversationHeaderOffset + 16}px` }}
         >
-          <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-base/95 px-4 pt-3 backdrop-blur sm:px-6 sm:pt-4">
+          <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-panel/95 px-4 pt-3 backdrop-blur sm:px-6 sm:pt-4">
             <div className="mx-auto w-full max-w-6xl pb-3 pt-1">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1 max-w-4xl">
@@ -5926,7 +5926,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       {/* Input area */}
       {!keyboardOpen && (
         <div
-          className={`px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+1rem)] transition-colors ${dragOver ? 'bg-accent/5' : ''}`}
+          className={`px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

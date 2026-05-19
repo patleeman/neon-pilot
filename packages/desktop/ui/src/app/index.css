@@ -235,7 +235,8 @@
   }
 
   .ui-input-shell {
-    @apply rounded-xl border border-border-subtle bg-elevated transition-[border-color,background-color,box-shadow];
+    @apply rounded-xl border border-border-subtle bg-panel transition-[border-color,background-color,box-shadow];
+    box-shadow: 0 4px 20px -2px rgb(var(--color-primary) / 0.07), 0 1px 4px rgb(var(--color-primary) / 0.04);
   }
 
   .ui-truncate-start {
@@ -356,11 +357,12 @@
   }
 
   .ui-message-card-user {
-    @apply min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-sm border border-accent/15 bg-accent/10 p-2.5;
+    @apply min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-sm border border-accent/20 px-3.5 py-3;
+    background-color: rgb(var(--color-accent) / 0.08);
   }
 
   .ui-message-card-assistant {
-    @apply min-w-0 max-w-full overflow-hidden rounded-2xl border border-steel/20 bg-surface/60 px-3.5 py-3;
+    @apply min-w-0 max-w-full overflow-hidden rounded-2xl border border-border-subtle bg-panel px-3.5 py-3;
   }
 
   .ui-terminal-block {
