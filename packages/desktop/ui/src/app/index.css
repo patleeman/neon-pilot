@@ -331,15 +331,6 @@
     display: none !important;
   }
 
-  .ui-chat-avatar {
-    @apply flex h-6 w-6 items-center justify-center rounded-md shrink-0;
-    background-color: rgb(var(--color-steel) / 0.18);
-  }
-
-  .ui-chat-avatar-mark {
-    @apply text-steel text-[9px] font-bold font-mono select-none;
-  }
-
   .ui-message-card-user {
     @apply min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-sm border border-accent/15 bg-accent/10 p-2.5;
   }

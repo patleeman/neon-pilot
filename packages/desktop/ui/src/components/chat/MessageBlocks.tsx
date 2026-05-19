@@ -283,9 +283,6 @@ export const AssistantMessage = memo(function AssistantMessage({
 
   return (
     <div className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5' : 'gap-3')}>
-      <div className="ui-chat-avatar mt-0.5">
-        <span className="ui-chat-avatar-mark">pa</span>
-      </div>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div {...replySelectionScopeProps} className="ui-message-card-assistant space-y-1 text-primary">
           {showRawRunCallbackCard ? (
