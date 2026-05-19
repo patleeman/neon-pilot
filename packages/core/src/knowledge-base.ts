@@ -945,8 +945,11 @@ export class KnowledgeBaseManager {
 
     const existingLock = readSyncLockMetadata(this.syncLockMetadataPath);
     const lockAcquiredAtMs = parseTimestampMs(existingLock?.acquiredAt);
+    // Corrupted metadata (non-null lock with null/invalid acquiredAt) is treated
+    // as stale so the lock can be broken rather than held indefinitely.
+    const metadataCorrupt = existingLock && lockAcquiredAtMs === null;
     const staleByAge = lockAcquiredAtMs !== null && Date.now() - lockAcquiredAtMs > KNOWLEDGE_BASE_SYNC_LOCK_STALE_MS;
-    const stale = !existingLock || !isProcessAlive(existingLock.pid) || staleByAge;
+    const stale = !existingLock || metadataCorrupt || !isProcessAlive(existingLock.pid) || staleByAge;
     if (!stale) {
       return false;
     }
