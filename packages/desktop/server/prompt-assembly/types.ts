@@ -40,5 +40,9 @@ export interface PromptAssemblyPlan {
     blocks: unknown[];
     diagnostics: AssemblyDiagnostic[];
   };
+  instructions: {
+    layers: unknown[];
+    diagnostics: AssemblyDiagnostic[];
+  };
   diagnostics: AssemblyDiagnostic[];
 }

@@ -1,5 +1,6 @@
 import type { ExtensionBackendContext } from '@personal-agent/extensions';
 
+import { buildInstructionPlan } from '../../../packages/desktop/server/prompt-assembly/instructionInventory.js';
 import { buildPromptAssemblyPlanAsync } from '../../../packages/desktop/server/prompt-assembly/promptAssembly.js';
 import { buildPromptTemplatePlanAsync } from '../../../packages/desktop/server/prompts/promptTemplateInventory.js';
 import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
@@ -10,13 +11,14 @@ export async function inspectPromptAssembly(input: unknown, ctx: ExtensionBacken
   const repoRoot = typeof body.repoRoot === 'string' && body.repoRoot.trim() ? body.repoRoot.trim() : process.cwd();
   const modelRef = typeof body.modelRef === 'string' ? body.modelRef : undefined;
   const runtimeCtx = { profile: ctx.profile, repoRoot, modelRef };
-  const [plan, skills, tools, promptTemplates] = await Promise.all([
+  const [plan, skills, tools, promptTemplates, instructions] = await Promise.all([
     buildPromptAssemblyPlanAsync(runtimeCtx),
     buildSkillInventoryAsync(runtimeCtx),
     buildToolInjectionPlanAsync(runtimeCtx),
     buildPromptTemplatePlanAsync(runtimeCtx),
+    buildInstructionPlan(runtimeCtx),
   ]);
-  return { ok: true, plan, skills, tools: tools.tools, promptTemplates: promptTemplates.templates };
+  return { ok: true, plan, skills, tools: tools.tools, promptTemplates: promptTemplates.templates, instructions: instructions.layers };
 }
 
 export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendContext) {

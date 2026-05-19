@@ -135,6 +135,7 @@ The manifest declares what your extension contributes:
 | `skillProviders`              | Dynamic Prompt Assembly skill providers                            | [See below](#prompt-assembly)                                                             |
 | `toolProviders`               | Dynamic Prompt Assembly tool providers                             | [See below](#prompt-assembly)                                                             |
 | `promptTemplateProviders`     | Dynamic Prompt Assembly template providers                         | [See below](#prompt-assembly)                                                             |
+| `instructionProviders`        | Dynamic Prompt Assembly instruction layers                         | [See below](#prompt-assembly)                                                             |
 | `promptAssemblyHooks`         | Privileged Prompt Assembly hooks                                   | [See below](#prompt-assembly)                                                             |
 | `modelProfiles`               | Enabled extension runtime profiles matched by provider/model globs |                                                                                           |
 | `mentions`                    | @-mention providers                                                |                                                                                           |
@@ -567,12 +568,13 @@ Use dynamic providers only when a contribution is generated, external, or condit
   "contributes": {
     "skillProviders": [{ "id": "generated-skills", "handler": "listGeneratedSkills", "title": "Generated Skills" }],
     "toolProviders": [{ "id": "generated-tools", "handler": "listGeneratedTools" }],
-    "promptTemplateProviders": [{ "id": "generated-prompts", "handler": "listGeneratedPrompts" }]
+    "promptTemplateProviders": [{ "id": "generated-prompts", "handler": "listGeneratedPrompts" }],
+    "instructionProviders": [{ "id": "runtime-instructions", "handler": "listRuntimeInstructions" }]
   }
 }
 ```
 
-Provider handlers may return either an array or an object keyed by the contribution kind, for example `{ "skills": [...] }`, `{ "tools": [...] }`, or `{ "templates": [...] }`. Providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly.
+Provider handlers may return either an array or an object keyed by the contribution kind, for example `{ "skills": [...] }`, `{ "tools": [...] }`, `{ "templates": [...] }`, or `{ "layers": [...] }`. Providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly.
 
 `promptAssemblyHooks` are the break-glass escape hatch for filtering or mutating the assembled plan:
 

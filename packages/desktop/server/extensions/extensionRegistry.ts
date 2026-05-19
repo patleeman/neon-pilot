@@ -227,7 +227,7 @@ export interface ExtensionAssemblyProviderRegistration {
   handler: string;
   title?: string;
   priority?: number;
-  kind: 'skills' | 'tools' | 'promptTemplates';
+  kind: 'skills' | 'tools' | 'promptTemplates' | 'instructions';
 }
 
 export interface ExtensionPromptAssemblyHookRegistration {
@@ -1029,7 +1029,7 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     }
   }
 
-  for (const providerField of ['skillProviders', 'toolProviders', 'promptTemplateProviders'] as const) {
+  for (const providerField of ['skillProviders', 'toolProviders', 'promptTemplateProviders', 'instructionProviders'] as const) {
     if (contributes[providerField] !== undefined) {
       for (const [index, provider] of assertRecordArray(contributes[providerField], `contributes.${providerField}`).entries()) {
         requireString(provider.id, `contributes.${providerField}[${index}].id`);
@@ -1802,6 +1802,7 @@ export function readExtensionSchema() {
       'tools',
       'toolProviders',
       'promptTemplateProviders',
+      'instructionProviders',
       'promptAssemblyHooks',
       'promptReferences',
       'promptContextProviders',
@@ -2069,6 +2070,7 @@ export function listExtensionAssemblyProviderRegistrations(stateRoot: string = g
     ['skillProviders', 'skills'],
     ['toolProviders', 'tools'],
     ['promptTemplateProviders', 'promptTemplates'],
+    ['instructionProviders', 'instructions'],
   ] as const;
   return listEnabledExtensionEntries(stateRoot)
     .flatMap((entry) =>

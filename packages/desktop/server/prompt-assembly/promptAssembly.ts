@@ -3,6 +3,7 @@ import { listExtensionPromptAssemblyHookRegistrations } from '../extensions/exte
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { buildToolInjectionPlan, buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
+import { buildInstructionPlan } from './instructionInventory.js';
 import { buildPromptContextPlan } from './promptContextInventory.js';
 import type { AssemblyRuntimeContext, PromptAssemblyPlan } from './types.js';
 
@@ -10,6 +11,7 @@ export function buildPromptAssemblyPlan(ctx: AssemblyRuntimeContext): PromptAsse
   const skills = buildSkillInjectionPlan(ctx);
   const tools = buildToolInjectionPlan(ctx);
   const promptTemplates = buildPromptTemplatePlan(ctx);
+  const instructions = { layers: [], diagnostics: [] };
   return {
     profile: ctx.profile,
     repoRoot: ctx.repoRoot,
@@ -27,6 +29,7 @@ export function buildPromptAssemblyPlan(ctx: AssemblyRuntimeContext): PromptAsse
       diagnostics: promptTemplates.diagnostics,
     },
     context: { blocks: [], diagnostics: [] },
+    instructions,
     diagnostics: [...skills.diagnostics, ...tools.diagnostics, ...promptTemplates.diagnostics],
   };
 }
@@ -39,10 +42,11 @@ export async function buildPromptAssemblyPlanAsync(
     contextMessages?: Array<{ customType: string; content: string }>;
   },
 ): Promise<PromptAssemblyPlan> {
-  const [skills, tools, promptTemplates] = await Promise.all([
+  const [skills, tools, promptTemplates, instructions] = await Promise.all([
     buildSkillInjectionPlanAsync(ctx),
     buildToolInjectionPlanAsync(ctx),
     buildPromptTemplatePlanAsync(ctx),
+    buildInstructionPlan(ctx),
   ]);
   const plan: PromptAssemblyPlan = {
     profile: ctx.profile,
@@ -51,7 +55,8 @@ export async function buildPromptAssemblyPlanAsync(
     tools: { activeToolNames: tools.activeToolNames, diagnostics: tools.diagnostics },
     promptTemplates: { templatePaths: promptTemplates.templatePaths, diagnostics: promptTemplates.diagnostics },
     context: { blocks: [], diagnostics: [] },
-    diagnostics: [...skills.diagnostics, ...tools.diagnostics, ...promptTemplates.diagnostics],
+    instructions: { layers: instructions.layers, diagnostics: instructions.diagnostics },
+    diagnostics: [...skills.diagnostics, ...tools.diagnostics, ...promptTemplates.diagnostics, ...instructions.diagnostics],
   };
   if (ctx.prompt && ctx.conversationId) {
     const context = await buildPromptContextPlan({

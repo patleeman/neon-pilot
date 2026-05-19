@@ -587,12 +587,13 @@ Prompt assembly providers and hooks are the advanced escape hatch for extensions
     "skillProviders": [{ "id": "generated-skills", "handler": "listGeneratedSkills", "title": "Generated Skills" }],
     "toolProviders": [{ "id": "generated-tools", "handler": "listGeneratedTools" }],
     "promptTemplateProviders": [{ "id": "generated-prompts", "handler": "listGeneratedPrompts" }],
+    "instructionProviders": [{ "id": "runtime-instructions", "handler": "listRuntimeInstructions" }],
     "promptAssemblyHooks": [{ "id": "filter-runtime-context", "handler": "filterRuntimeContext", "phase": "before-injection" }]
   }
 }
 ```
 
-Prompt assembly providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly. Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
+Prompt assembly providers are isolated: failures, timeouts, and malformed items become diagnostics and do not block the rest of assembly. Instruction providers return inspectable layers (`{ "layers": [...] }`) instead of silently mutating the system prompt. Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead. The built-in Prompt Assembly page at `/prompt-assembly` is the inspection and management surface.
 
 ## Surfaces and contribution choices
 

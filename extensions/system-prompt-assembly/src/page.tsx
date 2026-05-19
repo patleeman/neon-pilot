@@ -2,9 +2,10 @@ import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
 import { AppPageIntro, AppPageLayout, cx, ErrorState, LoadingState } from '@personal-agent/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 
-type Tab = 'summary' | 'skills' | 'tools' | 'templates' | 'context' | 'diagnostics';
+type Tab = 'summary' | 'instructions' | 'skills' | 'tools' | 'templates' | 'context' | 'diagnostics';
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'summary', label: 'Summary' },
+  { id: 'instructions', label: 'Instructions' },
   { id: 'skills', label: 'Skills' },
   { id: 'tools', label: 'Tools' },
   { id: 'templates', label: 'Templates' },
@@ -19,6 +20,7 @@ interface InspectResult {
     tools?: { activeToolNames?: string[] };
     promptTemplates?: { templatePaths?: string[] };
     context?: { blocks?: unknown[] };
+    instructions?: { layers?: unknown[] };
   };
   skills: Array<{
     id: string;
@@ -38,6 +40,14 @@ interface InspectResult {
     diagnostics?: unknown[];
   }>;
   promptTemplates: Array<{ id: string; title: string; enabled: boolean; location?: { path?: string }; diagnostics?: unknown[] }>;
+  instructions: Array<{
+    id: string;
+    title: string;
+    content?: string;
+    scope?: string;
+    risk?: string;
+    source?: { label?: string; kind?: string };
+  }>;
 }
 
 export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
@@ -71,6 +81,7 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
   const counts = useMemo(
     () => ({
       summary: 0,
+      instructions: data?.instructions.length ?? 0,
       skills: data?.skills.length ?? 0,
       tools: data?.tools.length ?? 0,
       templates: data?.promptTemplates.length ?? 0,
@@ -105,6 +116,13 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
         ))}
       </div>
       {activeTab === 'summary' ? <Summary data={data} /> : null}
+      {activeTab === 'instructions' ? (
+        <Rows
+          rows={data.instructions}
+          titleKey="title"
+          meta={(row) => `${row.scope ?? ''} · ${row.risk ?? ''} · ${row.source?.kind ?? ''} · ${row.source?.label ?? ''}`}
+        />
+      ) : null}
       {activeTab === 'skills' ? (
         <Rows
           rows={data.skills}
@@ -142,7 +160,8 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
 
 function Summary({ data }: { data: InspectResult }) {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-5 gap-3">
+      <Stat label="Instruction layers" value={data.instructions?.length ?? data.plan.instructions?.layers?.length ?? 0} />
       <Stat label="Skill paths" value={data.plan.skills?.skillPaths?.length ?? 0} />
       <Stat label="Active tools" value={data.plan.tools?.activeToolNames?.length ?? 0} />
       <Stat label="Templates" value={data.plan.promptTemplates?.templatePaths?.length ?? 0} />

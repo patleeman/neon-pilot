@@ -111,6 +111,7 @@ export interface ExtensionContributions {
   tools?: ExtensionToolContribution[];
   toolProviders?: ExtensionAssemblyProviderContribution[];
   promptTemplateProviders?: ExtensionAssemblyProviderContribution[];
+  instructionProviders?: ExtensionAssemblyProviderContribution[];
   promptAssemblyHooks?: ExtensionPromptAssemblyHookContribution[];
   modelProfiles?: ExtensionModelProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
