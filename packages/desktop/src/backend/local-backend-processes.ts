@@ -124,7 +124,7 @@ export class LocalBackendProcesses {
     }
 
     this.healthTimer = setInterval(() => {
-      if (!this.daemon || this.startPromise) {
+      if (this.disposed || !this.daemon || this.startPromise) {
         return;
       }
 
