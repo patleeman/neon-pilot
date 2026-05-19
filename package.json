@@ -43,7 +43,7 @@
     "check": "pnpm run check:types && pnpm run lint && pnpm run fmt && pnpm run check:settings && pnpm run check:extensions:quick; knip --no-config-hints || true",
     "check:extensions": "node scripts/check-extension-backend-api.mjs && vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts packages/desktop/server/extensions/systemExtensionBackendRuntime.smoke.test.ts packages/desktop/server/routes/registerAll.smoke.test.ts && node scripts/check-packaged-extensions.mjs",
     "check:extensions:quick": "node scripts/check-extension-backend-api.mjs && node scripts/check-filesystem-authority.mjs && vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts packages/desktop/server/extensions/systemExtensionBackendRuntime.smoke.test.ts packages/desktop/server/routes/registerAll.smoke.test.ts && node scripts/check-packaged-extensions.mjs",
-    "check:release": "pnpm run check:types && pnpm run check:settings && pnpm run check:extensions:quick",
+    "check:release": "pnpm run check:types && pnpm run check:settings && pnpm run build:extensions && pnpm run check:extensions:quick",
     "extensions:bundle-report": "node scripts/report-extension-bundles.mjs",
     "fix": "pnpm run fmt:fix && pnpm run lint:fix",
     "test": "vitest run",
