@@ -874,8 +874,9 @@ export function CommandPalette() {
       className="ui-overlay-backdrop"
       data-command-palette="true"
       style={{
-        background: 'rgb(0 0 0 / 0.48)',
-        backdropFilter: 'blur(3px)',
+        background: 'rgb(var(--color-base) / 0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1.75rem',
@@ -913,7 +914,9 @@ export function CommandPalette() {
                   }}
                   className={cx(
                     'rounded-md px-2.5 py-1 text-[11px] transition-colors',
-                    scope === option.value ? 'bg-surface text-primary' : 'text-dim hover:bg-surface/60 hover:text-secondary',
+                    scope === option.value
+                      ? 'bg-accent/10 text-accent ring-1 ring-accent/20'
+                      : 'text-dim hover:bg-surface/60 hover:text-secondary',
                   )}
                 >
                   {option.label}
@@ -999,7 +1002,7 @@ export function CommandPalette() {
                     disabled={item.disabled || isBusy}
                     className={cx(
                       'group flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors disabled:cursor-not-allowed',
-                      isSelected ? 'bg-elevated' : 'hover:bg-elevated/50',
+                      isSelected ? 'bg-accent/8 ring-1 ring-accent/15' : 'hover:bg-elevated/50',
                       item.disabled && 'opacity-55',
                     )}
                     title={item.subtitle ?? item.title}

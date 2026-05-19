@@ -12,7 +12,7 @@
 
 @layer components {
   .ui-page-header {
-    @apply sticky top-0 z-10 bg-base/95 backdrop-blur-sm border-b border-border-subtle px-6 py-4 flex items-center gap-4;
+    @apply sticky top-0 z-10 bg-panel/95 backdrop-blur-sm border-b border-border-subtle px-6 py-4 flex items-center gap-4;
   }
 
   .ui-page-title {
@@ -228,7 +228,10 @@
   }
 
   .ui-dialog-shell {
-    @apply w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col bg-surface border border-border-default;
+    @apply w-full rounded-2xl overflow-hidden flex flex-col bg-panel border border-border-subtle;
+    box-shadow:
+      0 8px 40px -4px rgb(var(--color-primary) / 0.12),
+      0 0 0 1px rgb(var(--color-border-subtle) / 0.8);
   }
 
   .ui-input-shell {
@@ -648,10 +651,9 @@
   }
 
   .ui-segmented-button-active {
-    @apply text-primary shadow-sm ring-1 ring-accent/20;
+    @apply text-accent ring-1 ring-accent/25;
     background-color: rgb(var(--color-accent) / 0.1);
-    background-image: linear-gradient(135deg, rgb(var(--color-accent) / 0.16), rgb(var(--color-steel) / 0.1));
-    box-shadow: inset 0 1px 0 rgb(var(--color-steel) / 0.12);
+    box-shadow: 0 1px 3px rgb(var(--color-primary) / 0.06);
   }
 
   .ui-browser-entry {
