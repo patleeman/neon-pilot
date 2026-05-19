@@ -308,8 +308,8 @@ describe('SettingsPage', () => {
     expect(html.indexOf('href="#settings-general"')).toBeLessThan(html.indexOf('href="#settings-capabilities"'));
     expect(html.indexOf('href="#settings-capabilities"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
     expect(html).toContain('Theme');
-    expect(html).toContain('Skills');
-    expect(html).toContain('Skill folders');
+    expect(html).toContain('Capabilities');
+    expect(html).toContain('AGENTS.md files');
     expect(html).not.toContain('Knowledge base');
     expect(html).toContain('Sample manifest setting');
     expect(html).toContain('Injected by');
@@ -326,8 +326,7 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Daemon');
     expect(html).not.toContain('Loading daemon settings');
     expect(html).toContain('Appearance, workspace defaults, and conversation behavior for new chats.');
-    expect(html).toContain('Skill discovery, MCP wrappers, and extension settings.');
-    expect(html).toContain('Load extra skill folders alongside the root skills directory.');
+    expect(html).toContain('MCP wrappers and extension settings.');
     expect(html).toContain('Append extra AGENTS.md-style files to the runtime prompt.');
     expect(html).toContain('Leave blank to use the runtime process cwd.');
     expect(html).not.toContain('Indexed root');
