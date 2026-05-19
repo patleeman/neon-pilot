@@ -352,6 +352,21 @@ export interface ExtensionRuntimeProviderContribution {
   description?: string;
 }
 
+export interface ExtensionAssemblyProviderContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+}
+
+export interface ExtensionPromptAssemblyHookContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+  phase: 'after-discovery' | 'before-policy' | 'after-policy' | 'before-injection' | 'after-assembly';
+}
+
 export interface ExtensionQuickOpenContribution {
   id: string;
   provider: string;
@@ -671,7 +686,11 @@ export interface ExtensionContributions {
   slashCommands?: ExtensionSlashCommandContribution[];
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
+  skillProviders?: ExtensionAssemblyProviderContribution[];
   tools?: ExtensionToolContribution[];
+  toolProviders?: ExtensionAssemblyProviderContribution[];
+  promptTemplateProviders?: ExtensionAssemblyProviderContribution[];
+  promptAssemblyHooks?: ExtensionPromptAssemblyHookContribution[];
   modelProfiles?: ExtensionModelProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];

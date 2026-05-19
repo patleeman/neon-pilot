@@ -87,7 +87,7 @@ Supported top-level fields:
 - `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
-- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, secrets, and settings metadata.
+- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, secrets, and settings metadata.
 - `dependsOn`: required or optional extension dependencies surfaced by diagnostics and available for runtime discovery.
 - `permissions`: declared capability intent.
 
@@ -578,6 +578,21 @@ Use extension tools when the agent needs executable runtime behavior backed by e
 The runtime registers a stable generated tool name: `extension_{extensionId}_{toolId}` with non-identifier characters normalized to underscores. Keep tools coarse and useful; do not expose every button click as an agent tool.
 
 Tool prompt guidance should be rare and short. The model already receives the tool `description`, JSON-schema `inputSchema`, and parameter descriptions, so do not duplicate action lists or parameter docs in `promptGuidelines`. Use `promptGuidelines` only for behavior the schema cannot encode — safety boundaries, when not to use the tool, or required follow-up behavior — and default to one short sentence. Put longer operational workflows in an extension skill.
+
+Prompt assembly providers and hooks are the advanced escape hatch for extensions that need to generate or filter runtime prompt capabilities. Prefer static `skills` and `tools` unless the contribution is genuinely dynamic. Provider and hook handlers are indexed by the registry, run through the central prompt assembly diagnostics surface, and should be treated as privileged runtime behavior:
+
+```json
+{
+  "contributes": {
+    "skillProviders": [{ "id": "generated-skills", "handler": "listGeneratedSkills", "title": "Generated Skills" }],
+    "toolProviders": [{ "id": "generated-tools", "handler": "listGeneratedTools" }],
+    "promptTemplateProviders": [{ "id": "generated-prompts", "handler": "listGeneratedPrompts" }],
+    "promptAssemblyHooks": [{ "id": "filter-runtime-context", "handler": "filterRuntimeContext", "phase": "before-injection" }]
+  }
+}
+```
+
+Hooks are powerful and should require clear user-facing diagnostics. Do not use hooks to silently rewrite the system prompt; contribute instruction/context through first-class providers instead.
 
 ## Surfaces and contribution choices
 

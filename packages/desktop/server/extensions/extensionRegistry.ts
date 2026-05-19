@@ -219,6 +219,26 @@ export interface ExtensionRuntimeProviderRegistration {
   description?: string;
 }
 
+export interface ExtensionAssemblyProviderRegistration {
+  extensionId: string;
+  id: string;
+  packageType: ExtensionPackageType;
+  handler: string;
+  title?: string;
+  priority?: number;
+  kind: 'skills' | 'tools' | 'promptTemplates';
+}
+
+export interface ExtensionPromptAssemblyHookRegistration {
+  extensionId: string;
+  id: string;
+  packageType: ExtensionPackageType;
+  handler: string;
+  title?: string;
+  priority?: number;
+  phase: 'after-discovery' | 'before-policy' | 'after-policy' | 'before-injection' | 'after-assembly';
+}
+
 export interface ExtensionPromptReferenceRegistration {
   extensionId: string;
   id: string;
@@ -1775,7 +1795,11 @@ export function readExtensionSchema() {
       'settings',
       'settingsComponent',
       'skills',
+      'skillProviders',
       'tools',
+      'toolProviders',
+      'promptTemplateProviders',
+      'promptAssemblyHooks',
       'promptReferences',
       'promptContextProviders',
       'turnContextProviders',
@@ -2035,6 +2059,61 @@ export function listExtensionRuntimeProviderRegistrations(stateRoot: string = ge
       ];
     }),
   );
+}
+
+export function listExtensionAssemblyProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionAssemblyProviderRegistration[] {
+  const fields = [
+    ['skillProviders', 'skills'],
+    ['toolProviders', 'tools'],
+    ['promptTemplateProviders', 'promptTemplates'],
+  ] as const;
+  return listEnabledExtensionEntries(stateRoot)
+    .flatMap((entry) =>
+      fields.flatMap(([field, kind]) =>
+        (entry.manifest.contributes?.[field] ?? []).flatMap((provider): ExtensionAssemblyProviderRegistration[] => {
+          const id = provider.id.trim();
+          const handler = provider.handler.trim();
+          if (!id || !handler) return [];
+          return [
+            {
+              extensionId: entry.manifest.id,
+              id,
+              packageType: entry.manifest.packageType ?? 'user',
+              handler,
+              kind,
+              ...(provider.title ? { title: provider.title } : {}),
+              ...(Number.isInteger(provider.priority) ? { priority: provider.priority } : {}),
+            },
+          ];
+        }),
+      ),
+    )
+    .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0) || left.id.localeCompare(right.id));
+}
+
+export function listExtensionPromptAssemblyHookRegistrations(
+  stateRoot: string = getStateRoot(),
+): ExtensionPromptAssemblyHookRegistration[] {
+  return listEnabledExtensionEntries(stateRoot)
+    .flatMap((entry) =>
+      (entry.manifest.contributes?.promptAssemblyHooks ?? []).flatMap((hook): ExtensionPromptAssemblyHookRegistration[] => {
+        const id = hook.id.trim();
+        const handler = hook.handler.trim();
+        if (!id || !handler) return [];
+        return [
+          {
+            extensionId: entry.manifest.id,
+            id,
+            packageType: entry.manifest.packageType ?? 'user',
+            handler,
+            phase: hook.phase,
+            ...(hook.title ? { title: hook.title } : {}),
+            ...(Number.isInteger(hook.priority) ? { priority: hook.priority } : {}),
+          },
+        ];
+      }),
+    )
+    .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0) || left.id.localeCompare(right.id));
 }
 
 export function listExtensionPromptReferenceRegistrations(stateRoot: string = getStateRoot()): ExtensionPromptReferenceRegistration[] {

@@ -36,6 +36,21 @@ interface ExtensionPromptReferenceContribution {
   title?: string;
 }
 
+interface ExtensionAssemblyProviderContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+}
+
+interface ExtensionPromptAssemblyHookContribution {
+  id: string;
+  handler: string;
+  title?: string;
+  priority?: number;
+  phase: 'after-discovery' | 'before-policy' | 'after-policy' | 'before-injection' | 'after-assembly';
+}
+
 interface ExtensionQuickOpenContribution {
   id: string;
   provider: string;
@@ -360,7 +375,11 @@ interface ExtensionContributions {
   slashCommands?: ExtensionSlashCommandContribution[];
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
+  skillProviders?: ExtensionAssemblyProviderContribution[];
   tools?: ExtensionToolContribution[];
+  toolProviders?: ExtensionAssemblyProviderContribution[];
+  promptTemplateProviders?: ExtensionAssemblyProviderContribution[];
+  promptAssemblyHooks?: ExtensionPromptAssemblyHookContribution[];
   modelProfiles?: ExtensionModelProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];

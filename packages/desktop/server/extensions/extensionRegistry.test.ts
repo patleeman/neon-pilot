@@ -6,8 +6,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isExtensionEnabled,
+  listExtensionAssemblyProviderRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
+  listExtensionPromptAssemblyHookRegistrations,
   listExtensionSkillRegistrations,
   listExtensionToolRegistrations,
   parseExtensionManifest,
@@ -303,6 +305,38 @@ describe('extension registry', () => {
     setExtensionEnabled('agent-board', false, stateRoot);
     expect(listExtensionSkillRegistrations(stateRoot).some((skill) => skill.extensionId === 'agent-board')).toBe(false);
     expect(listExtensionToolRegistrations(stateRoot).some((tool) => tool.extensionId === 'agent-board')).toBe(false);
+  });
+
+  it('indexes prompt assembly providers and hooks', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'prompt-lab');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'prompt-lab',
+        name: 'Prompt Lab',
+        backend: { entry: 'src/backend.ts' },
+        contributes: {
+          skillProviders: [{ id: 'generated-skills', handler: 'listGeneratedSkills', title: 'Generated Skills', priority: 10 }],
+          toolProviders: [{ id: 'generated-tools', handler: 'listGeneratedTools' }],
+          promptTemplateProviders: [{ id: 'generated-prompts', handler: 'listGeneratedPrompts' }],
+          promptAssemblyHooks: [{ id: 'filter-context', handler: 'filterContext', phase: 'before-injection', priority: 5 }],
+        },
+      }),
+    );
+
+    expect(listExtensionAssemblyProviderRegistrations(stateRoot)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ extensionId: 'prompt-lab', id: 'generated-skills', kind: 'skills', priority: 10 }),
+        expect.objectContaining({ extensionId: 'prompt-lab', id: 'generated-tools', kind: 'tools' }),
+        expect.objectContaining({ extensionId: 'prompt-lab', id: 'generated-prompts', kind: 'promptTemplates' }),
+      ]),
+    );
+    expect(listExtensionPromptAssemblyHookRegistrations(stateRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'prompt-lab', id: 'filter-context', phase: 'before-injection' })]),
+    );
   });
 
   it('exposes schema values for agents and the extension manager', () => {
