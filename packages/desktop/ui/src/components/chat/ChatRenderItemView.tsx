@@ -4,7 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
-import { AssistantMessage, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
+import { AssistantMessage, ContextShelf, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
 import type { ReplySelectionGestureHandler } from './replySelection.js';
 import { ToolBlock } from './ToolBlock.js';
 import { type ConversationTranscriptDisclosureMode, resolveConversationBlockAutoOpen } from './toolPresentation.js';
@@ -106,6 +106,29 @@ export function ChatRenderItemView({
           resumeTitle={resumeConversationTitle}
           resumeLabel={resumeConversationLabel}
           transcriptDisclosureMode={transcriptDisclosureMode}
+        />
+      </div>
+    );
+  }
+
+  if (item.type === 'context_cluster') {
+    const isTailContextItem = itemIndex === renderItemsLength - 1;
+    return (
+      <div
+        key={`context-${messageIndexOffset + item.startIndex}`}
+        data-chat-tail={isTailContextItem ? '1' : undefined}
+        style={contentVisibilityStyle}
+      >
+        {item.blocks.map((_, offset) => {
+          const absoluteIndex = messageIndexOffset + item.startIndex + offset;
+          return <span key={`anchor-${absoluteIndex}`} id={`msg-${absoluteIndex}`} className="block h-0 overflow-hidden" aria-hidden />;
+        })}
+        <ContextShelf
+          blocks={item.blocks}
+          messageIndexOffset={messageIndexOffset + item.startIndex}
+          onOpenFilePath={onOpenFilePath}
+          onOpenCheckpoint={onOpenCheckpoint}
+          onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}
         />
       </div>
     );

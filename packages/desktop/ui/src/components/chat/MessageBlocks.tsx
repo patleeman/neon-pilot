@@ -62,6 +62,102 @@ function summarizeSystemEventText(text: string): string {
   return normalized.length > 140 ? `${normalized.slice(0, 137).trimEnd()}…` : normalized;
 }
 
+function contextShelfLabel(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): string {
+  if (block.type === 'summary') {
+    switch (block.kind) {
+      case 'compaction':
+        return resolveCompactionSummaryLabel(block.title);
+      case 'related':
+        return block.title || 'Related conversations';
+      default:
+        return block.title || 'Branch summary';
+    }
+  }
+  return formatSystemEventLabel(block.customType);
+}
+
+function contextShelfPreview(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): string {
+  if (block.type === 'summary') {
+    if (block.kind === 'compaction') {
+      return resolveCompactionSummaryDetail(block.title, block.detail);
+    }
+    return block.detail?.trim() || summarizeSystemEventText(block.text);
+  }
+  return summarizeSystemEventText(block.text);
+}
+
+export const ContextShelf = memo(function ContextShelf({
+  blocks,
+  messageIndexOffset,
+  onOpenFilePath,
+  onOpenCheckpoint,
+  onSelectionGesture,
+}: {
+  blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[];
+  messageIndexOffset?: number;
+  onOpenFilePath?: (path: string) => void;
+  onOpenCheckpoint?: (checkpointId: string) => void;
+  onSelectionGesture?: ReplySelectionGestureHandler;
+}) {
+  const counts = new Map<string, number>();
+  for (const block of blocks) {
+    const label = contextShelfLabel(block);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const preview = [...counts.entries()].map(([label, count]) => (count > 1 ? `${label} ×${count}` : label)).join(' · ');
+
+  return (
+    <details
+      className="group rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
+      data-context-shelf="1"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+        <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+          ›
+        </span>
+        <span className="shrink-0 font-medium text-secondary/85">Context</span>
+        <span className="text-dim">· {blocks.length}</span>
+        {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
+        {blocks[blocks.length - 1]?.ts ? (
+          <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
+        ) : null}
+      </summary>
+      <div className="mt-2 space-y-1.5 pl-5">
+        {blocks.map((block, index) => {
+          const blockId = block.id?.trim() || undefined;
+          const replySelectionScopeProps = buildReplySelectionScopeProps(
+            typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
+            blockId,
+            onSelectionGesture,
+          );
+          return (
+            <details
+              key={block.id ?? index}
+              className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+              data-context-type={block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`}
+              data-summary-kind={block.type === 'summary' ? block.kind : undefined}
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
+                <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+              </summary>
+              <div {...replySelectionScopeProps} className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+                {block.type === 'summary' && block.kind === 'compaction' ? (
+                  <p className="mb-2 text-[12px] leading-relaxed text-secondary">
+                    {resolveCompactionSummaryDetail(block.title, block.detail)}
+                  </p>
+                ) : null}
+                {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </details>
+  );
+});
+
 // ── UserMessage ───────────────────────────────────────────────────────────────
 
 export const UserMessage = memo(function UserMessage({

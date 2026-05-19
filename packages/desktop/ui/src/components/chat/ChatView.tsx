@@ -176,6 +176,10 @@ export const ChatView = memo(function ChatView({
         toolBlocks += item.blocks.filter((block) => block.type === 'tool_use').length;
         continue;
       }
+      if (item.type === 'context_cluster') {
+        messageItems += item.blocks.length;
+        continue;
+      }
       messageItems += 1;
       const block = item.block;
       if (block.type === 'tool_use') {

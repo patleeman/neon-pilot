@@ -4,6 +4,7 @@ import { formatToolExecutionWrapperChain, readToolExecutionWrappers } from '../.
 import { isBackgroundShellStart } from './toolPresentation.js';
 
 export type TraceConversationBlock = Extract<MessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>;
+export type ContextConversationBlock = Extract<MessageBlock, { type: 'context' | 'summary' }>;
 
 export interface TraceClusterSummaryCategory {
   key: string;
@@ -23,7 +24,12 @@ export interface TraceClusterSummary {
 
 export type ChatRenderItem =
   | { type: 'message'; block: MessageBlock; index: number }
+  | { type: 'context_cluster'; blocks: ContextConversationBlock[]; startIndex: number; endIndex: number }
   | { type: 'trace_cluster'; blocks: TraceConversationBlock[]; startIndex: number; endIndex: number; summary: TraceClusterSummary };
+
+function isContextConversationBlock(block: MessageBlock): block is ContextConversationBlock {
+  return block.type === 'context' || block.type === 'summary';
+}
 
 function addSummaryCategory(categories: Map<string, TraceClusterSummaryCategory>, category: Omit<TraceClusterSummaryCategory, 'count'>) {
   const current = categories.get(category.key);
@@ -113,6 +119,8 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
   const items: ChatRenderItem[] = [];
   let pendingTraceBlocks: TraceConversationBlock[] = [];
   let traceStartIndex = -1;
+  let pendingContextBlocks: ContextConversationBlock[] = [];
+  let contextStartIndex = -1;
 
   function flushTraceBlocks() {
     if (pendingTraceBlocks.length === 0 || traceStartIndex < 0) {
@@ -132,8 +140,26 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
     traceStartIndex = -1;
   }
 
+  function flushContextBlocks() {
+    if (pendingContextBlocks.length === 0 || contextStartIndex < 0) {
+      pendingContextBlocks = [];
+      contextStartIndex = -1;
+      return;
+    }
+
+    items.push({
+      type: 'context_cluster',
+      blocks: pendingContextBlocks,
+      startIndex: contextStartIndex,
+      endIndex: contextStartIndex + pendingContextBlocks.length - 1,
+    });
+    pendingContextBlocks = [];
+    contextStartIndex = -1;
+  }
+
   for (const [index, block] of messages.entries()) {
     if (isTraceConversationBlock(block, standaloneTools)) {
+      flushContextBlocks();
       if (pendingTraceBlocks.length === 0) {
         traceStartIndex = index;
       }
@@ -141,10 +167,21 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
       continue;
     }
 
+    if (isContextConversationBlock(block)) {
+      flushTraceBlocks();
+      if (pendingContextBlocks.length === 0) {
+        contextStartIndex = index;
+      }
+      pendingContextBlocks.push(block);
+      continue;
+    }
+
     flushTraceBlocks();
+    flushContextBlocks();
     items.push({ type: 'message', block, index });
   }
 
   flushTraceBlocks();
+  flushContextBlocks();
   return items;
 }
