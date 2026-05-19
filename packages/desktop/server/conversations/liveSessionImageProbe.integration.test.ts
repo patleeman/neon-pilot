@@ -5,22 +5,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { createAgentSessionMock, readSavedModelPreferencesMock } = vi.hoisted(() => ({
-  createAgentSessionMock: vi.fn(),
+const { readSavedModelPreferencesMock, runAgentTaskMock } = vi.hoisted(() => ({
   readSavedModelPreferencesMock: vi.fn(() => ({ currentVisionModel: 'openai/gpt-4o' })),
+  runAgentTaskMock: vi.fn(),
 }));
 
-vi.mock('@earendil-works/pi-coding-agent', async () => {
-  const actual = await vi.importActual<typeof import('@earendil-works/pi-coding-agent')>('@earendil-works/pi-coding-agent');
-  return {
-    ...actual,
-    createAgentSession: createAgentSessionMock,
-    SessionManager: {
-      ...actual.SessionManager,
-      inMemory: vi.fn((cwd: string) => ({ cwd })),
-    },
-  };
-});
+vi.mock('@personal-agent/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
@@ -30,23 +20,19 @@ vi.mock('../ui/settingsPersistence.js', () => ({
   DEFAULT_RUNTIME_SETTINGS_FILE: '/runtime/settings.json',
 }));
 
-import { createImageProbeAgentExtension } from '../../../../experimental-extensions/extensions/system-images/src/probeImageTool.js';
+import { probeImage } from '../../../../extensions/system-image-probe/src/backend.js';
 import { clearImageProbeAttachmentCacheForTests } from '../extensions/imageProbeAttachmentStore.js';
 import { runPromptOnLiveEntry } from './liveSessionPromptOps.js';
 
 const tempDirs: string[] = [];
 const originalStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
 
-type RegisteredTool = Parameters<Parameters<typeof createImageProbeAgentExtension>[0]>[0] extends never
-  ? never
-  : Parameters<Parameters<typeof createImageProbeAgentExtension>[0]>[0];
-
 beforeEach(() => {
   const dir = mkdtempSync(join(tmpdir(), 'pa-live-image-probe-e2e-'));
   tempDirs.push(dir);
   process.env.PERSONAL_AGENT_STATE_ROOT = dir;
-  createAgentSessionMock.mockReset();
   readSavedModelPreferencesMock.mockReset();
+  runAgentTaskMock.mockReset();
   readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: 'openai/gpt-4o' });
   clearImageProbeAttachmentCacheForTests();
 });
@@ -94,44 +80,22 @@ describe('text-only live session image probing flow', () => {
     expect(promptText).toContain(`- ${imageId}: screen.png (image/png)`);
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.any(String));
 
-    let listener: ((event: { type: string; message: { role: string; content: unknown } }) => void) | null = null;
-    const visionSession = {
-      subscribe: vi.fn((nextListener) => {
-        listener = nextListener;
-        return vi.fn();
-      }),
-      prompt: vi.fn(async () => {
-        listener?.({
-          type: 'message_end',
-          message: { role: 'assistant', content: [{ type: 'text', text: 'It shows a fake screenshot.' }] },
-        });
-      }),
-      dispose: vi.fn(),
-    };
-    createAgentSessionMock.mockResolvedValue({ session: visionSession });
+    runAgentTaskMock.mockResolvedValue({ text: 'It shows a fake screenshot.', model: 'gpt-4o', provider: 'openai' });
 
-    let tool: RegisteredTool | null = null;
-    createImageProbeAgentExtension({ getPreferredVisionModel: () => 'openai/gpt-4o' })({
-      registerTool: (registeredTool: RegisteredTool) => {
-        tool = registeredTool;
-      },
+    const result = await probeImage({ imageIds: [imageId!], question: 'What does this screenshot show?' }, {
+      toolContext: { cwd: '/repo', preferredVisionModel: 'openai/gpt-4o', sessionId: 'session-e2e' },
     } as never);
 
-    const result = await tool!.execute(
-      'tool-1',
-      { imageIds: [imageId!], question: 'What does this screenshot show?' },
-      undefined,
-      undefined,
-      {
+    expect(runAgentTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
         cwd: '/repo',
-        sessionManager: { getSessionId: () => 'session-e2e' },
-        modelRegistry: { getAvailable: () => [{ provider: 'openai', id: 'gpt-4o', input: ['text', 'image'] }] },
-      } as never,
+        modelRef: 'openai/gpt-4o',
+        prompt: expect.stringContaining(`${imageId}: screen.png (image/png)`),
+        images: [{ type: 'image', data: originalImageData, mimeType: 'image/png' }],
+        tools: 'none',
+      }),
+      expect.anything(),
     );
-
-    expect(visionSession.prompt).toHaveBeenCalledWith(expect.stringContaining(`${imageId}: screen.png (image/png)`), {
-      images: [{ type: 'image', data: originalImageData, mimeType: 'image/png' }],
-    });
     expect(result.content).toEqual([{ type: 'text', text: 'It shows a fake screenshot.' }]);
     expect(result.details).toMatchObject({ imageIds: [imageId], model: 'gpt-4o', provider: 'openai' });
   });

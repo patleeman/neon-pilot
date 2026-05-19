@@ -8,7 +8,6 @@ const {
   writeMergedMcpConfigFileMock,
   materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResourcesMock,
-  createImageProbeAgentExtensionMock,
   createManifestAgentExtensionsMock,
   manifestAgentFactoryMock,
   authStorageMock,
@@ -29,7 +28,6 @@ const {
     materializeRuntimeResourcesToAgentDirMock: vi.fn(),
     resolveRuntimeResourcesMock: vi.fn(),
     writeMergedMcpConfigFileMock: vi.fn(() => ({ bundledServerCount: 0 })),
-    createImageProbeAgentExtensionMock: vi.fn(() => 'image-probe-extension'),
     createManifestAgentExtensionsMock: vi.fn(() => ({ factories: [manifestAgentFactoryMock], errors: [] })),
     manifestAgentFactoryMock,
     authStorageMock,
@@ -46,10 +44,6 @@ vi.mock('@personal-agent/core', () => ({
   materializeRuntimeResourcesToAgentDir: materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResources: resolveRuntimeResourcesMock,
   writeMergedMcpConfigFile: writeMergedMcpConfigFileMock,
-}));
-
-vi.mock('../extensions/imageProbeAgentExtension.js', () => ({
-  createImageProbeAgentExtension: createImageProbeAgentExtensionMock,
 }));
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
@@ -102,7 +96,6 @@ describe('createRuntimeState', () => {
     resolveRuntimeResourcesMock.mockReturnValue(resolvedShared);
     createManifestAgentExtensionsMock.mockClear();
     manifestAgentFactoryMock.mockClear();
-    createImageProbeAgentExtensionMock.mockClear();
     listExtensionSkillRegistrationsMock.mockReset();
     listExtensionEntriesMock.mockReset();
     listExtensionEntriesMock.mockReturnValue([]);
@@ -210,18 +203,6 @@ describe('createRuntimeState', () => {
       '/repo-root/extensions/system-runs/skills/runs',
       '/repo-root/extensions/system-artifacts/skills/artifacts',
     ]);
-  });
-
-  it('does not register image probing until a preferred vision model is configured', () => {
-    readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: '' });
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger: createLogger(),
-    });
-
-    expect(state.buildLiveSessionExtensionFactories()).toHaveLength(1);
-    expect(createImageProbeAgentExtensionMock).not.toHaveBeenCalled();
   });
 
   it('logs initial materialization failures', async () => {
