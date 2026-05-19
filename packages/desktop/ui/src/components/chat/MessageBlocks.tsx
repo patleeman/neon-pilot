@@ -28,9 +28,9 @@ function formatSystemEventLabel(customType?: string): string {
     case 'conversation_workspace_change':
       return 'Workspace changed';
     case 'child_conversation_topology':
-      return 'Conversation offshoot';
+      return 'Branch';
     case 'parent_conversation_backlink':
-      return 'Parent conversation';
+      return 'Branched from';
     case 'parallel_result':
       return 'Parallel response imported';
     case 'conversation_automation_review':
@@ -47,6 +47,71 @@ function formatSystemEventLabel(customType?: string): string {
     }
   }
 }
+
+interface BranchInfo {
+  kind: string;
+  title: string;
+  conversationId?: string;
+  sourceRunId?: string;
+}
+
+function parseBranchInfo(text: string): BranchInfo {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const first = lines[0] ?? 'Branch created';
+  const match = /^(?<kind>\w+) conversation created:\s*(?<title>.*)$/i.exec(first);
+  const conversationLine = lines.find((line) => line.startsWith('Conversation:'));
+  const sourceRunLine = lines.find((line) => line.startsWith('Source run:'));
+  return {
+    kind: match?.groups?.kind ?? 'Branch',
+    title: match?.groups?.title?.trim() || first,
+    conversationId: conversationLine?.replace(/^Conversation:\s*/, '').trim(),
+    sourceRunId: sourceRunLine?.replace(/^Source run:\s*/, '').trim(),
+  };
+}
+
+export const BranchShelf = memo(function BranchShelf({ blocks }: { blocks: Extract<MessageBlock, { type: 'context' }>[] }) {
+  const branches = blocks.map((block) => ({ block, info: parseBranchInfo(block.text) }));
+  const counts = new Map<string, number>();
+  for (const { info } of branches) {
+    const key = info.kind.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const preview = [...counts.entries()].map(([kind, count]) => `${kind} ×${count}`).join(' · ');
+
+  return (
+    <details
+      className="group rounded-xl border border-border-subtle/60 bg-surface/10 px-3 py-2 text-secondary transition-colors hover:bg-surface/20 open:bg-surface/20"
+      data-context-type="child_conversation_topology"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-[12px] marker:hidden [&::-webkit-details-marker]:hidden">
+        <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+          ›
+        </span>
+        <span className="font-medium text-primary">Branches</span>
+        <span className="text-dim">· {branches.length}</span>
+        {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
+        <span className="text-[11px] text-dim">show</span>
+      </summary>
+      <div className="mt-2 space-y-1.5 pl-5">
+        {branches.map(({ block, info }) => (
+          <div key={block.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] hover:bg-surface/25">
+            <span className="shrink-0 font-medium text-accent">{info.kind}</span>
+            <span className="min-w-0 flex-1 truncate text-primary/90">{info.title}</span>
+            {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+            {info.conversationId ? (
+              <a className="shrink-0 text-accent hover:text-primary" href={`/conversations/${encodeURIComponent(info.conversationId)}`}>
+                open
+              </a>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+});
 
 function summarizeSystemEventText(text: string): string {
   const normalized = text

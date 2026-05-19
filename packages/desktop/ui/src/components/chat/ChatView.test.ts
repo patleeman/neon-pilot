@@ -1106,7 +1106,8 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Conversation offshoot');
+    expect(html).toContain('Branches');
+    expect(html).toContain('fork ×1');
     expect(html).toContain('data-context-type="child_conversation_topology"');
     expect(html).toContain('Research branch');
   });
