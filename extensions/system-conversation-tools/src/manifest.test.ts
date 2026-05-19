@@ -3,8 +3,6 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createConversationToolsAgentExtension } from './backend.js';
-
 const PKG_ROOT = resolve(import.meta.dirname, '..');
 const EXTENSION_JSON_PATH = resolve(PKG_ROOT, 'extension.json');
 
@@ -67,19 +65,21 @@ describe('system-conversation-tools manifest', () => {
     expect(bashRenderer).not.toHaveProperty('standalone');
   });
 
-  it('registers only the consolidated conversation agent tool', () => {
-    const registered: Array<{ name?: string }> = [];
-    const pi = {
-      registerTool(tool: { name?: string }) {
-        registered.push(tool);
-      },
-    };
+  it('declares the consolidated conversation tool in contributes.tools', () => {
+    const toolNames = (manifest.contributes.tools ?? []).map((t: { name?: string }) => t.name);
+    expect(toolNames).toContain('conversation');
+    expect(toolNames).not.toContain('ask_user_question');
+    expect(toolNames).not.toContain('conversation_inspect');
+    expect(toolNames).not.toContain('set_conversation_title');
+    expect(toolNames).not.toContain('change_working_directory');
+  });
 
-    createConversationToolsAgentExtension()(pi as never);
+  it('declares backend action for the conversation tool', () => {
+    const actionIds = (manifest.backend.actions ?? []).map((a: { id: string }) => a.id);
+    expect(actionIds).toContain('conversationTool');
+  });
 
-    expect(registered.map((tool) => tool.name)).toEqual(['conversation']);
-    expect(registered.map((tool) => tool.name)).not.toEqual(
-      expect.arrayContaining(['ask_user_question', 'conversation_inspect', 'set_conversation_title', 'change_working_directory']),
-    );
+  it('does not use an agentExtension for conversation tools', () => {
+    expect(manifest.backend.agentExtension).toBeUndefined();
   });
 });

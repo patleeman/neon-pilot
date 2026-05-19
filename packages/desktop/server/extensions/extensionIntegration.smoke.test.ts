@@ -1387,8 +1387,8 @@ describe('extension agent extensions - registration listing', () => {
     const registrations = listExtensionAgentRegistrations();
     const agentIds = registrations.map((r) => r.extensionId);
 
-    // system-conversation-tools is always enabled (defaultEnabled is not false)
-    expect(agentIds, 'Expected system-conversation-tools agent extension').toContain('system-conversation-tools');
+    // system-conversation-tools migrated to manifest tools; no agentExtension expected
+    expect(agentIds, 'system-conversation-tools should not have an agentExtension').not.toContain('system-conversation-tools');
     // system-slack-mcp-gateway has defaultEnabled: false, so it may not be registered
     const slackGateway = listExtensionInstallSummaries().find((s) => s.id === 'system-slack-mcp-gateway');
     if (slackGateway?.enabled) {

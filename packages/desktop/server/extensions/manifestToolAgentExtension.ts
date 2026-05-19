@@ -167,6 +167,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
                 result: extensionResult?.details ?? invokeResult.result,
               },
               ...(extensionResult?.isError === true ? ({ isError: true } as const) : {}),
+              ...(extensionResult?.terminate === true ? ({ terminate: true } as const) : {}),
             };
           },
         });

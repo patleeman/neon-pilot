@@ -10,6 +10,178 @@
     "styles": []
   },
   "contributes": {
+    "tools": [
+      {
+        "id": "conversation",
+        "name": "conversation",
+        "title": "Conversation",
+        "description": "Ask the user, inspect conversations, set the title, change working directory, or schedule a deferred resume for this conversation.",
+        "action": "conversationTool",
+        "promptSnippet": "Use conversation for conversation/session state, questions, inspection, title, cwd changes, and deferred resumes.",
+        "promptGuidelines": [
+          "Use action=\"deferred_resume\" for wait-then-continue; do not run sleep in bash.",
+          "Ask the user only when blocked on a real decision or approval."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["ask", "inspect", "set_title", "change_working_directory", "deferred_resume"],
+              "description": "Operation to perform."
+            },
+            "question": {
+              "type": "string",
+              "description": "Legacy single-question form. Use questions[] for multiple questions or check-style questions."
+            },
+            "details": {
+              "type": "string",
+              "description": "Optional overall context, or legacy single-question context when question is used alone."
+            },
+            "options": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "maxItems": 6,
+              "description": "Legacy quick-reply options for a single-question prompt."
+            },
+            "questions": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "description": "Structured questions to render in the desktop UI. Prefer this for multiple questions and radio/check layouts.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string", "description": "Optional stable question id." },
+                  "label": { "type": "string", "description": "User-facing question label." },
+                  "question": { "type": "string", "description": "Alias for label." },
+                  "details": { "type": "string", "description": "Optional supporting context for this question." },
+                  "style": {
+                    "type": "string",
+                    "enum": ["radio", "check", "checkbox"],
+                    "description": "radio for one choice, check/checkbox for multi-select."
+                  },
+                  "options": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "description": "Available answers for this question.",
+                    "items": {
+                      "oneOf": [
+                        { "type": "string", "minLength": 1 },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "value": { "type": "string", "minLength": 1, "description": "Stable value sent back when selected." },
+                            "label": { "type": "string", "description": "User-facing option label. Defaults to value." },
+                            "details": { "type": "string", "description": "Optional supporting text shown under the option." }
+                          },
+                          "required": ["value"]
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": ["options"]
+              }
+            },
+            "inspectAction": {
+              "type": "string",
+              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "description": "Action to perform for inspect. Valid values: list, search, query, diff, outline, read_window."
+            },
+            "conversationId": {
+              "type": "string",
+              "description": "Required conversation id for query, outline, read_window, and diff actions."
+            },
+            "scope": { "type": "string", "description": "List scope. Valid values: all, live, running, archived." },
+            "cwd": {
+              "type": "string",
+              "description": "Target working directory or optional cwd filter for list actions. Relative paths resolve from the current conversation cwd."
+            },
+            "query": {
+              "type": "string",
+              "description": "Query string for list/search actions. List matches metadata; search matches visible transcript text."
+            },
+            "includeCurrent": {
+              "type": "boolean",
+              "description": "Whether list should include the current conversation. Defaults to false."
+            },
+            "types": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional structural transcript block types to include. Valid values: user, text, context, summary, tool_use, image, error."
+            },
+            "roles": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional conversational roles to include. Valid values: user, assistant, tool, context, summary, image, error."
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional tool names to match for tool_use/error blocks."
+            },
+            "text": { "type": "string", "description": "Case-insensitive transcript text filter." },
+            "searchMode": {
+              "type": "string",
+              "description": "How query/text matching works. Valid values: phrase, allTerms, anyTerm. Default phrase."
+            },
+            "afterBlockId": { "type": "string", "description": "Only include transcript blocks after this block id." },
+            "beforeBlockId": { "type": "string", "description": "Only include transcript blocks before this block id." },
+            "aroundBlockId": { "type": "string", "description": "Restrict query results to a context window around this block id." },
+            "knownSignature": { "type": "string", "description": "Last seen conversation signature for diff checks." },
+            "order": { "type": "string", "description": "Block order for query results. Valid values: asc, desc." },
+            "limit": { "type": "number", "minimum": 1, "maximum": 200, "description": "Maximum items to return." },
+            "window": { "type": "number", "minimum": 1, "maximum": 50, "description": "Context window size for aroundBlockId queries." },
+            "includeAroundMatches": {
+              "type": "boolean",
+              "description": "Include surrounding context blocks around each match using window."
+            },
+            "maxCharactersPerBlock": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 20000,
+              "description": "Character cap per returned block."
+            },
+            "maxSnippetCharacters": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 2000,
+              "description": "Character cap per returned search snippet."
+            },
+            "title": {
+              "type": "string",
+              "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
+            },
+            "continuePrompt": {
+              "type": "string",
+              "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
+            },
+            "deferredAction": {
+              "type": "string",
+              "enum": ["add", "list", "cancel"],
+              "description": "Deferred resume operation to perform."
+            },
+            "id": { "type": "string" },
+            "prompt": { "type": "string" },
+            "trigger": { "type": "string", "enum": ["after_turn", "delay", "at"] },
+            "delay": { "type": "string" },
+            "at": { "type": "string" },
+            "deliverAs": { "type": "string", "enum": ["steer", "followUp"] },
+            "reason": {
+              "type": "string",
+              "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        }
+      }
+    ],
     "transcriptRenderers": [
       {
         "id": "ask-user-question-tool-block",
@@ -63,6 +235,11 @@
     "entry": "src/backend.ts",
     "actions": [
       {
+        "id": "conversationTool",
+        "handler": "conversationTool",
+        "title": "Conversation tool"
+      },
+      {
         "id": "duplicateConversation",
         "handler": "duplicateConversation",
         "title": "Duplicate conversation"
@@ -82,8 +259,7 @@
         "handler": "copyDeeplink",
         "title": "Copy deeplink"
       }
-    ],
-    "agentExtension": "createConversationToolsAgentExtension"
+    ]
   },
   "permissions": ["conversations:readwrite", "storage:readwrite", "ui:notify"]
 }

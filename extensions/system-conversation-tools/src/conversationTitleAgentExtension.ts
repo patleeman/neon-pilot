@@ -9,7 +9,7 @@ export const ConversationTitleToolParams = Type.Object({
 export async function executeSetConversationTitle(
   params: { title?: string },
   ctx: { sessionManager: { getSessionId(): string } },
-  setSessionName: (title: string) => void,
+  setSessionName: (title: string) => void | Promise<void>,
 ) {
   const title = await normalizeGeneratedConversationTitle(params.title, 80);
   if (!title) {
