@@ -4,7 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
-import { AssistantMessage, BranchShelf, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
+import { AssistantMessage, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
 import type { ReplySelectionGestureHandler } from './replySelection.js';
 import { ToolBlock } from './ToolBlock.js';
 import { type ConversationTranscriptDisclosureMode, resolveConversationBlockAutoOpen } from './toolPresentation.js';
@@ -107,23 +107,6 @@ export function ChatRenderItemView({
           resumeLabel={resumeConversationLabel}
           transcriptDisclosureMode={transcriptDisclosureMode}
         />
-      </div>
-    );
-  }
-
-  if (item.type === 'branch_cluster') {
-    const isTailBranchItem = itemIndex === renderItemsLength - 1;
-    return (
-      <div
-        key={`branches-${messageIndexOffset + item.startIndex}`}
-        data-chat-tail={isTailBranchItem ? '1' : undefined}
-        style={contentVisibilityStyle}
-      >
-        {item.blocks.map((_, offset) => {
-          const absoluteIndex = messageIndexOffset + item.startIndex + offset;
-          return <span key={`anchor-${absoluteIndex}`} id={`msg-${absoluteIndex}`} className="block h-0 overflow-hidden" aria-hidden />;
-        })}
-        <BranchShelf blocks={item.blocks} />
       </div>
     );
   }

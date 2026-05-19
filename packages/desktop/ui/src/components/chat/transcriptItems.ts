@@ -23,12 +23,7 @@ export interface TraceClusterSummary {
 
 export type ChatRenderItem =
   | { type: 'message'; block: MessageBlock; index: number }
-  | { type: 'branch_cluster'; blocks: Extract<MessageBlock, { type: 'context' }>[]; startIndex: number; endIndex: number }
   | { type: 'trace_cluster'; blocks: TraceConversationBlock[]; startIndex: number; endIndex: number; summary: TraceClusterSummary };
-
-function isBranchTopologyBlock(block: MessageBlock): block is Extract<MessageBlock, { type: 'context' }> {
-  return block.type === 'context' && block.customType === 'child_conversation_topology';
-}
 
 function addSummaryCategory(categories: Map<string, TraceClusterSummaryCategory>, category: Omit<TraceClusterSummaryCategory, 'count'>) {
   const current = categories.get(category.key);
@@ -118,8 +113,6 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
   const items: ChatRenderItem[] = [];
   let pendingTraceBlocks: TraceConversationBlock[] = [];
   let traceStartIndex = -1;
-  let pendingBranchBlocks: Extract<MessageBlock, { type: 'context' }>[] = [];
-  let branchStartIndex = -1;
 
   function flushTraceBlocks() {
     if (pendingTraceBlocks.length === 0 || traceStartIndex < 0) {
@@ -139,26 +132,8 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
     traceStartIndex = -1;
   }
 
-  function flushBranchBlocks() {
-    if (pendingBranchBlocks.length === 0 || branchStartIndex < 0) {
-      pendingBranchBlocks = [];
-      branchStartIndex = -1;
-      return;
-    }
-
-    items.push({
-      type: 'branch_cluster',
-      blocks: pendingBranchBlocks,
-      startIndex: branchStartIndex,
-      endIndex: branchStartIndex + pendingBranchBlocks.length - 1,
-    });
-    pendingBranchBlocks = [];
-    branchStartIndex = -1;
-  }
-
   for (const [index, block] of messages.entries()) {
     if (isTraceConversationBlock(block, standaloneTools)) {
-      flushBranchBlocks();
       if (pendingTraceBlocks.length === 0) {
         traceStartIndex = index;
       }
@@ -166,21 +141,10 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
       continue;
     }
 
-    if (isBranchTopologyBlock(block)) {
-      flushTraceBlocks();
-      if (pendingBranchBlocks.length === 0) {
-        branchStartIndex = index;
-      }
-      pendingBranchBlocks.push(block);
-      continue;
-    }
-
     flushTraceBlocks();
-    flushBranchBlocks();
     items.push({ type: 'message', block, index });
   }
 
   flushTraceBlocks();
-  flushBranchBlocks();
   return items;
 }

@@ -35,6 +35,17 @@ function getLinkedRunConversationRoute(
   return getRunConnections(run, runLookups).find((connection) => connection.label === 'Conversation transcript' && connection.to)?.to;
 }
 
+function readToolDetailString(details: unknown, key: string): string | undefined {
+  if (!details || typeof details !== 'object') return undefined;
+  const value = (details as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function readToolInputString(input: Record<string, unknown>, key: string): string | undefined {
+  const value = input[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
 export function ToolBlock({
   block,
   autoOpen,
@@ -131,6 +142,11 @@ export function ToolBlock({
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
 
   const preview = buildToolPreview(block);
+  const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;
+  const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
+  const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
+  const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
+  const displayPreview = block.tool === 'subagent' ? (subagentTitle ?? subagentPrompt ?? preview) : preview;
   const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
 
@@ -164,7 +180,16 @@ export function ToolBlock({
             {wrapper.label ?? wrapper.id}
           </Pill>
         ))}
-        <span className="flex-1 truncate opacity-70 font-normal">{preview}</span>
+        <span className="flex-1 truncate opacity-70 font-normal">{displayPreview}</span>
+        {subagentConversationId ? (
+          <Link
+            to={`/conversations/${encodeURIComponent(subagentConversationId)}`}
+            className="ui-action-button shrink-0 text-[10px] font-sans"
+            onClick={(event) => event.stopPropagation()}
+          >
+            View
+          </Link>
+        ) : null}
         {block.durationMs && !isRunning && <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>}
         {isRunning ? (
           <>
@@ -235,6 +260,25 @@ export function ToolBlock({
       )}
 
       {fileChanges.length > 0 && !isRunning && !isError ? <FileChangesToolDiff fileChanges={fileChanges} /> : null}
+
+      {block.tool === 'subagent' && (subagentPrompt || subagentConversationId) ? (
+        <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 font-sans text-[11px]">
+          <div className="flex items-start gap-2">
+            <Pill tone="steel" mono className="shrink-0">
+              subagent
+            </Pill>
+            <div className="min-w-0 flex-1">
+              {subagentPrompt ? <p className="line-clamp-2 leading-relaxed text-primary/85">{subagentPrompt}</p> : null}
+              {subagentConversationId ? <p className="mt-1 truncate text-dim">Conversation {subagentConversationId}</p> : null}
+            </div>
+            {subagentConversationId ? (
+              <Link to={`/conversations/${encodeURIComponent(subagentConversationId)}`} className="ui-action-button shrink-0 text-[10px]">
+                Open conversation
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {open && (
         <div className="border-t border-border-subtle/70">

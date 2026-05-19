@@ -635,7 +635,10 @@ function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tai
 
   const rebasedBlocks = rebaseDisplayBlockIds(buildDisplayBlocksFromEntries(detailEntries), droppedVisibleBlockCount);
   const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
-  const blocksWithTopology = addParentConversationBacklink(mergeTopologyBlocks(blocksWithAssets, meta), meta);
+  const blocksWithTopology = addParentConversationBacklink(
+    mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithAssets, meta), meta),
+    meta,
+  );
   const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
   const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
   const blocks =
@@ -1380,6 +1383,7 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
 function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[] {
   const children = scanSessionMetas()
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
+    .filter((child) => (child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side')) !== 'subagent')
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   return children.map((child) => {
@@ -1394,6 +1398,32 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[]
       customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
       text: `${label} conversation created: ${child.title || child.id}\nOpen: /conversations/${child.id}\nConversation: ${child.id}${sourceRun}${cwd}`,
     } satisfies DisplayBlock;
+  });
+}
+
+function enrichSubagentToolBlocks(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  const subagentChildren = scanSessionMetas().filter(
+    (child) =>
+      child.id !== meta.id &&
+      (child.parentSessionId === meta.id || child.parentSessionFile === meta.file) &&
+      (child.offshootKind === 'subagent' || Boolean(child.sourceRunId)),
+  );
+  if (subagentChildren.length === 0) return blocks;
+
+  return blocks.map((block) => {
+    if (block.type !== 'tool_use' || block.tool !== 'subagent') return block;
+    const serialized = `${JSON.stringify(block.input)}\n${block.output}\n${JSON.stringify(block.details ?? {})}`;
+    const child = subagentChildren.find((candidate) => candidate.sourceRunId && serialized.includes(candidate.sourceRunId));
+    if (!child) return block;
+    return {
+      ...block,
+      details: {
+        ...(block.details && typeof block.details === 'object' ? (block.details as Record<string, unknown>) : {}),
+        childConversationId: child.id,
+        branchKind: child.offshootKind ?? 'subagent',
+        branchTitle: child.title,
+      },
+    };
   });
 }
 
@@ -1448,7 +1478,10 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
   const blocksWithoutTopology = detail.blocks.filter((block) => !isTopologyBlock(block));
   const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
-  const blocks = addParentConversationBacklink(mergeTopologyBlocks(blocksWithoutTopology, detail.meta), detail.meta);
+  const blocks = addParentConversationBacklink(
+    mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithoutTopology, detail.meta), detail.meta),
+    detail.meta,
+  );
   const topologyBlockCount = blocks.length - blocksWithoutTopology.length;
 
   if (previousTopologyBlockCount === topologyBlockCount && blocks === detail.blocks) {
@@ -2576,7 +2609,10 @@ export function readSessionBlocksByFileWithTelemetry(
   const manager = SessionManager.open(meta.file);
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
   const allBlocks = addParentConversationBacklink(
-    mergeTopologyBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta),
+    mergeTopologyBlocks(
+      enrichSubagentToolBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta),
+      meta,
+    ),
     meta,
   );
   const totalBlocks = allBlocks.length;

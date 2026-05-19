@@ -1920,7 +1920,7 @@ describe('sessions', () => {
     );
   });
 
-  it('renders child conversations as transcript topology events', () => {
+  it('renders non-subagent child conversations as transcript topology events', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
 
@@ -1931,13 +1931,18 @@ describe('sessions', () => {
       assistantTexts: ['Parent reply'],
     });
 
-    writeSessionFile({
+    const childSessionFile = writeSessionFile({
       sessionsDir,
-      cwdSlug: '__runs/run-child-branch',
       sessionId: 'topology-child-session',
       title: 'Topology child session',
       assistantTexts: ['Child reply'],
       parentSession: parentSessionFile,
+    });
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile,
+      kind: 'side',
+      parentSessionFile,
+      parentSessionId: 'topology-parent-session',
     });
 
     const detail = readSessionBlocks('topology-parent-session');
@@ -1947,9 +1952,62 @@ describe('sessions', () => {
         expect.objectContaining({
           type: 'context',
           customType: 'child_conversation_topology',
-          text: expect.stringContaining('Subagent conversation created: Topology child session'),
+          text: expect.stringContaining('Side conversation created: Topology child session'),
         }),
       ]),
+    );
+  });
+
+  it('pins subagent child conversations onto the subagent tool block instead of a separate topology event', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'subagent-parent-session',
+      title: 'Subagent parent session',
+      assistantTexts: [],
+    });
+    appendFileSync(
+      parentSessionFile,
+      `${JSON.stringify({
+        type: 'message',
+        id: 'subagent-call-message',
+        parentId: 'subagent-parent-session-user-1',
+        timestamp: '2026-03-11T12:00:01.000Z',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'toolCall', id: 'tool-subagent-1', name: 'subagent', arguments: { prompt: 'Check it' } }],
+        },
+      })}\n${JSON.stringify({
+        type: 'message',
+        id: 'subagent-result-message',
+        parentId: 'subagent-call-message',
+        timestamp: '2026-03-11T12:00:02.000Z',
+        message: {
+          role: 'toolResult',
+          toolCallId: 'tool-subagent-1',
+          toolName: 'subagent',
+          content: 'Started subagent run-child-tool for subagent-child-session.',
+        },
+      })}\n`,
+    );
+
+    writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-child-tool',
+      sessionId: 'subagent-child-session',
+      title: 'Subagent child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    const blocks = readSessionBlocks('subagent-parent-session')?.blocks ?? [];
+    expect(blocks).not.toEqual(expect.arrayContaining([expect.objectContaining({ customType: 'child_conversation_topology' })]));
+    expect(blocks.find((block) => block.type === 'tool_use' && block.tool === 'subagent')).toEqual(
+      expect.objectContaining({
+        details: expect.objectContaining({ childConversationId: 'subagent-child-session', branchKind: 'subagent' }),
+      }),
     );
   });
 
@@ -2012,13 +2070,18 @@ describe('sessions', () => {
 
     expect(readSessionBlocks('cached-topology-parent-session')?.blocks.some((block) => block.type === 'context')).toBe(false);
 
-    writeSessionFile({
+    const childSessionFile = writeSessionFile({
       sessionsDir,
-      cwdSlug: '__runs/run-child-after-cache',
       sessionId: 'cached-topology-child-session',
       title: 'Cached topology child session',
       assistantTexts: ['Child reply'],
       parentSession: parentSessionFile,
+    });
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile,
+      kind: 'side',
+      parentSessionFile,
+      parentSessionId: 'cached-topology-parent-session',
     });
 
     expect(readSessionBlocks('cached-topology-parent-session')?.blocks).toEqual(
