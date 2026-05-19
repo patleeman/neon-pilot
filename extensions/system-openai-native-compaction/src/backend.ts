@@ -571,8 +571,16 @@ export function reconstructNativeState(
     if (isAssistantMessage) {
       if (assistantMatchesModel(entry.message!, latestDetails.modelKey)) {
         trailing.push(...pendingTurn, ...items);
+        pendingTurn = [];
+        continue;
       }
-      pendingTurn = [];
+      // Model switch: flush pending user messages to trailing before
+      // dropping the non-matching assistant message, so user prompts
+      // between model switches aren't silently lost.
+      if (pendingTurn.length > 0) {
+        trailing.push(...pendingTurn);
+        pendingTurn = [];
+      }
       continue;
     }
 

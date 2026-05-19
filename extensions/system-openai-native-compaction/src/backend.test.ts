@@ -371,7 +371,7 @@ describe('openai native compaction extension', () => {
     ]);
   });
 
-  it('drops orphan tool outputs when reconstructing replay history across model changes', () => {
+  it('preserves user messages across model switches in replay history', () => {
     const state = reconstructNativeState(
       [
         {
@@ -406,6 +406,11 @@ describe('openai native compaction extension', () => {
         type: 'message',
         role: 'assistant',
         content: [{ type: 'output_text', text: 'Native compacted context' }],
+      },
+      {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: 'Try another model' }],
       },
       {
         type: 'message',
