@@ -27,6 +27,8 @@ function formatSystemEventLabel(customType?: string): string {
       return 'Browser comments';
     case 'conversation_workspace_change':
       return 'Workspace changed';
+    case 'child_conversation_topology':
+      return 'Child conversation';
     case 'parallel_result':
       return 'Parallel response imported';
     case 'conversation_automation_review':

@@ -20,7 +20,6 @@ import {
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { ConversationQuestionShelf } from '../components/conversation/ConversationQuestionShelf';
 import { ConversationQueueShelf } from '../components/conversation/ConversationQueueShelf';
-import { ConversationSessionTreeView } from '../components/conversation/ConversationSessionTreeView';
 import { ConversationSavedHeader } from '../components/ConversationSavedHeader';
 import { addNotification } from '../components/notifications/notificationStore';
 import { AppPageEmptyState, cx, EmptyState, LoadingState, PageHeader, Pill } from '../components/ui';
@@ -1241,17 +1240,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [titleSaving, setTitleSaving] = useState(false);
-  const [conversationViewMode, setConversationViewMode] = useState<'chat' | 'tree'>('chat');
-  const showConversationTreeView = conversationViewMode === 'tree' && Boolean(id) && !draft;
-
-  const selectConversationViewMode = useCallback((mode: 'chat' | 'tree') => {
-    setConversationViewMode(mode);
-    if (mode === 'tree') {
-      setAppLayoutMode('compact');
-      writeAppLayoutMode('compact');
-    }
-  }, []);
-
   const titleInputRef = useRef<HTMLInputElement>(null);
   const conversationHeaderRef = useRef<HTMLDivElement>(null);
   const [conversationHeaderOffset, setConversationHeaderOffset] = useState(96);
@@ -5680,61 +5668,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   )}
                 </div>
               </div>
-              {!draft && id ? (
-                <div className="mt-2 inline-flex rounded-md border border-border-subtle/50 bg-transparent p-0.5 text-secondary/65">
-                  <button
-                    type="button"
-                    className={cx(
-                      'grid h-6 w-6 place-items-center rounded-[5px] transition-colors hover:bg-surface-hover/60 hover:text-primary',
-                      conversationViewMode === 'chat' ? 'bg-surface-hover/70 text-primary' : '',
-                    )}
-                    onClick={() => selectConversationViewMode('chat')}
-                    title="Show transcript"
-                    aria-label="Show transcript"
-                    aria-pressed={conversationViewMode === 'chat'}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v6.75a2.25 2.25 0 0 1-2.25 2.25H12l-4.5 3v-3H6.75A2.25 2.25 0 0 1 4.5 13.5V6.75Z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={cx(
-                      'grid h-6 w-6 place-items-center rounded-[5px] transition-colors hover:bg-surface-hover/60 hover:text-primary',
-                      conversationViewMode === 'tree' ? 'bg-surface-hover/70 text-primary' : '',
-                    )}
-                    onClick={() => selectConversationViewMode('tree')}
-                    title="Show session tree"
-                    aria-label="Show session tree"
-                    aria-pressed={conversationViewMode === 'tree'}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M6 6.75h4.5v4.5H6v-4.5Zm7.5 0H18v4.5h-4.5v-4.5Zm-3.75 7.5h4.5v4.5h-4.5v-4.5Z" />
-                      <path d="M10.5 9h3M12 11.25v3" />
-                    </svg>
-                  </button>
-                </div>
-              ) : null}
               {conversationHeaderElements.length > 0 && (
                 <div className="flex items-center gap-2 pt-1">
                   {conversationHeaderElements.map((element) => (
@@ -5775,18 +5708,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               )}
             </div>
           </div>
-          {showConversationTreeView ? (
-            <ConversationSessionTreeView
-              conversationId={id}
-              onOpenNode={(nodeId) => {
-                const index = visibleTranscriptMessages?.findIndex((message) => 'id' in message && message.id === nodeId) ?? -1;
-                if (index >= 0) {
-                  selectConversationViewMode('chat');
-                  jumpToMessage(index);
-                }
-              }}
-            />
-          ) : showBlockingConversationLoadingState ? (
+          {showBlockingConversationLoadingState ? (
             <LoadingState label="Loading messages…" className="justify-center h-full" />
           ) : visibleTranscriptMessages ? (
             <>
@@ -5931,7 +5853,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             />
           )}
         </div>
-        {!showConversationTreeView && !showConversationLoadingState && showScrollToBottomControl && (
+        {!showConversationLoadingState && showScrollToBottomControl && (
           <button
             onClick={() => {
               scrollToBottom({ behavior: 'smooth', force: true });
@@ -6002,9 +5924,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       conversationCwdDraft,
       conversationCwdError,
       conversationHeaderOffset,
-      conversationViewMode,
-      selectConversationViewMode,
-      showConversationTreeView,
       currentCwd,
       isEditingTitle,
       renameConversationDisabled,
@@ -6060,7 +5979,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       {transcriptPane}
 
       {/* Input area */}
-      {!keyboardOpen && !showConversationTreeView && (
+      {!keyboardOpen && (
         <div
           className={`px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+1rem)] transition-colors ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}

@@ -1091,6 +1091,26 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-message-card-assistant');
   });
 
+  it('renders child conversation topology as a transcript event', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'context',
+            id: 'topology-child-1',
+            ts: '2026-03-11T18:00:00.000Z',
+            customType: 'child_conversation_topology',
+            text: 'Child conversation started: Research branch\nConversation: child-1',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('Child conversation');
+    expect(html).toContain('data-context-type="child_conversation_topology"');
+    expect(html).toContain('Research branch');
+  });
+
   it('renders remote control state as UI-only transcript chrome', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

@@ -15,7 +15,6 @@ import {
   readSessionBlocksWithTelemetry,
   readSessionImageAsset,
   readSessionSearchText,
-  readSessionTree,
   renameStoredSession,
 } from './sessions.js';
 
@@ -1920,29 +1919,69 @@ describe('sessions', () => {
     );
   });
 
-  it('reads a normalized session tree from the session graph', () => {
+  it('renders child conversations as transcript topology events', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
 
-    writeSessionFile({
+    const parentSessionFile = writeSessionFile({
       sessionsDir,
-      sessionId: 'tree-session',
-      title: 'Tree session',
-      assistantTexts: ['Assistant reply'],
+      sessionId: 'topology-parent-session',
+      title: 'Topology parent session',
+      assistantTexts: ['Parent reply'],
     });
 
-    const tree = readSessionTree('tree-session');
+    writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-child-branch',
+      sessionId: 'topology-child-session',
+      title: 'Topology child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
 
-    expect(tree).toEqual(
-      expect.objectContaining({
-        conversationId: 'tree-session',
-        title: 'Tree session',
-        nodes: expect.arrayContaining([
-          expect.objectContaining({ kind: 'session', title: 'Session start' }),
-          expect.objectContaining({ kind: 'message', role: 'user', title: 'Tree session' }),
-          expect.objectContaining({ kind: 'message', role: 'assistant', title: 'Assistant reply' }),
-        ]),
-      }),
+    const detail = readSessionBlocks('topology-parent-session');
+
+    expect(detail?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'context',
+          customType: 'child_conversation_topology',
+          text: expect.stringContaining('Topology child session'),
+        }),
+      ]),
+    );
+  });
+
+  it('refreshes transcript topology events when a child conversation appears after parent detail is cached', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'cached-topology-parent-session',
+      title: 'Cached topology parent session',
+      assistantTexts: ['Parent reply'],
+    });
+
+    expect(readSessionBlocks('cached-topology-parent-session')?.blocks.some((block) => block.type === 'context')).toBe(false);
+
+    writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-child-after-cache',
+      sessionId: 'cached-topology-child-session',
+      title: 'Cached topology child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    expect(readSessionBlocks('cached-topology-parent-session')?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'context',
+          customType: 'child_conversation_topology',
+          text: expect.stringContaining('Cached topology child session'),
+        }),
+      ]),
     );
   });
 

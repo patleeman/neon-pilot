@@ -623,14 +623,19 @@ function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tai
 
   const rebasedBlocks = rebaseDisplayBlockIds(buildDisplayBlocksFromEntries(detailEntries), droppedVisibleBlockCount);
   const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
+  const blocksWithTopology = mergeTopologyBlocks(blocksWithAssets, meta);
+  const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
+  const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
   const blocks =
-    droppedVisibleBlockCount > 0 ? deferHeavyBlockContent(blocksWithAssets, droppedVisibleBlockCount, totalBlocks) : blocksWithAssets;
+    droppedVisibleBlockCount > 0
+      ? deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology)
+      : blocksWithTopology;
 
   return {
     meta,
     blocks,
     blockOffset: droppedVisibleBlockCount,
-    totalBlocks,
+    totalBlocks: totalBlocksWithTopology,
     contextUsage: null,
   };
 }
@@ -817,12 +822,14 @@ export function getAssistantErrorDisplayMessage(message: { stopReason?: string; 
 const RELATED_THREADS_CONTEXT_CUSTOM_TYPE = 'related_threads_context';
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
 const GOAL_CONTINUATION_CUSTOM_TYPE = 'goal-continuation';
+const CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE = 'child_conversation_topology';
 
 function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): boolean {
   return (
     message.role === 'custom' &&
     (message.customType === 'referenced_context' ||
       message.customType === CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE ||
+      message.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE ||
       message.customType === GOAL_CONTINUATION_CUSTOM_TYPE)
   );
 }
@@ -1353,6 +1360,54 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
 
     return block;
   });
+}
+
+function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[] {
+  const children = scanSessionMetas()
+    .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+
+  return children.map((child) => {
+    const sourceRun = child.sourceRunId ? `\nSource run: ${child.sourceRunId}` : '';
+    const cwd = child.cwd && child.cwd !== meta.cwd ? `\nWorking directory: ${child.cwd}` : '';
+    return {
+      type: 'context',
+      id: `topology-child-${child.id}`,
+      ts: child.timestamp,
+      customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
+      text: `Child conversation started: ${child.title || child.id}\nConversation: ${child.id}${sourceRun}${cwd}`,
+    } satisfies DisplayBlock;
+  });
+}
+
+function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  const topologyBlocks = buildChildConversationTopologyBlocks(meta);
+  if (topologyBlocks.length === 0) {
+    return blocks;
+  }
+
+  return [...blocks, ...topologyBlocks].sort((left, right) => left.ts.localeCompare(right.ts));
+}
+
+function isTopologyBlock(block: DisplayBlock): boolean {
+  return block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE;
+}
+
+function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
+  const blocksWithoutTopology = detail.blocks.filter((block) => !isTopologyBlock(block));
+  const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
+  const blocks = mergeTopologyBlocks(blocksWithoutTopology, detail.meta);
+  const topologyBlockCount = blocks.length - blocksWithoutTopology.length;
+
+  if (previousTopologyBlockCount === topologyBlockCount && blocks === detail.blocks) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    blocks,
+    totalBlocks: Math.max(0, detail.totalBlocks - previousTopologyBlockCount + topologyBlockCount),
+  };
 }
 
 const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 80;
@@ -2115,181 +2170,6 @@ export function buildDisplayMessageEntriesFromSessionEntries(entries: SessionEnt
   return displayEntries;
 }
 
-export interface ConversationSessionTreeNode {
-  id: string;
-  parentId: string | null;
-  kind:
-    | 'session'
-    | 'message'
-    | 'custom_message'
-    | 'tool_call'
-    | 'compaction'
-    | 'branch_summary'
-    | 'model_change'
-    | 'thinking_level_change'
-    | 'session_info'
-    | 'custom'
-    | 'unknown';
-  role?: string;
-  title: string;
-  subtitle?: string;
-  timestamp?: string;
-  status?: string;
-  route?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ConversationSessionTree {
-  conversationId: string;
-  title: string;
-  nodes: ConversationSessionTreeNode[];
-}
-
-function summarizeRawContent(content: RawMessageContent | undefined): string {
-  if (typeof content === 'string') {
-    return content.replace(/\s+/g, ' ').trim().slice(0, 120);
-  }
-  if (!Array.isArray(content)) {
-    return '';
-  }
-  const parts = content.flatMap((block) => {
-    if (block.type === 'text' && block.text) return [block.text];
-    if (block.type === 'thinking' && block.thinking) return [block.thinking];
-    if (block.type === 'toolCall') return [`${block.name ?? 'tool'} call`];
-    if (block.type === 'image') return ['image'];
-    return [];
-  });
-  return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-}
-
-function rawContentIsOnlyToolCalls(content: RawMessageContent | undefined): boolean {
-  return Array.isArray(content) && content.length > 0 && content.every((block) => block.type === 'toolCall');
-}
-
-function summarizeToolCalls(content: RawMessageContent | undefined): string | null {
-  if (!Array.isArray(content)) return null;
-  const names = content.flatMap((block) => (block.type === 'toolCall' && block.name ? [block.name] : []));
-  if (names.length === 0) return null;
-  const uniqueNames = [...new Set(names)];
-  const visibleNames = uniqueNames.slice(0, 6).join(', ');
-  const suffix = uniqueNames.length > 6 ? ` +${uniqueNames.length - 6}` : '';
-  return `${names.length} tool call${names.length === 1 ? '' : 's'} · ${visibleNames}${suffix}`;
-}
-
-function buildSessionTreeNode(line: RawLine, index: number): ConversationSessionTreeNode | null {
-  if (line.type === 'session') {
-    return {
-      id: `session:${line.id}`,
-      parentId: null,
-      kind: 'session',
-      title: 'Session start',
-      subtitle: line.cwd,
-      timestamp: line.timestamp,
-      metadata: { sessionId: line.id, parentSession: line.parentSession },
-    };
-  }
-
-  const id = 'id' in line && typeof line.id === 'string' && line.id.trim() ? line.id.trim() : `line-${index}`;
-  const parentId = 'parentId' in line && typeof line.parentId === 'string' && line.parentId.trim() ? line.parentId.trim() : null;
-  const timestamp = 'timestamp' in line && line.timestamp !== undefined ? String(line.timestamp) : undefined;
-
-  if (line.type === 'message') {
-    const role = line.message.role;
-    const text = summarizeRawContent(line.message.content);
-    const isToolCall = role === 'assistant' && rawContentIsOnlyToolCalls(line.message.content);
-    const title = isToolCall
-      ? (summarizeToolCalls(line.message.content) ?? 'tool calls')
-      : role === 'toolResult'
-        ? `${line.message.toolName ?? 'tool'} result`
-        : text || `${role} message`;
-    return {
-      id,
-      parentId,
-      kind: isToolCall ? 'tool_call' : 'message',
-      role,
-      title,
-      subtitle: role,
-      timestamp,
-      status: line.message.errorMessage ? 'failed' : line.message.stopReason,
-      metadata: { toolCallId: line.message.toolCallId, toolName: line.message.toolName, details: line.message.details },
-    };
-  }
-
-  if (line.type === 'custom_message') {
-    return {
-      id,
-      parentId,
-      kind: 'custom_message',
-      role: 'custom',
-      title: summarizeRawContent(line.content) || line.customType || 'custom message',
-      subtitle: line.customType,
-      timestamp,
-      metadata: { details: line.details, display: line.display },
-    };
-  }
-
-  if (line.type === 'compaction') {
-    return { id, parentId, kind: 'compaction', title: line.summary.slice(0, 120), subtitle: 'compaction', timestamp };
-  }
-
-  if (line.type === 'branch_summary') {
-    return {
-      id,
-      parentId,
-      kind: 'branch_summary',
-      title: line.summary.slice(0, 120),
-      subtitle: 'branch summary',
-      timestamp,
-      metadata: { fromId: line.fromId },
-    };
-  }
-
-  if (line.type === 'model_change') {
-    return { id, parentId, kind: 'model_change', title: line.modelId ?? 'model change', subtitle: 'model', timestamp };
-  }
-
-  if (line.type === 'thinking_level_change') {
-    return { id, parentId, kind: 'thinking_level_change', title: line.thinkingLevel ?? 'thinking level', subtitle: 'thinking', timestamp };
-  }
-
-  if (line.type === 'session_info') {
-    return { id, parentId, kind: 'session_info', title: normalizeSessionName(line.name) ?? 'session info', subtitle: 'name', timestamp };
-  }
-
-  if (line.type === 'custom') {
-    return {
-      id,
-      parentId,
-      kind: 'custom',
-      title: line.customType ?? 'custom event',
-      subtitle: 'custom',
-      timestamp,
-      metadata: { data: line.data },
-    };
-  }
-
-  return null;
-}
-
-export function readSessionTree(sessionId: string): ConversationSessionTree | null {
-  const meta = resolveSessionMeta(sessionId);
-  if (!meta) return null;
-
-  const raw = readFileSync(meta.file, 'utf-8');
-  const nodes: ConversationSessionTreeNode[] = [];
-  let index = 0;
-  for (const rawLine of raw.split('\n')) {
-    if (!rawLine.trim()) continue;
-    const line = parseJsonLine(rawLine);
-    if (!line) continue;
-    const node = buildSessionTreeNode(line, index);
-    if (node) nodes.push(node);
-    index += 1;
-  }
-
-  return { conversationId: meta.id, title: meta.title, nodes };
-}
-
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export function listSessions(): SessionMeta[] {
@@ -2503,17 +2383,18 @@ export function readSessionBlocksByFileWithTelemetry(
   // ── Cache hit ────────────────────────────────────────────────────────────────
   if (cachedDetail?.signature === signature) {
     sessionDetailCache.delete(cacheKey);
-    sessionDetailCache.set(cacheKey, cachedDetail);
+    const detailWithFreshTopology = refreshSessionDetailTopology(cachedDetail.detail);
+    sessionDetailCache.set(cacheKey, { ...cachedDetail, detail: detailWithFreshTopology });
     return {
-      detail: cachedDetail.detail.signature === signature ? cachedDetail.detail : { ...cachedDetail.detail, signature },
+      detail: detailWithFreshTopology.signature === signature ? detailWithFreshTopology : { ...detailWithFreshTopology, signature },
       telemetry: {
         cache: 'hit',
-        loader: cachedDetail.detail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
+        loader: detailWithFreshTopology.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
         durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
         ...(typeof requestedTailBlocks === 'number' ? { requestedTailBlocks } : {}),
-        totalBlocks: cachedDetail.detail.totalBlocks,
-        blockOffset: cachedDetail.detail.blockOffset,
-        contextUsageIncluded: cachedDetail.detail.contextUsage !== null,
+        totalBlocks: detailWithFreshTopology.totalBlocks,
+        blockOffset: detailWithFreshTopology.blockOffset,
+        contextUsageIncluded: detailWithFreshTopology.contextUsage !== null,
       },
     };
   }
@@ -2590,7 +2471,7 @@ export function readSessionBlocksByFileWithTelemetry(
 
   const manager = SessionManager.open(meta.file);
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
-  const allBlocks = decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id);
+  const allBlocks = mergeTopologyBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta);
   const totalBlocks = allBlocks.length;
   const tailBlockLimit = resolveTailBlockLimit(requestedTailBlocks, totalBlocks);
   const blockOffset = tailBlockLimit === null ? 0 : Math.max(0, totalBlocks - tailBlockLimit);

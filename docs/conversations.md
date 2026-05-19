@@ -44,9 +44,7 @@ Long saved conversations open on their latest transcript segment. When earlier h
 
 Conversations support tree-style branching. Each turn creates a node in the conversation tree.
 
-Conversation files also keep file-level lineage. When a saved thread is branched, forked, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available.
-
-The main conversation panel also has a **Chat / Tree** toggle near the conversation title. **Chat** shows the active transcript branch. **Tree** renders the saved session graph from the session file as a zoomed-out node view, including messages, custom messages, compaction summaries, branch summaries, model changes, and other session entries. Clicking a message node that is present in the loaded transcript jumps back to the chat view at that message. The left sidebar stays shallow; detailed topology belongs in this main alternate view.
+Conversation files also keep file-level lineage. When a saved thread is branched, forked, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available. The transcript also renders child/side conversations as timeline events so topology stays visible in the primary reading surface while low-level tool-call plumbing remains collapsed in internal-work shelves.
 
 ### /fork
 
