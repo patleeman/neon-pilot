@@ -1,4 +1,4 @@
-import { isAbsolute, relative, resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 
 import {
   type ConversationCommitCheckpointFile,
@@ -45,7 +45,8 @@ function readPathInputs(cwd: string, values: string[] | undefined): string[] {
   for (const rawValue of values) {
     const trimmed = rawValue.trim();
     if (!trimmed || trimmed === '.' || trimmed === './') continue;
-    const relativePath = isAbsolute(trimmed) ? relative(cwd, resolve(trimmed)) : trimmed.replace(/^\.\//, '');
+    const absolutePath = resolve(cwd, trimmed);
+    const relativePath = relative(cwd, absolutePath);
     const normalized = relativePath.replace(/\\/g, '/').trim();
     if (!normalized || normalized.startsWith('..')) throw new Error(`Invalid checkpoint path: ${rawValue}`);
     if (!seen.has(normalized)) {
