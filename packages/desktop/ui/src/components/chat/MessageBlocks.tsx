@@ -3,6 +3,7 @@ import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
+import { cx } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -11,7 +12,6 @@ import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
 import { renderMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
-import { cx } from '../ui.js';
 
 function formatSystemEventLabel(customType?: string): string {
   switch (customType) {
