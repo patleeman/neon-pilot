@@ -40,7 +40,7 @@ function readQuestion(value: unknown): string {
 function classifyVisionProbeFailure(error: unknown, modelRef: string): string {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
-  if (/(402|insufficient|payment required|credits|billing)/.test(normalized)) {
+  if (/(402|insufficient\s+(balance|credits|funds|quota)|payment required|credits|billing)/.test(normalized)) {
     return `The configured vision model could not analyze the image because the provider reported a billing or credit problem. Check the provider account for ${modelRef}. Error: ${message}`;
   }
   if (/(does not support|not support|multimodal|image input|image_url|unsupported|does not accept images)/.test(normalized)) {
