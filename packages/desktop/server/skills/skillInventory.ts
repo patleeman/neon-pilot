@@ -131,7 +131,11 @@ async function listSkillDefinitionsWithDiagnosticsAsync(
 }
 
 function isSkillDefinitionLike(value: unknown): value is SkillDefinition {
-  return isRecord(value) && typeof value.id === 'string' && typeof value.title === 'string' && typeof value.description === 'string';
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.title !== 'string' || typeof value.description !== 'string') {
+    return false;
+  }
+  if (value.location === undefined) return true;
+  return isRecord(value.location) && value.location.kind === 'file' && typeof value.location.path === 'string';
 }
 
 export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {

@@ -98,7 +98,14 @@ async function listPromptTemplateDefinitionsWithDiagnosticsAsync(
 }
 
 function isPromptTemplateDefinitionLike(value: unknown): value is PromptTemplateDefinition {
-  return isRecord(value) && typeof value.id === 'string' && typeof value.title === 'string' && isRecord(value.location);
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.title === 'string' &&
+    isRecord(value.location) &&
+    value.location.kind === 'file' &&
+    typeof value.location.path === 'string'
+  );
 }
 
 export function buildPromptTemplatePlan(ctx: AssemblyRuntimeContext): PromptTemplatePlan {
