@@ -908,6 +908,13 @@ export class DesktopWindowController {
         });
       }
     });
+
+    // Handle renderer process gone (crash, OOM, SIGKILL). The existing
+    // handleRendererProcessGone method implements debounced reload with
+    // max 3 attempts per 60s window.
+    webContents.on('render-process-gone', (_event, _details) => {
+      this.handleRendererProcessGone(webContentsId);
+    });
   }
 
   private registerWindow(window: BrowserWindow, hostId: string, role: ManagedWindowRole): void {
