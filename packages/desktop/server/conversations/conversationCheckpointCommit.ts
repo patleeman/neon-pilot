@@ -209,7 +209,16 @@ export function createConversationCheckpointCommit(options: {
     throw new Error(`${stagedDiff.stderr ?? stagedDiff.stdout ?? 'Could not inspect staged changes.'}`.trim());
   }
 
-  runCheckpointGit(options.cwd, ['commit', '--only', '-m', options.message, '--', ...options.paths], { allowEmptyStdout: true });
+  try {
+    runCheckpointGit(options.cwd, ['commit', '--only', '-m', options.message, '--', ...options.paths], { allowEmptyStdout: true });
+  } catch (commitError) {
+    // git commit --only uses a temporary index. If the commit fails (e.g. hook
+    // rejection), the temporary index is discarded but the real index was already
+    // modified by the earlier git add --all. Unstage the paths to leave the
+    // index in a clean state for the caller.
+    spawnSync('git', ['reset', '--', ...options.paths], { cwd: options.cwd, encoding: 'utf-8' });
+    throw commitError;
+  }
   const commitSha = runCheckpointGit(options.cwd, ['rev-parse', 'HEAD']).trim();
   const metadata = parseCheckpointCommitMetadata(
     runCheckpointGit(options.cwd, ['show', '-s', `--format=%H%x00%h%x00%s%x00%B%x00%an%x00%ae%x00%cI`, commitSha]),
