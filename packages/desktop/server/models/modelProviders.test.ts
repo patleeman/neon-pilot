@@ -181,7 +181,6 @@ describe('upsertModelProviderModel', () => {
         input: ['text'],
         contextWindow: 262144,
         maxTokens: 32768,
-        toolProfile: undefined,
         headers: undefined,
         cost: {
           input: 0,
@@ -216,28 +215,6 @@ describe('upsertModelProviderModel', () => {
       input: ['text', 'image'],
       contextWindow: 131072,
       maxTokens: 16384,
-    });
-  });
-
-  it('persists valid model tool profiles', () => {
-    const dir = createTempDir();
-
-    const state = upsertModelProviderModel(
-      'assistant',
-      'openai-codex',
-      'gpt-codexish',
-      {
-        name: 'GPT Codexish',
-        input: ['text'],
-        toolProfile: 'codex-compatible',
-      },
-      { profilesDir: dir },
-    );
-
-    expect(state.providers[0]?.models[0]?.toolProfile).toBe('codex-compatible');
-    expect(JSON.parse(readFileSync(join(dir, 'shared', 'models.json'), 'utf-8')).providers['openai-codex'].models[0]).toMatchObject({
-      id: 'gpt-codexish',
-      toolProfile: 'codex-compatible',
     });
   });
 

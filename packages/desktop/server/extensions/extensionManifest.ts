@@ -108,7 +108,7 @@ export interface ExtensionContributions {
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
   tools?: ExtensionToolContribution[];
-  toolProfiles?: ExtensionToolProfileContribution[];
+  modelProfiles?: ExtensionModelProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   promptContextProviders?: ExtensionPromptContextProviderContribution[];
@@ -553,13 +553,12 @@ export interface ExtensionToolContribution {
   replaces?: string;
 }
 
-export interface ExtensionToolProfileContribution {
+export interface ExtensionModelProfileContribution {
   id: string;
   title?: string;
   description?: string;
-  tools: string[];
-  defaultForProviders?: string[];
-  defaultForModels?: string[];
+  match: string[];
+  priority?: number;
 }
 
 export type ExtensionSurface =

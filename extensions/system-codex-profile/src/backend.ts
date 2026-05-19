@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
 
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@personal-agent/extensions/backend';
+
+import codexCompactionExtension from './compaction.js';
 
 interface ApplyPatchInput {
   patch?: string;
@@ -56,6 +59,23 @@ interface ApplyPatchOutcome {
 }
 
 type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd?: string } };
+
+function isCodexProfileModel(model: unknown): boolean {
+  if (!model || typeof model !== 'object') return false;
+  const candidate = model as { provider?: unknown; id?: unknown };
+  return candidate.provider === 'openai-codex' && typeof candidate.id === 'string';
+}
+
+function activateCodexTools(pi: ExtensionAPI, ctx: { model?: unknown }): void {
+  if (!isCodexProfileModel(ctx.model)) return;
+  pi.setActiveTools(['bash', 'apply_patch']);
+}
+
+export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
+  pi.on('session_start', (_event, ctx) => activateCodexTools(pi, ctx));
+  pi.on('model_select', (_event, ctx) => activateCodexTools(pi, ctx));
+  codexCompactionExtension(pi);
+}
 
 function readCwd(ctx: ToolContext): string {
   return ctx.toolContext?.cwd ?? ctx.cwd ?? process.cwd();

@@ -90,9 +90,9 @@ Model/provider configuration is split on purpose:
 
 Provider credentials should be managed through Settings. Manual edits to `auth.json` are possible but discouraged. New extension secrets should use `contributes.secrets`; the active backend is configured by `secrets.provider` (`keychain`, `file`, or `env-only`). Environment variables declared by the extension take precedence over stored values.
 
-Model definitions may set `toolProfile` to request an extension-contributed tool profile for new sessions using that model. For example, the Codex Compatibility system extension contributes `codex-compatible`, which exposes `bash` and `apply_patch` and marks itself as the default for `openai-codex` provider models.
+Enabled extensions may contribute `modelProfiles` that match provider/model refs with simple globs over `<provider>/<model>`, for example `openai-codex/*` or `*/gpt-5.5`. Profile extensions own their runtime behavior through normal extension hooks and tools; disabled extensions do not participate, and models do not declare profiles.
 
-If the requested profile or any of its tools are unavailable, Personal Agent falls back to the normal default tool surface. Explicit per-run allowed tool lists still take precedence.
+If no enabled profile extension matches, Personal Agent uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.
 
 ## Knowledge vault resolution
 

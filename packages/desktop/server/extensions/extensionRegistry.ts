@@ -6,13 +6,13 @@ import { getStateRoot } from '@personal-agent/core';
 import type {
   ExtensionManifest,
   ExtensionMentionContribution,
+  ExtensionModelProfileContribution,
   ExtensionPackageType,
   ExtensionSecretBackendContribution,
   ExtensionSecretContribution,
   ExtensionSkillContribution,
   ExtensionSurface,
   ExtensionToolContribution,
-  ExtensionToolProfileContribution,
   ExtensionViewContribution,
 } from './extensionManifest.js';
 import {
@@ -109,15 +109,14 @@ export interface ExtensionToolRegistration {
   replaces?: string;
 }
 
-export interface ExtensionToolProfileRegistration {
+export interface ExtensionModelProfileRegistration {
   extensionId: string;
   packageType: ExtensionPackageType;
   id: string;
   title?: string;
   description?: string;
-  tools: string[];
-  defaultForProviders?: string[];
-  defaultForModels?: string[];
+  match: string[];
+  priority: number;
 }
 
 export interface ExtensionAgentRegistration {
@@ -695,18 +694,12 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
   });
 }
 
-function buildExtensionToolProfileRegistrations(entry: ExtensionRegistryEntry): ExtensionToolProfileRegistration[] {
-  return (entry.manifest.contributes?.toolProfiles ?? []).flatMap(
-    (profile: ExtensionToolProfileContribution): ExtensionToolProfileRegistration[] => {
+function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry): ExtensionModelProfileRegistration[] {
+  return (entry.manifest.contributes?.modelProfiles ?? []).flatMap(
+    (profile: ExtensionModelProfileContribution): ExtensionModelProfileRegistration[] => {
       const id = profile.id.trim();
-      const tools = Array.isArray(profile.tools) ? profile.tools.map((tool) => tool.trim()).filter(Boolean) : [];
-      if (!id || tools.length === 0) return [];
-      const defaultForProviders = Array.isArray(profile.defaultForProviders)
-        ? profile.defaultForProviders.map((provider) => provider.trim()).filter(Boolean)
-        : undefined;
-      const defaultForModels = Array.isArray(profile.defaultForModels)
-        ? profile.defaultForModels.map((model) => model.trim()).filter(Boolean)
-        : undefined;
+      const match = Array.isArray(profile.match) ? profile.match.map((pattern) => pattern.trim()).filter(Boolean) : [];
+      if (!id || match.length === 0) return [];
       return [
         {
           extensionId: entry.manifest.id,
@@ -714,9 +707,8 @@ function buildExtensionToolProfileRegistrations(entry: ExtensionRegistryEntry): 
           id,
           ...(profile.title ? { title: profile.title } : {}),
           ...(profile.description ? { description: profile.description } : {}),
-          tools,
-          ...(defaultForProviders && defaultForProviders.length > 0 ? { defaultForProviders } : {}),
-          ...(defaultForModels && defaultForModels.length > 0 ? { defaultForModels } : {}),
+          match,
+          priority: Number.isFinite(profile.priority) ? Number(profile.priority) : 0,
         },
       ];
     },
@@ -1073,17 +1065,14 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     }
   }
 
-  if (contributes.toolProfiles !== undefined) {
-    for (const [index, profile] of assertRecordArray(contributes.toolProfiles, 'contributes.toolProfiles').entries()) {
-      requireString(profile.id, `contributes.toolProfiles[${index}].id`);
-      requireStringArray(profile.tools, `contributes.toolProfiles[${index}].tools`);
-      validateOptionalString(profile.title, `contributes.toolProfiles[${index}].title`);
-      validateOptionalString(profile.description, `contributes.toolProfiles[${index}].description`);
-      if (profile.defaultForProviders !== undefined) {
-        requireStringArray(profile.defaultForProviders, `contributes.toolProfiles[${index}].defaultForProviders`);
-      }
-      if (profile.defaultForModels !== undefined) {
-        requireStringArray(profile.defaultForModels, `contributes.toolProfiles[${index}].defaultForModels`);
+  if (contributes.modelProfiles !== undefined) {
+    for (const [index, profile] of assertRecordArray(contributes.modelProfiles, 'contributes.modelProfiles').entries()) {
+      requireString(profile.id, `contributes.modelProfiles[${index}].id`);
+      requireStringArray(profile.match, `contributes.modelProfiles[${index}].match`);
+      validateOptionalString(profile.title, `contributes.modelProfiles[${index}].title`);
+      validateOptionalString(profile.description, `contributes.modelProfiles[${index}].description`);
+      if (profile.priority !== undefined && typeof profile.priority !== 'number') {
+        throw new Error(`Extension manifest contributes.modelProfiles[${index}].priority must be a number.`);
       }
     }
   }
@@ -2344,8 +2333,37 @@ export function listExtensionToolRegistrations(stateRoot: string = getStateRoot(
   return [...byName.values()];
 }
 
-export function listExtensionToolProfileRegistrations(stateRoot: string = getStateRoot()): ExtensionToolProfileRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolProfileRegistrations);
+export function listExtensionModelProfileRegistrations(stateRoot: string = getStateRoot()): ExtensionModelProfileRegistration[] {
+  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionModelProfileRegistrations);
+}
+
+function globMatches(pattern: string, value: string): boolean {
+  const escaped = pattern
+    .toLowerCase()
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`).test(value.toLowerCase());
+}
+
+export type ExtensionModelProfileResolution =
+  | { kind: 'none' }
+  | { kind: 'resolved'; profile: ExtensionModelProfileRegistration }
+  | { kind: 'ambiguous'; profiles: ExtensionModelProfileRegistration[] };
+
+export function resolveExtensionModelProfile(
+  input: { provider: string; model: string },
+  stateRoot: string = getStateRoot(),
+): ExtensionModelProfileResolution {
+  const modelRef = `${input.provider}/${input.model}`;
+  const matches = listExtensionModelProfileRegistrations(stateRoot).filter((profile) =>
+    profile.match.some((pattern) => globMatches(pattern, modelRef)),
+  );
+  if (matches.length === 0) return { kind: 'none' };
+  const sorted = [...matches].sort((left, right) => right.priority - left.priority || left.extensionId.localeCompare(right.extensionId));
+  const topPriority = sorted[0]?.priority ?? 0;
+  const top = sorted.filter((profile) => profile.priority === topPriority);
+  if (top.length > 1) return { kind: 'ambiguous', profiles: top };
+  return { kind: 'resolved', profile: top[0]! };
 }
 
 export function listExtensionAgentRegistrations(stateRoot: string = getStateRoot()): ExtensionAgentRegistration[] {

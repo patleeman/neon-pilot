@@ -3,7 +3,6 @@ import {
   AuthStorage,
   createAgentSession,
   createBashTool,
-  type DefaultResourceLoader,
   type ExtensionFactory,
   ModelRegistry,
   type SessionManager,
@@ -11,10 +10,8 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { resolveChildProcessEnv } from '@personal-agent/core';
 
-import { listExtensionToolProfileRegistrations } from '../extensions/extensionRegistry.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
-import { readModelToolProfileId } from '../models/modelToolProfiles.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
@@ -84,47 +81,6 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
-function resolveToolNamesForInitialModel(input: {
-  modelRegistry: ModelRegistry;
-  settingsFile: string;
-  initialModel?: string | null;
-}): string[] | undefined {
-  if (input.initialModel === null) return undefined;
-
-  const availableModels = input.modelRegistry.getAvailable();
-  const savedModel = readSavedModelPreferences(input.settingsFile, availableModels).currentModel;
-  const modelId = input.initialModel ?? savedModel;
-  const model = availableModels.find((candidate) => candidate.id === modelId);
-  const explicitProfile = readModelToolProfileId((model as { toolProfile?: unknown } | undefined)?.toolProfile);
-  const profiles = listExtensionToolProfileRegistrations();
-  const profile = explicitProfile
-    ? profiles.find((candidate) => candidate.id === explicitProfile)
-    : profiles.find(
-        (candidate) =>
-          (model?.provider && candidate.defaultForProviders?.includes(model.provider)) ||
-          (model?.id && candidate.defaultForModels?.includes(model.id)) ||
-          (model?.provider && model?.id && candidate.defaultForModels?.includes(`${model.provider}/${model.id}`)),
-      );
-  return profile?.tools;
-}
-
-const BUILT_IN_TOOL_NAMES = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls']);
-
-function loaderHasTool(loader: DefaultResourceLoader, toolName: string): boolean {
-  if (BUILT_IN_TOOL_NAMES.has(toolName)) return true;
-
-  const extensionsResult = loader.getExtensions();
-  for (const extension of extensionsResult.extensions) {
-    if (extension.tools.has(toolName)) return true;
-  }
-  return false;
-}
-
-function resolveAvailableProfileToolNames(loader: DefaultResourceLoader, requestedToolNames: string[] | undefined): string[] | undefined {
-  if (!requestedToolNames) return undefined;
-  return requestedToolNames.every((toolName) => loaderHasTool(loader, toolName)) ? requestedToolNames : undefined;
-}
-
 export async function createPreparedLiveAgentSession(input: {
   cwd: string;
   agentDir: string;
@@ -138,14 +94,8 @@ export async function createPreparedLiveAgentSession(input: {
   const agentDir = options.agentDir ?? input.agentDir;
   const auth = makeAuth(agentDir);
   const modelRegistry = makeRegistry(auth, options.extensionFactories);
-  const profileToolNames = resolveToolNamesForInitialModel({
-    modelRegistry,
-    settingsFile: input.settingsFile,
-    initialModel: options.initialModel,
-  });
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const resourceLoader = await makeLoader(input.cwd, options);
-  const availableProfileToolNames = resolveAvailableProfileToolNames(resourceLoader, profileToolNames);
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -154,11 +104,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(options.allowedToolNames
-      ? { tools: options.allowedToolNames }
-      : availableProfileToolNames
-        ? { tools: availableProfileToolNames }
-        : {}),
+    ...(options.allowedToolNames ? { tools: options.allowedToolNames } : {}),
   });
 
   patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session));

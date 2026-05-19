@@ -8,6 +8,7 @@
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
+    "agentExtension": "default",
     "actions": [
       {
         "id": "applyPatch",
@@ -27,13 +28,13 @@
     ]
   },
   "contributes": {
-    "toolProfiles": [
+    "modelProfiles": [
       {
         "id": "codex-compatible",
         "title": "Codex Compatible",
-        "description": "Codex-shaped tool surface for GPT coding models: shell plus apply_patch.",
-        "tools": ["bash", "apply_patch"],
-        "defaultForProviders": ["openai-codex"]
+        "description": "Codex-shaped runtime behavior for GPT coding models.",
+        "match": ["openai-codex/*"],
+        "priority": 100
       }
     ],
     "tools": [

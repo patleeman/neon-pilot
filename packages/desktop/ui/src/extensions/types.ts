@@ -134,13 +134,12 @@ interface ExtensionToolContribution {
   name?: string;
 }
 
-interface ExtensionToolProfileContribution {
+interface ExtensionModelProfileContribution {
   id: string;
   title?: string;
   description?: string;
-  tools: string[];
-  defaultForProviders?: string[];
-  defaultForModels?: string[];
+  match: string[];
+  priority?: number;
 }
 
 interface ExtensionMentionContribution {
@@ -362,7 +361,7 @@ interface ExtensionContributions {
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
   tools?: ExtensionToolContribution[];
-  toolProfiles?: ExtensionToolProfileContribution[];
+  modelProfiles?: ExtensionModelProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
