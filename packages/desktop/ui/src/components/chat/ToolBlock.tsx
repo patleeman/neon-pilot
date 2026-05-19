@@ -210,11 +210,9 @@ export function ToolBlock({
         onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
         className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left"
       >
-        {pinnedSubagent ? null : isRunning ? (
+        {isRunning ? (
           <span className="w-4 h-4 border-[1.5px] border-current border-t-transparent rounded-full animate-spin shrink-0 opacity-70" />
-        ) : (
-          <span className="font-bold w-4 text-center shrink-0 select-none">{meta.icon}</span>
-        )}
+        ) : null}
         <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
           {meta.label}
         </Pill>

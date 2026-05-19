@@ -71,9 +71,7 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
       >
         {block.status === 'running' ? (
           <span className="w-4 h-4 border-[1.5px] border-current border-t-transparent rounded-full animate-spin shrink-0" />
-        ) : (
-          <span className="font-bold shrink-0 select-none">⟳</span>
-        )}
+        ) : null}
         <Pill tone={tone} mono>
           subagent
         </Pill>
