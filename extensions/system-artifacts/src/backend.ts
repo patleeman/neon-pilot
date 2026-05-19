@@ -25,9 +25,8 @@ type ArtifactBackendContext = ExtensionBackendContext & {
 };
 
 function readRequiredString(value: string | undefined, label: string): string {
-  const normalized = value?.trim();
-  if (!normalized) throw new Error(`${label} is required.`);
-  return normalized;
+  if (!value || !value.trim()) throw new Error(`${label} is required.`);
+  return value;
 }
 
 function readRequiredKind(kind: string | undefined): ConversationArtifactKind {
