@@ -85,7 +85,11 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
         if (setting && setting.type === 'boolean') {
           overrides[key] = Boolean(value);
         } else if (setting && setting.type === 'number') {
-          overrides[key] = typeof value === 'number' ? value : Number(value);
+          const num = typeof value === 'number' ? value : Number(value);
+          if (!Number.isFinite(num)) {
+            throw new Error(`Invalid value for numeric setting "${key}": ${JSON.stringify(value)}`);
+          }
+          overrides[key] = num;
         } else {
           overrides[key] = value;
         }
