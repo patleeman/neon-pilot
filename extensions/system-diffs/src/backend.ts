@@ -70,6 +70,25 @@ async function runGit(
   return stdout;
 }
 
+function pathMatchesRequestedPath(filePath: string, requestedPath: string): boolean {
+  const normalizedFile = filePath.replace(/\\/g, '/').replace(/^\.\//, '');
+  const normalizedRequest = requestedPath.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+  return normalizedFile === normalizedRequest || normalizedFile.startsWith(`${normalizedRequest}/`);
+}
+
+function assertOnlyRequestedPathsStaged(stagedFiles: string, requestedPaths: string[]): void {
+  const staged = stagedFiles
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const unexpected = staged.filter(
+    (filePath) => !requestedPaths.some((requestedPath) => pathMatchesRequestedPath(filePath, requestedPath)),
+  );
+  if (unexpected.length > 0) {
+    throw new Error(`Refusing to checkpoint unrelated staged changes: ${unexpected.join(', ')}`);
+  }
+}
+
 function parseCommitMetadata(raw: string): ParsedCommitMetadata {
   const [commitSha = '', shortSha = '', subject = '', body = '', authorName = '', authorEmail = '', committedAt = ''] = raw.split('\u0000');
   return {
@@ -162,10 +181,12 @@ async function createCheckpointCommit(ctx: CheckpointBackendContext, options: { 
     allowEmptyStdout: true,
   });
   if (stagedFiles.trim().length === 0) throw new Error('No staged changes were found for the requested checkpoint paths.');
+  const allStagedFiles = await runGit(ctx, options.cwd, ['diff', '--cached', '--name-only'], { allowEmptyStdout: true });
+  assertOnlyRequestedPathsStaged(allStagedFiles, options.paths);
   // Explicitly disallow empty stdout so a silent commit failure (e.g. the file
   // was reverted between git-add and commit) raises an error instead of silently
   // returning the previous HEAD SHA.
-  await runGit(ctx, options.cwd, ['commit', '--only', '-m', options.message, '--', ...options.paths]);
+  await runGit(ctx, options.cwd, ['commit', '-m', options.message]);
   const commitSha = (await runGit(ctx, options.cwd, ['rev-parse', 'HEAD'])).trim();
   const metadata = parseCommitMetadata(
     await runGit(ctx, options.cwd, ['show', '-s', `--format=%H%x00%h%x00%s%x00%B%x00%an%x00%ae%x00%cI`, commitSha]),

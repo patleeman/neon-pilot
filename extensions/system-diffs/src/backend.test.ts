@@ -131,7 +131,8 @@ describe('system-diffs backend', () => {
           if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
           if (command.startsWith('add --all --')) return { stdout: '' };
           if (command.startsWith('diff --cached --name-only --')) return { stdout: 'src/file.ts\n' };
-          if (command.startsWith('commit --only -m msg --')) return { stdout: '[main abc1234] msg\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'src/file.ts\n' };
+          if (command === 'commit -m msg') return { stdout: '[main abc1234] msg\n' };
           if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
           if (command.startsWith('show -s --format=')) {
             return {
@@ -160,6 +161,69 @@ describe('system-diffs backend', () => {
       const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell, ui: undefined }));
 
       expect(result.text).toContain('Saved checkpoint abc1234 msg');
+    });
+
+    it('commits staged deleted paths without pathspecing missing files', async () => {
+      const commands: string[] = [];
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          commands.push(command);
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command === 'add --all -- old/deleted.ts') return { stdout: '' };
+          if (command === 'diff --cached --name-only -- old/deleted.ts') return { stdout: 'old/deleted.ts\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'old/deleted.ts\n' };
+          if (command === 'commit -m delete-file') return { stdout: '[main abc1234] delete-file\n' };
+          if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
+          if (command.startsWith('show -s --format=')) {
+            return {
+              stdout:
+                'abc1234def5678\u0000abc1234\u0000delete-file\u0000delete-file\u0000Test User\u0000test@example.com\u00002025-01-01T00:00:00Z',
+            };
+          }
+          if (command.startsWith('show --format= --patch')) {
+            return {
+              stdout:
+                'diff --git a/old/deleted.ts b/old/deleted.ts\ndeleted file mode 100644\n--- a/old/deleted.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n',
+            };
+          }
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+      mockSaveCheckpoint.mockReturnValue({
+        id: 'abc1234def5678',
+        commitSha: 'abc1234def5678',
+        shortSha: 'abc1234',
+        title: 'delete-file',
+        subject: 'delete-file',
+        fileCount: 1,
+        linesAdded: 0,
+        linesDeleted: 1,
+        cwd: '/tmp/test-repo',
+        updatedAt: '2025-01-01T00:00:00Z',
+      });
+
+      await checkpoint({ action: 'save', message: 'delete-file', paths: ['old/deleted.ts'] }, createCtx({ shell }));
+
+      expect(commands).toContain('commit -m delete-file');
+      expect(commands.some((command) => command.startsWith('commit --only'))).toBe(false);
+    });
+
+    it('refuses to commit unrelated staged paths', async () => {
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command.startsWith('add --all --')) return { stdout: '' };
+          if (command === 'diff --cached --name-only -- src/file.ts') return { stdout: 'src/file.ts\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'src/file.ts\nother.ts\n' };
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+
+      await expect(checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell }))).rejects.toThrow(
+        'Refusing to checkpoint unrelated staged changes: other.ts',
+      );
     });
   });
 
