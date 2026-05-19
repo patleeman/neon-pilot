@@ -476,7 +476,7 @@ export async function markBackgroundRunInterrupted(input: {
 }): Promise<boolean> {
   const manifest = loadDurableRunManifest(input.runPaths.manifestPath);
   const currentStatus = loadDurableRunStatus(input.runPaths.statusPath);
-  if (!manifest || manifest.kind !== 'background-run' || !currentStatus) {
+  if (!manifest || (manifest.kind !== 'background-run' && manifest.kind !== 'raw-shell') || !currentStatus) {
     return false;
   }
 
