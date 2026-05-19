@@ -12,6 +12,7 @@ import type {
   ExtensionSkillContribution,
   ExtensionSurface,
   ExtensionToolContribution,
+  ExtensionToolProfileContribution,
   ExtensionViewContribution,
 } from './extensionManifest.js';
 import {
@@ -106,6 +107,17 @@ export interface ExtensionToolRegistration {
   };
   /** Built-in tool name this tool overrides. */
   replaces?: string;
+}
+
+export interface ExtensionToolProfileRegistration {
+  extensionId: string;
+  packageType: ExtensionPackageType;
+  id: string;
+  title?: string;
+  description?: string;
+  tools: string[];
+  defaultForProviders?: string[];
+  defaultForModels?: string[];
 }
 
 export interface ExtensionAgentRegistration {
@@ -683,6 +695,34 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
   });
 }
 
+function buildExtensionToolProfileRegistrations(entry: ExtensionRegistryEntry): ExtensionToolProfileRegistration[] {
+  return (entry.manifest.contributes?.toolProfiles ?? []).flatMap(
+    (profile: ExtensionToolProfileContribution): ExtensionToolProfileRegistration[] => {
+      const id = profile.id.trim();
+      const tools = Array.isArray(profile.tools) ? profile.tools.map((tool) => tool.trim()).filter(Boolean) : [];
+      if (!id || tools.length === 0) return [];
+      const defaultForProviders = Array.isArray(profile.defaultForProviders)
+        ? profile.defaultForProviders.map((provider) => provider.trim()).filter(Boolean)
+        : undefined;
+      const defaultForModels = Array.isArray(profile.defaultForModels)
+        ? profile.defaultForModels.map((model) => model.trim()).filter(Boolean)
+        : undefined;
+      return [
+        {
+          extensionId: entry.manifest.id,
+          packageType: entry.manifest.packageType ?? 'user',
+          id,
+          ...(profile.title ? { title: profile.title } : {}),
+          ...(profile.description ? { description: profile.description } : {}),
+          tools,
+          ...(defaultForProviders && defaultForProviders.length > 0 ? { defaultForProviders } : {}),
+          ...(defaultForModels && defaultForModels.length > 0 ? { defaultForModels } : {}),
+        },
+      ];
+    },
+  );
+}
+
 function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
   const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
   mkdirSync(extensionsRoot, { recursive: true });
@@ -1030,6 +1070,21 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
       }
       validateOptionalString(tool.replaces, `contributes.tools[${index}].replaces`);
       if (tool.promptGuidelines !== undefined) requireStringArray(tool.promptGuidelines, `contributes.tools[${index}].promptGuidelines`);
+    }
+  }
+
+  if (contributes.toolProfiles !== undefined) {
+    for (const [index, profile] of assertRecordArray(contributes.toolProfiles, 'contributes.toolProfiles').entries()) {
+      requireString(profile.id, `contributes.toolProfiles[${index}].id`);
+      requireStringArray(profile.tools, `contributes.toolProfiles[${index}].tools`);
+      validateOptionalString(profile.title, `contributes.toolProfiles[${index}].title`);
+      validateOptionalString(profile.description, `contributes.toolProfiles[${index}].description`);
+      if (profile.defaultForProviders !== undefined) {
+        requireStringArray(profile.defaultForProviders, `contributes.toolProfiles[${index}].defaultForProviders`);
+      }
+      if (profile.defaultForModels !== undefined) {
+        requireStringArray(profile.defaultForModels, `contributes.toolProfiles[${index}].defaultForModels`);
+      }
     }
   }
 
@@ -2287,6 +2342,10 @@ export function listExtensionToolRegistrations(stateRoot: string = getStateRoot(
     }
   }
   return [...byName.values()];
+}
+
+export function listExtensionToolProfileRegistrations(stateRoot: string = getStateRoot()): ExtensionToolProfileRegistration[] {
+  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolProfileRegistrations);
 }
 
 export function listExtensionAgentRegistrations(stateRoot: string = getStateRoot()): ExtensionAgentRegistration[] {

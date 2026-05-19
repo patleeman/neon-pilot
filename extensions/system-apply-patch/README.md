@@ -1,6 +1,13 @@
-# Apply Patch
+# Codex Compatibility
 
-Adds a `write` agent tool with file-change metadata plus an `edit` agent tool for Codex-style file patches and an OpenAI-only patch-based replacement for `edit`.
+Contributes the `codex-compatible` tool profile for GPT/Codex-style coding models and provides the `apply_patch` agent tool.
+
+The profile exposes:
+
+- `bash`
+- `apply_patch`
+
+It is advertised as the default profile for the `openai-codex` provider. If the profile or any requested tool is unavailable, Personal Agent falls back to the normal default tool surface.
 
 Patch format:
 
@@ -20,21 +27,4 @@ The extension intentionally uses a JSON `{ "patch": string }` envelope because m
 
 ## File change metadata
 
-Successful patch/edit tool results include standard `details.fileChanges` metadata so the transcript can render the exact per-tool diff inline:
-
-```json
-{
-  "fileChanges": [
-    {
-      "path": "src/app.ts",
-      "previousPath": "src/old-app.ts",
-      "status": "renamed",
-      "additions": 4,
-      "deletions": 2,
-      "patch": "diff --git a/src/old-app.ts b/src/app.ts\n..."
-    }
-  ]
-}
-```
-
-`patch` is the unified diff for that exact tool mutation. Very large patches are omitted with `truncated: true` to keep transcript state sane.
+Successful patch/edit tool results include standard `details.fileChanges` metadata so the transcript can render the exact per-tool diff inline. Very large patches are omitted with `truncated: true` to keep transcript state sane.

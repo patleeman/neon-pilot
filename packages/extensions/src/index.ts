@@ -315,6 +315,15 @@ export interface ExtensionToolContribution {
   replaces?: string;
 }
 
+export interface ExtensionToolProfileContribution {
+  id: string;
+  title?: string;
+  description?: string;
+  tools: string[];
+  defaultForProviders?: string[];
+  defaultForModels?: string[];
+}
+
 export interface ExtensionTranscriptRendererContribution {
   id: string;
   tool: string;
@@ -664,6 +673,7 @@ export interface ExtensionContributions {
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
   tools?: ExtensionToolContribution[];
+  toolProfiles?: ExtensionToolProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   /** Per-turn context providers. Returned blocks are injected as prompt context before each turn. */

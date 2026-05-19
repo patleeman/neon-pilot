@@ -190,7 +190,7 @@ const smokes = {
     const result = await module.deferredResume({ action: 'list' }, ctx);
     assert(result.action === 'list', 'deferred resume list did not return list action');
   },
-  async 'system-apply-patch'() {
+  async 'system-codex-profile'() {
     const target = join(cwd, 'smoke.txt');
     writeFileSync(target, 'hello\n');
     const result = await module.applyPatch({ patch: '*** Begin Patch\n*** Update File: smoke.txt\n@@\n-hello\n+hello smoke\n*** End Patch' }, ctx);

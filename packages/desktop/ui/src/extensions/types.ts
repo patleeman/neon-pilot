@@ -134,6 +134,15 @@ interface ExtensionToolContribution {
   name?: string;
 }
 
+interface ExtensionToolProfileContribution {
+  id: string;
+  title?: string;
+  description?: string;
+  tools: string[];
+  defaultForProviders?: string[];
+  defaultForModels?: string[];
+}
+
 interface ExtensionMentionContribution {
   id: string;
   title: string;
@@ -353,6 +362,7 @@ interface ExtensionContributions {
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
   tools?: ExtensionToolContribution[];
+  toolProfiles?: ExtensionToolProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];

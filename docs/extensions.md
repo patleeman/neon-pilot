@@ -132,6 +132,7 @@ The manifest declares what your extension contributes:
 | `keybindings`                 | Keyboard shortcuts that execute commands                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `slashCommands`               | `/command` in composer                                      |                                                                                           |
 | `tools`                       | Agent-callable tools                                        |                                                                                           |
+| `toolProfiles`                | Named model tool surfaces contributed by extensions         |                                                                                           |
 | `mentions`                    | @-mention providers                                         |                                                                                           |
 | `skills`                      | Agent Skills (markdown)                                     |                                                                                           |
 | `themes`                      | Color themes                                                |                                                                                           |

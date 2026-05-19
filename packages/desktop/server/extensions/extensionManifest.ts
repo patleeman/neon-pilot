@@ -108,6 +108,7 @@ export interface ExtensionContributions {
   mentions?: ExtensionMentionContribution[];
   skills?: Array<string | ExtensionSkillContribution>;
   tools?: ExtensionToolContribution[];
+  toolProfiles?: ExtensionToolProfileContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
   promptContextProviders?: ExtensionPromptContextProviderContribution[];
@@ -550,6 +551,15 @@ export interface ExtensionToolContribution {
    * The extension must have the same permission level as the tool it replaces.
    */
   replaces?: string;
+}
+
+export interface ExtensionToolProfileContribution {
+  id: string;
+  title?: string;
+  description?: string;
+  tools: string[];
+  defaultForProviders?: string[];
+  defaultForModels?: string[];
 }
 
 export type ExtensionSurface =

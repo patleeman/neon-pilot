@@ -11,9 +11,10 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { resolveChildProcessEnv } from '@personal-agent/core';
 
+import { listExtensionToolProfileRegistrations } from '../extensions/extensionRegistry.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
-import { defaultToolProfileForProvider, readModelToolProfileId, toolNamesForModelToolProfile } from '../models/modelToolProfiles.js';
+import { readModelToolProfileId } from '../models/modelToolProfiles.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
@@ -95,8 +96,16 @@ function resolveToolNamesForInitialModel(input: {
   const modelId = input.initialModel ?? savedModel;
   const model = availableModels.find((candidate) => candidate.id === modelId);
   const explicitProfile = readModelToolProfileId((model as { toolProfile?: unknown } | undefined)?.toolProfile);
-  const providerDefaultProfile = defaultToolProfileForProvider(model?.provider);
-  return toolNamesForModelToolProfile(explicitProfile ?? providerDefaultProfile);
+  const profiles = listExtensionToolProfileRegistrations();
+  const profile = explicitProfile
+    ? profiles.find((candidate) => candidate.id === explicitProfile)
+    : profiles.find(
+        (candidate) =>
+          (model?.provider && candidate.defaultForProviders?.includes(model.provider)) ||
+          (model?.id && candidate.defaultForModels?.includes(model.id)) ||
+          (model?.provider && model?.id && candidate.defaultForModels?.includes(`${model.provider}/${model.id}`)),
+      );
+  return profile?.tools;
 }
 
 const BUILT_IN_TOOL_NAMES = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls']);

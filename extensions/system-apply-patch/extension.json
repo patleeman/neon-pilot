@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
-  "id": "system-apply-patch",
-  "name": "Apply Patch",
+  "id": "system-codex-profile",
+  "name": "Codex Compatibility",
   "packageType": "system",
   "defaultEnabled": false,
-  "description": "Apply Codex-style file patches from agent tool calls.",
+  "description": "Codex-compatible tool profile and apply_patch support for GPT coding models.",
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
@@ -27,6 +27,15 @@
     ]
   },
   "contributes": {
+    "toolProfiles": [
+      {
+        "id": "codex-compatible",
+        "title": "Codex Compatible",
+        "description": "Codex-shaped tool surface for GPT coding models: shell plus apply_patch.",
+        "tools": ["bash", "apply_patch"],
+        "defaultForProviders": ["openai-codex"]
+      }
+    ],
     "tools": [
       {
         "id": "apply-patch",
