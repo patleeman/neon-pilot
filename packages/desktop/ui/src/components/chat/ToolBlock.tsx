@@ -6,6 +6,7 @@ import { getRunConnections, type RunPresentationLookups } from '../../automation
 import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionToolBlockHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import type { DurableRunListResult, MessageBlock } from '../../shared/types';
+import { timeAgo } from '../../shared/utils';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
@@ -44,6 +45,14 @@ function readToolDetailString(details: unknown, key: string): string | undefined
 function readToolInputString(input: Record<string, unknown>, key: string): string | undefined {
   const value = input[key];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function readCheckpointId(block: Extract<MessageBlock, { type: 'tool_use' }>): string | undefined {
+  return (
+    readToolInputString(block.input, 'checkpointId') ??
+    readToolDetailString(block.details, 'checkpointId') ??
+    (/\b[0-9a-f]{7,40}\b/i.exec(block.output ?? '')?.[0]?.trim() || undefined)
+  );
 }
 
 export function ToolBlock({
@@ -146,8 +155,11 @@ export function ToolBlock({
   const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
   const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
   const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
+  const checkpointId = block.tool === 'checkpoint' ? readCheckpointId(block) : undefined;
   const displayPreview = block.tool === 'subagent' ? (subagentTitle ?? subagentPrompt ?? preview) : preview;
   const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
+  const pinnedCheckpoint = block.tool === 'checkpoint';
+  const pinnedTool = pinnedSubagent || pinnedCheckpoint;
   const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
 
@@ -191,7 +203,22 @@ export function ToolBlock({
             View
           </Link>
         ) : null}
-        {block.durationMs && !isRunning && <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>}
+        {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
+        {pinnedCheckpoint && checkpointId && onOpenCheckpoint ? (
+          <button
+            type="button"
+            className="ui-action-button shrink-0 text-[10px] font-sans"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenCheckpoint(checkpointId);
+            }}
+          >
+            View
+          </button>
+        ) : null}
+        {block.durationMs && !isRunning && !pinnedTool && (
+          <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
+        )}
         {isRunning ? (
           <>
             <span className="shrink-0 text-[10px] opacity-60 ml-2">running…</span>
@@ -202,7 +229,7 @@ export function ToolBlock({
         )}
       </button>
 
-      {linkedRuns.runs.length > 0 && !pinnedSubagent && (
+      {linkedRuns.runs.length > 0 && !pinnedTool && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
           <p className="mb-1.5 uppercase tracking-[0.14em] opacity-40">
             {linkedRuns.runs.length === 1
@@ -262,7 +289,7 @@ export function ToolBlock({
 
       {fileChanges.length > 0 && !isRunning && !isError ? <FileChangesToolDiff fileChanges={fileChanges} /> : null}
 
-      {open && !pinnedSubagent && (
+      {open && !pinnedTool && (
         <div className="border-t border-border-subtle/70">
           <div className="px-2.5 py-2 bg-black/5">
             <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">input</p>

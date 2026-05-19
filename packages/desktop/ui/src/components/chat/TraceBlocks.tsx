@@ -115,13 +115,14 @@ function traceSummaryTone(category: TraceClusterSummaryCategory) {
 const MAX_VISIBLE_TRACE_BLOCKS = 5;
 const TRACE_CLUSTER_INACTIVE_GRACE_MS = 900;
 
-function hasPinnedSubagentConversation(block: TraceConversationBlock): block is Extract<MessageBlock, { type: 'tool_use' }> {
+function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<MessageBlock, { type: 'tool_use' }> {
   return (
     block.type === 'tool_use' &&
-    block.tool === 'subagent' &&
-    !!block.details &&
-    typeof block.details === 'object' &&
-    typeof (block.details as Record<string, unknown>).childConversationId === 'string'
+    (block.tool === 'checkpoint' ||
+      (block.tool === 'subagent' &&
+        !!block.details &&
+        typeof block.details === 'object' &&
+        typeof (block.details as Record<string, unknown>).childConversationId === 'string'))
   );
 }
 
@@ -142,7 +143,7 @@ function PinnedSubagentToolBlocks({
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
 }) {
-  const pinned = blocks.filter(hasPinnedSubagentConversation);
+  const pinned = blocks.filter(hasPinnedToolBlock);
   if (pinned.length === 0) return null;
 
   return (
