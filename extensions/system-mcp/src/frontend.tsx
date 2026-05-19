@@ -201,7 +201,7 @@ export function McpSettingsPanel() {
     const nextServers = { ...explicitConfig.mcpServers };
     if (draft.originalName && draft.originalName !== name) delete nextServers[draft.originalName];
     const existingServer = draft.originalName ? explicitConfig.mcpServers[draft.originalName] : undefined;
-    nextServers[name] = configFromDraft(draft, existingServer?.raw as Record<string, unknown> | undefined);
+    nextServers[name] = configFromDraft(draft, existingServer as Record<string, unknown> | undefined);
     await persist({ mcpServers: nextServers }, `${name} saved.`);
   }
 
