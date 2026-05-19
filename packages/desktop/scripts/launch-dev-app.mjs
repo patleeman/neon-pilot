@@ -56,7 +56,9 @@ function buildDesktopLaunchEnv(baseEnv = process.env) {
     ...baseEnv,
     PERSONAL_AGENT_DESKTOP_VARIANT: desktopVariant,
     PERSONAL_AGENT_RUNTIME_CHANNEL: 'test',
-    PERSONAL_AGENT_DAEMON_NAMESPACE: baseEnv.PERSONAL_AGENT_DAEMON_NAMESPACE || `dev-${randomUUID()}`,
+    // Use only the first 8 hex chars of the UUID to keep the socket path within
+    // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
+    PERSONAL_AGENT_DAEMON_NAMESPACE: baseEnv.PERSONAL_AGENT_DAEMON_NAMESPACE || `dev-${randomUUID().slice(0, 8)}`,
     PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR: readElectronNativeModulesDir(),
     PERSONAL_AGENT_REPO_ROOT: repoRoot,
   };

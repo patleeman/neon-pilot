@@ -34,6 +34,11 @@ function expandHome(path: string): string {
   return path;
 }
 
+// macOS limits sun_path to 104 bytes including the null terminator (103 usable chars).
+// Exceeding this limit causes the kernel to silently truncate the path, which results
+// in EADDRINUSE when the truncated path collides with an existing directory entry.
+const UNIX_SOCKET_PATH_MAX = 103;
+
 export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.PERSONAL_AGENT_DAEMON_NAMESPACE): DaemonPaths {
   const statePaths = resolveStatePaths();
   const normalizedNamespace = explicitSocketPath ? undefined : normalizeDaemonNamespace(namespace);
@@ -42,6 +47,14 @@ export function resolveDaemonPaths(explicitSocketPath?: string, namespace = proc
     ? resolve(expandHome(explicitSocketPath))
     : join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
   const root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, daemonDirName);
+
+  if (socketPath.length > UNIX_SOCKET_PATH_MAX) {
+    throw new Error(
+      `Daemon socket path exceeds the Unix socket path limit (${UNIX_SOCKET_PATH_MAX} chars): ` +
+        `${socketPath} (${String(socketPath.length)} chars). ` +
+        `Shorten PERSONAL_AGENT_DAEMON_NAMESPACE or set PERSONAL_AGENT_DAEMON_SOCKET_PATH to an explicit short path.`,
+    );
+  }
 
   return {
     stateRoot: statePaths.root,

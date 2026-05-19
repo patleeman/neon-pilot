@@ -144,7 +144,9 @@ export function applyDesktopRuntimeEnvironmentOverrides(
     !env.PERSONAL_AGENT_DAEMON_NAMESPACE?.trim() &&
     !env.PERSONAL_AGENT_DAEMON_SOCKET_PATH?.trim()
   ) {
-    env.PERSONAL_AGENT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID()}`;
+    // Use only the first 8 hex chars of the UUID to keep the socket path within
+    // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
+    env.PERSONAL_AGENT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID().slice(0, 8)}`;
   }
 
   seedTestingRuntimeState(env, options);
