@@ -142,7 +142,7 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
   }, [artifact]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-base">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
       <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
         <div className="flex min-w-0 items-center justify-between gap-2">
           <div className="min-w-0 flex flex-1 items-center gap-2.5">

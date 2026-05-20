@@ -551,8 +551,8 @@ export function ConversationCheckpointWorkbenchPane({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-base">
-      <div className="shrink-0 border-b border-border-subtle bg-base/95 px-5 py-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
+      <div className="shrink-0 border-b border-border-subtle bg-panel px-5 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
@@ -584,7 +584,7 @@ export function ConversationCheckpointWorkbenchPane({
           ) : error || !checkpoint ? (
             <ErrorState message={error || 'Diff not found.'} className="px-4 py-4" />
           ) : (
-            <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-base">
+            <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-panel">
               {checkpoint.files.length === 0 ? (
                 <div className="flex h-full items-center justify-center px-6 text-[13px] text-secondary">
                   No changed files were captured for this diff.
@@ -755,8 +755,8 @@ function UncommittedDiffPaneView({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-base">
-      <div className="shrink-0 border-b border-border-subtle bg-base/95 px-5 py-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
+      <div className="shrink-0 border-b border-border-subtle bg-panel px-5 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
@@ -779,7 +779,7 @@ function UncommittedDiffPaneView({
           {files.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-[13px] text-secondary">No uncommitted changes.</div>
           ) : (
-            <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-base">
+            <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-panel">
               <div className="mx-auto max-w-[1500px] px-5 py-4">
                 {files.map((file) => (
                   <CheckpointDiffSection

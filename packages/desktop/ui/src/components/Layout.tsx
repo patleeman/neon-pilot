@@ -929,7 +929,7 @@ function WorkbenchKnowledgeRail({
   }, [activeCheckpointId, activeTool, onCheckpointSelect, setSearchParams, uncommittedResult]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
       <div className="flex shrink-0 flex-col gap-1 px-1.5 py-1.5">
         <button
           type="button"
@@ -1073,7 +1073,7 @@ function WorkbenchKnowledgeRail({
           ))}
       </div>
       {activeTool === 'files' ? (
-        <div className="min-h-0 flex-1 overflow-hidden bg-surface [&>[data-extension-id]]:bg-surface">
+        <div className="min-h-0 flex-1 overflow-hidden bg-panel [&>[data-extension-id]]:bg-panel">
           {systemFilesExtensionSurface ? (
             <NativeExtensionSurfaceHost
               surface={systemFilesExtensionSurface}
@@ -1138,7 +1138,7 @@ function WorkbenchKnowledgeRail({
           )}
         </div>
       ) : activeExtensionToolPanel ? (
-        <div className="min-h-0 flex-1 overflow-hidden bg-surface [&>[data-extension-id]]:bg-surface">
+        <div className="min-h-0 flex-1 overflow-hidden bg-panel [&>[data-extension-id]]:bg-panel">
           {'component' in activeExtensionToolPanel ? (
             <NativeExtensionSurfaceHost
               surface={activeExtensionToolPanel}
