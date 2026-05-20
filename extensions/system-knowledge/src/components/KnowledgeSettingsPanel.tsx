@@ -229,7 +229,7 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
             <button
               type="submit"
               disabled={action !== null || repoUrlDraft.trim().length === 0}
-              className="rounded-md bg-accent px-4 py-2 text-[13px] font-semibold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.5)] transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:bg-dim/45 disabled:text-white/80"
+              className="h-8 rounded-md bg-accent px-3 text-[12px] font-semibold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)] transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:bg-dim/45 disabled:text-white/80"
             >
               {action === 'save' ? 'Connecting…' : 'Connect Repository'}
             </button>
