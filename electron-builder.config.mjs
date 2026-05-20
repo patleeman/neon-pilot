@@ -86,31 +86,28 @@ const electronBuilderConfig = {
     '!ui/vite.config.ts',
     '!ui/postcss.config.js',
     '!ui/tailwind.config.js',
-    '!node_modules/@neon-pilot/*/node_modules{,/**/*}',
-    '!node_modules/@neon-pilot/*/src{,/**/*}',
-    '!node_modules/@neon-pilot/*/app{,/**/*}',
-    '!node_modules/@neon-pilot/*/public{,/**/*}',
-    '!node_modules/@neon-pilot/*/dist/**/*.test.js',
-    '!node_modules/@neon-pilot/*/tsconfig*.json',
-    '!node_modules/@neon-pilot/*/vite.config.ts',
-    '!node_modules/@neon-pilot/*/postcss.config.js',
-    '!node_modules/@neon-pilot/*/tailwind.config.js',
-    '!node_modules/esbuild{,/**/*}',
-    '!node_modules/@esbuild{,/**/*}',
-    '!node_modules/**/*.map',
-    '!node_modules/koffi/{doc,src,vendor,lib/native}{,/**/*}',
-    '!node_modules/koffi/build/koffi/{darwin_x64,freebsd_arm64,freebsd_ia32,freebsd_x64,linux_arm64,linux_armhf,linux_ia32,linux_loong64,linux_riscv64d,linux_x64,musl_arm64,musl_x64,openbsd_ia32,openbsd_x64,win32_arm64,win32_ia32,win32_x64}{,/**/*}',
-    '!node_modules/@mariozechner/clipboard-darwin-universal{,/**/*}',
-    '!node_modules/better-sqlite3/{deps,src}{,/**/*}',
-    '!node_modules/better-sqlite3/build/Release/obj{,/**/*}',
+    // Exclude all node_modules — esbuild/Vite bundle everything except the explicit
+    // runtime externals listed below. Shipping the raw node_modules tree is wasteful
+    // because those packages are already inlined into the server and UI bundles.
+    '!node_modules{,/**/*}',
+    // ajv runtime modules: ajv uses code-generation (tagged template literals) that
+    // emit require("ajv/dist/runtime/...") strings executed at runtime via the CJS
+    // require shim. They cannot be statically bundled by esbuild.
+    'node_modules/ajv{,/**/*}',
+    'node_modules/ajv-formats{,/**/*}',
+    // Native modules and their loader helpers (must remain on-disk, handled by asarUnpack).
+    'node_modules/better-sqlite3{,/**/*}',
+    'node_modules/bindings{,/**/*}',
+    'node_modules/file-uri-to-path{,/**/*}',
+    'node_modules/fsevents{,/**/*}',
   ],
   asarUnpack: [
     'server/dist/conversations/conversationInspectWorker.js',
+    // Shared chunks may be imported by the unpacked conversationInspectWorker thread.
+    'server/dist/chunks/**/*',
     'node_modules/better-sqlite3/**/*',
     'node_modules/bindings/**/*',
     'node_modules/file-uri-to-path/**/*',
-    'node_modules/whisper-cpp-node/**/*',
-    'node_modules/@whisper-cpp-node/**/*',
   ],
   extraMetadata: {
     main: './dist/main.js',

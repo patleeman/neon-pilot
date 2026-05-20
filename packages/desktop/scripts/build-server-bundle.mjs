@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { build } from 'esbuild';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -126,19 +126,34 @@ await Promise.all([
       js: createRequireBanner,
     },
   }),
-  ...backendApiLazyModuleEntries.map(([outfile, entryPoint]) =>
-    build({
-      ...sharedEsbuildOptions,
-      entryPoints: [resolve(packageRoot, entryPoint)],
-      outfile: resolve(outdir, outfile),
-      banner: {
-        js: createRequireBanner,
-      },
-    }),
-  ),
+  // All lazy-loaded backend API modules in a single split build. esbuild extracts
+  // shared code (AI SDKs, zod, highlight.js, …) into shared chunks under
+  // server/dist/chunks/ instead of duplicating ~5MB into every bundle separately.
+  build({
+    ...sharedEsbuildOptions,
+    splitting: true,
+    entryPoints: backendApiLazyModuleEntries.map(([, entryPoint]) => resolve(packageRoot, entryPoint)),
+    // outbase maps input paths to output paths: server/conversations/foo.ts → dist/conversations/foo.js
+    outbase: resolve(packageRoot, 'server'),
+    outdir: outdir,
+    chunkNames: 'chunks/[hash]',
+    banner: {
+      js: createRequireBanner,
+    },
+  }),
 ]);
 
+// Add lazy module entry point outputs to the known bundle list.
 bundleOutputs.push(...backendApiLazyModuleEntries.map(([outfile]) => resolve(outdir, outfile)));
+
+// Pick up the shared chunk files emitted by the split build.
+const chunkDir = resolve(outdir, 'chunks');
+const chunkFiles = existsSync(chunkDir)
+  ? readdirSync(chunkDir)
+      .filter((f) => f.endsWith('.js'))
+      .map((f) => resolve(chunkDir, f))
+  : [];
+bundleOutputs.push(...chunkFiles);
 
 // jiti's bundled Babel copy contains a duplicate TypeScript heritage switch case. When
 // another esbuild pass parses our server bundle, it reports a noisy duplicate-case warning.
@@ -193,11 +208,31 @@ const bundledPackageJsonByDir = new Map([
   ],
 ]);
 
+// Track processed dirs to avoid redundant writes when multiple bundles share a dir.
+const processedOutputDirs = new Set();
+
 for (const bundleOutput of bundleOutputs) {
   const outputDir = dirname(bundleOutput);
-  const workerOutput = resolve(outputDir, 'xhr-sync-worker.js');
+  if (processedOutputDirs.has(outputDir)) continue;
+  processedOutputDirs.add(outputDir);
+
   mkdirSync(outputDir, { recursive: true });
-  copyFileSync(jsdomXhrSyncWorker, workerOutput);
+
+  // Only copy xhr-sync-worker.js to dirs that contain a bundle referencing it.
+  // jsdom spawns this as a Worker thread; the file must be on-disk next to the
+  // bundle that has the "./xhr-sync-worker.js" string.
+  const bundlesInDir = bundleOutputs.filter((f) => dirname(f) === outputDir);
+  const needsXhrWorker = bundlesInDir.some((f) => {
+    try {
+      return readFileSync(f, 'utf-8').includes('"./xhr-sync-worker.js"');
+    } catch {
+      return false;
+    }
+  });
+  if (needsXhrWorker) {
+    copyFileSync(jsdomXhrSyncWorker, resolve(outputDir, 'xhr-sync-worker.js'));
+  }
+
   const packageJson = bundledPackageJsonByDir.get(outputDir) ?? bundledRuntimePackageJson;
   writeFileSync(resolve(outputDir, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`);
 }
