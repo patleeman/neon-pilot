@@ -64,6 +64,16 @@ describe('SettingsPage — untested panel rendering', () => {
       setThemePreference: vi.fn(),
       setLightTheme: vi.fn(),
       setDarkTheme: vi.fn(),
+      accent: 'lime',
+      availableAccents: [
+        {
+          id: 'lime',
+          label: 'Lime',
+          light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51' },
+          dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24' },
+        },
+      ],
+      setAccent: vi.fn(),
       toggle: vi.fn(),
     });
 
@@ -102,14 +112,14 @@ describe('SettingsPage — untested panel rendering', () => {
 
   it('renders the skills section heading', () => {
     const html = renderPage('/settings');
-    expect(html).toContain('Skills');
-    expect(html).toContain('Skill folders');
+    expect(html).toContain('Capabilities');
+    expect(html).toContain('AGENTS.md files');
   });
 
   it('renders the capabilities/MCP quick link', () => {
     const html = renderPage('/settings');
     expect(html).toContain('Capabilities');
-    expect(html).toContain('Skill discovery, MCP wrappers, and extension settings.');
+    expect(html).toContain('MCP wrappers and extension settings.');
   });
 
   it('does not render interface reset controls in core settings', () => {
