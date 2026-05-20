@@ -663,6 +663,10 @@ describe('extension manifests - cross-extension conflict detection', () => {
   it('no duplicate tool names', () => {
     const tools = listExtensionToolRegistrations();
     const conflicts = findAllStringConflicts(tools.map((t) => [t.name, `${t.extensionId}/${t.id}`]));
+    // Some tool names are intentionally shared across extensions and resolved by priority
+    // at the toolInventory layer (e.g. web_search provided by both duckduckgo and exa).
+    const ALLOWED_SHARED_NAMES = new Set(['web_search']);
+    for (const name of ALLOWED_SHARED_NAMES) conflicts.delete(name);
     expect(
       [...conflicts].map(([name, sources]) => `${name}: ${sources.join(', ')}`),
       'Duplicate tool names',

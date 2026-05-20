@@ -2439,14 +2439,7 @@ export function listExtensionSkillRegistrations(stateRoot: string = getStateRoot
 
 export function listExtensionToolRegistrations(stateRoot: string = getStateRoot()): ExtensionToolRegistration[] {
   const registrations = listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolRegistrations);
-  const byName = new Map<string, ExtensionToolRegistration>();
-  for (const registration of registrations) {
-    const existing = byName.get(registration.name);
-    if (!existing || (registration.priority ?? 0) > (existing.priority ?? 0)) {
-      byName.set(registration.name, registration);
-    }
-  }
-  return [...byName.values()];
+  return registrations;
 }
 
 export function listExtensionModelProfileRegistrations(stateRoot: string = getStateRoot()): ExtensionModelProfileRegistration[] {
