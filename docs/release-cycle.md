@@ -4,16 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.8.0-rc.19** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
+**v0.9.0-rc.0** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
 
-Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.8.0-rc.19
+Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.0
 
 Highlights in this train:
 
-- Updated Pi dependencies to 0.75.3.
-- Added transcript topology, checkpoint/diff/artifact shelf hardening, and release test inventory coverage.
-- Removed in-app extension compilation; runtime extensions now load prebuilt artifacts only.
-- Hardened app state isolation for dev/test launches and release smoke testing.
+- Completed the Neon Pilot rebrand across app copy, metadata, packaging, docs, and runtime naming.
+- Refreshed desktop shell styling with new logo assets, cobalt accent defaults, accent-aware surfaces, and tighter command palette/workbench behavior.
+- Improved workspace, prompt assembly, knowledge onboarding, extension, and settings layouts.
+- Hardened agent tooling, extension runtime activation, browser routing, and release test inventory coverage.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## Release Commands

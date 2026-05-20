@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0-rc.0 — 2026-05-20
+
+### Highlights
+
+- Starts the 0.9 RC train with the Neon Pilot rebrand completed across desktop copy, metadata, packaging, docs, and runtime naming.
+- Refreshes the desktop shell with the new logo, cobalt accent defaults, accent-aware surfaces, tighter command palette behavior, and cleaner top bar/workbench styling.
+- Improves workspace and knowledge UX with document-pane file tabs, prompt assembly tab simplification, onboarding polish, and denser extension/settings layouts.
+- Hardens agent tooling and extension runtime behavior, including live-session tool activation, Codex compatibility tools, MCP/backend tool coverage, and browser tab update routing.
+- Adds release test inventory coverage and restores build-critical paths so RC validation catches packaged extension and release regressions earlier.
+
+### Notes
+
+- 152 commits since the previous release.
+
 ## 0.8.0-rc.19 — 2026-05-18
 
 ### Highlights

@@ -1,6 +1,6 @@
 {
   "name": "@neon-pilot/core",
-  "version": "0.8.0-rc.19",
+  "version": "0.9.0-rc.0",
   "license": "MIT",
   "description": "Core Neon Pilot core library",
   "repository": "github:patleeman/neon-pilot",
