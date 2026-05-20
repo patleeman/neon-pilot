@@ -17,6 +17,7 @@ import type {
   CompanionConversationForkInput,
   CompanionConversationModelPreferencesUpdateInput,
   CompanionConversationPromptInput,
+  CompanionConversationQueueRestoreInput,
   CompanionConversationRenameInput,
   CompanionConversationResumeInput,
   CompanionConversationSubscriptionInput,
@@ -433,6 +434,23 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
           ...(input.attachmentRefs ? { attachmentRefs: input.attachmentRefs } : {}),
           ...(input.contextMessages ? { contextMessages: input.contextMessages } : {}),
           ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
+        },
+      });
+    },
+
+    async restoreConversationQueuePrompt(input: CompanionConversationQueueRestoreInput) {
+      const localController = hostManager.getHostController('local');
+      if (localController.restoreQueuedLiveSessionMessage) {
+        return localController.restoreQueuedLiveSessionMessage(input);
+      }
+
+      return invokeDesktopApi(hostManager, {
+        method: 'POST',
+        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/dequeue`,
+        body: {
+          ...(input.behavior ? { behavior: input.behavior } : {}),
+          ...(typeof input.index === 'number' ? { index: input.index } : {}),
+          ...(input.previewId ? { previewId: input.previewId } : {}),
         },
       });
     },

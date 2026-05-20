@@ -6,6 +6,7 @@ import type {
   DesktopApiStreamEvent,
   DesktopConversationStateBridgeEvent,
   DesktopConversationStateSubscriptionRequest,
+  DesktopLiveSessionQueueRestoreResult,
 } from './hosts/types.js';
 import { LocalApiWorkerClient } from './local-api-worker-client.js';
 
@@ -200,6 +201,24 @@ export interface LocalApiModule {
   readDesktopLiveSession(conversationId: string): Promise<unknown>;
   readDesktopLiveSessionForkEntries(conversationId: string): Promise<Array<{ entryId: string; text: string }>>;
   readDesktopLiveSessionContext(conversationId: string): Promise<unknown>;
+  takeOverDesktopLiveSession(input: { conversationId: string; surfaceId: string }): Promise<unknown>;
+  restoreDesktopQueuedLiveSessionMessage(input: {
+    conversationId: string;
+    behavior?: 'steer' | 'followUp';
+    index?: number;
+    previewId?: string;
+  }): Promise<DesktopLiveSessionQueueRestoreResult>;
+  compactDesktopLiveSession(input: { conversationId: string; customInstructions?: string }): Promise<{ ok: true; result: unknown }>;
+  exportDesktopLiveSession(input: { conversationId: string; outputPath?: string }): Promise<{ ok: true; path: string }>;
+  reloadDesktopLiveSession(input: { conversationId: string }): Promise<{ ok: true }>;
+  destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
+  branchDesktopLiveSession(input: { conversationId: string; entryId: string }): Promise<{ newSessionId: string; sessionFile: string }>;
+  forkDesktopLiveSession(input: {
+    conversationId: string;
+    entryId: string;
+    beforeEntry?: boolean;
+    preserveSource?: boolean;
+  }): Promise<{ newSessionId: string; sessionFile: string }>;
   readDesktopSessionDetail(input: {
     sessionId: string;
     tailBlocks?: number;
