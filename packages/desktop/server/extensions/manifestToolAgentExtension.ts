@@ -1,7 +1,7 @@
 import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-import type { ServerRouteContext } from '../routes/context.js';
 import { listModelDefinitions } from '../models/modelState.js';
+import type { ServerRouteContext } from '../routes/context.js';
 import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { invokeExtensionAction } from './extensionBackend.js';
 import { listExtensionToolRegistrations } from './extensionRegistry.js';
@@ -160,7 +160,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
             }
 
             const extensionResult = invokeResult.result as
-              | { content?: unknown; text?: unknown; details?: unknown; isError?: unknown }
+              | { content?: unknown; text?: unknown; details?: unknown; isError?: unknown; terminate?: unknown }
               | null
               | undefined;
             const content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }> =
