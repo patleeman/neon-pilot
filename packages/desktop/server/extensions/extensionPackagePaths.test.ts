@@ -46,6 +46,26 @@ describe('extension package paths', () => {
     }
   });
 
+  it('does not load documentation templates as experimental extensions', () => {
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
+    const experimentalRoot = join(tempRoot, 'experimental-extensions', 'extensions');
+    const templateRoot = writeExtension(experimentalRoot, 'template-crud-page');
+    const extensionRoot = writeExtension(experimentalRoot, 'system-images');
+
+    Object.defineProperty(process, 'resourcesPath', {
+      value: tempRoot,
+      configurable: true,
+    });
+
+    try {
+      const paths = listExtensionPackagePaths();
+      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: extensionRoot, source: 'experimental' })]));
+      expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: templateRoot })]));
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('prefers unpacked packaged extensions over asar-adjacent source paths', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const resourcesRoot = join(tempRoot, 'Resources');

@@ -45,6 +45,9 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
     .sort((left, right) => left.localeCompare(right))
     .flatMap((entryName): ExtensionPackagePath[] => {
       const packageRoot = resolve(root, entryName);
+      if (source === 'experimental' && entryName.startsWith('template-')) {
+        return [];
+      }
       if (!statSync(packageRoot).isDirectory() || !existsSync(resolve(packageRoot, 'extension.json'))) {
         return [];
       }
