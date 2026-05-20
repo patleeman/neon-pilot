@@ -117,6 +117,15 @@ export function useReloadState<T>({
   );
   const hydratedKeyRef = useRef(storageKey);
 
+  // Store callbacks in refs so callers can pass inline functions without
+  // causing the persist/hydrate effects to re-run on every render.
+  const serializeRef = useRef(serialize);
+  serializeRef.current = serialize;
+  const deserializeRef = useRef(deserialize);
+  deserializeRef.current = deserialize;
+  const shouldPersistRef = useRef(shouldPersist);
+  shouldPersistRef.current = shouldPersist;
+
   useLayoutEffect(() => {
     hydratedKeyRef.current = storageKey;
     setState(
@@ -124,10 +133,10 @@ export function useReloadState<T>({
         key: storageKey,
         fallback: initialValue,
         storage,
-        deserialize,
+        deserialize: deserializeRef.current,
       }),
     );
-  }, [storageKey, initialValue, storage, deserialize]);
+  }, [storageKey, initialValue, storage]);
 
   useEffect(() => {
     if (hydratedKeyRef.current !== storageKey) {
@@ -138,10 +147,10 @@ export function useReloadState<T>({
       key: storageKey,
       value: state,
       storage,
-      serialize,
-      shouldPersist,
+      serialize: serializeRef.current,
+      shouldPersist: shouldPersistRef.current,
     });
-  }, [storageKey, state, storage, serialize, shouldPersist]);
+  }, [storageKey, state, storage]);
 
   const clear = useCallback(() => {
     clearStoredState(storage, storageKey);
