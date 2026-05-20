@@ -1,14 +1,13 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import type { DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
 import type { AppLayoutMode } from '../ui-state/appLayoutMode';
-import { ToolbarButton } from './ui';
-
-const OPEN_COMMAND_PALETTE_EVENT = 'pa:command-palette-open';
+import { cx, ToolbarButton } from './ui';
 
 function LeftSidebarToggleIcon({ open }: { open: boolean }) {
   return (
@@ -138,8 +137,10 @@ export function DesktopTopBar({
 }) {
   const location = useLocation();
   const { topBarElements } = useExtensionRegistry();
+  const searchShellRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [navigation, setNavigation] = useState<DesktopNavigationState>({
     canGoBack: false,
     canGoForward: false,
@@ -211,7 +212,7 @@ export function DesktopTopBar({
   const environmentBadgeTitle = environment?.launchMode === 'testing' ? 'Launched from the command line' : environment?.activeHostSummary;
 
   function openPaletteFromSearch(query = searchQuery) {
-    const rect = searchInputRef.current?.getBoundingClientRect();
+    const rect = searchShellRef.current?.getBoundingClientRect();
     window.dispatchEvent(
       new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
         detail: {
@@ -221,6 +222,16 @@ export function DesktopTopBar({
       }),
     );
   }
+
+  useEffect(() => {
+    function handlePaletteState(event: Event) {
+      const detail = (event as CustomEvent<CommandPaletteStateDetail>).detail;
+      setPaletteOpen(Boolean(detail?.open));
+    }
+
+    window.addEventListener(COMMAND_PALETTE_STATE_EVENT, handlePaletteState);
+    return () => window.removeEventListener(COMMAND_PALETTE_STATE_EVENT, handlePaletteState);
+  }, []);
 
   useEffect(() => {
     function handlePaletteShortcut(event: Event) {
@@ -284,7 +295,11 @@ export function DesktopTopBar({
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div
-          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:border-accent/35 focus-within:bg-surface hover:border-accent/25 hover:bg-surface hover:text-secondary"
+          ref={searchShellRef}
+          className={cx(
+            'flex h-7 w-full max-w-[560px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:border-accent/35 focus-within:bg-surface hover:border-accent/25 hover:bg-surface hover:text-secondary',
+            paletteOpen && 'pointer-events-none opacity-0',
+          )}
           style={noDragStyle}
         >
           <span aria-hidden="true">⌕</span>

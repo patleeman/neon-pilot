@@ -16,7 +16,7 @@ import {
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
 } from '../commands/commandPalette';
-import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
+import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { buildCommandPaletteFileOpenRoute } from '../commands/commandPaletteNavigation';
 import { createHostCommands, evaluateCommandEnablement, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
@@ -367,6 +367,10 @@ export function CommandPalette() {
     setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
     setOpen(true);
   }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open } }));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -883,11 +887,9 @@ export function CommandPalette() {
     return null;
   }
 
-  const anchoredPanelWidth = anchorRect ? Math.min(560, window.innerWidth - 32) : undefined;
+  const anchoredPanelWidth = anchorRect ? Math.min(anchorRect.width, window.innerWidth - 32) : undefined;
   const anchoredPanelLeft =
-    anchorRect && anchoredPanelWidth
-      ? Math.min(Math.max(16, anchorRect.left + anchorRect.width / 2 - anchoredPanelWidth / 2), window.innerWidth - anchoredPanelWidth - 16)
-      : undefined;
+    anchorRect && anchoredPanelWidth ? Math.min(Math.max(16, anchorRect.left), window.innerWidth - anchoredPanelWidth - 16) : undefined;
   let runningIndex = -1;
 
   return (
@@ -922,7 +924,7 @@ export function CommandPalette() {
           overscrollBehavior: 'contain',
         }}
       >
-        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-2.5 py-2')}>
+        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-2.5 pb-2 pt-0')}>
           <div className={cx('flex items-center gap-2 min-w-0', anchorRect && 'h-7')}>
             <span className="text-[13px] text-dim">⌕</span>
             <input
@@ -934,7 +936,7 @@ export function CommandPalette() {
                 setActionError(null);
                 setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
               }}
-              placeholder={searchPlaceholder}
+              placeholder={anchorRect ? 'Search threads, models, settings…' : searchPlaceholder}
               aria-label="Search command palette"
               className={cx(
                 'min-w-0 flex-1 bg-transparent text-primary placeholder:text-dim outline-none',
@@ -946,7 +948,7 @@ export function CommandPalette() {
             </span>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-2.5 flex items-center justify-between gap-3">
             <div className="inline-flex items-center gap-1 rounded-md bg-surface p-0.5">
               {scopeOptions.map((option) => (
                 <button
