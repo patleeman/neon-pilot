@@ -376,7 +376,7 @@ function FormSection({
   return (
     <section id={id} className="grid scroll-mt-8 gap-6 border-t border-border-subtle py-7 md:grid-cols-[13rem_minmax(0,1fr)]">
       <div className="space-y-2">
-        <h3 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">{title}</h3>
+        <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
         <p className="text-[13px] leading-6 text-secondary">{description}</p>
       </div>
       <div className="min-w-0">{children}</div>

@@ -125,7 +125,7 @@ export function KnowledgePageSurface() {
             <div className="space-y-7">
               <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Set Up Knowledge</p>
-                <h2 className="font-serif text-[34px] font-normal italic leading-tight tracking-[-0.02em] text-primary text-balance">
+                <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.02em] text-primary text-balance">
                   Give the agent a durable memory.
                 </h2>
                 <p className="max-w-2xl text-[14px] leading-7 text-secondary">

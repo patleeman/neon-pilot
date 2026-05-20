@@ -48,7 +48,6 @@
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource/geist": "^5.2.9",
     "@fontsource/geist-mono": "^5.2.8",
-    "@fontsource/instrument-serif": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@lezer/highlight": "^1.2.3",
     "@pierre/diffs": "^1.1.19",

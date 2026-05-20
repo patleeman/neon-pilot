@@ -553,8 +553,7 @@
   }
 
   .ui-app-page-title {
-    font-family: 'Instrument Serif', Georgia, serif;
-    @apply text-[38px] font-normal italic leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px];
+    @apply text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px];
   }
 
   .ui-app-page-summary {

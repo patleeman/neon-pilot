@@ -385,7 +385,7 @@ function SettingsPanel({
     >
       <div className="min-w-0 space-y-2">
         <div className="space-y-1.5">
-          <h3 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">{title}</h3>
+          <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
           {description ? <p className="max-w-sm text-[12px] leading-5 text-secondary">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{actions}</div> : null}

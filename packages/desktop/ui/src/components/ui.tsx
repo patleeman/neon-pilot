@@ -223,7 +223,9 @@ export function AppPageSection({
     <section id={id} className={cx('ui-app-page-section', className)}>
       {title || description ? (
         <div className="space-y-2">
-          {title ? <h2 className="text-[28px] font-semibold tracking-[-0.035em] text-primary sm:text-[30px]">{title}</h2> : null}
+          {title ? (
+            <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.02em] text-primary sm:text-[32px]">{title}</h2>
+          ) : null}
           {description ? <div className="max-w-3xl text-[13px] leading-6 text-secondary">{description}</div> : null}
         </div>
       ) : null}

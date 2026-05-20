@@ -747,9 +747,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
-                        Model Settings
-                      </h2>
+                      <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Model Settings</h2>
                       <p className="mt-1 text-sm text-secondary">Choose which downloaded model the server should use.</p>
                     </div>
                     <ToolbarButton disabled={Boolean(busy || !selectedModel || !dirty)} onClick={() => void saveAndMaybeReload(false)}>
@@ -857,9 +855,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <section className="rounded-xl border border-border-subtle bg-surface p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <h2 className="font-serif text-[24px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
-                        Serving Settings
-                      </h2>
+                      <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-primary">Serving Settings</h2>
                       <p className="mt-0.5 text-xs text-secondary">Tune runtime parameters, then start or reload the server.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -1068,9 +1064,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
                 <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div>
-                    <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
-                      Runtime Logs
-                    </h2>
+                    <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Runtime Logs</h2>
                     <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically.</p>
                   </div>
                   <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
@@ -1086,9 +1080,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               <main className="min-w-0 flex-1 space-y-5">
                 <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div>
-                    <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
-                      Model Library
-                    </h2>
+                    <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Model Library</h2>
                     <p className="mt-1 text-sm text-secondary">
                       Search Hugging Face for MLX or GGUF models, inspect details, and download them locally.
                     </p>
@@ -1183,9 +1175,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <section className="rounded-xl border border-border-subtle bg-surface p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h2 className="font-serif text-[26px] font-normal italic leading-tight tracking-[-0.02em] text-primary">
-                        Downloaded Models
-                      </h2>
+                      <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Downloaded Models</h2>
                       <p className="mt-1 text-sm text-secondary">Models already available to the server page.</p>
                     </div>
                     <ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>
