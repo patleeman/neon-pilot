@@ -287,7 +287,7 @@ export function GatewaysPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
         <AppPageIntro
           title="Telegram Gateway"
           summary="Configure one Telegram bot, save the chat ID, and attach incoming messages to the conversation thread that should handle them."
@@ -303,7 +303,7 @@ export function GatewaysPage() {
         {loading ? <div className="rounded-lg border border-border-subtle bg-surface/25 px-3 py-2 text-sm text-dim">Loading…</div> : null}
 
         <main className="space-y-5">
-          <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+          <section className="rounded-xl border border-border-subtle bg-surface p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-primary">Bot Settings</h2>
@@ -388,7 +388,7 @@ export function GatewaysPage() {
             {telegramTokenSaveError ? <p className="mt-3 text-xs text-danger">{telegramTokenSaveError}</p> : null}
           </section>
 
-          <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+          <section className="rounded-xl border border-border-subtle bg-surface p-5">
             <div>
               <h2 className="text-xl font-semibold text-primary">Routing Settings</h2>
               <p className="mt-1 text-sm text-secondary">Save a chat ID, then attach that Telegram chat to an open conversation thread.</p>
@@ -575,7 +575,7 @@ function GatewayMeta({ label, value, muted = false }: { label: string; value: st
 function GatewayActivity({ events }: { events: GatewayEvent[] }) {
   const rows = useMemo(() => events.slice(0, 10), [events]);
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface/25 p-5">
+    <section className="rounded-xl border border-border-subtle bg-surface p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-primary">Recent Activity</h2>

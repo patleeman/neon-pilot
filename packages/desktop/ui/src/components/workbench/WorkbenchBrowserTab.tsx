@@ -85,7 +85,9 @@ export function WorkbenchBrowserTab({
       .navigateWorkbenchBrowser({ url: activeTab.url, sessionKey: browserSessionKey })
       .then((nextState) => {
         if (nextState) {
-          setState(nextState);
+          if (tabsStateRef.current.activeTabId === activeTab.id) {
+            setState(nextState);
+          }
         }
       })
       .catch(() => undefined);
@@ -103,12 +105,12 @@ export function WorkbenchBrowserTab({
       tabUrlMapRef.current[tabId] = state.url;
       onSetTabsState((prev) => ({
         ...prev,
-        tabs: prev.tabs.map((t) => (t.id === prev.activeTabId ? { ...t, url: state.url, title: state.title || t.title } : t)),
+        tabs: prev.tabs.map((t) => (t.id === tabId ? { ...t, url: state.url, title: state.title || t.title } : t)),
       }));
     }
   }, [state?.url, state?.title, activeTab.id]);
 
-  const syncUrlDraftFromBrowserState = useCallback((nextState: DesktopWorkbenchBrowserState) => {
+  const syncUrlDraftFromBrowserState = useCallback((nextState: DesktopWorkbenchBrowserState, tabId: string) => {
     if (document.activeElement === urlInputRef.current) {
       return;
     }
@@ -118,7 +120,7 @@ export function WorkbenchBrowserTab({
     setUrlDraft(newUrl);
     onSetTabsState((prev) => ({
       ...prev,
-      tabs: prev.tabs.map((t) => (t.id === prev.activeTabId ? { ...t, url: nextState.url, urlDraft: newUrl } : t)),
+      tabs: prev.tabs.map((t) => (t.id === tabId ? { ...t, url: nextState.url, urlDraft: newUrl, title: nextState.title || t.title } : t)),
     }));
   }, []);
 
@@ -133,8 +135,10 @@ export function WorkbenchBrowserTab({
         .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
         .then((nextState) => {
           if (nextState) {
-            setState(nextState);
-            syncUrlDraftFromBrowserState(nextState);
+            if (tabsStateRef.current.activeTabId === activeTab.id) {
+              setState(nextState);
+            }
+            syncUrlDraftFromBrowserState(nextState, activeTab.id);
           }
         })
         .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
@@ -160,8 +164,10 @@ export function WorkbenchBrowserTab({
       })
       .then((nextState) => {
         if (nextState) {
-          setState(nextState);
-          syncUrlDraftFromBrowserState(nextState);
+          if (tabsStateRef.current.activeTabId === activeTab.id) {
+            setState(nextState);
+          }
+          syncUrlDraftFromBrowserState(nextState, activeTab.id);
         }
       })
       .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
@@ -262,6 +268,7 @@ export function WorkbenchBrowserTab({
   }, []);
 
   async function runBrowserCommand(command: () => Promise<DesktopWorkbenchBrowserState | null | undefined>) {
+    const commandTabId = activeTab.id;
     if (!bridge) {
       setStatus('Workbench browser is only available in the Electron desktop app.');
       return;
@@ -270,14 +277,16 @@ export function WorkbenchBrowserTab({
       setStatus('Working…');
       const nextState = await command();
       if (nextState) {
-        setState(nextState);
+        if (tabsStateRef.current.activeTabId === commandTabId) {
+          setState(nextState);
+        }
         const newUrl = nextState.url === 'about:blank' ? '' : nextState.url;
         urlDraftRef.current = newUrl;
         setUrlDraft(newUrl);
         onSetTabsState((prev) => ({
           ...prev,
           tabs: prev.tabs.map((t) =>
-            t.id === prev.activeTabId ? { ...t, url: nextState.url, urlDraft: newUrl, title: nextState.title || t.title } : t,
+            t.id === commandTabId ? { ...t, url: nextState.url, urlDraft: newUrl, title: nextState.title || t.title } : t,
           ),
         }));
       }
@@ -306,7 +315,7 @@ export function WorkbenchBrowserTab({
     setUrlDraft(value);
     onSetTabsState((prev) => ({
       ...prev,
-      tabs: prev.tabs.map((t) => (t.id === prev.activeTabId ? { ...t, urlDraft: value } : t)),
+      tabs: prev.tabs.map((t) => (t.id === activeTab.id ? { ...t, urlDraft: value } : t)),
     }));
   }, []);
 

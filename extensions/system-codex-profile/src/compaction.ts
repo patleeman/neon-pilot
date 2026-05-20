@@ -82,8 +82,8 @@ function notify(
   if (ctx.hasUI) ctx.ui?.notify?.(message, level);
 }
 
-function getSessionId(ctx: { sessionManager: { getSessionId(): string } }): string {
-  return ctx.sessionManager.getSessionId();
+function getSessionId(ctx: { sessionManager?: { getSessionId(): string } }): string | undefined {
+  return ctx.sessionManager?.getSessionId();
 }
 
 function hostnameFromBaseUrl(baseUrl: unknown): string | undefined {

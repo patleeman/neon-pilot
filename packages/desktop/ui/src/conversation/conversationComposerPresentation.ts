@@ -184,31 +184,7 @@ export function summarizeQueuedRunCallbackPrompt(text: string): QueuedRunCallbac
   };
 }
 
-export function formatParallelJobStatusLabel(status: 'running' | 'ready' | 'failed' | 'importing'): string {
-  switch (status) {
-    case 'running':
-      return 'running';
-    case 'ready':
-      return 'queued';
-    case 'failed':
-      return 'failed';
-    case 'importing':
-      return 'appending';
-  }
-}
-
-export function formatParallelJobContextSummary(input: { imageCount: number; attachmentRefs: string[] }): string | null {
-  const parts: string[] = [];
-  if (Number.isSafeInteger(input.imageCount) && input.imageCount > 0) {
-    parts.push(`${input.imageCount} image${input.imageCount === 1 ? '' : 's'}`);
-  }
-  if (input.attachmentRefs.length > 0) {
-    parts.push(`${input.attachmentRefs.length} attachment${input.attachmentRefs.length === 1 ? '' : 's'}`);
-  }
-  return parts.length > 0 ? parts.join(' · ') : null;
-}
-
-export function formatComposerActionLabel(label: 'Steer' | 'Follow up' | 'Parallel'): string {
+export function formatComposerActionLabel(label: 'Steer' | 'Follow up'): string {
   return label === 'Follow up' ? 'followup' : label.toLowerCase();
 }
 

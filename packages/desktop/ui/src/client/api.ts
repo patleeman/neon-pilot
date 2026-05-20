@@ -52,10 +52,8 @@ import type {
   InstructionFilesState,
   LiveSessionContext,
   LiveSessionCreateResult,
-  LiveSessionExportResult,
   LiveSessionForkEntry,
   LiveSessionMeta,
-  LiveSessionPresenceState,
   MemoryData,
   ModelProviderState,
   ModelState,
@@ -1323,136 +1321,6 @@ export const api = {
         relatedConversationIds,
       },
     );
-  },
-  parallelPromptSession: async (
-    id: string,
-    text: string,
-    images?: PromptImageInput[],
-    attachmentRefs?: PromptAttachmentRefInput[],
-    surfaceId?: string,
-    contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
-    relatedConversationIds?: string[],
-  ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.submitLiveSessionParallelPrompt({
-        conversationId: id,
-        text,
-        ...(surfaceId ? { surfaceId } : {}),
-        images,
-        attachmentRefs,
-        contextMessages,
-        relatedConversationIds,
-      });
-    }
-
-    return post<{
-      ok: boolean;
-      accepted: boolean;
-      jobId: string;
-      childConversationId: string;
-      relatedConversationPointerWarnings?: string[];
-    }>(`/live-sessions/${id}/parallel-prompt`, {
-      text,
-      ...(surfaceId ? { surfaceId } : {}),
-      images: images?.map((image) => ({
-        type: 'image' as const,
-        data: image.data,
-        mimeType: image.mimeType,
-        ...(image.name ? { name: image.name } : {}),
-        ...(image.previewUrl ? { previewUrl: image.previewUrl } : {}),
-      })),
-      attachmentRefs: attachmentRefs?.map((attachmentRef) => ({
-        attachmentId: attachmentRef.attachmentId,
-        ...(attachmentRef.revision ? { revision: attachmentRef.revision } : {}),
-      })),
-      contextMessages: contextMessages?.map((message) => ({
-        customType: message.customType,
-        content: message.content,
-      })),
-      relatedConversationIds,
-    });
-  },
-  manageParallelPromptJob: async (id: string, jobId: string, action: 'importNow' | 'skip' | 'cancel', surfaceId?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.manageLiveSessionParallelJob({
-        conversationId: id,
-        jobId,
-        action,
-        ...(surfaceId ? { surfaceId } : {}),
-      });
-    }
-
-    return post<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }>(
-      `/live-sessions/${id}/parallel-jobs/${encodeURIComponent(jobId)}`,
-      {
-        action,
-        ...(surfaceId ? { surfaceId } : {}),
-      },
-    );
-  },
-  executeLiveSessionBash: async (id: string, command: string, options?: { excludeFromContext?: boolean }) => {
-    return post<{ ok: boolean; result: unknown }>(`/live-sessions/${id}/bash`, {
-      command,
-      excludeFromContext: options?.excludeFromContext === true,
-    });
-  },
-  restoreQueuedMessage: async (
-    id: string,
-    input: { behavior: 'steer' | 'followUp'; index: number; previewId?: string },
-    surfaceId?: string,
-  ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.restoreQueuedLiveSessionMessage({
-        conversationId: id,
-        ...input,
-      });
-    }
-
-    return post<{ ok: boolean; text: string; images: PromptImageInput[] }>(`/live-sessions/${id}/dequeue`, {
-      ...input,
-      ...(surfaceId ? { surfaceId } : {}),
-    });
-  },
-  takeoverLiveSession: async (id: string, surfaceId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.takeOverLiveSession({ conversationId: id, surfaceId });
-    }
-
-    return post<LiveSessionPresenceState>(`/live-sessions/${id}/takeover`, { surfaceId });
-  },
-  compactSession: async (id: string, customInstructions?: string, surfaceId?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.compactLiveSession({ conversationId: id, ...(customInstructions ? { customInstructions } : {}) });
-    }
-
-    return post<{ ok: boolean; result: unknown }>(`/live-sessions/${id}/compact`, {
-      customInstructions,
-      ...(surfaceId ? { surfaceId } : {}),
-    });
-  },
-  reloadSession: async (id: string, surfaceId?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.reloadLiveSession(id);
-    }
-
-    return post<{ ok: boolean }>(`/live-sessions/${id}/reload`, surfaceId ? { surfaceId } : {});
-  },
-  exportSession: async (id: string, outputPath?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.exportLiveSession({
-        conversationId: id,
-        ...(outputPath ? { outputPath } : {}),
-      });
-    }
-
-    return post<LiveSessionExportResult>(`/live-sessions/${id}/export`, { outputPath });
   },
   abortSession: async (id: string, surfaceId?: string) => {
     const desktopBridge = getDesktopBridge();

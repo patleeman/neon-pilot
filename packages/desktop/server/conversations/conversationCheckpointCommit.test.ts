@@ -115,6 +115,19 @@ describe('parseCheckpointDiffSections', () => {
     expect(files[0]).toMatchObject({ path: 'new-name.ts', status: 'renamed', previousPath: 'old-name.ts' });
   });
 
+  it('parses git-quoted non-ASCII file paths', () => {
+    const patch = [
+      'diff --git "a/caf\\303\\251.txt" "b/caf\\303\\251.txt"',
+      '--- "a/caf\\303\\251.txt"',
+      '+++ "b/caf\\303\\251.txt"',
+      '@@ -1 +1 @@',
+      '-old',
+      '+new',
+    ].join('\n');
+    const files = parseCheckpointDiffSections(patch);
+    expect(files[0]).toMatchObject({ path: 'café.txt', status: 'modified', additions: 1, deletions: 1 });
+  });
+
   it('parses a copied file', () => {
     const patch = ['diff --git a/source.ts b/copy.ts', 'copy from source.ts', 'copy to copy.ts', '--- a/source.ts', '+++ b/copy.ts'].join(
       '\n',

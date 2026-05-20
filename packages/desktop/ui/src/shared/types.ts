@@ -959,47 +959,6 @@ export interface QueuedPromptPreview {
   pending?: boolean;
 }
 
-export interface ParallelPromptPreview {
-  id: string;
-  prompt: string;
-  childConversationId: string;
-  status: 'running' | 'ready' | 'failed' | 'importing';
-  imageCount: number;
-  attachmentRefs: string[];
-  touchedFiles: string[];
-  parentTouchedFiles: string[];
-  overlapFiles: string[];
-  sideEffects: string[];
-  resultPreview?: string;
-  error?: string;
-}
-
-export interface LiveSessionToolDefinition {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-}
-
-interface DesktopConversationStreamState {
-  blocks: MessageBlock[];
-  blockOffset: number;
-  totalBlocks: number;
-  hasSnapshot: boolean;
-  isStreaming: boolean;
-  isCompacting: boolean;
-  error: string | null;
-  title: string | null;
-  tokens: { input: number; output: number; total: number } | null;
-  cost: number | null;
-  contextUsage: SessionContextUsage | null;
-  pendingQueue: { steering: QueuedPromptPreview[]; followUp: QueuedPromptPreview[] };
-  parallelJobs: ParallelPromptPreview[];
-  presence: LiveSessionPresenceState;
-  systemPrompt: string | null;
-  toolDefinitions: LiveSessionToolDefinition[];
-  cwdChange: { newConversationId: string; cwd: string; autoContinued: boolean } | null;
-}
-
 export interface DesktopConversationState {
   conversationId: string;
   sessionDetail: SessionDetail | null;
@@ -1026,7 +985,6 @@ export type SseEvent =
   | { type: 'cwd_changed'; newConversationId: string; cwd: string; autoContinued: boolean }
   | { type: 'user_message'; block: Extract<DisplayBlock, { type: 'user' }> }
   | { type: 'queue_state'; steering: QueuedPromptPreview[]; followUp: QueuedPromptPreview[] }
-  | { type: 'parallel_state'; jobs: ParallelPromptPreview[] }
   | { type: 'presence_state'; state: LiveSessionPresenceState }
   | { type: 'text_delta'; delta: string }
   | { type: 'thinking_delta'; delta: string }

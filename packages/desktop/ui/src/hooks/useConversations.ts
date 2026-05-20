@@ -289,7 +289,7 @@ export function useConversations() {
     () =>
       new Map(
         (tasks ?? []).flatMap((task) =>
-          task.threadConversationId
+          task.running && task.threadConversationId
             ? [[task.threadConversationId, task.threadTitle ?? task.title ?? `Automation: ${task.id}`] as const]
             : [],
         ),
@@ -314,6 +314,38 @@ export function useConversations() {
     () => new Map(withTitles.map((session) => [session.id, session] satisfies [string, SessionMeta])),
     [withTitles],
   );
+
+  useEffect(() => {
+    if (sessions === null) {
+      return;
+    }
+
+    const knownSessionIds = new Set([
+      ...sessions.map((session) => session.id),
+      ...liveTitles.keys(),
+      ...automationThreadTitleBySessionId.keys(),
+    ]);
+
+    const nextOpenIds = openIds.filter((id) => knownSessionIds.has(id));
+    const nextPinnedIds = pinnedIds.filter((id) => knownSessionIds.has(id));
+    const nextArchivedConversationIds = archivedConversationIds.filter((id) => knownSessionIds.has(id));
+
+    if (
+      nextOpenIds.length === openIds.length &&
+      nextPinnedIds.length === pinnedIds.length &&
+      nextArchivedConversationIds.length === archivedConversationIds.length
+    ) {
+      return;
+    }
+
+    const nextLayout = replaceConversationLayout({
+      sessionIds: nextOpenIds,
+      pinnedSessionIds: nextPinnedIds,
+      archivedSessionIds: nextArchivedConversationIds,
+      activeSessionId: activeId && knownSessionIds.has(activeId) ? activeId : null,
+    });
+    applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
+  }, [activeId, archivedConversationIds, automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessions]);
   const pinnedSessions = useMemo(
     () =>
       pinnedIds.map((id) => {

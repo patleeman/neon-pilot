@@ -203,13 +203,6 @@ export interface CompanionConversationQueueRestoreInput {
   surfaceId?: string;
 }
 
-export interface CompanionConversationParallelJobInput {
-  conversationId: string;
-  jobId: string;
-  action: 'importNow' | 'skip' | 'cancel';
-  surfaceId?: string;
-}
-
 export interface CompanionSshTargetSaveInput {
   id?: string;
   label: string;
@@ -326,9 +319,7 @@ export interface CompanionRuntime {
   createConversation(input: CompanionConversationCreateInput): Promise<unknown>;
   resumeConversation(input: CompanionConversationResumeInput): Promise<unknown>;
   promptConversation(input: CompanionConversationPromptInput): Promise<unknown>;
-  parallelPromptConversation(input: CompanionConversationPromptInput): Promise<unknown>;
   restoreConversationQueuePrompt(input: CompanionConversationQueueRestoreInput): Promise<unknown>;
-  manageConversationParallelJob(input: CompanionConversationParallelJobInput): Promise<unknown>;
   abortConversation(input: CompanionConversationAbortInput): Promise<unknown>;
   takeOverConversation(input: CompanionConversationTakeoverInput): Promise<unknown>;
   renameConversation(input: CompanionConversationRenameInput): Promise<unknown>;

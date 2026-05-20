@@ -38,7 +38,6 @@ import {
   type CompanionConversationExecutionTargetChangeInput,
   type CompanionConversationForkInput,
   type CompanionConversationModelPreferencesUpdateInput,
-  type CompanionConversationParallelJobInput,
   type CompanionConversationPromptInput,
   type CompanionConversationQueueRestoreInput,
   type CompanionConversationRenameInput,
@@ -995,29 +994,6 @@ export class DaemonCompanionServer {
       return;
     }
 
-    const conversationParallelJobMatch = /^\/companion\/v1\/conversations\/([^/]+)\/parallel-jobs\/([^/]+)$/.exec(pathname);
-    if (conversationParallelJobMatch && request.method === 'POST') {
-      if (!(await this.requireBearer(request, response))) {
-        return;
-      }
-
-      const runtime = await resolveRuntimeOrThrow(this.config, this.runtimeProvider);
-      const body = await parseJsonBody(request);
-      const payload = isRecord(body) ? body : {};
-      const action = readRequiredString(payload.action, 'action');
-      if (action !== 'importNow' && action !== 'skip' && action !== 'cancel') {
-        throw new Error('action must be importNow, skip, or cancel.');
-      }
-      const input: CompanionConversationParallelJobInput = {
-        conversationId: decodeURIComponent(conversationParallelJobMatch[1] || ''),
-        jobId: decodeURIComponent(conversationParallelJobMatch[2] || ''),
-        action,
-        ...(readOptionalString(payload.surfaceId) ? { surfaceId: readOptionalString(payload.surfaceId) } : {}),
-      };
-      sendJson(response, 200, await runtime.manageConversationParallelJob(input));
-      return;
-    }
-
     const conversationCwdMatch = /^\/companion\/v1\/conversations\/([^/]+)\/cwd$/.exec(pathname);
     if (conversationCwdMatch && request.method === 'POST') {
       if (!(await this.requireBearer(request, response))) {
@@ -1731,8 +1707,7 @@ export class DaemonCompanionServer {
         };
         return runtime.resumeConversation(input);
       }
-      case 'conversation.prompt':
-      case 'conversation.parallel_prompt': {
+      case 'conversation.prompt': {
         const input: CompanionConversationPromptInput = {
           conversationId: readRequiredString(payload.conversationId, 'conversationId'),
           text: readOptionalString(payload.text),
@@ -1746,9 +1721,6 @@ export class DaemonCompanionServer {
             : undefined,
           surfaceId: readOptionalString(payload.surfaceId),
         };
-        if (message.name === 'conversation.parallel_prompt') {
-          return runtime.parallelPromptConversation(input);
-        }
         return runtime.promptConversation(input);
       }
       case 'conversation.abort': {

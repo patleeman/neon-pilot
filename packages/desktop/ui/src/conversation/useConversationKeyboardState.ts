@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 
 type ComposerModifierEvent = Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'metaKey' | 'type'> & Partial<Pick<KeyboardEvent, 'key'>>;
 
-function readModifierState(event: ComposerModifierEvent): { altHeld: boolean; parallelHeld: boolean } {
-  return {
-    altHeld: event.altKey,
-    parallelHeld: event.ctrlKey || event.metaKey,
-  };
+function readModifierState(event: ComposerModifierEvent): { altHeld: boolean } {
+  return { altHeld: event.altKey };
 }
 
 function resolveVisualViewportKeyboardInset(input: { innerHeight: number; viewportHeight: number; viewportOffsetTop: number }): number {
@@ -54,7 +51,6 @@ export function useVisualViewportKeyboardInset(): number {
 
 export function resolveComposerModifierKeyState(event: ComposerModifierEvent): {
   altHeld: boolean;
-  parallelHeld: boolean;
 } {
   const key = event.key;
   const isKeyDown = event.type === 'keydown';
@@ -63,18 +59,15 @@ export function resolveComposerModifierKeyState(event: ComposerModifierEvent): {
 
   return {
     altHeld: key === 'Alt' ? isKeyDown || (!isKeyUp && modifierState.altHeld) : modifierState.altHeld,
-    parallelHeld: key === 'Control' || key === 'Meta' ? isKeyDown || (!isKeyUp && modifierState.parallelHeld) : modifierState.parallelHeld,
   };
 }
 
-export function useComposerModifierKeys(): { composerAltHeld: boolean; composerParallelHeld: boolean } {
+export function useComposerModifierKeys(): { composerAltHeld: boolean } {
   const [composerAltHeld, setComposerAltHeld] = useState(false);
-  const [composerParallelHeld, setComposerParallelHeld] = useState(false);
 
   useEffect(() => {
-    function applyModifierState(nextState: { altHeld: boolean; parallelHeld: boolean }) {
+    function applyModifierState(nextState: { altHeld: boolean }) {
       setComposerAltHeld((current) => (current === nextState.altHeld ? current : nextState.altHeld));
-      setComposerParallelHeld((current) => (current === nextState.parallelHeld ? current : nextState.parallelHeld));
     }
 
     function handleKeyboardModifierChange(event: KeyboardEvent) {
@@ -86,7 +79,7 @@ export function useComposerModifierKeys(): { composerAltHeld: boolean; composerP
     }
 
     function resetModifierState() {
-      applyModifierState({ altHeld: false, parallelHeld: false });
+      applyModifierState({ altHeld: false });
     }
 
     window.addEventListener('keydown', handleKeyboardModifierChange, true);
@@ -110,5 +103,5 @@ export function useComposerModifierKeys(): { composerAltHeld: boolean; composerP
     };
   }, []);
 
-  return { composerAltHeld, composerParallelHeld };
+  return { composerAltHeld };
 }

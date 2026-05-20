@@ -1,7 +1,5 @@
 # Changelog
 
-- fix: isolate dev/test daemon invocations with per-launch namespaces and ephemeral ports
-
 ## 0.8.0-rc.19 — 2026-05-18
 
 ### Highlights
@@ -14,6 +12,7 @@
 
 ### Notes
 
+- fix: isolate dev/test daemon invocations with per-launch namespaces and ephemeral ports
 - 135 commits since the previous release.
 
 ## 0.8.0-rc.18 — 2026-05-17

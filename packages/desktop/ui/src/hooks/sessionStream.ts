@@ -8,7 +8,6 @@ import type {
   LiveSessionSurfaceType,
   LiveSessionToolDefinition,
   MessageBlock,
-  ParallelPromptPreview,
   QueuedPromptPreview,
   SessionContextUsage,
   ThreadGoal,
@@ -27,7 +26,6 @@ export interface StreamState {
   cost: number | null;
   contextUsage: SessionContextUsage | null;
   pendingQueue: { steering: QueuedPromptPreview[]; followUp: QueuedPromptPreview[] };
-  parallelJobs: ParallelPromptPreview[];
   presence: LiveSessionPresenceState;
   goalState: ThreadGoal | null;
   systemPrompt: string | null;
@@ -57,7 +55,6 @@ export const INITIAL_STREAM_STATE: StreamState = {
   cost: null,
   contextUsage: null,
   pendingQueue: { steering: [], followUp: [] },
-  parallelJobs: [],
   presence: createEmptyLiveSessionPresenceState(),
   goalState: null,
   systemPrompt: null,

@@ -81,9 +81,9 @@ export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
     ctx.setActiveTools?.(['bash', 'apply_patch']);
   };
 
+  codexCompactionExtension(pi);
   pi.on('session_start', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: false }));
   pi.on('model_select', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: true }));
-  codexCompactionExtension(pi);
 }
 
 function readCwd(ctx: ToolContext): string {
@@ -309,14 +309,22 @@ function preflightFilePatch(filePatch: FilePatch, cwd: string): void {
 }
 
 function preflightPatchSet(filePatches: FilePatch[], cwd: string): void {
-  const touched = new Map<string, string>();
+  const inputs = new Map<string, string>();
+  const outputs = new Map<string, string>();
   for (const filePatch of filePatches) {
-    const paths = [filePatch.path, ...(filePatch.type === 'update' && filePatch.moveTo ? [filePatch.moveTo] : [])];
-    for (const path of paths) {
-      const resolved = resolveInsideCwd(cwd, path);
-      const previous = touched.get(resolved);
-      if (previous) throw new Error(`Patch touches the same file more than once: ${previous} and ${path}`);
-      touched.set(resolved, path);
+    const input = resolveInsideCwd(cwd, filePatch.path);
+    const previousInput = inputs.get(input);
+    if (previousInput && !(filePatch.type === 'update' && filePatch.moveTo)) {
+      throw new Error(`Patch touches the same file more than once: ${previousInput} and ${filePatch.path}`);
+    }
+    inputs.set(input, filePatch.path);
+
+    const outputPath = filePatch.type === 'add' ? filePatch.path : filePatch.type === 'update' ? filePatch.moveTo : undefined;
+    if (outputPath) {
+      const output = resolveInsideCwd(cwd, outputPath);
+      const previousOutput = outputs.get(output);
+      if (previousOutput) throw new Error(`Patch writes the same file more than once: ${previousOutput} and ${outputPath}`);
+      outputs.set(output, outputPath);
     }
     preflightFilePatch(filePatch, cwd);
   }

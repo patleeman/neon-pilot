@@ -24,9 +24,9 @@ The desktop app manages the local daemon automatically.
 
 ## Important paths
 
-- `<state-root>` — machine-local runtime state. Default: `~/.local/state/neon-pilot`
-- `<config-root>` — machine-local config. Default: `<state-root>/config`
-- `<vault-root>` — durable knowledge root
+- `<state-root>` — machine-local runtime state. Default: `$XDG_STATE_HOME/neon-pilot` when `XDG_STATE_HOME` is set, otherwise `~/.local/state/neon-pilot`
+- `<config-root>` — machine-local config. Default: `$XDG_CONFIG_HOME/neon-pilot` when set, otherwise `<state-root>/config`
+- `<vault-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
 
 ## Verify the install
 

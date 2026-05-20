@@ -4,8 +4,6 @@ import {
   appendMentionedConversationContextDocs,
   dedupeConversationContextDocs,
   formatComposerActionLabel,
-  formatParallelJobContextSummary,
-  formatParallelJobStatusLabel,
   formatQueuedPromptImageSummary,
   formatQueuedPromptShelfText,
   isAttachableMentionItem,
@@ -130,7 +128,7 @@ describe('conversation composer presentation helpers', () => {
     ).toEqual([{ kind: 'file', id: 'file:b', label: 'B', path: '/b.ts' }]);
   });
 
-  it('formats queued prompt and parallel job shelf text compactly', () => {
+  it('formats queued prompt shelf text compactly', () => {
     expect(truncateConversationShelfText('one\ntwo\nthree', { maxLines: 2 })).toBe('one\ntwo…');
     expect(truncateConversationShelfText('abcdef', { maxChars: 3 })).toBe('abc…');
     expect(truncateConversationShelfText('one\ntwo\nthree', { maxLines: 1.5 })).toBe('one\ntwo\nthree');
@@ -145,10 +143,6 @@ describe('conversation composer presentation helpers', () => {
     expect(formatQueuedPromptShelfText('  ', 0)).toBe('(empty queued prompt)');
     expect(formatQueuedPromptImageSummary(2)).toBe('2 images attached');
     expect(formatQueuedPromptImageSummary(1.5)).toBeNull();
-    expect(formatParallelJobStatusLabel('importing')).toBe('appending');
-    expect(formatParallelJobContextSummary({ imageCount: 1, attachmentRefs: ['a', 'b'] })).toBe('1 image · 2 attachments');
-    expect(formatParallelJobContextSummary({ imageCount: 1.5, attachmentRefs: [] })).toBeNull();
-    expect(formatParallelJobContextSummary({ imageCount: 0, attachmentRefs: [] })).toBeNull();
   });
 
   it('summarizes raw background-run callback prompts for the queue shelf', () => {
@@ -181,7 +175,6 @@ describe('conversation composer presentation helpers', () => {
 
   it('formats composer actions and git summary chips', () => {
     expect(formatComposerActionLabel('Follow up')).toBe('followup');
-    expect(formatComposerActionLabel('Parallel')).toBe('parallel');
     expect(resolveConversationGitSummaryPresentation(null)).toEqual({ kind: 'none' });
     expect(
       resolveConversationGitSummaryPresentation({

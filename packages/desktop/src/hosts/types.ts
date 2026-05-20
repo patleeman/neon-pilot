@@ -232,40 +232,6 @@ export interface DesktopLiveSessionPromptResult {
   relatedConversationPointerWarnings?: string[];
 }
 
-export interface DesktopLiveSessionParallelPromptRequest {
-  conversationId: string;
-  text?: string;
-  images?: Array<{ data: string; mimeType: string; name?: string }>;
-  attachmentRefs?: Array<{ attachmentId: string; revision?: number }>;
-  contextMessages?: Array<{ customType: string; content: string }>;
-  relatedConversationIds?: string[];
-  surfaceId?: string;
-}
-
-export interface DesktopLiveSessionParallelPromptResult {
-  ok: true;
-  accepted: true;
-  jobId: string;
-  childConversationId: string;
-  referencedTaskIds: string[];
-  referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
-  referencedAttachmentIds: string[];
-  relatedConversationPointerWarnings?: string[];
-}
-
-export interface DesktopLiveSessionParallelJobRequest {
-  conversationId: string;
-  jobId: string;
-  action: 'importNow' | 'skip' | 'cancel';
-  surfaceId?: string;
-}
-
-export interface DesktopLiveSessionParallelJobResult {
-  ok: true;
-  status: 'imported' | 'queued' | 'skipped' | 'cancelled';
-}
-
 export interface DesktopLiveSessionQueueRestoreRequest {
   conversationId: string;
   behavior: 'steer' | 'followUp';
@@ -449,8 +415,6 @@ export interface HostController {
   branchLiveSession?(input: DesktopLiveSessionBranchRequest): Promise<{ newSessionId: string; sessionFile: string }>;
   forkLiveSession?(input: DesktopLiveSessionForkRequest): Promise<{ newSessionId: string; sessionFile: string }>;
   submitLiveSessionPrompt?(input: DesktopLiveSessionPromptRequest): Promise<DesktopLiveSessionPromptResult>;
-  submitLiveSessionParallelPrompt?(input: DesktopLiveSessionParallelPromptRequest): Promise<DesktopLiveSessionParallelPromptResult>;
-  manageLiveSessionParallelJob?(input: DesktopLiveSessionParallelJobRequest): Promise<DesktopLiveSessionParallelJobResult>;
   abortLiveSession?(conversationId: string): Promise<{ ok: true }>;
   subscribeConversationState?(
     input: DesktopConversationStateSubscriptionRequest,

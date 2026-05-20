@@ -1303,13 +1303,21 @@ export function WorkspaceFileDocument({
   const [selectionContextMenu, setSelectionContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const selectionContextMenuRef = useRef<HTMLDivElement | null>(null);
+  const loadRequestIdRef = useRef(0);
 
   const loadFile = useCallback(
     async (options?: { force?: boolean }) => {
+      const requestId = loadRequestIdRef.current + 1;
+      loadRequestIdRef.current = requestId;
+      const isCurrentRequest = () => loadRequestIdRef.current === requestId;
+
       setFileState((current) => ({ status: 'loading', data: current.data, error: null }));
       setDiffState({ status: 'idle', data: null, error: null });
       try {
         const file = await api.workspaceFile(cwd, path, { force: options?.force });
+        if (!isCurrentRequest()) {
+          return;
+        }
         setFileState({ status: 'idle', data: file, error: null });
         setDraftContent(file.content ?? '');
         setSaveState({ status: 'idle', error: null });
@@ -1317,13 +1325,22 @@ export function WorkspaceFileDocument({
           setDiffState({ status: 'loading', data: null, error: null });
           try {
             const diff = await api.workspaceDiff(cwd, path);
+            if (!isCurrentRequest()) {
+              return;
+            }
             setDiffState({ status: 'idle', data: diff, error: null });
           } catch {
+            if (!isCurrentRequest()) {
+              return;
+            }
             // Diff is best-effort; don't let a diff failure cascade.
             setDiffState({ status: 'idle', data: null, error: null });
           }
         }
       } catch (error) {
+        if (!isCurrentRequest()) {
+          return;
+        }
         setFileState({ status: 'idle', data: null, error: error instanceof Error ? error.message : String(error) });
       }
     },

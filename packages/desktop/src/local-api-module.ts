@@ -236,52 +236,6 @@ export interface LocalApiModule {
     referencedAttachmentIds: string[];
     relatedConversationPointerWarnings?: string[];
   }>;
-  submitDesktopLiveSessionParallelPrompt(input: {
-    conversationId: string;
-    text?: string;
-    images?: Array<{ data: string; mimeType: string; name?: string }>;
-    attachmentRefs?: unknown;
-    contextMessages?: Array<{ customType: string; content: string }>;
-    relatedConversationIds?: string[];
-    surfaceId?: string;
-  }): Promise<{
-    ok: true;
-    accepted: true;
-    jobId: string;
-    childConversationId: string;
-    referencedTaskIds: string[];
-    referencedMemoryDocIds: string[];
-    referencedVaultFileIds: string[];
-    referencedAttachmentIds: string[];
-    relatedConversationPointerWarnings?: string[];
-  }>;
-  manageDesktopLiveSessionParallelJob(input: {
-    conversationId: string;
-    jobId: string;
-    action: 'importNow' | 'skip' | 'cancel';
-    surfaceId?: string;
-  }): Promise<{
-    ok: true;
-    status: 'imported' | 'queued' | 'skipped' | 'cancelled';
-  }>;
-  takeOverDesktopLiveSession(input: { conversationId: string; surfaceId: string }): Promise<unknown>;
-  restoreDesktopQueuedLiveSessionMessage(input: {
-    conversationId: string;
-    behavior: 'steer' | 'followUp';
-    index: number;
-    previewId?: string;
-  }): Promise<{ ok: true; text: string; images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }> }>;
-  compactDesktopLiveSession(input: { conversationId: string; customInstructions?: string }): Promise<{ ok: true; result: unknown }>;
-  exportDesktopLiveSession(input: { conversationId: string; outputPath?: string }): Promise<{ ok: true; path: string }>;
-  reloadDesktopLiveSession(input: { conversationId: string }): Promise<{ ok: true }>;
-  destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
-  branchDesktopLiveSession(input: { conversationId: string; entryId: string }): Promise<{ newSessionId: string; sessionFile: string }>;
-  forkDesktopLiveSession(input: {
-    conversationId: string;
-    entryId: string;
-    preserveSource?: boolean;
-    beforeEntry?: boolean;
-  }): Promise<{ newSessionId: string; sessionFile: string }>;
   abortDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
   subscribeDesktopConversationState(
     input: DesktopConversationStateSubscriptionRequest,

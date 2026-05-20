@@ -1,20 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMcpAgentExtension, inspectMcpSettings } from './backend.js';
-
-type ExtensionAPI = ReturnType<typeof createMcpAgentExtension> extends (api: infer A) => unknown ? A : never;
-
-function createMockApi(): { api: ExtensionAPI; registeredExecute: (params: unknown) => Promise<unknown> } {
-  let execute: ((toolCallId: string, params: unknown) => Promise<unknown>) | undefined;
-  return {
-    api: {
-      registerTool: vi.fn((tool: { name: string; execute: (toolCallId: string, params: unknown) => Promise<unknown> }) => {
-        execute = tool.execute;
-      }),
-    } as unknown as ExtensionAPI,
-    registeredExecute: (params: unknown) => execute!('tool-call-id', params),
-  };
-}
+import { inspectMcpSettings, mcpTool } from './backend.js';
 
 vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   listMcpCatalog: vi.fn(),
@@ -35,10 +21,7 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
 const core = await import('@neon-pilot/extensions/backend/mcp');
 
 function buildHandler() {
-  const { api, registeredExecute } = createMockApi();
-  const ext = createMcpAgentExtension();
-  ext(api);
-  return registeredExecute;
+  return (params: unknown) => mcpTool(params);
 }
 
 describe('inspectMcpSettings', () => {
@@ -416,18 +399,6 @@ describe('mcpAgentExtension', () => {
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toBe('string rejection');
-    });
-  });
-
-  describe('registerTool', () => {
-    it('registers the mcp tool on the API', () => {
-      const { api, registeredExecute } = createMockApi();
-      const ext = createMcpAgentExtension();
-      const result = ext(api);
-
-      expect(api.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: 'mcp' }));
-      expect(result).toBe(api);
-      expect(registeredExecute).toBeDefined();
     });
   });
 });

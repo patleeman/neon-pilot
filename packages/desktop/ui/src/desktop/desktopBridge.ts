@@ -382,34 +382,6 @@ export interface NeonPilotDesktopBridge {
     referencedAttachmentIds: string[];
     relatedConversationPointerWarnings?: string[];
   }>;
-  submitLiveSessionParallelPrompt(input: {
-    conversationId: string;
-    text?: string;
-    images?: PromptImageInput[];
-    attachmentRefs?: PromptAttachmentRefInput[];
-    contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>;
-    relatedConversationIds?: string[];
-    surfaceId?: string;
-  }): Promise<{
-    ok: true;
-    accepted: true;
-    jobId: string;
-    childConversationId: string;
-    referencedTaskIds: string[];
-    referencedMemoryDocIds: string[];
-    referencedVaultFileIds: string[];
-    referencedAttachmentIds: string[];
-    relatedConversationPointerWarnings?: string[];
-  }>;
-  manageLiveSessionParallelJob(input: {
-    conversationId: string;
-    jobId: string;
-    action: 'importNow' | 'skip' | 'cancel';
-    surfaceId?: string;
-  }): Promise<{
-    ok: true;
-    status: 'imported' | 'queued' | 'skipped' | 'cancelled';
-  }>;
   abortLiveSession(conversationId: string): Promise<{ ok: true }>;
   subscribeConversationState(input: {
     conversationId: string;

@@ -17,7 +17,6 @@ const baseProps: React.ComponentProps<typeof ConversationComposerActions> = {
   composerQuestionSubmitting: false,
   composerSubmitLabel: 'Send',
   composerAltHeld: false,
-  composerParallelHeld: false,
   onInsertComposerText: vi.fn(),
   onSubmitComposerQuestion: vi.fn(),
   onSubmitComposerActionForModifiers: vi.fn(),
@@ -39,7 +38,6 @@ describe('ConversationComposerActions', () => {
   it('renders normal send and queued action states', () => {
     expect(renderActions({ composerHasContent: true, composerSubmitLabel: 'Send' })).toContain('aria-label="Send"');
     expect(renderActions({ composerHasContent: true, composerSubmitLabel: 'Follow up' })).toContain('followup');
-    expect(renderActions({ composerHasContent: true, composerSubmitLabel: 'Parallel' })).toContain('Parallel (Ctrl/⌘+Enter)');
   });
 
   it('renders streaming stop and steer controls', () => {
@@ -88,17 +86,6 @@ describe('ConversationComposerActions', () => {
     });
 
     expect(html).toContain('followup');
-    expect(html).toContain('aria-label="Stop"');
-  });
-
-  it('renders parallel button while streaming when modifier is held', () => {
-    const html = renderActions({
-      streamIsStreaming: true,
-      composerHasContent: true,
-      composerSubmitLabel: 'Parallel',
-    });
-
-    expect(html).toContain('Parallel (Ctrl/⌘+Enter)');
     expect(html).toContain('aria-label="Stop"');
   });
 

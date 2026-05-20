@@ -16,9 +16,7 @@ import type {
   CompanionConversationExecutionTargetChangeInput,
   CompanionConversationForkInput,
   CompanionConversationModelPreferencesUpdateInput,
-  CompanionConversationParallelJobInput,
   CompanionConversationPromptInput,
-  CompanionConversationQueueRestoreInput,
   CompanionConversationRenameInput,
   CompanionConversationResumeInput,
   CompanionConversationSubscriptionInput,
@@ -434,66 +432,6 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
           ...(input.images ? { images: input.images } : {}),
           ...(input.attachmentRefs ? { attachmentRefs: input.attachmentRefs } : {}),
           ...(input.contextMessages ? { contextMessages: input.contextMessages } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
-    },
-
-    async parallelPromptConversation(input: CompanionConversationPromptInput) {
-      const localController = hostManager.getHostController('local');
-      if (localController.submitLiveSessionParallelPrompt) {
-        return localController.submitLiveSessionParallelPrompt({
-          conversationId: input.conversationId,
-          ...(input.text !== undefined ? { text: input.text } : {}),
-          ...(input.images ? { images: input.images } : {}),
-          ...(input.attachmentRefs ? { attachmentRefs: input.attachmentRefs } : {}),
-          ...(input.contextMessages ? { contextMessages: input.contextMessages } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        });
-      }
-
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/parallel-prompt`,
-        body: {
-          ...(input.text !== undefined ? { text: input.text } : {}),
-          ...(input.images ? { images: input.images } : {}),
-          ...(input.attachmentRefs ? { attachmentRefs: input.attachmentRefs } : {}),
-          ...(input.contextMessages ? { contextMessages: input.contextMessages } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
-    },
-
-    async restoreConversationQueuePrompt(input: CompanionConversationQueueRestoreInput) {
-      const localController = hostManager.getHostController('local');
-      if (localController.restoreQueuedLiveSessionMessage) {
-        return localController.restoreQueuedLiveSessionMessage(input);
-      }
-
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/dequeue`,
-        body: {
-          behavior: input.behavior,
-          index: input.index,
-          ...(input.previewId ? { previewId: input.previewId } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
-    },
-
-    async manageConversationParallelJob(input: CompanionConversationParallelJobInput) {
-      const localController = hostManager.getHostController('local');
-      if (localController.manageLiveSessionParallelJob) {
-        return localController.manageLiveSessionParallelJob(input);
-      }
-
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/parallel-jobs/${encodeURIComponent(input.jobId)}`,
-        body: {
-          action: input.action,
           ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
         },
       });

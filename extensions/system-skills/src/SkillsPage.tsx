@@ -102,34 +102,35 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   if (error) return <ErrorState title="Failed to load skills" message={error} />;
 
   return (
-    <AppPageLayout>
-      <AppPageIntro title="Skills" description="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
+    <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+      <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
 
-      <div className="flex gap-5 border-b border-subtle text-[12px]">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={cx(
-              'border-b-2 px-1 pb-2 pt-1 text-secondary transition-colors',
-              activeTab === tab.id ? 'border-accent text-primary' : 'border-transparent hover:text-primary',
-            )}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label} <span className="text-dim">{counts[tab.id]}</span>
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle/70 pb-5">
+        <div className="flex flex-wrap items-center gap-1 text-[12px]">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={cx(
+                'rounded-xl px-3 py-2 text-secondary transition-colors',
+                activeTab === tab.id ? 'bg-surface text-primary shadow-sm' : 'hover:bg-surface/60 hover:text-primary',
+              )}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label} <span className="text-dim">{counts[tab.id]}</span>
+            </button>
+          ))}
+        </div>
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search skills…"
+          className="w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] outline-none transition-colors focus:border-accent md:w-72"
+        />
       </div>
 
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search skills…"
-        className="w-full rounded-md border border-subtle bg-surface px-3 py-2 text-[13px] outline-none focus:border-accent"
-      />
-
       {filtered.length === 0 ? (
-        <EmptyState title="No skills" description="No skills match the current filters." />
+        <EmptyState title="No skills" body="No skills match the current filters." />
       ) : (
         <div className="divide-y divide-subtle border-y border-subtle">
           {filtered.map((skill) => (

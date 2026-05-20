@@ -933,12 +933,10 @@ describe('ConversationPage', () => {
     );
 
     expect(html).toContain('Loading messages');
-    expect(html).toContain('Message… / commands, @ notes');
+    expect(html).toContain('Message Neon Pilot');
   });
 
-  it('blocks parallel submit while conversation is idle', () => {
-    // Renders ConversationPage and verifies the parallel flow checks
-    // stream.isStreaming before allowing parallel prompts.
+  it('renders the normal send affordance while conversation is idle', () => {
     // The SSE-based stream is no longer available — the desktop bridge
     // is the only path, so the fallback INITIAL_STREAM_STATE has
     // isStreaming: false.
@@ -951,8 +949,7 @@ describe('ConversationPage', () => {
       </MemoryRouter>,
     );
 
-    // Idle conversation should render disabled send, not parallel
+    // Idle conversation should render disabled send.
     expect(html).toContain('aria-label="Send"');
-    expect(html).not.toContain('Parallel (Ctrl');
   });
 });

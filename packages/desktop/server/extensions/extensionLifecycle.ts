@@ -77,16 +77,20 @@ function starterHelpText(): string {
 }
 
 function createStarterFrontend(name: string, template: RuntimeExtensionTemplate): string {
+  const nameLiteral = JSON.stringify(name);
+
   if (template === 'right-rail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+
+const EXTENSION_NAME = ${nameLiteral};
 
 export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
   return (
     <aside className="h-full overflow-auto px-4 py-5 text-[13px] text-secondary">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Right rail</p>
-      <h2 className="mt-2 text-lg font-semibold text-primary">${name}</h2>
+      <h2 className="mt-2 text-lg font-semibold text-primary">{EXTENSION_NAME}</h2>
       <p className="mt-2 leading-6">${starterHelpText()}</p>
-      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast('${name} is wired up.')}>
+      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
         Test toast
       </button>
     </aside>
@@ -98,13 +102,15 @@ export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
   if (template === 'workbench-detail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
+const EXTENSION_NAME = ${nameLiteral};
+
 export function ExtensionRail({ pa }: ExtensionSurfaceProps) {
   return (
     <aside className="h-full overflow-auto px-4 py-5 text-[13px] text-secondary">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Right rail</p>
-      <h2 className="mt-2 text-lg font-semibold text-primary">${name}</h2>
+      <h2 className="mt-2 text-lg font-semibold text-primary">{EXTENSION_NAME}</h2>
       <p className="mt-2 leading-6">Select something here; render the large view in the paired workbench detail surface.</p>
-      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast('${name} rail action')}>
+      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' rail action')}>
         Test toast
       </button>
     </aside>
@@ -116,9 +122,9 @@ export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
     <main className="flex h-full items-center justify-center px-8 text-center">
       <div className="max-w-md">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Workbench detail</p>
-        <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-primary">${name}</h1>
+        <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-primary">{EXTENSION_NAME}</h1>
         <p className="mt-2 text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
-        <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast('${name} detail action')}>
+        <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' detail action')}>
           Test toast
         </button>
       </div>
@@ -130,13 +136,15 @@ export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
 
   return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
+const EXTENSION_NAME = ${nameLiteral};
+
 export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
     <main className="mx-auto max-w-5xl px-8 py-14">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Extension</p>
-      <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.04em] text-primary">${name}</h1>
+      <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.04em] text-primary">{EXTENSION_NAME}</h1>
       <p className="mt-2 max-w-2xl text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
-      <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast('${name} is wired up.')}>
+      <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
         Test toast
       </button>
     </main>

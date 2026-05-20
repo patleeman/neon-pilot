@@ -215,42 +215,6 @@ export function useDesktopConversationState(conversationId: string | null, optio
     [conversationId, surfaceId],
   );
 
-  const parallel = useCallback(
-    async (
-      text: string,
-      images?: PromptImageInput[],
-      attachmentRefs?: PromptAttachmentRefInput[],
-      contextMessages?: Array<{ customType: string; content: string }>,
-      relatedConversationIds?: string[],
-    ) => {
-      if (!conversationId) {
-        return;
-      }
-
-      return await api.parallelPromptSession(
-        conversationId,
-        text,
-        images,
-        attachmentRefs,
-        surfaceId,
-        contextMessages,
-        relatedConversationIds,
-      );
-    },
-    [conversationId, surfaceId],
-  );
-
-  const manageParallelJob = useCallback(
-    async (jobId: string, action: 'importNow' | 'skip' | 'cancel') => {
-      if (!conversationId) {
-        return;
-      }
-
-      return api.manageParallelPromptJob(conversationId, jobId, action, surfaceId);
-    },
-    [conversationId, surfaceId],
-  );
-
   const abort = useCallback(async () => {
     if (!conversationId) {
       return;
@@ -276,8 +240,6 @@ export function useDesktopConversationState(conversationId: string | null, optio
     surfaceId,
     reconnect,
     send,
-    parallel,
-    manageParallelJob,
     abort,
     takeover,
   };

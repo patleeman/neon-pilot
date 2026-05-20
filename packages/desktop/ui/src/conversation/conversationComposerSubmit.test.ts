@@ -85,35 +85,12 @@ describe('resolveConversationComposerSubmitState', () => {
     });
   });
 
-  it('shows Parallel when a stale turn is pending and the parallel modifier is held', () => {
-    expect(resolveConversationComposerSubmitState(false, false, true, true)).toEqual({
-      label: 'Parallel',
-      action: 'parallel',
-    });
-  });
-
   it('shows Steer while streaming by default', () => {
     expect(resolveConversationComposerSubmitState(true, false)).toEqual({ label: 'Steer', action: 'submit' });
   });
 
   it('switches to Follow up while streaming when Alt is held', () => {
     expect(resolveConversationComposerSubmitState(true, true)).toEqual({
-      label: 'Follow up',
-      action: 'submit',
-      behavior: 'followUp',
-    });
-  });
-
-  it('switches to Parallel while streaming when the parallel modifier is held', () => {
-    expect(resolveConversationComposerSubmitState(true, false, false, true)).toEqual({
-      label: 'Parallel',
-      action: 'parallel',
-    });
-  });
-
-  it('Alt takes priority over parallel modifier while streaming', () => {
-    // When both Alt and Ctrl are held, Alt (follow-up) wins
-    expect(resolveConversationComposerSubmitState(true, true, false, true)).toEqual({
       label: 'Follow up',
       action: 'submit',
       behavior: 'followUp',
@@ -128,18 +105,12 @@ describe('resolveConversationComposerSubmitState', () => {
     });
   });
 
-  it('stale turn does not affect alt/parallel modifiers while streaming', () => {
+  it('stale turn does not affect alt modifier while streaming', () => {
     // Even with stale turn, Alt produces follow-up when streaming
     expect(resolveConversationComposerSubmitState(true, true, true)).toEqual({
       label: 'Follow up',
       action: 'submit',
       behavior: 'followUp',
-    });
-
-    // Even with stale turn, Ctrl produces parallel when streaming
-    expect(resolveConversationComposerSubmitState(true, false, true, true)).toEqual({
-      label: 'Parallel',
-      action: 'parallel',
     });
   });
 });

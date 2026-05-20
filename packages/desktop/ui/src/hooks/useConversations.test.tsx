@@ -4,7 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
-import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings.js';
+import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  OPEN_SESSION_IDS_STORAGE_KEY,
+  PINNED_SESSION_IDS_STORAGE_KEY,
+} from '../local/localSettings.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
 import { useConversations } from './useConversations.js';
 
@@ -177,6 +182,29 @@ describe('useConversations', () => {
     await flushAsyncWork();
 
     expect(latestHookResult?.archivedSessions.map((session) => session.id)).toEqual(['newest', 'middle', 'older']);
+  });
+
+  it('drops stale layout ids that are not in the loaded session snapshot', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['real-open', 'stale-open']));
+    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-pinned']));
+    localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-archived']));
+    localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'stale-open');
+
+    renderProbe({
+      sessions: [createSession({ id: 'real-open', title: 'Real conversation' })],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
+    expect(latestHookResult?.pinnedSessions).toEqual([]);
+    expect(latestHookResult?.archivedConversationIds).toEqual([]);
+    expect(latestHookResult?.activeId).toBeNull();
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['real-open']);
+    expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
   });
 
   it('uses the latest session snapshot as the source of truth for running state', () => {

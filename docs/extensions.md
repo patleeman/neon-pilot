@@ -145,6 +145,13 @@ The manifest declares what your extension contributes:
 | `transcriptRenderers`         | Custom tool result rendering                                       |                                                                                           |
 | `promptReferences`            | @-mention resolvers                                                |                                                                                           |
 | `turnContextProviders`        | Ordered per-turn context injection                                 | [See below](#turn-context-providers-turncontextproviders)                                 |
+| `promptContextProviders`      | Prompt Assembly context diagnostics/providers                      | [See below](#prompt-context-providers-promptcontextproviders)                             |
+| `selectionActions`            | Actions available for selected transcript/composer text            | [See below](#selection-actions-selectionactions)                                          |
+| `transcriptBlocks`            | Extension-owned transcript block renderers                         | [See below](#transcript-blocks-transcriptblocks)                                          |
+| `subscriptions`               | Backend event subscriptions                                        | [See below](#backend-event-subscriptions-subscriptions)                                   |
+| `secrets`                     | Secret declarations surfaced in Settings                           | [See below](#settings)                                                                    |
+| `activityTreeItemElements`    | Custom content in thread/activity tree rows                        | [Activity tree](activity-tree.md)                                                         |
+| `activityTreeItemStyles`      | Custom row styling for thread/activity tree items                  | [Activity tree](activity-tree.md)                                                         |
 | `quickOpen`                   | Command palette surfaces/tabs backed by extension providers        | [See below](#quick-open-surfaces-quickopen)                                               |
 | `searchProviders`             | Backend-powered global search providers                            | [See below](#global-search-providers-searchproviders)                                     |
 | `runtimeProviders`            | Extension-advertised local/remote runtime targets                  | [See below](#runtime-providers-runtimeproviders)                                          |
@@ -371,6 +378,18 @@ Add React UI for conversation state transitions such as waiting for user input, 
 Components receive `{ pa, lifecycleContext }`, where `lifecycleContext` includes `conversationId`, `cwd`, `event`, `isStreaming`, `hasGoal`, `isCompacting`, and optional `error`.
 
 For backend automation, subscribe to `source: "conversation"` and patterns like `tool.started`, `tool.ended`, `tool.failed`, `run.started`, `run.ended`, `model.error`, `compaction.started`, or `compaction.ended`. Handlers receive `{ subscriptionId, event, payload, sourceExtensionId }`; `payload.type` is the lifecycle event name.
+
+### Prompt Context Providers (`promptContextProviders`)
+
+Use `promptContextProviders` when an extension needs to expose prompt-assembly diagnostics or suggested hidden context that can be inspected from the Prompt Assembly page. New provider implementations should document what context they add and whether the user can disable it.
+
+```json
+{
+  "contributes": {
+    "promptContextProviders": [{ "id": "suggested-context", "handler": "provide-prompt-context", "title": "Suggested context" }]
+  }
+}
+```
 
 ### Turn Context Providers (`turnContextProviders`)
 
@@ -1494,7 +1513,7 @@ backend import failures):
 # Run the full extension integration suite (includes ~25s dynamic import check)
 pnpm run check:extensions
 
-# Quick check (skips slow dynamic import test, ~5s)
+# Quick release/development gate (backend API check, packaged extension check, runtime smoke, filesystem authority)
 pnpm run check:extensions:quick
 
 # Run alongside the server endpoint smoke tests
@@ -1511,8 +1530,7 @@ host backend API implementation list in lockstep, and to block backend API seams
 from statically importing known heavy/runtime internals. They also run
 `scripts/check-packaged-extensions.mjs`. That packaged check imports every system
 and experimental extension backend from its built `dist` output, verifies backend
-action handler exports, smoke-calls known safe `list` tools (`scheduled_task`,
-`queue_followup`), and runs product-critical smoke calls for Knowledge,
+action handler exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs product-critical smoke calls for Knowledge,
 Automations, and Diffs extension actions. It fails on forbidden bare imports
 that are not available inside the packaged desktop app, such as
 `@earendil-works/pi-coding-agent`, `@neon-pilot/core`,
@@ -1540,7 +1558,7 @@ non-portable bundled imports, and backend import crashes for one extension. The
 release publisher reruns the packaged-extension check against the built `.app`
 before notarization/upload.
 
-The integration suite covers 79 tests across 12 categories:
+The integration suite covers these categories:
 
 | Category                  | What it validates                                                                                                                                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |

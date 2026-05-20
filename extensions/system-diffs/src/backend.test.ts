@@ -163,6 +163,53 @@ describe('system-diffs backend', () => {
       expect(result.text).toContain('Saved checkpoint abc1234 msg');
     });
 
+    it('parses git-quoted non-ASCII paths in saved checkpoint files', async () => {
+      let savedFiles: unknown[] = [];
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command.startsWith('add --all --')) return { stdout: '' };
+          if (command.startsWith('diff --cached --name-only --')) return { stdout: 'café.txt\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'café.txt\n' };
+          if (command === 'commit -m unicode') return { stdout: '[main abc1234] unicode\n' };
+          if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
+          if (command.startsWith('show -s --format=')) {
+            return {
+              stdout:
+                'abc1234def5678\u0000abc1234\u0000unicode\u0000unicode\u0000Test User\u0000test@example.com\u00002025-01-01T00:00:00Z',
+            };
+          }
+          if (command.startsWith('show --format= --patch')) {
+            return {
+              stdout:
+                'diff --git "a/caf\\303\\251.txt" "b/caf\\303\\251.txt"\n--- "a/caf\\303\\251.txt"\n+++ "b/caf\\303\\251.txt"\n@@ -1 +1 @@\n-old\n+new\n',
+            };
+          }
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+      mockSaveCheckpoint.mockImplementation((record) => {
+        savedFiles = record.files;
+        return {
+          id: 'abc1234def5678',
+          commitSha: 'abc1234def5678',
+          shortSha: 'abc1234',
+          title: 'unicode',
+          subject: 'unicode',
+          fileCount: 1,
+          linesAdded: 1,
+          linesDeleted: 1,
+          cwd: '/tmp/test-repo',
+          updatedAt: '2025-01-01T00:00:00Z',
+        };
+      });
+
+      await checkpoint({ action: 'save', message: 'unicode', paths: ['café.txt'] }, createCtx({ shell }));
+
+      expect(savedFiles[0]).toMatchObject({ path: 'café.txt', status: 'modified', additions: 1, deletions: 1 });
+    });
+
     it('commits staged deleted paths without pathspecing missing files', async () => {
       const commands: string[] = [];
       const shell = {
