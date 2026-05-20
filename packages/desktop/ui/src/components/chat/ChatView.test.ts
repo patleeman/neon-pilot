@@ -1133,7 +1133,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-message-card-assistant');
   });
 
-  it('renders goal continuations as visible context blocks', () => {
+  it('renders goal continuations as quiet lifecycle markers', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
@@ -1147,10 +1147,10 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('<details');
-    expect(html).toContain('Goal continuation');
-    expect(html).toContain('data-context-type="goal-continuation"');
-    expect(html).toContain('Objective: keep shipping');
+    expect(html).toContain('data-lifecycle-marker="auto-resume"');
+    expect(html).toContain('Goal resumed automatically');
+    expect(html).not.toContain('<details');
+    expect(html).not.toContain('Objective: keep shipping');
     expect(html).not.toContain('ui-chat-avatar-mark">pa<');
     expect(html).not.toContain('ui-message-card-assistant');
   });

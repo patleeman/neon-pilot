@@ -16,7 +16,7 @@ import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from
 function formatSystemEventLabel(customType?: string): string {
   switch (customType) {
     case 'goal-continuation':
-      return 'Goal continuation';
+      return 'Goal auto-resume';
     case 'system_prompt':
       return 'System prompt';
     case 'referenced_context':
@@ -48,6 +48,23 @@ function formatSystemEventLabel(customType?: string): string {
       return normalized.charAt(0).toUpperCase() + normalized.slice(1);
     }
   }
+}
+
+function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
+  return block.type === 'context' && (block.customType === 'goal-continuation' || block.customType === 'background_auto_resume');
+}
+
+function autoResumeLifecycleText(blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]): string {
+  const goalCount = blocks.filter((block) => block.type === 'context' && block.customType === 'goal-continuation').length;
+  const backgroundCount = blocks.filter((block) => block.type === 'context' && block.customType === 'background_auto_resume').length;
+
+  if (goalCount > 0 && backgroundCount > 0) {
+    return `Resumed automatically · ${goalCount + backgroundCount} events`;
+  }
+  if (goalCount > 1) return `Goal resumed automatically · ${goalCount} times`;
+  if (goalCount === 1) return 'Goal resumed automatically';
+  if (backgroundCount > 1) return `Background tasks completed · resumed automatically · ${backgroundCount} events`;
+  return 'Background task completed · resumed automatically';
 }
 
 function summarizeSystemEventText(text: string): string {
@@ -145,6 +162,21 @@ export const ContextShelf = memo(function ContextShelf({
     })
     .join(' · ');
   const totalItemCount = blocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
+
+  if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isAutoResumeLifecycleContext)) {
+    const lastTs = blocks[blocks.length - 1]?.ts;
+    return (
+      <div
+        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
+        data-context-shelf="1"
+        data-lifecycle-marker="auto-resume"
+      >
+        <span aria-hidden="true">↻</span>
+        <span className="min-w-0 truncate">{autoResumeLifecycleText(blocks)}</span>
+        {lastTs ? <span className="ui-message-meta shrink-0 opacity-60">{timeAgo(lastTs)}</span> : null}
+      </div>
+    );
+  }
 
   return (
     <details
