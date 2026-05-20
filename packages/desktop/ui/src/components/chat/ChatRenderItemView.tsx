@@ -4,7 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
-import { AssistantMessage, ContextShelf, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
+import { AssistantMessage, ContextShelf, SummaryMessage, SystemEventMessage, TopologyBlock, UserMessage } from './MessageBlocks.js';
 import type { ReplySelectionGestureHandler } from './replySelection.js';
 import { ToolBlock } from './ToolBlock.js';
 import {
@@ -14,6 +14,7 @@ import {
 } from './toolPresentation.js';
 import { ErrorBlock, SubagentBlock, ThinkingBlock, TraceClusterBlock } from './TraceBlocks.js';
 import type { ChatRenderItem } from './transcriptItems.js';
+import { isTopologyBlock } from './transcriptItems.js';
 
 export function ChatRenderItemView({
   item,
@@ -186,6 +187,9 @@ export function ChatRenderItemView({
           />
         );
       case 'context':
+        if (isTopologyBlock(block)) {
+          return <TopologyBlock block={block} />;
+        }
         return (
           <SystemEventMessage
             block={block}

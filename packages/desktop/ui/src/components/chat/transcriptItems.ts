@@ -29,8 +29,14 @@ export type ChatRenderItem =
   | { type: 'context_cluster'; blocks: ContextConversationBlock[]; startIndex: number; endIndex: number }
   | { type: 'trace_cluster'; blocks: TraceConversationBlock[]; startIndex: number; endIndex: number; summary: TraceClusterSummary };
 
+const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
+
+export function isTopologyBlock(block: MessageBlock): boolean {
+  return block.type === 'context' && TOPOLOGY_CUSTOM_TYPES.has((block as { customType?: string }).customType ?? '');
+}
+
 function isContextConversationBlock(block: MessageBlock): block is ContextConversationBlock {
-  return block.type === 'context' || block.type === 'summary';
+  return (block.type === 'context' || block.type === 'summary') && !isTopologyBlock(block);
 }
 
 function addSummaryCategory(categories: Map<string, TraceClusterSummaryCategory>, category: Omit<TraceClusterSummaryCategory, 'count'>) {

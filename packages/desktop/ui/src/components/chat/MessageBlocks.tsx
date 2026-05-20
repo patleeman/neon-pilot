@@ -1,4 +1,5 @@
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
@@ -737,6 +738,49 @@ export function resolveCompactionSummaryDetail(title: string | undefined, extraD
   const normalizedExtraDetail = extraDetail?.trim();
   return normalizedExtraDetail ? `${baseDetail} ${normalizedExtraDetail}` : baseDetail;
 }
+
+function parseTopologyBlockText(text: string): { title: string; conversationId: string | null } {
+  const lines = text.split('\n');
+  const firstLine = lines[0] ?? '';
+  // "Fork conversation created: <title>" → extract title after the colon
+  const titleMatch = firstLine.match(/^[^:]+:\s*(.+)$/);
+  const title = titleMatch?.[1]?.trim() || firstLine.trim();
+
+  const openLine = lines.find((l) => l.startsWith('Open: /conversations/'));
+  const conversationId = openLine?.replace('Open: /conversations/', '').trim() || null;
+  return { title, conversationId };
+}
+
+export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
+  const navigate = useNavigate();
+  const isChild = block.customType === 'child_conversation_topology';
+  const { title, conversationId } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
+
+  const handleClick = useCallback(() => {
+    if (conversationId) {
+      navigate(`/conversations/${encodeURIComponent(conversationId)}`);
+    }
+  }, [conversationId, navigate]);
+
+  const label = isChild ? 'Forked →' : '← Branched from';
+
+  return (
+    <div className="flex items-center gap-1.5 py-0.5 text-[11px] text-dim/70" data-topology-kind={block.customType}>
+      <span className="shrink-0">{label}</span>
+      {conversationId ? (
+        <button
+          type="button"
+          onClick={handleClick}
+          className="truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+        >
+          {title}
+        </button>
+      ) : (
+        <span className="truncate">{title}</span>
+      )}
+    </div>
+  );
+});
 
 export const SummaryMessage = memo(function SummaryMessage({
   block,
