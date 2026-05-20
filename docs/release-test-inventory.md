@@ -21,13 +21,17 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Conversation/workbench core
 
+- Routes: `/`, `/conversations`, `/conversations/new`, `/conversations/:id`, and extension fallback routes.
 - Conversation list: create, open, search/palette, duplicate, archive/delete if available, title updates.
+- Sidebar: thread list grouping, archived section, hover quick actions, close/archive controls, workspace quick select modal, new conversation button.
+- Command palette: open/archived threads scope, files/quick-open scope, extension commands, extension search providers, keyboard navigation, empty/search/error states.
 - Composer: send prompt, multiline input, submit shortcuts, disabled/loading states, model selection, cwd display, context attachments, image/file attachments, dictation input, Excalidraw input.
 - Bash shortcut parsing: whole-line `!command` and `!!command`; empty/inline bang ignored.
 - Streaming transcript: user messages, assistant text, tool calls, tool results, errors, collapsed/expanded shelves, pinned tool rows.
 - Stop/cancel running agent, retry/try again, continue/resume, compact/context-hardening flows.
 - Branching/topology: alternate replies, branch navigation, transcript-native topology events.
 - Conversation context menu: duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
+- Thread header actions contributed by extensions, including Import Session when enabled.
 - CWD group context menu: copy working directory and grouped thread behavior.
 - Selection context menu: copy/selection actions.
 - Right rail/workbench tool slots: open, close, switch tabs, detail panes, preserved sizing.
@@ -47,7 +51,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Settings.
 - Command: `open-settings`.
 - Pages/views: Settings, Provider settings, Desktop settings.
+- Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`) and `conversation.transcriptDisclosure` (`auto`, `expanded`).
 - Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences, persistence after restart.
+- Extension settings components hosted here: Knowledge Base, Dictation, MCP tools, Extension search paths, Alleycat host when enabled.
 
 ### `/settings/providers` — Provider settings
 
@@ -71,6 +77,10 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Knowledge.
 - Views: Knowledge page, Knowledge tree right rail, Knowledge file workbench detail.
 - Actions: `readState`, `updateState`, `sync`, `vaultListFiles`, `vaultTree`, `vaultReadFile`, `vaultWriteFile`, `vaultCreateFolder`, `vaultDeleteFile`, `vaultRename`, `vaultMove`, `vaultBacklinks`, `vaultSearch`, `vaultUploadImage`, `vaultImportUrl`, `resolvePromptReferences`.
+- Prompt reference provider: `knowledge-files`.
+- Quick open provider: `knowledge-files` in the command palette files section.
+- Mentions provider: `knowledge-files` in the conversation `@` menu for note, folder, and file kinds.
+- Settings component: `knowledge-base` / Knowledge Base.
 - Test file tree, open file, edit/save, create folder, rename, move, delete, backlinks, search, image upload, URL import, sync status, conflict/error states.
 - Context menu: knowledge entry actions.
 
@@ -88,6 +98,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Nav item: Telemetry.
 - Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling, export/inspection if available.
+- Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens, tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
 
 ### `/prompt-assembly` — Prompt Assembly (`system-prompt-assembly`)
 
@@ -99,6 +110,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Nav item: Telegram Gateway.
 - Views: gateway page, attach conversation view.
+- Secret: `telegramBotToken` / Telegram bot token.
+- Conversation list context menu: Attach to Telegram Gateway.
 - Test enablement, bot token/config validation, attach/detach conversation, inbound message, outbound reply.
 - Telegram commands: `/start`, `/help`, `/stop` or `/pause`, `/new`, `/model <model>`, `/rename <title>` including bot mentions and invalid commands.
 
@@ -142,7 +155,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Browser (`system-browser`, default disabled)
 
 - Views: Browser tabs right rail, Browser workbench.
-- Commands/buttons: open browser, new tab, reopen closed tab, close tab, focus location bar.
+- Commands/buttons/keybindings: open browser (`mod+shift+b`), new tab (`mod+t`), reopen closed tab (`mod+shift+t`), close tab (`mod+w`), focus location bar (`mod+l`).
 - Agent tools/actions: `browser_snapshot`, `browser_cdp`, `browser_screenshot`.
 - Transcript renderers: snapshot, CDP, screenshot tool blocks.
 - Test navigation, address entry, tabs, close/reopen, page load errors, snapshots with element list, screenshots, CDP single/batched commands, invalid CDP, tab targeting, shared-browser warning boundary vs agent-browser.
@@ -159,7 +172,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Model Picker (`system-model-picker`)
 
-- Model preferences surface.
+- Composer control: model preferences / model picker.
 - Test selected model display, model change, persistence per conversation/global default, unavailable model handling.
 
 ### Composer Attachments (`system-composer-attachments`)
@@ -195,6 +208,11 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Test start/replace goal, complete goal, invalid premature complete, conversation persistence, auto-mode behavior.
 - Skill: `goal-mode`.
 
+### Context Hardening (`system-context-hardening`)
+
+- Extension ID: `system-context-hardening`.
+- Test compact/context-hardening behavior from the conversation flow, context summaries, and failure/retry states.
+
 ### Excalidraw input (`system-excalidraw-input`)
 
 - Composer action: Excalidraw.
@@ -208,8 +226,15 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Caffeinate (`system-caffeinate`, default disabled)
 
+- Top bar element: `caffeinate-toggle` / Caffeinate toggle.
 - Actions: `caffeinateStatus`, `caffeinateStart`, `caffeinateStop`, `caffeinateToggle`.
 - Test start/stop/toggle/status, app sleep prevention indication, cleanup on quit.
+
+### Onboarding top bar (`system-onboarding`)
+
+- Top bar element: `onboarding-bootstrap` / Onboarding bootstrap.
+- Action: `ensure` / Ensure onboarding conversation.
+- Test first-run onboarding bootstrap, existing-user no-op, interrupted onboarding, generated conversation state.
 
 ## Agent tools without major pages
 
@@ -217,7 +242,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Agent tool: `conversation`.
 - Actions: ask user question, duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
-- Command: open thread palette.
+- Command/keybinding: `open-thread-palette` / Open thread palette (`mod+k`).
+- Conversation list context menu IDs: `duplicate-conversation`, `copy-working-directory`, `copy-conversation-id`, `copy-deeplink`.
 - Transcript renderers: ask-user-question tool block, terminal bash tool block.
 - Tool operations to test:
   - Ask: `question`, `details`, quick `options`, structured `questions` with radio/check styles.
@@ -237,7 +263,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Agent tool: `mcp` actions `list`, `get/info`, `grep`, `call`, `auth`, `logout`.
 - Actions: `mcpTool`, `inspectSettings`, `saveExplicitConfig`, `testServer`, `authServer`, `logoutServer`.
-- Settings section: MCP tools.
+- Settings component/section: MCP tools.
 - Test server list with/without probe, tool info, glob search, tool call arguments JSON, OAuth auth/logout, failing server, config save, test server.
 
 ### Codex Compatibility (`system-codex-profile`)
@@ -250,11 +276,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `listSkills`, `updateSkillEnabled`.
 - Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.
 
-### Onboarding (`system-onboarding`)
-
-- Action: `ensure` onboarding conversation.
-- Test first-run onboarding bootstrap, existing-user no-op, interrupted onboarding, generated conversation state.
-
 ### ACP Protocol (`system-acp`, default disabled)
 
 - ACP action/surface.
@@ -263,6 +284,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Session Exchange (`system-session-exchange`, default disabled)
 
 - Actions: `exportSession`, `importSession`.
+- Conversation list context menu: `export-session` / Export Session.
+- Thread header action: `import-session` / Import Session.
 - Test export current session, import valid session, malformed import, conflicts/duplicates, transcript/tool preservation.
 
 ### Alleycat mobile pairing (`system-alleycat`, default disabled)
@@ -296,3 +319,223 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Telemetry records route views and important actions without sensitive payloads.
 - Docs and skills linked from each extension remain loadable.
 - Release build loads only prebuilt extension artifacts; missing artifacts fail loudly and understandably.
+
+## Manifest contribution ID audit
+
+Every contributed manifest ID below must appear in a release test plan. This section exists to catch exact buttons/actions/renderers by stable ID, even when the human-readable sections above describe them by title.
+
+### system-alleycat — Kitty Litter Mobile Pairing (Alleycat) (default disabled)
+
+- settingsComponent: alleycat
+- backend actions: alleycatStart, alleycatStop, alleycatStatus, rotateToken
+
+### system-artifacts — Artifacts
+
+- tools: artifact
+- views: conversation-artifacts, artifact-detail
+- transcriptRenderers: artifact-tool-block for artifact
+- skills: artifacts
+- backend actions: artifact
+
+### system-auto-mode — Goal Mode
+
+- tools: goal
+- composerControls: goal-mode
+- skills: goal-mode
+
+### system-automations — Automations
+
+- tools: scheduled-task/scheduled_task
+- views: page (/automations)
+- nav: nav (/automations)
+- skills: async-attention, scheduled-tasks
+- backend actions: scheduledTask, deferredResume
+
+### system-caffeinate — Caffeinate (default disabled)
+
+- topBarElements: caffeinate-toggle
+- backend actions: caffeinateStatus, caffeinateStart, caffeinateStop, caffeinateToggle
+
+### system-codex-profile — Codex Compatibility
+
+- tools: apply-patch/apply_patch, write-file, apply-patch-edit
+- modelProfiles: 0
+- backend actions: applyPatch, applyPatchEdit, writeFile
+
+### system-composer-attachments — Composer Attachments
+
+- composerControls: attach-files
+
+### system-context-usage — Context Usage
+
+- statusBarItems: composer-context-usage
+
+### system-conversation-tools — Conversation Tools
+
+- tools: conversation
+- commands: open-thread-palette
+- keybindings: open-thread-palette [mod+k]
+- transcriptRenderers: ask-user-question-tool-block for ask_user_question, terminal-bash-tool-block for bash
+- contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
+- backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
+
+### system-diffs — Diffs
+
+- tools: checkpoint
+- views: conversation-diffs, conversation-diff-detail
+- transcriptRenderers: checkpoint-tool-block for checkpoint
+- backend actions: checkpoint
+
+### system-duckduckgo-search — DuckDuckGo Search
+
+- tools: duckduckgo-search/duckduckgo_search
+- backend actions: duckDuckGoSearch
+
+### system-exa-search — Exa Search
+
+- tools: exa-search/exa_search
+- secrets: exaApiKey
+- backend actions: exaSearch
+
+### system-excalidraw-input — Excalidraw input
+
+- composerInputTools: excalidraw
+
+### system-extension-manager — Extension Manager
+
+- views: page (/extensions)
+- nav: extensions-nav (/extensions)
+- skills: skills-and-capabilities, local-extension-development
+- settingsComponent: extension-search-paths
+- backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, validateExtension, listHostViewComponents, readSearchPaths, updateSearchPaths, manageExtension
+
+### system-files — File Explorer
+
+- views: workspace-files, workspace-file-detail
+
+### system-git-status — Git Status
+
+- statusBarItems: composer-git-status
+
+### system-image-probe — Image Probe
+
+- tools: probe-image/probe_image
+- backend actions: probeImage
+
+### system-knowledge — Knowledge
+
+- views: knowledge-page (/knowledge), knowledge-tree, knowledge-file
+- nav: knowledge (/knowledge)
+- promptReferences: knowledge-files
+- quickOpen: knowledge-files
+- mentions: knowledge-files
+- settingsComponent: knowledge-base
+- backend actions: readState, updateState, sync, vaultListFiles, vaultTree, vaultReadFile, vaultWriteFile, vaultCreateFolder, vaultDeleteFile, vaultRename, vaultMove, vaultBacklinks, vaultSearch, vaultUploadImage, vaultImportUrl, resolvePromptReferences
+
+### system-local-dictation — Local Dictation
+
+- composerButtons: dictation
+- settingsComponent: dictation
+- backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile
+
+### system-loose-ends — Loose Ends (default disabled)
+
+- tools: loose-ends/loose_ends
+- views: loose-ends
+- turnContextProviders: loose-ends
+- backend actions: getState, setEnabled, addItem, updateItem, deleteItem, looseEndsTool, provideTurnContext
+
+### system-mcp — MCP
+
+- tools: mcp
+- settingsComponent: mcp-tools
+- backend actions: mcpTool, inspectSettings, saveExplicitConfig, testServer, authServer, logoutServer
+
+### system-model-picker — Model Picker
+
+- composerControls: model-preferences
+
+### system-onboarding — Onboarding
+
+- topBarElements: onboarding-bootstrap
+- backend actions: ensure
+
+### system-prompt-assembly — Prompt Assembly
+
+- views: prompt-assembly-page (/prompt-assembly)
+- nav: prompt-assembly-nav (/prompt-assembly)
+- backend actions: inspectPromptAssembly, updatePromptAssemblySkillEnabled
+
+### system-reply-actions — Reply Actions
+
+- selectionActions: reply-agree, reply-disagree, reply-question, reply-think-harder, reply-try-again, reply-do-it
+
+### system-runs — Background Work
+
+- tools: bash-background/bash, background-bash/background_bash, subagent
+- views: conversation-runs, conversation-run-detail
+- composerShelves: activity-shelf
+- skills: runs
+- backend actions: bash, background_bash, subagent
+
+### system-settings — Settings panels
+
+- views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop)
+- nav: settings-nav (/settings)
+- commands: open-settings
+- settings: secrets.provider, conversation.transcriptDisclosure
+
+### system-skills — Skills
+
+- backend actions: listSkills, updateSkillEnabled
+
+### system-suggested-context — Suggested Context
+
+- newConversationPanels: suggested-context
+- promptContextProviders: provide-prompt-context
+- backend actions: warmPointers
+
+### system-telemetry — Telemetry
+
+- views: page (/telemetry)
+- nav: telemetry-nav (/telemetry)
+
+### system-web-tools — Web fetch
+
+- tools: web-fetch/web_fetch
+- backend actions: webFetch
+
+### system-browser — Browser (default disabled)
+
+- tools: browser_snapshot, browser_cdp, browser_screenshot
+- views: browser-tabs, browser-workbench
+- commands: open-browser
+- keybindings: open-browser [mod+shift+b], new-browser-tab [mod+t], reopen-browser-tab [mod+shift+t], close-browser-tab [mod+w], focus-browser-location [mod+l]
+- transcriptRenderers: browser-snapshot-tool-block for browser_snapshot, browser-cdp-tool-block for browser_cdp, browser-screenshot-tool-block for browser_screenshot
+- skills: browser
+- backend actions: browserSnapshot, browserCdp, browserScreenshot
+
+### system-gateways — Telegram Gateway (default disabled)
+
+- views: page (/gateways)
+- nav: nav (/gateways)
+- contextMenus: attach-conversation on conversationList
+- secrets: telegramBotToken
+
+### system-images — Images (default disabled)
+
+- tools: image
+- backend actions: image
+
+### system-local-models — Local Models (default disabled)
+
+- views: main (/ext/system-local-models)
+- nav: system-local-models (/ext/system-local-models)
+- modelDiscovery: {"action":"localModelsDiscover"}
+- backend actions: localModelsStatus, localModelsMlxSetModel, localModelsMlxSetup, localModelsMlxUpdateRuntime, localModelsMlxStart, localModelsMlxStop, localModelsMlxSearch, localModelsSearch, localModelsModelDetails, localModelsGgufDownload, localModelsGgufCancelDownload, localModelsGgufSaveSettings, localModelsGgufSetModel, localModelsGgufReveal, localModelsMlxDelete, localModelsGgufDelete, localModelsGgufInstallRuntime, localModelsGgufStart, localModelsGgufStop, localModelsGgufRunPrompt, localModelsDiscover
+
+### system-session-exchange — Session Exchange (default disabled)
+
+- contextMenus: export-session on conversationList
+- threadHeaderActions: import-session
+- backend actions: exportSession, importSession
