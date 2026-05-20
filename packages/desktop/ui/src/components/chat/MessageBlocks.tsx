@@ -172,7 +172,8 @@ export const ContextShelf = memo(function ContextShelf({
   if (remoteControlled) {
     counts.set('Remote control', 1);
   }
-  for (const block of blocks) {
+  const nonTopologyBlocks = blocks.filter((b) => !(b.type === 'context' && TOPOLOGY_CONTEXT_TYPES.has(b.customType ?? '')));
+  for (const block of nonTopologyBlocks) {
     const label = contextShelfLabel(block);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
@@ -182,7 +183,7 @@ export const ContextShelf = memo(function ContextShelf({
       return count > 1 ? `${normalizedLabel} ×${count}` : normalizedLabel;
     })
     .join(' · ');
-  const totalItemCount = blocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
+  const totalItemCount = nonTopologyBlocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
 
   if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isAutoResumeLifecycleContext)) {
     const lastTs = blocks[blocks.length - 1]?.ts;
@@ -261,6 +262,17 @@ export const ContextShelf = memo(function ContextShelf({
             blockId,
             onSelectionGesture,
           );
+
+          // Topology blocks (parent backlinks, child tombstones) have navigable links;
+          // render them inline with proper navigation instead of as collapsed details.
+          if (block.type === 'context' && TOPOLOGY_CONTEXT_TYPES.has(block.customType ?? '')) {
+            return (
+              <div key={block.id ?? index} className="px-2 py-0.5">
+                <TopologyBlock block={block} />
+              </div>
+            );
+          }
+
           return (
             <details
               key={block.id ?? index}
@@ -758,6 +770,8 @@ export function resolveCompactionSummaryDetail(title: string | undefined, extraD
   const normalizedExtraDetail = extraDetail?.trim();
   return normalizedExtraDetail ? `${baseDetail} ${normalizedExtraDetail}` : baseDetail;
 }
+
+export const TOPOLOGY_CONTEXT_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
 
 function parseTopologyBlockKind(firstLine: string): string {
   // "Fork conversation created: ..." → "Fork"

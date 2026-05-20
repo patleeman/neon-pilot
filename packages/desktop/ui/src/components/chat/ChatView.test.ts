@@ -1,5 +1,6 @@
 import React, { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../../app/contexts.js';
@@ -1092,21 +1093,26 @@ describe('chat view streaming disclosure', () => {
 
   it('renders child conversation topology as a transcript event', () => {
     const html = renderToStaticMarkup(
-      createElement(ChatView, {
-        messages: [
-          {
-            type: 'context',
-            id: 'topology-child-1',
-            ts: '2026-03-11T18:00:00.000Z',
-            customType: 'child_conversation_topology',
-            text: 'Fork conversation created: Research branch\nOpen: /conversations/child-1\nConversation: child-1',
-          },
-        ],
-      }),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(ChatView, {
+          messages: [
+            {
+              type: 'context',
+              id: 'topology-child-1',
+              ts: '2026-03-11T18:00:00.000Z',
+              customType: 'child_conversation_topology',
+              text: 'Fork conversation created: Research branch\nOpen: /conversations/child-1\nConversation: child-1',
+            },
+          ],
+        }),
+      ),
     );
 
-    expect(html).toContain('Branch');
-    expect(html).toContain('data-context-type="child_conversation_topology"');
+    // Topology block renders inline with navigation (TopologyBlock), not as a collapsed details chip.
+    expect(html).toContain('Forked');
+    expect(html).toContain('data-topology-kind="child_conversation_topology"');
     expect(html).toContain('Research branch');
   });
 
