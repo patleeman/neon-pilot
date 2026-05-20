@@ -69,8 +69,8 @@ describe('SettingsPage — untested panel rendering', () => {
         {
           id: 'lime',
           label: 'Lime',
-          light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51' },
-          dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24' },
+          light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51', warning: '184 115 10' },
+          dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24', warning: '255 180 73' },
         },
       ],
       setAccent: vi.fn(),

@@ -13,44 +13,45 @@ interface AccentTokenSet {
   accent: string;
   accentBg: string;
   selection: string;
+  warning: string;
 }
 
 export const THEME_ACCENTS: Array<{ id: ThemeAccent; label: string; light: AccentTokenSet; dark: AccentTokenSet }> = [
   {
     id: 'lime',
     label: 'Lime',
-    light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51' },
-    dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24' },
+    light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51', warning: '184 115 10' },
+    dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24', warning: '255 180 73' },
   },
   {
     id: 'forest',
     label: 'Forest',
-    light: { accent: '47 122 58', accentBg: '226 240 228', selection: '108 229 138' },
-    dark: { accent: '108 229 138', accentBg: '22 52 31', selection: '34 82 49' },
+    light: { accent: '47 122 58', accentBg: '226 240 228', selection: '108 229 138', warning: '47 122 58' },
+    dark: { accent: '108 229 138', accentBg: '22 52 31', selection: '34 82 49', warning: '108 229 138' },
   },
   {
     id: 'cobalt',
     label: 'Cobalt',
-    light: { accent: '31 95 200', accentBg: '225 234 251', selection: '116 168 255' },
-    dark: { accent: '116 168 255', accentBg: '24 41 74', selection: '37 64 115' },
+    light: { accent: '31 95 200', accentBg: '225 234 251', selection: '116 168 255', warning: '31 95 200' },
+    dark: { accent: '116 168 255', accentBg: '24 41 74', selection: '37 64 115', warning: '116 168 255' },
   },
   {
     id: 'ember',
     label: 'Ember',
-    light: { accent: '196 77 18', accentBg: '249 231 220', selection: '255 147 82' },
-    dark: { accent: '255 147 82', accentBg: '72 36 20', selection: '113 57 32' },
+    light: { accent: '196 77 18', accentBg: '249 231 220', selection: '255 147 82', warning: '196 77 18' },
+    dark: { accent: '255 147 82', accentBg: '72 36 20', selection: '113 57 32', warning: '255 147 82' },
   },
   {
     id: 'violet',
     label: 'Violet',
-    light: { accent: '106 61 209', accentBg: '235 228 251', selection: '182 156 255' },
-    dark: { accent: '182 156 255', accentBg: '47 36 82', selection: '74 56 128' },
+    light: { accent: '106 61 209', accentBg: '235 228 251', selection: '182 156 255', warning: '106 61 209' },
+    dark: { accent: '182 156 255', accentBg: '47 36 82', selection: '74 56 128', warning: '182 156 255' },
   },
   {
     id: 'ink',
     label: 'Ink',
-    light: { accent: '20 20 15', accentBg: '235 234 229', selection: '20 20 15' },
-    dark: { accent: '245 243 232', accentBg: '46 46 36', selection: '82 80 66' },
+    light: { accent: '20 20 15', accentBg: '235 234 229', selection: '20 20 15', warning: '20 20 15' },
+    dark: { accent: '245 243 232', accentBg: '46 46 36', selection: '82 80 66', warning: '245 243 232' },
   },
 ];
 
@@ -123,6 +124,7 @@ function applyAccent(accent: ThemeAccent, appearance: ThemeAppearance) {
   document.documentElement.style.setProperty('--color-streaming-glow', tokens.accent);
   document.documentElement.style.setProperty('--color-accent-bg', tokens.accentBg);
   document.documentElement.style.setProperty('--color-selection', tokens.selection);
+  document.documentElement.style.setProperty('--color-warning', tokens.warning);
   document.documentElement.style.setProperty('--pa-accent', 'rgb(var(--color-accent))');
   document.documentElement.style.setProperty('--pa-accent-hover', 'rgb(var(--color-accent))');
 }

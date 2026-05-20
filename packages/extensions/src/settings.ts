@@ -68,8 +68,8 @@ export declare function useTheme(): {
   availableAccents: Array<{
     id: ThemeAccent;
     label: string;
-    light: { accent: string; accentBg: string; selection: string };
-    dark: { accent: string; accentBg: string; selection: string };
+    light: { accent: string; accentBg: string; selection: string; warning: string };
+    dark: { accent: string; accentBg: string; selection: string; warning: string };
   }>;
   setThemePreference: (theme: ThemePreference) => void;
   setLightTheme: (theme: string) => void;
