@@ -12,6 +12,11 @@ function numberParam(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function exitCodeFromResult(result: unknown): number {
+  const record = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
+  return typeof record.exitCode === 'number' && Number.isFinite(record.exitCode) ? Math.trunc(record.exitCode) : 0;
+}
+
 // Track active command sessions for protocol compatibility. Commands run through
 // ctx.shell so PA can apply execution wrappers; interactive stdin is not supported
 // by the host shell capability yet.
@@ -54,7 +59,7 @@ export const command = {
           dataBase64: Buffer.from(result.stderr).toString('base64'),
         });
       }
-      return { processId, exitCode: 0, signal: null, stdout: result.stdout, stderr: result.stderr };
+      return { processId, exitCode: exitCodeFromResult(result), signal: null, stdout: result.stdout, stderr: result.stderr };
     } finally {
       activeSessions.delete(processId);
     }

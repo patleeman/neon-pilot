@@ -258,7 +258,19 @@ export const toolRequestUserInput = (async (params, ctx) => {
 
 // ── App ───────────────────────────────────────────────────────────────────
 
-export const appList = (async () => ({ data: [], nextCursor: null })) as MethodHandler;
+export const appList = (async () => ({
+  data: [
+    {
+      id: 'neon-pilot',
+      name: 'neon-pilot',
+      displayName: 'Neon Pilot',
+      description: 'Neon Pilot desktop agent runtime exposed through the Kitty Litter bridge.',
+      available: true,
+      isDefault: true,
+    },
+  ],
+  nextCursor: null,
+})) as MethodHandler;
 
 // ── Remote Control ─────────────────────────────────────────────────────────
 

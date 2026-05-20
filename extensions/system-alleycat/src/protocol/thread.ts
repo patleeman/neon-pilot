@@ -235,6 +235,11 @@ function metaKey(threadId: string): string {
   return `meta-${threadId}`;
 }
 
+function exitCodeFromShellResult(result: unknown): number {
+  const record = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
+  return typeof record.exitCode === 'number' && Number.isFinite(record.exitCode) ? Math.trunc(record.exitCode) : 0;
+}
+
 // ── Method handlers ─────────────────────────────────────────────────────────
 
 export const thread = {
@@ -640,11 +645,12 @@ export const thread = {
     if (!command) throw new Error('command is required');
 
     const result = await ctx.shell.exec({ command: 'sh', args: ['-c', command], cwd: (p?.cwd as string) ?? process.cwd() });
+    const exitCode = exitCodeFromShellResult(result);
     const output = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join('\n');
     try {
       await ctx.conversations.sendMessage(
         threadId,
-        `[shell command]\n$ ${command}\n${output ? `\`\`\`\n${output}\n\`\`\`` : ''}\n[exited with code 0]`,
+        `[shell command]\n$ ${command}\n${output ? `\`\`\`\n${output}\n\`\`\`` : ''}\n[exited with code ${exitCode}]`,
       );
     } catch {
       /* ok */
@@ -653,6 +659,6 @@ export const thread = {
       threadId,
       turn: { id: `shell-${Date.now()}`, status: 'completed', error: null },
     });
-    return { exitCode: 0, output, executionWrappers: result.executionWrappers };
+    return { exitCode, output, executionWrappers: result.executionWrappers };
   }) as MethodHandler,
 };

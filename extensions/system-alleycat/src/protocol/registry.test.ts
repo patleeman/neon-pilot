@@ -42,7 +42,7 @@ function ctx(): ExtensionBackendContext {
       subscribe: vi.fn(() => undefined),
     },
     shell: {
-      exec: vi.fn(async () => ({ stdout: 'ok\n', stderr: '' })),
+      exec: vi.fn(async () => ({ stdout: 'ok\n', stderr: '', exitCode: 7 })),
       spawn: vi.fn(async ({ onStdout, onExit }: SpawnInput) => {
         onStdout?.('spawned\n');
         onExit?.({ code: 0, signal: null });
@@ -78,7 +78,7 @@ describe('system-alleycat protocol registry compatibility surface', () => {
       layers: [],
     });
     await expect(call('configRequirements/read', {})).resolves.toMatchObject({ requirements: [] });
-    await expect(call('app/list', {})).resolves.toMatchObject({ data: [], nextCursor: null });
+    await expect(call('app/list', {})).resolves.toMatchObject({ data: [{ id: 'neon-pilot', available: true }], nextCursor: null });
     await expect(call('skills/list', { cwd: process.cwd() })).resolves.toMatchObject({ data: expect.any(Array) });
   });
 
@@ -101,6 +101,7 @@ describe('system-alleycat protocol registry compatibility surface', () => {
     await expect(call('command/exec', { command: 'echo ok', processId: 'cmd-1' })).resolves.toMatchObject({
       processId: 'cmd-1',
       stdout: 'ok\n',
+      exitCode: 7,
     });
     await expect(call('process/spawn', { command: 'echo', args: ['ok'] })).resolves.toMatchObject({
       processId: expect.stringMatching(/^proc-/),
