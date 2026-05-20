@@ -17,6 +17,18 @@ Highlights in this train:
 - Fixed rc.1 release smoke blockers around host-backed extension imports and isolated daemon socket paths.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
+## RC release operating instructions
+
+RC releases are long, stateful, and easy to half-finish. Run them from a conversation with **goal mode enabled** and keep the goal active until artifacts are published, the GitHub release is verified, and the release notes/current-release section are aligned.
+
+When publishing an RC, run the publish command in the foreground:
+
+```bash
+pnpm run release:publish
+```
+
+Do **not** start the RC publish as a background run. The script can require interactive attention for smoke-test prompts, signing/notarization failures, release-note validation, and GitHub publish errors; foreground output is the source of truth for deciding the next step.
+
 ## Release Commands
 
 ```bash
