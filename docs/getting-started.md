@@ -24,9 +24,9 @@ The desktop app manages the local daemon automatically.
 
 ## Important paths
 
-- `<state-root>` — machine-local runtime state. Default: `~/.local/state/personal-agent`
-- `<config-root>` — machine-local config. Default: `<state-root>/config`
-- `<vault-root>` — durable knowledge root
+- `<state-root>` — machine-local runtime state. Default: `$XDG_STATE_HOME/personal-agent` when `XDG_STATE_HOME` is set, otherwise `~/.local/state/personal-agent`
+- `<config-root>` — machine-local config. Default: `$XDG_CONFIG_HOME/personal-agent` when set, otherwise `<state-root>/config`
+- `<vault-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
 
 ## Verify the install
 

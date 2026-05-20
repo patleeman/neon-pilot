@@ -134,20 +134,18 @@ The `goal` tool provides the legacy goal-mode path. Continuations are scheduled 
 
 ## Slash Commands
 
-Type `/` in the composer to open the command menu. Commands execute immediately — they don't get sent to the agent. Some trigger UI actions, others inject text into the composer.
+Type `/` in the composer to open the command menu. Slash commands are intercepted by the UI. Some run local UI actions; others convert into prompts sent to the agent.
 
-| Command              | Action                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `/compact`           | Manually compact session context (optionally pass guidance)                           |
-| `/export [path]`     | Export session to HTML file                                                           |
-| `/name <title>`      | Set session display name                                                              |
-| `/run <cmd>`         | Send "Run this shell command: …" to the agent                                         |
-| `/search <query>`    | Send "Search the web for: …" to the agent                                             |
-| `/summarize`         | Send "Summarize our conversation so far" to the agent                                 |
-| `/think [topic]`     | Send "Think step-by-step about: …" to the agent                                       |
-| `/copy`              | Copy the last agent message to clipboard                                              |
-| `/resume` / `/defer` | Schedule this conversation to continue later (usage: `/resume 10m continue checking`) |
-| `/skill:<name>`      | Trigger a skill by name                                                               |
+| Command           | Action                                                      |
+| ----------------- | ----------------------------------------------------------- |
+| `/compact`        | Manually compact session context (optionally pass guidance) |
+| `/export [path]`  | Export session to HTML file                                 |
+| `/name <title>`   | Set session display name                                    |
+| `/run <cmd>`      | Send "Run this shell command: …" to the agent               |
+| `/search <query>` | Send "Search the web for: …" to the agent                   |
+| `/summarize`      | Send "Summarize our conversation so far" to the agent       |
+| `/think [topic]`  | Send "Think step-by-step about: …" to the agent             |
+| `/copy`           | Copy the last agent message to clipboard                    |
 
 Several of these send a prompt to the agent instead of executing locally: `/run`, `/search`, `/summarize`, `/think`.
 

@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.8.0-rc.18** — published 2026-05-17.
+**v0.8.0-rc.19** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.8.0-rc.18
+Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.8.0-rc.19
 
-Highlights:
+Highlights in this train:
 
-- Updated Pi dependencies to 0.75.0.
-- Improved local model runtime logging and cache installation behavior.
-- Fixed packaged extension-manager backend validation by removing forbidden runtime imports.
-- Restored unified node migration TypeScript build validation.
-- Published signed, notarized RC macOS ZIP/DMG artifacts with passing automated smoke tests.
+- Updated Pi dependencies to 0.75.3.
+- Added transcript topology, checkpoint/diff/artifact shelf hardening, and release test inventory coverage.
+- Removed in-app extension compilation; runtime extensions now load prebuilt artifacts only.
+- Hardened app state isolation for dev/test launches and release smoke testing.
+- Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## Release Commands
 
