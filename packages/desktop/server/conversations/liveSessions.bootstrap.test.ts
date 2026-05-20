@@ -113,6 +113,7 @@ vi.mock('./conversationRuns.js', () => ({
 vi.mock('./sessions.js', () => ({
   appendConversationWorkspaceMetadata: appendConversationWorkspaceMetadataMock,
   appendConversationOffshootMetadata: vi.fn(),
+  appendChildConversationTopologyEntry: vi.fn(),
   buildDisplayBlocksFromEntries: vi.fn(() => []),
   getAssistantErrorDisplayMessage: vi.fn(() => null),
   readSessionBlocksByFile: readSessionBlocksByFileMock,

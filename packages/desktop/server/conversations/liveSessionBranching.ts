@@ -1,7 +1,7 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
 import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
-import { appendConversationOffshootMetadata } from './sessions.js';
+import { appendChildConversationTopologyEntry, appendConversationOffshootMetadata } from './sessions.js';
 
 export interface LiveSessionBranchHost {
   sessionId: string;
@@ -55,6 +55,15 @@ export async function branchLiveSession(
     cwdOverride: entry.cwd,
   });
 
+  // Write the "Forked →" tombstone directly into the source session file
+  // so it survives app restarts without scanning other files.
+  appendChildConversationTopologyEntry({
+    parentSessionFile: sourceSessionFile,
+    childSessionId: resumed.id,
+    kind: 'fork',
+    anchorEntryId: entryId,
+  });
+
   return { newSessionId: resumed.id, sessionFile: branchedSessionFile };
 }
 
@@ -105,6 +114,16 @@ export async function forkLiveSession(
       parentMessageId: entryId,
     });
 
+    // Write tombstone to source (only when source is kept)
+    if (preserveSource) {
+      appendChildConversationTopologyEntry({
+        parentSessionFile: sourceSessionFile,
+        childSessionId: created.id,
+        kind: 'rewind',
+        anchorEntryId: entryId,
+      });
+    }
+
     return { newSessionId: created.id, sessionFile: created.sessionFile };
   }
 
@@ -133,6 +152,16 @@ export async function forkLiveSession(
     ...loaderOptions,
     cwdOverride: entry.cwd,
   });
+
+  // Write tombstone to source (only when source is kept)
+  if (preserveSource) {
+    appendChildConversationTopologyEntry({
+      parentSessionFile: sourceSessionFile,
+      childSessionId: resumed.id,
+      kind: beforeEntry ? 'rewind' : 'fork',
+      anchorEntryId: entryId,
+    });
+  }
 
   if (!preserveSource) {
     callbacks.destroySession(entry.sessionId);

@@ -1830,6 +1830,40 @@ function readCurrentSessionLeafId(filePath: string): string | null {
   }
 }
 
+/**
+ * Write a child topology marker directly into the parent session file.
+ * This makes the "Forked →" tombstone self-contained — it doesn't depend on
+ * scanning other session files at read time.
+ */
+export function appendChildConversationTopologyEntry(input: {
+  parentSessionFile: string;
+  childSessionId: string;
+  childTitle?: string;
+  kind: ConversationOffshootKind;
+  anchorEntryId?: string;
+}): void {
+  const kind = input.kind;
+  const label = kind.charAt(0).toUpperCase() + kind.slice(1);
+  const title = input.childTitle || input.childSessionId;
+  const text = `${label} conversation created: ${title}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}`;
+  const parentId = input.anchorEntryId ? input.anchorEntryId : readCurrentSessionLeafId(input.parentSessionFile);
+
+  appendFileSync(
+    input.parentSessionFile,
+    `${JSON.stringify({
+      type: 'custom_message',
+      id: randomUUID(),
+      parentId,
+      timestamp: new Date().toISOString(),
+      customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
+      display: false,
+      content: [{ type: 'text', text }],
+    })}\n`,
+    'utf-8',
+  );
+  clearSessionCaches();
+}
+
 export function appendConversationWorkspaceMetadata(input: {
   sessionFile: string;
   cwd?: string;
