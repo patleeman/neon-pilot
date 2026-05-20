@@ -13,15 +13,16 @@ function fuzzySearchFiles(params: unknown) {
   const p = params as Record<string, unknown> | undefined;
   const query = typeof p?.query === 'string' ? p.query.toLowerCase() : '';
   const roots = Array.isArray(p?.roots) ? p.roots.filter((root): root is string => typeof root === 'string' && root.trim().length > 0) : [];
+  const maxResults = typeof p?.limit === 'number' && p.limit > 0 ? Math.min(Math.floor(p.limit), 500) : 200;
+  const maxVisitedPerRoot = typeof p?.maxVisited === 'number' && p.maxVisited > 0 ? Math.min(Math.floor(p.maxVisited), 25_000) : 5_000;
   const files: Array<{ root: string; path: string; matchType: 'file' | 'directory'; fileName: string; score: number; indices?: number[] }> =
     [];
-  const maxPerRoot = 80;
 
   for (const root of roots) {
     if (!existsSync(root)) continue;
     const stack = [root];
-    let count = 0;
-    while (stack.length && count < maxPerRoot) {
+    let visited = 0;
+    while (stack.length && visited < maxVisitedPerRoot) {
       const dir = stack.pop()!;
       let entries: ReturnType<typeof readdirSync>;
       try {
@@ -29,12 +30,15 @@ function fuzzySearchFiles(params: unknown) {
       } catch {
         continue;
       }
-      for (const entry of entries) {
-        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'target') continue;
+      entries.sort((a, b) => a.name.localeCompare(b.name));
+      for (const entry of entries.reverse()) {
+        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'target' || entry.name === '.next') continue;
         const fullPath = join(dir, entry.name);
         const rel = relative(root, fullPath) || entry.name;
         const haystack = `${entry.name}\n${rel}`.toLowerCase();
-        if (query && !haystack.includes(query)) {
+        visited += 1;
+        const match = scoreMatch(haystack, query, entry.name.toLowerCase());
+        if (query && !match) {
           if (entry.isDirectory()) stack.push(fullPath);
           continue;
         }
@@ -43,16 +47,38 @@ function fuzzySearchFiles(params: unknown) {
           path: fullPath,
           matchType: entry.isDirectory() ? 'directory' : 'file',
           fileName: basename(fullPath),
-          score: query ? Math.max(1, 1000 - haystack.indexOf(query)) : 1,
+          score: match?.score ?? 1,
+          ...(match?.indices ? { indices: match.indices } : {}),
         });
-        count += 1;
         if (entry.isDirectory()) stack.push(fullPath);
-        if (count >= maxPerRoot) break;
+        if (!query && files.length >= maxResults) break;
       }
     }
   }
 
-  return { files };
+  files.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+  return { files: files.slice(0, maxResults) };
+}
+
+function scoreMatch(haystack: string, query: string, fileName: string): { score: number; indices?: number[] } | null {
+  if (!query) return { score: 1 };
+  const exactIndex = haystack.indexOf(query);
+  if (exactIndex >= 0) {
+    const fileNameBonus = fileName.includes(query) ? 500 : 0;
+    const prefixBonus = fileName.startsWith(query) ? 250 : 0;
+    return { score: 2_000 + fileNameBonus + prefixBonus - exactIndex };
+  }
+
+  const indices: number[] = [];
+  let searchFrom = 0;
+  for (const char of query) {
+    const index = haystack.indexOf(char, searchFrom);
+    if (index === -1) return null;
+    indices.push(index);
+    searchFrom = index + 1;
+  }
+  const span = indices.at(-1)! - indices[0];
+  return { score: Math.max(1, 1_000 - span), indices };
 }
 
 export const fs = {

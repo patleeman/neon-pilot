@@ -50,4 +50,37 @@ describe('system-alleycat fs protocol', () => {
     await expect(fs.remove({ path: dir, recursive: false, force: true }, ctx, conn, notify)).rejects.toThrow();
     expect(existsSync(dir)).toBe(true);
   });
+
+  it('finds nested fuzzy file picker matches beyond shallow directory caps', async () => {
+    const root = await tempRoot();
+    let dir = root;
+    for (let index = 0; index < 120; index += 1) {
+      dir = join(dir, `l${String(index).padStart(3, '0')}`);
+      mkdirSync(dir);
+    }
+    const target = join(dir, 'mobile-kitty-target.ts');
+    await writeFile(target, 'export const target = true;');
+
+    const result = (await fs.fuzzyFileSearch({ roots: [root], query: 'mkt', limit: 5 }, ctx, conn, notify)) as {
+      files: Array<{ path: string; fileName: string; indices?: number[] }>;
+    };
+
+    expect(result.files[0]).toMatchObject({ path: target, fileName: 'mobile-kitty-target.ts' });
+    expect(result.files[0].indices).toEqual(expect.any(Array));
+  });
+
+  it('honors fuzzy search result limits and ranks file-name exact matches first', async () => {
+    const root = await tempRoot();
+    mkdirSync(join(root, 'nested'));
+    await writeFile(join(root, 'nested', 'alpha-query.txt'), 'nested');
+    await writeFile(join(root, 'query.txt'), 'root');
+    await writeFile(join(root, 'other-query.txt'), 'other');
+
+    const result = (await fs.fuzzyFileSearch({ roots: [root], query: 'query', limit: 1 }, ctx, conn, notify)) as {
+      files: Array<{ path: string }>;
+    };
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0].path).toBe(join(root, 'query.txt'));
+  });
 });
