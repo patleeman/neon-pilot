@@ -1,3 +1,4 @@
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { getWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '@neon-pilot/extensions/backend/browser';
 
@@ -241,4 +242,64 @@ export async function browserScreenshot(input: unknown, ctx: ExtensionBackendCon
       details: { action: 'screenshot', error: message },
     };
   }
+}
+
+function toBackendContext(
+  ctx: { sessionManager?: { getSessionId?(): string } } | undefined,
+  signal: AbortSignal | undefined,
+): ExtensionBackendContext {
+  const conversationId = ctx?.sessionManager?.getSessionId?.() ?? '';
+  return {
+    toolContext: { conversationId, sessionId: conversationId },
+    agentToolContext: { signal },
+  } as ExtensionBackendContext;
+}
+
+export function createWorkbenchBrowserAgentExtension(): (pi: ExtensionAPI) => void {
+  return (pi: ExtensionAPI) => {
+    pi.registerTool({
+      name: 'browser_snapshot',
+      label: 'Browser Snapshot',
+      description:
+        'Observe the built-in Workbench Browser — active tab snapshot with structured elements, plus a list of all open tabs. Use tabId to target a specific tab.',
+      promptSnippet:
+        'Use browser_snapshot to understand the shared Workbench Browser. It returns the active tab snapshot plus a list of all open tabs with their tabId values. Pass tabId to target any tab. For development validation, use the agent-browser skill/CLI through bash instead.',
+      promptGuidelines: [
+        "Use Workbench Browser tools only for the user's visible shared browser; start with browser_snapshot and use agent-browser CLI for autonomous dev/QA.",
+      ],
+      parameters: { type: 'object', properties: { tabId: { type: 'string' } }, additionalProperties: false },
+      execute: (_toolCallId, params, signal, _onUpdate, ctx) => browserSnapshot(params, toBackendContext(ctx, signal)),
+    });
+
+    pi.registerTool({
+      name: 'browser_cdp',
+      label: 'Browser CDP',
+      description: 'Send one or more Chrome DevTools Protocol commands to the Workbench Browser. Use tabId to target a specific tab.',
+      promptSnippet:
+        'Use browser_cdp to act on the shared Workbench Browser. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev automation/testing, use the agent-browser skill/CLI through bash instead.',
+      promptGuidelines: [
+        'browser_cdp controls the shared Workbench Browser; get tabId from browser_snapshot, batch multiple CDP commands in one call, and use agent-browser CLI for dev/QA automation.',
+      ],
+      parameters: {
+        type: 'object',
+        properties: { command: {}, continueOnError: { type: 'boolean' }, tabId: { type: 'string' } },
+        required: ['command'],
+        additionalProperties: false,
+      },
+      execute: (_toolCallId, params, signal, _onUpdate, ctx) => browserCdp(params, toBackendContext(ctx, signal)),
+    });
+
+    pi.registerTool({
+      name: 'browser_screenshot',
+      label: 'Browser Screenshot',
+      description: 'Capture a PNG screenshot of the Workbench Browser. Use tabId to target a specific tab.',
+      promptSnippet:
+        'Use browser_screenshot for the shared Workbench Browser when visual communication matters. Pass tabId to target a specific tab (get tab IDs from browser_snapshot). For dev validation screenshots, use the agent-browser skill/CLI through bash.',
+      promptGuidelines: [
+        'browser_screenshot captures the shared Workbench Browser for user-facing visual context; use agent-browser CLI for product-under-test screenshots.',
+      ],
+      parameters: { type: 'object', properties: { tabId: { type: 'string' } }, additionalProperties: false },
+      execute: (_toolCallId, params, signal, _onUpdate, ctx) => browserScreenshot(params, toBackendContext(ctx, signal)),
+    });
+  };
 }
