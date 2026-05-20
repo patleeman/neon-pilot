@@ -22,6 +22,7 @@ export interface ColorTheme {
   extensionId?: string;
 }
 export type ThemePreference = 'light' | 'dark' | 'system';
+export type ThemeAccent = 'lime' | 'forest' | 'cobalt' | 'ember' | 'violet' | 'ink';
 export type TranscriptionModelStatus = unknown;
 export type TranscriptionProviderId = unknown;
 export type UnifiedSettingsEntry = unknown;
@@ -63,8 +64,16 @@ export declare function useTheme(): {
   lightTheme: string;
   darkTheme: string;
   availableThemes: ColorTheme[];
+  accent: ThemeAccent;
+  availableAccents: Array<{
+    id: ThemeAccent;
+    label: string;
+    light: { accent: string; accentBg: string; selection: string };
+    dark: { accent: string; accentBg: string; selection: string };
+  }>;
   setThemePreference: (theme: ThemePreference) => void;
   setLightTheme: (theme: string) => void;
   setDarkTheme: (theme: string) => void;
+  setAccent: (accent: ThemeAccent) => void;
   toggle: () => void;
 };

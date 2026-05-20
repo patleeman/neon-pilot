@@ -8,6 +8,7 @@ import { KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY } from './knowledgeTreeStat
 export const THEME_STORAGE_KEY = 'pa-theme';
 export const LIGHT_THEME_STORAGE_KEY = 'pa-theme-light-default';
 export const DARK_THEME_STORAGE_KEY = 'pa-theme-dark-default';
+export const ACCENT_STORAGE_KEY = 'pa-theme-accent';
 export const OPEN_SESSION_IDS_STORAGE_KEY = 'pa:open-session-ids';
 export const PINNED_SESSION_IDS_STORAGE_KEY = 'pa:pinned-session-ids';
 export const ARCHIVED_SESSION_IDS_STORAGE_KEY = 'pa:archived-session-ids';

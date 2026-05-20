@@ -34,7 +34,7 @@ export type {
   TelemetryDbMaintenanceResult,
 } from '../shared/types';
 export type { SecretsState, SecretStatusEntry, UnifiedSettingsEntry } from '../shared/types';
-export { type ColorTheme, type ThemePreference, useTheme } from '../ui-state/theme';
+export { type ColorTheme, type ThemeAccent, type ThemePreference, useTheme } from '../ui-state/theme';
 export { SettingsField } from './SettingsField';
 export { SettingsPanelHost } from './SettingsPanelHost';
 export type { ExtensionKeybindingRegistration } from './types';

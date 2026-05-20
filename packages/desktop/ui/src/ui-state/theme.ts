@@ -2,11 +2,57 @@ import { createContext, createElement, type ReactNode, useCallback, useContext, 
 
 import { api } from '../client/api';
 import type { ExtensionManifest } from '../extensions/types';
-import { DARK_THEME_STORAGE_KEY, LIGHT_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from '../local/localSettings';
+import { ACCENT_STORAGE_KEY, DARK_THEME_STORAGE_KEY, LIGHT_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from '../local/localSettings';
 
 type ThemeAppearance = 'light' | 'dark';
 type Theme = 'tokyo-night-light' | 'tokyo-night-dark' | 'light' | 'dark' | string;
 export type ThemePreference = 'light' | 'dark' | 'system';
+export type ThemeAccent = 'lime' | 'forest' | 'cobalt' | 'ember' | 'violet' | 'ink';
+
+interface AccentTokenSet {
+  accent: string;
+  accentBg: string;
+  selection: string;
+}
+
+export const THEME_ACCENTS: Array<{ id: ThemeAccent; label: string; light: AccentTokenSet; dark: AccentTokenSet }> = [
+  {
+    id: 'lime',
+    label: 'Lime',
+    light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51' },
+    dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24' },
+  },
+  {
+    id: 'forest',
+    label: 'Forest',
+    light: { accent: '47 122 58', accentBg: '226 240 228', selection: '108 229 138' },
+    dark: { accent: '108 229 138', accentBg: '22 52 31', selection: '34 82 49' },
+  },
+  {
+    id: 'cobalt',
+    label: 'Cobalt',
+    light: { accent: '31 95 200', accentBg: '225 234 251', selection: '116 168 255' },
+    dark: { accent: '116 168 255', accentBg: '24 41 74', selection: '37 64 115' },
+  },
+  {
+    id: 'ember',
+    label: 'Ember',
+    light: { accent: '196 77 18', accentBg: '249 231 220', selection: '255 147 82' },
+    dark: { accent: '255 147 82', accentBg: '72 36 20', selection: '113 57 32' },
+  },
+  {
+    id: 'violet',
+    label: 'Violet',
+    light: { accent: '106 61 209', accentBg: '235 228 251', selection: '182 156 255' },
+    dark: { accent: '182 156 255', accentBg: '47 36 82', selection: '74 56 128' },
+  },
+  {
+    id: 'ink',
+    label: 'Ink',
+    light: { accent: '20 20 15', accentBg: '235 234 229', selection: '20 20 15' },
+    dark: { accent: '245 243 232', accentBg: '46 46 36', selection: '82 80 66' },
+  },
+];
 
 export interface ColorTheme {
   id: Theme;
@@ -26,6 +72,7 @@ const BUILT_IN_THEMES: ColorTheme[] = [
 const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
 const DEFAULT_LIGHT_THEME: Theme = 'studio-light';
 const DEFAULT_DARK_THEME: Theme = 'studio-dark';
+const DEFAULT_ACCENT: ThemeAccent = 'lime';
 const SYSTEM_THEME_QUERY = '(prefers-color-scheme: dark)';
 
 interface ThemeContextValue {
@@ -37,6 +84,9 @@ interface ThemeContextValue {
   setThemePreference: (theme: ThemePreference) => void;
   setLightTheme: (theme: Theme) => void;
   setDarkTheme: (theme: Theme) => void;
+  accent: ThemeAccent;
+  availableAccents: typeof THEME_ACCENTS;
+  setAccent: (accent: ThemeAccent) => void;
   toggle: () => void;
 }
 
@@ -53,7 +103,31 @@ function findTheme(themes: ColorTheme[], theme: Theme): ColorTheme {
   return themes.find((candidate) => candidate.id === normalizedTheme) ?? BUILT_IN_THEMES[0];
 }
 
-function applyTheme(theme: ColorTheme) {
+function normalizeAccent(value: string | null | undefined): ThemeAccent {
+  return THEME_ACCENTS.some((accent) => accent.id === value) ? (value as ThemeAccent) : DEFAULT_ACCENT;
+}
+
+function accentTokensFor(accent: ThemeAccent, appearance: ThemeAppearance): AccentTokenSet {
+  const entry = THEME_ACCENTS.find((candidate) => candidate.id === accent) ?? THEME_ACCENTS[0];
+  return appearance === 'dark' ? entry.dark : entry.light;
+}
+
+function applyAccent(accent: ThemeAccent, appearance: ThemeAppearance) {
+  if (typeof document === 'undefined') return;
+
+  const tokens = accentTokensFor(accent, appearance);
+  document.documentElement.setAttribute('data-accent', accent);
+  document.documentElement.style.setProperty('--color-accent', tokens.accent);
+  document.documentElement.style.setProperty('--color-steel', tokens.accent);
+  document.documentElement.style.setProperty('--color-mission-glow', tokens.accent);
+  document.documentElement.style.setProperty('--color-streaming-glow', tokens.accent);
+  document.documentElement.style.setProperty('--color-accent-bg', tokens.accentBg);
+  document.documentElement.style.setProperty('--color-selection', tokens.selection);
+  document.documentElement.style.setProperty('--pa-accent', 'rgb(var(--color-accent))');
+  document.documentElement.style.setProperty('--pa-accent-hover', 'rgb(var(--color-accent))');
+}
+
+function applyTheme(theme: ColorTheme, accent: ThemeAccent = DEFAULT_ACCENT) {
   if (typeof document === 'undefined') {
     return;
   }
@@ -71,6 +145,8 @@ function applyTheme(theme: ColorTheme) {
   for (const [property, value] of Object.entries(theme.tokens ?? {})) {
     document.documentElement.style.setProperty(property, value);
   }
+
+  applyAccent(accent, theme.appearance);
 
   document.documentElement.style.setProperty('--pa-bg', 'rgb(var(--color-base))');
   document.documentElement.style.setProperty('--pa-surface', 'rgb(var(--color-surface))');
@@ -147,17 +223,29 @@ function readStoredThemeId(storageKey: string, fallback: Theme): Theme {
   return fallback;
 }
 
+function readStoredAccent(): ThemeAccent {
+  try {
+    return normalizeAccent(localStorage.getItem(ACCENT_STORAGE_KEY));
+  } catch {
+    return DEFAULT_ACCENT;
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>(() => {
     const currentPreference = readStoredThemePreference();
     const lightTheme = readStoredThemeId(LIGHT_THEME_STORAGE_KEY, DEFAULT_LIGHT_THEME);
     const darkTheme = readStoredThemeId(DARK_THEME_STORAGE_KEY, DEFAULT_DARK_THEME);
-    applyTheme(findTheme(BUILT_IN_THEMES, resolveThemePreference(currentPreference, readSystemTheme(), lightTheme, darkTheme)));
+    applyTheme(
+      findTheme(BUILT_IN_THEMES, resolveThemePreference(currentPreference, readSystemTheme(), lightTheme, darkTheme)),
+      readStoredAccent(),
+    );
     return currentPreference;
   });
   const [systemTheme, setSystemTheme] = useState<ThemeAppearance>(() => readSystemTheme());
   const [lightTheme, setLightThemeState] = useState<Theme>(() => readStoredThemeId(LIGHT_THEME_STORAGE_KEY, DEFAULT_LIGHT_THEME));
   const [darkTheme, setDarkThemeState] = useState<Theme>(() => readStoredThemeId(DARK_THEME_STORAGE_KEY, DEFAULT_DARK_THEME));
+  const [accent, setAccentState] = useState<ThemeAccent>(() => readStoredAccent());
   const [extensionThemes, setExtensionThemes] = useState<ColorTheme[]>([]);
   const availableThemes = useMemo(() => [...BUILT_IN_THEMES, ...extensionThemes], [extensionThemes]);
 
@@ -167,8 +255,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [availableThemes, darkTheme, lightTheme, systemTheme, themePreference]);
 
   useEffect(() => {
-    applyTheme(findTheme(availableThemes, theme));
-  }, [availableThemes, theme]);
+    applyTheme(findTheme(availableThemes, theme), accent);
+  }, [accent, availableThemes, theme]);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,7 +317,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (nextThemePreference === 'system') {
         setSystemTheme(nextSystemTheme);
       }
-      applyTheme(nextTheme);
+      applyTheme(nextTheme, accent);
 
       try {
         localStorage.setItem(THEME_STORAGE_KEY, nextThemePreference);
@@ -237,7 +325,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         // Ignore storage failures.
       }
     },
-    [availableThemes, darkTheme, lightTheme, systemTheme],
+    [accent, availableThemes, darkTheme, lightTheme, systemTheme],
+  );
+
+  const setAccent = useCallback(
+    (nextAccent: ThemeAccent) => {
+      const normalizedAccent = normalizeAccent(nextAccent);
+      setAccentState(normalizedAccent);
+      applyAccent(normalizedAccent, findTheme(availableThemes, theme).appearance);
+      try {
+        localStorage.setItem(ACCENT_STORAGE_KEY, normalizedAccent);
+      } catch {
+        // Ignore storage failures.
+      }
+    },
+    [availableThemes, theme],
   );
 
   const setLightTheme = useCallback((nextTheme: Theme) => {
@@ -265,8 +367,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [availableThemes, setThemePreference, theme]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ theme, themePreference, lightTheme, darkTheme, availableThemes, setThemePreference, setLightTheme, setDarkTheme, toggle }),
-    [availableThemes, darkTheme, lightTheme, setDarkTheme, setLightTheme, setThemePreference, theme, themePreference, toggle],
+    () => ({
+      theme,
+      themePreference,
+      lightTheme,
+      darkTheme,
+      availableThemes,
+      setThemePreference,
+      setLightTheme,
+      setDarkTheme,
+      accent,
+      availableAccents: THEME_ACCENTS,
+      setAccent,
+      toggle,
+    }),
+    [
+      accent,
+      availableThemes,
+      darkTheme,
+      lightTheme,
+      setAccent,
+      setDarkTheme,
+      setLightTheme,
+      setThemePreference,
+      theme,
+      themePreference,
+      toggle,
+    ],
   );
 
   return createElement(ThemeContext.Provider, { value }, children);
