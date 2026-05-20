@@ -166,6 +166,10 @@ export async function ggufStop(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.stopServer(input, ctx);
 }
 
+export async function ggufSetServerEnabled(input: unknown, ctx: ExtensionBackendContext) {
+  return gguf.setServerEnabled(input, ctx);
+}
+
 export async function ggufRunPrompt(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.runPrompt(input as never, ctx);
 }

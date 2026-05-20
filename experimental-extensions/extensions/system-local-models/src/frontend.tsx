@@ -53,6 +53,7 @@ type GgufStatus = {
     error: string | null;
   } | null;
   log: string;
+  enabled: boolean;
 };
 
 type Status = { mlx: MlxStatus; gguf: GgufStatus };
@@ -259,6 +260,7 @@ function RowActionsMenu({ label, disabled, actions }: { label: string; disabled?
 export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [page, setPage] = useState<PageId>('server');
   const [status, setStatus] = useState<Status | null>(null);
+  const [serverEnabled, setServerEnabled] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -293,6 +295,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     try {
       const next = await pa.extension.invoke<Status>('localModelsStatus', {});
       setStatus(next);
+      setServerEnabled(next.gguf?.enabled !== false);
       setSelectedModelId((current) => current || next.gguf?.selectedModelPath || (next.mlx?.installed ? 'mlx:selected' : ''));
       return next;
     } catch (err) {
@@ -363,7 +366,16 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
       : Boolean(status?.gguf?.process.managedRunning && !running);
   const setupRunning = Boolean(status?.mlx?.setup);
   const runtimeStatus =
-    busy || (running ? 'Running' : loading ? 'Loading' : setupRunning ? status?.mlx?.setup?.message || 'Downloading' : 'Ready');
+    busy ||
+    (!serverEnabled
+      ? 'Disabled'
+      : running
+        ? 'Running'
+        : loading
+          ? 'Loading'
+          : setupRunning
+            ? status?.mlx?.setup?.message || 'Downloading'
+            : 'Ready');
   useEffect(() => {
     if (!status || !selectedModel) return;
     const contextInitKey = `${activeRuntime}:${selectedModel.id}`;
@@ -495,6 +507,17 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
       }
       setDirty(false);
     });
+  }
+
+  async function toggleServerEnabled(enabled: boolean) {
+    setServerEnabled(enabled);
+    try {
+      await pa.extension.invoke('localModelsGgufSetServerEnabled', { enabled });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setServerEnabled(!enabled);
+    }
   }
 
   async function stopServer() {
@@ -678,8 +701,39 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
           actions={
             <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={serverEnabled}
+                aria-label="Enable local model server"
+                onClick={() => void toggleServerEnabled(!serverEnabled)}
+                className="group inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cx(
+                    'relative inline-flex h-[18px] w-[32px] shrink-0 rounded-full border p-[1px] transition-all',
+                    serverEnabled
+                      ? 'border-accent/55 bg-accent/75 shadow-sm'
+                      : 'border-border-default bg-surface/40 group-hover:bg-surface/60',
+                  )}
+                >
+                  <span
+                    className={cx(
+                      'h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform',
+                      serverEnabled ? 'translate-x-[14px]' : 'translate-x-0',
+                    )}
+                  />
+                </span>
+                <span>Server</span>
+              </button>
               <div className="inline-flex items-center gap-2 text-sm text-secondary">
-                <span className={cx('h-2 w-2 rounded-full', running ? 'bg-success' : setupRunning ? 'bg-warning' : 'bg-dim')} />
+                <span
+                  className={cx(
+                    'h-2 w-2 rounded-full',
+                    !serverEnabled ? 'bg-dim' : running ? 'bg-success' : setupRunning ? 'bg-warning' : 'bg-dim',
+                  )}
+                />
                 <span className="font-medium text-primary">{runtimeStatus}</span>
               </div>
               <ToolbarButton type="button" onClick={() => void refresh()} aria-label="Refresh local models" title="Refresh local models">

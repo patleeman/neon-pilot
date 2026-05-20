@@ -79,6 +79,7 @@ const LOG_FILE = join(modelCacheRoot, '..', 'latest.log');
 const SERVER_PID_KEY = 'gguf/process/serverPid';
 const MODEL_PATH_KEY = 'gguf/settings/modelPath';
 const SERVING_SETTINGS_KEY = 'gguf/settings/serving';
+const SERVER_ENABLED_KEY = 'gguf/settings/serverEnabled';
 
 type ServingSettings = {
   contextSize?: number;
@@ -409,7 +410,22 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
     download: download ? serializeDownloadJob(download) : null,
     log: readLog(),
     savedServingSettings: await loadServingSettings(ctx),
+    enabled: (await ctx.storage.get(SERVER_ENABLED_KEY).catch(() => null)) !== false,
   };
+}
+
+export async function setServerEnabled(input: unknown, ctx: ExtensionBackendContext) {
+  const { enabled } = input as { enabled: boolean };
+  await ctx.storage.put(SERVER_ENABLED_KEY, enabled);
+  if (!enabled) {
+    // Stop the server if it's running
+    const pid = await readPid(ctx);
+    if (pid) {
+      await ctx.shell.exec({ command: 'sh', args: ['-c', `kill ${pid} 2>/dev/null || true`] });
+      await ctx.storage.put(SERVER_PID_KEY, 0);
+    }
+  }
+  return { ok: true, enabled };
 }
 
 export async function downloadModel(input: DownloadModelInput, ctx: ExtensionBackendContext) {
