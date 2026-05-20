@@ -22,12 +22,12 @@ interface EnsureResult {
 
 const ensureInFlightByProfile = new Map<string, Promise<EnsureResult>>();
 
-const onboardingMessage = `Welcome to Personal Agent. This first conversation is here to get you unstuck before the app becomes a very expensive blank text box.
+const onboardingMessage = `Welcome to Neon Pilot. This first conversation is here to get you unstuck before the app becomes a very expensive blank text box.
 
 Start here:
 
-1. Open **Settings** and configure your model provider first. PA needs a provider before normal agent conversations can run.
-2. PA is extension-based. Most product features live as extensions, including tools, panels, automations, browser features, artifacts, and workflow helpers.
+1. Open **Settings** and configure your model provider first. Neon Pilot needs a provider before normal agent conversations can run.
+2. Neon Pilot is extension-based. Most product features live as extensions, including tools, panels, automations, browser features, artifacts, and workflow helpers.
 3. Open **Settings → Extensions** to enable, disable, inspect, or manage extensions. System extensions ship with the app; user extensions are where your own workflows belong.
 4. After your provider is configured, start a new conversation and ask PA to help with a real task. The app works best when you give it a concrete objective and let it use tools.
 
@@ -71,7 +71,7 @@ async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendC
   }
 
   const created = (await ctx.conversations.create({ cwd: ctx.runtime.getRepoRoot() })) as { id: string };
-  await ctx.conversations.setTitle(created.id, 'Welcome to Personal Agent');
+  await ctx.conversations.setTitle(created.id, 'Welcome to Neon Pilot');
   await ctx.conversations.appendVisibleCustomMessage(created.id, 'onboarding_intro', onboardingMessage, { source: ctx.extensionId });
 
   await ctx.storage.put(ONBOARDING_STATE_KEY, {
