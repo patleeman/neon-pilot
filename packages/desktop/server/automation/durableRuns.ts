@@ -7,6 +7,7 @@ import {
   type FollowUpDurableRunResult,
   getDurableRun as getDurableRunFromDaemon,
   type GetDurableRunResult,
+  loadDaemonConfig,
   listDurableRuns as listDurableRunsFromDaemon,
   type ListDurableRunsResult,
   pingDaemon,
@@ -68,7 +69,7 @@ function isRunNotFound(error: unknown): boolean {
 }
 
 function resolveRunsRoot(): string {
-  return resolveDurableRunsRoot(resolveDaemonPaths().root);
+  return resolveDurableRunsRoot(resolveDaemonPaths(loadDaemonConfig().ipc.socketPath).root);
 }
 
 function decorateRuns<T extends ScannedDurableRun>(runs: T[]) {
