@@ -198,6 +198,7 @@ export function CommandPalette() {
   const location = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const requestedThreadBootstrapRef = useRef(false);
   const macPlatform = useMemo(() => isMacPlatform(), []);
   const { sessions } = useAppData();
@@ -818,6 +819,19 @@ export function CommandPalette() {
   }, [activateItem, closePalette, cursor, open, scope, scopeOptions, visibleItems]);
 
   useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const shell = shellRef.current;
+      if (!shell || !(event.target instanceof Node)) return;
+      if (!shell.contains(event.target)) closePalette();
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [closePalette, open]);
+
+  useEffect(() => {
     closePalette();
   }, [closePalette, location.pathname, location.search]);
 
@@ -895,6 +909,7 @@ export function CommandPalette() {
       }}
     >
       <div
+        ref={shellRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
