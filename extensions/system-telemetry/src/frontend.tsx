@@ -13,7 +13,7 @@
  * 9. Subagent flame graph
  */
 
-import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, ToolbarButton } from '@personal-agent/extensions/ui';
+import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
 
 import { TracesAgentLoop } from './traces/TracesAgentLoop';

@@ -1,4 +1,4 @@
-import type { KnowledgeBaseState } from '@personal-agent/extensions/data';
+import type { KnowledgeBaseState } from '@neon-pilot/extensions/data';
 
 export interface KnowledgeBaseSyncPresentation {
   text: string;

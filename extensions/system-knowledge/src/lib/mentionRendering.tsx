@@ -1,4 +1,4 @@
-import type { MentionItem } from '@personal-agent/extensions/data';
+import type { MentionItem } from '@neon-pilot/extensions/data';
 import React, { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 

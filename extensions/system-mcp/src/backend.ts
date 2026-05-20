@@ -12,7 +12,7 @@ import {
   listMcpCatalog,
   readBundledSkillMcpManifests,
   readMcpConfigDocument,
-} from '@personal-agent/extensions/backend/mcp';
+} from '@neon-pilot/extensions/backend/mcp';
 import { Type } from '@sinclair/typebox';
 
 const MCP_ACTION_VALUES = ['list', 'info', 'grep', 'call', 'auth', 'logout'] as const;

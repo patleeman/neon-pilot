@@ -1,4 +1,4 @@
-import type { AppTelemetryEventInput, AppTelemetrySource } from '@personal-agent/core';
+import type { AppTelemetryEventInput, AppTelemetrySource } from '@neon-pilot/core';
 
 export interface ExtensionTelemetryEventInput extends Omit<AppTelemetryEventInput, 'source' | 'stateRoot'> {
   source?: AppTelemetrySource;

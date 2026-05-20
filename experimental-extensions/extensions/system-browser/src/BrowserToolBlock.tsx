@@ -1,4 +1,4 @@
-import { cx, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
+import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 const BROWSER_TOOL_LABELS: Record<string, string> = {

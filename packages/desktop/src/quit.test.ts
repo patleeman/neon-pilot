@@ -38,7 +38,7 @@ describe('buildDesktopQuitConfirmationOptions', () => {
   });
 
   it('includes the app icon when one is provided', () => {
-    expect(buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/personal-agent-icon.png')).toEqual({
+    expect(buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/neon-pilot-icon.png')).toEqual({
       type: 'question',
       buttons: ['Cancel', 'Quit Neon Pilot'],
       defaultId: 0,
@@ -46,7 +46,7 @@ describe('buildDesktopQuitConfirmationOptions', () => {
       noLink: true,
       message: 'Quit Neon Pilot?',
       detail: 'Closing the window only hides it. Quitting closes the menu bar app and stops the local runtime until you reopen it.',
-      icon: '/tmp/personal-agent-icon.png',
+      icon: '/tmp/neon-pilot-icon.png',
     });
   });
 });
@@ -73,10 +73,8 @@ describe('confirmDesktopQuit', () => {
       showMessageBox: vi.fn().mockResolvedValue({ response: 1 }),
     };
 
-    await expect(confirmDesktopQuit(dialogLike, 'Neon Pilot', '/tmp/personal-agent-icon.png')).resolves.toBe(true);
-    expect(dialogLike.showMessageBox).toHaveBeenCalledWith(
-      buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/personal-agent-icon.png'),
-    );
+    await expect(confirmDesktopQuit(dialogLike, 'Neon Pilot', '/tmp/neon-pilot-icon.png')).resolves.toBe(true);
+    expect(dialogLike.showMessageBox).toHaveBeenCalledWith(buildDesktopQuitConfirmationOptions('Neon Pilot', '/tmp/neon-pilot-icon.png'));
   });
 
   it('returns false when the user cancels the quit action', async () => {

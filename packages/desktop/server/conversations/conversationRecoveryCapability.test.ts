@@ -40,7 +40,7 @@ vi.mock('node:fs', async (importOriginal) => {
   };
 });
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   parsePendingOperation: parsePendingOperationMock,
 }));
 

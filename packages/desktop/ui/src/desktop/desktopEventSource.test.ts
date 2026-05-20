@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const DESKTOP_API_STREAM_EVENT = 'personal-agent-desktop-api-stream';
+const DESKTOP_API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
 
 describe('createDesktopAwareEventSource', () => {
   beforeEach(() => {
@@ -11,7 +11,7 @@ describe('createDesktopAwareEventSource', () => {
   it('replays matching desktop API stream events that arrive before the subscription id is available', async () => {
     const eventTarget = new EventTarget();
     const fakeWindow = {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
         subscribeApiStream: vi.fn().mockImplementation(() => new Promise(() => {})),
         unsubscribeApiStream: vi.fn().mockResolvedValue(undefined),

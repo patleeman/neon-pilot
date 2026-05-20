@@ -8,7 +8,7 @@ import {
   setActivityConversationLinks,
   upsertAlert,
   writeProfileActivityEntry,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 function sanitizeIdSegment(value: string): string {
   const sanitized = value

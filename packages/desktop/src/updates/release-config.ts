@@ -1,7 +1,7 @@
 const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
 function resolveDesktopReleaseRepoSlug(): string {
-  const value = process.env.PERSONAL_AGENT_RELEASE_REPO?.trim() || DEFAULT_DESKTOP_RELEASE_REPO_SLUG;
+  const value = process.env.NEON_PILOT_RELEASE_REPO?.trim() || DEFAULT_DESKTOP_RELEASE_REPO_SLUG;
   const parts = value
     .split('/')
     .map((part) => part.trim())

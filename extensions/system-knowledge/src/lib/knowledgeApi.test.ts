@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   invokeExtensionAction: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/data', () => ({
+vi.mock('@neon-pilot/extensions/data', () => ({
   api: {
     invokeExtensionAction: mocks.invokeExtensionAction,
   },

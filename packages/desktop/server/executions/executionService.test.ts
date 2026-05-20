@@ -1,4 +1,4 @@
-import type { ScannedDurableRun } from '@personal-agent/daemon';
+import type { ScannedDurableRun } from '@neon-pilot/daemon';
 import { describe, expect, it } from 'vitest';
 
 import { projectExecution } from './executionService.js';

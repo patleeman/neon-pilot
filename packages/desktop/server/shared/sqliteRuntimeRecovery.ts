@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
-import { openSqliteDatabase, type SqliteDatabase } from '@personal-agent/core';
+import { openSqliteDatabase, type SqliteDatabase } from '@neon-pilot/core';
 
 function timestampSegment(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');

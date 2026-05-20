@@ -9,7 +9,7 @@ import {
   pingDaemon,
   rerunDurableRun,
   startBackgroundRun,
-} from '@personal-agent/extensions/backend/runs';
+} from '@neon-pilot/extensions/backend/runs';
 
 type RunAgentExtensionFactory = (api: RegisterToolApi) => void;
 

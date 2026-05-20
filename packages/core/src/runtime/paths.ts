@@ -5,11 +5,11 @@
  * All paths are rooted outside managed repository files by default.
  *
  * Environment variables for override:
- * - PERSONAL_AGENT_STATE_ROOT: Override the base state directory
- * - PERSONAL_AGENT_VAULT_ROOT: Override the durable knowledge vault root
- * - PERSONAL_AGENT_AUTH_PATH: Override auth directory
- * - PERSONAL_AGENT_SESSION_PATH: Override session directory
- * - PERSONAL_AGENT_CACHE_PATH: Override cache directory
+ * - NEON_PILOT_STATE_ROOT: Override the base state directory
+ * - NEON_PILOT_VAULT_ROOT: Override the durable knowledge vault root
+ * - NEON_PILOT_AUTH_PATH: Override auth directory
+ * - NEON_PILOT_SESSION_PATH: Override session directory
+ * - NEON_PILOT_CACHE_PATH: Override cache directory
  */
 
 import { existsSync, mkdirSync, readFileSync, realpathSync } from 'fs';
@@ -18,14 +18,14 @@ import { basename, dirname, join, resolve } from 'path';
 
 /**
  * Default state root directory (outside repo)
- * Uses XDG_STATE_HOME or falls back to ~/.local/state/personal-agent
+ * Uses XDG_STATE_HOME or falls back to ~/.local/state/neon-pilot
  */
 export function getDefaultStateRoot(): string {
   const xdgStateHome = process.env.XDG_STATE_HOME;
   if (xdgStateHome) {
-    return join(xdgStateHome, 'personal-agent');
+    return join(xdgStateHome, 'neon-pilot');
   }
-  return join(homedir(), '.local', 'state', 'personal-agent');
+  return join(homedir(), '.local', 'state', 'neon-pilot');
 }
 
 function expandHomePath(pathValue: string): string {
@@ -44,7 +44,7 @@ function expandHomePath(pathValue: string): string {
  * Get the configured state root directory
  */
 export function getStateRoot(): string {
-  const explicit = process.env.PERSONAL_AGENT_STATE_ROOT;
+  const explicit = process.env.NEON_PILOT_STATE_ROOT;
   return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultStateRoot();
 }
 
@@ -53,7 +53,7 @@ export function getPiAgentStateDir(stateRoot: string = getStateRoot()): string {
 }
 
 export function getPiAgentRuntimeDir(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'pi-agent-runtime');
+  return join(stateRoot, 'neon-pilot-runtime');
 }
 
 export function resolveNeutralChatCwd(profile: string, stateRoot: string = getStateRoot()): string {
@@ -77,12 +77,12 @@ export function getDefaultConfigRoot(): string {
  * Get the configured config root directory.
  */
 export function getConfigRoot(): string {
-  const explicit = process.env.PERSONAL_AGENT_CONFIG_ROOT;
+  const explicit = process.env.NEON_PILOT_CONFIG_ROOT;
   return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultConfigRoot();
 }
 
 function getMachineConfigFilePathForRuntimePaths(): string {
-  const explicit = process.env.PERSONAL_AGENT_CONFIG_FILE;
+  const explicit = process.env.NEON_PILOT_CONFIG_FILE;
   if (explicit && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
@@ -126,7 +126,7 @@ function readMachineConfigRuntimeOverrides(): { vaultRoot?: string; knowledgeBas
  * Mutable profile config lives separately under machine-local config.
  */
 export function getDefaultVaultRoot(): string {
-  return join(homedir(), 'Documents', 'personal-agent');
+  return join(homedir(), 'Documents', 'neon-pilot');
 }
 
 export function getKnowledgeBaseStateDir(stateRoot: string = getStateRoot()): string {
@@ -141,7 +141,7 @@ export function getManagedKnowledgeBaseRoot(stateRoot: string = getStateRoot()):
  * Get the configured durable knowledge vault root directory.
  */
 export function getVaultRoot(): string {
-  const explicit = process.env.PERSONAL_AGENT_VAULT_ROOT;
+  const explicit = process.env.NEON_PILOT_VAULT_ROOT;
   if (explicit && explicit.trim().length > 0) {
     return expandHomePath(explicit.trim());
   }
@@ -168,7 +168,7 @@ export function getDefaultProfilesRoot(): string {
  * Get the configured mutable profiles root directory.
  */
 export function getProfilesRoot(): string {
-  const explicit = process.env.PERSONAL_AGENT_PROFILES_ROOT;
+  const explicit = process.env.NEON_PILOT_PROFILES_ROOT;
   return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultProfilesRoot();
 }
 
@@ -270,7 +270,7 @@ export function getDefaultLocalProfileDir(): string {
  * Get the configured local overlay directory.
  */
 export function getLocalProfileDir(): string {
-  const explicit = process.env.PERSONAL_AGENT_LOCAL_PROFILE_DIR;
+  const explicit = process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
   return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultLocalProfileDir();
 }
 
@@ -297,9 +297,9 @@ export function resolveStatePaths(): RuntimeStatePaths {
 
   return {
     root,
-    auth: process.env.PERSONAL_AGENT_AUTH_PATH ?? join(root, 'auth'),
-    session: process.env.PERSONAL_AGENT_SESSION_PATH ?? join(root, 'session'),
-    cache: process.env.PERSONAL_AGENT_CACHE_PATH ?? join(root, 'cache'),
+    auth: process.env.NEON_PILOT_AUTH_PATH ?? join(root, 'auth'),
+    session: process.env.NEON_PILOT_SESSION_PATH ?? join(root, 'session'),
+    cache: process.env.NEON_PILOT_CACHE_PATH ?? join(root, 'cache'),
   };
 }
 
@@ -373,9 +373,9 @@ export function validateStatePathsOutsideRepo(paths: RuntimeStatePaths, repoRoot
   if (violations.length > 0) {
     throw new Error(
       `Runtime state paths must be outside repository:\n${violations.join('\n')}\n\n` +
-        `Set PERSONAL_AGENT_STATE_ROOT to a directory outside the repo, or ` +
-        `configure individual paths via PERSONAL_AGENT_AUTH_PATH, ` +
-        `PERSONAL_AGENT_SESSION_PATH, PERSONAL_AGENT_CACHE_PATH`,
+        `Set NEON_PILOT_STATE_ROOT to a directory outside the repo, or ` +
+        `configure individual paths via NEON_PILOT_AUTH_PATH, ` +
+        `NEON_PILOT_SESSION_PATH, NEON_PILOT_CACHE_PATH`,
     );
   }
 }

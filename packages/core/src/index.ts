@@ -1,5 +1,5 @@
 /**
- * Core personal agent library.
+ * Core Neon Pilot core library.
  *
  * Runtime state management for auth, sessions, knowledge, and desktop resources.
  * Mutable data stays outside managed repository files.

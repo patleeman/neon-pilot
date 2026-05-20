@@ -1,4 +1,4 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import React, { lazy, Suspense } from 'react';
 
 const LazySkillsPage = lazy(async () => ({ default: (await import('./SkillsPage.js')).SkillsPage }));

@@ -1,5 +1,5 @@
-import { readKnowledgeState, syncKnowledgeState, updateKnowledgeState } from '@personal-agent/extensions/backend/knowledge';
-import { knowledgeVault } from '@personal-agent/extensions/backend/knowledgeVault';
+import { readKnowledgeState, syncKnowledgeState, updateKnowledgeState } from '@neon-pilot/extensions/backend/knowledge';
+import { knowledgeVault } from '@neon-pilot/extensions/backend/knowledgeVault';
 
 export async function readState() {
   return readKnowledgeState();

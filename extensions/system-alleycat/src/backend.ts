@@ -21,7 +21,7 @@ const DEFAULT_COMPAT_PORT = 3850;
 const SECRET_KEY = 'alleycat-secret-key';
 const STABLE_IDENTITY_FILE = 'kitty-litter-alleycat/identity.json';
 const SIDECAR_READY_TIMEOUT_MS = 30_000;
-const SIDECAR_PROCESS_NAME = 'pa-alleycat-host';
+const SIDECAR_PROCESS_NAME = 'neon-pilot-alleycat-host';
 
 export interface AlleycatPairPayload {
   v: 1;
@@ -61,7 +61,7 @@ export interface AlleycatStatus {
   note: string;
 }
 
-function personalAgentInfo(available: boolean): AlleycatAgentInfo {
+function neonPilotInfo(available: boolean): AlleycatAgentInfo {
   return {
     name: 'neon-pilot',
     display_name: 'Neon Pilot',
@@ -164,12 +164,12 @@ function rememberLog(line: string): void {
 }
 
 function sidecarBinaryPath(): { binary: string | null; searched: string[] } {
-  if (process.env.PERSONAL_AGENT_ALLEYCAT_SIDECAR) return { binary: process.env.PERSONAL_AGENT_ALLEYCAT_SIDECAR, searched: [] };
+  if (process.env.NEON_PILOT_ALLEYCAT_SIDECAR) return { binary: process.env.NEON_PILOT_ALLEYCAT_SIDECAR, searched: [] };
   const here = dirname(fileURLToPath(import.meta.url));
   const platform = process.platform === 'darwin' ? 'macos' : process.platform;
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
-  const binaryName = `pa-alleycat-host-${platform}-${arch}`;
-  const roots = [process.env.PERSONAL_AGENT_REPO_ROOT, process.cwd()].filter((root): root is string => Boolean(root));
+  const binaryName = `neon-pilot-alleycat-host-${platform}-${arch}`;
+  const roots = [process.env.NEON_PILOT_REPO_ROOT, process.cwd()].filter((root): root is string => Boolean(root));
   const candidates = [
     // Built/imported extension packages copy static binaries into dist/bin.
     join(here, 'bin', binaryName),
@@ -261,7 +261,7 @@ async function startSidecar(ctx: ExtensionBackendContext): Promise<void> {
   const { binary, searched } = sidecarBinaryPath();
   if (!binary) {
     rememberLog(`sidecar binary missing; searched: ${searched.join(', ')}`);
-    rememberLog('set PERSONAL_AGENT_ALLEYCAT_SIDECAR or rebuild/reimport the extension so dist/bin/pa-alleycat-host-* is packaged');
+    rememberLog('set NEON_PILOT_ALLEYCAT_SIDECAR or rebuild/reimport the extension so dist/bin/neon-pilot-alleycat-host-* is packaged');
     return;
   }
 
@@ -283,10 +283,10 @@ async function startSidecar(ctx: ExtensionBackendContext): Promise<void> {
 
   const env = {
     ...process.env,
-    PA_ALLEYCAT_TOKEN: token,
-    PA_ALLEYCAT_SECRET_KEY: secret,
-    PA_ALLEYCAT_JSONL_HOST: '127.0.0.1',
-    PA_ALLEYCAT_JSONL_PORT: String(codexServer.jsonlPort),
+    NEON_PILOT_ALLEYCAT_TOKEN: token,
+    NEON_PILOT_ALLEYCAT_SECRET_KEY: secret,
+    NEON_PILOT_ALLEYCAT_JSONL_HOST: '127.0.0.1',
+    NEON_PILOT_ALLEYCAT_JSONL_PORT: String(codexServer.jsonlPort),
     RUST_LOG: process.env.RUST_LOG ?? 'info',
   };
   const child = await ctx.shell.spawn({
@@ -325,7 +325,7 @@ async function startOnce(_input: unknown, ctx: ExtensionBackendContext): Promise
     const auth = codexAuth ?? createCodexAuth(ctx);
     codexAuth = auth;
     await auth.ensurePairing();
-    const port = Number(process.env.PERSONAL_AGENT_ALLEYCAT_COMPAT_PORT) || DEFAULT_COMPAT_PORT;
+    const port = Number(process.env.NEON_PILOT_ALLEYCAT_COMPAT_PORT) || DEFAULT_COMPAT_PORT;
     setCodexProtocolLogger(rememberLog);
     codexServer = await createCodexServer({ port, auth, ctx, bindAddress: '127.0.0.1', fallbackToEphemeralPortOnConflict: true });
     ctx.log.info('Neon Pilot Alleycat compatibility server started', { port: codexServer.port, jsonlPort: codexServer.jsonlPort });
@@ -394,7 +394,7 @@ export async function status(_input?: unknown, ctx?: ExtensionBackendContext): P
     running: Boolean(codexServer && sidecarPid),
     port: codexServer?.port ?? null,
     pairPayload: pairPayloadCache,
-    agents: [personalAgentInfo(Boolean(codexServer && sidecarPid))],
+    agents: [neonPilotInfo(Boolean(codexServer && sidecarPid))],
     implementation: sidecarPid ? 'iroh-sidecar' : 'codex-jsonrpc-compat',
     sidecarRunning: Boolean(sidecarPid),
     logs: sidecarLogs.slice(-50),

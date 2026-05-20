@@ -9,7 +9,7 @@ import { buildReferencedVaultFilesContext, listVaultFiles, resolveMentionedVault
 const createdDirs: string[] = [];
 
 function createVaultFixture(): string {
-  const root = join(tmpdir(), `personal-agent-vault-files-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const root = join(tmpdir(), `neon-pilot-vault-files-${Date.now()}-${Math.random().toString(16).slice(2)}`);
   createdDirs.push(root);
   mkdirSync(join(root, 'notes'), { recursive: true });
   mkdirSync(join(root, '_profiles', 'datadog'), { recursive: true });

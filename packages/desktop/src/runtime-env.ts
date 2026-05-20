@@ -6,13 +6,13 @@ import {
   getDefaultStateRoot,
   getPiAgentRuntimeDir,
   readPortOverride,
-  resolvePersonalAgentRuntimeChannel,
-  resolvePersonalAgentRuntimeChannelConfig,
-} from '@personal-agent/core';
+  resolveNeonPilotRuntimeChannel,
+  resolveNeonPilotRuntimeChannelConfig,
+} from '@neon-pilot/core';
 
 function resolveDefaultStateRootForEnv(env: NodeJS.ProcessEnv): string {
   const xdgStateHome = env.XDG_STATE_HOME?.trim();
-  return xdgStateHome ? join(xdgStateHome, 'personal-agent') : getDefaultStateRoot();
+  return xdgStateHome ? join(xdgStateHome, 'neon-pilot') : getDefaultStateRoot();
 }
 
 function resolveVariantStateRoot(defaultStateRoot: string, suffix: string): string {
@@ -31,14 +31,14 @@ export function resolveDesktopRuntimeEnvironmentOverrides(
 ): {
   stateRoot?: string;
 } {
-  const channelConfig = resolvePersonalAgentRuntimeChannelConfig(env, options);
+  const channelConfig = resolveNeonPilotRuntimeChannelConfig(env, options);
 
   if (!channelConfig.stateRootSuffix) {
     return {};
   }
 
   return {
-    ...(env.PERSONAL_AGENT_STATE_ROOT?.trim()
+    ...(env.NEON_PILOT_STATE_ROOT?.trim()
       ? {}
       : {
           stateRoot: resolveVariantStateRoot(options.defaultStateRoot ?? resolveDefaultStateRootForEnv(env), channelConfig.stateRootSuffix),
@@ -98,12 +98,12 @@ function writeJsonRecord(filePath: string, record: Record<string, unknown>): voi
 }
 
 export function seedTestingRuntimeState(env: NodeJS.ProcessEnv = process.env, options: DesktopRuntimeEnvironmentOptions = {}): void {
-  const channel = resolvePersonalAgentRuntimeChannel(env, options);
+  const channel = resolveNeonPilotRuntimeChannel(env, options);
   if (channel !== 'rc' && channel !== 'dev' && channel !== 'test') {
     return;
   }
 
-  const variantStateRoot = env.PERSONAL_AGENT_STATE_ROOT?.trim();
+  const variantStateRoot = env.NEON_PILOT_STATE_ROOT?.trim();
   if (!variantStateRoot) {
     return;
   }
@@ -125,28 +125,28 @@ export function applyDesktopRuntimeEnvironmentOverrides(
   const overrides = resolveDesktopRuntimeEnvironmentOverrides(env, options);
 
   if (overrides.stateRoot) {
-    env.PERSONAL_AGENT_STATE_ROOT = overrides.stateRoot;
+    env.NEON_PILOT_STATE_ROOT = overrides.stateRoot;
   }
 
-  const channelConfig = resolvePersonalAgentRuntimeChannelConfig(env, options);
-  const codexPort = readPortOverride(env.PERSONAL_AGENT_CODEX_PORT) ?? channelConfig.codexPort;
-  const companionPort = readPortOverride(env.PERSONAL_AGENT_COMPANION_PORT) ?? channelConfig.companionPort;
+  const channelConfig = resolveNeonPilotRuntimeChannelConfig(env, options);
+  const codexPort = readPortOverride(env.NEON_PILOT_CODEX_PORT) ?? channelConfig.codexPort;
+  const companionPort = readPortOverride(env.NEON_PILOT_COMPANION_PORT) ?? channelConfig.companionPort;
   if (!env.CODEX_PORT && codexPort > 0) {
     env.CODEX_PORT = String(codexPort);
   }
-  if (!env.PERSONAL_AGENT_COMPANION_PORT && companionPort >= 0) {
-    env.PERSONAL_AGENT_COMPANION_PORT = String(companionPort);
+  if (!env.NEON_PILOT_COMPANION_PORT && companionPort >= 0) {
+    env.NEON_PILOT_COMPANION_PORT = String(companionPort);
   }
-  env.PERSONAL_AGENT_RUNTIME_CHANNEL = channelConfig.channel;
+  env.NEON_PILOT_RUNTIME_CHANNEL = channelConfig.channel;
 
   if (
     (channelConfig.channel === 'dev' || channelConfig.channel === 'test') &&
-    !env.PERSONAL_AGENT_DAEMON_NAMESPACE?.trim() &&
-    !env.PERSONAL_AGENT_DAEMON_SOCKET_PATH?.trim()
+    !env.NEON_PILOT_DAEMON_NAMESPACE?.trim() &&
+    !env.NEON_PILOT_DAEMON_SOCKET_PATH?.trim()
   ) {
     // Use only the first 8 hex chars of the UUID to keep the socket path within
     // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
-    env.PERSONAL_AGENT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID().slice(0, 8)}`;
+    env.NEON_PILOT_DAEMON_NAMESPACE = `${channelConfig.channel}-${randomUUID().slice(0, 8)}`;
   }
 
   seedTestingRuntimeState(env, options);

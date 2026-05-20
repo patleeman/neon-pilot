@@ -45,7 +45,7 @@ describe('getDefaultStateRoot', () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     delete process.env.XDG_STATE_HOME;
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
   });
 
   afterEach(() => {
@@ -54,12 +54,12 @@ describe('getDefaultStateRoot', () => {
 
   it('should use XDG_STATE_HOME when set', () => {
     process.env.XDG_STATE_HOME = '/custom/state';
-    expect(getDefaultStateRoot()).toBe('/custom/state/personal-agent');
+    expect(getDefaultStateRoot()).toBe('/custom/state/neon-pilot');
   });
 
-  it('should fall back to ~/.local/state/personal-agent', () => {
+  it('should fall back to ~/.local/state/neon-pilot', () => {
     delete process.env.XDG_STATE_HOME;
-    expect(getDefaultStateRoot()).toBe(join(homedir(), '.local', 'state', 'personal-agent'));
+    expect(getDefaultStateRoot()).toBe(join(homedir(), '.local', 'state', 'neon-pilot'));
   });
 });
 
@@ -68,7 +68,7 @@ describe('getStateRoot', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
     delete process.env.XDG_STATE_HOME;
   });
 
@@ -76,13 +76,13 @@ describe('getStateRoot', () => {
     process.env = originalEnv;
   });
 
-  it('should return PERSONAL_AGENT_STATE_ROOT when set', () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = '/custom/runtime/state';
+  it('should return NEON_PILOT_STATE_ROOT when set', () => {
+    process.env.NEON_PILOT_STATE_ROOT = '/custom/runtime/state';
     expect(getStateRoot()).toBe('/custom/runtime/state');
   });
 
   it('should fall back to default state root', () => {
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
     expect(getStateRoot()).toBe(getDefaultStateRoot());
   });
 });
@@ -93,7 +93,7 @@ describe('resolveNeutralChatCwd', () => {
     try {
       const cwd = resolveNeutralChatCwd('shared/profile', stateRoot);
 
-      expect(cwd).toBe(join(stateRoot, 'pi-agent-runtime', 'chat-workspaces', 'shared-profile'));
+      expect(cwd).toBe(join(stateRoot, 'neon-pilot-runtime', 'chat-workspaces', 'shared-profile'));
       expect(existsSync(cwd)).toBe(true);
     } finally {
       rmSync(stateRoot, { recursive: true, force: true });
@@ -106,12 +106,12 @@ describe('profile and config path helpers', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
-    delete process.env.PERSONAL_AGENT_CONFIG_ROOT;
-    delete process.env.PERSONAL_AGENT_CONFIG_FILE;
-    delete process.env.PERSONAL_AGENT_PROFILES_ROOT;
-    delete process.env.PERSONAL_AGENT_LOCAL_PROFILE_DIR;
-    delete process.env.PERSONAL_AGENT_VAULT_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
+    delete process.env.NEON_PILOT_CONFIG_ROOT;
+    delete process.env.NEON_PILOT_CONFIG_FILE;
+    delete process.env.NEON_PILOT_PROFILES_ROOT;
+    delete process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+    delete process.env.NEON_PILOT_VAULT_ROOT;
   });
 
   afterEach(() => {
@@ -119,36 +119,36 @@ describe('profile and config path helpers', () => {
   });
 
   it('derives runtime state paths from state root and durable knowledge paths from the vault root', () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = '/runtime/state';
+    process.env.NEON_PILOT_STATE_ROOT = '/runtime/state';
 
     expect(getConfigRoot()).toBe('/runtime/state/config');
-    expect(getDefaultVaultRoot()).toBe(join(homedir(), 'Documents', 'personal-agent'));
+    expect(getDefaultVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
     expect(getKnowledgeBaseStateDir()).toBe('/runtime/state/knowledge-base');
     expect(getManagedKnowledgeBaseRoot()).toBe('/runtime/state/knowledge-base/repo');
-    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'personal-agent'));
+    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
     expect(getProfilesRoot()).toBe('/runtime/state/config/profiles');
     expect(getSyncRoot()).toBe('/runtime/state/sync');
     expect(getDurablePiAgentDir()).toBe('/runtime/state/sync/pi-agent');
     expect(getDurableSessionsDir()).toBe('/runtime/state/sync/pi-agent/sessions');
     expect(getDurableConversationAttentionDir()).toBe('/runtime/state/sync/pi-agent/state/conversation-attention');
     expect(getDurableProfilesDir()).toBe('/runtime/state/config/profiles');
-    expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'personal-agent', 'AGENTS.md'));
-    expect(getDurableSettingsDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'settings'));
-    expect(getDurableModelsDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'models'));
-    expect(getDurableSkillsDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'skills'));
-    expect(getDurableNodesDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'nodes'));
-    expect(getDurableNotesDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'notes'));
-    expect(getDurableMemoryDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'notes'));
+    expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'AGENTS.md'));
+    expect(getDurableSettingsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'settings'));
+    expect(getDurableModelsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'models'));
+    expect(getDurableSkillsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'skills'));
+    expect(getDurableNodesDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'nodes'));
+    expect(getDurableNotesDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'notes'));
+    expect(getDurableMemoryDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'notes'));
     expect(getDurableTasksDir()).toBe('/runtime/state/sync/tasks');
-    expect(getDurableProjectsDir()).toBe(join(homedir(), 'Documents', 'personal-agent', 'projects'));
+    expect(getDurableProjectsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'projects'));
     expect(getLocalProfileDir()).toBe('/runtime/state/config/local');
   });
 
   it('honors explicit overrides', () => {
-    process.env.PERSONAL_AGENT_CONFIG_ROOT = '/custom/config';
-    process.env.PERSONAL_AGENT_PROFILES_ROOT = '/custom/profiles';
-    process.env.PERSONAL_AGENT_LOCAL_PROFILE_DIR = '/custom/local';
-    process.env.PERSONAL_AGENT_VAULT_ROOT = '/custom/vault';
+    process.env.NEON_PILOT_CONFIG_ROOT = '/custom/config';
+    process.env.NEON_PILOT_PROFILES_ROOT = '/custom/profiles';
+    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = '/custom/local';
+    process.env.NEON_PILOT_VAULT_ROOT = '/custom/vault';
 
     expect(getConfigRoot()).toBe('/custom/config');
     expect(getVaultRoot()).toBe('/custom/vault');
@@ -162,11 +162,11 @@ describe('profile and config path helpers', () => {
   });
 
   it('prefers the managed knowledge base root when a knowledge base repo is configured', () => {
-    const configDir = mkdtempSync(join(tmpdir(), 'personal-agent-config-'));
-    const stateRoot = mkdtempSync(join(tmpdir(), 'personal-agent-state-'));
+    const configDir = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
     writeFileSync(join(configDir, 'config.json'), JSON.stringify({ knowledgeBaseRepoUrl: 'https://github.com/user/kb.git' }));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    process.env.PERSONAL_AGENT_CONFIG_FILE = join(configDir, 'config.json');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
 
     expect(getVaultRoot()).toBe(join(stateRoot, 'knowledge-base', 'repo'));
 
@@ -175,11 +175,11 @@ describe('profile and config path helpers', () => {
   });
 
   it('reads vault root from machine config when no env override is set', () => {
-    const configDir = mkdtempSync(join(tmpdir(), 'personal-agent-config-'));
-    const stateRoot = mkdtempSync(join(tmpdir(), 'personal-agent-state-'));
+    const configDir = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
     writeFileSync(join(configDir, 'config.json'), JSON.stringify({ vaultRoot: '~/Documents/custom-agent-vault' }));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    process.env.PERSONAL_AGENT_CONFIG_FILE = join(configDir, 'config.json');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
 
     expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'custom-agent-vault'));
     expect(getDurableProfilesDir()).toBe(join(stateRoot, 'config', 'profiles'));
@@ -190,12 +190,12 @@ describe('profile and config path helpers', () => {
   });
 
   it('keeps vault directory fallbacks for skills and tasks while profiles stay machine-local', () => {
-    const stateRoot = mkdtempSync(join(tmpdir(), 'personal-agent-state-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
     mkdirSync(join(stateRoot, 'sync', 'skills'), { recursive: true });
     mkdirSync(join(stateRoot, 'sync', 'tasks'), { recursive: true });
 
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    process.env.PERSONAL_AGENT_VAULT_ROOT = join(stateRoot, 'sync');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_VAULT_ROOT = join(stateRoot, 'sync');
 
     expect(getProfilesRoot()).toBe(join(stateRoot, 'config', 'profiles'));
     expect(getDurableProfilesDir()).toBe(join(stateRoot, 'config', 'profiles'));
@@ -208,11 +208,11 @@ describe('profile and config path helpers', () => {
   });
 
   it('expands ~ in path overrides', () => {
-    process.env.PERSONAL_AGENT_CONFIG_ROOT = '~/pa-config';
-    process.env.PERSONAL_AGENT_VAULT_ROOT = '~/Documents/personal-agent';
+    process.env.NEON_PILOT_CONFIG_ROOT = '~/pa-config';
+    process.env.NEON_PILOT_VAULT_ROOT = '~/Documents/neon-pilot';
 
     expect(getConfigRoot()).toBe(join(homedir(), 'pa-config'));
-    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'personal-agent'));
+    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
   });
 });
 
@@ -221,10 +221,10 @@ describe('resolveStatePaths', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
-    delete process.env.PERSONAL_AGENT_AUTH_PATH;
-    delete process.env.PERSONAL_AGENT_SESSION_PATH;
-    delete process.env.PERSONAL_AGENT_CACHE_PATH;
+    delete process.env.NEON_PILOT_STATE_ROOT;
+    delete process.env.NEON_PILOT_AUTH_PATH;
+    delete process.env.NEON_PILOT_SESSION_PATH;
+    delete process.env.NEON_PILOT_CACHE_PATH;
   });
 
   afterEach(() => {
@@ -241,8 +241,8 @@ describe('resolveStatePaths', () => {
     expect(paths.cache).toBe(join(root, 'cache'));
   });
 
-  it('should use PERSONAL_AGENT_STATE_ROOT for base path', () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = '/runtime/state';
+  it('should use NEON_PILOT_STATE_ROOT for base path', () => {
+    process.env.NEON_PILOT_STATE_ROOT = '/runtime/state';
     const paths = resolveStatePaths();
 
     expect(paths.root).toBe('/runtime/state');
@@ -252,9 +252,9 @@ describe('resolveStatePaths', () => {
   });
 
   it('should allow individual path overrides', () => {
-    process.env.PERSONAL_AGENT_AUTH_PATH = '/secure/auth';
-    process.env.PERSONAL_AGENT_SESSION_PATH = '/tmp/sessions';
-    process.env.PERSONAL_AGENT_CACHE_PATH = '/var/cache/pa';
+    process.env.NEON_PILOT_AUTH_PATH = '/secure/auth';
+    process.env.NEON_PILOT_SESSION_PATH = '/tmp/sessions';
+    process.env.NEON_PILOT_CACHE_PATH = '/var/cache/pa';
 
     const paths = resolveStatePaths();
 
@@ -264,8 +264,8 @@ describe('resolveStatePaths', () => {
   });
 
   it('should combine root override with individual overrides', () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = '/runtime/state';
-    process.env.PERSONAL_AGENT_AUTH_PATH = '/secure/auth';
+    process.env.NEON_PILOT_STATE_ROOT = '/runtime/state';
+    process.env.NEON_PILOT_AUTH_PATH = '/secure/auth';
 
     const paths = resolveStatePaths();
 
@@ -410,6 +410,6 @@ describe('validateStatePathsOutsideRepo', () => {
     expect(error!.message).toContain('Auth path');
     expect(error!.message).toContain('Session path');
     expect(error!.message).toContain('Cache path');
-    expect(error!.message).toContain('PERSONAL_AGENT_STATE_ROOT');
+    expect(error!.message).toContain('NEON_PILOT_STATE_ROOT');
   });
 });

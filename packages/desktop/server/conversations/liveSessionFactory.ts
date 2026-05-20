@@ -8,7 +8,7 @@ import {
   type SessionManager,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
-import { resolveChildProcessEnv } from '@personal-agent/core';
+import { resolveChildProcessEnv } from '@neon-pilot/core';
 
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
@@ -60,8 +60,8 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
       spawnHook: (context) => {
         const env = resolveChildProcessEnv(
           {
-            PERSONAL_AGENT_SOURCE_CONVERSATION_ID: conversationId,
-            ...(sessionFile ? { PERSONAL_AGENT_SOURCE_SESSION_FILE: sessionFile } : {}),
+            NEON_PILOT_SOURCE_CONVERSATION_ID: conversationId,
+            ...(sessionFile ? { NEON_PILOT_SOURCE_SESSION_FILE: sessionFile } : {}),
           },
           context.env,
         );

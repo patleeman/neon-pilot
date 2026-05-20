@@ -9,4 +9,4 @@ export {
   listMcpCatalog,
   readBundledSkillMcpManifests,
   readMcpConfigDocument,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 import { app } from 'electron';
 
 export interface DesktopRuntimePaths {
@@ -42,7 +42,7 @@ function resolveDevRepoRoot(context: DesktopRuntimePathContext): string {
   const cwd = context.cwd ?? process.cwd();
   const appPath = context.appRoot?.trim();
   const candidates = [
-    env.PERSONAL_AGENT_REPO_ROOT,
+    env.NEON_PILOT_REPO_ROOT,
     resolve(currentDir, '..', '..', '..'),
     appPath ? resolve(appPath, '..', '..', '..', '..', '..') : undefined,
     resolve(cwd),
@@ -102,14 +102,14 @@ export function resolveDesktopRuntimePathsForContext(context: DesktopRuntimePath
 
   mkdirSync(desktopLogsDir, { recursive: true, mode: 0o700 });
 
-  const nodeCommand = isPackaged ? execPath : env.PERSONAL_AGENT_NODE_PATH?.trim() || 'node';
+  const nodeCommand = isPackaged ? execPath : env.NEON_PILOT_NODE_PATH?.trim() || 'node';
   const desktopNativeModulesDir = isPackaged
     ? resolve(repoRoot, 'app.asar.unpacked')
-    : env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR?.trim() || undefined;
+    : env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR?.trim() || undefined;
 
   const daemonEntryFile = (() => {
     const candidates = isPackaged
-      ? [resolve(appRoot, 'node_modules', '@personal-agent', 'daemon', 'dist', 'index.js')]
+      ? [resolve(appRoot, 'node_modules', '@neon-pilot', 'daemon', 'dist', 'index.js')]
       : [resolve(repoRoot, 'packages', 'desktop', 'server', 'daemon', 'package.json')];
     for (const candidate of candidates) {
       if (existsSync(candidate)) {
@@ -162,7 +162,7 @@ export function resolveDesktopRuntimePaths(): DesktopRuntimePaths {
     return cachedDesktopRuntimePaths;
   }
 
-  const forceDevBundle = process.env.PERSONAL_AGENT_DESKTOP_DEV_BUNDLE === '1';
+  const forceDevBundle = process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE === '1';
 
   cachedDesktopRuntimePaths = resolveDesktopRuntimePathsForContext({
     currentDir: dirname(fileURLToPath(import.meta.url)),

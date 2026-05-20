@@ -6,8 +6,8 @@ const { runAgentTaskMock, getImageProbeAttachmentsMock, getImageProbeAttachments
   getImageProbeAttachmentsByIdMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
-vi.mock('@personal-agent/extensions/backend/images', () => ({
+vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
+vi.mock('@neon-pilot/extensions/backend/images', () => ({
   getImageProbeAttachments: getImageProbeAttachmentsMock,
   getImageProbeAttachmentsById: getImageProbeAttachmentsByIdMock,
 }));

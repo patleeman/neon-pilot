@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 import { buildInstructionPlan } from '../../../packages/desktop/server/prompt-assembly/instructionInventory.js';
 import { buildPromptAssemblyPlanAsync } from '../../../packages/desktop/server/prompt-assembly/promptAssembly.js';

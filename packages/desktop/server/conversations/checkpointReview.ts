@@ -5,7 +5,7 @@ import {
   type ConversationCommitCheckpointRecord,
   getConversationCommitCheckpoint,
   listConversationCommitCheckpoints,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import { readSessionMeta } from './sessions.js';
 

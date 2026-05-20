@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 
-import { resolveRuntimeResources } from '@personal-agent/core';
+import { resolveRuntimeResources } from '@neon-pilot/core';
 
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';

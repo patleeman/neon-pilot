@@ -582,7 +582,7 @@
 - Fix llama-cpp: use ctx.shell.exec instead of node:child_process.spawn (bypasses forbidden import)
 - Fix llama-cpp experimental extension: network permission format, rebuild extension dist bundles
 - Remove getPiAgentRuntimeDir from images backend API, add to runtime module as getRuntimeDir; add better-sqlite3 to forbidden imports
-- Enforce extension API boundary at build time: add @personal-agent/core and @personal-agent/daemon to forbidden backend imports
+- Enforce extension API boundary at build time: add @neon-pilot/core and @neon-pilot/daemon to forbidden backend imports
 - Decouple extension discovery: add extensionEntries/extensionDirs to ResolveResourceOptions, allow host to inject extension entries into resource resolution
 - Remove hardcoded extension IDs from desktop UI: add toolSlot to view contributions, use slot-based lookups in Layout/Sidebar/workbenchNav/ConversationPage
 - Fix settings page
@@ -1036,7 +1036,7 @@
 - fix: bump testing codex port to 3846, 3844 already taken by production
 - fix: build missing artifacts and resolve port conflict for dev app
 - fix notification center UI: compact sizing, visible backgrounds, reposition toasts to bottom-right
-- fix: set PERSONAL_AGENT_REPO_ROOT in dev app launch env
+- fix: set NEON_PILOT_REPO_ROOT in dev app launch env
 - Fix daemon entry file path after daemon→desktop collapse
 - chore: checkpoint all uncommitted changes across multiple conversations
 - Fix duplicate createRequire declaration in Electron main process

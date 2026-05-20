@@ -1,5 +1,5 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@personal-agent/extensions/ui';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type RuntimeUpdateStatus = {

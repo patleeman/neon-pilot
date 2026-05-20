@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getProfilesRoot, getStateRoot, writeMergedMcpConfigFile } from '@personal-agent/core';
-import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@personal-agent/core';
+import { getProfilesRoot, getStateRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
+import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
@@ -44,14 +44,14 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
-    process.env.PERSONAL_AGENT_ACTIVE_PROFILE = runtimeScope;
-    process.env.PERSONAL_AGENT_PROFILE = runtimeScope;
+    process.env.NEON_PILOT_ACTIVE_PROFILE = runtimeScope;
+    process.env.NEON_PILOT_PROFILE = runtimeScope;
     if (existsSync(resolve(repoRoot, 'packages'))) {
-      process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
-      delete process.env.PERSONAL_AGENT_RESOURCES_ROOT;
+      process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+      delete process.env.NEON_PILOT_RESOURCES_ROOT;
     } else {
-      delete process.env.PERSONAL_AGENT_REPO_ROOT;
-      process.env.PERSONAL_AGENT_RESOURCES_ROOT = repoRoot;
+      delete process.env.NEON_PILOT_REPO_ROOT;
+      process.env.NEON_PILOT_RESOURCES_ROOT = repoRoot;
     }
 
     if (mcpConfigPath) {
@@ -336,7 +336,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       repoRoot,
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
-    const runtimeAgentDir = mkdtempSync(join(tmpdir(), 'pa-web-runtime-inspect-'));
+    const runtimeAgentDir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-runtime-inspect-'));
     materializeRuntimeResourcesToAgentDir(resolved, runtimeAgentDir);
 
     return run(runtimeAgentDir).finally(() => {

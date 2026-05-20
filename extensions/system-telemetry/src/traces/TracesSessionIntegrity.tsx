@@ -5,7 +5,7 @@
  * instead of append-only) along with the old/new file metadata.
  */
 
-import type { AppTelemetryEventRow } from '@personal-agent/extensions/data';
+import type { AppTelemetryEventRow } from '@neon-pilot/extensions/data';
 
 interface Props {
   events: AppTelemetryEventRow[];

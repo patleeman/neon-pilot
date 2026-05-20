@@ -38,7 +38,7 @@ function resolveAppTelemetryLogDay(ts: string): string {
 }
 
 function resolveMaxLogFileBytes(): number {
-  const raw = process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES;
+  const raw = process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES;
   if (!raw) return DEFAULT_MAX_LOG_FILE_BYTES;
   const parsed = Number.parseInt(raw, 10);
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_MAX_LOG_FILE_BYTES;
@@ -70,7 +70,7 @@ export function resolveAppTelemetryLogPath(ts: string, stateRoot?: string, lineB
 }
 
 function resolveRetentionDays(): number {
-  const raw = process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_RETENTION_DAYS;
+  const raw = process.env.NEON_PILOT_APP_TELEMETRY_LOG_RETENTION_DAYS;
   if (!raw) return DEFAULT_RETENTION_DAYS;
   const parsed = Number.parseInt(raw, 10);
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_RETENTION_DAYS;

@@ -12,32 +12,32 @@ import { closeTraceDbs, maintainTraceDb, writeTraceStats } from './trace-db.js';
 
 describe('app-telemetry-db', () => {
   const testDir = join(tmpdir(), `app-telemetry-db-test-${randomUUID()}`);
-  const originalRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
-  const originalTelemetryMaxEvents = process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS;
-  const originalTelemetryMaxBytes = process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES;
+  const originalRoot = process.env.NEON_PILOT_STATE_ROOT;
+  const originalTelemetryMaxEvents = process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS;
+  const originalTelemetryMaxBytes = process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES;
 
   beforeAll(() => {
     if (!existsSync(testDir)) mkdirSync(testDir, { recursive: true });
-    process.env.PERSONAL_AGENT_STATE_ROOT = testDir;
+    process.env.NEON_PILOT_STATE_ROOT = testDir;
   });
 
   afterAll(() => {
     closeAppTelemetryDbs();
     closeTraceDbs();
     if (originalRoot) {
-      process.env.PERSONAL_AGENT_STATE_ROOT = originalRoot;
+      process.env.NEON_PILOT_STATE_ROOT = originalRoot;
     } else {
-      delete process.env.PERSONAL_AGENT_STATE_ROOT;
+      delete process.env.NEON_PILOT_STATE_ROOT;
     }
     if (originalTelemetryMaxEvents) {
-      process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS = originalTelemetryMaxEvents;
+      process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS = originalTelemetryMaxEvents;
     } else {
-      delete process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS;
+      delete process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS;
     }
     if (originalTelemetryMaxBytes) {
-      process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES = originalTelemetryMaxBytes;
+      process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES = originalTelemetryMaxBytes;
     } else {
-      delete process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES;
+      delete process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES;
     }
     rmSync(testDir, { recursive: true, force: true });
   });
@@ -45,8 +45,8 @@ describe('app-telemetry-db', () => {
   beforeEach(() => {
     closeAppTelemetryDbs();
     closeTraceDbs();
-    delete process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS;
-    delete process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES;
+    delete process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS;
+    delete process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES;
     rmSync(join(testDir, 'pi-agent'), { recursive: true, force: true });
     rmSync(join(testDir, 'observability'), { recursive: true, force: true });
     rmSync(join(testDir, 'logs'), { recursive: true, force: true });
@@ -101,7 +101,7 @@ describe('app-telemetry-db', () => {
   });
 
   it('rotates telemetry log files by size', () => {
-    process.env.PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES = '260';
+    process.env.NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES = '260';
 
     writeAppTelemetryEvent({ source: 'server', category: 'api', name: 'first', metadata: { payload: 'x'.repeat(80) } });
     writeAppTelemetryEvent({ source: 'server', category: 'api', name: 'second', metadata: { payload: 'y'.repeat(80) } });
@@ -120,7 +120,7 @@ describe('app-telemetry-db', () => {
     for (let index = 0; index < 1250; index += 1) {
       writeAppTelemetryEvent({ source: 'server', category: 'test', name: `event-${index}` });
     }
-    process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS = '1000';
+    process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS = '1000';
 
     const appResult = maintainAppTelemetryDb(testDir);
     const traceResult = maintainTraceDb(testDir);
@@ -179,7 +179,7 @@ describe('app-telemetry-db', () => {
   });
 
   it('caps stored telemetry events', () => {
-    process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS = '1000';
+    process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS = '1000';
 
     for (let index = 0; index < 1250; index += 1) {
       writeAppTelemetryEvent({ source: 'server', category: 'test', name: `event-${index}` });

@@ -8,7 +8,7 @@ const { authStorageCreateMock, getPiAgentRuntimeDirMock, modelRegistryCreateMock
   modelRegistryCreateMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getPiAgentRuntimeDir: getPiAgentRuntimeDirMock,
 }));
 
@@ -37,11 +37,11 @@ describe('model registry helpers', () => {
       getAvailable: vi.fn(() => []),
       find: vi.fn(),
     };
-    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/pi-agent-runtime');
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
 
     expect(createRuntimeModelRegistry(authStorage as never)).toBe(registry);
-    expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/runtime/pi-agent-runtime/models.json');
+    expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/runtime/neon-pilot-runtime/models.json');
   });
 
   it('creates a registry beside the provided auth file', () => {
@@ -70,7 +70,7 @@ describe('model registry helpers', () => {
       ]),
       find: vi.fn(() => ({ id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 272_000 })),
     };
-    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/pi-agent-runtime');
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
 
     const created = createRuntimeModelRegistry(authStorage as never);
@@ -94,7 +94,7 @@ describe('model registry helpers', () => {
       getAvailable: vi.fn(() => [{ id: 'gpt-5.4', provider: 'openai-codex', contextWindow: Number.MAX_SAFE_INTEGER + 1 }]),
       find: vi.fn(() => ({ id: 'gpt-5.4', provider: 'openai-codex', contextWindow: Number.MAX_SAFE_INTEGER + 1 })),
     };
-    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/pi-agent-runtime');
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
 
     const created = createRuntimeModelRegistry(authStorage as never);

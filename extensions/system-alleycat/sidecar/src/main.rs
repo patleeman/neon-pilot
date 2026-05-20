@@ -188,20 +188,20 @@ async fn wait_for_dialable_endpoint(endpoint: &Endpoint) -> anyhow::Result<()> {
 }
 
 fn load_config() -> anyhow::Result<Config> {
-    let token = env::var("PA_ALLEYCAT_TOKEN").context("PA_ALLEYCAT_TOKEN is required")?;
+    let token = env::var("NEON_PILOT_ALLEYCAT_TOKEN").context("NEON_PILOT_ALLEYCAT_TOKEN is required")?;
     let secret =
-        env::var("PA_ALLEYCAT_SECRET_KEY").context("PA_ALLEYCAT_SECRET_KEY is required")?;
+        env::var("NEON_PILOT_ALLEYCAT_SECRET_KEY").context("NEON_PILOT_ALLEYCAT_SECRET_KEY is required")?;
     let secret_bytes = base64::engine::general_purpose::STANDARD
         .decode(secret.as_bytes())
         .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(secret.as_bytes()))
-        .context("decoding PA_ALLEYCAT_SECRET_KEY")?;
+        .context("decoding NEON_PILOT_ALLEYCAT_SECRET_KEY")?;
     let secret_key = SecretKey::try_from(secret_bytes.as_slice())
-        .map_err(|_| anyhow!("invalid PA_ALLEYCAT_SECRET_KEY"))?;
-    let jsonl_host = env::var("PA_ALLEYCAT_JSONL_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let jsonl_port = env::var("PA_ALLEYCAT_JSONL_PORT")
-        .context("PA_ALLEYCAT_JSONL_PORT is required")?
+        .map_err(|_| anyhow!("invalid NEON_PILOT_ALLEYCAT_SECRET_KEY"))?;
+    let jsonl_host = env::var("NEON_PILOT_ALLEYCAT_JSONL_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let jsonl_port = env::var("NEON_PILOT_ALLEYCAT_JSONL_PORT")
+        .context("NEON_PILOT_ALLEYCAT_JSONL_PORT is required")?
         .parse::<u16>()
-        .context("PA_ALLEYCAT_JSONL_PORT must be a TCP port")?;
+        .context("NEON_PILOT_ALLEYCAT_JSONL_PORT must be a TCP port")?;
     Ok(Config {
         token,
         secret_key,

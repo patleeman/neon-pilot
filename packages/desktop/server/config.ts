@@ -3,8 +3,8 @@ import {
   getMachineConfigFilePath,
   readMachineConfigSection,
   readPortOverride,
-  resolvePersonalAgentRuntimeChannelConfig,
-} from '@personal-agent/core';
+  resolveNeonPilotRuntimeChannelConfig,
+} from '@neon-pilot/core';
 import { homedir } from 'os';
 import { join, resolve } from 'path';
 
@@ -120,7 +120,7 @@ function readConfigOverride(path: string): Record<string, unknown> {
 }
 
 export function getDaemonConfigFilePath(): string {
-  const explicit = process.env.PERSONAL_AGENT_DAEMON_CONFIG;
+  const explicit = process.env.NEON_PILOT_DAEMON_CONFIG;
   if (explicit && explicit.trim().length > 0) {
     return resolve(expandHome(explicit.trim()));
   }
@@ -129,15 +129,15 @@ export function getDaemonConfigFilePath(): string {
 }
 
 export function getDefaultDaemonConfig(): DaemonConfig {
-  const channelConfig = resolvePersonalAgentRuntimeChannelConfig();
-  const companionPort = readPortOverride(process.env.PERSONAL_AGENT_COMPANION_PORT) ?? channelConfig.companionPort;
+  const channelConfig = resolveNeonPilotRuntimeChannelConfig();
+  const companionPort = readPortOverride(process.env.NEON_PILOT_COMPANION_PORT) ?? channelConfig.companionPort;
   return {
     logLevel: 'info',
     queue: {
       maxDepth: 1000,
     },
     ipc: {
-      socketPath: process.env.PERSONAL_AGENT_DAEMON_SOCKET_PATH,
+      socketPath: process.env.NEON_PILOT_DAEMON_SOCKET_PATH,
     },
     companion: {
       port: companionPort,

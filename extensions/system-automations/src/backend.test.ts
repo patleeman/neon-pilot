@@ -40,9 +40,9 @@ const backendAutomationMock = vi.hoisted(() => ({
   recordTelemetryEvent: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend', () => backendAutomationMock);
-vi.mock('@personal-agent/extensions/backend/automations', () => backendAutomationMock);
-vi.mock('@personal-agent/extensions/backend/runs', () => ({
+vi.mock('@neon-pilot/extensions/backend', () => backendAutomationMock);
+vi.mock('@neon-pilot/extensions/backend/automations', () => backendAutomationMock);
+vi.mock('@neon-pilot/extensions/backend/runs', () => ({
   getDurableRun: (...args: unknown[]) => mocks.getDurableRun(...args),
 }));
 

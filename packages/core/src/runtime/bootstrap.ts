@@ -149,7 +149,7 @@ function generateSuggestions(errors: BootstrapError[]): string {
 
   if (hasPermissionErrors) {
     suggestions.push('  - Check directory permissions or run with appropriate privileges');
-    suggestions.push('  - Set PERSONAL_AGENT_STATE_ROOT to a writable directory (e.g., /tmp/personal-agent for testing)');
+    suggestions.push('  - Set NEON_PILOT_STATE_ROOT to a writable directory (e.g., /tmp/neon-pilot for testing)');
   }
 
   if (hasCreationErrors) {
@@ -157,7 +157,7 @@ function generateSuggestions(errors: BootstrapError[]): string {
     suggestions.push('  - Check disk space and filesystem health');
   }
 
-  suggestions.push('  - Override individual paths: PERSONAL_AGENT_AUTH_PATH, PERSONAL_AGENT_SESSION_PATH, PERSONAL_AGENT_CACHE_PATH');
+  suggestions.push('  - Override individual paths: NEON_PILOT_AUTH_PATH, NEON_PILOT_SESSION_PATH, NEON_PILOT_CACHE_PATH');
 
   return suggestions.join('\n');
 }

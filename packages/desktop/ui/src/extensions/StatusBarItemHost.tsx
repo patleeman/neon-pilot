@@ -1,4 +1,4 @@
-import type { ExtensionStatusBarItemProps } from '@personal-agent/extensions';
+import type { ExtensionStatusBarItemProps } from '@neon-pilot/extensions';
 import { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';

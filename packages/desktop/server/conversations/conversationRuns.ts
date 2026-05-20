@@ -11,7 +11,7 @@ import {
   type WebLiveConversationPreludeMessage,
   type WebLiveConversationPromptImage,
   type WebLiveConversationRunState,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 export type {
   RecoverableWebLiveConversationRun,

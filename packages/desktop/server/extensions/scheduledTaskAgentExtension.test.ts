@@ -3,8 +3,8 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { getTaskCallbackBinding } from '@personal-agent/core';
-import { closeAutomationDbs, saveAutomationRuntimeStateMap } from '@personal-agent/daemon';
+import { getTaskCallbackBinding } from '@neon-pilot/core';
+import { closeAutomationDbs, saveAutomationRuntimeStateMap } from '@neon-pilot/daemon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createScheduledTaskAgentExtension } from '../../../../extensions/system-automations/src/scheduledTaskTool.js';
@@ -15,8 +15,8 @@ const { pingDaemonMock, startScheduledTaskRunMock } = vi.hoisted(() => ({
   startScheduledTaskRunMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/automations', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@personal-agent/extensions/backend/automations')>();
+vi.mock('@neon-pilot/extensions/backend/automations', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/extensions/backend/automations')>();
   return {
     ...actual,
     pingDaemon: pingDaemonMock,
@@ -71,7 +71,7 @@ function createToolContext(sessionFile = '') {
 }
 
 function writeSessionFile(conversationId: string): string {
-  const dir = createTempDir('pa-web-task-session-');
+  const dir = createTempDir('neon-pilot-web-task-session-');
   const sessionFile = join(dir, `${conversationId}.jsonl`);
   writeFileSync(
     sessionFile,
@@ -82,7 +82,7 @@ function writeSessionFile(conversationId: string): string {
 }
 
 beforeEach(() => {
-  process.env = { ...originalEnv, PERSONAL_AGENT_STATE_ROOT: createTempDir('pa-web-task-state-') };
+  process.env = { ...originalEnv, NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-task-state-') };
   pingDaemonMock.mockReset();
   startScheduledTaskRunMock.mockReset();
   pingDaemonMock.mockResolvedValue(true);

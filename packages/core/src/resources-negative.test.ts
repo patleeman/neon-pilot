@@ -22,10 +22,10 @@ function createTempDir(prefix: string): string {
 }
 
 function createTempRuntimeConfigRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'personal-agent-runtime-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-config-'));
   const runtimeConfigRoot = join(root, 'sync', 'profiles');
   mkdirSync(runtimeConfigRoot, { recursive: true });
-  process.env.PERSONAL_AGENT_VAULT_ROOT = join(root, 'sync');
+  process.env.NEON_PILOT_VAULT_ROOT = join(root, 'sync');
   tempDirs.push(root);
   return runtimeConfigRoot;
 }
@@ -43,12 +43,12 @@ afterEach(async () => {
 describe('resources negative tests', () => {
   describe('resolveRuntimeResources error cases', () => {
     it('throws on invalid runtime scope name with path traversal', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       expect(() => resolveRuntimeResources('../../../etc/passwd', { repoRoot: repo })).toThrow('Invalid runtime scope name');
     });
 
     it('resolves empty runtime scope names as shared when shared defaults exist', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 
@@ -57,7 +57,7 @@ describe('resources negative tests', () => {
     });
 
     it('resolves non-existent runtime scope names to shared', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 
@@ -66,9 +66,9 @@ describe('resources negative tests', () => {
     });
 
     it('handles a runtime scope with no durable resources but local overlay', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
-      const local = createTempDir('personal-agent-local-');
+      const local = createTempDir('neon-pilot-local-');
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
       writeFile(join(local, 'agent/AGENTS.md'), '# Local\n');
 
@@ -84,14 +84,14 @@ describe('resources negative tests', () => {
 
   describe('mergeJsonFiles error cases', () => {
     it('throws on non-existent file', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const nonExistentFile = join(repo, 'nonexistent.json');
 
       expect(() => mergeJsonFiles([nonExistentFile])).toThrow();
     });
 
     it('throws on malformed JSON', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const file = join(repo, 'malformed.json');
       writeFile(file, '{"broken":');
 
@@ -105,12 +105,12 @@ describe('resources negative tests', () => {
 
   describe('materializeRuntimeResourcesToAgentDir edge cases', () => {
     it('writes APPEND_SYSTEM with durable vault guidance even when no other system append content exists', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
-      const runtime = createTempDir('personal-agent-runtime-');
+      const runtime = createTempDir('neon-pilot-runtime-');
       const syncRoot = join(runtimeConfigRoot, '..');
 
-      process.env.PERSONAL_AGENT_VAULT_ROOT = syncRoot;
+      process.env.NEON_PILOT_VAULT_ROOT = syncRoot;
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 
       const resolved = resolveRuntimeResources('shared', {
@@ -126,9 +126,9 @@ describe('resources negative tests', () => {
     });
 
     it('handles runtime directory that does not exist', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
-      const runtime = join(createTempDir('personal-agent-parent-'), 'nested', 'runtime');
+      const runtime = join(createTempDir('neon-pilot-parent-'), 'nested', 'runtime');
 
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 
@@ -145,7 +145,7 @@ describe('resources negative tests', () => {
 
   describe('listRuntimeScopes edge cases', () => {
     it('always includes the shared runtime scope', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
 
       const profiles = listRuntimeScopes({ repoRoot: repo, runtimeConfigRoot });
@@ -153,7 +153,7 @@ describe('resources negative tests', () => {
     });
 
     it('ignores legacy runtime scope directories', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       mkdirSync(join(runtimeConfigRoot, 'incomplete'), { recursive: true });
 
@@ -162,7 +162,7 @@ describe('resources negative tests', () => {
     });
 
     it('does not list legacy runtime scope directories with special characters', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       mkdirSync(join(runtimeConfigRoot, 'test-profile_v2'), { recursive: true });
 
@@ -173,7 +173,7 @@ describe('resources negative tests', () => {
 
   describe('buildPiResourceArgs edge cases', () => {
     it('handles a runtime scope with no resource directories', () => {
-      const repo = createTempDir('personal-agent-resources-');
+      const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 

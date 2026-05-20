@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 
 const RESTART_LOCK_MAX_AGE_MS = 30 * 60 * 1000;
 
@@ -91,25 +91,25 @@ function buildRequestMessage(action: ApplicationCommand): string {
 
 function buildNotificationEnv(input: { action: ApplicationCommand; profile?: string; requestedAt: string }): Record<string, string> {
   const shared = {
-    PERSONAL_AGENT_OPERATIONAL_ACTIVITY_STATE_ROOT: join(getStateRoot(), 'daemon'),
+    NEON_PILOT_OPERATIONAL_ACTIVITY_STATE_ROOT: join(getStateRoot(), 'daemon'),
   };
 
   if (input.action === 'update') {
     return {
       ...shared,
-      PERSONAL_AGENT_UPDATE_NOTIFY_INBOX: '1',
-      PERSONAL_AGENT_UPDATE_NOTIFY_PROFILE: input.profile ?? '',
-      PERSONAL_AGENT_UPDATE_REQUESTED_AT: input.requestedAt,
+      NEON_PILOT_UPDATE_NOTIFY_INBOX: '1',
+      NEON_PILOT_UPDATE_NOTIFY_PROFILE: input.profile ?? '',
+      NEON_PILOT_UPDATE_REQUESTED_AT: input.requestedAt,
     };
   }
 
   if (input.action === 'restart') {
     return {
       ...shared,
-      PERSONAL_AGENT_RESTART_NOTIFY_SUCCESS_INBOX: '1',
-      PERSONAL_AGENT_RESTART_NOTIFY_FAILURE_INBOX: '1',
-      PERSONAL_AGENT_RESTART_NOTIFY_PROFILE: input.profile ?? '',
-      PERSONAL_AGENT_RESTART_REQUESTED_AT: input.requestedAt,
+      NEON_PILOT_RESTART_NOTIFY_SUCCESS_INBOX: '1',
+      NEON_PILOT_RESTART_NOTIFY_FAILURE_INBOX: '1',
+      NEON_PILOT_RESTART_NOTIFY_PROFILE: input.profile ?? '',
+      NEON_PILOT_RESTART_REQUESTED_AT: input.requestedAt,
     };
   }
 
@@ -206,7 +206,7 @@ function requestApplicationCommand(input: {
       stdio: ['ignore', logFd, logFd],
       env: {
         ...process.env,
-        PERSONAL_AGENT_REPO_ROOT: repoRoot,
+        NEON_PILOT_REPO_ROOT: repoRoot,
         ...buildNotificationEnv({
           action: input.action,
           profile,

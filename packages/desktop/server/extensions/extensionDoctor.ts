@@ -43,9 +43,9 @@ const forbiddenBackendSourceImports = new Set([
 ]);
 const forbiddenPackagedBackendPrefixes = [
   '@earendil-works/pi-coding-agent',
-  '@personal-agent/core',
-  '@personal-agent/daemon',
-  '@personal-agent/extensions/backend',
+  '@neon-pilot/core',
+  '@neon-pilot/daemon',
+  '@neon-pilot/extensions/backend',
   '@sinclair/typebox',
   'jsdom',
 ];

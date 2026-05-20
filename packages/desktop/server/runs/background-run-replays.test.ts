@@ -107,7 +107,7 @@ beforeEach(() => {
   const stateRoot = createTempDir('pa-run-replays-state-');
   process.env = {
     ...originalEnv,
-    PERSONAL_AGENT_STATE_ROOT: stateRoot,
+    NEON_PILOT_STATE_ROOT: stateRoot,
   };
 });
 

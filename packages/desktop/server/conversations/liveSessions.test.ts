@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { getDurableSessionsDir } from '@personal-agent/core';
+import { getDurableSessionsDir } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as conversationModelPreferences from './conversationModelPreferences.js';
@@ -4526,8 +4526,8 @@ describe('event translation', () => {
 
 describe('session directory resolution', () => {
   it('stores web-created sessions under cwd-specific subdirectories', () => {
-    expect(resolvePersistentSessionDir('/Users/patrick/workingdir/personal-agent')).toBe(
-      join(getDurableSessionsDir(), '--Users-patrick-workingdir-personal-agent--'),
+    expect(resolvePersistentSessionDir('/Users/patrick/workingdir/neon-pilot')).toBe(
+      join(getDurableSessionsDir(), '--Users-patrick-workingdir-neon-pilot--'),
     );
   });
 });

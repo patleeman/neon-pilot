@@ -19,19 +19,19 @@ function createDaemonSnapshot(input: {
     warnings: input.warnings ?? [],
     service: {
       platform: 'launchd',
-      identifier: 'personal-agent-daemon',
-      manifestPath: '/tmp/personal-agent-daemon.plist',
+      identifier: 'neon-pilot-daemon',
+      manifestPath: '/tmp/neon-pilot-daemon.plist',
       installed: input.installed ?? true,
       running: input.running,
       ...(input.serviceError ? { error: input.serviceError } : {}),
     },
     runtime: {
       running: input.running,
-      socketPath: '/tmp/personal-agentd.sock',
+      socketPath: '/tmp/neon-pilotd.sock',
       moduleCount: input.running ? 4 : 0,
     },
     log: {
-      path: '/tmp/personal-agentd.log',
+      path: '/tmp/neon-pilotd.log',
       lines: [],
     },
   };

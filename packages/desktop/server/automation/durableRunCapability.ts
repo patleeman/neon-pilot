@@ -1,4 +1,4 @@
-import { markDurableRunAttentionRead, markDurableRunAttentionUnread } from '@personal-agent/core';
+import { markDurableRunAttentionRead, markDurableRunAttentionUnread } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';

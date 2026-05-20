@@ -2,7 +2,7 @@
 
 Performance diagnostics expose lightweight renderer timing samples for debugging app jank without attaching a profiler first.
 
-The renderer stores recent samples on `window.__PA_APP_PERF__`. Set `localStorage.pa.debugPerf = '1'` and reload to also print samples to the console.
+The renderer stores recent samples on `window.__NEON_PILOT_APP_PERF__`. Set `localStorage.neonPilot.debugPerf = '1'` and reload to also print samples to the console.
 
 Conversation navigation records `conversationOpenSamples` with these phases:
 

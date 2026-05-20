@@ -25,7 +25,7 @@ function reasoningOptions(values: string[]) {
 }
 
 function toCodexModel(model: Record<string, unknown>, index: number) {
-  const id = String(model.id ?? model.model ?? 'personal-agent');
+  const id = String(model.id ?? model.model ?? 'neon-pilot');
   const displayName = String(model.name ?? model.displayName ?? id);
   const reasoningEfforts = reasoningOptions(stringArray(model.supportedReasoningEfforts ?? model.reasoningEfforts ?? model.thinkingLevels));
   const explicitDefault = typeof model.defaultReasoningEffort === 'string' ? normalizeReasoning(model.defaultReasoningEffort) : null;

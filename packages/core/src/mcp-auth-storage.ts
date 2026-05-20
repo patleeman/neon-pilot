@@ -22,8 +22,8 @@ function getLegacyMcpRemoteBaseDir(): string {
   return join(homedir(), '.mcp-auth');
 }
 
-function getPersonalAgentMcpBaseDir(): string {
-  const explicit = process.env.PERSONAL_AGENT_MCP_AUTH_DIR?.trim();
+function getNeonPilotMcpBaseDir(): string {
+  const explicit = process.env.NEON_PILOT_MCP_AUTH_DIR?.trim();
   if (explicit) {
     return resolve(explicit);
   }
@@ -32,7 +32,7 @@ function getPersonalAgentMcpBaseDir(): string {
 }
 
 export function getMcpAuthConfigDir(): string {
-  return join(getPersonalAgentMcpBaseDir(), MCP_AUTH_SCHEMA_VERSION);
+  return join(getNeonPilotMcpBaseDir(), MCP_AUTH_SCHEMA_VERSION);
 }
 
 function getLegacyConfigDirs(): string[] {

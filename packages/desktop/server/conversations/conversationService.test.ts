@@ -71,8 +71,8 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
   },
 }));
 
-vi.mock('@personal-agent/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@personal-agent/core')>();
+vi.mock('@neon-pilot/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/core')>();
   return {
     ...actual,
     ensureConversationAttentionBaselines: ensureConversationAttentionBaselinesMock,
@@ -87,7 +87,7 @@ vi.mock('@personal-agent/core', async (importOriginal) => {
   };
 });
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   loadDaemonConfig: loadDaemonConfigMock,
   resolveDaemonPaths: resolveDaemonPathsMock,
 }));

@@ -4,7 +4,7 @@ import {
   loadAttentionEventsState,
   saveAttentionEventsState,
   upsertAlert,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';

@@ -2,7 +2,7 @@
  * Tool Telemetry — Per-tool cards with sparklines
  */
 
-import type { TraceToolHealth } from '@personal-agent/extensions/data';
+import type { TraceToolHealth } from '@neon-pilot/extensions/data';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {

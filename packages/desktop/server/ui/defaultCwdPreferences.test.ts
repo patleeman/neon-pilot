@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-default-cwd-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-default-cwd-'));
   tempDirs.push(dir);
   return dir;
 }

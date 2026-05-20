@@ -11,10 +11,10 @@ describe('ConversationSavedHeader', () => {
     const html = renderToString(
       <ConversationSavedHeader
         title="Fix the top bar"
-        cwd="/tmp/personal-agent"
+        cwd="/tmp/neon-pilot"
         onTitleClick={() => {}}
         cwdEditing={false}
-        cwdDraft="/tmp/personal-agent"
+        cwdDraft="/tmp/neon-pilot"
         onCwdDraftChange={() => {}}
         onCancelEditingCwd={() => {}}
         onSaveCwd={() => {}}
@@ -29,9 +29,9 @@ describe('ConversationSavedHeader', () => {
     const html = renderToString(
       <ConversationSavedHeader
         title="Fix the top bar"
-        cwd="/tmp/personal-agent"
+        cwd="/tmp/neon-pilot"
         cwdEditing={false}
-        cwdDraft="/tmp/personal-agent"
+        cwdDraft="/tmp/neon-pilot"
         onCwdDraftChange={() => {}}
         onCancelEditingCwd={() => {}}
         onSaveCwd={() => {}}
@@ -39,7 +39,7 @@ describe('ConversationSavedHeader', () => {
     );
 
     expect(html).toContain('Fix the top bar');
-    expect(html).not.toContain('/tmp/personal-agent');
+    expect(html).not.toContain('/tmp/neon-pilot');
     expect(html).not.toContain('Choose a new working directory for this conversation');
     expect(html).not.toContain('Enter the working directory manually');
     expect(html).not.toContain('Running');
@@ -50,7 +50,7 @@ describe('ConversationSavedHeader', () => {
     const html = renderToString(
       <ConversationSavedHeader
         title="Fix the top bar"
-        cwd="/tmp/personal-agent"
+        cwd="/tmp/neon-pilot"
         cwdEditing
         cwdDraft="/tmp/other-repo"
         cwdError="Directory does not exist"

@@ -5,7 +5,7 @@ export type SystemPromptTemplateVariables = Record<
   string | number | boolean | null | undefined | Array<Record<string, string | undefined>>
 >;
 
-export const SYSTEM_PROMPT_TEMPLATE = `# Personal agent defaults
+export const SYSTEM_PROMPT_TEMPLATE = `# Neon Pilot defaults
 
 You are Patrick Lee's personal AI agent. Use the knowledge base, skills, notes, and project context to do the work the way Patrick would.
 

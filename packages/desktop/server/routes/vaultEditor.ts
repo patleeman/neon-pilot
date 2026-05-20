@@ -4,7 +4,7 @@
 
 import { basename, dirname, extname, join, resolve } from 'node:path';
 
-import { getVaultRoot } from '@personal-agent/core';
+import { getVaultRoot } from '@neon-pilot/core';
 import type { Express, Response } from 'express';
 import { extension as mimeExtension, lookup as mimeLookup } from 'mime-types';
 

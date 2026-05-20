@@ -13,8 +13,8 @@ vi.mock('./bootstrap.js', async () => {
   };
 });
 
-vi.mock('@personal-agent/core', async () => {
-  const actual = await vi.importActual<typeof import('@personal-agent/core')>('@personal-agent/core');
+vi.mock('@neon-pilot/core', async () => {
+  const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
   return {
     ...actual,
     startKnowledgeBaseSyncLoop: vi.fn(),
@@ -54,19 +54,19 @@ describe('desktop local API conversation actions', () => {
 
 describe('desktop local API extension routes', () => {
   const tempStateRoot = mkdtempSync(join(tmpdir(), 'pa-local-api-extensions-'));
-  const previousStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+  const previousStateRoot = process.env.NEON_PILOT_STATE_ROOT;
 
   afterAll(() => {
     if (previousStateRoot === undefined) {
-      delete process.env.PERSONAL_AGENT_STATE_ROOT;
+      delete process.env.NEON_PILOT_STATE_ROOT;
     } else {
-      process.env.PERSONAL_AGENT_STATE_ROOT = previousStateRoot;
+      process.env.NEON_PILOT_STATE_ROOT = previousStateRoot;
     }
     rmSync(tempStateRoot, { recursive: true, force: true });
   });
 
   it('dispatches wildcard extension bundle routes in the desktop local API', async () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = tempStateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
     const extensionRoot = join(tempStateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
@@ -88,19 +88,19 @@ describe('desktop local API extension routes', () => {
 
 describe('desktop local API vault routes', () => {
   const tempRoot = mkdtempSync(join(tmpdir(), 'pa-local-api-vault-'));
-  const previousVaultRoot = process.env.PERSONAL_AGENT_VAULT_ROOT;
+  const previousVaultRoot = process.env.NEON_PILOT_VAULT_ROOT;
 
   afterAll(() => {
     if (previousVaultRoot === undefined) {
-      delete process.env.PERSONAL_AGENT_VAULT_ROOT;
+      delete process.env.NEON_PILOT_VAULT_ROOT;
     } else {
-      process.env.PERSONAL_AGENT_VAULT_ROOT = previousVaultRoot;
+      process.env.NEON_PILOT_VAULT_ROOT = previousVaultRoot;
     }
     rmSync(tempRoot, { recursive: true, force: true });
   });
 
   it('registers vault routes and handles GET + PUT requests for the knowledge workspace', async () => {
-    process.env.PERSONAL_AGENT_VAULT_ROOT = tempRoot;
+    process.env.NEON_PILOT_VAULT_ROOT = tempRoot;
     mkdirSync(join(tempRoot, 'notes'), { recursive: true });
     mkdirSync(join(tempRoot, '_attachments'), { recursive: true });
     writeFileSync(join(tempRoot, 'notes', 'existing.md'), '# Existing\n', 'utf-8');
@@ -149,7 +149,7 @@ describe('desktop local API vault routes', () => {
   });
 
   it('deletes a vault folder recursively in one request', async () => {
-    process.env.PERSONAL_AGENT_VAULT_ROOT = tempRoot;
+    process.env.NEON_PILOT_VAULT_ROOT = tempRoot;
     const folderPath = join(tempRoot, 'delete-me');
     mkdirSync(join(folderPath, 'nested'), { recursive: true });
     writeFileSync(join(folderPath, 'nested', 'note.md'), '# Delete me\n', 'utf-8');

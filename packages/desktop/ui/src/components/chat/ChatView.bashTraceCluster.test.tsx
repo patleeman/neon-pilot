@@ -105,7 +105,7 @@ describe('ChatView bash trace clusters', () => {
       ts: '2026-05-13T10:56:49.000Z',
       tool: 'bash',
       input: { command: 'pwd' },
-      output: '/Users/patrick/workingdir/personal-agent',
+      output: '/Users/patrick/workingdir/neon-pilot',
       status: 'ok',
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 
@@ -123,7 +123,7 @@ describe('ChatView bash trace clusters', () => {
       ts: '2026-05-13T10:56:49.000Z',
       tool: 'bash',
       input: { command: 'pwd' },
-      output: '/Users/patrick/workingdir/personal-agent',
+      output: '/Users/patrick/workingdir/neon-pilot',
       status: 'ok',
     } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
 

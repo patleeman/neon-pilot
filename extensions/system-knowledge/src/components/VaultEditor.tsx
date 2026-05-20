@@ -1,4 +1,4 @@
-import type { VaultBacklink, VaultEntry } from '@personal-agent/extensions/data';
+import type { VaultBacklink, VaultEntry } from '@neon-pilot/extensions/data';
 import { Image } from '@tiptap/extension-image';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
@@ -107,7 +107,7 @@ function useAutosave(
       console.error('vault autosave failed', error);
       onError(error instanceof Error ? error.message : String(error));
       window.dispatchEvent(
-        new CustomEvent('pa-notification', {
+        new CustomEvent('neon-pilot-notification', {
           detail: {
             type: 'warning',
             message: 'Vault autosave failed',
@@ -574,7 +574,7 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
           } catch (err) {
             console.error('image upload failed', err);
             window.dispatchEvent(
-              new CustomEvent('pa-notification', {
+              new CustomEvent('neon-pilot-notification', {
                 detail: {
                   type: 'error',
                   message: 'Image upload failed',
@@ -604,7 +604,7 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
             } catch (err) {
               console.error('image upload failed', err);
               window.dispatchEvent(
-                new CustomEvent('pa-notification', {
+                new CustomEvent('neon-pilot-notification', {
                   detail: {
                     type: 'error',
                     message: 'Image upload failed',

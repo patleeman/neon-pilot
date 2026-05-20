@@ -1,6 +1,6 @@
 # SQLite Schema Migrations
 
-This doc describes the versioned schema migration framework in `@personal-agent/core` (`packages/core/src/sqlite-migrations.ts`).
+This doc describes the versioned schema migration framework in `@neon-pilot/core` (`packages/core/src/sqlite-migrations.ts`).
 
 ## Why
 
@@ -61,7 +61,7 @@ When a parent table is renamed, SQLite **automatically rewrites** FK references 
 ### Defining migrations
 
 ```typescript
-import { applyMigrations, type Migration } from '@personal-agent/core';
+import { applyMigrations, type Migration } from '@neon-pilot/core';
 
 const MY_MIGRATIONS: Migration[] = [
   {
@@ -152,14 +152,14 @@ rm -f /path/to/runtime.db-wal /path/to/runtime.db-shm
 Or programmatically:
 
 ```typescript
-import { restoreDbBackup } from '@personal-agent/core';
+import { restoreDbBackup } from '@neon-pilot/core';
 restoreDbBackup('/path/to/runtime.db', '/path/to/.backups/runtime.db.<timestamp>.backup');
 ```
 
 ### Using migrateWithBackup
 
 ```typescript
-import { migrateWithBackup } from '@personal-agent/core';
+import { migrateWithBackup } from '@neon-pilot/core';
 
 const result = migrateWithBackup(db, dbPath, 'my-store', MY_MIGRATIONS);
 // result.applied    — number of migrations applied
@@ -169,7 +169,7 @@ const result = migrateWithBackup(db, dbPath, 'my-store', MY_MIGRATIONS);
 ### Manual backup
 
 ```typescript
-import { createDbBackup, listDbBackups } from '@personal-agent/core';
+import { createDbBackup, listDbBackups } from '@neon-pilot/core';
 
 // Create a backup
 const backupPath = createDbBackup('/path/to/runtime.db');

@@ -1,4 +1,4 @@
-import { connectMcpServerDirect, type McpClientConnection, type McpServerConfig } from '@personal-agent/core';
+import { connectMcpServerDirect, type McpClientConnection, type McpServerConfig } from '@neon-pilot/core';
 
 import {
   attachGatewayConversation,

@@ -1,7 +1,7 @@
 import { Readable, Writable } from 'node:stream';
 
 import * as acp from '@agentclientprotocol/sdk';
-import type { ExtensionProtocolContext } from '@personal-agent/extensions';
+import type { ExtensionProtocolContext } from '@neon-pilot/extensions';
 
 const SESSION_KEY_PREFIX = 'session/';
 const DEFAULT_MODE_ID = 'code';
@@ -140,7 +140,7 @@ function buildSessionInfo(record: StoredSessionRecord): acp.SessionInfo {
   };
 }
 
-class PersonalAgentAcpAgent implements acp.Agent {
+class NeonPilotAcpAgent implements acp.Agent {
   private readonly activePrompts = new Map<string, ActivePrompt>();
 
   constructor(
@@ -153,7 +153,7 @@ class PersonalAgentAcpAgent implements acp.Agent {
     return {
       protocolVersion: acp.PROTOCOL_VERSION,
       agentInfo: {
-        name: 'personal-agent',
+        name: 'neon-pilot',
         title: 'Neon Pilot',
         version: '0.8.0',
       },
@@ -626,10 +626,7 @@ function parseProtocolInput(input: unknown): AcpProtocolInput {
 export async function runAcpProtocol(input: unknown, ctx: ExtensionProtocolContext): Promise<void> {
   const protocolInput = parseProtocolInput(input);
   const stream = acp.ndJsonStream(Writable.toWeb(ctx.stdio.stdout), Readable.toWeb(ctx.stdio.stdin));
-  const connection = new acp.AgentSideConnection(
-    (agentConnection) => new PersonalAgentAcpAgent(agentConnection, ctx, protocolInput),
-    stream,
-  );
+  const connection = new acp.AgentSideConnection((agentConnection) => new NeonPilotAcpAgent(agentConnection, ctx, protocolInput), stream);
   await Promise.race([
     connection.closed,
     new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve(), { once: true })),

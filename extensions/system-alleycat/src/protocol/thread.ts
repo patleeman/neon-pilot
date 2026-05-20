@@ -18,7 +18,7 @@ function epochSeconds(value: unknown): number {
 }
 
 function defaultCwd(ctx?: { runtime?: { getRepoRoot?: () => string } }): string {
-  return ctx?.runtime?.getRepoRoot?.() || process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
+  return ctx?.runtime?.getRepoRoot?.() || process.env.NEON_PILOT_REPO_ROOT || process.cwd();
 }
 
 function absoluteCwd(value: unknown, ctx?: { runtime?: { getRepoRoot?: () => string } }): string {

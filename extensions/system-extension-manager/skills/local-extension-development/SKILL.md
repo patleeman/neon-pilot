@@ -23,7 +23,7 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 1. Inspect installed extensions through Extension Manager or `GET /api/extensions/installed`.
 2. If editing an existing user extension, snapshot it first from Extension Manager or `POST /api/extensions/{id}/snapshot`.
 3. If creating a new extension, use Extension Manager **Create** or `POST /api/extensions`.
-4. Edit `src/` files and `extension.json`, then build outside the app with `pa-extension build <extension-dir>` or repo tooling.
+4. Edit `src/` files and `extension.json`, then build outside the app with `neon-pilot-extension build <extension-dir>` or repo tooling.
 5. Validate from Extension Manager or `POST /api/extensions/{id}/validate` and fix every error.
 6. Reload from Extension Manager or `POST /api/extensions/{id}/reload`.
 7. Open the declared route/surface and visually inspect UI changes.
@@ -248,8 +248,8 @@ Use top-level `dependsOn` for extension dependencies, e.g. `["system-knowledge",
 ## Frontend source pattern
 
 ```tsx
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageLayout, EmptyState, ToolbarButton } from '@personal-agent/extensions/ui';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   async function ping() {
@@ -268,7 +268,7 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
 
 Frontend rules:
 
-- Import app-native primitives from `@personal-agent/extensions/ui` instead of building isolated card-heavy UI.
+- Import app-native primitives from `@neon-pilot/extensions/ui` instead of building isolated card-heavy UI.
 - Use `pa.extension.invoke(actionId, input)` for backend calls.
 - Use `pa.storage`, `pa.events`, and `pa.extensions` for host-provided client capabilities when available.
 - Keep exported component names exactly aligned with `extension.json`.
@@ -277,7 +277,7 @@ Frontend rules:
 ## Backend source pattern
 
 ```ts
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 export async function ping(input: unknown, ctx: ExtensionBackendContext) {
   ctx.log.info('ping', { input });
@@ -319,20 +319,20 @@ Use `ctx.storage` / `pa.storage` for private runtime state, caches, and per-exte
 {
   "type": "module",
   "dependencies": {
-    "@personal-agent/extensions": "*"
+    "@neon-pilot/extensions": "*"
   }
 }
 ```
 
-Normal third-party dependencies are bundled into `dist/` by the builder. Host packages such as `@personal-agent/extensions`, `react`, and `react-dom` are provided by the app. If package tooling is unavailable in the built app, avoid adding new dependencies or vendor a tiny local helper.
+Normal third-party dependencies are bundled into `dist/` by the builder. Host packages such as `@neon-pilot/extensions`, `react`, and `react-dom` are provided by the app. If package tooling is unavailable in the built app, avoid adding new dependencies or vendor a tiny local helper.
 
-Never import app internals like `packages/desktop/server/*`, `packages/desktop/ui/*`, `@personal-agent/core`, or `@personal-agent/daemon` from an extension. If a host capability is missing, the right platform change is a reusable SDK/backend subpath, not a private import.
+Never import app internals like `packages/desktop/server/*`, `packages/desktop/ui/*`, `@neon-pilot/core`, or `@neon-pilot/daemon` from an extension. If a host capability is missing, the right platform change is a reusable SDK/backend subpath, not a private import.
 
 ## Build, validate, and reload
 
 Built app path:
 
-1. Build outside the app with `pa-extension build /path/to/extension` or repo tooling.
+1. Build outside the app with `neon-pilot-extension build /path/to/extension` or repo tooling.
 2. Validate with Extension Manager **Validate** or `POST /api/extensions/{id}/validate`. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
 3. Reload with Extension Manager **Reload** or `POST /api/extensions/{id}/reload`.
 4. Inspect diagnostics in Extension Manager.

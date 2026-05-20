@@ -4,7 +4,7 @@ import {
   maintainAppTelemetryDb,
   maintainTraceDb,
   resolveAppTelemetryLogDir,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';

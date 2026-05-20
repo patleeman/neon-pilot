@@ -16,7 +16,7 @@ function createMockApi(): { api: ExtensionAPI; registeredExecute: (params: unkno
   };
 }
 
-vi.mock('@personal-agent/extensions/backend/mcp', () => ({
+vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   listMcpCatalog: vi.fn(),
   inspectMcpServer: vi.fn(),
   inspectMcpTool: vi.fn(),
@@ -28,11 +28,11 @@ vi.mock('@personal-agent/extensions/backend/mcp', () => ({
   readBundledSkillMcpManifests: vi.fn(),
   readMcpConfigDocument: vi.fn(),
   getDurableSessionsDir: vi.fn(() => '/tmp/durable-sessions'),
-  getPiAgentRuntimeDir: vi.fn(() => '/tmp/pi-agent-runtime'),
+  getPiAgentRuntimeDir: vi.fn(() => '/tmp/neon-pilot-runtime'),
   getConfigRoot: vi.fn(() => '/tmp/pi-agent-config'),
 }));
 
-const core = await import('@personal-agent/extensions/backend/mcp');
+const core = await import('@neon-pilot/extensions/backend/mcp');
 
 function buildHandler() {
   const { api, registeredExecute } = createMockApi();

@@ -12,8 +12,8 @@ vi.mock('./bootstrap.js', async () => {
   };
 });
 
-vi.mock('@personal-agent/core', async () => {
-  const actual = await vi.importActual<typeof import('@personal-agent/core')>('@personal-agent/core');
+vi.mock('@neon-pilot/core', async () => {
+  const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
   return {
     ...actual,
     startKnowledgeBaseSyncLoop: startKnowledgeBaseSyncLoopMock,
@@ -29,14 +29,14 @@ describe('localApi knowledge base sync loop startup', () => {
   });
 
   afterEach(() => {
-    delete process.env.PERSONAL_AGENT_DESKTOP_RUNTIME;
+    delete process.env.NEON_PILOT_DESKTOP_RUNTIME;
     startKnowledgeBaseSyncLoopMock.mockClear();
     subscribeKnowledgeBaseStateMock.mockClear();
     vi.resetModules();
   });
 
   it('starts the knowledge base sync loop in managed web runtime', async () => {
-    delete process.env.PERSONAL_AGENT_DESKTOP_RUNTIME;
+    delete process.env.NEON_PILOT_DESKTOP_RUNTIME;
 
     await import('./localApi.js');
 
@@ -45,7 +45,7 @@ describe('localApi knowledge base sync loop startup', () => {
   }, 15000);
 
   it('skips the knowledge base sync loop in desktop runtime', async () => {
-    process.env.PERSONAL_AGENT_DESKTOP_RUNTIME = '1';
+    process.env.NEON_PILOT_DESKTOP_RUNTIME = '1';
 
     await import('./localApi.js');
 

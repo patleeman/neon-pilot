@@ -1,4 +1,4 @@
-import { HOST_VIEW_COMPONENT_DEFINITIONS, type HostViewComponentDefinition } from '@personal-agent/extensions/host-view-components';
+import { HOST_VIEW_COMPONENT_DEFINITIONS, type HostViewComponentDefinition } from '@neon-pilot/extensions/host-view-components';
 import React from 'react';
 
 import { lazyWithRecovery } from '../navigation/lazyRouteRecovery';

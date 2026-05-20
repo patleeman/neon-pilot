@@ -294,7 +294,7 @@ class NodeFileSystemBackend implements FileSystemBackend {
   }
 
   async createTempRoot(input: { prefix?: string }): Promise<FileRootDescriptor> {
-    const tempPath = await mkdtemp(join(tmpdir(), input.prefix ?? 'personal-agent-fs-'));
+    const tempPath = await mkdtemp(join(tmpdir(), input.prefix ?? 'neon-pilot-fs-'));
     return { kind: 'temp', id: tempPath, path: tempPath, provider: this.id, displayName: 'Temporary workspace' };
   }
 }

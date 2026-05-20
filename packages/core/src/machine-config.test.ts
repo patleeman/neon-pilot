@@ -35,23 +35,23 @@ describe('machine config', () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
-  it('uses only PERSONAL_AGENT_CONFIG_FILE for the shared machine config path', () => {
+  it('uses only NEON_PILOT_CONFIG_FILE for the shared machine config path', () => {
     const configDir = createTempDir('pa-machine-config-');
     const daemonConfigPath = join(configDir, 'daemon.json');
-    process.env.PERSONAL_AGENT_DAEMON_CONFIG = daemonConfigPath;
+    process.env.NEON_PILOT_DAEMON_CONFIG = daemonConfigPath;
 
     const resolvedPath = getMachineConfigFilePath();
     expect(resolvedPath).not.toBe(daemonConfigPath);
     expect(resolvedPath.endsWith('/config.json')).toBe(true);
 
-    process.env.PERSONAL_AGENT_CONFIG_FILE = join(configDir, 'custom-config.json');
+    process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'custom-config.json');
     expect(getMachineConfigFilePath()).toBe(join(configDir, 'custom-config.json'));
   });
 
   it('still honors legacy section-specific env overrides', () => {
     const configDir = createTempDir('pa-machine-config-');
     const daemonConfigPath = join(configDir, 'daemon.json');
-    process.env.PERSONAL_AGENT_DAEMON_CONFIG = daemonConfigPath;
+    process.env.NEON_PILOT_DAEMON_CONFIG = daemonConfigPath;
 
     updateMachineConfigSection('daemon', () => ({ modules: { tasks: { pollIntervalMs: 5000 } } }));
 
@@ -97,23 +97,20 @@ describe('machine config', () => {
 
     writeMachineInstructionFiles(
       [
-        '/Users/patrick/Documents/personal-agent/AGENTS.md',
-        '  /Users/patrick/Documents/personal-agent/skills/checkpoint/SKILL.md  ',
-        '/Users/patrick/Documents/personal-agent/AGENTS.md',
+        '/Users/patrick/Documents/neon-pilot/AGENTS.md',
+        '  /Users/patrick/Documents/neon-pilot/skills/checkpoint/SKILL.md  ',
+        '/Users/patrick/Documents/neon-pilot/AGENTS.md',
         '',
       ],
       { configRoot: configDir },
     );
 
     expect(readMachineInstructionFiles({ configRoot: configDir })).toEqual([
-      '/Users/patrick/Documents/personal-agent/AGENTS.md',
-      '/Users/patrick/Documents/personal-agent/skills/checkpoint/SKILL.md',
+      '/Users/patrick/Documents/neon-pilot/AGENTS.md',
+      '/Users/patrick/Documents/neon-pilot/skills/checkpoint/SKILL.md',
     ]);
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({
-      instructionFiles: [
-        '/Users/patrick/Documents/personal-agent/AGENTS.md',
-        '/Users/patrick/Documents/personal-agent/skills/checkpoint/SKILL.md',
-      ],
+      instructionFiles: ['/Users/patrick/Documents/neon-pilot/AGENTS.md', '/Users/patrick/Documents/neon-pilot/skills/checkpoint/SKILL.md'],
     });
 
     writeMachineInstructionFiles([], { configRoot: configDir });
@@ -126,20 +123,20 @@ describe('machine config', () => {
 
     writeMachineSkillDirs(
       [
-        '/Users/patrick/Documents/personal-agent/skills',
+        '/Users/patrick/Documents/neon-pilot/skills',
         '  /Users/patrick/Documents/shared-skills  ',
-        '/Users/patrick/Documents/personal-agent/skills',
+        '/Users/patrick/Documents/neon-pilot/skills',
         '',
       ],
       { configRoot: configDir },
     );
 
     expect(readMachineSkillDirs({ configRoot: configDir })).toEqual([
-      '/Users/patrick/Documents/personal-agent/skills',
+      '/Users/patrick/Documents/neon-pilot/skills',
       '/Users/patrick/Documents/shared-skills',
     ]);
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({
-      skillDirs: ['/Users/patrick/Documents/personal-agent/skills', '/Users/patrick/Documents/shared-skills'],
+      skillDirs: ['/Users/patrick/Documents/neon-pilot/skills', '/Users/patrick/Documents/shared-skills'],
     });
 
     writeMachineSkillDirs([], { configRoot: configDir });

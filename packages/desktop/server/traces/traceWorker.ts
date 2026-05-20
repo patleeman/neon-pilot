@@ -16,7 +16,7 @@ import {
   writeTraceStats,
   writeTraceSuggestedContext,
   writeTraceToolCall,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 export type TraceWorkerMessage =
   | ({ type: 'stats' } & Parameters<typeof writeTraceStats>[0])

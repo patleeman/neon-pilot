@@ -1,4 +1,4 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type LooseEndStatus = 'open' | 'resolved' | 'dismissed';

@@ -9,7 +9,7 @@ import { getMemoryDocsDir, migrateLegacyProfileMemoryDirs } from './memory-docs.
 const tempDirs: string[] = [];
 
 function createTempVaultRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'personal-agent-memory-docs-'));
+  const root = mkdtempSync(join(tmpdir(), 'neon-pilot-memory-docs-'));
   const dir = join(root, 'sync');
   mkdirSync(dir, { recursive: true });
   tempDirs.push(root);
@@ -36,7 +36,7 @@ describe('note node paths', () => {
     const legacyProfilesRoot = join(vaultRoot, '_profiles');
     const assistantMemory = join(legacyProfilesRoot, 'assistant', 'agent', 'memory', 'runpod.md');
     const legacyPackagePath = join(vaultRoot, 'memory', 'runpod', 'MEMORY.md');
-    const runtimeNote = join(vaultRoot, '..', 'pi-agent-runtime', 'notes', 'desktop.md');
+    const runtimeNote = join(vaultRoot, '..', 'neon-pilot-runtime', 'notes', 'desktop.md');
 
     writeFile(assistantMemory, '---\nid: runpod\ntitle: Runpod\nsummary: Notes\n---\nRunpod\n');
     writeFile(legacyPackagePath, '---\nname: runpod\ndescription: Runpod notes.\n---\n# Runpod\n');

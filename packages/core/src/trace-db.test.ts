@@ -21,17 +21,17 @@ import { resolveTraceTelemetryLogDir } from './trace-telemetry-log.js';
 
 describe('trace-db JSONL writers', () => {
   const testDir = join(tmpdir(), `trace-jsonl-test-${randomUUID()}`);
-  const originalRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+  const originalRoot = process.env.NEON_PILOT_STATE_ROOT;
 
   beforeAll(() => {
     mkdirSync(testDir, { recursive: true });
-    process.env.PERSONAL_AGENT_STATE_ROOT = testDir;
+    process.env.NEON_PILOT_STATE_ROOT = testDir;
   });
 
   afterAll(() => {
     closeTraceDbs();
-    if (originalRoot) process.env.PERSONAL_AGENT_STATE_ROOT = originalRoot;
-    else delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    if (originalRoot) process.env.NEON_PILOT_STATE_ROOT = originalRoot;
+    else delete process.env.NEON_PILOT_STATE_ROOT;
     rmSync(testDir, { recursive: true, force: true });
   });
 

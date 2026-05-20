@@ -105,7 +105,7 @@ const conversations = new Map<string, ExtensionAgentConversationRecord>();
 const defaultDynamicImport = importServerModule;
 let dynamicImport = defaultDynamicImport;
 const PI_CODING_AGENT_PACKAGE = '@earendil-works/pi-coding-agent';
-const PERSONAL_AGENT_CORE_PACKAGE = '@personal-agent/core';
+const NEON_PILOT_CORE_PACKAGE = '@neon-pilot/core';
 
 export function setExtensionAgentDynamicImportForTests(importer: typeof dynamicImport): void {
   dynamicImport = importer;
@@ -241,7 +241,7 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
     cwd,
     model: model as never,
     authStorage: pi.AuthStorage.create(
-      join(await callServerModuleExport<string>(PERSONAL_AGENT_CORE_PACKAGE, 'getPiAgentRuntimeDir'), 'auth.json'),
+      join(await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getPiAgentRuntimeDir'), 'auth.json'),
     ),
     modelRegistry: modelRegistry as never,
     sessionManager: pi.SessionManager.inMemory(cwd),

@@ -544,7 +544,7 @@ Add component-backed tools beside the attachment button in the composer input ro
 }
 ```
 
-The component receives `pa` and `toolContext`. `toolContext.addFiles(files)` routes files through the normal composer attachment pipeline. `toolContext.upsertDrawingAttachment(payload)` adds an Excalidraw-compatible drawing payload to the composer. Excalidraw tools should import shared serialization helpers from `@personal-agent/extensions/excalidraw` instead of duplicating preview/source generation.
+The component receives `pa` and `toolContext`. `toolContext.addFiles(files)` routes files through the normal composer attachment pipeline. `toolContext.upsertDrawingAttachment(payload)` adds an Excalidraw-compatible drawing payload to the composer. Excalidraw tools should import shared serialization helpers from `@neon-pilot/extensions/excalidraw` instead of duplicating preview/source generation.
 
 ### Prompt Assembly
 
@@ -630,7 +630,7 @@ The component receives:
 
 ```typescript
 {
-  pa: PersonalAgentClient;
+  pa: NeonPilotClient;
   shelfContext: {
     conversationId: string;
     isStreaming: boolean;
@@ -656,7 +656,7 @@ The component receives:
 
 ```typescript
 {
-  pa: PersonalAgentClient;
+  pa: NeonPilotClient;
   panelContext: {
     conversationId: string;
   }
@@ -683,7 +683,7 @@ The component receives:
 
 ```typescript
 {
-  pa: PersonalAgentClient;
+  pa: NeonPilotClient;
   session: SessionMeta; // conversation metadata
 }
 ```
@@ -917,7 +917,7 @@ agent sees intermediate progress instead of waiting silently.```
 Your `src/frontend.tsx` exports React components referenced in the manifest. The desktop app loads the extension registry once at the app shell and shares it through context; do not add per-message or per-tool registry fetches in frontend hosts.
 
 ```tsx
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
   return (
@@ -945,18 +945,18 @@ The `pa` client provides:
 
 See `packages/extensions/src/index.ts` for the full API.
 
-Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@personal-agent/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/knowledge`, `/knowledgeVault`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
+Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@neon-pilot/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/knowledge`, `/knowledgeVault`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
 
-The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@personal-agent/extensions/backend/{name}`. It must not import desktop server files, `@personal-agent/core`, `@personal-agent/daemon`, or agent-runtime internals directly. System extension source may use type-only Pi imports for extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. `pnpm run check:extensions:quick` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
+The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source may use type-only Pi imports for extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. `pnpm run check:extensions:quick` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
 
 Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions (`agent:run`, `agent:conversations`, etc.). Narrow host helpers such as `/compaction`, `/runtime`, and `/webContent` are trusted system-extension internals; they do not create standalone user-facing authority and should stay scoped to active hook/action context rather than growing into broad service APIs.
 
-For model-backed extension workflows, use `@personal-agent/extensions/backend/agent` instead of importing Pi directly. `runAgentTask` runs a host-owned one-shot hidden agent task with optional image inputs, `tools: 'none'`, and timeout cleanup; the host owns model lookup, auth storage, session creation, cancellation boundaries, and runtime policy. Extensions must declare `agent:run` to use this seam. For multi-turn extension-owned workers, use `createAgentConversation`, `sendAgentMessage`, `getAgentConversation`, `listAgentConversations`, `abortAgentConversation`, and `disposeAgentConversation`; conversations support hidden+ephemeral private worker sessions and visible+saved host conversations that appear in the normal conversation system. Both modes are scoped to the owner extension id and require `agent:conversations`.
+For model-backed extension workflows, use `@neon-pilot/extensions/backend/agent` instead of importing Pi directly. `runAgentTask` runs a host-owned one-shot hidden agent task with optional image inputs, `tools: 'none'`, and timeout cleanup; the host owns model lookup, auth storage, session creation, cancellation boundaries, and runtime policy. Extensions must declare `agent:run` to use this seam. For multi-turn extension-owned workers, use `createAgentConversation`, `sendAgentMessage`, `getAgentConversation`, `listAgentConversations`, `abortAgentConversation`, and `disposeAgentConversation`; conversations support hidden+ephemeral private worker sessions and visible+saved host conversations that appear in the normal conversation system. Both modes are scoped to the owner extension id and require `agent:conversations`.
 
 Backend extensions can record fire-and-forget app telemetry through the dedicated telemetry seam:
 
 ```ts
-import { recordTelemetryEvent } from '@personal-agent/extensions/backend/telemetry';
+import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_completed', durationMs: 42 });
 ```
@@ -980,7 +980,7 @@ Use the same `max-w-[72rem]`, `space-y-10`, and `AppPageIntro` title/summary pat
 
 ## Styling guidance
 
-Extension UIs should look native to Neon Pilot, not like embedded websites. Default to the shared primitives from `@personal-agent/extensions/ui` and Tailwind utility classes that use app theme tokens.
+Extension UIs should look native to Neon Pilot, not like embedded websites. Default to the shared primitives from `@neon-pilot/extensions/ui` and Tailwind utility classes that use app theme tokens.
 
 ```tsx
 <section className="space-y-4 border-t border-border-subtle pt-6">
@@ -1009,7 +1009,7 @@ The backend runs in the Node.js server process. It exposes actions
 that the frontend can call via `pa.extension.invoke()`. A backend can also declare `onEnableAction` in `extension.json` to run an action immediately after the user enables the extension.
 
 ```typescript
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
   ctx.log.info('ping received');
@@ -1470,7 +1470,7 @@ POST /api/extensions/my-ext/build
 pnpm run extension:build -- /path/to/my-extension
 ```
 
-Frontend builds bundle the authoring SDK UI modules (`@personal-agent/extensions/ui`, `/host`, `/workbench`, `/data`, and `/settings`) into `dist/frontend.js`. The browser loads that built file directly from `/api/extensions/<id>/files/...`, so frontend dist output must not leave `@personal-agent/extensions/*` as bare runtime imports.
+Frontend builds bundle the authoring SDK UI modules (`@neon-pilot/extensions/ui`, `/host`, `/workbench`, `/data`, and `/settings`) into `dist/frontend.js`. The browser loads that built file directly from `/api/extensions/<id>/files/...`, so frontend dist output must not leave `@neon-pilot/extensions/*` as bare runtime imports.
 
 ### Hot Reload
 
@@ -1515,8 +1515,8 @@ action handler exports, smoke-calls known safe `list` tools (`scheduled_task`,
 `queue_followup`), and runs product-critical smoke calls for Knowledge,
 Automations, and Diffs extension actions. It fails on forbidden bare imports
 that are not available inside the packaged desktop app, such as
-`@earendil-works/pi-coding-agent`, `@personal-agent/core`,
-`@personal-agent/daemon`, `jsdom`, and `@sinclair/typebox`. It also rejects
+`@earendil-works/pi-coding-agent`, `@neon-pilot/core`,
+`@neon-pilot/daemon`, `jsdom`, and `@sinclair/typebox`. It also rejects
 absolute or `file:` imports, forbidden bundled runtime path fragments, and backend
 bundles over their explicit byte budget. The packaged-extension hardening knobs
 live in `scripts/extension-hardening-config.mjs`, so smoke inputs and size budgets
@@ -1601,4 +1601,4 @@ See the system extensions in `extensions/` for practical examples:
 Each system extension has a complete `extension.json` manifest and
 `src/backend.ts` + optionally `src/frontend.tsx`.
 
-Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`PERSONAL_AGENT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.
+Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`NEON_PILOT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.

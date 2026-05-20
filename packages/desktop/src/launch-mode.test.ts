@@ -13,7 +13,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('marks explicit testing launches clearly', () => {
     expect(
       resolveDesktopLaunchPresentation({
-        PERSONAL_AGENT_DESKTOP_VARIANT: ' testing ',
+        NEON_PILOT_DESKTOP_VARIANT: ' testing ',
       }),
     ).toEqual({
       mode: 'testing',
@@ -25,7 +25,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('treats the dev desktop bundle as a testing launch by default', () => {
     expect(
       resolveDesktopLaunchPresentation({
-        PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1',
+        NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
       }),
     ).toEqual({
       mode: 'testing',
@@ -37,7 +37,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('marks explicit dev launches clearly', () => {
     expect(
       resolveDesktopLaunchPresentation({
-        PERSONAL_AGENT_RUNTIME_CHANNEL: ' dev ',
+        NEON_PILOT_RUNTIME_CHANNEL: ' dev ',
       }),
     ).toEqual({
       mode: 'dev',
@@ -49,7 +49,7 @@ describe('resolveDesktopLaunchPresentation', () => {
   it('marks explicit RC launches clearly', () => {
     expect(
       resolveDesktopLaunchPresentation({
-        PERSONAL_AGENT_DESKTOP_VARIANT: ' rc ',
+        NEON_PILOT_DESKTOP_VARIANT: ' rc ',
       }),
     ).toEqual({
       mode: 'rc',

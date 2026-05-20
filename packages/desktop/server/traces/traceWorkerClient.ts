@@ -16,7 +16,7 @@ import {
   writeTraceStats,
   writeTraceSuggestedContext,
   writeTraceToolCall,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import type { TraceWorkerMessage } from './traceWorker.js';
 

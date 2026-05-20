@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 type DownloadModelInput = { repo?: string; filename?: string };
 type DownloadJob = {
@@ -55,9 +55,9 @@ type RevealInput = { modelPath?: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = join(here, '..');
-const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
+const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
 const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
-const runtimeCacheRoot = join(homedir(), '.cache', 'personal-agent', 'llama-cpp');
+const runtimeCacheRoot = join(homedir(), '.cache', 'neon-pilot', 'llama-cpp');
 const runtimeBinDir = join(runtimeCacheRoot, 'bin', 'darwin-arm64');
 function bundledRuntimePath(name: string) {
   const installedPath = join(runtimeBinDir, name);
@@ -313,7 +313,7 @@ async function readLlamaLatestRelease() {
   runtimeUpdateCache.checkedAt = Date.now();
   try {
     const response = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
-      headers: { 'user-agent': 'personal-agent-local-models' },
+      headers: { 'user-agent': 'neon-pilot-local-models' },
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -541,7 +541,7 @@ export async function installRuntime(input: unknown, ctx: ExtensionBackendContex
     return { ok: true, installed: false, status: await runtimeStatus({}, ctx) };
 
   const releaseResponse = await fetch('https://api.github.com/repos/ggml-org/llama.cpp/releases/latest', {
-    headers: { 'user-agent': 'personal-agent-local-models' },
+    headers: { 'user-agent': 'neon-pilot-local-models' },
     signal: AbortSignal.timeout(30_000),
   });
   if (!releaseResponse.ok) throw new Error(`Failed to read llama.cpp releases: ${releaseResponse.status} ${releaseResponse.statusText}`);

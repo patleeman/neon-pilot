@@ -41,13 +41,12 @@ let lifecycleRegistered = false;
 const lastTelegramDeliveryByConversation = new Map<string, string>();
 
 function publishTelegramGatewayHostApi(): void {
-  (globalThis as typeof globalThis & { __personalAgentTelegramGatewayHostApi?: TelegramGatewayHostApi })[TELEGRAM_GATEWAY_HOST_API_GLOBAL] =
-    {
-      registerTelegramGatewayLifecycleDelivery,
-      startTelegramGatewayRuntime,
-      stopTelegramGatewayRuntime,
-      readTelegramGatewayRuntimeStatus,
-    };
+  (globalThis as typeof globalThis & { __neonPilotTelegramGatewayHostApi?: TelegramGatewayHostApi })[TELEGRAM_GATEWAY_HOST_API_GLOBAL] = {
+    registerTelegramGatewayLifecycleDelivery,
+    startTelegramGatewayRuntime,
+    stopTelegramGatewayRuntime,
+    readTelegramGatewayRuntimeStatus,
+  };
 }
 
 function initializeGatewayRoutesContext(context: ServerRouteContext): void {

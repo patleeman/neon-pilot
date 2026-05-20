@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding, upsertAlert } from '@personal-agent/core';
+import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding, upsertAlert } from '@neon-pilot/core';
 import {
   type AutomationActivityEntry,
   createStoredAutomation,
@@ -12,7 +12,7 @@ import {
   startScheduledTaskRun,
   type StoredAutomation,
   updateStoredAutomation,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { readSessionMeta } from '../conversations/sessions.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';

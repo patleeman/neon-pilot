@@ -323,7 +323,7 @@ export const turn = {
             item: {
               id: toolId,
               type: 'dynamicToolCall',
-              namespace: 'personal-agent',
+              namespace: 'neon-pilot',
               tool: (ev.toolName as string) || 'tool',
               arguments: ev.input ?? {},
               status: 'inProgress',
@@ -339,7 +339,7 @@ export const turn = {
             item: {
               id: toolId,
               type: 'dynamicToolCall',
-              namespace: 'personal-agent',
+              namespace: 'neon-pilot',
               tool: (ev.toolName as string) || 'tool',
               arguments: ev.input ?? {},
               status: 'completed',

@@ -4,7 +4,7 @@ import {
   readSessionConversationId,
   resolveDeferredResumeStateFile,
   saveDeferredResumeState,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import { join, resolve, sep } from 'path';
 
 import { surfaceReadyDeferredResume } from '../../daemon/conversation-wakeups.js';
@@ -61,8 +61,8 @@ function inferRepoRootFromTaskDir(taskDir: string, profile: string): string | un
 function resolveProfileContext(taskDir: string): { profile: string; repoRoot?: string } {
   const profile =
     inferProfileFromTaskDir(taskDir) ??
-    sanitizeProfileName(process.env.PERSONAL_AGENT_ACTIVE_PROFILE) ??
-    sanitizeProfileName(process.env.PERSONAL_AGENT_PROFILE) ??
+    sanitizeProfileName(process.env.NEON_PILOT_ACTIVE_PROFILE) ??
+    sanitizeProfileName(process.env.NEON_PILOT_PROFILE) ??
     'shared';
 
   return {

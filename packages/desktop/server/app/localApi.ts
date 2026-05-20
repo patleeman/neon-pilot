@@ -17,9 +17,9 @@ import {
   subscribeKnowledgeBaseState,
   syncKnowledgeBaseNow,
   updateKnowledgeBase,
-} from '@personal-agent/core';
-import { ensureAutomationThread } from '@personal-agent/daemon';
-import { loadDaemonConfig, resolveDaemonPaths } from '@personal-agent/daemon';
+} from '@neon-pilot/core';
+import { ensureAutomationThread } from '@neon-pilot/daemon';
+import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { readDaemonState } from '../automation/daemon.js';
 import {
@@ -321,7 +321,7 @@ const MAX_DESKTOP_ROLLBACK_TURNS = 100;
 
 function resolveRepoRoot(): string {
   const defaultRepoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-  return process.env.PERSONAL_AGENT_REPO_ROOT ?? process.env.PERSONAL_AGENT_RESOURCES_ROOT ?? defaultRepoRoot;
+  return process.env.NEON_PILOT_REPO_ROOT ?? process.env.NEON_PILOT_RESOURCES_ROOT ?? defaultRepoRoot;
 }
 
 function resolveDaemonRoot(): string {
@@ -630,7 +630,7 @@ subscribeKnowledgeBaseState(() => {
 // block the app while the user is clicking around. Keep the loop in the managed
 // web service, but skip it for the embedded desktop runtime and its worker
 // helpers.
-if (process.env.PERSONAL_AGENT_DESKTOP_RUNTIME !== '1') {
+if (process.env.NEON_PILOT_DESKTOP_RUNTIME !== '1') {
   startKnowledgeBaseSyncLoop();
 }
 
@@ -1074,7 +1074,7 @@ export async function readDesktopAppStatus() {
   return {
     profile: 'shared',
     repoRoot: context.getRepoRoot(),
-    appRevision: process.env.PERSONAL_AGENT_APP_REVISION,
+    appRevision: process.env.NEON_PILOT_APP_REVISION,
   };
 }
 

@@ -4,7 +4,7 @@ describe('openSqliteDatabase', () => {
   afterEach(() => {
     vi.resetModules();
     vi.doUnmock('node:module');
-    delete process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR;
+    delete process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR;
   });
 
   async function importWithRequire(fakeRequire: (id: string) => unknown) {
@@ -175,7 +175,7 @@ describe('openSqliteDatabase', () => {
     });
 
     vi.resetModules();
-    process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR = '/tmp/electron-native';
+    process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR = '/tmp/electron-native';
     vi.doMock('node:module', () => ({
       createRequire: createRequireMock,
     }));
@@ -209,7 +209,7 @@ describe('openSqliteDatabase', () => {
     });
 
     vi.resetModules();
-    process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR = '/tmp/electron-native';
+    process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR = '/tmp/electron-native';
     vi.doMock('node:module', () => ({
       createRequire: createRequireMock,
     }));

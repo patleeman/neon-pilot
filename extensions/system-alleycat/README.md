@@ -7,7 +7,7 @@ Neon Pilot-owned remote host for Kitty Litter / Alleycat-compatible clients.
 This extension should replace external `kittylitter` process management for Neon Pilot users:
 
 - run a PA-managed Alleycat-compatible host
-- advertise **only** `personal-agent`
+- advertise **only** `neon-pilot`
 - show pairing payload / QR in Settings
 - expose Neon Pilot conversations through the Codex-shaped JSON-RPC API Kitty expects
 
@@ -70,21 +70,21 @@ Compatibility notes:
 
 - `thread/loaded/list` is intentionally workspace state, not runtime liveness. Open/close controls what appears in the shared desktop/mobile workspace; `activeConversationId` controls focused conversation; archive/unarchive controls workspace archive state and removes archived threads from open/pinned/remote-control sets; live/running status remains separate.
 - `model/list` maps PA model metadata into Codex fields. Reasoning effort options use Codex's object shape; if PA metadata is unavailable the bridge returns deterministic PA model defaults so Kitty's model picker can render.
-- Tool calls are emitted as Codex `dynamicToolCall` items under the `personal-agent` namespace so Kitty can render them instead of seeing opaque PA events.
+- Tool calls are emitted as Codex `dynamicToolCall` items under the `neon-pilot` namespace so Kitty can render them instead of seeing opaque PA events.
 - `turn/start` uses the extension conversation `runTurn` boundary so resume, live-event subscription, prompt dispatch, and terminal event handling are one atomic operation. It opens the thread in the shared desktop workspace and marks it with a visible remote-control note the first time Kitty drives it. `turn/start` and `turn/steer` preserve Kitty image input items and forward them as PA prompt images. Supported forms are data URLs, base64 fields with image MIME metadata, and local/file URLs readable by the desktop host.
 - Compatibility endpoints must either be PA-backed or fail with a clear unsupported error. Do not add silent `not_implemented` placeholders; Kitty often spins forever on fake success shapes.
 - If Kitty adds stricter Codex rendering assumptions, update the protocol mapper here rather than changing PA conversation internals.
 
 ## Transport
 
-`sidecar/` contains the Rust host process. The backend launches the packaged `bin/pa-alleycat-host-<platform>-<arch>` through `ctx.shell`, passes it the PA token/secret and local JSONL port, then reads the sidecar ready event for the real iroh pair payload.
+`sidecar/` contains the Rust host process. The backend launches the packaged `bin/neon-pilot-alleycat-host-<platform>-<arch>` through `ctx.shell`, passes it the Neon Pilot Alleycat token/secret and local JSONL port, then reads the sidecar ready event for the real iroh pair payload.
 
 The sidecar waits for Iroh to report an online, relay-backed endpoint before emitting the ready event used for the pairing QR. This prevents Kitty from scanning a node/token payload that has no dialable addressing information yet.
 
 The sidecar implements Alleycat host ops:
 
-- `list_agents` returns only `personal-agent`
-- `restart_agent` is accepted only for `personal-agent`
+- `list_agents` returns only `neon-pilot`
+- `restart_agent` is accepted only for `neon-pilot`
 - `connect` returns a session ack, then byte-proxies the iroh stream to the local PA JSONL bridge
 
 Do not reintroduce ACP or hijack a named external agent slot such as Devin.

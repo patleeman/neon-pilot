@@ -22,7 +22,7 @@ describe('readDesktopEnvironment', () => {
   it('reuses the same bridge request across repeated reads', async () => {
     const getEnvironment = vi.fn().mockResolvedValue({ activeHostKind: 'local', activeHostLabel: 'Local' });
     vi.stubGlobal('window', {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         getEnvironment,
       },
     } as unknown as Window & typeof globalThis);
@@ -40,7 +40,7 @@ describe('readDesktopEnvironment', () => {
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce({ activeHostKind: 'local', activeHostLabel: 'Local' });
     vi.stubGlobal('window', {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         getEnvironment,
       },
     } as unknown as Window & typeof globalThis);

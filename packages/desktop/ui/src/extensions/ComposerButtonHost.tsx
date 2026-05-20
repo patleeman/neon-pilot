@@ -1,4 +1,4 @@
-import type { ComposerControlContext } from '@personal-agent/extensions/composer';
+import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';

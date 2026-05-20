@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { getAlert, upsertAlert } from '@personal-agent/core';
+import { getAlert, upsertAlert } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -56,8 +56,8 @@ describe('alerts server helpers', () => {
   }
 
   it('lists, snapshots, acknowledges, and dismisses alerts for a profile', () => {
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     upsertAlert({ stateRoot, profile: 'shared', alert: createAlert({ id: 'alert-1' }) });
 
@@ -76,8 +76,8 @@ describe('alerts server helpers', () => {
   });
 
   it('returns undefined for missing alerts and validates snooze inputs before loading wakeup state', async () => {
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     expect(await snoozeAlertForProfile('shared', 'missing', { delay: '15m' })).toBeUndefined();
 
@@ -121,8 +121,8 @@ describe('alerts server helpers', () => {
   });
 
   it('rejects snoozes for alerts without wakeup state', async () => {
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     upsertAlert({
       stateRoot,
@@ -144,8 +144,8 @@ describe('alerts server helpers', () => {
   });
 
   it('snoozes wakeup alerts by rescheduling the underlying deferred resume', async () => {
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-123.jsonl',
@@ -207,8 +207,8 @@ describe('alerts server helpers', () => {
   it('falls back to the current clock for invalid snooze Date inputs', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-26T14:00:00.000Z'));
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-invalid-now.jsonl',
@@ -251,8 +251,8 @@ describe('alerts server helpers', () => {
   });
 
   it('supports explicit snooze timestamps', async () => {
-    const stateRoot = createTempDir('pa-web-alerts-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-alerts-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const wakeup = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-456.jsonl',

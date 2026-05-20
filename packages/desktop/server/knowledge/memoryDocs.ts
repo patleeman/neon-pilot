@@ -17,8 +17,8 @@ import {
   listUnifiedSkillNodeDirs,
   loadMemoryPackageReferences,
   loadUnifiedNodes,
-} from '@personal-agent/core';
-import { resolveRuntimeResources } from '@personal-agent/core';
+} from '@neon-pilot/core';
+import { resolveRuntimeResources } from '@neon-pilot/core';
 import { parseDocument, stringify as stringifyYaml } from 'yaml';
 
 // ── Memory path utilities ─────────────────────────────────────────────────────

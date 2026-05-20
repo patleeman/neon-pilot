@@ -1,4 +1,4 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import React, { lazy, Suspense } from 'react';
 
 import { CheckpointTranscriptRenderer as BaseCheckpointTranscriptRenderer } from './panels.js';

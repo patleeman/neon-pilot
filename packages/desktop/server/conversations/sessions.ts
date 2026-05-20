@@ -29,7 +29,7 @@ import {
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
-import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
@@ -1591,7 +1591,7 @@ function buildSessionInfoRecord(name: string): string {
 }
 
 function slugToCwd(slug: string): string {
-  // slug: --Users-user-personal-personal-agent-- → /Users/user/personal/personal-agent
+  // slug: --Users-user-personal-neon-pilot-- → /Users/user/personal/neon-pilot
   return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
 }
 

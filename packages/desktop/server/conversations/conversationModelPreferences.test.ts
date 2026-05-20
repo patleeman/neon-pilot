@@ -40,7 +40,7 @@ function createTestModel(input: {
 
 function createSessionManager(): SessionManager {
   const sessionDir = mkdtempSync(join(tmpdir(), 'conversation-model-preferences-'));
-  return SessionManager.create('/tmp/personal-agent', sessionDir);
+  return SessionManager.create('/tmp/neon-pilot', sessionDir);
 }
 
 describe('conversationModelPreferences', () => {

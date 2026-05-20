@@ -536,7 +536,7 @@ describe('runPresentation', () => {
         resumePolicy: 'manual',
         createdAt: '2026-03-12T20:30:00.000Z',
         spec: {
-          shellCommand: 'env -u PERSONAL_AGENT_APP_REVISION npm --prefix packages/desktop run dev:client',
+          shellCommand: 'env -u NEON_PILOT_APP_REVISION npm --prefix packages/desktop run dev:client',
         },
         source: {
           type: 'cli',
@@ -563,11 +563,11 @@ describe('runPresentation', () => {
           target: {
             type: 'shell',
             command: 'printf ok',
-            cwd: '/Users/patrick/workingdir/personal-agent',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
           },
           metadata: {
             taskSlug: 'ui-preview-check',
-            cwd: '/Users/patrick/workingdir/personal-agent',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
           },
         },
         source: {
@@ -584,11 +584,11 @@ describe('runPresentation', () => {
           target: {
             type: 'shell',
             command: 'printf ok',
-            cwd: '/Users/patrick/workingdir/personal-agent',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
           },
           metadata: {
             taskSlug: 'ui-preview-check',
-            cwd: '/Users/patrick/workingdir/personal-agent',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
           },
         },
       },
@@ -616,7 +616,7 @@ describe('runPresentation', () => {
           },
           metadata: {
             taskSlug: 'ui-polish',
-            cwd: '/Users/patrick/workingdir/personal-agent',
+            cwd: '/Users/patrick/workingdir/neon-pilot',
           },
         },
         source: {

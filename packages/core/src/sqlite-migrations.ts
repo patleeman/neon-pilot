@@ -6,7 +6,7 @@
  *
  * Usage:
  *
- *   import { applyMigrations, safeRebuildTable } from '@personal-agent/core';
+ *   import { applyMigrations, safeRebuildTable } from '@neon-pilot/core';
  *
  *   const MIGRATIONS: Migration[] = [
  *     { version: 1, description: 'Initial schema', up: (db) => { ... } },

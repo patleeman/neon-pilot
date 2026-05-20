@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions/backend';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 import {
   persistTraceSuggestedContext,
   readConversationSummary,
@@ -6,7 +6,7 @@ import {
   readSessionMeta,
   scheduleConversationSearchIndexing,
   searchIndexedConversationDocuments,
-} from '@personal-agent/extensions/backend/conversations';
+} from '@neon-pilot/extensions/backend/conversations';
 import { eng, removeStopwords } from 'stopword';
 
 interface IndexedConversationSearchCandidate {

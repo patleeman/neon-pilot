@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveConversationInspectWorkerUrlFrom } from './conversationInspectWorkerClient.js';
 
-const previousRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT;
+const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 const tempRoots: string[] = [];
 
 function makeTempRoot(): string {
@@ -25,9 +25,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 
   if (previousRepoRoot === undefined) {
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
   } else {
-    process.env.PERSONAL_AGENT_REPO_ROOT = previousRepoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
   }
 
   for (const root of tempRoots.splice(0)) {
@@ -57,7 +57,7 @@ describe('resolveConversationInspectWorkerUrlFrom', () => {
     touch(clientPath);
     touch(tscWorkerPath);
     touch(bundledWorkerPath);
-    process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 
     const workerUrl = resolveConversationInspectWorkerUrlFrom(pathToFileURL(clientPath).href);
 
@@ -73,7 +73,7 @@ describe('resolveConversationInspectWorkerUrlFrom', () => {
     touch(clientPath);
     touch(cachedWorkerPath);
     touch(bundledWorkerPath);
-    process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 
     const workerUrl = resolveConversationInspectWorkerUrlFrom(pathToFileURL(clientPath).href);
 

@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn, type SpawnOptions } from 'node:child_process';
 
-import { resolveChildProcessEnv } from '@personal-agent/core';
+import { resolveChildProcessEnv } from '@neon-pilot/core';
 
 export interface ProcessWrapperMetadata {
   id: string;

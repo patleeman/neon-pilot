@@ -5,7 +5,7 @@
  * suggested related-conversation pointers vs. ignoring them.
  */
 
-import type { ContextPointerUsageResult } from '@personal-agent/extensions/data';
+import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {

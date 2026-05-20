@@ -16,7 +16,8 @@ describe('perfDiagnostics', () => {
       meta: { messageCount: 4, toolBlocks: 1 },
     });
 
-    const perf = (globalThis as typeof globalThis & { __PA_APP_PERF__?: { chatRenderSamples?: unknown[] } }).__PA_APP_PERF__;
+    const perf = (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { chatRenderSamples?: unknown[] } })
+      .__NEON_PILOT_APP_PERF__;
     expect(perf?.chatRenderSamples).toEqual([
       expect.objectContaining({
         conversationId: 'conv-1',
@@ -32,7 +33,8 @@ describe('perfDiagnostics', () => {
     ensureConversationOpenStart('conv-1', 'route');
     completeConversationOpenPhase('conv-1', 'extensions', { extensionCount: 3 });
 
-    const perf = (globalThis as typeof globalThis & { __PA_APP_PERF__?: { conversationOpenSamples?: unknown[] } }).__PA_APP_PERF__;
+    const perf = (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { conversationOpenSamples?: unknown[] } })
+      .__NEON_PILOT_APP_PERF__;
     expect(perf?.conversationOpenSamples).toEqual([
       expect.objectContaining({
         conversationId: 'conv-1',

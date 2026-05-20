@@ -117,7 +117,7 @@ function renderTailscaleCommandFailure(execution: TailscaleCommandExecution): st
 }
 
 function resolveTailscaleCommandCandidates(): string[] {
-  const explicit = process.env.PERSONAL_AGENT_TAILSCALE_BIN;
+  const explicit = process.env.NEON_PILOT_TAILSCALE_BIN;
   const candidates = [
     explicit,
     'tailscale',

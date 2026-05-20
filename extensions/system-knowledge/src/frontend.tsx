@@ -1,6 +1,6 @@
 import './components/knowledge.css';
 
-import { type MemoryDocItem, type MentionItem } from '@personal-agent/extensions/data';
+import { type MemoryDocItem, type MentionItem } from '@neon-pilot/extensions/data';
 import {
   AppPageEmptyState,
   AppPageIntro,
@@ -8,7 +8,7 @@ import {
   type ExtensionSurfaceProps,
   lazyRouteWithRecovery,
   useApi,
-} from '@personal-agent/extensions/ui';
+} from '@neon-pilot/extensions/ui';
 import { Suspense, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -175,7 +175,7 @@ export function KnowledgePageSurface() {
         <AppPageEmptyState
           align="start"
           title="Select a file to start editing"
-          body="Pick a note from the Knowledge tab, or import a URL into the knowledge base."
+          body="Pick a note from the right sidebar, or import a URL into the knowledge base."
         />
       </AppPageLayout>
     </div>
@@ -207,7 +207,7 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
         <div className="max-w-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
           <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a knowledge file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the Files tab to keep it beside the transcript.</p>
+          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the right rail to keep it beside the transcript.</p>
         </div>
       </div>
     );

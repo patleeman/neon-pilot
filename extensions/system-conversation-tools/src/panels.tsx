@@ -2,7 +2,7 @@ import {
   describeAskUserQuestionState,
   readAskUserQuestionPresentation,
   TerminalToolBlock,
-} from '@personal-agent/extensions/workbench-transcript';
+} from '@neon-pilot/extensions/workbench-transcript';
 
 import { AskUserQuestionToolBlock } from './AskUserQuestionToolBlock.js';
 

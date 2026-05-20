@@ -11,8 +11,8 @@ type RegisteredTool = {
   execute: (...args: unknown[]) => Promise<{ content?: Array<{ text?: string }>; details?: Record<string, unknown> }>;
 };
 
-const previousRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT;
-const previousStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+const previousStateRoot = process.env.NEON_PILOT_STATE_ROOT;
 const tempRoots: string[] = [];
 
 function makeTempRoot(prefix: string): string {
@@ -26,7 +26,7 @@ function writeWorker(path: string, source: string): void {
   writeFileSync(path, source);
 }
 
-function restoreEnv(name: 'PERSONAL_AGENT_REPO_ROOT' | 'PERSONAL_AGENT_STATE_ROOT', value: string | undefined): void {
+function restoreEnv(name: 'NEON_PILOT_REPO_ROOT' | 'NEON_PILOT_STATE_ROOT', value: string | undefined): void {
   if (value === undefined) {
     delete process.env[name];
   } else {
@@ -35,8 +35,8 @@ function restoreEnv(name: 'PERSONAL_AGENT_REPO_ROOT' | 'PERSONAL_AGENT_STATE_ROO
 }
 
 afterEach(() => {
-  restoreEnv('PERSONAL_AGENT_REPO_ROOT', previousRepoRoot);
-  restoreEnv('PERSONAL_AGENT_STATE_ROOT', previousStateRoot);
+  restoreEnv('NEON_PILOT_REPO_ROOT', previousRepoRoot);
+  restoreEnv('NEON_PILOT_STATE_ROOT', previousStateRoot);
 
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -47,8 +47,8 @@ describe('conversation inspect extension cache integration', () => {
   it('loads the cached extension backend but spawns the bundled repo worker, not an extension-cache sibling', async () => {
     const stateRoot = makeTempRoot('pa-conversation-inspect-cache-state-');
     const workerRepoRoot = makeTempRoot('pa-conversation-inspect-worker-repo-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    process.env.PERSONAL_AGENT_REPO_ROOT = process.cwd();
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_REPO_ROOT = process.cwd();
 
     const reload = await reloadExtensionBackend('system-conversation-tools');
     expect(reload.ok).toBe(true);
@@ -65,7 +65,7 @@ describe('conversation inspect extension cache integration', () => {
       bundledWorkerPath,
       `import { parentPort } from 'node:worker_threads'; parentPort?.on('message', (request) => parentPort.postMessage({ id: request.id, ok: true, action: request.action, result: { source: 'repo-worker' }, text: 'repo worker text' }));`,
     );
-    process.env.PERSONAL_AGENT_REPO_ROOT = workerRepoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = workerRepoRoot;
 
     const tools: RegisteredTool[] = [];
     factory({

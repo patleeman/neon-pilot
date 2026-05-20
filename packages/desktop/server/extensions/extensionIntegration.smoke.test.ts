@@ -36,7 +36,7 @@ import {
 } from './extensionRegistry.js';
 import { listExtensionAgentRegistrations } from './extensionRegistry.js';
 
-process.env.PERSONAL_AGENT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'pa-extension-integration-state-'));
+process.env.NEON_PILOT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-integration-state-'));
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */

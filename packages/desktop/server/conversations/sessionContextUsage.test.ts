@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 function createTempSessionFile(lines: unknown[]): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-session-context-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-session-context-'));
   tempDirs.push(dir);
   const file = join(dir, 'session.jsonl');
   writeFileSync(file, lines.map((line) => JSON.stringify(line)).join('\n') + '\n');

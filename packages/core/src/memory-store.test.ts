@@ -32,23 +32,23 @@ afterEach(async () => {
 
 describe('memory store organization metadata', () => {
   it('parses note nodes from sync/notes and tracks package-local references', () => {
-    const vaultRoot = createTempDir('personal-agent-memory-store-');
+    const vaultRoot = createTempDir('neon-pilot-memory-store-');
 
     writeFile(
-      memoryPath(vaultRoot, 'personal-agent'),
+      memoryPath(vaultRoot, 'neon-pilot'),
       `---
-id: personal-agent
+id: neon-pilot
 kind: note
 title: Personal-agent
 summary: Hub doc.
-description: Tell the agent to use this note for durable personal-agent architecture guidance.
+description: Tell the agent to use this note for durable neon-pilot architecture guidance.
 status: active
 links:
   related:
     - runpod
 updatedAt: 2026-03-18
 tags:
-  - area:personal-agent
+  - area:neon-pilot
   - role:structure
   - noteType:project
   - status:active
@@ -61,7 +61,7 @@ Hub doc.
     );
 
     writeFile(
-      join(vaultRoot, 'notes', 'personal-agent', 'references', 'desktop-ui.md'),
+      join(vaultRoot, 'notes', 'neon-pilot', 'references', 'desktop-ui.md'),
       `---
 name: desktop-ui
 description: Durable UI notes.
@@ -76,7 +76,7 @@ Keep the right rail visible and resizable.
     );
 
     writeFile(
-      join(vaultRoot, 'notes', 'personal-agent', 'references', 'state-model.md'),
+      join(vaultRoot, 'notes', 'neon-pilot', 'references', 'state-model.md'),
       `# Project state model
 
 Keep planning state durable.
@@ -85,20 +85,20 @@ Keep planning state durable.
 
     const loaded = loadMemoryDocs({ vaultRoot });
     expect(loaded.parseErrors).toHaveLength(0);
-    expect(loaded.docs.map((doc) => doc.id)).toEqual(['personal-agent']);
+    expect(loaded.docs.map((doc) => doc.id)).toEqual(['neon-pilot']);
 
     const hub = loaded.docs[0];
     expect(hub).toMatchObject({
-      area: 'personal-agent',
+      area: 'neon-pilot',
       role: 'structure',
       related: ['runpod'],
       title: 'Personal-agent',
       summary: 'Hub doc.',
-      description: 'Tell the agent to use this note for durable personal-agent architecture guidance.',
+      description: 'Tell the agent to use this note for durable neon-pilot architecture guidance.',
     });
     expect(hub?.referencePaths).toHaveLength(2);
 
-    const references = loadMemoryPackageReferences(join(vaultRoot, 'notes', 'personal-agent'));
+    const references = loadMemoryPackageReferences(join(vaultRoot, 'notes', 'neon-pilot'));
     expect(references.map((reference) => reference.title)).toEqual(['desktop-ui', 'Project state model']);
     expect(references[0]).toMatchObject({
       relativePath: 'references/desktop-ui.md',
@@ -106,14 +106,14 @@ Keep planning state durable.
     });
 
     const filtered = filterMemoryDocs(loaded.docs, {
-      area: 'personal-agent',
-      text: 'personal-agent',
+      area: 'neon-pilot',
+      text: 'neon-pilot',
     });
-    expect(filtered.map((doc) => doc.id)).toEqual(['personal-agent']);
+    expect(filtered.map((doc) => doc.id)).toEqual(['neon-pilot']);
   });
 
   it('creates note nodes in sync/notes', () => {
-    const vaultRoot = createTempDir('personal-agent-memory-create-');
+    const vaultRoot = createTempDir('neon-pilot-memory-create-');
 
     const created = createMemoryDoc(
       {
@@ -125,7 +125,7 @@ Keep planning state durable.
         status: 'active',
         area: 'notes',
         role: 'hub',
-        related: ['personal-agent'],
+        related: ['neon-pilot'],
       },
       { vaultRoot },
     );
@@ -148,11 +148,11 @@ Keep planning state durable.
     expect(fileContent).toContain('structure');
     expect(fileContent).toContain('links:');
     expect(fileContent).toContain('related:');
-    expect(fileContent).toContain('- personal-agent');
+    expect(fileContent).toContain('- neon-pilot');
   });
 
   it('ignores project child markdown when listing top-level notes', () => {
-    const vaultRoot = createTempDir('personal-agent-memory-scope-');
+    const vaultRoot = createTempDir('neon-pilot-memory-scope-');
 
     writeFile(
       join(vaultRoot, 'notes', 'top-level.md'),
@@ -208,8 +208,8 @@ tags:
   });
 
   it('ignores legacy runtime notes outside the vault on load', () => {
-    const vaultRoot = createTempDir('personal-agent-memory-runtime-');
-    const runtimeNotePath = join(vaultRoot, '..', 'pi-agent-runtime', 'notes', 'desktop.md');
+    const vaultRoot = createTempDir('neon-pilot-memory-runtime-');
+    const runtimeNotePath = join(vaultRoot, '..', 'neon-pilot-runtime', 'notes', 'desktop.md');
 
     writeFile(
       runtimeNotePath,
@@ -232,7 +232,7 @@ updatedAt: 2026-03-31
   });
 
   it('reports broken related references during lint', () => {
-    const vaultRoot = createTempDir('personal-agent-memory-lint-');
+    const vaultRoot = createTempDir('neon-pilot-memory-lint-');
 
     writeFile(
       memoryPath(vaultRoot, 'runpod'),

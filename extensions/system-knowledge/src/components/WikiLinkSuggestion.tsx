@@ -1,4 +1,4 @@
-import type { VaultEntry } from '@personal-agent/extensions/data';
+import type { VaultEntry } from '@neon-pilot/extensions/data';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 

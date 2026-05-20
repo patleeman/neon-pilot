@@ -3,7 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 
 import {
   findExtensionEntry,
@@ -78,7 +78,7 @@ function starterHelpText(): string {
 
 function createStarterFrontend(name: string, template: RuntimeExtensionTemplate): string {
   if (template === 'right-rail') {
-    return `import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+    return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
   return (
@@ -96,7 +96,7 @@ export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
   }
 
   if (template === 'workbench-detail') {
-    return `import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+    return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 export function ExtensionRail({ pa }: ExtensionSurfaceProps) {
   return (
@@ -128,7 +128,7 @@ export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
 `;
   }
 
-  return `import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+  return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
@@ -146,7 +146,7 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
 }
 
 function createStarterBackend(): string {
-  return `import type { ExtensionBackendContext } from '@personal-agent/extensions';
+  return `import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
   ctx.log.info('ping');
@@ -261,7 +261,7 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
   writeFileSync(join(extensionRoot, 'README.md'), createStarterReadme(name));
   writeFileSync(
     join(extensionRoot, 'package.json'),
-    `${JSON.stringify({ type: 'module', dependencies: { '@personal-agent/extensions': '*' } }, null, 2)}\n`,
+    `${JSON.stringify({ type: 'module', dependencies: { '@neon-pilot/extensions': '*' } }, null, 2)}\n`,
   );
 
   const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
@@ -300,7 +300,7 @@ export async function buildRuntimeExtension(extensionId: string) {
 
   throw new Error(
     `The app no longer builds extensions at runtime. Build "${extensionId}" outside the app with ` +
-      '`pnpm run extension:build -- <extension-dir>` or `pa-extension build <extension-dir>`, then validate/reload it.',
+      '`pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then validate/reload it.',
   );
 }
 
@@ -369,7 +369,7 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
   }
 
   assertSafeZipEntries(readZipEntries(zipPath));
-  const extractRoot = mkdtempSync(join(tmpdir(), 'pa-extension-import-'));
+  const extractRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-import-'));
   try {
     execFileSync('unzip', ['-q', zipPath, '-d', extractRoot]);
     const packageRoot = findExtractedManifestRoot(extractRoot);

@@ -4,4 +4,4 @@ export {
   getConversationCommitCheckpoint,
   listConversationCommitCheckpoints,
   saveConversationCommitCheckpoint,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
-function resolveDesktopReleaseRepoSlug(value = process.env.PERSONAL_AGENT_RELEASE_REPO) {
+function resolveDesktopReleaseRepoSlug(value = process.env.NEON_PILOT_RELEASE_REPO) {
   const normalizedValue = value?.trim() || DEFAULT_DESKTOP_RELEASE_REPO_SLUG;
   const parts = normalizedValue
     .split('/')
@@ -86,15 +86,15 @@ const electronBuilderConfig = {
     '!ui/vite.config.ts',
     '!ui/postcss.config.js',
     '!ui/tailwind.config.js',
-    '!node_modules/@personal-agent/*/node_modules{,/**/*}',
-    '!node_modules/@personal-agent/*/src{,/**/*}',
-    '!node_modules/@personal-agent/*/app{,/**/*}',
-    '!node_modules/@personal-agent/*/public{,/**/*}',
-    '!node_modules/@personal-agent/*/dist/**/*.test.js',
-    '!node_modules/@personal-agent/*/tsconfig*.json',
-    '!node_modules/@personal-agent/*/vite.config.ts',
-    '!node_modules/@personal-agent/*/postcss.config.js',
-    '!node_modules/@personal-agent/*/tailwind.config.js',
+    '!node_modules/@neon-pilot/*/node_modules{,/**/*}',
+    '!node_modules/@neon-pilot/*/src{,/**/*}',
+    '!node_modules/@neon-pilot/*/app{,/**/*}',
+    '!node_modules/@neon-pilot/*/public{,/**/*}',
+    '!node_modules/@neon-pilot/*/dist/**/*.test.js',
+    '!node_modules/@neon-pilot/*/tsconfig*.json',
+    '!node_modules/@neon-pilot/*/vite.config.ts',
+    '!node_modules/@neon-pilot/*/postcss.config.js',
+    '!node_modules/@neon-pilot/*/tailwind.config.js',
     '!node_modules/esbuild{,/**/*}',
     '!node_modules/@esbuild{,/**/*}',
     '!node_modules/**/*.map',

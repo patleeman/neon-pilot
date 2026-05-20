@@ -14,7 +14,7 @@ export interface LiveSessionDurableRunHost {
 }
 
 export function resolveLiveSessionProfile(): string | undefined {
-  const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE ?? process.env.PERSONAL_AGENT_PROFILE;
+  const profile = process.env.NEON_PILOT_ACTIVE_PROFILE ?? process.env.NEON_PILOT_PROFILE;
   const normalized = profile?.trim();
   return normalized && normalized.length > 0 ? normalized : undefined;
 }

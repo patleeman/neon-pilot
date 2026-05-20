@@ -8,7 +8,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const [command, ...args] = process.argv.slice(2);
 
 function usage() {
-  console.error(`Usage: pa-extension <command> [args]
+  console.error(`Usage: neon-pilot-extension <command> [args]
 
 Commands:
   build [--sourcemap] <extension-dir>   Build frontend/backend bundles into dist/
@@ -39,7 +39,7 @@ switch (command) {
     process.exit(command ? 0 : 1);
     break;
   default:
-    console.error(`Unknown pa-extension command: ${command}`);
+    console.error(`Unknown neon-pilot-extension command: ${command}`);
     usage();
     process.exit(1);
 }

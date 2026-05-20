@@ -13,8 +13,8 @@ import {
   rerunDurableRun,
   setTaskCallbackBinding,
   startBackgroundRun,
-} from '@personal-agent/extensions/backend/runs';
-import { recordTelemetryEvent } from '@personal-agent/extensions/backend/telemetry';
+} from '@neon-pilot/extensions/backend/runs';
+import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 import { Type } from '@sinclair/typebox';
 
 import { ALLOWED_TOOLS_DESCRIPTION, COMMON_AGENT_TOOL_NAMES, normalizeAllowedTools } from './allowedTools.js';

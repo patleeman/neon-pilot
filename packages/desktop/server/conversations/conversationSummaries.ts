@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 
 import { type Api, completeSimple, type Model } from '@earendil-works/pi-ai';
 import { AuthStorage } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, type SqliteDatabase } from '@personal-agent/core';
+import { getPiAgentRuntimeDir, type SqliteDatabase } from '@neon-pilot/core';
 
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { logWarn } from '../shared/logging.js';

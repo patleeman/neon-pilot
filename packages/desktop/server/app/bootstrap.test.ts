@@ -35,7 +35,7 @@ function startServer(app: Express): Promise<{ baseUrl: string; close: () => Prom
 }
 
 describe('mountStaticServerApps with built assets', () => {
-  const tempRoot = mkdtempSync(join(tmpdir(), 'pa-web-bootstrap-'));
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-web-bootstrap-'));
   const distDir = join(tempRoot, 'dist');
   const distAssetsDir = join(distDir, 'assets');
 
@@ -89,7 +89,7 @@ describe('mountStaticServerApps with built assets', () => {
 });
 
 describe('mountStaticServerApps without built assets', () => {
-  const tempRoot = mkdtempSync(join(tmpdir(), 'pa-web-bootstrap-empty-'));
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-web-bootstrap-empty-'));
   const distDir = join(tempRoot, 'missing-dist');
 
   let appBaseUrl = '';
@@ -116,7 +116,7 @@ describe('mountStaticServerApps without built assets', () => {
     const response = await fetch(`${appBaseUrl}/`);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('personal-agent desktop renderer');
+    expect(await response.text()).toContain('neon-pilot desktop renderer');
     expect(await fetch(`${appBaseUrl}/`).then((result) => result.text())).toContain('SPA not built yet.');
   });
 });

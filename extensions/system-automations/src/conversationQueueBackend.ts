@@ -14,8 +14,8 @@ import {
   promptSession,
   type QueuedPromptPreview,
   scheduleDeferredResumeForSessionFile,
-} from '@personal-agent/extensions/backend/automations';
-import { getDurableRun } from '@personal-agent/extensions/backend/runs';
+} from '@neon-pilot/extensions/backend/automations';
+import { getDurableRun } from '@neon-pilot/extensions/backend/runs';
 
 const DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 type DeliverAs = (typeof DELIVER_AS_VALUES)[number];

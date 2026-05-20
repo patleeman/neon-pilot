@@ -66,8 +66,8 @@ describe('api desktop transport', () => {
       activeHostKind: 'local',
       activeHostSummary: 'Local backend is healthy.',
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment,
       },
     });
@@ -273,8 +273,8 @@ describe('api desktop transport', () => {
       activeHostKind: 'local',
       activeHostSummary: 'Local backend is healthy.',
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment,
         readAppStatus,
         readDaemonState,
@@ -658,8 +658,8 @@ describe('api desktop transport', () => {
       mimeType: 'image/png',
       fileName: 'preview.png',
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -763,8 +763,8 @@ describe('api desktop transport', () => {
       cancelledId: 'resume-2',
       resumes: [],
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -822,8 +822,8 @@ describe('api desktop transport', () => {
     const readDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: '', effectiveCwd: '/repo' });
     const updateDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: './repo', effectiveCwd: '/repo' });
     const pickFolder = vi.fn().mockResolvedValue({ path: '/picked/repo', cancelled: false });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -852,8 +852,8 @@ describe('api desktop transport', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const pickFolder = vi.fn().mockResolvedValue({ path: '/picked/vault', cancelled: false });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -883,8 +883,8 @@ describe('api desktop transport', () => {
         defaultPresetIds: ['preset-1'],
       },
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -926,8 +926,8 @@ describe('api desktop transport', () => {
       archivedSessionIds: ['conversation-6'],
       workspacePaths: ['/tmp/beta'],
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -973,8 +973,8 @@ describe('api desktop transport', () => {
       .mockResolvedValueOnce(createJsonResponse({ currentCwd: './repo', effectiveCwd: '/repo' }));
     vi.stubGlobal('fetch', fetchMock);
     const readDefaultCwd = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1005,8 +1005,8 @@ describe('api desktop transport', () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(createJsonResponse({ path: '/picked/repo', cancelled: false }));
     vi.stubGlobal('fetch', fetchMock);
     const pickFolder = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1042,8 +1042,8 @@ describe('api desktop transport', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     const readConversationPlansWorkspace = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1094,8 +1094,8 @@ describe('api desktop transport', () => {
     vi.stubGlobal('fetch', fetchMock);
     const readOpenConversationTabs = vi.fn();
     const updateOpenConversationTabs = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1149,8 +1149,8 @@ describe('api desktop transport', () => {
     vi.stubGlobal('fetch', fetchMock);
     const readAppStatus = vi.fn();
     const readDaemonState = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1179,8 +1179,8 @@ describe('api desktop transport', () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(createJsonResponse({ ok: true }));
     vi.stubGlobal('fetch', fetchMock);
     const markDurableRunAttention = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1215,8 +1215,8 @@ describe('api desktop transport', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     const readModels = vi.fn().mockRejectedValue(new Error('ipc failed'));
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -1257,8 +1257,8 @@ describe('api desktop transport', () => {
       currentServiceTier: '',
       models: [],
     });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'local',
@@ -1299,8 +1299,8 @@ describe('api desktop transport', () => {
     const readModels = vi.fn();
     const readModelProviders = vi.fn();
     const readProviderAuth = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1396,8 +1396,8 @@ describe('api desktop transport', () => {
     const createConversationAttachment = vi.fn();
     const updateConversationAttachment = vi.fn();
     const readConversationAttachmentAsset = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1499,8 +1499,8 @@ describe('api desktop transport', () => {
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1606,8 +1606,8 @@ describe('api desktop transport', () => {
     const scheduleConversationDeferredResume = vi.fn();
     const fireConversationDeferredResume = vi.fn();
     const cancelConversationDeferredResume = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1676,8 +1676,8 @@ describe('api desktop transport', () => {
     const readSessionMeta = vi.fn();
     const readSessionSearchIndex = vi.fn();
     const invokeLocalApi = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',
@@ -1737,8 +1737,8 @@ describe('api desktop transport', () => {
       .mockResolvedValueOnce(createJsonResponse({ ok: true, path: '/tmp/remote-live.html' }));
     vi.stubGlobal('fetch', fetchMock);
     const invokeLocalApi = vi.fn();
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
           isElectron: true,
           activeHostId: 'web-1',

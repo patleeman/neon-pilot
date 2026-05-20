@@ -699,7 +699,7 @@ MVP product constraints:
 
 ### Why this needs core support
 
-Provisioning over SSH is extension-owned integration work. Actually running a conversation remotely is core runtime routing, filesystem authority, transcript persistence, cancellation, and tool accounting. If an extension fakes it with `ssh personal-agent run ...`, it will work until it absolutely does not, probably while holding a chainsaw. Core needs a runtime-provider boundary so remotes are boring instead of haunted.
+Provisioning over SSH is extension-owned integration work. Actually running a conversation remotely is core runtime routing, filesystem authority, transcript persistence, cancellation, and tool accounting. If an extension fakes it with `ssh neon-pilot run ...`, it will work until it absolutely does not, probably while holding a chainsaw. Core needs a runtime-provider boundary so remotes are boring instead of haunted.
 
 ## Built-in conversation implementation notes side panel
 

@@ -20,8 +20,8 @@ import { setConversationServiceContext } from './conversationService.js';
 // Initialize the conversation service context from environment variables
 // inherited from the parent Electron process.
 setConversationServiceContext({
-  getCurrentProfile: () => process.env.PERSONAL_AGENT_PROFILE ?? 'shared',
-  getRepoRoot: () => process.env.PERSONAL_AGENT_REPO_ROOT ?? process.cwd(),
+  getCurrentProfile: () => process.env.NEON_PILOT_PROFILE ?? 'shared',
+  getRepoRoot: () => process.env.NEON_PILOT_REPO_ROOT ?? process.cwd(),
   getSavedUiPreferences: () =>
     ({
       openConversationIds: [],

@@ -4,8 +4,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@personal-agent/core', async () => {
-  const actual = await vi.importActual<typeof import('@personal-agent/core')>('@personal-agent/core');
+vi.mock('@neon-pilot/core', async () => {
+  const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
   return {
     ...actual,
     getStateRoot: () => stateRoot,
@@ -117,7 +117,7 @@ let promptAssemblyHooks: unknown[] = [];
 
 describe('buildPromptAssemblyPlan', () => {
   it('assembles skills, tools, and prompt templates through canonical inventories', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'pa-prompt-assembly-'));
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-prompt-assembly-'));
     stateRoot = join(root, 'state');
     durableSkillsDir = join(root, 'vault', 'skills');
     configuredSkillsDir = join(root, 'configured-skills');
@@ -159,7 +159,7 @@ describe('buildPromptAssemblyPlan', () => {
   });
 
   it('preserves existing diagnostics when hooks return a replacement plan', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'pa-prompt-assembly-hooks-'));
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-prompt-assembly-hooks-'));
     stateRoot = join(root, 'state');
     durableSkillsDir = join(root, 'vault', 'skills');
     configuredSkillsDir = join(root, 'configured-skills');

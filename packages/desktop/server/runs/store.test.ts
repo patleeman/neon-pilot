@@ -1,4 +1,4 @@
-import { openSqliteDatabase } from '@personal-agent/core';
+import { openSqliteDatabase } from '@neon-pilot/core';
 import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';

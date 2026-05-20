@@ -102,18 +102,18 @@ if (manifest.backend?.entry && existsSync(backendSource)) {
       js: 'import { createRequire as __paExtensionCreateRequire } from "node:module"; const require = __paExtensionCreateRequire(import.meta.url);',
     },
     external: [
-      '@personal-agent/extensions/host',
-      '@personal-agent/extensions/ui',
-      '@personal-agent/extensions/workbench',
-      '@personal-agent/extensions/workbench-artifacts',
-      '@personal-agent/extensions/workbench-browser',
-      '@personal-agent/extensions/workbench-diffs',
-      '@personal-agent/extensions/workbench-files',
-      '@personal-agent/extensions/workbench-runs',
-      '@personal-agent/extensions/workbench-transcript',
-      '@personal-agent/extensions/settings',
-      '@personal-agent/extensions/data',
-      '@personal-agent/extensions/excalidraw',
+      '@neon-pilot/extensions/host',
+      '@neon-pilot/extensions/ui',
+      '@neon-pilot/extensions/workbench',
+      '@neon-pilot/extensions/workbench-artifacts',
+      '@neon-pilot/extensions/workbench-browser',
+      '@neon-pilot/extensions/workbench-diffs',
+      '@neon-pilot/extensions/workbench-files',
+      '@neon-pilot/extensions/workbench-runs',
+      '@neon-pilot/extensions/workbench-transcript',
+      '@neon-pilot/extensions/settings',
+      '@neon-pilot/extensions/data',
+      '@neon-pilot/extensions/excalidraw',
       'electron',
       'fsevents',
       'process',
@@ -184,15 +184,15 @@ function commitTempDist() {
 
 function createFrontendRawCssPlugin() {
   return {
-    name: 'personal-agent-frontend-raw-css',
+    name: 'neon-pilot-frontend-raw-css',
     setup(buildContext) {
       buildContext.onResolve({ filter: /\.css\?raw$/ }, async (args) => {
         const cssPath = args.path.slice(0, -'?raw'.length);
         const resolved = await buildContext.resolve(cssPath, { importer: args.importer, kind: args.kind, resolveDir: args.resolveDir });
         if (resolved.errors.length > 0) return { errors: resolved.errors };
-        return { path: resolved.path, namespace: 'pa-raw-css' };
+        return { path: resolved.path, namespace: 'neon-pilot-raw-css' };
       });
-      buildContext.onLoad({ filter: /\.css$/, namespace: 'pa-raw-css' }, (args) => ({
+      buildContext.onLoad({ filter: /\.css$/, namespace: 'neon-pilot-raw-css' }, (args) => ({
         contents: readFileSync(args.path, 'utf8'),
         loader: 'text',
       }));
@@ -201,7 +201,7 @@ function createFrontendRawCssPlugin() {
 }
 
 function createFrontendSharedReactPlugin() {
-  const reactFacade = `const React = globalThis.__PA_REACT__;
+  const reactFacade = `const React = globalThis.__NEON_PILOT_REACT__;
 if (!React) throw new Error('Neon Pilot React host runtime is unavailable.');
 export const Children = React.Children;
 export const Component = React.Component;
@@ -240,7 +240,7 @@ export const useTransition = React.useTransition;
 export const version = React.version;
 export default React;
 `;
-  const reactDomFacade = `const ReactDom = globalThis.__PA_REACT_DOM__;
+  const reactDomFacade = `const ReactDom = globalThis.__NEON_PILOT_REACT_DOM__;
 if (!ReactDom) throw new Error('Neon Pilot React DOM host runtime is unavailable.');
 export const createPortal = ReactDom.createPortal;
 export const flushSync = ReactDom.flushSync;
@@ -252,13 +252,13 @@ export const unstable_batchedUpdates = ReactDom.unstable_batchedUpdates;
 export const version = ReactDom.version;
 export default ReactDom;
 `;
-  const reactDomClientFacade = `const ReactDomClient = globalThis.__PA_REACT_DOM_CLIENT__;
+  const reactDomClientFacade = `const ReactDomClient = globalThis.__NEON_PILOT_REACT_DOM_CLIENT__;
 if (!ReactDomClient) throw new Error('Neon Pilot React DOM client host runtime is unavailable.');
 export const createRoot = ReactDomClient.createRoot;
 export const hydrateRoot = ReactDomClient.hydrateRoot;
 export default ReactDomClient;
 `;
-  const jsxRuntimeFacade = `const runtime = globalThis.__PA_REACT_JSX_RUNTIME__;
+  const jsxRuntimeFacade = `const runtime = globalThis.__NEON_PILOT_REACT_JSX_RUNTIME__;
 if (!runtime) throw new Error('Neon Pilot React JSX runtime is unavailable.');
 export const Fragment = runtime.Fragment;
 export const jsx = runtime.jsx;
@@ -266,32 +266,38 @@ export const jsxs = runtime.jsxs;
 export const jsxDEV = runtime.jsxDEV;
 `;
   return {
-    name: 'personal-agent-frontend-shared-react',
+    name: 'neon-pilot-frontend-shared-react',
     setup(buildContext) {
-      buildContext.onResolve({ filter: /^react$/ }, () => ({ path: 'pa-shared-react', namespace: 'pa-shared-react' }));
-      buildContext.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'pa-shared-react-dom', namespace: 'pa-shared-react' }));
+      buildContext.onResolve({ filter: /^react$/ }, () => ({ path: 'neon-pilot-shared-react', namespace: 'neon-pilot-shared-react' }));
+      buildContext.onResolve({ filter: /^react-dom$/ }, () => ({
+        path: 'neon-pilot-shared-react-dom',
+        namespace: 'neon-pilot-shared-react',
+      }));
       buildContext.onResolve({ filter: /^react-dom\/client$/ }, () => ({
-        path: 'pa-shared-react-dom-client',
-        namespace: 'pa-shared-react',
+        path: 'neon-pilot-shared-react-dom-client',
+        namespace: 'neon-pilot-shared-react',
       }));
       buildContext.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({
-        path: 'pa-shared-react-jsx-runtime',
-        namespace: 'pa-shared-react',
+        path: 'neon-pilot-shared-react-jsx-runtime',
+        namespace: 'neon-pilot-shared-react',
       }));
       buildContext.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, () => ({
-        path: 'pa-shared-react-jsx-dev-runtime',
-        namespace: 'pa-shared-react',
+        path: 'neon-pilot-shared-react-jsx-dev-runtime',
+        namespace: 'neon-pilot-shared-react',
       }));
-      buildContext.onLoad({ filter: /^pa-shared-react$/, namespace: 'pa-shared-react' }, () => ({ contents: reactFacade, loader: 'js' }));
-      buildContext.onLoad({ filter: /^pa-shared-react-dom$/, namespace: 'pa-shared-react' }, () => ({
+      buildContext.onLoad({ filter: /^neon-pilot-shared-react$/, namespace: 'neon-pilot-shared-react' }, () => ({
+        contents: reactFacade,
+        loader: 'js',
+      }));
+      buildContext.onLoad({ filter: /^neon-pilot-shared-react-dom$/, namespace: 'neon-pilot-shared-react' }, () => ({
         contents: reactDomFacade,
         loader: 'js',
       }));
-      buildContext.onLoad({ filter: /^pa-shared-react-dom-client$/, namespace: 'pa-shared-react' }, () => ({
+      buildContext.onLoad({ filter: /^neon-pilot-shared-react-dom-client$/, namespace: 'neon-pilot-shared-react' }, () => ({
         contents: reactDomClientFacade,
         loader: 'js',
       }));
-      buildContext.onLoad({ filter: /^pa-shared-react-jsx-(?:dev-)?runtime$/, namespace: 'pa-shared-react' }, () => ({
+      buildContext.onLoad({ filter: /^neon-pilot-shared-react-jsx-(?:dev-)?runtime$/, namespace: 'neon-pilot-shared-react' }, () => ({
         contents: jsxRuntimeFacade,
         loader: 'js',
       }));
@@ -301,34 +307,34 @@ export const jsxDEV = runtime.jsxDEV;
 
 function createFrontendExtensionSdkPlugin() {
   const moduleFiles = {
-    '@personal-agent/extensions/host': 'host.ts',
-    '@personal-agent/extensions/ui': 'ui.ts',
-    '@personal-agent/extensions/workbench': 'workbench.ts',
-    '@personal-agent/extensions/data': 'data.ts',
-    '@personal-agent/extensions/settings': 'settings.ts',
-    '@personal-agent/extensions/host-view-components': 'host-view-components.ts',
-    '@personal-agent/extensions/workbench-artifacts': 'workbench-artifacts.ts',
-    '@personal-agent/extensions/workbench-browser': 'workbench-browser.ts',
-    '@personal-agent/extensions/workbench-diffs': 'workbench-diffs.ts',
-    '@personal-agent/extensions/workbench-files': 'workbench-files.ts',
-    '@personal-agent/extensions/workbench-runs': 'workbench-runs.ts',
-    '@personal-agent/extensions/workbench-transcript': 'workbench-transcript.ts',
+    '@neon-pilot/extensions/host': 'host.ts',
+    '@neon-pilot/extensions/ui': 'ui.ts',
+    '@neon-pilot/extensions/workbench': 'workbench.ts',
+    '@neon-pilot/extensions/data': 'data.ts',
+    '@neon-pilot/extensions/settings': 'settings.ts',
+    '@neon-pilot/extensions/host-view-components': 'host-view-components.ts',
+    '@neon-pilot/extensions/workbench-artifacts': 'workbench-artifacts.ts',
+    '@neon-pilot/extensions/workbench-browser': 'workbench-browser.ts',
+    '@neon-pilot/extensions/workbench-diffs': 'workbench-diffs.ts',
+    '@neon-pilot/extensions/workbench-files': 'workbench-files.ts',
+    '@neon-pilot/extensions/workbench-runs': 'workbench-runs.ts',
+    '@neon-pilot/extensions/workbench-transcript': 'workbench-transcript.ts',
   };
   return {
-    name: 'personal-agent-frontend-extension-sdk',
+    name: 'neon-pilot-frontend-extension-sdk',
     setup(buildContext) {
       buildContext.onResolve({ filter: /^\.\/systemExtensionModules$/ }, (args) => {
         if (!args.importer.includes('/packages/desktop/ui/src/extensions/')) return;
-        return { path: 'pa-empty-system-extension-modules', namespace: 'pa-extension-sdk' };
+        return { path: 'neon-pilot-empty-system-extension-modules', namespace: 'neon-pilot-extension-sdk' };
       });
-      buildContext.onLoad({ filter: /^pa-empty-system-extension-modules$/, namespace: 'pa-extension-sdk' }, () => ({
+      buildContext.onLoad({ filter: /^neon-pilot-empty-system-extension-modules$/, namespace: 'neon-pilot-extension-sdk' }, () => ({
         contents: 'export const systemExtensionModules = new Map();',
         loader: 'js',
       }));
       buildContext.onResolve(
         {
           filter:
-            /^@personal-agent\/extensions\/(host|ui|workbench|host-view-components|workbench-artifacts|workbench-browser|workbench-diffs|workbench-files|workbench-runs|workbench-transcript|data|settings)$/,
+            /^@neon-pilot\/extensions\/(host|ui|workbench|host-view-components|workbench-artifacts|workbench-browser|workbench-diffs|workbench-files|workbench-runs|workbench-transcript|data|settings)$/,
         },
         (args) => {
           const moduleFile = moduleFiles[args.path];
@@ -346,7 +352,7 @@ function createFrontendExtensionSdkPlugin() {
 function createForbiddenBackendImportPlugin(extensionPackageRoot) {
   const sourceRoot = `${resolve(extensionPackageRoot, 'src')}/`;
   return {
-    name: 'personal-agent-forbidden-backend-imports',
+    name: 'neon-pilot-forbidden-backend-imports',
     setup(buildContext) {
       buildContext.onResolve({ filter: /.*/ }, (args) => {
         if (!FORBIDDEN_BACKEND_IMPORTS.has(args.path)) return;
@@ -365,18 +371,18 @@ function createForbiddenBackendImportPlugin(extensionPackageRoot) {
 
 function createExtensionBackendApiPlugin() {
   return {
-    name: 'personal-agent-extension-backend-api',
+    name: 'neon-pilot-extension-backend-api',
     setup(buildContext) {
-      buildContext.onResolve({ filter: /^@personal-agent\/extensions\/backend$/ }, () => ({
+      buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/backend$/ }, () => ({
         path: join(repoRoot, 'packages/desktop/server/extensions/backendApi/index.ts'),
       }));
-      buildContext.onResolve({ filter: /^@personal-agent\/extensions\/backend\/(.+)$/ }, (args) => ({
+      buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/backend\/(.+)$/ }, (args) => ({
         path: join(repoRoot, `packages/desktop/server/extensions/backendApi/${args.path.split('/').pop()}.ts`),
       }));
-      buildContext.onResolve({ filter: /^@personal-agent\/extensions\/host-view-components$/ }, () => ({
+      buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/host-view-components$/ }, () => ({
         path: join(repoRoot, 'packages/extensions/src/host-view-components.ts'),
       }));
-      buildContext.onResolve({ filter: /^@personal-agent\/daemon$/ }, (args) => {
+      buildContext.onResolve({ filter: /^@neon-pilot\/daemon$/ }, (args) => {
         const desktopDaemonBundle = join(repoRoot, 'packages/desktop/server/dist/daemon/index.js');
         // Bundle the daemon runtime inline so extensions work in packaged
         // apps where the absolute build-time path no longer exists.
@@ -388,7 +394,7 @@ function createExtensionBackendApiPlugin() {
 
 function createHostRuntimeExternalPlugin() {
   return {
-    name: 'personal-agent-extension-host-runtime-externals',
+    name: 'neon-pilot-extension-host-runtime-externals',
     setup(buildContext) {
       buildContext.onResolve({ filter: HOST_RUNTIME_EXTERNAL_IMPORT_RE }, (args) => ({ path: args.path, external: true }));
     },
@@ -397,13 +403,13 @@ function createHostRuntimeExternalPlugin() {
 
 function createJsdomWorkerPlugin() {
   return {
-    name: 'personal-agent-jsdom-worker-stub',
+    name: 'neon-pilot-jsdom-worker-stub',
     setup(buildContext) {
       buildContext.onResolve({ filter: /^\.\/xhr-sync-worker\.js$/ }, () => ({
-        path: 'personal-agent-jsdom-xhr-sync-worker',
-        namespace: 'pa-jsdom',
+        path: 'neon-pilot-jsdom-xhr-sync-worker',
+        namespace: 'neon-pilot-jsdom',
       }));
-      buildContext.onLoad({ filter: /.*/, namespace: 'pa-jsdom' }, () => ({ contents: 'export default "";', loader: 'js' }));
+      buildContext.onLoad({ filter: /.*/, namespace: 'neon-pilot-jsdom' }, () => ({ contents: 'export default "";', loader: 'js' }));
     },
   };
 }

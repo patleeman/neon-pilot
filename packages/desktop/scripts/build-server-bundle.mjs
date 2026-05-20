@@ -17,7 +17,7 @@ const createRequireBanner =
 const extensionApiAliasPlugin = {
   name: 'extension-api-aliases',
   setup(build) {
-    build.onResolve({ filter: /^@personal-agent\/extensions\/host-view-components$/ }, () => ({
+    build.onResolve({ filter: /^@neon-pilot\/extensions\/host-view-components$/ }, () => ({
       path: resolve(packageRoot, '..', 'extensions', 'src', 'host-view-components.ts'),
     }));
   },
@@ -97,7 +97,7 @@ await Promise.all([
     entryPoints: [resolve(packageRoot, 'server/traces/traceWorker.ts')],
     outfile: bundleOutputs[2],
   }),
-  // Daemon barrel used by @personal-agent/daemon.
+  // Daemon barrel used by @neon-pilot/daemon.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/daemon/index.ts')],
@@ -116,7 +116,7 @@ await Promise.all([
     },
   }),
   // Package the core runtime behind a stable app.asar path so prebuilt extension
-  // backends can resolve @personal-agent/core without relying on workspace
+  // backends can resolve @neon-pilot/core without relying on workspace
   // node_modules symlinks that do not exist in signed apps.
   build({
     ...sharedEsbuildOptions,
@@ -176,7 +176,7 @@ const bundledPackageJsonByDir = new Map([
   [
     resolve(outdir, 'daemon'),
     {
-      name: '@personal-agent/daemon',
+      name: '@neon-pilot/daemon',
       version: desktopPackageMetadata.version ?? '0.0.0',
       type: 'module',
       main: './index.js',
@@ -185,7 +185,7 @@ const bundledPackageJsonByDir = new Map([
   [
     resolve(outdir, 'core'),
     {
-      name: '@personal-agent/core',
+      name: '@neon-pilot/core',
       version: desktopPackageMetadata.version ?? '0.0.0',
       type: 'module',
       main: './index.js',

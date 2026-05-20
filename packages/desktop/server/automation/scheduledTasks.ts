@@ -11,7 +11,7 @@ import {
   type ParsedTaskDefinition,
   parseTaskDefinition,
   type StoredAutomation,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 const MAX_SCHEDULED_TASK_DURATION_SECONDS = 7 * 24 * 60 * 60;
 

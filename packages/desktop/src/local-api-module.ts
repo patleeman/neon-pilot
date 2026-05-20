@@ -381,8 +381,8 @@ export function resolveLocalApiModuleUrl(
   } = {},
 ): string {
   const currentDir = input.currentDir ?? dirname(fileURLToPath(import.meta.url));
-  const envRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim();
-  const envAppPath = process.env.PERSONAL_AGENT_DESKTOP_APP_PATH?.trim();
+  const envRepoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
+  const envAppPath = process.env.NEON_PILOT_DESKTOP_APP_PATH?.trim();
   const devPath = resolveDevLocalApiModuleFilePath(currentDir);
   const packagedPath = resolvePackagedLocalApiModuleFilePath(currentDir, input.appPath ?? envAppPath ?? null);
   const repoPath = resolveRepoLocalApiModuleFilePath(input.repoRoot ?? envRepoRoot ?? null);
@@ -408,7 +408,7 @@ export function resolveLocalApiModuleUrl(
 }
 
 function resolveFallbackLocalApiModuleUrl(): string | null {
-  const repoPath = resolveRepoLocalApiModuleFilePath(process.env.PERSONAL_AGENT_REPO_ROOT?.trim());
+  const repoPath = resolveRepoLocalApiModuleFilePath(process.env.NEON_PILOT_REPO_ROOT?.trim());
   if (!repoPath || !existsSync(repoPath)) {
     return null;
   }

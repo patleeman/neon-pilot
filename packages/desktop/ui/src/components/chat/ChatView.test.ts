@@ -371,7 +371,7 @@ describe('chat view streaming disclosure', () => {
               action: 'start_agent',
               taskSlug: 'ui-polish',
               prompt: 'Inspect git diff',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
             output: 'Started durable agent run run-ui-polish-2026-03-25T00-53-25-347Z-903aa31b for ui-polish.',
             status: 'running',
@@ -379,7 +379,7 @@ describe('chat view streaming disclosure', () => {
               action: 'start_agent',
               runId: 'run-ui-polish-2026-03-25T00-53-25-347Z-903aa31b',
               taskSlug: 'ui-polish',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
               model: 'openai-codex/gpt-5.4',
             },
           },
@@ -392,7 +392,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Inspect git diff');
     expect(html).toContain('agent task');
     expect(html).toContain('ui-polish');
-    expect(html).toContain('cwd personal-agent');
+    expect(html).toContain('cwd neon-pilot');
     expect(html).toContain('gpt-5.4');
   });
 
@@ -408,7 +408,7 @@ describe('chat view streaming disclosure', () => {
               action: 'start',
               taskSlug: 'ui-preview-check',
               command: 'printf ok',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
             output: 'Started durable run run-ui-preview-check-2026-03-25T00-53-25-347Z-903aa31b for ui-preview-check.',
             status: 'running',
@@ -422,7 +422,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('printf ok');
     expect(html).toContain('background command');
     expect(html).toContain('ui-preview-check');
-    expect(html).toContain('cwd personal-agent');
+    expect(html).toContain('cwd neon-pilot');
   });
 
   it('does not surface linked run cards as separate internal-work cluster shelf content', () => {
@@ -991,7 +991,7 @@ describe('chat view streaming disclosure', () => {
   it('renders the system prompt as an optional collapsed transcript disclosure', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
-        systemPrompt: 'You are Patrick’s personal agent.\nUse the repo instructions.',
+        systemPrompt: 'You are Patrick’s Neon Pilot.\nUse the repo instructions.',
         messages: [
           {
             type: 'user',
@@ -1433,22 +1433,19 @@ describe('chat view streaming disclosure', () => {
   });
 
   it('renders knowledge base file paths as links when file opening is available', () => {
-    const html = renderAssistantText(
-      'Open `/Users/patrick/.local/state/personal-agent/knowledge-base/repo/skills/checkpoint/SKILL.md` next.',
-      { onOpenFilePath: () => undefined },
-    );
+    const html = renderAssistantText('Open `/Users/patrick/.local/state/neon-pilot/knowledge-base/repo/skills/checkpoint/SKILL.md` next.', {
+      onOpenFilePath: () => undefined,
+    });
 
     expect(html).toContain('href="/knowledge?file=skills%2Fcheckpoint%2FSKILL.md"');
-    expect(html).toContain('/Users/patrick/.local/state/personal-agent/knowledge-base/repo/skills/checkpoint/SKILL.md');
+    expect(html).toContain('/Users/patrick/.local/state/neon-pilot/knowledge-base/repo/skills/checkpoint/SKILL.md');
   });
 
   it('keeps knowledge base paths as plain inline code without file opening', () => {
-    const html = renderAssistantText(
-      'Open `/Users/patrick/.local/state/personal-agent/knowledge-base/repo/skills/checkpoint/SKILL.md` next.',
-    );
+    const html = renderAssistantText('Open `/Users/patrick/.local/state/neon-pilot/knowledge-base/repo/skills/checkpoint/SKILL.md` next.');
 
     expect(html).toContain('<code');
-    expect(html).toContain('/Users/patrick/.local/state/personal-agent/knowledge-base/repo/skills/checkpoint/SKILL.md');
+    expect(html).toContain('/Users/patrick/.local/state/neon-pilot/knowledge-base/repo/skills/checkpoint/SKILL.md');
     expect(html).not.toContain('/knowledge?file=skills%2Fcheckpoint%2FSKILL.md');
   });
 

@@ -13,10 +13,10 @@ const tsxPath = resolve(process.cwd(), 'node_modules/.bin/tsx');
 function canUseBuiltCli() {
   if (!existsSync(cliDistPath)) return false;
   try {
-    require.resolve('@personal-agent/core');
-    require.resolve('@personal-agent/extensions');
-    require.resolve('@personal-agent/desktop');
-    require.resolve('@personal-agent/daemon');
+    require.resolve('@neon-pilot/core');
+    require.resolve('@neon-pilot/extensions');
+    require.resolve('@neon-pilot/desktop');
+    require.resolve('@neon-pilot/daemon');
     return true;
   } catch {
     return false;

@@ -2,7 +2,7 @@
 
 The normal way to create a Neon Pilot extension is to ask your agent to build it for you. Start with [`docs/build-an-extension.md`](../../docs/build-an-extension.md) for the agent-first workflow and copy-paste prompt.
 
-This package is the public import surface for native Neon Pilot extensions. Extension code should import from `@personal-agent/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
+This package is the public import surface for native Neon Pilot extensions. Extension code should import from `@neon-pilot/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
 
 This doc is written for agents building extensions. Read it before creating or editing an extension, then inspect the current schema/types and nearby system extensions for exact examples.
 
@@ -12,7 +12,7 @@ Build new Neon Pilot product features as extensions by default. Core is the smal
 
 User-facing, domain-specific, and workflow-specific behavior belongs in extensions: pages, panels, tool renderers, commands, integrations, context providers, automations, import/export flows, diagnostics views, settings sections, and opinionated UX.
 
-If the SDK lacks a host primitive needed by a first-party extension, add a reusable API to `@personal-agent/extensions` instead of importing app internals or hardcoding the feature in the app shell. Core should make features possible; extensions should be where features live.
+If the SDK lacks a host primitive needed by a first-party extension, add a reusable API to `@neon-pilot/extensions` instead of importing app internals or hardcoding the feature in the app shell. Core should make features possible; extensions should be where features live.
 
 ## Agent workflow
 
@@ -23,7 +23,7 @@ When asked to build or modify an extension:
 1. Inspect existing extension IDs, routes, commands, and surfaces before choosing names.
 2. Create editable source files, not dist-only output.
 3. Declare all host contributions in `extension.json` and all Node dependencies in `package.json`.
-4. Use `@personal-agent/extensions` as the SDK seam. Do not import from `packages/desktop/ui/src/...` or `packages/desktop/server/...`.
+4. Use `@neon-pilot/extensions` as the SDK seam. Do not import from `packages/desktop/ui/src/...` or `packages/desktop/server/...`.
 5. Run the repo-owned extension build and reload extensions.
 6. Visually inspect any UI surface you changed.
 7. Checkpoint only the files you touched.
@@ -35,12 +35,12 @@ Do not create new iframe or webview extensions. Native extensions render React c
 User-created extensions live in runtime state by default:
 
 ```text
-~/.local/state/personal-agent/extensions/{extension-id}/
+~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
 Bundled first-party extensions live in the repo under `extensions/`. They use the same contract as user extensions and are good examples when you need to copy a working shape.
 
-The loader also accepts package roots through `PERSONAL_AGENT_EXTENSION_PATHS`. Each path can point directly at a folder with `extension.json` or at a parent folder containing many extension packages.
+The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS`. Each path can point directly at a folder with `extension.json` or at a parent folder containing many extension packages.
 
 A native extension package usually looks like this:
 
@@ -68,10 +68,10 @@ agent-board/
 Neon Pilot owns the build command. Run it from the repo root:
 
 ```bash
-pnpm run extension:build -- ~/.local/state/personal-agent/extensions/agent-board
+pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
 ```
 
-The builder compiles frontend React to `dist/frontend.js`, backend Node code to `dist/backend.mjs`, and bundles normal third-party dependencies. Host packages such as `react`, `react-dom`, and `@personal-agent/extensions` are treated as provided by the app. Backend `dist/` output is the runtime contract for system extensions, and stale, missing, oversized, or non-portable system-extension bundles fail validation. System frontends are loaded from source by the desktop renderer so they share the app's React singleton; their `dist/frontend.js` output is still built and checked for packaged releases.
+The builder compiles frontend React to `dist/frontend.js`, backend Node code to `dist/backend.mjs`, and bundles normal third-party dependencies. Host packages such as `react`, `react-dom`, and `@neon-pilot/extensions` are treated as provided by the app. Backend `dist/` output is the runtime contract for system extensions, and stale, missing, oversized, or non-portable system-extension bundles fail validation. System frontends are loaded from source by the desktop renderer so they share the app's React singleton; their `dist/frontend.js` output is still built and checked for packaged releases.
 
 Packaged desktop releases only load prebuilt `dist/` files. They do not run esbuild for extensions at runtime, so imported/user extensions must already include their built frontend/backend bundles.
 
@@ -186,7 +186,7 @@ Resolution order:
 
 This means:
 
-- **Host packages** (`@personal-agent/extensions`, subpath imports, `react`) are always available — marked external in the esbuild config, resolved from the host at runtime.
+- **Host packages** (`@neon-pilot/extensions`, subpath imports, `react`) are always available — marked external in the esbuild config, resolved from the host at runtime.
 - **If a dep is already in the app** (like `zod`, `date-fns`, `nanoid`), you can import it without any setup — it resolves through the fallback path.
 - **If you need a dep the app doesn't have**, run `pnpm add <pkg>` in the extension directory before building.
 - **If you need a custom build** (different bundler, plugins, externals), build `dist/` yourself. The app loads whatever `dist/frontend.js` and `dist/backend.mjs` exist.
@@ -197,22 +197,22 @@ This means:
 {
   "type": "module",
   "dependencies": {
-    "@personal-agent/extensions": "*",
+    "@neon-pilot/extensions": "*",
     "some-runtime-lib": "^1.2.3"
   }
 }
 ```
 
-`@personal-agent/extensions` is the host SDK — listed to document the contract, not for npm resolution.
+`@neon-pilot/extensions` is the host SDK — listed to document the contract, not for npm resolution.
 
 ### Agent workflow for extensions with deps
 
 ```bash
-# 1. Create the extension (or place it in ~/.local/state/personal-agent/extensions/{id}/)
+# 1. Create the extension (or place it in ~/.local/state/neon-pilot/extensions/{id}/)
 # 2. If you need a dep the app doesn't already ship:
-pnpm --dir ~/.local/state/personal-agent/extensions/my-ext add zod
+pnpm --dir ~/.local/state/neon-pilot/extensions/my-ext add zod
 # 3. Build
-pnpm run extension:build -- ~/.local/state/personal-agent/extensions/my-ext
+pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-ext
 # 4. Reload (from Extension Manager UI or app restart)
 ```
 
@@ -223,30 +223,30 @@ If you omit `pnpm install`, esbuild falls back to the app's `node_modules/`. If 
 Use these modules as the paved road:
 
 ```ts
-import type { ExtensionBackendContext, ExtensionManifest, ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageLayout, EmptyState, ToolbarButton } from '@personal-agent/extensions/ui';
-import { api, timeAgo, useAppData } from '@personal-agent/extensions/data';
-import { WorkbenchBrowserTab, WorkspaceExplorer } from '@personal-agent/extensions/workbench';
-import { SettingsPage } from '@personal-agent/extensions/settings';
+import type { ExtensionBackendContext, ExtensionManifest, ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { api, timeAgo, useAppData } from '@neon-pilot/extensions/data';
+import { WorkbenchBrowserTab, WorkspaceExplorer } from '@neon-pilot/extensions/workbench';
+import { SettingsPage } from '@neon-pilot/extensions/settings';
 ```
 
 System backend extensions can also import deliberate backend primitives through the backend seam:
 
 ```ts
-import { createScheduledTask } from '@personal-agent/extensions/backend';
+import { createScheduledTask } from '@neon-pilot/extensions/backend';
 ```
 
 Prefer focused backend subpaths for narrow primitives so extension bundles do not pull in unrelated host seams:
 
 ```ts
-import { saveConversationCommitCheckpoint } from '@personal-agent/extensions/backend/checkpoints';
-import { compactConversation } from '@personal-agent/extensions/backend/compaction';
+import { saveConversationCommitCheckpoint } from '@neon-pilot/extensions/backend/checkpoints';
+import { compactConversation } from '@neon-pilot/extensions/backend/compaction';
 ```
 
 Extensions that need a host-owned one-shot agent can use the agent seam instead of importing Pi directly:
 
 ```ts
-import { runAgentTask } from '@personal-agent/extensions/backend/agent';
+import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 
 const result = await runAgentTask({ prompt: 'Summarize this image', images, tools: 'none', timeoutMs: 30_000 }, ctx);
 ```
@@ -261,7 +261,7 @@ import {
   sendAgentMessage,
   listAgentConversations,
   disposeAgentConversation,
-} from '@personal-agent/extensions/backend/agent';
+} from '@neon-pilot/extensions/backend/agent';
 
 const conversation = await createAgentConversation({ title: 'Research worker', tools: 'none' }, ctx);
 const reply = await sendAgentMessage({ conversationId: conversation.id, text: 'Inspect this state.' }, ctx);
@@ -282,7 +282,7 @@ Extension-owned conversations support two modes: hidden+ephemeral for private wo
 Extensions can record fire-and-forget app telemetry through the dedicated telemetry seam:
 
 ```ts
-import { recordTelemetryEvent } from '@personal-agent/extensions/backend/telemetry';
+import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_completed', durationMs: 42 });
 ```
@@ -295,11 +295,11 @@ If a system extension needs a host primitive that is not exported here, add it d
 
 The backend seam is a public SDK contract with a host implementation:
 
-- Public stubs live in `packages/extensions/src/backend/*.ts` and are exported from `packages/extensions/package.json` as `@personal-agent/extensions/backend/{name}`.
+- Public stubs live in `packages/extensions/src/backend/*.ts` and are exported from `packages/extensions/package.json` as `@neon-pilot/extensions/backend/{name}`.
 - Host implementations live in `packages/desktop/server/extensions/backendApi/{name}.ts` and are swapped in by the extension build/runtime alias.
-- Extension source may import only the SDK seam, never `packages/desktop/server/...`, `@personal-agent/core`, `@personal-agent/daemon`, or agent-runtime internals directly.
+- Extension source may import only the SDK seam, never `packages/desktop/server/...`, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly.
 - Host backend API modules must stay narrow. If a capability needs desktop runtime, daemon, routes, conversations, gateways, or other heavy app internals, lazy-load that implementation inside the called function instead of importing it at module scope.
-- Prefer focused subpaths over the broad `@personal-agent/extensions/backend` barrel so a small extension does not bundle unrelated seams.
+- Prefer focused subpaths over the broad `@neon-pilot/extensions/backend` barrel so a small extension does not bundle unrelated seams.
 
 `pnpm run check:extensions:quick` runs `scripts/check-extension-backend-api.mjs`, which verifies every SDK backend subpath has a matching host implementation, every host backend API module is exported by the SDK, and backend API modules do not statically import known heavy/runtime internals. If this check fails, fix the seam instead of widening the allowlist. Yes, this is intentionally annoying; annoying beats shipping a signed app with surprise noodle imports.
 
@@ -308,8 +308,8 @@ The backend seam is a public SDK contract with a host implementation:
 A frontend surface exports a React component referenced by `contributes.views[].component`:
 
 ```tsx
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageLayout, EmptyState, ToolbarButton } from '@personal-agent/extensions/ui';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 export function AgentBoardPage({ pa, context }: ExtensionSurfaceProps) {
   return (
@@ -331,12 +331,12 @@ Every extension renders under a host root such as `<section data-extension-id="a
 
 Backend entries are separate from frontend entries. Keep browser React code and Node capability code apart.
 
-Extensions can also expose host-launched stdio protocols via `backend.protocolEntrypoints`, for example an ACP server behind `personal-agent protocol acp`. These handlers receive `ExtensionProtocolContext`, which extends the normal backend context with `protocolId`, `stdio`, and `signal` for long-lived protocol sessions.
+Extensions can also expose host-launched stdio protocols via `backend.protocolEntrypoints`, for example an ACP server behind `neon-pilot protocol acp`. These handlers receive `ExtensionProtocolContext`, which extends the normal backend context with `protocolId`, `stdio`, and `signal` for long-lived protocol sessions.
 
 Backend extensions export handlers referenced by `backend.actions[].handler`:
 
 ```ts
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 export async function createTask(input: { title?: string; conversationId?: string }, ctx: ExtensionBackendContext) {
   const id = crypto.randomUUID();

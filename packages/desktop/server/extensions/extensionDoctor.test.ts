@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { validateExtensionPackage } from './extensionDoctor.js';
 
 function createExtensionPackage() {
-  const root = mkdtempSync(join(tmpdir(), 'pa-extension-doctor-'));
+  const root = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-doctor-'));
   mkdirSync(join(root, 'src'), { recursive: true });
   mkdirSync(join(root, 'dist'), { recursive: true });
   writeFileSync(

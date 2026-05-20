@@ -1,5 +1,5 @@
 [package]
-name = "pa-alleycat-host"
+name = "neon-pilot-alleycat-host"
 version = "0.1.0"
 edition = "2021"
 publish = false

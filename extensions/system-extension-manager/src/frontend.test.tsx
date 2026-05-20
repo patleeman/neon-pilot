@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   extensionKeybindings: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/data', () => ({
+vi.mock('@neon-pilot/extensions/data', () => ({
   api: {
     buildExtension: mocks.buildExtension,
     exportExtension: mocks.exportExtension,
@@ -24,17 +24,17 @@ vi.mock('@personal-agent/extensions/data', () => ({
     validateExtension: mocks.validateExtension,
     extensionKeybindings: mocks.extensionKeybindings,
   },
-  EXTENSION_REGISTRY_CHANGED_EVENT: 'pa-extension-registry-changed',
+  EXTENSION_REGISTRY_CHANGED_EVENT: 'neon-pilot-extension-registry-changed',
   notifyExtensionRegistryChanged: mocks.notifyExtensionRegistryChanged,
 }));
 
-vi.mock('@personal-agent/extensions/workbench', () => ({
+vi.mock('@neon-pilot/extensions/workbench', () => ({
   getDesktopBridge: () => ({
     openPath: mocks.openPath,
   }),
 }));
 
-vi.mock('@personal-agent/extensions/workbench-browser', () => ({
+vi.mock('@neon-pilot/extensions/workbench-browser', () => ({
   getDesktopBridge: () => ({
     openPath: mocks.openPath,
   }),

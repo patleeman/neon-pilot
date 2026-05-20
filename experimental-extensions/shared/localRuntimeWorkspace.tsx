@@ -1,4 +1,4 @@
-import { AppPageIntro, AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
+import { AppPageIntro, AppPageLayout, ToolbarButton } from '@neon-pilot/extensions/ui';
 import type React from 'react';
 
 export type RuntimeStatusTone = 'ready' | 'running' | 'warning' | 'muted';

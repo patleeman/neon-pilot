@@ -12,7 +12,7 @@ tools:
 
 # Artifacts and Rendered Outputs
 
-`personal-agent` uses the word **artifact** for rendered outputs or saved deliverables that should remain inspectable after they are created.
+`neon-pilot` uses the word **artifact** for rendered outputs or saved deliverables that should remain inspectable after they are created.
 
 There are two different artifact surfaces:
 
@@ -50,7 +50,7 @@ Behavior by kind:
 
 Conversation artifacts live in local runtime state because they are conversation-bound:
 
-- `~/.local/state/personal-agent/pi-agent/state/conversation-artifacts/<conversationId>/<artifactId>.json`
+- `~/.local/state/neon-pilot/pi-agent/state/conversation-artifacts/<conversationId>/<artifactId>.json`
 
 They are not portable durable page files.
 

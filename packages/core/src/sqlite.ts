@@ -66,7 +66,7 @@ function loadSqliteDatabaseCtor(): SqliteDatabaseCtor {
     return nodeSqliteCtor;
   }
 
-  const desktopNativeModulesDir = process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR?.trim();
+  const desktopNativeModulesDir = process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR?.trim();
   if (desktopNativeModulesDir) {
     try {
       const desktopRequire = createRequire(resolve(desktopNativeModulesDir, 'package.json'));

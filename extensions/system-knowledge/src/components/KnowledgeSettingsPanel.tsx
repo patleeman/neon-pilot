@@ -1,4 +1,4 @@
-import { cx, useApi, useInvalidateOnTopics } from '@personal-agent/extensions/settings';
+import { cx, useApi, useInvalidateOnTopics } from '@neon-pilot/extensions/settings';
 import { useEffect, useMemo, useState } from 'react';
 
 import { knowledgeApi } from '../lib/knowledgeApi';

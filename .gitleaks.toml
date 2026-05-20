@@ -1,7 +1,7 @@
 # gitleaks config - extends the default rules
 # See https://github.com/gitleaks/gitleaks for options
 
-title = "personal-agent gitleaks config"
+title = "neon-pilot gitleaks config"
 
 [extend]
 useDefault = true

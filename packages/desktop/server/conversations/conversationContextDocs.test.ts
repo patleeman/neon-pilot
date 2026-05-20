@@ -11,7 +11,7 @@ import {
 } from './conversationContextDocs.js';
 
 function createStateRoot(): string {
-  return mkdtempSync(join(tmpdir(), 'personal-agent-conversation-context-docs-'));
+  return mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-context-docs-'));
 }
 
 describe('conversationContextDocs', () => {

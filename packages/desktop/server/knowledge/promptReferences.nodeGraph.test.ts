@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loadUnifiedNodesMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   loadUnifiedNodes: loadUnifiedNodesMock,
 }));
 

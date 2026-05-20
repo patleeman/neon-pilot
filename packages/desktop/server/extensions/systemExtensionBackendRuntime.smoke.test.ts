@@ -15,7 +15,7 @@ import { join } from 'node:path';
 const extensionId = process.argv[1];
 const backendUrl = process.argv[2];
 const repoRoot = process.argv[3];
-const tempRoot = mkdtempSync(join(tmpdir(), 'pa-extension-runtime-smoke-' + extensionId + '-'));
+const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-runtime-smoke-' + extensionId + '-'));
 const runtimeDir = join(tempRoot, 'runtime');
 const vaultRoot = join(tempRoot, 'vault');
 const stateRoot = join(tempRoot, 'state');
@@ -31,11 +31,11 @@ mkdirSync(cwd, { recursive: true });
 writeFileSync(join(vaultRoot, 'smoke.md'), '# Smoke\n');
 writeFileSync(sessionFile, JSON.stringify({ id: 'smoke-session', entries: [] }, null, 2));
 
-process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
-process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-process.env.PERSONAL_AGENT_CONFIG_ROOT = configRoot;
-process.env.PERSONAL_AGENT_VAULT_ROOT = vaultRoot;
-delete process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR;
+process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+process.env.NEON_PILOT_CONFIG_ROOT = configRoot;
+process.env.NEON_PILOT_VAULT_ROOT = vaultRoot;
+delete process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR;
 
 const module = await import(backendUrl);
 const storage = new Map();
@@ -330,7 +330,7 @@ function runBackendRuntimeSmoke(extensionId: string, backendPath: string) {
       timeout: 30000,
       env: {
         ...process.env,
-        PERSONAL_AGENT_REPO_ROOT: process.cwd(),
+        NEON_PILOT_REPO_ROOT: process.cwd(),
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=1024`.trim(),
       },
     },

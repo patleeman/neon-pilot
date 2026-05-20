@@ -2,13 +2,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } fr
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 const DEFAULT_MODEL_ID = 'unsloth/Qwen3.6-35B-A3B-UD-MLX-4bit';
 const PROVIDER_ID = 'mlx-local';
 const MODEL_PORT = 8011;
 const BASE_URL = `http://127.0.0.1:${MODEL_PORT}/v1`;
-const CACHE_DIR = join(homedir(), '.cache', 'personal-agent', 'mlx-local-models');
+const CACHE_DIR = join(homedir(), '.cache', 'neon-pilot', 'mlx-local-models');
 const VENV_DIR = join(CACHE_DIR, 'venv');
 const VENV_PYTHON = join(VENV_DIR, 'bin', 'python');
 const VENV_HF = join(VENV_DIR, 'bin', 'hf');

@@ -1,4 +1,4 @@
-import { getVaultRoot } from '@personal-agent/core';
+import { getVaultRoot } from '@neon-pilot/core';
 
 import { listVaultFiles } from '../knowledge/vaultFiles.js';
 import type { FilePickerResult } from './filePicker.js';

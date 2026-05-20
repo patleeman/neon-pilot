@@ -16,7 +16,7 @@ const {
   syncWebLiveConversationRunStateMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   createWebLiveConversationRunId: createWebLiveConversationRunIdMock,
   listRecoverableWebLiveConversationRuns: listRecoverableWebLiveConversationRunsLocalMock,
   listRecoverableWebLiveConversationRunsFromDaemon: listRecoverableWebLiveConversationRunsFromDaemonMock,

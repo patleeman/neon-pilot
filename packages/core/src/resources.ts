@@ -368,7 +368,7 @@ export function installPackageSource(options: InstallPackageSourceOptions): Inst
 }
 
 export function getRepoRoot(explicitRepoRoot?: string): string {
-  const value = explicitRepoRoot ?? process.env.PERSONAL_AGENT_REPO_ROOT ?? PACKAGE_ROOT;
+  const value = explicitRepoRoot ?? process.env.NEON_PILOT_REPO_ROOT ?? PACKAGE_ROOT;
   return resolve(value);
 }
 
@@ -377,7 +377,7 @@ export function getRepoDefaultsAgentDir(explicitRepoRoot?: string): string {
 }
 
 function resolveVaultRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.vaultRoot ?? process.env.PERSONAL_AGENT_VAULT_ROOT;
+  const explicit = options.vaultRoot ?? process.env.NEON_PILOT_VAULT_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
@@ -386,7 +386,7 @@ function resolveVaultRoot(options: ResolveResourceOptions = {}): string {
 }
 
 function resolveRuntimeConfigRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.runtimeConfigRoot ?? process.env.PERSONAL_AGENT_PROFILES_ROOT;
+  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_PROFILES_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }

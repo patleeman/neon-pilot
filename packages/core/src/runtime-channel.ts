@@ -1,14 +1,14 @@
-export type PersonalAgentRuntimeChannel = 'stable' | 'rc' | 'dev' | 'test';
+export type NeonPilotRuntimeChannel = 'stable' | 'rc' | 'dev' | 'test';
 
-export interface PersonalAgentRuntimeChannelConfig {
-  channel: PersonalAgentRuntimeChannel;
+export interface NeonPilotRuntimeChannelConfig {
+  channel: NeonPilotRuntimeChannel;
   stateRootSuffix: '' | '-rc' | '-dev' | '-testing';
   companionPort: number;
   codexPort: number;
   updatesEnabled: boolean;
 }
 
-const CHANNEL_CONFIGS: Record<PersonalAgentRuntimeChannel, PersonalAgentRuntimeChannelConfig> = {
+const CHANNEL_CONFIGS: Record<NeonPilotRuntimeChannel, NeonPilotRuntimeChannelConfig> = {
   stable: { channel: 'stable', stateRootSuffix: '', companionPort: 3842, codexPort: 3846, updatesEnabled: true },
   rc: { channel: 'rc', stateRootSuffix: '-rc', companionPort: 3843, codexPort: 3847, updatesEnabled: true },
   dev: { channel: 'dev', stateRootSuffix: '-dev', companionPort: 0, codexPort: 0, updatesEnabled: false },
@@ -19,7 +19,7 @@ function isRcVersion(version?: string): boolean {
   return typeof version === 'string' && /-rc(?:\.|$)/iu.test(version);
 }
 
-function normalizeRuntimeChannel(value: string | undefined): PersonalAgentRuntimeChannel | null {
+function normalizeRuntimeChannel(value: string | undefined): NeonPilotRuntimeChannel | null {
   const normalized = value?.trim().toLowerCase();
   if (normalized === 'stable' || normalized === 'prod' || normalized === 'production') return 'stable';
   if (normalized === 'rc') return 'rc';
@@ -28,26 +28,26 @@ function normalizeRuntimeChannel(value: string | undefined): PersonalAgentRuntim
   return null;
 }
 
-export function resolvePersonalAgentRuntimeChannel(
+export function resolveNeonPilotRuntimeChannel(
   env: NodeJS.ProcessEnv = process.env,
   options: { version?: string; packaged?: boolean } = {},
-): PersonalAgentRuntimeChannel {
-  const explicit = normalizeRuntimeChannel(env.PERSONAL_AGENT_RUNTIME_CHANNEL ?? env.PERSONAL_AGENT_DESKTOP_VARIANT);
+): NeonPilotRuntimeChannel {
+  const explicit = normalizeRuntimeChannel(env.NEON_PILOT_RUNTIME_CHANNEL ?? env.NEON_PILOT_DESKTOP_VARIANT);
   if (explicit) return explicit;
-  if (env.PERSONAL_AGENT_DESKTOP_DEV_BUNDLE === '1') return 'test';
+  if (env.NEON_PILOT_DESKTOP_DEV_BUNDLE === '1') return 'test';
   if (options.packaged && isRcVersion(options.version)) return 'rc';
   return 'stable';
 }
 
-export function getPersonalAgentRuntimeChannelConfig(channel: PersonalAgentRuntimeChannel): PersonalAgentRuntimeChannelConfig {
+export function getNeonPilotRuntimeChannelConfig(channel: NeonPilotRuntimeChannel): NeonPilotRuntimeChannelConfig {
   return CHANNEL_CONFIGS[channel];
 }
 
-export function resolvePersonalAgentRuntimeChannelConfig(
+export function resolveNeonPilotRuntimeChannelConfig(
   env: NodeJS.ProcessEnv = process.env,
   options: { version?: string; packaged?: boolean } = {},
-): PersonalAgentRuntimeChannelConfig {
-  return getPersonalAgentRuntimeChannelConfig(resolvePersonalAgentRuntimeChannel(env, options));
+): NeonPilotRuntimeChannelConfig {
+  return getNeonPilotRuntimeChannelConfig(resolveNeonPilotRuntimeChannel(env, options));
 }
 
 export function readPortOverride(value: string | undefined): number | undefined {

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { DaemonConfig } from '../config.js';
-import { PersonalAgentDaemon } from '../daemon/server.js';
+import { NeonPilotDaemon } from '../daemon/server.js';
 import { resolveDaemonPaths } from '../paths.js';
 import { createBackgroundRunRecord } from './background-runs.js';
 import { loadDurableRunStatus, resolveDurableRunsRoot } from './store.js';
@@ -49,7 +49,7 @@ describe('background run cancellation', () => {
   it('cancels durable shell command records even when they are not in the active process map', async () => {
     const socketPath = join(createTempDir('pa-daemon-cancel-'), 'daemon.sock');
     const config = createTestConfig(socketPath);
-    const daemon = new PersonalAgentDaemon({ config, stopRequestBehavior: 'reject' });
+    const daemon = new NeonPilotDaemon({ config, stopRequestBehavior: 'reject' });
     const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths(socketPath).root);
     const record = await createBackgroundRunRecord(runsRoot, {
       taskSlug: 'test-run',

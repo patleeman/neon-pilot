@@ -146,7 +146,7 @@ const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey(
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
-const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'personal-agent-desktop-shortcut';
+const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_DOCUMENT_WITH_OPEN_FILE_SELECTOR = '[data-workbench-document-pane="true"][data-has-open-file="true"]';
 
@@ -2584,8 +2584,8 @@ export function Sidebar() {
     setDropTarget(null);
     setGroupDropTarget(null);
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/x-personal-agent-conversation', sessionId);
-    event.dataTransfer.setData('application/x-personal-agent-conversation-section', section);
+    event.dataTransfer.setData('application/x-neon-pilot-conversation', sessionId);
+    event.dataTransfer.setData('application/x-neon-pilot-conversation-section', section);
     event.dataTransfer.setData('text/plain', sessionId);
   }
 
@@ -2596,12 +2596,12 @@ export function Sidebar() {
     setDropTarget(null);
     setGroupDropTarget(null);
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/x-personal-agent-conversation-group', groupKey);
+    event.dataTransfer.setData('application/x-neon-pilot-conversation-group', groupKey);
   }
 
   function handleTabDragOver(section: ConversationShelf, sessionId: string, event: DragEvent<HTMLDivElement>) {
     const draggedId = draggingSessionId ?? event.dataTransfer.getData('text/plain');
-    const draggedSection = draggingSection || event.dataTransfer.getData('application/x-personal-agent-conversation-section');
+    const draggedSection = draggingSection || event.dataTransfer.getData('application/x-neon-pilot-conversation-section');
     if (!draggedId || !draggedSection || draggedSection !== section) {
       return;
     }
@@ -2635,9 +2635,7 @@ export function Sidebar() {
 
   function handleConversationGroupDragOver(groupKey: string, event: DragEvent<HTMLDivElement>) {
     const draggedConversationId =
-      draggingSessionId ||
-      event.dataTransfer.getData('application/x-personal-agent-conversation') ||
-      event.dataTransfer.getData('text/plain');
+      draggingSessionId || event.dataTransfer.getData('application/x-neon-pilot-conversation') || event.dataTransfer.getData('text/plain');
     if (draggedConversationId) {
       if (!canDropConversationOnGroup(draggedConversationId, groupKey)) {
         setConversationCwdDropTargetGroupKey(null);
@@ -2651,7 +2649,7 @@ export function Sidebar() {
       return;
     }
 
-    const draggedGroupId = draggingGroupKey ?? event.dataTransfer.getData('application/x-personal-agent-conversation-group');
+    const draggedGroupId = draggingGroupKey ?? event.dataTransfer.getData('application/x-neon-pilot-conversation-group');
     if (!draggedGroupId) {
       return;
     }
@@ -2677,9 +2675,7 @@ export function Sidebar() {
     event.preventDefault();
 
     const draggedConversationId =
-      draggingSessionId ||
-      event.dataTransfer.getData('application/x-personal-agent-conversation') ||
-      event.dataTransfer.getData('text/plain');
+      draggingSessionId || event.dataTransfer.getData('application/x-neon-pilot-conversation') || event.dataTransfer.getData('text/plain');
     const targetGroup = conversationGroupsByKey.get(targetGroupKey);
     if (!draggedConversationId || !targetGroup?.cwd || !canDropConversationOnGroup(draggedConversationId, targetGroupKey)) {
       clearDragState();
@@ -2752,15 +2748,13 @@ export function Sidebar() {
     event.preventDefault();
 
     const draggedConversationId =
-      draggingSessionId ||
-      event.dataTransfer.getData('application/x-personal-agent-conversation') ||
-      event.dataTransfer.getData('text/plain');
+      draggingSessionId || event.dataTransfer.getData('application/x-neon-pilot-conversation') || event.dataTransfer.getData('text/plain');
     if (draggedConversationId) {
       void handleConversationCwdDrop(targetGroupKey, event);
       return;
     }
 
-    const draggedGroupId = draggingGroupKey ?? event.dataTransfer.getData('application/x-personal-agent-conversation-group');
+    const draggedGroupId = draggingGroupKey ?? event.dataTransfer.getData('application/x-neon-pilot-conversation-group');
     if (!draggedGroupId || draggedGroupId === targetGroupKey || !canDropConversationGroupOnGroup(draggedGroupId, targetGroupKey)) {
       clearDragState();
       return;
@@ -2818,9 +2812,7 @@ export function Sidebar() {
     event.preventDefault();
     const targetGroupKey = conversationGroupKeyBySessionId.get(sessionId);
     const draggedConversationId =
-      draggingSessionId ||
-      event.dataTransfer.getData('application/x-personal-agent-conversation') ||
-      event.dataTransfer.getData('text/plain');
+      draggingSessionId || event.dataTransfer.getData('application/x-neon-pilot-conversation') || event.dataTransfer.getData('text/plain');
     if (
       draggedConversationId &&
       targetGroupKey &&

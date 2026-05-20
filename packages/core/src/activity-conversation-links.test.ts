@@ -26,14 +26,14 @@ function createTempDir(prefix: string): string {
 
 describe('activity conversation link paths', () => {
   it('resolves the profile-scoped activity conversations directory under local runtime state', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
     expect(resolveProfileActivityConversationLinksDir({ stateRoot, profile: 'assistant' })).toBe(
       join(stateRoot, 'pi-agent', 'state', 'activity-conversation-links', 'assistant'),
     );
   });
 
   it('resolves an activity conversation link path under local runtime state', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
     expect(resolveActivityConversationLinkPath({ stateRoot, profile: 'assistant', activityId: 'daily-report' })).toBe(
       join(stateRoot, 'pi-agent', 'state', 'activity-conversation-links', 'assistant', 'daily-report.json'),
     );
@@ -42,7 +42,7 @@ describe('activity conversation link paths', () => {
 
 describe('activity conversation links', () => {
   it('writes and reads an activity conversation link document', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
 
     setActivityConversationLinks({
       stateRoot,
@@ -60,7 +60,7 @@ describe('activity conversation links', () => {
   });
 
   it('returns null when the link file is corrupt', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
     const path = resolveActivityConversationLinkPath({ stateRoot, profile: 'assistant', activityId: 'daily-report' });
     mkdirSync(join(path, '..'), { recursive: true });
     writeFileSync(path, '{ nope');
@@ -69,7 +69,7 @@ describe('activity conversation links', () => {
   });
 
   it('returns the normalized document after writing', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
 
     const result = setActivityConversationLinks({
       stateRoot,
@@ -87,7 +87,7 @@ describe('activity conversation links', () => {
   });
 
   it('rejects invalid updatedAt values before writing', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
 
     expect(() =>
       setActivityConversationLinks({
@@ -101,7 +101,7 @@ describe('activity conversation links', () => {
   });
 
   it('clears the durable link file when no conversation ids remain', () => {
-    const stateRoot = createTempDir('personal-agent-activity-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
 
     setActivityConversationLinks({
       stateRoot,

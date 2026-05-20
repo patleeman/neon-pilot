@@ -2,7 +2,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { cx, IconButton, Keycap } from './ui';
 
-const DESKTOP_SHORTCUT_EVENT = 'personal-agent-desktop-shortcut';
+const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const PAGE_SEARCH_MATCH_HIGHLIGHT = 'pa-page-search-match';
 const PAGE_SEARCH_ACTIVE_HIGHLIGHT = 'pa-page-search-active';
 const NON_SEARCHABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'SCRIPT', 'STYLE', 'NOSCRIPT']);

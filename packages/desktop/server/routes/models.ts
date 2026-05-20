@@ -15,7 +15,7 @@ import {
   updateKnowledgeBase,
   writeMachineInstructionFiles,
   writeMachineSkillDirs,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import {

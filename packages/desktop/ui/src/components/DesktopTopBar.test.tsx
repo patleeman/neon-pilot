@@ -88,7 +88,7 @@ describe('DesktopTopBar', () => {
 
   it('keeps desktop navigation chrome visible in Electron shells even when the preload bridge is missing', () => {
     vi.stubGlobal('window', {
-      personalAgentDesktop: undefined,
+      neonPilotDesktop: undefined,
       location: { search: '' },
       sessionStorage: {
         getItem: () => null,

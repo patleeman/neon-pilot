@@ -14,7 +14,7 @@ const {
   resolveAppTelemetryLogDirMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   exportAppTelemetryLogBundle: exportAppTelemetryLogBundleMock,
   listAppTelemetryLogFiles: listAppTelemetryLogFilesMock,
   maintainAppTelemetryDb: maintainAppTelemetryDbMock,

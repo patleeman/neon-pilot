@@ -1,9 +1,9 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   buildLiveSessionExtensionFactoriesForRuntime,
   buildLiveSessionResourceOptionsForRuntime,
   requestConversationWorkingDirectoryChange,
-} from '@personal-agent/extensions/backend/conversations';
+} from '@neon-pilot/extensions/backend/conversations';
 
 import { deferredResume } from '../../system-automations/src/conversationQueueBackend.js';
 import { executeAskUserQuestion } from './askUserQuestionAgentExtension.js';

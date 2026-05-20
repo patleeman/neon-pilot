@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-provider-auth-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-provider-auth-'));
   tempDirs.push(dir);
   return dir;
 }

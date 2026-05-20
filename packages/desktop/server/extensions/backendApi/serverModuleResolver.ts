@@ -20,7 +20,7 @@ export function normalizeServerExtensionModuleSpecifier(relativeSpecifier: strin
 }
 
 function packageEntryCandidates(specifier: string, resourcesPath: string | undefined): string[] {
-  const repoRoots = [process.env.PERSONAL_AGENT_REPO_ROOT, process.cwd()].filter((value): value is string => Boolean(value));
+  const repoRoots = [process.env.NEON_PILOT_REPO_ROOT, process.cwd()].filter((value): value is string => Boolean(value));
   const candidates: string[] = [];
   const pushRepoPath = (relativePath: string) => {
     for (const repoRoot of repoRoots) candidates.push(resolve(repoRoot, relativePath));
@@ -31,7 +31,7 @@ function packageEntryCandidates(specifier: string, resourcesPath: string | undef
     candidates.push(resolve(resourcesPath, 'app.asar.unpacked', relativePath));
   };
 
-  if (specifier === '@personal-agent/core') {
+  if (specifier === '@neon-pilot/core') {
     pushRepoPath('packages/desktop/server/dist/core/index.js');
     pushRepoPath('packages/desktop/dist/server/core/index.js');
     pushRepoPath('packages/core/dist/index.js');
@@ -39,7 +39,7 @@ function packageEntryCandidates(specifier: string, resourcesPath: string | undef
     pushResourcePath('packages/desktop/server/dist/core/index.js');
     pushResourcePath('packages/desktop/dist/server/core/index.js');
     pushResourcePath('packages/core/dist/index.js');
-  } else if (specifier === '@personal-agent/daemon') {
+  } else if (specifier === '@neon-pilot/daemon') {
     pushRepoPath('packages/desktop/server/dist/daemon/index.js');
     pushResourcePath('packages/desktop/server/dist/daemon/index.js');
     pushResourcePath('server/dist/daemon/index.js');
@@ -66,10 +66,10 @@ export function resolveServerModuleSpecifierFrom({
   const normalized = normalize(relativeSpecifier);
   const currentDir = dirname(fileURLToPath(importMetaUrl));
   const candidates = [
-    ...(process.env.PERSONAL_AGENT_REPO_ROOT
+    ...(process.env.NEON_PILOT_REPO_ROOT
       ? [
-          resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/server/dist', normalized),
-          resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/dist/server', normalized),
+          resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/dist', normalized),
+          resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/dist/server', normalized),
         ]
       : []),
     resolve(process.cwd(), 'packages/desktop/server/dist', normalized),

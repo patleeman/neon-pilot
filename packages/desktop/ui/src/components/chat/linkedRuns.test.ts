@@ -127,7 +127,7 @@ describe('linkedRuns', () => {
           runId: 'run-architecture-pass-abc123',
           prompt: 'Improve the chat architecture by extracting linked runs.',
           taskSlug: 'architecture-pass',
-          cwd: '/Users/patrick/workingdir/personal-agent',
+          cwd: '/Users/patrick/workingdir/neon-pilot',
           model: 'openai/gpt-5.1',
         },
       }),
@@ -138,7 +138,7 @@ describe('linkedRuns', () => {
       {
         runId: 'run-architecture-pass-abc123',
         title: 'Improve the chat architecture by extracting linked runs.',
-        detail: 'running · agent task · architecture-pass · cwd personal-agent · gpt-5.1',
+        detail: 'running · agent task · architecture-pass · cwd neon-pilot · gpt-5.1',
       },
     ]);
   });

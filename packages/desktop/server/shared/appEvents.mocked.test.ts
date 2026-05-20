@@ -117,7 +117,7 @@ vi.mock('node:fs', () => ({
   watch: watchMock,
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getDurableTasksDir: getDurableTasksDirMock,
   getMachineConfigFilePath: getMachineConfigFilePathMock,
   getStateRoot: getStateRootMock,
@@ -131,7 +131,7 @@ vi.mock('@personal-agent/core', () => ({
   resolveProfileConversationArtifactsDir: resolveProfileConversationArtifactsDirMock,
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   getDaemonConfigFilePath: getDaemonConfigFilePathMock,
   loadDaemonConfig: loadDaemonConfigMock,
   resolveDaemonPaths: resolveDaemonPathsMock,

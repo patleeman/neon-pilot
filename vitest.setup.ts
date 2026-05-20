@@ -46,14 +46,14 @@ if (typeof globalThis.EventSource !== 'function') {
   globalThis.EventSource = EventSourceMock as unknown as typeof EventSource;
 }
 
-const GLOBAL_KEY = '__PERSONAL_AGENT_VITEST_STATE_ROOT__' as const;
+const GLOBAL_KEY = '__NEON_PILOT_VITEST_STATE_ROOT__' as const;
 
 const globalForTestStateRoot = globalThis as typeof globalThis & {
   [GLOBAL_KEY]?: string;
 };
 
 if (!globalForTestStateRoot[GLOBAL_KEY]) {
-  const stateRoot = mkdtempSync(join(tmpdir(), 'personal-agent-vitest-state-'));
+  const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-vitest-state-'));
   globalForTestStateRoot[GLOBAL_KEY] = stateRoot;
 
   process.once('exit', () => {
@@ -61,8 +61,8 @@ if (!globalForTestStateRoot[GLOBAL_KEY]) {
   });
 }
 
-if (!process.env.PERSONAL_AGENT_STATE_ROOT) {
-  process.env.PERSONAL_AGENT_STATE_ROOT = globalForTestStateRoot[GLOBAL_KEY]!;
+if (!process.env.NEON_PILOT_STATE_ROOT) {
+  process.env.NEON_PILOT_STATE_ROOT = globalForTestStateRoot[GLOBAL_KEY]!;
 }
 
 afterEach(() => {

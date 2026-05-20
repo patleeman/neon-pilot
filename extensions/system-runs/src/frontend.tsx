@@ -1,6 +1,6 @@
 export { ActivityShelf } from './ActivityShelf.js';
 
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { lazy, Suspense } from 'react';
 
 const LazyConversationBackgroundWorkPanel = lazy(async () => ({ default: (await import('./panels.js')).ConversationBackgroundWorkPanel }));

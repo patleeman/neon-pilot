@@ -4,18 +4,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 const readCheckpointPresentationMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@personal-agent/extensions/data', () => ({
+vi.mock('@neon-pilot/extensions/data', () => ({
   timeAgo: () => 'just now',
 }));
 
-vi.mock('@personal-agent/extensions/ui', () => ({
+vi.mock('@neon-pilot/extensions/ui', () => ({
   CheckpointInlineDiff: ({ checkpointId }: { checkpointId: string }) => <div>inline diff {checkpointId}</div>,
   SurfacePanel: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   cx: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
 }));
 
-vi.mock('@personal-agent/extensions/workbench', () => ({
+vi.mock('@neon-pilot/extensions/workbench', () => ({
   ConversationCheckpointWorkbenchPane: () => null,
   ConversationDiffRailContent: () => null,
   getConversationCheckpointIdFromSearch: () => null,
@@ -23,7 +23,7 @@ vi.mock('@personal-agent/extensions/workbench', () => ({
   useConversationCheckpointSummaries: () => ({ checkpoints: [], loading: false, error: null }),
 }));
 
-vi.mock('@personal-agent/extensions/workbench-diffs', () => ({
+vi.mock('@neon-pilot/extensions/workbench-diffs', () => ({
   readCheckpointPresentation: readCheckpointPresentationMock,
 }));
 

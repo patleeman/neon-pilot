@@ -52,7 +52,7 @@ type DesktopRendererShortcutAction =
 
 type ManagedWindowRole = 'main' | 'remote' | 'popout';
 
-const DESKTOP_NAVIGATE_CHANNEL = 'personal-agent-desktop:navigate';
+const DESKTOP_NAVIGATE_CHANNEL = 'neon-pilot-desktop:navigate';
 const DEFAULT_WINDOW_WIDTH = 1440;
 const DEFAULT_WINDOW_HEIGHT = 960;
 const MAX_SAVED_WINDOW_WIDTH = 4096;
@@ -144,7 +144,7 @@ export function shouldGrantDesktopMediaPermission(requestingUrl: string, permiss
   if (permission !== 'media' && permission !== 'microphone') return false;
   try {
     const parsed = new URL(requestingUrl);
-    return parsed.protocol === 'personal-agent:' && parsed.hostname === 'app';
+    return parsed.protocol === 'neon-pilot:' && parsed.hostname === 'app';
   } catch {
     return false;
   }
@@ -571,7 +571,7 @@ export class DesktopWindowController {
       return;
     }
 
-    targetWindow.webContents.send('personal-agent-desktop:shortcut', action);
+    targetWindow.webContents.send('neon-pilot-desktop:shortcut', action);
   }
 
   private async openWindowForHost(hostId: string, pathname: string, role: ManagedWindowRole): Promise<void> {

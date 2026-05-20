@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions/backend';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 
 const ONBOARDING_STATE_KEY = 'onboarding:v1';
 

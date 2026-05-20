@@ -1,4 +1,4 @@
-import { type AppTelemetryEventInput, writeAppTelemetryEvent } from '@personal-agent/core';
+import { type AppTelemetryEventInput, writeAppTelemetryEvent } from '@neon-pilot/core';
 
 const MAX_QUEUE_SIZE = 1000;
 const FLUSH_BATCH_SIZE = 100;

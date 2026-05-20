@@ -10,7 +10,7 @@ import {
   readSessionConversationId,
   saveAttentionEventsState,
   scheduleAttentionEvent,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import { parseFutureHumanDateTime } from './humanDateTime.js';
 

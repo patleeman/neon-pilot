@@ -25,8 +25,8 @@ vi.mock('./bootstrap.js', async () => {
   };
 });
 
-vi.mock('@personal-agent/core', async () => {
-  const actual = await vi.importActual<typeof import('@personal-agent/core')>('@personal-agent/core');
+vi.mock('@neon-pilot/core', async () => {
+  const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
   return {
     ...actual,
     startKnowledgeBaseSyncLoop: mocks.startKnowledgeBaseSyncLoop,
@@ -81,7 +81,7 @@ describe('changeDesktopConversationCwd', () => {
     const targetCwd = await mkdtemp(join(tmpdir(), 'pa-local-cwd-target-'));
     const sourceSessionFile = join(targetCwd, 'source.jsonl');
     const nextSessionFile = join(targetCwd, 'next.jsonl');
-    const sourceCwd = join(tmpdir(), 'pi-agent-runtime', 'chat-workspaces', 'testing');
+    const sourceCwd = join(tmpdir(), 'neon-pilot-runtime', 'chat-workspaces', 'testing');
     mkdirSync(sourceCwd, { recursive: true });
 
     mocks.liveRegistry.set('conversation-1', {

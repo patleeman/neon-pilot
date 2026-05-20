@@ -39,7 +39,7 @@ describe('liveSessionQueue', () => {
 
     expect(state.steering).toEqual([{ id: expect.stringMatching(/^steer-queued-/), text: '', imageCount: 1 }]);
     expect(state.followUp).toEqual([{ id: expect.stringMatching(/^followUp-queued-/), text: 'Follow up please', imageCount: 0 }]);
-    expect(Object.keys(imageMessage)).not.toContain('__personalAgentQueuedPromptId');
+    expect(Object.keys(imageMessage)).not.toContain('__neonPilotQueuedPromptId');
   });
 
   it('falls back to visible queued text when internal queue entries are not user prompts', () => {
@@ -67,15 +67,15 @@ describe('liveSessionQueue', () => {
   it('removes queued user messages by preview id without counting assistant messages', () => {
     const queue = [
       { role: 'assistant', content: [] },
-      { role: 'user', content: [], __personalAgentQueuedPromptId: 'first' },
-      { role: 'user', content: [], __personalAgentQueuedPromptId: 'second' },
+      { role: 'user', content: [], __neonPilotQueuedPromptId: 'first' },
+      { role: 'user', content: [], __neonPilotQueuedPromptId: 'second' },
     ];
 
     const removed = removeQueuedUserMessage(queue, { index: 0, previewId: 'second' });
 
     expect(removed?.userQueueIndex).toBe(1);
-    expect(removed?.message.__personalAgentQueuedPromptId).toBe('second');
-    expect(queue.map((message) => message.__personalAgentQueuedPromptId)).toEqual([undefined, 'first']);
+    expect(removed?.message.__neonPilotQueuedPromptId).toBe('second');
+    expect(queue.map((message) => message.__neonPilotQueuedPromptId)).toEqual([undefined, 'first']);
   });
 
   it('extracts queued prompt text and image attachments', () => {
@@ -162,8 +162,8 @@ describe('liveSessionQueue', () => {
   it('restores by preview id without removing the wrong visible queued prompt when the index is stale', async () => {
     const steeringMessages = ['first queued prompt', 'second queued prompt'];
     const steeringQueue = [
-      { role: 'user', content: [{ type: 'text', text: 'first queued prompt' }], __personalAgentQueuedPromptId: 'first' },
-      { role: 'user', content: [{ type: 'text', text: 'second queued prompt' }], __personalAgentQueuedPromptId: 'second' },
+      { role: 'user', content: [{ type: 'text', text: 'first queued prompt' }], __neonPilotQueuedPromptId: 'first' },
+      { role: 'user', content: [{ type: 'text', text: 'second queued prompt' }], __neonPilotQueuedPromptId: 'second' },
     ];
 
     const restored = await restoreLiveSessionQueuedMessage(
@@ -184,7 +184,7 @@ describe('liveSessionQueue', () => {
 
     expect(restored.text).toBe('second queued prompt');
     expect(steeringMessages).toEqual(['first queued prompt']);
-    expect(steeringQueue.map((message) => message.__personalAgentQueuedPromptId)).toEqual(['first']);
+    expect(steeringQueue.map((message) => message.__neonPilotQueuedPromptId)).toEqual(['first']);
   });
 
   it('rejects unsafe queued prompt restore indexes', async () => {

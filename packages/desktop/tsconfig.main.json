@@ -5,16 +5,16 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
-      "@personal-agent/core": ["../core/src"],
-      "@personal-agent/daemon": ["./server/daemon"],
-      "@personal-agent/extensions": ["../extensions/src"],
-      "@personal-agent/extensions/host": ["./ui/src/extensions/host"],
-      "@personal-agent/extensions/ui": ["./ui/src/extensions/ui"],
-      "@personal-agent/extensions/workbench": ["./ui/src/extensions/workbench"],
-      "@personal-agent/extensions/data": ["./ui/src/extensions/data"],
-      "@personal-agent/extensions/settings": ["./ui/src/extensions/settings"],
-      "@personal-agent/extensions/excalidraw": ["../extensions/src/excalidraw"],
-      "@personal-agent/extensions/backend": ["./server/extensions/backendApi"]
+      "@neon-pilot/core": ["../core/src"],
+      "@neon-pilot/daemon": ["./server/daemon"],
+      "@neon-pilot/extensions": ["../extensions/src"],
+      "@neon-pilot/extensions/host": ["./ui/src/extensions/host"],
+      "@neon-pilot/extensions/ui": ["./ui/src/extensions/ui"],
+      "@neon-pilot/extensions/workbench": ["./ui/src/extensions/workbench"],
+      "@neon-pilot/extensions/data": ["./ui/src/extensions/data"],
+      "@neon-pilot/extensions/settings": ["./ui/src/extensions/settings"],
+      "@neon-pilot/extensions/excalidraw": ["../extensions/src/excalidraw"],
+      "@neon-pilot/extensions/backend": ["./server/extensions/backendApi"]
     }
   },
   "include": ["src/**/*.ts"],

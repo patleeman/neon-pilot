@@ -1,6 +1,6 @@
 import { networkInterfaces } from 'node:os';
 
-import { resolvePersonalAgentRuntimeChannelConfig } from '@personal-agent/core';
+import { resolveNeonPilotRuntimeChannelConfig } from '@neon-pilot/core';
 
 import type { DaemonConfig } from '../../config.js';
 import { resolveCompanionTailscaleUrl } from '../tailscale-serve.js';
@@ -60,7 +60,7 @@ export function buildCompanionSetupState(input: {
   resolveTailnetUrl?: (port: number) => string | undefined;
 }): CompanionSetupState {
   const companionHost = input.config.companion?.host?.trim() || DEFAULT_COMPANION_HOST;
-  const companionPort = input.config.companion?.port ?? resolvePersonalAgentRuntimeChannelConfig().companionPort;
+  const companionPort = input.config.companion?.port ?? resolveNeonPilotRuntimeChannelConfig().companionPort;
   const warnings: string[] = [];
   const links: CompanionSetupLink[] = [];
   const seenBaseUrls = new Set<string>();

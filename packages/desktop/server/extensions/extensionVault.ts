@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
-import { getVaultRoot } from '@personal-agent/core';
+import { getVaultRoot } from '@neon-pilot/core';
 
 interface VaultEntry {
   id: string;

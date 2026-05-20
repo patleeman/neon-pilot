@@ -20,13 +20,13 @@ function run(command, args, options = {}) {
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url, { headers: { 'user-agent': 'personal-agent-llama-cpp-extension' } });
+  const response = await fetch(url, { headers: { 'user-agent': 'neon-pilot-llama-cpp-extension' } });
   if (!response.ok) throw new Error(`GET ${url} failed: ${response.status} ${response.statusText}`);
   return response.json();
 }
 
 async function download(url, destination) {
-  const response = await fetch(url, { headers: { 'user-agent': 'personal-agent-llama-cpp-extension' } });
+  const response = await fetch(url, { headers: { 'user-agent': 'neon-pilot-llama-cpp-extension' } });
   if (!response.ok || !response.body) throw new Error(`GET ${url} failed: ${response.status} ${response.statusText}`);
   await pipeline(response.body, createWriteStream(destination));
 }

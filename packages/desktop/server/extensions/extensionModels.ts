@@ -1,6 +1,6 @@
 import { readModelState } from '../models/modelState.js';
 
-const DEFAULT_RUNTIME_SETTINGS_FILE = process.env.PERSONAL_AGENT_SETTINGS_FILE || '';
+const DEFAULT_RUNTIME_SETTINGS_FILE = process.env.NEON_PILOT_SETTINGS_FILE || '';
 
 /**
  * Models capability for extensions.
@@ -16,7 +16,7 @@ export function createExtensionModelsCapability() {
           DEFAULT_RUNTIME_SETTINGS_FILE ||
           (await (async () => {
             // Lazy default — look for the settings file in the agent dir
-            const { getPiAgentRuntimeDir } = await import('@personal-agent/core');
+            const { getPiAgentRuntimeDir } = await import('@neon-pilot/core');
             return `${getPiAgentRuntimeDir()}/settings.json`;
           })().catch(() => ''));
         if (!settingsFile) return [];

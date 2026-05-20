@@ -1,6 +1,6 @@
-import { timeAgo } from '@personal-agent/extensions/data';
-import { CheckpointInlineDiff, cx, DiffActionButton, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
-import type { readCheckpointPresentation } from '@personal-agent/extensions/workbench-diffs';
+import { timeAgo } from '@neon-pilot/extensions/data';
+import { CheckpointInlineDiff, cx, DiffActionButton, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
+import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo } from 'react';
 
 const CheckpointToolBlock = memo(function CheckpointToolBlock({

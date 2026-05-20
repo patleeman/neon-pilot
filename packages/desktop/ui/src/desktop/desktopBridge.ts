@@ -44,12 +44,12 @@ import type {
   VaultFileListResult,
 } from '../shared/types';
 
-export const DESKTOP_API_STREAM_EVENT = 'personal-agent-desktop-api-stream';
-export const DESKTOP_CONVERSATION_STATE_EVENT = 'personal-agent-desktop-conversation-state';
-export const DESKTOP_APP_EVENTS_EVENT = 'personal-agent-desktop-app-events';
-export const DESKTOP_PROVIDER_OAUTH_EVENT = 'personal-agent-desktop-provider-oauth-login';
-export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'personal-agent-desktop-workbench-browser-comment';
-export const DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT = 'personal-agent-desktop-show-workbench-browser';
+export const DESKTOP_API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
+export const DESKTOP_CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
+export const DESKTOP_APP_EVENTS_EVENT = 'neon-pilot-desktop-app-events';
+export const DESKTOP_PROVIDER_OAUTH_EVENT = 'neon-pilot-desktop-provider-oauth-login';
+export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
+export const DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
 interface DesktopScreenshotCaptureResult {
   cancelled: boolean;
@@ -102,7 +102,7 @@ export interface DesktopWorkbenchBrowserCommentTarget {
   devicePixelRatio: number;
 }
 
-export interface PersonalAgentDesktopBridge {
+export interface NeonPilotDesktopBridge {
   getEnvironment(): Promise<DesktopEnvironmentState>;
   getNavigationState(): Promise<DesktopNavigationState>;
   openNewConversation(): Promise<void>;
@@ -439,12 +439,12 @@ export interface PersonalAgentDesktopBridge {
   snapshotWorkbenchBrowser(input?: { sessionKey?: string | null }): Promise<DesktopWorkbenchBrowserSnapshot>;
 }
 
-export function getDesktopBridge(): PersonalAgentDesktopBridge | null {
+export function getDesktopBridge(): NeonPilotDesktopBridge | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  return window.personalAgentDesktop ?? null;
+  return window.neonPilotDesktop ?? null;
 }
 
 export function isDesktopShell(): boolean {
@@ -467,7 +467,7 @@ export function isDesktopShell(): boolean {
     }
   }
 
-  if (typeof document !== 'undefined' && document.documentElement.dataset.personalAgentDesktop === '1') {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.neonPilotDesktop === '1') {
     return true;
   }
 
@@ -488,7 +488,7 @@ export function shouldUseNativeAppContextMenus(): boolean {
 // status checks. Cache the in-flight result so route changes do not keep poking
 // the desktop runtime while the user clicks around the app.
 let desktopEnvironmentPromise: Promise<DesktopEnvironmentState | null> | null = null;
-let desktopEnvironmentBridge: PersonalAgentDesktopBridge | null = null;
+let desktopEnvironmentBridge: NeonPilotDesktopBridge | null = null;
 
 export async function readDesktopEnvironment(): Promise<DesktopEnvironmentState | null> {
   const bridge = getDesktopBridge();

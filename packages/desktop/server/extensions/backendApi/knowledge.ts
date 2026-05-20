@@ -1,7 +1,7 @@
 import { callServerModuleExport } from './serverModuleResolver.js';
 
 async function callCoreExport<T>(name: string, ...args: unknown[]): Promise<T> {
-  return callServerModuleExport<T>('@personal-agent/core', name, ...args);
+  return callServerModuleExport<T>('@neon-pilot/core', name, ...args);
 }
 
 const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<Record<string, unknown>>;

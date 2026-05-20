@@ -1,6 +1,6 @@
-import type { NativeExtensionClient } from '@personal-agent/extensions';
-import type { ScheduledTaskSchedulerHealth, ScheduledTaskSummary } from '@personal-agent/extensions/data';
-import { timeAgo } from '@personal-agent/extensions/data';
+import type { NativeExtensionClient } from '@neon-pilot/extensions';
+import type { ScheduledTaskSchedulerHealth, ScheduledTaskSummary } from '@neon-pilot/extensions/data';
+import { timeAgo } from '@neon-pilot/extensions/data';
 import {
   AppPageIntro,
   AppPageLayout,
@@ -11,7 +11,7 @@ import {
   IconButton,
   LoadingState,
   ToolbarButton,
-} from '@personal-agent/extensions/ui';
+} from '@neon-pilot/extensions/ui';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface ConversationOption {

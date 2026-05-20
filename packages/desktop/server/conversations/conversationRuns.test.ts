@@ -3,13 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import {
-  type DaemonConfig,
-  PersonalAgentDaemon,
-  resolveDurableRunPaths,
-  resolveDurableRunsRoot,
-  scanDurableRun,
-} from '@personal-agent/daemon';
+import { type DaemonConfig, NeonPilotDaemon, resolveDurableRunPaths, resolveDurableRunsRoot, scanDurableRun } from '@neon-pilot/daemon';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createWebLiveConversationRunId, listRecoverableWebLiveConversationRuns, syncWebLiveConversationRun } from './conversationRuns.js';
@@ -56,8 +50,8 @@ describe('web live conversation durable runs', () => {
   });
 
   it('creates and updates a durable conversation run for a live web session', async () => {
-    const stateRoot = createTempDir('pa-web-conversation-runs-');
-    const daemonSocketDir = createTempDir('pa-web-conversation-sock-');
+    const stateRoot = createTempDir('np-conv-runs-');
+    const daemonSocketDir = createTempDir('np-conv-sock-');
     const sessionDir = join(stateRoot, 'sessions');
     mkdirSync(sessionDir, { recursive: true });
     const sessionFile = join(sessionDir, 'conv-123.jsonl');
@@ -65,8 +59,8 @@ describe('web live conversation durable runs', () => {
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: join(daemonSocketDir, 'personal-agentd.sock'),
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: join(daemonSocketDir, 'neon-pilotd.sock'),
     };
 
     await syncWebLiveConversationRun({
@@ -157,9 +151,9 @@ describe('web live conversation durable runs', () => {
   });
 
   it('uses the daemon IPC path when the daemon is available', async () => {
-    const stateRoot = createTempDir('pa-web-conversation-runs-');
-    const daemonSocketDir = createTempDir('pa-web-conversation-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-conv-runs-');
+    const daemonSocketDir = createTempDir('np-conv-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
     const sessionDir = join(stateRoot, 'sessions');
     mkdirSync(sessionDir, { recursive: true });
     const sessionFile = join(sessionDir, 'conv-ipc.jsonl');
@@ -167,11 +161,11 @@ describe('web live conversation durable runs', () => {
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
-    const daemon = new PersonalAgentDaemon(createTestConfig(socketPath));
+    const daemon = new NeonPilotDaemon(createTestConfig(socketPath));
     await daemon.start();
 
     try {

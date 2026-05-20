@@ -27,7 +27,7 @@ describe('extension package paths', () => {
   });
 
   it('discovers packaged experimental extensions from Electron resources', () => {
-    const tempRoot = join(tmpdir(), `pa-extension-paths-${process.pid}-${Date.now()}`);
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const experimentalRoot = join(tempRoot, 'experimental-extensions', 'extensions');
     const packageRoot = writeExtension(experimentalRoot, 'sample-experiment');
 
@@ -47,7 +47,7 @@ describe('extension package paths', () => {
   });
 
   it('prefers unpacked packaged extensions over asar-adjacent source paths', () => {
-    const tempRoot = join(tmpdir(), `pa-extension-paths-${process.pid}-${Date.now()}`);
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const resourcesRoot = join(tempRoot, 'Resources');
     const unpackedRoot = join(resourcesRoot, 'experimental-extensions', 'extensions');
     const asarAppRoot = join(resourcesRoot, 'app.asar', 'server', 'dist', 'app');

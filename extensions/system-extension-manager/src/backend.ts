@@ -1,15 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   createRuntimeExtension,
   listExtensionInstallSummaries,
   reloadExtensionBackend,
   snapshotRuntimeExtension,
   validateExtensionPackage,
-} from '@personal-agent/extensions/backend/extensions';
-import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@personal-agent/extensions/host-view-components';
+} from '@neon-pilot/extensions/backend/extensions';
+import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
 
 const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
 
@@ -64,7 +64,7 @@ export async function readSearchPaths(_input: unknown, ctx: ExtensionBackendCont
     ok: true,
     defaultLocation: join(ctx.runtimeDir, 'extensions'),
     configuredPaths: readConfiguredSearchPaths(ctx),
-    environmentPaths: splitEnvironmentPathList(process.env.PERSONAL_AGENT_EXTENSION_PATHS),
+    environmentPaths: splitEnvironmentPathList(process.env.NEON_PILOT_EXTENSION_PATHS),
   };
 }
 

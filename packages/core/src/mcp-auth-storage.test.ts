@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const DIRS: string[] = [];
-const origAuth = process.env.PERSONAL_AGENT_MCP_AUTH_DIR;
+const origAuth = process.env.NEON_PILOT_MCP_AUTH_DIR;
 
 beforeEach(() => {
   const tmp = mkdtempSync(join(tmpdir(), 'mcp-auth-test-'));
   DIRS.push(tmp);
-  process.env.PERSONAL_AGENT_MCP_AUTH_DIR = tmp;
+  process.env.NEON_PILOT_MCP_AUTH_DIR = tmp;
 });
 
 afterEach(() => {
@@ -18,9 +18,9 @@ afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
   }
   if (origAuth) {
-    process.env.PERSONAL_AGENT_MCP_AUTH_DIR = origAuth;
+    process.env.NEON_PILOT_MCP_AUTH_DIR = origAuth;
   } else {
-    delete process.env.PERSONAL_AGENT_MCP_AUTH_DIR;
+    delete process.env.NEON_PILOT_MCP_AUTH_DIR;
   }
 });
 

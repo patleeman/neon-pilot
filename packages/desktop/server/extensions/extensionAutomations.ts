@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { clearTaskCallbackBinding } from '@personal-agent/core';
-import type { AutomationActivityEntry } from '@personal-agent/daemon';
+import { clearTaskCallbackBinding } from '@neon-pilot/core';
+import type { AutomationActivityEntry } from '@neon-pilot/daemon';
 import {
   createStoredAutomation,
   deleteStoredAutomation,
@@ -10,7 +10,7 @@ import {
   normalizeAutomationTargetTypeForSelection,
   startScheduledTaskRun,
   updateStoredAutomation,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { readScheduledTaskSchedulerHealth } from '../automation/scheduledTaskCapability.js';
 import { loadScheduledTasksForProfile, type TaskRuntimeEntry, toScheduledTaskMetadata } from '../automation/scheduledTasks.js';

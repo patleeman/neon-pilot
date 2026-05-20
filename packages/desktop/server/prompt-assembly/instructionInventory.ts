@@ -8,7 +8,7 @@ import {
   getStateRoot,
   getSyncRoot,
   resolveRuntimeResources,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from '../../../core/src/system-prompt-template.js';
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';

@@ -29,14 +29,14 @@ function createTempDir(prefix: string): string {
 
 describe('conversation link paths', () => {
   it('resolves the profile-scoped conversations directory under local runtime state', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
     expect(resolveProfileConversationLinksDir({ stateRoot, profile: 'assistant' })).toBe(
       join(stateRoot, 'pi-agent', 'state', 'conversation-project-links', 'assistant'),
     );
   });
 
   it('resolves a conversation link path under local runtime state', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
     expect(resolveConversationLinkPath({ stateRoot, profile: 'assistant', conversationId: 'conv-123' })).toBe(
       join(stateRoot, 'pi-agent', 'state', 'conversation-project-links', 'assistant', 'conv-123.json'),
     );
@@ -49,7 +49,7 @@ describe('conversation link paths', () => {
 
 describe('conversation project links', () => {
   it('writes and reads a conversation project link document', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     setConversationProjectLinks({
       stateRoot,
@@ -73,7 +73,7 @@ describe('conversation project links', () => {
   });
 
   it('returns the normalized document after writing', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     const result = setConversationProjectLinks({
       stateRoot,
@@ -91,7 +91,7 @@ describe('conversation project links', () => {
   });
 
   it('rejects invalid updatedAt values before writing', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     expect(() =>
       setConversationProjectLinks({
@@ -105,7 +105,7 @@ describe('conversation project links', () => {
   });
 
   it('adds links idempotently and keeps the file on disk', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     addConversationProjectLink({
       stateRoot,
@@ -139,7 +139,7 @@ describe('conversation project links', () => {
   });
 
   it('removes a project link and leaves an empty durable record when none remain', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     setConversationProjectLinks({
       stateRoot,
@@ -166,7 +166,7 @@ describe('conversation project links', () => {
   });
 
   it('returns null instead of throwing when a conversation link file is malformed', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     setConversationProjectLinks({
       stateRoot,
@@ -185,7 +185,7 @@ describe('conversation project links', () => {
   });
 
   it('skips malformed conversation link files when listing links', () => {
-    const stateRoot = createTempDir('personal-agent-conversation-links-state-');
+    const stateRoot = createTempDir('neon-pilot-conversation-links-state-');
 
     setConversationProjectLinks({
       stateRoot,

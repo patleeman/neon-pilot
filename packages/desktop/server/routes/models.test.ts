@@ -72,7 +72,7 @@ const {
   writeSavedModelPreferencesMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getMachineConfigFilePath: getMachineConfigFilePathMock,
   readKnowledgeBaseState: readKnowledgeBaseStateMock,
   readMachineInstructionFiles: readMachineInstructionFilesMock,
@@ -365,7 +365,7 @@ describe('model routes', () => {
   });
 
   afterEach(() => {
-    delete process.env.PERSONAL_AGENT_VAULT_ROOT;
+    delete process.env.NEON_PILOT_VAULT_ROOT;
     vi.useRealTimers();
     for (const files of allocatedFiles.splice(0)) {
       cleanupRouteFiles(files);

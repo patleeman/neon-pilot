@@ -1,10 +1,10 @@
 {
-  "name": "@personal-agent/extension-system-caffeinate",
+  "name": "@neon-pilot/extension-system-caffeinate",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@personal-agent/extensions": "workspace:*",
+    "@neon-pilot/extensions": "workspace:*",
     "react": "workspace:*",
     "react-dom": "workspace:*"
   }

@@ -649,7 +649,7 @@ function resolveServerCommandLine(server: McpServerConfig): string | undefined {
 function createClient(): Client {
   return new Client(
     {
-      name: 'personal-agent',
+      name: 'neon-pilot',
       version: '1.0.0',
     },
     {

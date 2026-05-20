@@ -1,5 +1,5 @@
-import type { ComposerButtonContext } from '@personal-agent/extensions/composer';
-import { cx } from '@personal-agent/extensions/ui';
+import type { ComposerButtonContext } from '@neon-pilot/extensions/composer';
+import { cx } from '@neon-pilot/extensions/ui';
 
 export function GoalModeComposerButton({ buttonContext }: { buttonContext: ComposerButtonContext }) {
   const enabled = buttonContext.goalEnabled;

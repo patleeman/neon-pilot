@@ -53,7 +53,7 @@ describe('system-alleycat thread protocol', () => {
       { type: 'reasoning', content: ['thinking'] },
       {
         type: 'dynamicToolCall',
-        namespace: 'personal-agent',
+        namespace: 'neon-pilot',
         tool: 'read',
         arguments: { path: 'README.md' },
         contentItems: [{ type: 'text', text: 'contents' }],
@@ -64,7 +64,7 @@ describe('system-alleycat thread protocol', () => {
       { type: 'userMessage', content: [{ type: 'text', text: 'next' }] },
       {
         type: 'dynamicToolCall',
-        namespace: 'personal-agent',
+        namespace: 'neon-pilot',
         tool: 'error',
         success: false,
         contentItems: [{ type: 'text', text: 'boom' }],

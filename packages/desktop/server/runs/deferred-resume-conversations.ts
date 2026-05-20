@@ -1,4 +1,4 @@
-import { readSessionConversationId } from '@personal-agent/core';
+import { readSessionConversationId } from '@neon-pilot/core';
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 

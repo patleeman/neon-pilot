@@ -37,7 +37,7 @@ describe('useDesktopConversationState', () => {
     }
     latestReconnect = null;
     vi.restoreAllMocks();
-    Reflect.deleteProperty(window, 'personalAgentDesktop');
+    Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
 
   it('resubscribes when reconnect is requested after a same-conversation cwd change', async () => {
@@ -48,7 +48,7 @@ describe('useDesktopConversationState', () => {
     });
     const unsubscribeConversationState = vi.fn().mockResolvedValue(undefined);
 
-    Object.defineProperty(window, 'personalAgentDesktop', {
+    Object.defineProperty(window, 'neonPilotDesktop', {
       configurable: true,
       value: {
         getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),

@@ -15,7 +15,7 @@ import {
 } from './imageProbeAttachmentStore.js';
 
 const tempDirs: string[] = [];
-const originalStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
 const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function pngData(label: string): string {
@@ -25,15 +25,15 @@ function pngData(label: string): string {
 beforeEach(() => {
   const dir = mkdtempSync(join(tmpdir(), 'pa-image-probe-store-'));
   tempDirs.push(dir);
-  process.env.PERSONAL_AGENT_STATE_ROOT = dir;
+  process.env.NEON_PILOT_STATE_ROOT = dir;
 });
 
 afterEach(async () => {
   clearImageProbeAttachmentCacheForTests();
   if (originalStateRoot === undefined) {
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
   } else {
-    process.env.PERSONAL_AGENT_STATE_ROOT = originalStateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
   }
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });

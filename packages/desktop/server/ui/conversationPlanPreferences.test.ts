@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-conversation-plan-prefs-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-conversation-plan-prefs-'));
   tempDirs.push(dir);
   return dir;
 }

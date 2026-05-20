@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   useApi: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/settings', () => ({
+vi.mock('@neon-pilot/extensions/settings', () => ({
   api: mocks.api,
   cx: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
   Pill: ({ children }: { children: React.ReactNode }) => children,

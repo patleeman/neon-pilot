@@ -9,7 +9,7 @@ const { buildSessionContextForRuntimeMock } = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock('@personal-agent/extensions/backend/runtime', () => ({
+vi.mock('@neon-pilot/extensions/backend/runtime', () => ({
   buildSessionContextForRuntime: buildSessionContextForRuntimeMock,
 }));
 

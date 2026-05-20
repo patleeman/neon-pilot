@@ -1,6 +1,6 @@
 import { createWriteStream, existsSync, type WriteStream } from 'node:fs';
 
-import { bindInProcessDaemonClient, PersonalAgentDaemon } from '@personal-agent/daemon';
+import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
 import { resolveDesktopRuntimePaths } from '../desktop-env.js';
 
@@ -40,7 +40,7 @@ async function showDaemonHealthNotification(kind: DaemonHealthNotificationKind, 
 }
 
 export class LocalBackendProcesses {
-  private daemon?: PersonalAgentDaemon;
+  private daemon?: NeonPilotDaemon;
   private clearInProcessClientBinding?: () => void;
   private startPromise?: Promise<void>;
   private logStream?: WriteStream;
@@ -180,7 +180,7 @@ export class LocalBackendProcesses {
     const runtime = resolveDesktopRuntimePaths();
     const logPath = `${runtime.desktopLogsDir}/daemon.log`;
     const logStream = createWriteStream(logPath, { flags: 'a', encoding: 'utf-8' });
-    const daemon = new PersonalAgentDaemon({
+    const daemon = new NeonPilotDaemon({
       stopRequestBehavior: 'reject',
       logSink: (line) => {
         logStream.write(`${line}\n`);

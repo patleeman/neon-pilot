@@ -7,7 +7,7 @@ import {
   getConversationCommitCheckpoint,
   listConversationCommitCheckpoints,
   saveConversationCommitCheckpoint,
-} from '@personal-agent/extensions/backend/checkpoints';
+} from '@neon-pilot/extensions/backend/checkpoints';
 
 type CheckpointBackendContext = ExtensionBackendContext & {
   profile: string;

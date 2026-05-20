@@ -1,4 +1,4 @@
-import { api, cx, Pill, ToolbarButton, useApi } from '@personal-agent/extensions/settings';
+import { api, cx, Pill, ToolbarButton, useApi } from '@neon-pilot/extensions/settings';
 import React, { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 
 type McpServerConfig = {

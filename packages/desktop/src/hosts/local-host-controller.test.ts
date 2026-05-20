@@ -121,7 +121,7 @@ describe('LocalHostController', () => {
     const backend = createBackendMock();
     const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
 
-    await expect(controller.getBaseUrl()).resolves.toBe('personal-agent://app/');
+    await expect(controller.getBaseUrl()).resolves.toBe('neon-pilot://app/');
 
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe('LocalHostController', () => {
       reachable: true,
       mode: 'local-app-runtime',
       summary: 'Local desktop runtime is healthy.',
-      webUrl: 'personal-agent://app/',
+      webUrl: 'neon-pilot://app/',
       daemonHealthy: true,
     });
   });
@@ -155,7 +155,7 @@ describe('LocalHostController', () => {
       reachable: false,
       mode: 'local-app-runtime',
       summary: 'Local desktop runtime is starting or unavailable.',
-      webUrl: 'personal-agent://app/',
+      webUrl: 'neon-pilot://app/',
       daemonHealthy: false,
     });
   });

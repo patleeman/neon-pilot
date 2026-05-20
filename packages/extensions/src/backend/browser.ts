@@ -1,5 +1,5 @@
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/browser must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/browser must be resolved by the Neon Pilot host runtime.');
 }
 
 export type WorkbenchBrowserToolHost = unknown;

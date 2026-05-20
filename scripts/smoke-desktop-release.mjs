@@ -249,7 +249,7 @@ async function assertLiveSessionBash(cdp, child, logs, cwd) {
       } catch {}
 
       const bash = sessionId
-        ? await post('/api/live-sessions/' + encodeURIComponent(sessionId) + '/bash', { command: 'printf pa-bash-ok' })
+        ? await post('/api/live-sessions/' + encodeURIComponent(sessionId) + '/bash', { command: 'printf neon-pilot-bash-ok' })
         : { status: 0, ok: false, body: 'no live session id returned' };
       const closed = sessionId ? await del('/api/live-sessions/' + encodeURIComponent(sessionId)) : null;
       return { models, model, created, bash, closed };
@@ -263,7 +263,7 @@ async function assertLiveSessionBash(cdp, child, logs, cwd) {
   });
   const value = result?.result?.value;
   const bashBody = typeof value?.bash?.body === 'string' ? value.bash.body : '';
-  if (!value?.created?.ok || !value?.bash?.ok || !bashBody.includes('pa-bash-ok')) {
+  if (!value?.created?.ok || !value?.bash?.ok || !bashBody.includes('neon-pilot-bash-ok')) {
     throw new Error(`Packaged live session bash smoke check failed: ${JSON.stringify(value, null, 2)}\n${logs()}`);
   }
 }
@@ -310,7 +310,7 @@ async function main() {
   assertPackagedAgentReadableResources(appPath);
 
   const executablePath = join(appPath, 'Contents', 'MacOS', basename(appPath, '.app'));
-  const tempRoot = mkdtempSync(join(tmpdir(), 'pa-release-smoke-'));
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-release-smoke-'));
   const stateRoot = join(tempRoot, 'state');
   const daemonSocketPath = join(tempRoot, 'daemon.sock');
   const debugPort = await allocatePort();
@@ -328,10 +328,10 @@ async function main() {
   const child = spawn(executablePath, [`--remote-debugging-port=${debugPort}`, '--no-quit-confirmation'], {
     env: {
       ...process.env,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: daemonSocketPath,
-      PERSONAL_AGENT_COMPANION_PORT: String(companionPort),
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
+      NEON_PILOT_DAEMON_SOCKET_PATH: daemonSocketPath,
+      NEON_PILOT_COMPANION_PORT: String(companionPort),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -348,9 +348,9 @@ async function main() {
 
     await waitForLoadedBody(cdp, child, renderLogs, 'initial desktop route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
-    await navigateAndAssert(cdp, child, renderLogs, 'personal-agent://app/knowledge', 'Knowledge route');
+    await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/knowledge', 'Knowledge route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
-    await navigateAndAssert(cdp, child, renderLogs, 'personal-agent://app/', 'conversation route');
+    await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/', 'conversation route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
     await assertLiveSessionBash(cdp, child, renderLogs, process.cwd());
 

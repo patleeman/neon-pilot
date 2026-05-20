@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { pingDaemon, startBackgroundRun } from '@personal-agent/daemon';
+import { pingDaemon, startBackgroundRun } from '@neon-pilot/daemon';
 import type { Express, Response } from 'express';
 
 import {
@@ -28,8 +28,8 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 
 function candidatePaComponentsCssPaths(): string[] {
   return [
-    process.env.PERSONAL_AGENT_REPO_ROOT
-      ? resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/server/extensions/pa-components.css')
+    process.env.NEON_PILOT_REPO_ROOT
+      ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/extensions/pa-components.css')
       : null,
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions/pa-components.css') : null,
     resolve(process.cwd(), 'server/extensions/pa-components.css'),

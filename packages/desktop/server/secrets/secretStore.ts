@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 
 import { listExtensionSecretRegistrations } from '../extensions/extensionRegistry.js';
 
@@ -30,7 +30,7 @@ export interface SecretBackend {
   delete(key: string): void;
 }
 
-const KEYCHAIN_SERVICE = 'personal-agent';
+const KEYCHAIN_SERVICE = 'neon-pilot';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

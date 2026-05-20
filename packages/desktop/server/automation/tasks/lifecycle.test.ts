@@ -11,7 +11,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PersonalAgentDaemon } from '../../daemon/server.js';
+import { NeonPilotDaemon } from '../../daemon/server.js';
 import { resolveDaemonPaths } from '../../paths.js';
 import type { DaemonConfig } from '../config.js';
 
@@ -62,7 +62,7 @@ async function sendRequest(socketPath: string, request: unknown): Promise<Respon
 }
 
 describe('daemon module lifecycle', () => {
-  let daemon: PersonalAgentDaemon | null = null;
+  let daemon: NeonPilotDaemon | null = null;
   let socketPath: string;
 
   beforeEach(async () => {
@@ -86,7 +86,7 @@ describe('daemon module lifecycle', () => {
     // Note: Module start failure handling is tested at the integration level
     // The daemon should log module failures but continue startup
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
 
     // Start should succeed with default (non-failing) modules
     await expect(daemon.start()).resolves.not.toThrow();
@@ -94,7 +94,7 @@ describe('daemon module lifecycle', () => {
 
   it('handles module stop failure gracefully', async () => {
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     // Stop should complete without throwing
@@ -103,7 +103,7 @@ describe('daemon module lifecycle', () => {
 
   it('signal/shutdown idempotency - multiple stop calls are safe', async () => {
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     // First stop
@@ -118,7 +118,7 @@ describe('daemon module lifecycle', () => {
 
   it('daemon remains responsive after stop and can be restarted', async () => {
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     // Verify daemon is running
@@ -132,7 +132,7 @@ describe('daemon module lifecycle', () => {
     daemon = null;
 
     // Create new daemon instance with same socket path
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     // Verify new daemon is responsive
@@ -148,7 +148,7 @@ describe('daemon module lifecycle', () => {
     const testSocketPath = join(tempDir, 'test.sock');
     const config = createTestConfig(testSocketPath);
 
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     expect(existsSync(testSocketPath)).toBe(true);
@@ -166,7 +166,7 @@ describe('daemon module lifecycle', () => {
 
     const pidFile = resolveDaemonPaths(testSocketPath).pidFile;
 
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     expect(existsSync(pidFile)).toBe(true);
@@ -179,7 +179,7 @@ describe('daemon module lifecycle', () => {
 
   it('daemon handles concurrent shutdown requests safely', async () => {
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     // Trigger multiple concurrent stops
@@ -193,7 +193,7 @@ describe('daemon module lifecycle', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const config = createTestConfig(socketPath);
-    daemon = new PersonalAgentDaemon(config);
+    daemon = new NeonPilotDaemon(config);
     await daemon.start();
 
     await daemon.stop();

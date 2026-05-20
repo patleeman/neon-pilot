@@ -364,7 +364,7 @@ export async function finalizeBackgroundRun(input: FinalizeBackgroundRunInput): 
     },
   });
 
-  const marker = `\n__PA_RUN_EXIT_CODE=${String(input.exitCode)}\n`;
+  const marker = `\n__NEON_PILOT_RUN_EXIT_CODE=${String(input.exitCode)}\n`;
   appendOutputLog(input.runPaths.outputLogPath, `${marker}# endedAt=${input.endedAt}\n# status=${status}\n`);
 
   const childSummary = readExistingRunSummary(input.runPaths.resultPath);

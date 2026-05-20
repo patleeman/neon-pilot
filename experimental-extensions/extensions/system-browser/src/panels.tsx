@@ -8,7 +8,7 @@ import {
   readBrowserTabsState,
   WorkbenchBrowserTab,
   writeBrowserTabsState,
-} from '@personal-agent/extensions/workbench-browser';
+} from '@neon-pilot/extensions/workbench-browser';
 import { useCallback, useEffect, useState } from 'react';
 
 import { BrowserToolBlock } from './BrowserToolBlock.js';

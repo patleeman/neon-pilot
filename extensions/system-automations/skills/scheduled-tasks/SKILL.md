@@ -42,7 +42,7 @@ Do not confuse scheduled tasks with:
 
 Canonical storage:
 
-- `~/.local/state/personal-agent/daemon/runtime.db`
+- `~/.local/state/neon-pilot/daemon/runtime.db`
 
 Automation definitions and scheduler runtime state now live in the daemon SQLite database.
 
@@ -207,7 +207,7 @@ Use the web UI when you want to inspect automation detail, status, and owned run
 
 Default daemon state root:
 
-- `~/.local/state/personal-agent/daemon`
+- `~/.local/state/neon-pilot/daemon`
 
 Useful storage:
 

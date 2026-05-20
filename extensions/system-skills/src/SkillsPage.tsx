@@ -1,5 +1,5 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@personal-agent/extensions/ui';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type SkillSource = 'extension' | 'vault' | 'project' | string;

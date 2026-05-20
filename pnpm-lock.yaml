@@ -80,7 +80,7 @@ importers:
       '@electron/asar':
         specifier: ^3.4.1
         version: 3.4.1
-      '@personal-agent/core':
+      '@neon-pilot/core':
         specifier: workspace:*
         version: link:packages/core
       '@types/jsdom':
@@ -189,10 +189,10 @@ importers:
       '@fontsource-variable/geist-mono':
         specifier: ^5.2.8
         version: 5.2.8
-      '@personal-agent/core':
+      '@neon-pilot/core':
         specifier: workspace:*
         version: link:../core
-      '@personal-agent/extensions':
+      '@neon-pilot/extensions':
         specifier: workspace:*
         version: link:../extensions
       electron-updater:

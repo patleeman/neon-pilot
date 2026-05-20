@@ -1,4 +1,4 @@
-import { getDurableSessionsDir } from '@personal-agent/core';
+import { getDurableSessionsDir } from '@neon-pilot/core';
 import { join } from 'path';
 
 const BACKGROUND_RUN_SESSIONS_DIR_NAME = '__runs';

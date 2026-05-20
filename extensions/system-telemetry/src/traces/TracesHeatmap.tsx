@@ -2,7 +2,7 @@
  * Token Activity Heatmap — GitHub-style contribution grid
  */
 
-import type { TraceTokenDaily } from '@personal-agent/extensions/data';
+import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
 
 export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length === 0) {

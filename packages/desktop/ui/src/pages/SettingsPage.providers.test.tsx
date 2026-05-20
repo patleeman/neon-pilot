@@ -178,11 +178,11 @@ describe('SettingsPage provider model editor', () => {
 
     const skillFoldersResult = buildUseApiResult({
       configFile: '/tmp/config.json',
-      skillDirs: ['/Users/patrick/Documents/personal-agent/skills'],
+      skillDirs: ['/Users/patrick/Documents/neon-pilot/skills'],
     });
     const instructionsResult = buildUseApiResult({
       configFile: '/tmp/config.json',
-      instructionFiles: ['/Users/patrick/Documents/personal-agent/AGENTS.md'],
+      instructionFiles: ['/Users/patrick/Documents/neon-pilot/AGENTS.md'],
     });
     const modelsResult = buildUseApiResult({
       currentModel: 'gpt-5.4',
@@ -240,7 +240,7 @@ describe('SettingsPage provider model editor', () => {
     });
     const defaultCwdResult = buildUseApiResult({
       currentCwd: '',
-      effectiveCwd: '/Users/patrick/workingdir/personal-agent',
+      effectiveCwd: '/Users/patrick/workingdir/neon-pilot',
     });
     const conversationTitleSettingsResult = buildUseApiResult({
       enabled: true,
@@ -256,7 +256,7 @@ describe('SettingsPage provider model editor', () => {
     });
     const statusResult = buildUseApiResult({
       profile: 'assistant',
-      repoRoot: '/Users/patrick/workingdir/personal-agent',
+      repoRoot: '/Users/patrick/workingdir/neon-pilot',
       projectCount: 5,
       appRevision: 'abc123',
     });
@@ -415,7 +415,7 @@ describe('SettingsPage provider model editor', () => {
     startProviderOAuthLoginMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
     maintainTelemetryDbMock.mockRestore();
-    delete (window as { personalAgentDesktop?: unknown }).personalAgentDesktop;
+    delete (window as { neonPilotDesktop?: unknown }).neonPilotDesktop;
     for (const root of mountedRoots.splice(0)) {
       act(() => {
         root.unmount();
@@ -459,8 +459,8 @@ describe('SettingsPage provider model editor', () => {
 
   it('opens OAuth login URLs through the desktop shell bridge', async () => {
     const openExternalUrl = vi.fn().mockResolvedValue({ url: 'https://auth.openai.com/oauth', opened: true });
-    Object.assign(window as { personalAgentDesktop?: unknown }, {
-      personalAgentDesktop: {
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({ isElectron: false, activeHostKind: 'local' }),
         readDesktopAppPreferences: vi.fn().mockResolvedValue({
           available: true,

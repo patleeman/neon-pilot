@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';

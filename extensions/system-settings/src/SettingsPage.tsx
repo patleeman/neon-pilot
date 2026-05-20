@@ -48,7 +48,7 @@ import {
   useApi,
   useExtensionRegistry,
   useTheme,
-} from '@personal-agent/extensions/settings';
+} from '@neon-pilot/extensions/settings';
 import {
   createContext,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -644,7 +644,9 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 
   useEffect(() => {
     if (error)
-      window.dispatchEvent(new CustomEvent('pa-notification', { detail: { type: 'error', message: error, source: 'system-settings' } }));
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message: error, source: 'system-settings' } }),
+      );
   }, [error]);
 
   const dirty = useMemo(() => {
@@ -1017,7 +1019,7 @@ export function DesktopConnectionsSettingsPanel() {
   useEffect(() => {
     if (appPreferencesError)
       window.dispatchEvent(
-        new CustomEvent('pa-notification', { detail: { type: 'error', message: appPreferencesError, source: 'system-settings' } }),
+        new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message: appPreferencesError, source: 'system-settings' } }),
       );
   }, [appPreferencesError]);
 
@@ -1156,7 +1158,7 @@ function ExtensionSettingsSection() {
   useEffect(() => {
     if (saveError)
       window.dispatchEvent(
-        new CustomEvent('pa-notification', { detail: { type: 'error', message: saveError, source: 'system-settings' } }),
+        new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message: saveError, source: 'system-settings' } }),
       );
   }, [saveError]);
 
@@ -1272,7 +1274,7 @@ function ExtensionSecretsSection() {
   useEffect(() => {
     if (error)
       window.dispatchEvent(
-        new CustomEvent('pa-notification', {
+        new CustomEvent('neon-pilot-notification', {
           detail: { type: 'error', message: `Failed to load secrets: ${error}`, source: 'system-settings' },
         }),
       );
@@ -1281,7 +1283,7 @@ function ExtensionSecretsSection() {
   useEffect(() => {
     if (errorMessage)
       window.dispatchEvent(
-        new CustomEvent('pa-notification', { detail: { type: 'error', message: errorMessage, source: 'system-settings' } }),
+        new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message: errorMessage, source: 'system-settings' } }),
       );
   }, [errorMessage]);
 

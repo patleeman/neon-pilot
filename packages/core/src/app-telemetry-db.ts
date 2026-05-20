@@ -208,7 +208,7 @@ function stringifyMetadata(metadata: Record<string, unknown> | null): string | n
 }
 
 function resolveMaxEvents(): number {
-  const raw = process.env.PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS;
+  const raw = process.env.NEON_PILOT_APP_TELEMETRY_MAX_EVENTS;
   if (!raw) return DEFAULT_MAX_EVENTS;
   const parsed = Number.parseInt(raw, 10);
   return Number.isSafeInteger(parsed) && parsed >= 1_000 ? parsed : DEFAULT_MAX_EVENTS;

@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot } from '@personal-agent/core';
+import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot } from '@neon-pilot/core';
 
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
@@ -94,7 +94,7 @@ function parseArgs(argv: string[]): RunnerArgs {
 }
 
 export function writeRunnerResult(summary: string): void {
-  const resultPath = process.env.PERSONAL_AGENT_RUN_RESULT_PATH?.trim();
+  const resultPath = process.env.NEON_PILOT_RUN_RESULT_PATH?.trim();
   if (!resultPath) {
     return;
   }
@@ -139,7 +139,7 @@ export function collectAssistantErrorMessages(session: { messages?: unknown[] })
 }
 
 function readParentSessionFile(): string | undefined {
-  const value = process.env.PERSONAL_AGENT_PARENT_SESSION_FILE?.trim();
+  const value = process.env.NEON_PILOT_PARENT_SESSION_FILE?.trim();
   return value ? value : undefined;
 }
 
@@ -152,7 +152,7 @@ export async function main(): Promise<void> {
   });
   const extensionFactories = [
     ...createManifestToolAgentExtensions({
-      getCurrentProfile: () => process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
+      getCurrentProfile: () => process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => args.model ?? readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
@@ -163,7 +163,7 @@ export async function main(): Promise<void> {
           return false;
         }
       },
-      repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
+      repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
       profilesRoot: getProfilesRoot(),
       stateRoot: getStateRoot(),
     }),
@@ -247,7 +247,7 @@ export async function main(): Promise<void> {
 }
 
 export function shouldRunBackgroundAgentMain(importMetaUrl: string, argvEntry: string | undefined, env: NodeJS.ProcessEnv): boolean {
-  if (env.PERSONAL_AGENT_RUN_ID?.trim()) {
+  if (env.NEON_PILOT_RUN_ID?.trim()) {
     return true;
   }
   return Boolean(argvEntry && fileURLToPath(importMetaUrl) === argvEntry);

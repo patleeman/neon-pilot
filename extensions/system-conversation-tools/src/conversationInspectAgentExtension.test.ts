@@ -14,7 +14,7 @@ const {
   readConversationSessionsCapabilityMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/conversations', () => ({
+vi.mock('@neon-pilot/extensions/backend/conversations', () => ({
   CONVERSATION_INSPECT_ACTION_VALUES: ['list', 'search', 'query', 'diff', 'outline', 'read_window'],
   CONVERSATION_INSPECT_BLOCK_TYPE_VALUES: ['user', 'text', 'context', 'summary', 'tool_use', 'image', 'error'],
   CONVERSATION_INSPECT_ORDER_VALUES: ['asc', 'desc'],

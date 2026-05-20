@@ -22,7 +22,7 @@ const tempDirs: string[] = [];
 const originalEnv = process.env;
 
 beforeEach(() => {
-  process.env = { ...originalEnv, PERSONAL_AGENT_STATE_ROOT: createTempDir('pa-web-scheduled-tasks-state-') };
+  process.env = { ...originalEnv, NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-scheduled-tasks-state-') };
 });
 
 afterEach(async () => {
@@ -30,7 +30,7 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-function createTempDir(prefix = 'pa-web-scheduled-tasks-'): string {
+function createTempDir(prefix = 'neon-pilot-web-scheduled-tasks-'): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(dir);
   return dir;
@@ -244,7 +244,7 @@ describe('scheduledTasks', () => {
     const runtimeFilePath = join(tasksDir, 'runtime.task.md');
     writeFileSync(runtimeFilePath, `---\ncron: "0 9 * * *"\nprofile: "assistant"\n---\nRuntime task\n`);
 
-    const daemonDir = join(process.env.PERSONAL_AGENT_STATE_ROOT!, 'daemon');
+    const daemonDir = join(process.env.NEON_PILOT_STATE_ROOT!, 'daemon');
     mkdirSync(daemonDir, { recursive: true });
     writeFileSync(
       join(daemonDir, 'task-state.json'),
@@ -284,7 +284,7 @@ describe('scheduledTasks', () => {
     writeFileSync(validFilePath, `---\ncron: "0 9 * * *"\nprofile: "assistant"\n---\nDaily task\n`);
     writeFileSync(invalidFilePath, `---\ncron: "0 9 * *"\n---\nBroken task\n`);
 
-    const daemonDir = join(process.env.PERSONAL_AGENT_STATE_ROOT!, 'daemon');
+    const daemonDir = join(process.env.NEON_PILOT_STATE_ROOT!, 'daemon');
     mkdirSync(daemonDir, { recursive: true });
     writeFileSync(
       join(daemonDir, 'task-state.json'),

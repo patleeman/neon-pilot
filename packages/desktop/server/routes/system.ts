@@ -44,7 +44,7 @@ function handleStatus(_req: Request, res: Response): void {
   try {
     res.json({
       repoRoot: getRepoRootFn(),
-      appRevision: process.env.PERSONAL_AGENT_APP_REVISION,
+      appRevision: process.env.NEON_PILOT_APP_REVISION,
     });
   } catch (err) {
     logError('request handler error', {

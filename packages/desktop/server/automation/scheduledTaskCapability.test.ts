@@ -51,8 +51,8 @@ vi.mock('node:fs', () => ({
   readFileSync: readFileSyncMock,
 }));
 
-vi.mock('@personal-agent/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@personal-agent/core')>();
+vi.mock('@neon-pilot/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/core')>();
   return {
     ...actual,
     clearTaskCallbackBinding: clearTaskCallbackBindingMock,
@@ -61,7 +61,7 @@ vi.mock('@personal-agent/core', async (importOriginal) => {
   };
 });
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   createStoredAutomation: createStoredAutomationMock,
   deleteStoredAutomation: deleteStoredAutomationMock,
   ensureAutomationThread: ensureAutomationThreadMock,

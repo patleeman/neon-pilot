@@ -1,5 +1,5 @@
-import { type DurableRunAttentionStateDocument, loadDurableRunAttentionState } from '@personal-agent/core';
-import type { ScannedDurableRun } from '@personal-agent/daemon';
+import { type DurableRunAttentionStateDocument, loadDurableRunAttentionState } from '@neon-pilot/core';
+import type { ScannedDurableRun } from '@neon-pilot/daemon';
 
 interface DurableRunAttentionCandidate extends Pick<ScannedDurableRun, 'runId' | 'status' | 'problems' | 'recoveryAction'> {}
 

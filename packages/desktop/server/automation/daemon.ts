@@ -1,6 +1,6 @@
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 
-import { getDaemonStatus, loadDaemonConfig, pingDaemon, resolveDaemonPaths } from '@personal-agent/daemon';
+import { getDaemonStatus, loadDaemonConfig, pingDaemon, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { filterSystemLogTailLines } from '../shared/systemLogTail.js';
 
@@ -10,7 +10,7 @@ interface LogTail {
 }
 
 function getDesktopDaemonLogFile(): string | undefined {
-  return process.env.PERSONAL_AGENT_DESKTOP_DAEMON_LOG_FILE?.trim() || undefined;
+  return process.env.NEON_PILOT_DESKTOP_DAEMON_LOG_FILE?.trim() || undefined;
 }
 
 interface DaemonServiceSummary {

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 
-import { getDurableSessionsDir, getStateRoot } from '@personal-agent/core';
+import { getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { clearSessionCaches, listSessions, readSessionMeta } from './sessions.js';

@@ -1,4 +1,4 @@
-import { pingDaemon, startBackgroundRun } from '@personal-agent/daemon';
+import { pingDaemon, startBackgroundRun } from '@neon-pilot/daemon';
 
 import { cancelDurableRun, getDurableRun, getDurableRunLog, listDurableRuns } from '../automation/durableRuns.js';
 import { getExecution, getExecutionLog, listConversationExecutions, listExecutions } from '../executions/executionService.js';

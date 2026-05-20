@@ -9,7 +9,7 @@ const { inspectAvailableToolsMock, inspectCliBinaryMock, listRuntimeScopesMock, 
     readPackageSourceTargetStateMock: vi.fn(),
   }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   inspectCliBinary: inspectCliBinaryMock,
   listRuntimeScopes: listRuntimeScopesMock,
   readPackageSourceTargetState: readPackageSourceTargetStateMock,
@@ -82,7 +82,7 @@ describe('registerToolsRoutes', () => {
     const handler = getHandler('/api/tools');
     const res = createResponse();
 
-    process.env.PERSONAL_AGENT_OP_BIN = 'op-custom';
+    process.env.NEON_PILOT_OP_BIN = 'op-custom';
     inspectAvailableToolsMock.mockResolvedValueOnce({
       tools: [{ id: 'shell' }],
       toolsets: [{ id: 'default' }],
@@ -115,7 +115,7 @@ describe('registerToolsRoutes', () => {
           id: '1password-cli',
           name: '1Password CLI',
           description: 'Resolves op:// secret references used by Neon Pilot features and extensions.',
-          configuredBy: 'PERSONAL_AGENT_OP_BIN',
+          configuredBy: 'NEON_PILOT_OP_BIN',
           usedBy: ['op:// secret references', 'web-tools extension'],
           binary: { command: 'op-custom', exists: true },
         },

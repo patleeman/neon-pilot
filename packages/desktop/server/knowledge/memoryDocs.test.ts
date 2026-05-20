@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize } from 'node:path';
 
-import { getDurableAgentFilePath, getDurableSkillsDir, getProfilesRoot } from '@personal-agent/core';
+import { getDurableAgentFilePath, getDurableSkillsDir, getProfilesRoot } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -51,12 +51,12 @@ function skillPath(skillId: string, fileName = 'SKILL.md'): string {
 }
 
 beforeEach(() => {
-  const stateRoot = createTempDir('pa-web-memory-docs-');
+  const stateRoot = createTempDir('neon-pilot-web-memory-docs-');
   process.env = {
     ...originalEnv,
-    PERSONAL_AGENT_STATE_ROOT: stateRoot,
-    PERSONAL_AGENT_VAULT_ROOT: join(stateRoot, 'sync'),
-    PERSONAL_AGENT_PROFILES_ROOT: join(stateRoot, 'sync', 'profiles'),
+    NEON_PILOT_STATE_ROOT: stateRoot,
+    NEON_PILOT_VAULT_ROOT: join(stateRoot, 'sync'),
+    NEON_PILOT_PROFILES_ROOT: join(stateRoot, 'sync', 'profiles'),
   };
   clearMemoryBrowserCaches();
 });
@@ -69,7 +69,7 @@ afterEach(async () => {
 
 describe('web memory docs', () => {
   it('lists note nodes from sync/notes packages', () => {
-    const stateRoot = process.env.PERSONAL_AGENT_STATE_ROOT as string;
+    const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
     writeFile(
       notePath(stateRoot, 'memory-index'),
       `---
@@ -116,7 +116,7 @@ Top-level note hub.
   });
 
   it('normalizes helper inputs and allows durable memory roots', () => {
-    const stateRoot = process.env.PERSONAL_AGENT_STATE_ROOT as string;
+    const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
     const profilesRoot = getProfilesRoot();
 
     mkdirSync(join(profilesRoot, 'assistant'), { recursive: true });
@@ -136,7 +136,7 @@ Top-level note hub.
   });
 
   it('lists skills for a profile and creates new durable skill docs', () => {
-    const repoRoot = createTempDir('pa-web-memory-docs-repo-');
+    const repoRoot = createTempDir('neon-pilot-web-memory-docs-repo-');
     process.chdir(repoRoot);
     mkdirSync(join(getProfilesRoot(), 'assistant'), { recursive: true });
 
@@ -218,7 +218,7 @@ profiles:
   });
 
   it('finds docs, generates note ids, and builds structured markdown', () => {
-    const stateRoot = process.env.PERSONAL_AGENT_STATE_ROOT as string;
+    const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
     writeFile(
       notePath(stateRoot, 'existing-note'),
       `---
@@ -284,7 +284,7 @@ Old body.
   });
 
   it('creates note nodes in sync/notes packages', () => {
-    const stateRoot = process.env.PERSONAL_AGENT_STATE_ROOT as string;
+    const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
 
     const created = createMemoryDoc({
       id: 'quick-note',

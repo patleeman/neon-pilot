@@ -1,11 +1,11 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions/backend';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 import {
   type ConversationArtifactKind,
   deleteConversationArtifact,
   getConversationArtifact,
   listConversationArtifacts,
   saveConversationArtifact,
-} from '@personal-agent/extensions/backend/artifacts';
+} from '@neon-pilot/extensions/backend/artifacts';
 
 const ARTIFACT_KIND_VALUES = ['html', 'mermaid', 'latex'] as const;
 type ArtifactAction = 'save' | 'get' | 'list' | 'delete';

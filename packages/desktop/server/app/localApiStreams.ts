@@ -1,7 +1,7 @@
 import { existsSync, watch } from 'node:fs';
 import { join } from 'node:path';
 
-import { getVaultRoot } from '@personal-agent/core';
+import { getVaultRoot } from '@neon-pilot/core';
 
 import { getDurableRunLogCursor, getDurableRunSnapshot, readDurableRunLogDelta } from '../automation/durableRuns.js';
 import { inlineConversationSessionSnapshotAssetsCapability } from '../conversations/conversationSessionAssetCapability.js';

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { normalizeServerExtensionModuleSpecifier, resolveServerModuleSpecifierFrom } from './serverModuleResolver.js';
 
-const previousRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT;
+const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 const previousCwd = process.cwd();
 const tempRoots: string[] = [];
 
@@ -24,9 +24,9 @@ function touch(path: string): void {
 
 afterEach(() => {
   if (previousRepoRoot === undefined) {
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
   } else {
-    process.env.PERSONAL_AGENT_REPO_ROOT = previousRepoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
   }
 
   process.chdir(previousCwd);
@@ -42,13 +42,13 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const cwdRoot = makeTempRoot();
     const corePath = join(resourcesRoot, 'app.asar/server/dist/core/index.js');
     touch(corePath);
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
     process.chdir(cwdRoot);
 
     expect(
       resolveServerModuleSpecifierFrom({
         importMetaUrl: import.meta.url,
-        relativeSpecifier: '@personal-agent/core',
+        relativeSpecifier: '@neon-pilot/core',
         resourcesPath: resourcesRoot,
       }),
     ).toBe(pathToFileURL(corePath).href);
@@ -69,7 +69,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const tscPath = join(repoRoot, 'packages/desktop/dist/server/conversations/conversationInspectWorkerClient.js');
     touch(bundledPath);
     touch(tscPath);
-    process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 
     const resolved = resolveServerModuleSpecifierFrom({
       importMetaUrl: pathToFileURL(join(repoRoot, 'extension-cache/system-conversation-tools/backend.mjs')).href,
@@ -85,7 +85,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const siblingPath = join(root, 'unlikely-test-only-module/serverModuleResolverFallback.js');
     touch(backendPath);
     touch(siblingPath);
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
 
     const resolved = resolveServerModuleSpecifierFrom({
       importMetaUrl: pathToFileURL(backendPath).href,
@@ -101,7 +101,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const tscPath = join(repoRoot, 'packages/desktop/dist/server/extensions/extensionLifecycle.js');
     touch(bundledPath);
     touch(tscPath);
-    process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 
     const resolved = resolveServerModuleSpecifierFrom({
       importMetaUrl: pathToFileURL(join(repoRoot, 'extension-cache/system-extension-manager/backend.mjs')).href,
@@ -119,7 +119,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const doctorPath = join(resourcesRoot, 'app.asar/server/dist/extensions/extensionDoctor.js');
     touch(backendPath);
     touch(doctorPath);
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
     process.chdir(cwdRoot);
 
     for (const [specifier, expected] of [
@@ -142,7 +142,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const cwdRoot = makeTempRoot();
     const appAsarPath = join(resourcesRoot, 'app.asar/server/dist/conversations/sessions.js');
     touch(appAsarPath);
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
     process.chdir(cwdRoot);
 
     const resolved = resolveServerModuleSpecifierFrom({
@@ -159,7 +159,7 @@ describe('resolveServerModuleSpecifierFrom', () => {
     const cwdRoot = makeTempRoot();
     const appAsarPath = join(resourcesRoot, 'app.asar/server/dist/automation/deferredResumes.js');
     touch(appAsarPath);
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
     process.chdir(cwdRoot);
 
     const resolved = resolveServerModuleSpecifierFrom({

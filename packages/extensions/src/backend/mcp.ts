@@ -1,5 +1,5 @@
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/mcp must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/mcp must be resolved by the Neon Pilot host runtime.');
 }
 
 export const authenticateMcpServer = (..._args: unknown[]): unknown => hostResolved();

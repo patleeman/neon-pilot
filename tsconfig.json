@@ -14,17 +14,17 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@personal-agent/core": ["./packages/core/src"],
-      "@personal-agent/daemon": ["./packages/desktop/server/daemon"],
-      "@personal-agent/extensions": ["./packages/extensions/src"],
-      "@personal-agent/extensions/host": ["./packages/desktop/ui/src/extensions/host"],
-      "@personal-agent/extensions/ui": ["./packages/desktop/ui/src/extensions/ui"],
-      "@personal-agent/extensions/workbench": ["./packages/desktop/ui/src/extensions/workbench"],
-      "@personal-agent/extensions/data": ["./packages/desktop/ui/src/extensions/data"],
-      "@personal-agent/extensions/settings": ["./packages/desktop/ui/src/extensions/settings"],
-      "@personal-agent/extensions/excalidraw": ["./packages/extensions/src/excalidraw"],
-      "@personal-agent/extensions/backend": ["./packages/desktop/server/extensions/backendApi"],
-      "@personal-agent/extensions/backend/*": ["./packages/desktop/server/extensions/backendApi/*"]
+      "@neon-pilot/core": ["./packages/core/src"],
+      "@neon-pilot/daemon": ["./packages/desktop/server/daemon"],
+      "@neon-pilot/extensions": ["./packages/extensions/src"],
+      "@neon-pilot/extensions/host": ["./packages/desktop/ui/src/extensions/host"],
+      "@neon-pilot/extensions/ui": ["./packages/desktop/ui/src/extensions/ui"],
+      "@neon-pilot/extensions/workbench": ["./packages/desktop/ui/src/extensions/workbench"],
+      "@neon-pilot/extensions/data": ["./packages/desktop/ui/src/extensions/data"],
+      "@neon-pilot/extensions/settings": ["./packages/desktop/ui/src/extensions/settings"],
+      "@neon-pilot/extensions/excalidraw": ["./packages/extensions/src/excalidraw"],
+      "@neon-pilot/extensions/backend": ["./packages/desktop/server/extensions/backendApi"],
+      "@neon-pilot/extensions/backend/*": ["./packages/desktop/server/extensions/backendApi/*"]
     }
   },
   "references": [{ "path": "./packages/core" }, { "path": "./packages/extensions" }, { "path": "./packages/desktop" }],

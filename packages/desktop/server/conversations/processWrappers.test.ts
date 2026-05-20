@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { clearResolvedChildProcessEnvCache } from '@personal-agent/core';
+import { clearResolvedChildProcessEnvCache } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearProcessWrappers, registerProcessWrapper, resolveProcessLaunch } from '../shared/processLauncher.js';
@@ -17,9 +17,9 @@ function createFakeZsh(entries: string[]): string {
     shellPath,
     [
       '#!/bin/sh',
-      "printf '%s\\0' '__PERSONAL_AGENT_ENV_START__'",
+      "printf '%s\\0' '__NEON_PILOT_ENV_START__'",
       ...entries.map((entry) => `printf '%s\\0' ${JSON.stringify(entry)}`),
-      "printf '%s\\0' '__PERSONAL_AGENT_ENV_END__'",
+      "printf '%s\\0' '__NEON_PILOT_ENV_END__'",
     ].join('\n'),
     'utf-8',
   );

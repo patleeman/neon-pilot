@@ -1,7 +1,7 @@
 import { PassThrough, Readable, Writable } from 'node:stream';
 
 import * as acp from '@agentclientprotocol/sdk';
-import type { ExtensionProtocolContext } from '@personal-agent/extensions';
+import type { ExtensionProtocolContext } from '@neon-pilot/extensions';
 import { describe, expect, it } from 'vitest';
 
 import { runAcpProtocol } from '../backend.js';

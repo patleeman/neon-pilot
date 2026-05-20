@@ -51,11 +51,11 @@ vi.mock('node:fs', () => ({
   readFileSync: readFileSyncMock,
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   clearTaskCallbackBinding: clearTaskCallbackBindingMock,
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   createStoredAutomation: createStoredAutomationMock,
   deleteStoredAutomation: deleteStoredAutomationMock,
   ensureAutomationThread: ensureAutomationThreadMock,

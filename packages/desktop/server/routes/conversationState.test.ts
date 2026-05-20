@@ -107,7 +107,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
   },
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   parsePendingOperation: parsePendingOperationMock,
 }));
 

@@ -11,17 +11,17 @@ import { setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
 
-const ORIGINAL_STATE_ROOT = process.env.PERSONAL_AGENT_STATE_ROOT;
+const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
 
 afterEach(() => {
-  if (ORIGINAL_STATE_ROOT === undefined) delete process.env.PERSONAL_AGENT_STATE_ROOT;
-  else process.env.PERSONAL_AGENT_STATE_ROOT = ORIGINAL_STATE_ROOT;
+  if (ORIGINAL_STATE_ROOT === undefined) delete process.env.NEON_PILOT_STATE_ROOT;
+  else process.env.NEON_PILOT_STATE_ROOT = ORIGINAL_STATE_ROOT;
 });
 
 describe('extension backend action invocation', () => {
   it('refuses to invoke actions from disabled extensions before loading backend code', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'disabled-action-ext');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(

@@ -11,8 +11,8 @@ import {
   resolveProfileConversationArtifactsDir,
   resolveProfileConversationAttachmentsDir,
   resolveProfileConversationCommitCheckpointsDir,
-} from '@personal-agent/core';
-import { getDaemonConfigFilePath, loadDaemonConfig, resolveDaemonPaths, resolveDurableRunsRoot } from '@personal-agent/daemon';
+} from '@neon-pilot/core';
+import { getDaemonConfigFilePath, loadDaemonConfig, resolveDaemonPaths, resolveDurableRunsRoot } from '@neon-pilot/daemon';
 
 import { clearDurableRunsListCache } from '../automation/durableRuns.js';
 import { readKnownSessionIdByFilePath } from '../conversations/sessions.js';

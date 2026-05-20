@@ -20,7 +20,7 @@ import type {
   TraceThroughput,
   TraceTokenDaily,
   TraceToolHealth,
-} from '@personal-agent/extensions/data';
+} from '@neon-pilot/extensions/data';
 import { useCallback, useEffect, useState } from 'react';
 
 async function telemetryGet<T>(path: string, range: TraceRange): Promise<T> {
@@ -31,7 +31,7 @@ async function telemetryGet<T>(path: string, range: TraceRange): Promise<T> {
 }
 
 function notifyError(message: string) {
-  window.dispatchEvent(new CustomEvent('pa-notification', { detail: { type: 'error', message, source: 'system-telemetry' } }));
+  window.dispatchEvent(new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message, source: 'system-telemetry' } }));
 }
 
 export type TraceRange = '1h' | '6h' | '24h' | '7d' | '30d';

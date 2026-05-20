@@ -52,9 +52,9 @@ describe('preparePiAgentDir', () => {
     const result = await preparePiAgentDir({ statePaths });
 
     expect(result).toEqual({
-      agentDir: join(root, 'pi-agent-runtime'),
-      authFile: join(root, 'pi-agent-runtime', 'auth.json'),
-      sessionsDir: join(root, 'pi-agent-runtime', 'sessions'),
+      agentDir: join(root, 'neon-pilot-runtime'),
+      authFile: join(root, 'neon-pilot-runtime', 'auth.json'),
+      sessionsDir: join(root, 'neon-pilot-runtime', 'sessions'),
     });
     expect(lstatSync(result.sessionsDir).isSymbolicLink()).toBe(true);
     expect(resolve(dirname(result.sessionsDir), readlinkSync(result.sessionsDir))).toBe(getDurableSessionsDir(root));
@@ -76,7 +76,7 @@ describe('preparePiAgentDir', () => {
   it('replaces a pre-existing runtime sessions file with the durable sessions symlink', async () => {
     const root = await createTempStateRoot();
     const statePaths = createStatePaths(root);
-    const runtimeSessionsPath = join(root, 'pi-agent-runtime', 'sessions');
+    const runtimeSessionsPath = join(root, 'neon-pilot-runtime', 'sessions');
 
     mkdirSync(dirname(runtimeSessionsPath), { recursive: true });
     writeFileSync(runtimeSessionsPath, 'legacy sessions file');
@@ -90,7 +90,7 @@ describe('preparePiAgentDir', () => {
   it('repairs incorrect legacy symlinks and leaves the correct target in place on repeat runs', async () => {
     const root = await createTempStateRoot();
     const statePaths = createStatePaths(root);
-    const runtimeSessionsPath = join(root, 'pi-agent-runtime', 'sessions');
+    const runtimeSessionsPath = join(root, 'neon-pilot-runtime', 'sessions');
     const wrongTarget = join(root, 'sync', 'pi-agent', 'legacy-sessions');
 
     mkdirSync(dirname(runtimeSessionsPath), { recursive: true });

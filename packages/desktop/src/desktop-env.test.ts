@@ -15,52 +15,52 @@ function seedDevRepo(repoRoot: string): void {
   mkdirSync(join(repoRoot, 'packages', 'desktop', 'dist'), { recursive: true });
   mkdirSync(join(repoRoot, 'packages', 'desktop', 'ui', 'dist'), { recursive: true });
   mkdirSync(join(repoRoot, 'packages', 'desktop', 'assets'), { recursive: true });
-  writeFileSync(join(repoRoot, 'package.json'), '{"name":"personal-agent"}\n');
+  writeFileSync(join(repoRoot, 'package.json'), '{"name":"neon-pilot"}\n');
   mkdirSync(join(repoRoot, 'packages', 'desktop', 'server', 'daemon'), { recursive: true });
-  writeFileSync(join(repoRoot, 'packages', 'desktop', 'server', 'daemon', 'package.json'), '{"name":"@personal-agent/daemon"}\n');
+  writeFileSync(join(repoRoot, 'packages', 'desktop', 'server', 'daemon', 'package.json'), '{"name":"@neon-pilot/daemon"}\n');
   writeFileSync(join(repoRoot, 'packages', 'desktop', 'assets', 'iconTemplate.png'), 'png\n');
   writeFileSync(join(repoRoot, 'packages', 'desktop', 'assets', 'icon.png'), 'png\n');
 }
 
 function seedPackagedApp(appRoot: string, resourcesPath: string): void {
-  mkdirSync(join(appRoot, 'node_modules', '@personal-agent', 'daemon', 'dist'), { recursive: true });
+  mkdirSync(join(appRoot, 'node_modules', '@neon-pilot', 'daemon', 'dist'), { recursive: true });
   mkdirSync(join(appRoot, 'server', 'dist'), { recursive: true });
   mkdirSync(join(appRoot, 'ui', 'dist'), { recursive: true });
   mkdirSync(join(appRoot, 'assets'), { recursive: true });
   mkdirSync(join(resourcesPath, 'defaults'), { recursive: true });
   mkdirSync(join(resourcesPath, 'extensions'), { recursive: true });
   mkdirSync(join(resourcesPath, 'prompt-catalog'), { recursive: true });
-  writeFileSync(join(appRoot, 'node_modules', '@personal-agent', 'daemon', 'dist', 'index.js'), 'console.log("daemon");\n');
+  writeFileSync(join(appRoot, 'node_modules', '@neon-pilot', 'daemon', 'dist', 'index.js'), 'console.log("daemon");\n');
   writeFileSync(join(appRoot, 'server', 'dist', 'index.js'), 'console.log("web");\n');
   writeFileSync(join(appRoot, 'assets', 'iconTemplate.png'), 'png\n');
   writeFileSync(join(appRoot, 'assets', 'icon.png'), 'png\n');
 }
 
-const originalStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
 
 afterEach(() => {
   if (originalStateRoot === undefined) {
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
     return;
   }
 
-  process.env.PERSONAL_AGENT_STATE_ROOT = originalStateRoot;
+  process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
 });
 
 describe('resolveDesktopRuntimePathsForContext', () => {
   it('resolves repo artifacts in development mode', () => {
-    const repoRoot = createTempDir('pa-desktop-dev-');
-    const stateRoot = createTempDir('pa-desktop-state-');
+    const repoRoot = createTempDir('neon-pilot-desktop-dev-');
+    const stateRoot = createTempDir('neon-pilot-desktop-state-');
     seedDevRepo(repoRoot);
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const result = resolveDesktopRuntimePathsForContext({
       currentDir: join(repoRoot, 'packages', 'desktop', 'dist'),
       cwd: repoRoot,
       env: {
         ...process.env,
-        PERSONAL_AGENT_NODE_PATH: '/custom/node',
-        PERSONAL_AGENT_REPO_ROOT: repoRoot,
+        NEON_PILOT_NODE_PATH: '/custom/node',
+        NEON_PILOT_REPO_ROOT: repoRoot,
       },
       execPath: '/ignored/electron',
       isPackaged: false,
@@ -81,12 +81,12 @@ describe('resolveDesktopRuntimePathsForContext', () => {
   });
 
   it('resolves packaged resources and uses the bundled runtime', () => {
-    const appBundleRoot = createTempDir('pa-desktop-app-');
+    const appBundleRoot = createTempDir('neon-pilot-desktop-app-');
     const resourcesPath = join(appBundleRoot, 'Neon Pilot.app', 'Contents', 'Resources');
     const appRoot = join(resourcesPath, 'app.asar');
-    const stateRoot = createTempDir('pa-desktop-state-');
+    const stateRoot = createTempDir('neon-pilot-desktop-state-');
     seedPackagedApp(appRoot, resourcesPath);
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const result = resolveDesktopRuntimePathsForContext({
       isPackaged: true,
@@ -102,25 +102,25 @@ describe('resolveDesktopRuntimePathsForContext', () => {
     expect(result.nodeCommand).toBe('/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot');
     expect(result.useElectronRunAsNode).toBe(true);
     expect(result.desktopNativeModulesDir).toBe(join(resourcesPath, 'app.asar.unpacked'));
-    expect(result.daemonEntryFile).toBe(join(appRoot, 'node_modules', '@personal-agent', 'daemon', 'dist', 'index.js'));
+    expect(result.daemonEntryFile).toBe(join(appRoot, 'node_modules', '@neon-pilot', 'daemon', 'dist', 'index.js'));
     expect(result.webDistDir).toBe(join(appRoot, 'ui', 'dist'));
     expect(result.trayTemplateIconFile).toBe(join(appRoot, 'assets', 'iconTemplate.png'));
     expect(result.colorIconFile).toBe(join(appRoot, 'assets', 'icon.png'));
   });
 
   it('can force dev-path resolution from a generated mac dev app bundle', () => {
-    const repoRoot = createTempDir('pa-desktop-dev-bundle-');
-    const stateRoot = createTempDir('pa-desktop-state-');
+    const repoRoot = createTempDir('neon-pilot-desktop-dev-bundle-');
+    const stateRoot = createTempDir('neon-pilot-desktop-state-');
     seedDevRepo(repoRoot);
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const result = resolveDesktopRuntimePathsForContext({
       currentDir: join(repoRoot, 'packages', 'desktop', 'dist'),
       cwd: repoRoot,
       env: {
         ...process.env,
-        PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1',
-        PERSONAL_AGENT_REPO_ROOT: repoRoot,
+        NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
+        NEON_PILOT_REPO_ROOT: repoRoot,
       },
       execPath: '/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot',
       isPackaged: false,
@@ -134,15 +134,15 @@ describe('resolveDesktopRuntimePathsForContext', () => {
   });
 
   it('can recover the repo root from a dev app bundle appRoot when cwd is elsewhere', () => {
-    const repoRoot = createTempDir('pa-desktop-dev-app-root-');
-    const stateRoot = createTempDir('pa-desktop-state-');
+    const repoRoot = createTempDir('neon-pilot-desktop-dev-app-root-');
+    const stateRoot = createTempDir('neon-pilot-desktop-state-');
     const appRoot = join(repoRoot, 'packages', 'desktop', 'dist', 'mac-arm64', 'Neon Pilot.app', 'Contents', 'Resources', 'app.asar');
     seedDevRepo(repoRoot);
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const result = resolveDesktopRuntimePathsForContext({
       currentDir: join(repoRoot, 'packages', 'desktop', 'dist'),
-      cwd: createTempDir('pa-desktop-unrelated-cwd-'),
+      cwd: createTempDir('neon-pilot-desktop-unrelated-cwd-'),
       env: {
         ...process.env,
       },

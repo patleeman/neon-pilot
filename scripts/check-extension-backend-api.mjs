@@ -14,9 +14,9 @@ const hostBackendApiRoot = join(repoRoot, 'packages/desktop/server/extensions/ba
 const buildScriptPath = join(repoRoot, 'scripts/extension-build.mjs');
 
 const nodeBuiltins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
-const alwaysAllowedStaticImports = new Set(['@personal-agent/core']);
+const alwaysAllowedStaticImports = new Set(['@neon-pilot/core']);
 const forbiddenStaticImportPrefixes = [
-  '@personal-agent/daemon',
+  '@neon-pilot/daemon',
   '@earendil-works/pi-coding-agent',
   '@sinclair/typebox',
   'jsdom',
@@ -104,7 +104,7 @@ for (const moduleName of hostModules) {
   assert(
     sdkSubpathSet.has(moduleName),
     failures,
-    `host backendApi/${moduleName}.ts is not exported from @personal-agent/extensions ./backend/${moduleName}`,
+    `host backendApi/${moduleName}.ts is not exported from @neon-pilot/extensions ./backend/${moduleName}`,
   );
 }
 
@@ -121,9 +121,9 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
 
 const buildScript = readFileSync(buildScriptPath, 'utf8');
 assert(
-  buildScript.includes('/^@personal-agent\\/extensions\\/backend\\/(.+)$/'),
+  buildScript.includes('/^@neon-pilot\\/extensions\\/backend\\/(.+)$/'),
   failures,
-  'extension-build.mjs does not resolve @personal-agent/extensions/backend/* subpaths explicitly',
+  'extension-build.mjs does not resolve @neon-pilot/extensions/backend/* subpaths explicitly',
 );
 assert(
   buildScript.includes('packages/desktop/server/extensions/backendApi/${args.path.split'),

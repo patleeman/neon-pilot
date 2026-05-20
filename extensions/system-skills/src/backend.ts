@@ -1,5 +1,5 @@
-import { writeMergedMcpConfigFile } from '@personal-agent/core';
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import { writeMergedMcpConfigFile } from '@neon-pilot/core';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 import {
   buildSkillInjectionPlanAsync,

@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { loadDeferredResumeState } from '@personal-agent/core';
+import { loadDeferredResumeState } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -39,8 +39,8 @@ afterEach(async () => {
 
 describe('deferredResumes', () => {
   it('schedules and lists deferred resumes for a session file', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const scheduled = await scheduleDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-123.jsonl',
@@ -66,8 +66,8 @@ describe('deferredResumes', () => {
   });
 
   it('uses the default prompt when one is not provided', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const scheduled = await scheduleDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-123.jsonl',
@@ -81,8 +81,8 @@ describe('deferredResumes', () => {
   it('falls back to the current clock when scheduling with an invalid Date', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-12T13:00:00.000Z'));
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const scheduled = await scheduleDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-invalid-now.jsonl',
@@ -96,8 +96,8 @@ describe('deferredResumes', () => {
   });
 
   it('uses the default prompt for ready resumes with blank prompt text', () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const ready = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-123.jsonl',
@@ -110,8 +110,8 @@ describe('deferredResumes', () => {
   it('falls back to the current clock for invalid ready resume timestamps', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-12T13:00:00.000Z'));
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const ready = createReadyDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/conv-ready-invalid-time.jsonl',
@@ -131,8 +131,8 @@ describe('deferredResumes', () => {
   });
 
   it('cancels only entries that belong to the requested session file', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const keep = await scheduleDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/other.jsonl',
@@ -156,8 +156,8 @@ describe('deferredResumes', () => {
   });
 
   it('fires a scheduled resume immediately without dropping a newer schedule', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const sessionFile = '/tmp/sessions/current.jsonl';
 
     const first = await scheduleDeferredResumeForSessionFile({
@@ -194,8 +194,8 @@ describe('deferredResumes', () => {
   });
 
   it('completes a ready resume without dropping a newer schedule', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const sessionFile = '/tmp/sessions/current.jsonl';
 
     const first = await scheduleDeferredResumeForSessionFile({
@@ -230,8 +230,8 @@ describe('deferredResumes', () => {
   });
 
   it('retries a ready resume without dropping a newer schedule', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const sessionFile = '/tmp/sessions/current.jsonl';
 
     const first = await scheduleDeferredResumeForSessionFile({
@@ -274,8 +274,8 @@ describe('deferredResumes', () => {
   });
 
   it('preserves follow-up metadata and absolute times', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     const scheduled = await scheduleDeferredResumeForSessionFile({
       sessionFile: '/tmp/sessions/current.jsonl',
@@ -313,8 +313,8 @@ describe('deferredResumes', () => {
   });
 
   it('rejects invalid delays', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     await expect(
       scheduleDeferredResumeForSessionFile({
@@ -325,8 +325,8 @@ describe('deferredResumes', () => {
   });
 
   it('rejects non-ISO at timestamps', async () => {
-    const stateRoot = createTempDir('pa-web-deferred-');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    const stateRoot = createTempDir('neon-pilot-web-deferred-');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     await expect(
       scheduleDeferredResumeForSessionFile({

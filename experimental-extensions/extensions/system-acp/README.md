@@ -7,13 +7,13 @@ This extension exposes Neon Pilot as an ACP agent over stdio.
 Enable the extension, then run:
 
 ```bash
-personal-agent protocol acp
+neon-pilot protocol acp
 ```
 
 For Alleycat:
 
 ```bash
-ACP_BRIDGE_AGENT_BIN=personal-agent
+ACP_BRIDGE_AGENT_BIN=neon-pilot
 ACP_BRIDGE_AGENT_ARGS="protocol acp"
 ```
 

@@ -1,6 +1,6 @@
 import { relative } from 'node:path';
 
-import { loadUnifiedNodes, type UnifiedNodeRecord } from '@personal-agent/core';
+import { loadUnifiedNodes, type UnifiedNodeRecord } from '@neon-pilot/core';
 
 export interface PromptReferenceTask {
   id: string;

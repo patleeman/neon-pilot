@@ -31,7 +31,7 @@ describe('runCommand', () => {
   });
 
   it('rejects when the process cannot be spawned', async () => {
-    await expect(runCommand('personal-agent-command-that-does-not-exist', [])).rejects.toThrow();
+    await expect(runCommand('neon-pilot-command-that-does-not-exist', [])).rejects.toThrow();
   });
 
   it('rejects with a timeout error when command exceeds timeout', async () => {

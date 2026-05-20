@@ -240,7 +240,7 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
       },
       setDetailState(surfaceId, state) {
         detailStateByExtensionSurface.set(detailStateKey(extensionId, surfaceId), state);
-        window.dispatchEvent(new CustomEvent('pa-extension-workbench-detail-state', { detail: { extensionId, surfaceId, state } }));
+        window.dispatchEvent(new CustomEvent('neon-pilot-extension-workbench-detail-state', { detail: { extensionId, surfaceId, state } }));
       },
     },
     browser: {
@@ -272,7 +272,7 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
     commands: {
       execute(command, args) {
         return new Promise<boolean>((resolve) => {
-          window.dispatchEvent(new CustomEvent('pa-extension-command-execute', { detail: { command, args, resolve } }));
+          window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-execute', { detail: { command, args, resolve } }));
         });
       },
       async list() {
@@ -318,11 +318,11 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
     },
     ui: {
       toast(message, type) {
-        window.dispatchEvent(new CustomEvent('pa-extension-toast', { detail: { extensionId, message, type: type ?? 'info' } }));
+        window.dispatchEvent(new CustomEvent('neon-pilot-extension-toast', { detail: { extensionId, message, type: type ?? 'info' } }));
       },
       notify(options) {
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               message: options.message,
               type: options.type ?? 'info',
@@ -337,7 +337,7 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
       },
       openModal(options) {
         return new Promise((resolve, reject) => {
-          window.dispatchEvent(new CustomEvent('pa-extension-modal', { detail: { extensionId, ...options, resolve, reject } }));
+          window.dispatchEvent(new CustomEvent('neon-pilot-extension-modal', { detail: { extensionId, ...options, resolve, reject } }));
         });
       },
     },

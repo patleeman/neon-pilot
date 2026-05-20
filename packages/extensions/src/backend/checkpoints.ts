@@ -66,7 +66,7 @@ export interface SaveConversationCommitCheckpointInput extends ConversationCommi
  * contract; runtime implementations are provided by the desktop host alias.
  */
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/checkpoints must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/checkpoints must be resolved by the Neon Pilot host runtime.');
 }
 
 export function listConversationCommitCheckpoints(_input: ConversationCommitCheckpointSelector): ConversationCommitCheckpointSummary[] {

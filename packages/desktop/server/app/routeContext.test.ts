@@ -4,7 +4,7 @@ import { createServerRouteContext } from './routeContext.js';
 
 describe('createServerRouteContext', () => {
   beforeEach(() => {
-    process.env.PERSONAL_AGENT_PROFILES_ROOT = '/tmp/test-profiles';
+    process.env.NEON_PILOT_PROFILES_ROOT = '/tmp/test-profiles';
   });
 
   it('maps the provided route context callbacks and values', async () => {

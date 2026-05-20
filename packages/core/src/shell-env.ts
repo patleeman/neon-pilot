@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, delimiter } from 'node:path';
 
-const ENV_CAPTURE_START = '__PERSONAL_AGENT_ENV_START__';
-const ENV_CAPTURE_END = '__PERSONAL_AGENT_ENV_END__';
+const ENV_CAPTURE_START = '__NEON_PILOT_ENV_START__';
+const ENV_CAPTURE_END = '__NEON_PILOT_ENV_END__';
 const ENV_CAPTURE_COMMAND = `printf '%s\\0' '${ENV_CAPTURE_START}'; env -0; printf '%s\\0' '${ENV_CAPTURE_END}'`;
 const ENV_CAPTURE_TIMEOUT_MS = 5_000;
 const ENV_CAPTURE_MAX_BUFFER = 4 * 1024 * 1024;

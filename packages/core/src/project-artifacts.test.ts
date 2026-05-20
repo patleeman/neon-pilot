@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-artifacts-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-artifacts-'));
   tempDirs.push(dir);
   return dir;
 }
@@ -94,7 +94,7 @@ describe('project artifacts', () => {
       archivedAt: '2026-03-10T14:00:00.000Z',
       title: 'Durable artifact model',
       description: 'Create a durable artifact model.',
-      repoRoot: '/Users/patrick/workingdir/personal-agent',
+      repoRoot: '/Users/patrick/workingdir/neon-pilot',
       summary: 'Core storage is in place and the CLI surface is next.',
       requirements: {
         goal: 'Create a durable artifact model that stays easy to inspect and edit.',
@@ -114,7 +114,7 @@ describe('project artifacts', () => {
 
     const yaml = formatProject(document);
     expect(yaml).toContain('archivedAt: 2026-03-10T14:00:00.000Z');
-    expect(yaml).toContain('repoRoot: /Users/patrick/workingdir/personal-agent');
+    expect(yaml).toContain('repoRoot: /Users/patrick/workingdir/neon-pilot');
     expect(yaml).toContain('status: active');
     expect(yaml).toContain('plan:');
     expect(yaml).toContain('tasks:');
@@ -126,7 +126,7 @@ describe('project artifacts', () => {
 
     expect(parseProject(yaml, document)).toMatchObject({
       archivedAt: '2026-03-10T14:00:00.000Z',
-      repoRoot: '/Users/patrick/workingdir/personal-agent',
+      repoRoot: '/Users/patrick/workingdir/neon-pilot',
       status: 'active',
       requirements: {
         goal: 'Create a durable artifact model that stays easy to inspect and edit.',

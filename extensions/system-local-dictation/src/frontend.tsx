@@ -1,5 +1,5 @@
-import { type NativeExtensionClient } from '@personal-agent/extensions';
-import { cx, ToolbarButton } from '@personal-agent/extensions/ui';
+import { type NativeExtensionClient } from '@neon-pilot/extensions';
+import { cx, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { bytesToBase64, type ComposerDictationCapture, startComposerDictationCapture } from './capture.js';

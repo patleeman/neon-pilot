@@ -3,7 +3,7 @@ import { readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { openSqliteDatabase } from '@personal-agent/core';
+import { openSqliteDatabase } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { openRecoveringRuntimeSqliteDb } from './sqliteRuntimeRecovery.js';

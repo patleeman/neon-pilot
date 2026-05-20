@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 interface CaffeinateStatus {
   running: boolean;

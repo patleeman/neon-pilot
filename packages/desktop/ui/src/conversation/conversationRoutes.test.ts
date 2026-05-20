@@ -15,8 +15,8 @@ describe('buildConversationDeeplink', () => {
   });
 
   it('preserves the desktop app protocol when running inside Electron', () => {
-    expect(buildConversationDeeplink('conversation-1', 'personal-agent://app/automations')).toBe(
-      'personal-agent://app/conversations/conversation-1',
+    expect(buildConversationDeeplink('conversation-1', 'neon-pilot://app/automations')).toBe(
+      'neon-pilot://app/conversations/conversation-1',
     );
   });
 });

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getPiAgentRuntimeDir, type SqliteDatabase } from '@personal-agent/core';
+import { getPiAgentRuntimeDir, type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { readConversationSummary } from './conversationSummaries.js';

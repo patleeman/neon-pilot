@@ -1,5 +1,5 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
-import { parseDuckDuckGoHtml } from '@personal-agent/extensions/backend/webContent';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { parseDuckDuckGoHtml } from '@neon-pilot/extensions/backend/webContent';
 
 function createRequestSignal(timeoutMs: number): AbortSignal {
   return AbortSignal.timeout(timeoutMs);

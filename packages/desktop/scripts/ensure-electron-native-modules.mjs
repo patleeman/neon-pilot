@@ -78,7 +78,7 @@ function createStamp() {
 
 function writeNativeModulesPackageJson() {
   const packageJson = {
-    name: 'personal-agent-electron-native',
+    name: 'neon-pilot-electron-native',
     private: true,
     description: 'Electron-native development modules for Neon Pilot desktop.',
     dependencies: {

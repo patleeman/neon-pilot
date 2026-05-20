@@ -188,7 +188,7 @@ export function getMachineConfigFilePath(options: MachineConfigOptions = {}): st
     return join(resolve(options.configRoot), 'config.json');
   }
 
-  const explicit = process.env.PERSONAL_AGENT_CONFIG_FILE;
+  const explicit = process.env.NEON_PILOT_CONFIG_FILE;
   if (explicit && explicit.trim().length > 0) {
     return resolve(explicit.trim());
   }
@@ -202,7 +202,7 @@ function resolveSectionOptions(section: MachineConfigSectionKey, options: Machin
   }
 
   if (section === 'daemon') {
-    const explicit = process.env.PERSONAL_AGENT_DAEMON_CONFIG;
+    const explicit = process.env.NEON_PILOT_DAEMON_CONFIG;
     if (explicit && explicit.trim().length > 0) {
       return { filePath: explicit.trim() };
     }

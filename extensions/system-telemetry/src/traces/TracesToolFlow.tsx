@@ -2,7 +2,7 @@
  * Tool Flow — Trajectories, transitions, co-occurrence, and failure patterns
  */
 
-import type { ToolFlowResult } from '@personal-agent/extensions/data';
+import type { ToolFlowResult } from '@neon-pilot/extensions/data';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {

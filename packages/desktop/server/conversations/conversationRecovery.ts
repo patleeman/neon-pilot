@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { parsePendingOperation } from '@personal-agent/daemon';
+import { parsePendingOperation } from '@neon-pilot/daemon';
 
 import { getDurableRun } from '../automation/durableRuns.js';
 import { logError } from '../middleware/index.js';

@@ -60,13 +60,13 @@ describe('countGitStatusEntries', () => {
 
 describe('readGitStatusSummary', () => {
   it('returns null outside a git repository', () => {
-    const dir = createTempDir('pa-web-git-outside-');
+    const dir = createTempDir('neon-pilot-web-git-outside-');
     expect(readGitRepoInfo(dir)).toBeNull();
     expect(readGitStatusSummary(dir)).toBeNull();
   });
 
   it('reads the containing git repo root and basename', () => {
-    const dir = createTempDir('pa-web-git-repo-info-');
+    const dir = createTempDir('neon-pilot-web-git-repo-info-');
     runGit(['init'], dir);
 
     const nestedRoot = join(dir, 'nested');
@@ -81,14 +81,14 @@ describe('readGitStatusSummary', () => {
 
     expect(readGitRepoInfo(nested)).toEqual(
       expect.objectContaining({
-        root: expect.stringContaining(`/pa-web-git-repo-info-`),
-        name: expect.stringContaining('pa-web-git-repo-info-'),
+        root: expect.stringContaining(`/neon-pilot-web-git-repo-info-`),
+        name: expect.stringContaining('neon-pilot-web-git-repo-info-'),
       }),
     );
   });
 
   it('reports cache telemetry for repeated git status reads', () => {
-    const dir = createTempDir('pa-web-git-repo-cache-');
+    const dir = createTempDir('neon-pilot-web-git-repo-cache-');
     runGit(['init'], dir);
 
     writeFileSync(join(dir, 'tracked.txt'), 'one\n');
@@ -120,7 +120,7 @@ describe('readGitStatusSummary', () => {
   });
 
   it('shares cached git status across different cwd values in the same repo', () => {
-    const dir = createTempDir('pa-web-git-repo-shared-cache-');
+    const dir = createTempDir('neon-pilot-web-git-repo-shared-cache-');
     runGit(['init'], dir);
 
     const nested = join(dir, 'packages', 'web');
@@ -146,7 +146,7 @@ describe('readGitStatusSummary', () => {
   });
 
   it('summarizes staged, unstaged, and untracked changes', () => {
-    const dir = createTempDir('pa-web-git-repo-');
+    const dir = createTempDir('neon-pilot-web-git-repo-');
     runGit(['init'], dir);
 
     writeFileSync(join(dir, 'tracked.txt'), 'one\n');

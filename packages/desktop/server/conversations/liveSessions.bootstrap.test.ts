@@ -61,8 +61,8 @@ const {
   };
 });
 
-vi.mock('@personal-agent/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@personal-agent/core')>();
+vi.mock('@neon-pilot/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/core')>();
   return {
     ...actual,
     getDurableSessionsDir: () => '/tmp/durable-sessions',
@@ -503,8 +503,8 @@ describe('liveSessions bootstrap helpers', () => {
     });
     expect(resolveChildProcessEnvMock).toHaveBeenCalledWith(
       {
-        PERSONAL_AGENT_SOURCE_CONVERSATION_ID: 'session-created',
-        PERSONAL_AGENT_SOURCE_SESSION_FILE: '/tmp/durable-sessions/--tmp-workspace--/session-created.jsonl',
+        NEON_PILOT_SOURCE_CONVERSATION_ID: 'session-created',
+        NEON_PILOT_SOURCE_SESSION_FILE: '/tmp/durable-sessions/--tmp-workspace--/session-created.jsonl',
       },
       {
         PATH: '/usr/bin',
@@ -514,8 +514,8 @@ describe('liveSessions bootstrap helpers', () => {
     expect(spawned.env).toEqual({
       PATH: '/interactive/bin:/usr/bin',
       BASE: '1',
-      PERSONAL_AGENT_SOURCE_CONVERSATION_ID: 'session-created',
-      PERSONAL_AGENT_SOURCE_SESSION_FILE: '/tmp/durable-sessions/--tmp-workspace--/session-created.jsonl',
+      NEON_PILOT_SOURCE_CONVERSATION_ID: 'session-created',
+      NEON_PILOT_SOURCE_SESSION_FILE: '/tmp/durable-sessions/--tmp-workspace--/session-created.jsonl',
     });
     expect(createdSession.session._baseToolRegistry.get('bash')).toEqual({ name: 'bash-tool' });
     expect(createdSession.session._refreshToolRegistry).toHaveBeenCalledWith({

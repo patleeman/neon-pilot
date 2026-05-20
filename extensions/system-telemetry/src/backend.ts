@@ -67,8 +67,8 @@ function parseRangeParam(range: unknown): string {
   return new Date(now - ms[selected]).toISOString();
 }
 
-function telemetryLogDir(stateRoot = process.env.PERSONAL_AGENT_STATE_ROOT): string {
-  return join(stateRoot ?? join(process.env.HOME ?? '.', '.local', 'state', 'personal-agent'), 'logs', 'telemetry');
+function telemetryLogDir(stateRoot = process.env.NEON_PILOT_STATE_ROOT): string {
+  return join(stateRoot ?? join(process.env.HOME ?? '.', '.local', 'state', 'neon-pilot'), 'logs', 'telemetry');
 }
 
 function parseTraceTelemetryLogEvent(line: string): TraceTelemetryLogEvent | null {

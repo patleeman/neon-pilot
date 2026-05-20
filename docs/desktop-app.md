@@ -24,7 +24,7 @@ For packaged builds, launch `Neon Pilot.app` from the output directory. RC build
 ```
 Electron main process
     │
-    ├── Renderer (React) ── personal-agent://app/
+    ├── Renderer (React) ── neon-pilot://app/
     │       │
     │       ├── Conversation routes
     │       ├── Knowledge
@@ -45,7 +45,7 @@ Electron main process
     │       └── Follow-up queue
 ```
 
-- Electron owns the UI surface through the `personal-agent://app/` protocol
+- Electron owns the UI surface through the `neon-pilot://app/` protocol
 - Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule deferred work
 - Freeze-prone local API work runs behind worker-thread RPC; do not import or execute heavy desktop server capabilities directly on the Electron main thread
 - Avoid `spawnSync`/`execSync` in desktop main-process flows

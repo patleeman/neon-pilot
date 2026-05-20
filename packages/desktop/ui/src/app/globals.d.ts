@@ -1,8 +1,8 @@
-import type { PersonalAgentDesktopBridge } from '../desktop/desktopBridge';
+import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
 
 declare global {
   interface Window {
-    personalAgentDesktop?: PersonalAgentDesktopBridge;
+    neonPilotDesktop?: NeonPilotDesktopBridge;
   }
 }
 

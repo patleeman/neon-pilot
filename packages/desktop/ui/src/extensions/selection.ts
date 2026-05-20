@@ -27,7 +27,7 @@ export function setExtensionSelection(selection: Omit<ExtensionSelectionState, '
       console.warn('[extension-selection] listener error:', error);
     }
   }
-  window.dispatchEvent(new CustomEvent('pa-extension-selection-change', { detail: currentSelection }));
+  window.dispatchEvent(new CustomEvent('neon-pilot-extension-selection-change', { detail: currentSelection }));
   window.dispatchEvent(new CustomEvent('pa-ext-event', { detail: { event: 'host:selection', payload: currentSelection } }));
 }
 

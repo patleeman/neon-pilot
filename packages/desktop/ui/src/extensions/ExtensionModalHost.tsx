@@ -43,8 +43,8 @@ export function ExtensionModalHost() {
       setModal({ extensionId, title, component: componentName, props, size, resolve, reject });
     }
 
-    window.addEventListener('pa-extension-modal', handleModal as EventListener);
-    return () => window.removeEventListener('pa-extension-modal', handleModal as EventListener);
+    window.addEventListener('neon-pilot-extension-modal', handleModal as EventListener);
+    return () => window.removeEventListener('neon-pilot-extension-modal', handleModal as EventListener);
   }, []);
 
   // Reject the promise if the host unmounts while a modal is open

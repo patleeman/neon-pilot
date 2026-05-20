@@ -14,7 +14,7 @@ vi.mock('stopword', () => ({
   removeStopwords: (tokens: string[]) => tokens,
 }));
 
-vi.mock('@personal-agent/extensions/backend/conversations', () => ({
+vi.mock('@neon-pilot/extensions/backend/conversations', () => ({
   persistTraceSuggestedContext: mocks.persistTraceSuggestedContext,
   readConversationSummary: mocks.readConversationSummary,
   readSessionBlocks: mocks.readSessionBlocks,

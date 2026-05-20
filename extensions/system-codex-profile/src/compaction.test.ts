@@ -4,7 +4,7 @@ const { compactMock } = vi.hoisted(() => ({
   compactMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/compaction', () => ({
+vi.mock('@neon-pilot/extensions/backend/compaction', () => ({
   compactConversation: compactMock,
 }));
 

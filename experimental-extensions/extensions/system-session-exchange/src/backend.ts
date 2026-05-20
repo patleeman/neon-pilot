@@ -1,5 +1,5 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions/backend';
-import { exportConversationSession, importConversationSession } from '@personal-agent/extensions/backend/conversations';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
+import { exportConversationSession, importConversationSession } from '@neon-pilot/extensions/backend/conversations';
 
 interface ExportSessionInput {
   conversationId?: string;

@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 import * as gguf from '../../../shared/local-model-runtimes/gguf';
 import * as mlx from '../../../shared/local-model-runtimes/mlx';

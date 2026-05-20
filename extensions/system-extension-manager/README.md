@@ -10,7 +10,7 @@ For the extension authoring contract, read [`packages/extensions/README.md`](../
 
 Extensions are Neon Pilot's native product-module system. They let Patrick or an agent add app functionality without editing the core shell for every workflow.
 
-The old iframe/HTML extension model is deprecated. New extensions render native React inside the Neon Pilot UI, declare their surfaces in `extension.json`, call stable PA capabilities from `@personal-agent/extensions`, and use separate frontend/backend entries.
+The old iframe/HTML extension model is deprecated. New extensions render native React inside the Neon Pilot UI, declare their surfaces in `extension.json`, call stable PA capabilities from `@neon-pilot/extensions`, and use separate frontend/backend entries.
 
 The Extension Manager should make that loop boring:
 
@@ -32,16 +32,16 @@ The Extension Manager should make that loop boring:
 User extensions live in runtime state by default:
 
 ```text
-~/.local/state/personal-agent/extensions/{extension-id}/
+~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
 Bundled first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as user extensions; there is no hard-coded system extension allowlist.
 
 The loader also includes repo-local experimental extensions from `experimental-extensions/extensions/` as external extension packages. They should declare `defaultEnabled: false`, which keeps them visible in Extension Manager's collapsed Experimental section without registering routes/tools until enabled.
 
-The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `PERSONAL_AGENT_EXTENSION_PATHS` for process-level overrides.
+The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
-Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `pa-extension build <extension-dir>`, then use **Validate** and **Reload** in Extension Manager. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
+Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then use **Validate** and **Reload** in Extension Manager. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
 
 ## Agent workflow for this extension
 
@@ -87,7 +87,7 @@ Native extension views declare host intent with `placement`, `scope`, and `activ
 
 Target order:
 
-1. Keep manifest schema v2 and public types in `@personal-agent/extensions` current.
+1. Keep manifest schema v2 and public types in `@neon-pilot/extensions` current.
 2. Keep `npm run extension:build -- <extension-dir>` working for frontend/backend bundles.
 3. Keep native `ExtensionSurfaceHost` lazy-loading extension frontend bundles.
 4. Keep scoped CSS loading with extension root, reset boundary, theme tokens, and cascade layer.

@@ -5,7 +5,7 @@ This extension owns the Knowledge workbench surfaces and knowledge-file mention 
 ## What it contributes
 
 - A left-nav **Knowledge** destination backed by the native `knowledge-page` extension view.
-- A top-tab **Knowledge** tree for browsing the local knowledge base.
+- A right-rail **Knowledge** tree for browsing the local knowledge base.
 - A paired workbench detail view for opening and editing knowledge files beside a conversation.
 - A `knowledge-files` mention provider that adds notes, folders, and files to the conversation `@` menu.
 - A quick-open provider for command-palette file open/search.
@@ -17,7 +17,7 @@ This extension owns the Knowledge workbench surfaces and knowledge-file mention 
 The extension renders native React surfaces declared in `extension.json`:
 
 - `knowledge-page` renders the main `/knowledge` page with its own file tree and editor.
-- `knowledge-tree` renders the workbench tab browser.
+- `knowledge-tree` renders the right-rail browser.
 - `knowledge-file` renders the workbench detail panel for the selected file.
 
 The extension also owns backend actions for knowledge state, managed sync, vault file operations, and prompt-reference resolution:
@@ -36,10 +36,10 @@ Knowledge UI should stay in this extension. Host code may render contributed sur
 
 The vault is the root directory for durable knowledge. It resolves in this order:
 
-1. `PERSONAL_AGENT_VAULT_ROOT` environment variable
+1. `NEON_PILOT_VAULT_ROOT` environment variable
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when `knowledgeBaseRepoUrl` is configured
 3. Legacy `vaultRoot` config value in `<config-root>/config.json`
-4. `~/Documents/personal-agent`
+4. `~/Documents/neon-pilot`
 
 ## Vault contents
 

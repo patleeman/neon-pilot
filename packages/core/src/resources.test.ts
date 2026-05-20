@@ -24,16 +24,16 @@ afterEach(async () => {
 });
 
 function createTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-resources-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-resources-'));
   tempDirs.push(dir);
   return dir;
 }
 
 function createTempRuntimeConfigRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'personal-agent-runtime-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-config-'));
   const runtimeConfigRoot = join(root, 'sync', '_profiles');
   mkdirSync(runtimeConfigRoot, { recursive: true });
-  process.env.PERSONAL_AGENT_VAULT_ROOT = join(root, 'sync');
+  process.env.NEON_PILOT_VAULT_ROOT = join(root, 'sync');
   tempDirs.push(root);
   return runtimeConfigRoot;
 }
@@ -58,7 +58,7 @@ describe('runtime resource loader', () => {
     const repo = createTempRepo();
     const runtimeConfigRoot = createTempRuntimeConfigRoot();
     const syncRoot = join(runtimeConfigRoot, '..');
-    const local = mkdtempSync(join(tmpdir(), 'personal-agent-local-'));
+    const local = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));
     tempDirs.push(local);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
@@ -97,7 +97,7 @@ describe('runtime resource loader', () => {
     const repo = createTempRepo();
     const runtimeConfigRoot = createTempRuntimeConfigRoot();
     const syncRoot = join(runtimeConfigRoot, '..');
-    const configRoot = mkdtempSync(join(tmpdir(), 'personal-agent-config-'));
+    const configRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
     tempDirs.push(configRoot);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
@@ -109,7 +109,7 @@ describe('runtime resource loader', () => {
         instructionFiles: [join(repo, 'custom-instructions.md')],
       }),
     );
-    process.env.PERSONAL_AGENT_CONFIG_FILE = join(configRoot, 'config.json');
+    process.env.NEON_PILOT_CONFIG_FILE = join(configRoot, 'config.json');
 
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
@@ -128,8 +128,8 @@ describe('runtime resource loader', () => {
     const repo = createTempRepo();
     const runtimeConfigRoot = createTempRuntimeConfigRoot();
     const syncRoot = join(runtimeConfigRoot, '..');
-    const configRoot = mkdtempSync(join(tmpdir(), 'personal-agent-config-'));
-    const externalSkillsDir = mkdtempSync(join(tmpdir(), 'personal-agent-extra-skills-'));
+    const configRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
+    const externalSkillsDir = mkdtempSync(join(tmpdir(), 'neon-pilot-extra-skills-'));
     tempDirs.push(configRoot, externalSkillsDir);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
@@ -147,7 +147,7 @@ describe('runtime resource loader', () => {
         skillDirs: [externalSkillsDir],
       }),
     );
-    process.env.PERSONAL_AGENT_CONFIG_FILE = join(configRoot, 'config.json');
+    process.env.NEON_PILOT_CONFIG_FILE = join(configRoot, 'config.json');
 
     const resolved = resolveRuntimeResources('shared', {
       repoRoot: repo,
@@ -206,9 +206,9 @@ metadata:
     const repo = createTempRepo();
     const runtimeConfigRoot = createTempRuntimeConfigRoot();
     const syncRoot = join(runtimeConfigRoot, '..');
-    const runtime = mkdtempSync(join(tmpdir(), 'personal-agent-runtime-'));
+    const runtime = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-'));
     tempDirs.push(runtime);
-    process.env.PERSONAL_AGENT_VAULT_ROOT = syncRoot;
+    process.env.NEON_PILOT_VAULT_ROOT = syncRoot;
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(join(repo, 'defaults/agent/APPEND_SYSTEM.md'), 'shared append\n');
@@ -242,7 +242,7 @@ description: Commit and push the agent's current work.
     expect(result.writtenFiles.some((path) => path.endsWith('/APPEND_SYSTEM.md'))).toBe(true);
     expect(result.writtenFiles.some((path) => path.endsWith('/settings.json'))).toBe(true);
     expect(result.writtenFiles.some((path) => path.endsWith('/models.json'))).toBe(true);
-    expect(runtimePrompt).toContain('# Personal agent defaults');
+    expect(runtimePrompt).toContain('# Neon Pilot defaults');
     expect(runtimePrompt).not.toContain(`Docs index: ${join(repo, 'docs', 'index.md')}`);
     expect(runtimePrompt).not.toContain(`Extension authoring docs: ${join(repo, 'docs', 'extensions.md')}`);
     expect(runtimePrompt).toContain('shared append');
@@ -258,7 +258,7 @@ description: Commit and push the agent's current work.
 
   it('installs package sources into local settings', () => {
     const repo = createTempRepo();
-    const local = mkdtempSync(join(tmpdir(), 'personal-agent-local-'));
+    const local = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));
     tempDirs.push(local);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
@@ -301,7 +301,7 @@ description: Commit and push the agent's current work.
 
   it('loads shared resources from canonical underscored durable directories', () => {
     const repo = createTempRepo();
-    const root = mkdtempSync(join(tmpdir(), 'personal-agent-legacy-sync-'));
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-legacy-sync-'));
     const syncRoot = join(root, 'sync');
     const runtimeConfigRoot = join(syncRoot, '_profiles');
     tempDirs.push(root);

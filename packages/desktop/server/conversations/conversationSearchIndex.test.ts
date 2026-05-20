@@ -21,13 +21,13 @@ afterEach(async () => {
   const mod = await import('./conversationSearchIndex.js');
   mod.resetConversationSearchIndexForTests();
   vi.resetAllMocks();
-  delete process.env.PERSONAL_AGENT_STATE_ROOT;
+  delete process.env.NEON_PILOT_STATE_ROOT;
 });
 
 describe('conversationSearchIndex', () => {
   it('indexes changed sessions and searches recent FTS documents', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-search-index-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = root;
+    process.env.NEON_PILOT_STATE_ROOT = root;
     const sessionFile = join(root, 'session.jsonl');
     writeFileSync(sessionFile, '{"type":"session"}\n{"type":"message"}\n');
     listSessionsMock.mockReturnValue([

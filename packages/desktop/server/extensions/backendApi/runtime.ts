@@ -1,4 +1,4 @@
-import { getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 type RuntimeAgentHooksModule = typeof import('../runtimeAgentHooks.js');
 const dynamicImport = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;

@@ -44,7 +44,7 @@ For a new extension, the agent should:
 2. Create the package through Extension Manager when available, or create the same package layout by hand.
 3. Keep editable source files in `src/`; do not create dist-only extensions.
 4. Declare surfaces, commands, tools, settings, skills, and permissions in `extension.json`.
-5. Use `@personal-agent/extensions` as the SDK seam; do not import app internals.
+5. Use `@neon-pilot/extensions` as the SDK seam; do not import app internals.
 6. Build outside the desktop app using repo or CLI extension tooling.
 7. Validate and fix Extension Manager diagnostics.
 8. Reload extensions.
@@ -57,7 +57,7 @@ For a new extension, the agent should:
 User-created extensions live in runtime state by default:
 
 ```text
-~/.local/state/personal-agent/extensions/{extension-id}/
+~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
 Bundled first-party extensions live in the repo under `extensions/`. Experimental bundled extensions live under `experimental-extensions/extensions/` and should usually set `defaultEnabled: false`.
@@ -106,7 +106,7 @@ Build outside the desktop app:
 ```bash
 pnpm run extension:build -- /path/to/my-extension
 # or, when linked/installed:
-pa-extension build /path/to/my-extension
+neon-pilot-extension build /path/to/my-extension
 ```
 
 In the packaged app, use Extension Manager actions or endpoints to create, validate, and reload built artifacts:
@@ -125,7 +125,7 @@ Validation is not optional. The extension doctor catches missing bundles, stale 
 - **The UI opens blank** — check frontend export names and Extension Manager diagnostics.
 - **Backend action/tool is missing** — check backend import errors and handler export names.
 - **Works from source but not in the app** — build `dist/`; the app does not compile extensions at runtime.
-- **Need an app capability the SDK lacks** — add the smallest reusable API to `@personal-agent/extensions`; do not import desktop/server internals.
+- **Need an app capability the SDK lacks** — add the smallest reusable API to `@neon-pilot/extensions`; do not import desktop/server internals.
 
 ## Reference
 

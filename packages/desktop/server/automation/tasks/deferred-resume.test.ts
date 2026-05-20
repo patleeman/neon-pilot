@@ -6,7 +6,7 @@ import {
   saveDeferredResumeState,
   scheduleDeferredResume,
   setConversationProjectLinks,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -126,7 +126,7 @@ describe('deferred resume daemon module', () => {
     const stateRoot = createTempDir('deferred-resume-module-state-');
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
+      NEON_PILOT_STATE_ROOT: stateRoot,
     };
 
     const sessionDir = join(stateRoot, 'sessions');
@@ -213,7 +213,7 @@ describe('deferred resume daemon module', () => {
     const stateRoot = createTempDir('deferred-resume-module-state-');
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
+      NEON_PILOT_STATE_ROOT: stateRoot,
     };
 
     const module = createDeferredResumeModule({

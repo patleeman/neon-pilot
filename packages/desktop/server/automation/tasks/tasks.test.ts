@@ -4,7 +4,7 @@ import {
   loadAttentionEventsState,
   openSqliteDatabase,
   setTaskCallbackBinding,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';

@@ -22,14 +22,14 @@ import {
   saveDeferredResumeState,
   scheduleAttentionEvent,
   scheduleDeferredResume,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import {
   cancelDeferredResumeConversationRun,
   loadDaemonConfig,
   markDeferredResumeConversationRunReady,
   resolveDaemonPaths,
   scheduleDeferredResumeConversationRun,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { parseFutureHumanDateTime } from './humanDateTime.js';
 

@@ -20,7 +20,7 @@ vi.mock('./runTool.js', () => ({
   }),
 }));
 
-vi.mock('@personal-agent/extensions/backend/runs', () => ({
+vi.mock('@neon-pilot/extensions/backend/runs', () => ({
   cancelDurableRun: mocks.cancelDurableRun,
   followUpDurableRun: mocks.followUpDurableRun,
   getDurableRun: mocks.getDurableRun,
@@ -31,7 +31,7 @@ vi.mock('@personal-agent/extensions/backend/runs', () => ({
   startBackgroundRun: mocks.startBackgroundRun,
 }));
 
-vi.mock('@personal-agent/extensions/backend', () => ({
+vi.mock('@neon-pilot/extensions/backend', () => ({
   listDurableRuns: vi.fn(),
   getDurableRun: vi.fn(),
   getDurableRunLog: vi.fn(),

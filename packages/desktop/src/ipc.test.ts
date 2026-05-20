@@ -86,7 +86,7 @@ describe('registerDesktopIpc', () => {
           getActiveHostController: () => createMockController(),
           getHostController: () => createMockController(),
           getHostRecord: (id: string) => ({ id: id ?? 'local', kind: 'local' }),
-          getHostBaseUrl: vi.fn().mockResolvedValue('personal-agent://app/'),
+          getHostBaseUrl: vi.fn().mockResolvedValue('neon-pilot://app/'),
           openNewConversation: vi.fn().mockResolvedValue('/conversations/new'),
           openNewConversationInHost: vi.fn(),
         } as never,

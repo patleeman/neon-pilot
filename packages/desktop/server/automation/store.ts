@@ -10,7 +10,7 @@ import {
   setSchemaVersion,
   type SqliteDatabase,
   tableExists,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import { loadDaemonConfig } from '../config.js';
 import { resolveDaemonPaths } from '../paths.js';

@@ -30,7 +30,7 @@ const {
   invalidateAppTopicsMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/runs', () => ({
+vi.mock('@neon-pilot/extensions/backend/runs', () => ({
   listDurableRuns: listDurableRunsMock,
   getDurableRun: getDurableRunMock,
   getDurableRunLog: getDurableRunLogMock,
@@ -51,8 +51,8 @@ vi.mock('@personal-agent/extensions/backend/runs', () => ({
   setTaskCallbackBinding: setTaskCallbackBindingMock,
 }));
 
-vi.mock('@personal-agent/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@personal-agent/core')>();
+vi.mock('@neon-pilot/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/core')>();
   return {
     ...actual,
     parseDeferredResumeDelayMs: (value: string) => {

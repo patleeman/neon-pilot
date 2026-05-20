@@ -12,7 +12,7 @@ export interface ExtensionPackagePath {
 function candidateBundledExtensionRoots(): string[] {
   const currentDir = dirname(fileURLToPath(import.meta.url));
   return [
-    process.env.PERSONAL_AGENT_REPO_ROOT ? resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'extensions') : null,
+    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'extensions') : null,
     resolve(process.cwd(), 'extensions'),
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions') : null,
     resolve(currentDir, '../../../../extensions'),
@@ -23,7 +23,7 @@ function candidateBundledExtensionRoots(): string[] {
 function candidateExperimentalExtensionRoots(): string[] {
   const currentDir = dirname(fileURLToPath(import.meta.url));
   return [
-    process.env.PERSONAL_AGENT_REPO_ROOT ? resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'experimental-extensions/extensions') : null,
+    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'experimental-extensions/extensions') : null,
     resolve(process.cwd(), 'experimental-extensions/extensions'),
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'experimental-extensions/extensions') : null,
     resolve(currentDir, '../../../../experimental-extensions/extensions'),

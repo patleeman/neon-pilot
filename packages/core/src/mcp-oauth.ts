@@ -621,7 +621,7 @@ async function connectToRemoteServer(options: {
   }
 }
 
-class PersonalAgentOAuthClientProvider implements OAuthClientProvider {
+class NeonPilotOAuthClientProvider implements OAuthClientProvider {
   private readonly stateId = randomUUID();
   private cachedClientInfo: OAuthClientInformationMixed | undefined;
 
@@ -654,7 +654,7 @@ class PersonalAgentOAuthClientProvider implements OAuthClientProvider {
       token_endpoint_auth_method: 'none',
       client_name: 'Neon Pilot MCP Client',
       client_uri: 'https://github.com/patrickc/pa',
-      software_id: 'personal-agent-mcp',
+      software_id: 'neon-pilot-mcp',
       software_version: '1',
       ...this.input.staticClientMetadata,
       scope: this.getEffectiveScope(),
@@ -822,7 +822,7 @@ export async function resolveCallbackPort(serverUrlHash: string, preferredPort?:
 export async function openRemoteMcpClient(options: McpRemoteOAuthOptions): Promise<McpRemoteClientConnection> {
   const client = new Client(
     {
-      name: 'personal-agent',
+      name: 'neon-pilot',
       version: '1.0.0',
     },
     {
@@ -832,7 +832,7 @@ export async function openRemoteMcpClient(options: McpRemoteOAuthOptions): Promi
 
   emitLog(options.log, `Discovering OAuth server configuration for ${options.serverName}…`);
   const discovery = await discoverOAuthServerInfo(options.serverUrl, options.headers);
-  const authProvider = new PersonalAgentOAuthClientProvider({
+  const authProvider = new NeonPilotOAuthClientProvider({
     serverUrlHash: options.serverUrlHash,
     serverUrl: discovery.authorizationServerUrl,
     callbackHost: options.callbackHost,

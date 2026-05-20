@@ -13,7 +13,7 @@ import {
   setActivityConversationLinks,
   writeMachineConfig,
   writeProfileActivityEntry,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import {
   createDurableRunManifest,
   createInitialDurableRunStatus,
@@ -23,7 +23,7 @@ import {
   saveDurableRunCheckpoint,
   saveDurableRunManifest,
   saveDurableRunStatus,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -33,23 +33,23 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(currentDir, '..');
 const demoProfile = 'shared';
 const now = '2026-04-30T12:00:00.000Z';
-const stateRoot = mkdtempSync(join(tmpdir(), 'personal-agent-desktop-demo-'));
+const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-demo-'));
 const vaultRoot = join(stateRoot, 'vault');
 const configRoot = join(stateRoot, 'config');
 const sessionsRoot = getDurableSessionsDir(stateRoot);
 const tasksRoot = getDurableTasksDir(configRoot);
 const daemonRoot = join(stateRoot, 'daemon');
 const runsRoot = resolveDurableRunsRoot(daemonRoot);
-const runtimeSettingsFile = join(stateRoot, 'pi-agent-runtime', 'settings.json');
+const runtimeSettingsFile = join(stateRoot, 'neon-pilot-runtime', 'settings.json');
 const localSettingsFile = join(configRoot, 'local', 'settings.json');
 const desktopUserDataDir = join(stateRoot, 'desktop', 'user-data');
 const initialRoute = '/conversations/demo-rich';
 
-process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-process.env.PERSONAL_AGENT_CONFIG_ROOT = configRoot;
-process.env.PERSONAL_AGENT_VAULT_ROOT = vaultRoot;
-process.env.PERSONAL_AGENT_PROFILE = demoProfile;
-process.env.PERSONAL_AGENT_ACTIVE_PROFILE = demoProfile;
+process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+process.env.NEON_PILOT_CONFIG_ROOT = configRoot;
+process.env.NEON_PILOT_VAULT_ROOT = vaultRoot;
+process.env.NEON_PILOT_PROFILE = demoProfile;
+process.env.NEON_PILOT_ACTIVE_PROFILE = demoProfile;
 
 function mkdirp(path) {
   mkdirSync(path, { recursive: true });
@@ -480,11 +480,11 @@ write(
       warnings: ['Daemon service is installed but not running.', 'Daemon runtime is not responding on the local socket.'],
       service: {
         platform: 'darwin',
-        identifier: 'personal-agent-daemon',
-        manifestPath: '/tmp/personal-agent-daemon.plist',
+        identifier: 'neon-pilot-daemon',
+        manifestPath: '/tmp/neon-pilot-daemon.plist',
         installed: true,
         running: false,
-        logFile: '/tmp/personal-agentd.log',
+        logFile: '/tmp/neon-pilotd.log',
       },
       runtime: {
         running: false,
@@ -492,7 +492,7 @@ write(
         moduleCount: 0,
       },
       log: {
-        path: '/tmp/personal-agentd.log',
+        path: '/tmp/neon-pilotd.log',
         lines: [],
       },
     },
@@ -756,13 +756,13 @@ const envFile = join(stateRoot, 'desktop-demo-env.sh');
 write(
   envFile,
   [
-    `export PERSONAL_AGENT_STATE_ROOT=${JSON.stringify(stateRoot)}`,
-    `export PERSONAL_AGENT_CONFIG_ROOT=${JSON.stringify(configRoot)}`,
-    `export PERSONAL_AGENT_VAULT_ROOT=${JSON.stringify(vaultRoot)}`,
-    `export PERSONAL_AGENT_PROFILE=${JSON.stringify(demoProfile)}`,
-    `export PERSONAL_AGENT_ACTIVE_PROFILE=${JSON.stringify(demoProfile)}`,
-    `export PERSONAL_AGENT_DESKTOP_INITIAL_ROUTE=${JSON.stringify(initialRoute)}`,
-    `export PERSONAL_AGENT_DESKTOP_USER_DATA_DIR=${JSON.stringify(desktopUserDataDir)}`,
+    `export NEON_PILOT_STATE_ROOT=${JSON.stringify(stateRoot)}`,
+    `export NEON_PILOT_CONFIG_ROOT=${JSON.stringify(configRoot)}`,
+    `export NEON_PILOT_VAULT_ROOT=${JSON.stringify(vaultRoot)}`,
+    `export NEON_PILOT_PROFILE=${JSON.stringify(demoProfile)}`,
+    `export NEON_PILOT_ACTIVE_PROFILE=${JSON.stringify(demoProfile)}`,
+    `export NEON_PILOT_DESKTOP_INITIAL_ROUTE=${JSON.stringify(initialRoute)}`,
+    `export NEON_PILOT_DESKTOP_USER_DATA_DIR=${JSON.stringify(desktopUserDataDir)}`,
   ].join('\n') + '\n',
 );
 

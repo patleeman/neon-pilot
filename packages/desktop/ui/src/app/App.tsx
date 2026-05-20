@@ -56,7 +56,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
 
   componentDidCatch(error: unknown, _errorInfo: { componentStack?: string }) {
     window.dispatchEvent(
-      new CustomEvent('pa-notification', {
+      new CustomEvent('neon-pilot-notification', {
         detail: {
           message: 'Application crash recovered',
           type: 'error',
@@ -293,7 +293,7 @@ export function App() {
           return;
         case 'notification':
           window.dispatchEvent(
-            new CustomEvent('pa-notification', {
+            new CustomEvent('neon-pilot-notification', {
               detail: {
                 message: payload.message,
                 type: (payload as { severity?: string }).severity ?? 'info',
@@ -305,7 +305,7 @@ export function App() {
           return;
         case 'extension_command':
           window.dispatchEvent(
-            new CustomEvent('pa-extension-command-execute', {
+            new CustomEvent('neon-pilot-extension-command-execute', {
               detail: {
                 command: payload.command,
                 args: payload.args,

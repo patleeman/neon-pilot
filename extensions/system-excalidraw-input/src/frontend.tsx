@@ -1,4 +1,4 @@
-import { type NativeExtensionClient } from '@personal-agent/extensions';
+import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import { lazy, Suspense } from 'react';
 
 import type { ExcalidrawEditorSavePayload } from './editorModal';

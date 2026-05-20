@@ -1,6 +1,6 @@
-# personal-agent repo instructions
+# neon-pilot repo instructions
 
-personal-agent is Patrick's personal AI agent runtime. Keep core small and build user-facing features as extensions by default.
+neon-pilot is Patrick's personal AI agent runtime. Keep core small and build user-facing features as extensions by default.
 
 ## Always-on rules
 

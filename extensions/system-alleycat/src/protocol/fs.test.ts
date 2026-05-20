@@ -13,7 +13,7 @@ const notify = () => undefined;
 const roots: string[] = [];
 
 async function tempRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'pa-alleycat-fs-'));
+  const root = await mkdtemp(join(tmpdir(), 'neon-pilot-alleycat-fs-'));
   roots.push(root);
   return root;
 }

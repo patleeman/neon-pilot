@@ -11,8 +11,8 @@ import {
   markConversationAttentionRead,
   markConversationAttentionUnread,
   summarizeConversationAttention,
-} from '@personal-agent/core';
-import { loadDaemonConfig, resolveDaemonPaths } from '@personal-agent/daemon';
+} from '@neon-pilot/core';
+import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { type DeferredResumeSummary } from '../automation/deferredResumes.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';

@@ -1,4 +1,4 @@
-import { type ProjectActivityNotificationState } from '@personal-agent/core';
+import { type ProjectActivityNotificationState } from '@neon-pilot/core';
 
 import type { DaemonStateSnapshot } from '../automation/daemon.js';
 import { logWarn } from './logging.js';

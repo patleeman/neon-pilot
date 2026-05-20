@@ -40,7 +40,7 @@ Runtime identity is centralized as `stable`, `rc`, `dev`, or `test`. The channel
 | `dev`    | Neon Pilot Dev     | `-dev`            | disabled |
 | `test`   | Neon Pilot Testing | `-testing`        | disabled |
 
-Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`personal-agent-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it.
+Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`neon-pilot-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it.
 
 Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. Dev/test launches disable update checks so local builds do not emit packaged updater metadata warnings.
 
@@ -64,7 +64,7 @@ Each release command performs these steps in order:
 
 The release script runs an automated smoke test after signing and notarization, before pushing the tag. It launches the built `.app` with:
 
-- An isolated temporary `PERSONAL_AGENT_STATE_ROOT`
+- An isolated temporary `NEON_PILOT_STATE_ROOT`
 - A dedicated daemon socket
 - No interference from an already-running user daemon
 
@@ -80,14 +80,14 @@ The check verifies:
 8. The Knowledge route renders
 9. A conversation route renders
 
-`pnpm run build` also verifies the current daemon output under `packages/desktop/dist/server/daemon/` and rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with missing `@personal-agent/extensions/backend` exports, rerun the full build before cutting the release.
+`pnpm run build` also verifies the current daemon output under `packages/desktop/dist/server/daemon/` and rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with missing `@neon-pilot/extensions/backend` exports, rerun the full build before cutting the release.
 
 ### Manual smoke test
 
 If the automated check is unavailable, set:
 
 ```bash
-PERSONAL_AGENT_RELEASE_SKIP_AUTOMATED_SMOKE=1
+NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1
 ```
 
 The script will stop and ask you to manually test the built `.app` before continuing.
@@ -100,7 +100,7 @@ If the version bump and build succeeded but the publish step failed:
 pnpm run release:publish
 ```
 
-This runs the smoke test, push, and GitHub release creation without repeating the version bump, changelog update, and build steps. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing or still contains the generated release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested build, set `PERSONAL_AGENT_RELEASE_SMOKE_TESTED=1`.
+This runs the smoke test, push, and GitHub release creation without repeating the version bump, changelog update, and build steps. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing or still contains the generated release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested build, set `NEON_PILOT_RELEASE_SMOKE_TESTED=1`.
 
 ## Release artifacts
 
@@ -110,7 +110,7 @@ Release assets must include Electron updater metadata plus signed macOS artifact
 - signed `.zip` and `.zip.blockmap`
 - optionally `.dmg` and `.dmg.blockmap`
 
-The publish script loads Apple credentials from `PERSONAL_AGENT_RELEASE_ENV`, then `.env`, then `~/.config/personal-agent/release-env`. It maps `APPLE_PASSWORD` to `APPLE_APP_SPECIFIC_PASSWORD` for notarization and can target another public release repo with `PERSONAL_AGENT_RELEASE_REPO`.
+The publish script loads Apple credentials from `NEON_PILOT_RELEASE_ENV`, then `.env`, then `~/.config/neon-pilot/release-env`. It maps `APPLE_PASSWORD` to `APPLE_APP_SPECIFIC_PASSWORD` for notarization and can target another public release repo with `NEON_PILOT_RELEASE_REPO`.
 
 ## Gotchas
 

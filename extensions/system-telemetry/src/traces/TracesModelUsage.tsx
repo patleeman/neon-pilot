@@ -2,7 +2,7 @@
  * Model Usage & Cost — 2×2 grid section
  */
 
-import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@personal-agent/extensions/data';
+import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@neon-pilot/extensions/data';
 
 export function TracesModelUsage({
   models,

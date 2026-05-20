@@ -21,7 +21,7 @@ afterEach(async () => {
 });
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-model-providers-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-model-providers-'));
   tempDirs.push(dir);
   return dir;
 }
@@ -59,7 +59,7 @@ describe('upsertModelProvider', () => {
         apiKey: 'OPENROUTER_API_KEY',
         authHeader: true,
         headers: {
-          'x-app': 'personal-agent',
+          'x-app': 'neon-pilot',
         },
         compat: {
           supportsDeveloperRole: false,
@@ -76,7 +76,7 @@ describe('upsertModelProvider', () => {
         apiKey: 'OPENROUTER_API_KEY',
         authHeader: true,
         headers: {
-          'x-app': 'personal-agent',
+          'x-app': 'neon-pilot',
         },
         compat: {
           supportsDeveloperRole: false,
@@ -94,7 +94,7 @@ describe('upsertModelProvider', () => {
           apiKey: 'OPENROUTER_API_KEY',
           authHeader: true,
           headers: {
-            'x-app': 'personal-agent',
+            'x-app': 'neon-pilot',
           },
           compat: {
             supportsDeveloperRole: false,

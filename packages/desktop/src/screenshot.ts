@@ -43,7 +43,7 @@ export async function captureDesktopScreenshot(deps: CaptureDesktopScreenshotDep
     throw new Error('Built-in screenshot capture is currently only available on macOS.');
   }
 
-  const tempDir = await deps.mkdtemp(join(deps.tmpdir(), 'personal-agent-screenshot-'));
+  const tempDir = await deps.mkdtemp(join(deps.tmpdir(), 'neon-pilot-screenshot-'));
   const fileName = `Screenshot ${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
   const outputPath = join(tempDir, fileName);
 

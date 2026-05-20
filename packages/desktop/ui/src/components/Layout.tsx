@@ -48,8 +48,8 @@ import { Sidebar } from './Sidebar';
 import { cx } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
-const DESKTOP_SHORTCUT_EVENT = 'personal-agent-desktop-shortcut';
-const DESKTOP_NAVIGATE_EVENT = 'personal-agent-desktop-navigate';
+const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
+const DESKTOP_NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
   import('./CommandPalette').then((module) => ({ default: module.CommandPalette })),
 );
@@ -478,7 +478,7 @@ class RouteContentBoundary extends Component<
     }
 
     window.dispatchEvent(
-      new CustomEvent('pa-notification', {
+      new CustomEvent('neon-pilot-notification', {
         detail: {
           message: 'A page error was recovered',
           type: 'error',
@@ -930,11 +930,11 @@ function WorkbenchKnowledgeRail({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
-      <div className="flex min-h-[36px] shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-border-subtle bg-base px-1.5 py-1">
+      <div className="flex shrink-0 flex-col gap-1 px-1.5 py-1.5">
         <button
           type="button"
           className={cx(
-            'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
+            'ui-sidebar-nav-item w-full text-left',
             (activeTool === 'files' ||
               (systemFilesExtensionSurface && activeTool === extensionToolPanelMode(systemFilesExtensionSurface))) &&
               'ui-sidebar-nav-item-active',
@@ -956,15 +956,12 @@ function WorkbenchKnowledgeRail({
           >
             <path d="M3.75 6.75h5.379a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H20.25m-16.5-3A2.25 2.25 0 0 0 1.5 9v8.25A2.25 2.25 0 0 0 3.75 19.5h16.5a2.25 2.25 0 0 0 2.25-2.25v-5.25a2.25 2.25 0 0 0-2.25-2.25H3.75" />
           </svg>
-          <span className="flex-1 text-left">Files</span>
+          <span className="flex-1 text-left">File Explorer</span>
         </button>
         {!systemDiffsExtensionSurface && (checkpoints.length > 0 || activeCheckpointId || uncommittedResult) ? (
           <button
             type="button"
-            className={cx(
-              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
-              activeTool === 'diffs' && 'ui-sidebar-nav-item-active',
-            )}
+            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'diffs' && 'ui-sidebar-nav-item-active')}
             title="Diffs"
             onClick={handleDiffsModeSelect}
           >
@@ -993,10 +990,7 @@ function WorkbenchKnowledgeRail({
         {!systemArtifactsExtensionSurface && artifacts.length > 0 ? (
           <button
             type="button"
-            className={cx(
-              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
-              activeTool === 'artifacts' && 'ui-sidebar-nav-item-active',
-            )}
+            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'artifacts' && 'ui-sidebar-nav-item-active')}
             title="Artifacts"
             onClick={handleArtifactsModeSelect}
           >
@@ -1023,10 +1017,7 @@ function WorkbenchKnowledgeRail({
         {!systemRunsExtensionSurface && showRunsTab ? (
           <button
             type="button"
-            className={cx(
-              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
-              activeTool === 'runs' && 'ui-sidebar-nav-item-active',
-            )}
+            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'runs' && 'ui-sidebar-nav-item-active')}
             title="Runs"
             onClick={handleRunsModeSelect}
           >
@@ -1056,7 +1047,7 @@ function WorkbenchKnowledgeRail({
               key={`${surface.extensionId}:${surface.id}`}
               type="button"
               className={cx(
-                'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
+                'ui-sidebar-nav-item w-full text-left',
                 (activeTool === extensionToolPanelMode(surface) ||
                   (inferSurfaceToolSlot(surface) === 'runs' && isRunsRailMode(activeTool)) ||
                   (inferSurfaceToolSlot(surface) === 'diffs' && isDiffsRailMode(activeTool)) ||
@@ -1125,7 +1116,7 @@ function WorkbenchKnowledgeRail({
           </Suspense>
         </div>
       ) : isRunsRailMode(activeTool) ? (
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden bg-panel [&>[data-extension-id]]:bg-panel">
           {systemRunsExtensionSurface ? (
             <NativeExtensionSurfaceHost
               surface={systemRunsExtensionSurface}
@@ -1488,10 +1479,10 @@ export function Layout() {
     }
 
     window.addEventListener('keydown', handleExtensionKeybinding, true);
-    window.addEventListener('pa-extension-command-execute', handleExtensionCommandExecute as EventListener);
+    window.addEventListener('neon-pilot-extension-command-execute', handleExtensionCommandExecute as EventListener);
     return () => {
       window.removeEventListener('keydown', handleExtensionKeybinding, true);
-      window.removeEventListener('pa-extension-command-execute', handleExtensionCommandExecute as EventListener);
+      window.removeEventListener('neon-pilot-extension-command-execute', handleExtensionCommandExecute as EventListener);
     };
   }, [executeCommandOptions, extensionKeybindings]);
 

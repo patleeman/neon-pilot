@@ -8,8 +8,8 @@
   "bugs": "https://github.com/patleeman/neon-pilot/issues",
   "homepage": "https://github.com/patleeman/neon-pilot",
   "bin": {
-    "personal-agent": "./scripts/personal-agent-cli.mjs",
-    "pa-extension": "./scripts/pa-extension-cli.mjs"
+    "neon-pilot": "./scripts/neon-pilot-cli.mjs",
+    "neon-pilot-extension": "./scripts/neon-pilot-extension-cli.mjs"
   },
   "scripts": {
     "build": "pnpm run build:ts && pnpm run build:web && pnpm run build:extensions && node scripts/verify-build-artifacts.mjs",
@@ -58,7 +58,7 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
     "@electron/asar": "^3.4.1",
-    "@personal-agent/core": "workspace:*",
+    "@neon-pilot/core": "workspace:*",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",

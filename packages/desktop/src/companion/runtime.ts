@@ -33,7 +33,7 @@ import type {
   CompanionSshTargetSaveInput,
   CompanionSshTargetTestInput,
   CompanionSurfaceType,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { parseApiDispatchResult, readApiDispatchError } from '../hosts/api-dispatch.js';
 import type { HostManager } from '../hosts/host-manager.js';

@@ -92,7 +92,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
   },
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getConversationArtifact: getConversationArtifactMock,
   getConversationAttachment: getConversationAttachmentMock,
   listConversationArtifacts: listConversationArtifactsMock,

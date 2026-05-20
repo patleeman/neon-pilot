@@ -103,16 +103,16 @@ describe('draftConversation', () => {
   it('persists and reads the draft cwd', () => {
     const storage = createStorage();
 
-    persistDraftConversationCwd('~/workingdir/personal-agent', storage);
+    persistDraftConversationCwd('~/workingdir/neon-pilot', storage);
 
-    expect(readDraftConversationCwd(storage)).toBe('~/workingdir/personal-agent');
-    expect(storage.getItem(DRAFT_CONVERSATION_CWD_STORAGE_KEY)).toBe(JSON.stringify('~/workingdir/personal-agent'));
+    expect(readDraftConversationCwd(storage)).toBe('~/workingdir/neon-pilot');
+    expect(storage.getItem(DRAFT_CONVERSATION_CWD_STORAGE_KEY)).toBe(JSON.stringify('~/workingdir/neon-pilot'));
   });
 
   it('clears the stored draft cwd', () => {
     const storage = createStorage();
 
-    persistDraftConversationCwd('~/workingdir/personal-agent', storage);
+    persistDraftConversationCwd('~/workingdir/neon-pilot', storage);
     clearDraftConversationCwd(storage);
 
     expect(readDraftConversationCwd(storage)).toBe('');

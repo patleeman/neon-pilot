@@ -5,8 +5,8 @@
  *   NotificationProvider (in Layout) → useNotificationStore() hook
  *
  * External sources feed in via:
- *   - `pa-extension-toast` CustomEvent (extension frontend → store)
- *   - `pa-notification` CustomEvent (core code, error boundaries → store)
+ *   - `neon-pilot-extension-toast` CustomEvent (extension frontend → store)
+ *   - `neon-pilot-notification` CustomEvent (core code, error boundaries → store)
  *   - Direct `addNotification()` export (class components, imperative use)
  *   - DesktopAppEvent `{ type: 'notification' }` (backend extension → SSE → store)
  */
@@ -185,7 +185,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Listen for `pa-extension-toast` from extension frontends
+  // Listen for `neon-pilot-extension-toast` from extension frontends
   useEffect(() => {
     function handleExtensionToast(event: CustomEvent) {
       const detail = event.detail as {
@@ -204,11 +204,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       });
     }
 
-    window.addEventListener('pa-extension-toast', handleExtensionToast as EventListener);
-    return () => window.removeEventListener('pa-extension-toast', handleExtensionToast as EventListener);
+    window.addEventListener('neon-pilot-extension-toast', handleExtensionToast as EventListener);
+    return () => window.removeEventListener('neon-pilot-extension-toast', handleExtensionToast as EventListener);
   }, []);
 
-  // Listen for `pa-notification` from core code / error boundaries
+  // Listen for `neon-pilot-notification` from core code / error boundaries
   useEffect(() => {
     function handleNotification(event: CustomEvent) {
       const detail = event.detail as AddNotificationPayload & { _id?: string };
@@ -216,8 +216,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       dispatch({ kind: 'ADD', payload: { type: detail.type, message: detail.message, details: detail.details, source: detail.source } });
     }
 
-    window.addEventListener('pa-notification', handleNotification as EventListener);
-    return () => window.removeEventListener('pa-notification', handleNotification as EventListener);
+    window.addEventListener('neon-pilot-notification', handleNotification as EventListener);
+    return () => window.removeEventListener('neon-pilot-notification', handleNotification as EventListener);
   }, []);
 
   const add = useCallback((payload: AddNotificationPayload): string => {

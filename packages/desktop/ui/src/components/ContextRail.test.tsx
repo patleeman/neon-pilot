@@ -244,11 +244,11 @@ describe('ContextRail run detail', () => {
             target: {
               type: 'shell',
               command: 'printf ok',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
             metadata: {
               taskSlug: 'ui-preview-check',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
           },
           source: {
@@ -276,11 +276,11 @@ describe('ContextRail run detail', () => {
             target: {
               type: 'shell',
               command: 'printf ok',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
             metadata: {
               taskSlug: 'ui-preview-check',
-              cwd: '/Users/patrick/workingdir/personal-agent',
+              cwd: '/Users/patrick/workingdir/neon-pilot',
             },
           },
         },
@@ -316,7 +316,7 @@ describe('ContextRail run detail', () => {
     expect(html).toContain('Outcome');
     expect(html).toContain('Completed and posted the final report.');
     expect(html).toContain('printf ok');
-    expect(html).toContain('/Users/patrick/workingdir/personal-agent');
+    expect(html).toContain('/Users/patrick/workingdir/neon-pilot');
     expect(html).toContain('Working dir');
   });
 

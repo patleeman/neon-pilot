@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getStateRoot, openSqliteDatabase, type SqliteDatabase } from '@personal-agent/core';
+import { getStateRoot, openSqliteDatabase, type SqliteDatabase } from '@neon-pilot/core';
 
 export interface ExtensionStateDocument<T = unknown> {
   key: string;

@@ -1,5 +1,5 @@
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
+import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
@@ -20,12 +20,12 @@ export function setRuntimeAgentHookBuilders(builders: {
 }
 
 function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
-  const resolved = resolveRuntimeResources(process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared', {
-    ...(process.env.PERSONAL_AGENT_REPO_ROOT ? { repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT } : {}),
+  const resolved = resolveRuntimeResources(process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared', {
+    ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
   });
 
-  const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared';
-  const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
+  const profile = process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared';
+  const repoRoot = process.env.NEON_PILOT_REPO_ROOT || process.cwd();
   const assembly = buildPromptAssemblyPlan({ profile, repoRoot, modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE) });
 
   return {
@@ -48,7 +48,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
 
   return [
     ...createManifestToolAgentExtensions({
-      getCurrentProfile: () => process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
+      getCurrentProfile: () => process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
@@ -59,7 +59,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
           return false;
         }
       },
-      repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
+      repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
       profilesRoot: getProfilesRoot(),
       stateRoot: getStateRoot(),
     }),

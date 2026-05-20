@@ -1,5 +1,5 @@
-import { hydrateProcessEnvFromShell, resolveChildProcessEnv } from '@personal-agent/core';
-import { resolvePersonalAgentRuntimeChannelConfig } from '@personal-agent/core';
+import { hydrateProcessEnvFromShell, resolveChildProcessEnv } from '@neon-pilot/core';
+import { resolveNeonPilotRuntimeChannelConfig } from '@neon-pilot/core';
 import { type ChildProcess } from 'child_process';
 import { closeSync, cpSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { createServer, type Server, type Socket } from 'net';
@@ -143,14 +143,14 @@ function appendBackgroundRunSessionDir(
 
 export type DaemonStopRequestBehavior = 'exit-process' | 'reject' | 'stop-only';
 
-export interface PersonalAgentDaemonOptions {
+export interface NeonPilotDaemonOptions {
   config?: DaemonConfig;
   stopRequestBehavior?: DaemonStopRequestBehavior;
   logSink?: (line: string) => void;
   companionRuntimeProvider?: CompanionRuntimeProvider;
 }
 
-function isDaemonConfig(value: DaemonConfig | PersonalAgentDaemonOptions): value is DaemonConfig {
+function isDaemonConfig(value: DaemonConfig | NeonPilotDaemonOptions): value is DaemonConfig {
   return 'modules' in value && 'queue' in value && 'ipc' in value;
 }
 
@@ -177,7 +177,7 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-export class PersonalAgentDaemon {
+export class NeonPilotDaemon {
   private readonly config: DaemonConfig;
   private readonly paths: DaemonPaths;
   private readonly runsRoot: string;
@@ -199,7 +199,7 @@ export class PersonalAgentDaemon {
   private running = false;
   private stopping = false;
 
-  constructor(input: DaemonConfig | PersonalAgentDaemonOptions = loadDaemonConfig()) {
+  constructor(input: DaemonConfig | NeonPilotDaemonOptions = loadDaemonConfig()) {
     const options = isDaemonConfig(input) ? { config: input } : input;
     this.config = options.config ?? loadDaemonConfig();
     this.stopRequestBehavior = options.stopRequestBehavior ?? 'exit-process';
@@ -247,7 +247,7 @@ export class PersonalAgentDaemon {
     } catch {
       const existingPid = readExistingDaemonLockPid(lockPath);
       if (existingPid && isProcessAlive(existingPid)) {
-        throw new Error(`personal-agentd is already running with pid=${String(existingPid)}; refusing to start a second daemon`);
+        throw new Error(`neon-pilotd is already running with pid=${String(existingPid)}; refusing to start a second daemon`);
       }
 
       rmSync(lockPath, { force: true });
@@ -326,7 +326,7 @@ export class PersonalAgentDaemon {
       // Clean up old quarantine / backup files from previous recovery events.
       pruneStaleRecoveryFiles(this.paths.root, (level, msg) => this.log(level as LogLevel, msg));
 
-      this.log('info', `personal-agentd started pid=${this.pid} socket=${this.paths.socketPath}`);
+      this.log('info', `neon-pilotd started pid=${this.pid} socket=${this.paths.socketPath}`);
     } catch (error) {
       this.releaseProcessLock();
       throw error;
@@ -339,7 +339,7 @@ export class PersonalAgentDaemon {
     }
 
     this.stopping = true;
-    this.log('info', 'stopping personal-agentd');
+    this.log('info', 'stopping neon-pilotd');
 
     for (const handle of this.timerHandles) {
       clearInterval(handle);
@@ -409,7 +409,7 @@ export class PersonalAgentDaemon {
     const previous = {
       enabled: this.config.companion?.enabled !== false,
       host: this.config.companion?.host ?? DEFAULT_COMPANION_HOST,
-      port: this.config.companion?.port ?? resolvePersonalAgentRuntimeChannelConfig().companionPort,
+      port: this.config.companion?.port ?? resolveNeonPilotRuntimeChannelConfig().companionPort,
     };
     const next = {
       enabled: input.enabled ?? previous.enabled,
@@ -981,18 +981,18 @@ export class PersonalAgentDaemon {
 
     const isBackgroundAgentRunner = spawnInput.argv ? looksLikeBackgroundAgentRunnerEntryPath(spawnInput.argv[1]) : false;
     const childEnv = resolveChildProcessEnv({
-      PERSONAL_AGENT_RUN_ID: record.runId,
-      PERSONAL_AGENT_RUN_ROOT: record.paths.root,
-      PERSONAL_AGENT_RUN_MANIFEST_PATH: record.paths.manifestPath,
-      PERSONAL_AGENT_RUN_STATUS_PATH: record.paths.statusPath,
-      PERSONAL_AGENT_RUN_CHECKPOINT_PATH: record.paths.checkpointPath,
-      PERSONAL_AGENT_RUN_EVENTS_PATH: record.paths.eventsPath,
-      PERSONAL_AGENT_RUN_OUTPUT_LOG_PATH: record.paths.outputLogPath,
-      PERSONAL_AGENT_RUN_RESULT_PATH: record.paths.resultPath,
+      NEON_PILOT_RUN_ID: record.runId,
+      NEON_PILOT_RUN_ROOT: record.paths.root,
+      NEON_PILOT_RUN_MANIFEST_PATH: record.paths.manifestPath,
+      NEON_PILOT_RUN_STATUS_PATH: record.paths.statusPath,
+      NEON_PILOT_RUN_CHECKPOINT_PATH: record.paths.checkpointPath,
+      NEON_PILOT_RUN_EVENTS_PATH: record.paths.eventsPath,
+      NEON_PILOT_RUN_OUTPUT_LOG_PATH: record.paths.outputLogPath,
+      NEON_PILOT_RUN_RESULT_PATH: record.paths.resultPath,
       ...(isBackgroundAgentRunner
         ? {
             ELECTRON_RUN_AS_NODE: '1',
-            ...(input.source?.filePath ? { PERSONAL_AGENT_PARENT_SESSION_FILE: input.source.filePath } : {}),
+            ...(input.source?.filePath ? { NEON_PILOT_PARENT_SESSION_FILE: input.source.filePath } : {}),
           }
         : {}),
     });
@@ -1318,7 +1318,7 @@ export class PersonalAgentDaemon {
 export async function runDaemonProcess(): Promise<void> {
   hydrateProcessEnvFromShell();
 
-  const daemon = new PersonalAgentDaemon();
+  const daemon = new NeonPilotDaemon();
 
   const shutdown = async () => {
     await daemon.stop();

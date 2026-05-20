@@ -1,7 +1,7 @@
-import type { ExtensionSurfaceProps, NativeExtensionClient } from '@personal-agent/extensions';
-import type { ExtensionInstallSummary } from '@personal-agent/extensions/data';
-import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@personal-agent/extensions/data';
-import { SettingsField, type UnifiedSettingsEntry, useApi } from '@personal-agent/extensions/settings';
+import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/extensions';
+import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
+import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
+import { SettingsField, type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
 import {
   AppPageIntro,
   AppPageLayout,
@@ -11,8 +11,8 @@ import {
   IconButton,
   LoadingState,
   ToolbarButton,
-} from '@personal-agent/extensions/ui';
-import { getDesktopBridge } from '@personal-agent/extensions/workbench-browser';
+} from '@neon-pilot/extensions/ui';
+import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -1207,7 +1207,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
       .catch((err: unknown) => {
         setLoading(false);
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               type: 'error',
               message: 'Failed to load extensions',
@@ -1908,7 +1908,7 @@ export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClien
       <div className="space-y-2">
         <ReadOnlyPathRow label="Default install location" path={state.defaultLocation} detail="Neon Pilot always scans this folder." />
         {state.environmentPaths.map((path) => (
-          <ReadOnlyPathRow key={path} label="Environment search path" path={path} detail="Set by PERSONAL_AGENT_EXTENSION_PATHS." />
+          <ReadOnlyPathRow key={path} label="Environment search path" path={path} detail="Set by NEON_PILOT_EXTENSION_PATHS." />
         ))}
       </div>
 

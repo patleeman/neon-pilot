@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 const METADATA_NAMESPACE = 'system-loose-ends';
 const MAX_ITEM_TEXT_LENGTH = 1000;

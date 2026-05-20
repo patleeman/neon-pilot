@@ -1,7 +1,7 @@
-// Barrel file for @personal-agent/daemon
+// Barrel file for @neon-pilot/daemon
 // Source files have been moved to their natural homes within the desktop server.
-// The tsconfig path mapping (@personal-agent/daemon → ./packages/desktop/server/daemon)
-// means consumers can keep importing from '@personal-agent/daemon' and this barrel
+// The tsconfig path mapping (@neon-pilot/daemon → ./packages/desktop/server/daemon)
+// means consumers can keep importing from '@neon-pilot/daemon' and this barrel
 // re-exports from the new locations.
 
 // Config / paths — now at packages/desktop/server/
@@ -41,7 +41,7 @@ export {
   updateStoredAutomation,
 } from '../automation/store.js';
 export { ensureAutomationThread, normalizeAutomationThreadModeForSelection, resolveAutomationThreadTitle } from '../automation/threads.js';
-export { setTaskCallbackBinding } from '@personal-agent/core';
+export { setTaskCallbackBinding } from '@neon-pilot/core';
 
 // Tasks (previously daemon/modules/) — now at packages/desktop/server/automation/tasks/
 export type { ParsedTaskDefinition } from '../automation/tasks/tasks-parser.js';
@@ -153,7 +153,7 @@ export {
   getDaemonClientTransportOverride,
   setDaemonClientTransportOverride,
 } from '../daemon/in-process-client.js';
-export { type DaemonStopRequestBehavior, PersonalAgentDaemon, type PersonalAgentDaemonOptions } from '../daemon/server.js';
+export { type DaemonStopRequestBehavior, NeonPilotDaemon, type NeonPilotDaemonOptions } from '../daemon/server.js';
 export type {
   CancelDurableRunResult,
   DaemonEvent,

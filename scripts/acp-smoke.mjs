@@ -44,7 +44,7 @@ class SmokeClient {
 }
 
 async function makeStateRoot() {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'pa-acp-smoke-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'neon-pilot-acp-smoke-'));
   await mkdir(path.join(root, 'extensions'), { recursive: true });
   await writeFile(
     path.join(root, 'extensions', 'registry.json'),
@@ -56,13 +56,13 @@ async function makeStateRoot() {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const stateRoot = await makeStateRoot();
-  const cliPath = path.resolve('scripts/personal-agent-cli.mjs');
+  const cliPath = path.resolve('scripts/neon-pilot-cli.mjs');
 
   const child = spawn('node', [cliPath, 'protocol', 'acp', '--smoke-test'], {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
+      NEON_PILOT_STATE_ROOT: stateRoot,
     },
     stdio: ['pipe', 'pipe', 'inherit'],
   });

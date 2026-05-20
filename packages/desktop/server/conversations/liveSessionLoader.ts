@@ -1,5 +1,5 @@
 import { DefaultResourceLoader, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { logWarn } from '../shared/logging.js';
 

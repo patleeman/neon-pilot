@@ -1,4 +1,4 @@
-import type { SqliteDatabase } from '@personal-agent/core';
+import type { SqliteDatabase } from '@neon-pilot/core';
 import { existsSync, mkdirSync } from 'fs';
 import { basename, dirname, join } from 'path';
 

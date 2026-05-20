@@ -1,5 +1,5 @@
 {
-  "name": "@personal-agent/daemon",
+  "name": "@neon-pilot/daemon",
   "type": "module",
   "main": "../../../packages/desktop/server/dist/daemon/index.js",
   "types": "index.ts"

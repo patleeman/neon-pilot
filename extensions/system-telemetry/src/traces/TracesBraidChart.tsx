@@ -2,7 +2,7 @@
  * Braid Chart — Multi-metric time series overlay (SVG)
  */
 
-import type { TraceTokenDaily } from '@personal-agent/extensions/data';
+import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
 
 export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length < 2) {

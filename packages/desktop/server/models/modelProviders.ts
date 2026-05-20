@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getDurableModelsDir, getDurableProfilesDir } from '@personal-agent/core';
+import { getDurableModelsDir, getDurableProfilesDir } from '@neon-pilot/core';
 
 export type ModelProviderApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages' | 'google-generative-ai';
 export type ModelProviderInputType = 'text' | 'image';

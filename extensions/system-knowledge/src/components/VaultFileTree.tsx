@@ -1,4 +1,4 @@
-import type { VaultEntry } from '@personal-agent/extensions/data';
+import type { VaultEntry } from '@neon-pilot/extensions/data';
 import {
   addOpenFileId,
   canDropAllPaths,
@@ -23,7 +23,7 @@ import {
   writeStoredExpandedFolderIds,
   writeStoredOpenFileIds,
   writeStoredRecentlyClosedFileIds,
-} from '@personal-agent/extensions/ui';
+} from '@neon-pilot/extensions/ui';
 import {
   type ContextMenuItem as FileTreeContextMenuItem,
   type ContextMenuOpenContext as FileTreeContextMenuOpenContext,
@@ -820,7 +820,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
       } catch (error) {
         console.error('failed to load knowledge base snapshot', error);
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               type: 'error',
               message: 'Failed to load knowledge base',
@@ -847,7 +847,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
       } catch (error) {
         console.error('rename failed', error);
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               type: 'error',
               message: 'Failed to rename file',
@@ -875,7 +875,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
       } catch (error) {
         console.error('move failed', error);
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               type: 'error',
               message: 'Failed to move file',
@@ -934,7 +934,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
     } catch (error) {
       console.error('knowledge base sync failed', error);
       window.dispatchEvent(
-        new CustomEvent('pa-notification', {
+        new CustomEvent('neon-pilot-notification', {
           detail: {
             type: 'error',
             message: 'Knowledge base sync failed',
@@ -1015,7 +1015,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
         } catch (error) {
           console.error('delete failed', error);
           window.dispatchEvent(
-            new CustomEvent('pa-notification', {
+            new CustomEvent('neon-pilot-notification', {
               detail: {
                 type: 'error',
                 message: 'Failed to delete file',
@@ -1045,7 +1045,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
         if (!result.opened) {
           console.error('open in Finder failed', result.error ?? 'Unknown error');
           window.dispatchEvent(
-            new CustomEvent('pa-notification', {
+            new CustomEvent('neon-pilot-notification', {
               detail: {
                 type: 'warning',
                 message: 'Failed to open in Finder',
@@ -1058,7 +1058,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
       } catch (error) {
         console.error('open in Finder failed', error);
         window.dispatchEvent(
-          new CustomEvent('pa-notification', {
+          new CustomEvent('neon-pilot-notification', {
             detail: {
               type: 'warning',
               message: 'Failed to open in Finder',

@@ -124,22 +124,22 @@ export async function invalidateAppTopics(topics: string | string[]): Promise<vo
   }
 }
 export async function getSessionDeferredResumeEntries(state: unknown, sessionFile: string) {
-  return callModuleExport<Array<Record<string, unknown>>>('@personal-agent/core', 'getSessionDeferredResumeEntries', state, sessionFile);
+  return callModuleExport<Array<Record<string, unknown>>>('@neon-pilot/core', 'getSessionDeferredResumeEntries', state, sessionFile);
 }
 export async function loadDeferredResumeState() {
-  return callModuleExport<Record<string, unknown>>('@personal-agent/core', 'loadDeferredResumeState');
+  return callModuleExport<Record<string, unknown>>('@neon-pilot/core', 'loadDeferredResumeState');
 }
 export async function readSessionConversationId(sessionFile: string) {
-  return callModuleExport<string | undefined>('@personal-agent/core', 'readSessionConversationId', sessionFile);
+  return callModuleExport<string | undefined>('@neon-pilot/core', 'readSessionConversationId', sessionFile);
 }
 export async function getTaskCallbackBinding(input: unknown) {
-  return callModuleExport<Record<string, unknown> | undefined>('@personal-agent/core', 'getTaskCallbackBinding', input);
+  return callModuleExport<Record<string, unknown> | undefined>('@neon-pilot/core', 'getTaskCallbackBinding', input);
 }
 export async function setTaskCallbackBinding(input: unknown) {
-  return callModuleExport<void>('@personal-agent/core', 'setTaskCallbackBinding', input);
+  return callModuleExport<void>('@neon-pilot/core', 'setTaskCallbackBinding', input);
 }
 export async function clearTaskCallbackBinding(input: unknown) {
-  return callModuleExport<void>('@personal-agent/core', 'clearTaskCallbackBinding', input);
+  return callModuleExport<void>('@neon-pilot/core', 'clearTaskCallbackBinding', input);
 }
 export async function pingDaemon(): Promise<boolean> {
   try {

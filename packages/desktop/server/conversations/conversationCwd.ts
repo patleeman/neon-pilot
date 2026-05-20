@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { resolveNeutralChatCwd } from '@personal-agent/core';
+import { resolveNeutralChatCwd } from '@neon-pilot/core';
 
 function expandHome(pathValue: string): string {
   if (pathValue === '~') {

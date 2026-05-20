@@ -1,1 +1,1 @@
-export * from '@personal-agent/extensions/excalidraw';
+export * from '@neon-pilot/extensions/excalidraw';

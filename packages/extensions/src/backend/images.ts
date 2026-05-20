@@ -1,5 +1,5 @@
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/images must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/images must be resolved by the Neon Pilot host runtime.');
 }
 
 export type StoredImageProbeAttachment = unknown;

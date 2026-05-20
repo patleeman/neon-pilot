@@ -832,7 +832,7 @@ export interface ExtensionRenderContext {
 }
 
 export interface ExtensionSurfaceProps<Params = Record<string, string>> {
-  pa: PersonalAgentClient;
+  pa: NeonPilotClient;
   context: ExtensionRenderContext;
   surface: ExtensionViewContribution;
   params: Params;
@@ -917,7 +917,7 @@ export interface ExtensionTranscriptBlockWriteInput {
   blockId?: string;
 }
 
-export interface PersonalAgentClient {
+export interface NeonPilotClient {
   extension: {
     invoke<T = unknown>(actionId: string, input?: unknown): Promise<T>;
     getManifest(): Promise<ExtensionManifest>;
@@ -1070,7 +1070,7 @@ export interface RuntimeHealth {
 export interface ExtensionBackendContext {
   extensionId: string;
   profile: string;
-  /** Absolute path to the pi-agent-runtime directory. */
+  /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
   /** Absolute path to the current profile's settings file. */
   profileSettingsFilePath: string;

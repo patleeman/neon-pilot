@@ -1,22 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-const CHANNEL_PREFIX = 'personal-agent-desktop';
+const CHANNEL_PREFIX = 'neon-pilot-desktop';
 const SHORTCUT_CHANNEL = `${CHANNEL_PREFIX}:shortcut`;
-const SHORTCUT_EVENT = 'personal-agent-desktop-shortcut';
+const SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const NAVIGATE_CHANNEL = `${CHANNEL_PREFIX}:navigate`;
-const NAVIGATE_EVENT = 'personal-agent-desktop-navigate';
+const NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 const API_STREAM_CHANNEL = `${CHANNEL_PREFIX}:api-stream`;
-const API_STREAM_EVENT = 'personal-agent-desktop-api-stream';
+const API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
 const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
-const CONVERSATION_STATE_EVENT = 'personal-agent-desktop-conversation-state';
+const CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
 const APP_EVENTS_CHANNEL = `${CHANNEL_PREFIX}:app-events`;
-const APP_EVENTS_EVENT = 'personal-agent-desktop-app-events';
+const APP_EVENTS_EVENT = 'neon-pilot-desktop-app-events';
 const PROVIDER_OAUTH_CHANNEL = `${CHANNEL_PREFIX}:provider-oauth-login`;
-const PROVIDER_OAUTH_EVENT = 'personal-agent-desktop-provider-oauth-login';
+const PROVIDER_OAUTH_EVENT = 'neon-pilot-desktop-provider-oauth-login';
 const WORKBENCH_BROWSER_COMMENT_CHANNEL = `${CHANNEL_PREFIX}:workbench-browser-comment`;
-const WORKBENCH_BROWSER_COMMENT_EVENT = 'personal-agent-desktop-workbench-browser-comment';
+const WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
 const SHOW_WORKBENCH_BROWSER_CHANNEL = `${CHANNEL_PREFIX}:show-workbench-browser`;
-const SHOW_WORKBENCH_BROWSER_EVENT = 'personal-agent-desktop-show-workbench-browser';
+const SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
 const domGlobals = globalThis as typeof globalThis & {
   document?: {
@@ -359,11 +359,11 @@ const desktopBridge = {
 };
 
 if (domGlobals.document?.documentElement) {
-  domGlobals.document.documentElement.dataset.personalAgentDesktop = '1';
+  domGlobals.document.documentElement.dataset.neonPilotDesktop = '1';
 }
 
 if (domGlobals.document?.body) {
-  domGlobals.document.body.setAttribute('data-personal-agent-desktop', '1');
+  domGlobals.document.body.setAttribute('data-neon-pilot-desktop', '1');
 }
 
 function dispatchDesktopEvent<T>(type: string, detail: T): void {
@@ -406,4 +406,4 @@ ipcRenderer.on(SHOW_WORKBENCH_BROWSER_CHANNEL, (_event, payload: unknown) => {
   dispatchDesktopEvent(SHOW_WORKBENCH_BROWSER_EVENT, payload);
 });
 
-contextBridge.exposeInMainWorld('personalAgentDesktop', desktopBridge);
+contextBridge.exposeInMainWorld('neonPilotDesktop', desktopBridge);

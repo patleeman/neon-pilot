@@ -5,15 +5,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RuntimeStatePaths } from './paths.js';
 
 const statePaths: RuntimeStatePaths = {
-  root: '/tmp/personal-agent-state',
-  auth: '/tmp/personal-agent-state/auth',
-  session: '/tmp/personal-agent-state/session',
-  cache: '/tmp/personal-agent-state/cache',
+  root: '/tmp/neon-pilot-state',
+  auth: '/tmp/neon-pilot-state/auth',
+  session: '/tmp/neon-pilot-state/session',
+  cache: '/tmp/neon-pilot-state/cache',
 };
 
-const runtimeSessionsPath = '/tmp/personal-agent-state/pi-agent-runtime/sessions';
-const durableSessionsPath = '/tmp/personal-agent-state/sync/pi-agent/sessions';
-const relativeDurableSessionsPath = relative('/tmp/personal-agent-state/pi-agent-runtime', durableSessionsPath);
+const runtimeSessionsPath = '/tmp/neon-pilot-state/neon-pilot-runtime/sessions';
+const durableSessionsPath = '/tmp/neon-pilot-state/sync/pi-agent/sessions';
+const relativeDurableSessionsPath = relative('/tmp/neon-pilot-state/neon-pilot-runtime', durableSessionsPath);
 
 async function importWithMocks(options: {
   lstatSync: (path: string) => unknown;

@@ -3,7 +3,7 @@ import {
   type DeferredResumeAlertLevel,
   loadAttentionEventsState,
   saveAttentionEventsState,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import {
   loadDurableRunCheckpoint,

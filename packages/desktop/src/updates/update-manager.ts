@@ -1,4 +1,4 @@
-import { resolvePersonalAgentRuntimeChannelConfig } from '@personal-agent/core';
+import { resolveNeonPilotRuntimeChannelConfig } from '@neon-pilot/core';
 import { app, dialog } from 'electron';
 import { type AppUpdater, MacUpdater, type UpdateDownloadedEvent, type UpdateInfo } from 'electron-updater';
 
@@ -42,7 +42,7 @@ function renderUpdateErrorMessage(error: unknown): string {
 function areDesktopUpdatesSupported(): boolean {
   return (
     app.isPackaged &&
-    resolvePersonalAgentRuntimeChannelConfig(process.env, { version: app.getVersion(), packaged: app.isPackaged }).updatesEnabled
+    resolveNeonPilotRuntimeChannelConfig(process.env, { version: app.getVersion(), packaged: app.isPackaged }).updatesEnabled
   );
 }
 

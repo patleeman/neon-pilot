@@ -59,7 +59,7 @@ vi.mock('../automation/deferredResumes.js', () => ({
   retryDeferredResumeForSessionFile: retryDeferredResumeForSessionFileMock,
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   activateDueAttentionEvents: activateDueAttentionEventsMock,
   completeAttentionEvents: completeAttentionEventsMock,
   getReadySessionAttentionEvents: getReadySessionAttentionEventsMock,
@@ -68,7 +68,7 @@ vi.mock('@personal-agent/core', () => ({
   saveAttentionEventsState: saveAttentionEventsStateMock,
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   completeDeferredResumeConversationRun: completeDeferredResumeConversationRunMock,
   markDeferredResumeConversationRunReady: markDeferredResumeConversationRunReadyMock,
   markDeferredResumeConversationRunRetryScheduled: markDeferredResumeConversationRunRetryScheduledMock,

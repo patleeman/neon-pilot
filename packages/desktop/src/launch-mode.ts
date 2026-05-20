@@ -1,4 +1,4 @@
-import { resolvePersonalAgentRuntimeChannel } from '@personal-agent/core';
+import { resolveNeonPilotRuntimeChannel } from '@neon-pilot/core';
 
 type DesktopLaunchMode = 'stable' | 'rc' | 'dev' | 'testing';
 
@@ -17,7 +17,7 @@ export function resolveDesktopLaunchPresentation(
   env: NodeJS.ProcessEnv = process.env,
   options: { version?: string; packaged?: boolean } = {},
 ): DesktopLaunchPresentation {
-  const channel = resolvePersonalAgentRuntimeChannel(env, options);
+  const channel = resolveNeonPilotRuntimeChannel(env, options);
 
   if (channel === 'test') {
     return {

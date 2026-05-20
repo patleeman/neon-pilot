@@ -13,7 +13,7 @@ describe('subscribeDesktopAppEvents', () => {
     const unsubscribeAppEvents = vi.fn().mockResolvedValue(undefined);
     const eventTarget = new EventTarget();
     const fakeWindow = {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         subscribeAppEvents,
         unsubscribeAppEvents,
       },
@@ -82,7 +82,7 @@ describe('subscribeDesktopAppEvents', () => {
     const eventTarget = new EventTarget();
     const unsubscribeAppEvents = vi.fn().mockResolvedValue(undefined);
     const fakeWindow = {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         subscribeAppEvents: vi.fn().mockImplementation(async () => {
           fakeWindow.dispatchEvent(
             new CustomEvent(DESKTOP_APP_EVENTS_EVENT, {

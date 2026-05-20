@@ -1,4 +1,4 @@
-import type { KnowledgeBaseState } from '@personal-agent/extensions/data';
+import type { KnowledgeBaseState } from '@neon-pilot/extensions/data';
 import { describe, expect, it } from 'vitest';
 
 import { getKnowledgeBaseSyncPresentation } from './knowledgeBaseSyncStatus';

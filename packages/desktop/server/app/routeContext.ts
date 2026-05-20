@@ -1,4 +1,4 @@
-import { getProfilesRoot } from '@personal-agent/core';
+import { getProfilesRoot } from '@neon-pilot/core';
 
 import type {
   CurrentProfileTaskSummary,

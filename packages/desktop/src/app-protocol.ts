@@ -11,7 +11,7 @@ import { loadLocalApiModule, type LocalApiModuleLoader } from './local-api-modul
 import { dispatchReadonlyLocalApiRequest, shouldDispatchReadonlyLocalApiInWorker } from './readonly-local-api.js';
 import { getHostBrowserPartition } from './state/browser-partitions.js';
 
-const DESKTOP_APP_SCHEME = 'personal-agent';
+const DESKTOP_APP_SCHEME = 'neon-pilot';
 const DESKTOP_APP_HOST = 'app';
 
 protocol.registerSchemesAsPrivileged([
@@ -79,7 +79,7 @@ function resolveDesktopWebDistDir(): string {
   }
 
   const currentDir = dirname(fileURLToPath(import.meta.url));
-  const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT?.trim() || resolve(currentDir, '..', '..', '..');
+  const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim() || resolve(currentDir, '..', '..', '..');
 
   // Match dev mode order from resolveDesktopRuntimePaths: ui/dist first, then dist.
   const candidates = [resolve(repoRoot, 'packages', 'desktop', 'ui', 'dist'), resolve(repoRoot, 'packages', 'desktop', 'dist')];
@@ -379,7 +379,7 @@ function configureDesktopProtocolSession(partitionSession: ElectronSession, host
     });
 
     // App shell asset URLs are content-hashed, but Chromium can keep a stale
-    // personal-agent://app main bundle across app updates. That stale bundle can
+    // neon-pilot://app main bundle across app updates. That stale bundle can
     // then try to dynamically import extension chunks that no longer exist,
     // blanking every extension-owned page. Clear only the desktop shell session;
     // browser/workbench web sessions use their own partitions.

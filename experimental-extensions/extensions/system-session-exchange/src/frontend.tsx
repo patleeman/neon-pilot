@@ -1,5 +1,5 @@
-import { type NativeExtensionClient } from '@personal-agent/extensions';
-import { api } from '@personal-agent/extensions/data';
+import { type NativeExtensionClient } from '@neon-pilot/extensions';
+import { api } from '@neon-pilot/extensions/data';
 import { useState } from 'react';
 
 interface FilePickerResult {

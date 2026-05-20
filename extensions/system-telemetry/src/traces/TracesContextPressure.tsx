@@ -2,7 +2,7 @@
  * Context Pressure — Session gauges, compaction log, and session timeline braid
  */
 
-import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@personal-agent/extensions/data';
+import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
 
 export function TracesContextPressure({
   sessions,

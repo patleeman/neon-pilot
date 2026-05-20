@@ -14,7 +14,7 @@ function printUsage(exitCode = 1) {
   node scripts/agent-browser-session.mjs cleanup [--older-than-hours <hours>] [--dry-run]
 
 Examples:
-  node scripts/agent-browser-session.mjs run --session kb-check --command 'ab open personal-agent://app/knowledge && ab wait 1500 && ab snapshot -i'
+  node scripts/agent-browser-session.mjs run --session kb-check --command 'ab open neon-pilot://app/knowledge && ab wait 1500 && ab snapshot -i'
   node scripts/agent-browser-session.mjs cleanup --older-than-hours 6
 `);
   process.exit(exitCode);

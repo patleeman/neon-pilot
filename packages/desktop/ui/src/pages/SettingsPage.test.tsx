@@ -115,14 +115,14 @@ describe('SettingsPage', () => {
       if (fetcher === api.skillFolders) {
         return buildUseApiResult({
           configFile: '/tmp/config.json',
-          skillDirs: ['/Users/patrick/Documents/personal-agent/skills'],
+          skillDirs: ['/Users/patrick/Documents/neon-pilot/skills'],
         });
       }
 
       if (fetcher === api.instructions) {
         return buildUseApiResult({
           configFile: '/tmp/config.json',
-          instructionFiles: ['/Users/patrick/Documents/personal-agent/AGENTS.md'],
+          instructionFiles: ['/Users/patrick/Documents/neon-pilot/AGENTS.md'],
         });
       }
 
@@ -186,7 +186,7 @@ describe('SettingsPage', () => {
       if (fetcher === api.defaultCwd) {
         return buildUseApiResult({
           currentCwd: '',
-          effectiveCwd: '/Users/patrick/workingdir/personal-agent',
+          effectiveCwd: '/Users/patrick/workingdir/neon-pilot',
         });
       }
 
@@ -234,7 +234,7 @@ describe('SettingsPage', () => {
       if (fetcher === api.status) {
         return buildUseApiResult({
           profile: 'assistant',
-          repoRoot: '/Users/patrick/workingdir/personal-agent',
+          repoRoot: '/Users/patrick/workingdir/neon-pilot',
           projectCount: 5,
           appRevision: 'abc123',
         });
@@ -290,13 +290,13 @@ describe('SettingsPage', () => {
           repoUrl: 'https://github.com/user/knowledge-base.git',
           branch: 'main',
           configured: true,
-          effectiveRoot: '/Users/patrick/Documents/personal-agent',
-          managedRoot: '/Users/patrick/.local/state/personal-agent/knowledge-base/repo',
+          effectiveRoot: '/Users/patrick/Documents/neon-pilot',
+          managedRoot: '/Users/patrick/.local/state/neon-pilot/knowledge-base/repo',
           usesManagedRoot: true,
           syncStatus: 'idle',
           lastSyncAt: '2026-04-16T12:00:00.000Z',
           recoveredEntryCount: 1,
-          recoveryDir: '/Users/patrick/.local/state/personal-agent/knowledge-base/recovered',
+          recoveryDir: '/Users/patrick/.local/state/neon-pilot/knowledge-base/recovered',
         });
       }
 
@@ -325,7 +325,7 @@ describe('SettingsPage', () => {
     expect(html).toContain('Injected by');
     expect(html).toContain('<span class="font-mono text-primary">sample-extension</span>');
     expect(html).not.toContain('Injected by extension <span');
-    expect(html).not.toContain('/Users/patrick/.local/state/personal-agent/knowledge-base/repo');
+    expect(html).not.toContain('/Users/patrick/.local/state/neon-pilot/knowledge-base/repo');
     expect(html).not.toContain('In sync · Last synced');
     expect(html).toContain('AGENTS.md files');
     expect(html).toContain('Default model');
@@ -361,7 +361,7 @@ describe('SettingsPage', () => {
 
   it('shows a desktop bridge warning instead of hiding desktop connections when preload is unavailable', () => {
     vi.stubGlobal('window', {
-      personalAgentDesktop: undefined,
+      neonPilotDesktop: undefined,
       location: { search: '' },
       sessionStorage: {
         getItem: () => null,

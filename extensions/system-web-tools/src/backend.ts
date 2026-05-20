@@ -1,5 +1,5 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
-import { extractReadableHtml } from '@personal-agent/extensions/backend/webContent';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { extractReadableHtml } from '@neon-pilot/extensions/backend/webContent';
 
 const DEFAULT_MAX_BYTES = 50 * 1024;
 const DEFAULT_MAX_LINES = 2000;

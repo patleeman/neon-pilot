@@ -7,7 +7,7 @@ import {
   DesktopConnectionsSettingsPanel,
   DesktopKeyboardShortcutsSettingsSection,
 } from '../../../../../extensions/system-settings/src/SettingsPage';
-import type { PersonalAgentDesktopBridge } from '../desktop/desktopBridge';
+import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -40,12 +40,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 function installDesktopBridge() {
-  window.personalAgentDesktop = {
+  window.neonPilotDesktop = {
     getEnvironment: mocks.getEnvironment,
     readDesktopAppPreferences: mocks.readDesktopAppPreferences,
     updateDesktopAppPreferences: mocks.updateDesktopAppPreferences,
-  } as unknown as PersonalAgentDesktopBridge;
-  document.documentElement.dataset.personalAgentDesktop = '1';
+  } as unknown as NeonPilotDesktopBridge;
+  document.documentElement.dataset.neonPilotDesktop = '1';
 }
 
 function renderPanel() {
@@ -106,8 +106,8 @@ describe('DesktopConnectionsSettingsPanel', () => {
       });
     }
     document.body.innerHTML = '';
-    document.documentElement.dataset.personalAgentDesktop = '';
-    delete window.personalAgentDesktop;
+    document.documentElement.dataset.neonPilotDesktop = '';
+    delete window.neonPilotDesktop;
   });
 
   it('renders app behavior settings', async () => {
@@ -160,8 +160,8 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
       });
     }
     document.body.innerHTML = '';
-    document.documentElement.dataset.personalAgentDesktop = '';
-    delete window.personalAgentDesktop;
+    document.documentElement.dataset.neonPilotDesktop = '';
+    delete window.neonPilotDesktop;
   });
 
   it('captures arbitrary shortcut chords and auto-saves every desktop shortcut', async () => {

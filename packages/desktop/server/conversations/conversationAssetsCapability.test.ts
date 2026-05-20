@@ -30,7 +30,7 @@ const {
   invalidateAppTopicsMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   deleteConversationArtifact: deleteConversationArtifactMock,
   deleteConversationAttachment: deleteConversationAttachmentMock,
   getConversationArtifact: getConversationArtifactMock,

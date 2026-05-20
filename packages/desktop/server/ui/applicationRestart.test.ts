@@ -26,7 +26,7 @@ vi.mock('node:fs', () => ({
   writeFileSync: writeFileSyncMock,
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getStateRoot: () => '/tmp/pa-state',
 }));
 

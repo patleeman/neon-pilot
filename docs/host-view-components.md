@@ -69,7 +69,7 @@ Host components have explicit JSON `props` and named override slots. The first s
 The wrapper export receives the normal extension surface props plus `HostComponent`, `hostProps`, and `slotOverrides`:
 
 ```tsx
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 type HostWrapperProps = ExtensionSurfaceProps & {
   HostComponent: React.ComponentType<ExtensionSurfaceProps>;
@@ -146,7 +146,7 @@ After host components, the extension keeps the contribution but delegates the vi
 The extension frontend now only needs the customization wrapper:
 
 ```tsx
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 
 type ArtifactDetailWrapperProps = ExtensionSurfaceProps & {
   HostComponent: React.ComponentType<ExtensionSurfaceProps>;
@@ -166,7 +166,7 @@ If there is no customization, remove `frontend` entirely when no other contribut
 
 ## Available host components
 
-The canonical catalog lives in `@personal-agent/extensions/host-view-components` and is used by runtime validation, UI loading, docs, and extension-manager tooling.
+The canonical catalog lives in `@neon-pilot/extensions/host-view-components` and is used by runtime validation, UI loading, docs, and extension-manager tooling.
 
 | Host id                      | Title                  | Locations   | Props | Override slots |
 | ---------------------------- | ---------------------- | ----------- | ----- | -------------- |

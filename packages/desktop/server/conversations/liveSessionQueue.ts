@@ -17,7 +17,7 @@ export interface PromptImageAttachment {
 export interface InternalQueuedAgentMessage {
   role?: string;
   content?: unknown;
-  __personalAgentQueuedPromptId?: string;
+  __neonPilotQueuedPromptId?: string;
 }
 
 interface InternalQueuedAgentQueueContainer {
@@ -31,7 +31,7 @@ export interface InternalAgentQueues {
   followUpQueue?: InternalQueuedAgentQueue;
 }
 
-const INTERNAL_QUEUED_PROMPT_ID_FIELD = '__personalAgentQueuedPromptId';
+const INTERNAL_QUEUED_PROMPT_ID_FIELD = '__neonPilotQueuedPromptId';
 let queuedPromptPreviewIdCounter = 0;
 
 export function normalizeQueuedPromptBehavior(
@@ -90,7 +90,7 @@ export function resolveInternalQueuedMessages(queue: InternalQueuedAgentQueue | 
 }
 
 function ensureQueuedPromptPreviewId(queueType: 'steer' | 'followUp', message: InternalQueuedAgentMessage): string {
-  const existingId = message.__personalAgentQueuedPromptId?.trim();
+  const existingId = message.__neonPilotQueuedPromptId?.trim();
   if (existingId) {
     return existingId;
   }
@@ -104,7 +104,7 @@ function ensureQueuedPromptPreviewId(queueType: 'steer' | 'followUp', message: I
       enumerable: false,
     });
   } catch {
-    message.__personalAgentQueuedPromptId = id;
+    message.__neonPilotQueuedPromptId = id;
   }
   return id;
 }
@@ -200,7 +200,7 @@ export function removeQueuedUserMessage(
       continue;
     }
 
-    const matchesPreviewId = previewId.length > 0 && queuedMessage.__personalAgentQueuedPromptId === previewId;
+    const matchesPreviewId = previewId.length > 0 && queuedMessage.__neonPilotQueuedPromptId === previewId;
     const matchesIndex = previewId.length === 0 && userQueueIndex === input.index;
     if (matchesPreviewId || matchesIndex) {
       return {

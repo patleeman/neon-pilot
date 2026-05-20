@@ -1,5 +1,5 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
-import { getWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '@personal-agent/extensions/backend/browser';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { getWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '@neon-pilot/extensions/backend/browser';
 
 function requireHost(): WorkbenchBrowserToolHost {
   const host = getWorkbenchBrowserToolHost();

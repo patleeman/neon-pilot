@@ -12,8 +12,7 @@ const args = new Set(process.argv.slice(2));
 const full = args.has('--full');
 const skipBuild = args.has('--skip-build');
 const ggufModel =
-  process.env.LOCAL_MODELS_GGUF_MODEL ||
-  '/Users/patrick/.cache/personal-agent/llama-cpp/models/unsloth__Qwen3.5-4B-GGUF/Qwen3.5-4B-BF16.gguf';
+  process.env.LOCAL_MODELS_GGUF_MODEL || '/Users/patrick/.cache/neon-pilot/llama-cpp/models/unsloth__Qwen3.5-4B-GGUF/Qwen3.5-4B-BF16.gguf';
 const mlxModel = process.env.LOCAL_MODELS_MLX_MODEL || 'mlx-community/SmolLM-135M-Instruct-4bit';
 
 function log(message) {
@@ -30,7 +29,7 @@ function run(command, options = {}) {
     cwd: repoRoot,
     stdio: 'inherit',
     shell: true,
-    env: { ...process.env, PERSONAL_AGENT_REPO_ROOT: repoRoot },
+    env: { ...process.env, NEON_PILOT_REPO_ROOT: repoRoot },
     ...options,
   });
 }
@@ -52,7 +51,7 @@ function createContext() {
       async exec(input) {
         const child = spawn(input.command, input.args ?? [], {
           cwd: repoRoot,
-          env: { ...process.env, PERSONAL_AGENT_REPO_ROOT: repoRoot },
+          env: { ...process.env, NEON_PILOT_REPO_ROOT: repoRoot },
           stdio: ['ignore', 'pipe', 'pipe'],
         });
         let stdout = '';
@@ -202,8 +201,8 @@ async function main() {
 }
 
 const tempState = mkdtempSync(join(tmpdir(), 'pa-local-models-smoke-'));
-process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
-process.env.PERSONAL_AGENT_STATE_ROOT = tempState;
+process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+process.env.NEON_PILOT_STATE_ROOT = tempState;
 main()
   .finally(() => rmSync(tempState, { recursive: true, force: true }))
   .catch((error) => {

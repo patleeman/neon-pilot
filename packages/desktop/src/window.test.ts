@@ -47,7 +47,7 @@ describe('getDesktopWindowChromeOptions', () => {
 
 describe('toDesktopShellUrl', () => {
   it('adds desktop-shell=1 query param', () => {
-    const url = toDesktopShellUrl('https://app.personal-agent.dev/settings');
+    const url = toDesktopShellUrl('https://app.neon-pilot.dev/settings');
     expect(url).toContain('desktop-shell=1');
     expect(url).toContain('settings');
   });
@@ -55,12 +55,12 @@ describe('toDesktopShellUrl', () => {
 
 describe('toDesktopShellRoute', () => {
   it('extracts the route path removing desktop-shell param', () => {
-    const route = toDesktopShellRoute('https://app.personal-agent.dev/conversations/new?desktop-shell=1');
+    const route = toDesktopShellRoute('https://app.neon-pilot.dev/conversations/new?desktop-shell=1');
     expect(route).toBe('/conversations/new');
   });
 
   it('preserves other search params', () => {
-    const route = toDesktopShellRoute('https://app.personal-agent.dev/conv/123?file=doc.md&desktop-shell=1');
+    const route = toDesktopShellRoute('https://app.neon-pilot.dev/conv/123?file=doc.md&desktop-shell=1');
     expect(route).toContain('file=doc');
     expect(route).not.toContain('desktop-shell');
   });
@@ -96,7 +96,7 @@ describe('shouldOpenWindowExternally', () => {
   });
 
   it('keeps app-internal URLs in-app', () => {
-    expect(shouldOpenWindowExternally('personal-agent://app/settings')).toBe(false);
+    expect(shouldOpenWindowExternally('neon-pilot://app/settings')).toBe(false);
   });
 
   it('returns false for empty strings', () => {
@@ -116,13 +116,13 @@ describe('shouldOpenNavigationExternally', () => {
 
 describe('shouldGrantDesktopMediaPermission', () => {
   it('allows app-local media and microphone permission requests', () => {
-    expect(shouldGrantDesktopMediaPermission('personal-agent://app/conversations/new', 'media')).toBe(true);
-    expect(shouldGrantDesktopMediaPermission('personal-agent://app/conversations/new', 'microphone')).toBe(true);
+    expect(shouldGrantDesktopMediaPermission('neon-pilot://app/conversations/new', 'media')).toBe(true);
+    expect(shouldGrantDesktopMediaPermission('neon-pilot://app/conversations/new', 'microphone')).toBe(true);
   });
 
   it('blocks non-app origins and unrelated permissions', () => {
     expect(shouldGrantDesktopMediaPermission('https://example.com', 'media')).toBe(false);
-    expect(shouldGrantDesktopMediaPermission('personal-agent://app/conversations/new', 'camera')).toBe(false);
+    expect(shouldGrantDesktopMediaPermission('neon-pilot://app/conversations/new', 'camera')).toBe(false);
   });
 });
 

@@ -1,12 +1,12 @@
-import type { GatewayConnection, GatewayEvent, GatewayState, GatewayThreadBinding, SessionMeta } from '@personal-agent/extensions/data';
+import type { GatewayConnection, GatewayEvent, GatewayState, GatewayThreadBinding, SessionMeta } from '@neon-pilot/extensions/data';
 import {
   api,
   CONVERSATION_LAYOUT_CHANGED_EVENT,
   notifyGatewayStateChanged,
   readConversationLayout,
   timeAgoCompact,
-} from '@personal-agent/extensions/data';
-import { AppPageIntro, AppPageLayout, ToolbarButton } from '@personal-agent/extensions/ui';
+} from '@neon-pilot/extensions/data';
+import { AppPageIntro, AppPageLayout, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -60,7 +60,7 @@ export function GatewaysPage() {
           const msg = formatGatewayError(err);
           setError(msg);
           window.dispatchEvent(
-            new CustomEvent('pa-notification', {
+            new CustomEvent('neon-pilot-notification', {
               detail: { type: 'error', message: `Failed to load gateways: ${msg}`, source: 'system-gateways' },
             }),
           );

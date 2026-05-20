@@ -26,11 +26,11 @@ const originalEnv = process.env;
 const tempDirs: string[] = [];
 
 function createTempStateRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-nodes-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-nodes-'));
   tempDirs.push(dir);
-  process.env.PERSONAL_AGENT_STATE_ROOT = dir;
-  process.env.PERSONAL_AGENT_VAULT_ROOT = join(dir, 'sync');
-  process.env.PERSONAL_AGENT_PROFILES_ROOT = join(dir, 'config', 'profiles');
+  process.env.NEON_PILOT_STATE_ROOT = dir;
+  process.env.NEON_PILOT_VAULT_ROOT = join(dir, 'sync');
+  process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'config', 'profiles');
   return dir;
 }
 

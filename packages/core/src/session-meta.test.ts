@@ -32,7 +32,7 @@ describe('listStoredSessions', () => {
   });
 
   it('reads session metadata from jsonl files newest-first by last activity', () => {
-    const sessionsDir = createTempDir('personal-agent-session-meta-');
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
 
     writeFile(
       join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-00-00-000Z_a.jsonl'),
@@ -91,7 +91,7 @@ describe('listStoredSessions', () => {
   });
 
   it('prefers persisted session names over the first user message fallback', () => {
-    const sessionsDir = createTempDir('personal-agent-session-meta-');
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
 
     writeFile(
       join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-08-00-000Z_named.jsonl'),
@@ -121,10 +121,10 @@ describe('listStoredSessions', () => {
   });
 
   it('defaults to the synced durable sessions directory for the active state root', () => {
-    const stateRoot = createTempDir('personal-agent-session-meta-state-');
+    const stateRoot = createTempDir('neon-pilot-session-meta-state-');
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
+      NEON_PILOT_STATE_ROOT: stateRoot,
     };
 
     const sessionsDir = getDurableSessionsDir(stateRoot);
@@ -150,7 +150,7 @@ describe('listStoredSessions', () => {
   });
 
   it('falls back to slug-derived cwd, file mtimes, and string user content', () => {
-    const sessionsDir = createTempDir('personal-agent-session-meta-');
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
     const filePath = join(sessionsDir, '--Users-patrick-project--', '2026-03-12T12-10-00-000Z_fallback.jsonl');
 
     writeFile(
@@ -180,7 +180,7 @@ describe('listStoredSessions', () => {
   });
 
   it('falls back to image attachment titles when the stored session name is blank', () => {
-    const sessionsDir = createTempDir('personal-agent-session-meta-');
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
 
     writeFile(
       join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-11-00-000Z_images.jsonl'),
@@ -207,7 +207,7 @@ describe('listStoredSessions', () => {
   });
 
   it('sorts root-level session files by id when last activity ties and skips files without a session record', () => {
-    const sessionsDir = createTempDir('personal-agent-session-meta-');
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
 
     writeFile(
       join(sessionsDir, '2026-03-12T12-12-00-000Z_a.jsonl'),

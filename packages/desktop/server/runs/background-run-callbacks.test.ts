@@ -1,4 +1,4 @@
-import { loadAttentionEventsState, resolveAttentionEventsStateFile } from '@personal-agent/core';
+import { loadAttentionEventsState, resolveAttentionEventsStateFile } from '@neon-pilot/core';
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';

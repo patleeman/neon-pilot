@@ -1,7 +1,7 @@
 import { type Dirent, existsSync, readdirSync, type Stats, statSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 
-import { getVaultRoot } from '@personal-agent/core';
+import { getVaultRoot } from '@neon-pilot/core';
 
 import { extractMentionIds } from './promptReferences.js';
 

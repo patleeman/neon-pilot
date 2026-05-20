@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
-import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@personal-agent/core';
+import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { listExtensionAssemblyProviderRegistrations, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';

@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@personal-agent/core';
+import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@neon-pilot/core';
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
@@ -61,7 +61,7 @@ export interface ExtensionBackendEventPublishInput {
 export interface ExtensionBackendContext {
   extensionId: string;
   profile: string;
-  /** Absolute path to the pi-agent-runtime directory. */
+  /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
   /** Absolute path to the current profile's settings file. */
   profileSettingsFilePath: string;

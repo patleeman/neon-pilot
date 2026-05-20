@@ -97,7 +97,7 @@ interface PathChangeResolution {
 }
 
 const SYNC_COMMIT_AUTHOR_NAME = 'Neon Pilot';
-const SYNC_COMMIT_AUTHOR_EMAIL = 'kb@personal-agent.local';
+const SYNC_COMMIT_AUTHOR_EMAIL = 'kb@neon-pilot.local';
 const KNOWLEDGE_BASE_SYNC_INTERVAL_MS = 5 * 60 * 1_000;
 const KNOWLEDGE_BASE_LOCAL_CHANGE_QUIET_MS = 2 * 60 * 1_000;
 const KNOWLEDGE_BASE_AUTO_MAINTENANCE_INTERVAL_MS = 6 * 60 * 60 * 1_000;
@@ -111,7 +111,7 @@ const RECOVERY_INDEX_FILE_NAME = 'recovery-index.json';
 const SYNC_LOCK_DIR_NAME = 'sync.lock';
 const SYNC_LOCK_METADATA_FILE_NAME = 'metadata.json';
 const SNAPSHOT_VERSION = 1;
-const SOURCE_ENV_VAR = 'PERSONAL_AGENT_VAULT_ROOT';
+const SOURCE_ENV_VAR = 'NEON_PILOT_VAULT_ROOT';
 const SKIPPED_RECOVERY_PATH_SEGMENTS = new Set(['', '.', '..']);
 const managerRegistry = new Map<string, KnowledgeBaseManager>();
 

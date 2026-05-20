@@ -313,7 +313,7 @@ function deriveRunOutcome(run: DurableRunDetailResult['run'], outputLog: string 
     const lines = trimmedOutput
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith('__PA_RUN_EXIT_CODE='));
+      .filter((line) => line.length > 0 && !line.startsWith('__NEON_PILOT_RUN_EXIT_CODE='));
     const lastLine = lines.at(-1);
     if (lastLine) {
       return lastLine.length <= 220 ? lastLine : `${lastLine.slice(0, 219).trimEnd()}…`;
@@ -448,7 +448,7 @@ function RunContextPanel({
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Could not mark the run as reviewed.';
       setActionError(msg);
-      window.dispatchEvent(new CustomEvent('pa-notification', { detail: { type: 'warning', message: msg, source: 'core' } }));
+      window.dispatchEvent(new CustomEvent('neon-pilot-notification', { detail: { type: 'warning', message: msg, source: 'core' } }));
     } finally {
       setMarkingReviewed(false);
     }

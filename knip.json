@@ -6,7 +6,7 @@
     "esbuild",
     "qrcode",
     "whisper-cpp-node",
-    "@personal-agent/extensions",
+    "@neon-pilot/extensions",
     "@tiptap/core",
     "@tiptap/extension-image",
     "@tiptap/extension-link",

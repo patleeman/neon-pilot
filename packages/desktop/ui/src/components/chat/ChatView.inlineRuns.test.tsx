@@ -213,7 +213,7 @@ describe('ChatView inline run cards', () => {
 
   it.skip('shows a friendly unavailable state when a linked run record cannot be loaded', async () => {
     apiMocks.durableRun.mockRejectedValue(
-      new Error("Error invoking remote method 'personal-agent-desktop:read-durable-run': Error: Run not found"),
+      new Error("Error invoking remote method 'neon-pilot-desktop:read-durable-run': Error: Run not found"),
     );
     apiMocks.durableRunLog.mockRejectedValue(new Error('Run not found'));
 

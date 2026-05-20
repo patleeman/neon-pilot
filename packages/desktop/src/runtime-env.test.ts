@@ -12,27 +12,27 @@ import {
 
 describe('desktop runtime environment overrides', () => {
   it('does not override stable desktop launches', () => {
-    expect(resolveDesktopRuntimeEnvironmentOverrides({}, { defaultStateRoot: '/state/personal-agent' })).toEqual({});
+    expect(resolveDesktopRuntimeEnvironmentOverrides({}, { defaultStateRoot: '/state/neon-pilot' })).toEqual({});
   });
 
   it('isolates testing launches onto a separate state root', () => {
     expect(
       resolveDesktopRuntimeEnvironmentOverrides(
         {
-          PERSONAL_AGENT_DESKTOP_VARIANT: 'testing',
+          NEON_PILOT_DESKTOP_VARIANT: 'testing',
         },
-        { defaultStateRoot: '/state/personal-agent' },
+        { defaultStateRoot: '/state/neon-pilot' },
       ),
     ).toEqual({
-      stateRoot: '/state/personal-agent-testing',
+      stateRoot: '/state/neon-pilot-testing',
     });
   });
 
   it('isolates packaged RC launches onto a separate state root', () => {
     expect(
-      resolveDesktopRuntimeEnvironmentOverrides({}, { defaultStateRoot: '/state/personal-agent', version: '0.7.9-rc.10', packaged: true }),
+      resolveDesktopRuntimeEnvironmentOverrides({}, { defaultStateRoot: '/state/neon-pilot', version: '0.7.9-rc.10', packaged: true }),
     ).toEqual({
-      stateRoot: '/state/personal-agent-rc',
+      stateRoot: '/state/neon-pilot-rc',
     });
   });
 
@@ -40,54 +40,54 @@ describe('desktop runtime environment overrides', () => {
     expect(
       resolveDesktopRuntimeEnvironmentOverrides(
         {
-          PERSONAL_AGENT_DESKTOP_VARIANT: 'testing',
-          PERSONAL_AGENT_STATE_ROOT: '/custom/state',
+          NEON_PILOT_DESKTOP_VARIANT: 'testing',
+          NEON_PILOT_STATE_ROOT: '/custom/state',
         },
-        { defaultStateRoot: '/state/personal-agent' },
+        { defaultStateRoot: '/state/neon-pilot' },
       ),
     ).toEqual({});
   });
 
   it('applies testing overrides directly onto the process environment', () => {
     const env: NodeJS.ProcessEnv = {
-      PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1',
+      NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
     };
 
     applyDesktopRuntimeEnvironmentOverrides(env);
 
-    expect(env.PERSONAL_AGENT_STATE_ROOT).toBeTruthy();
-    expect(env.PERSONAL_AGENT_STATE_ROOT).toMatch(/personal-agent-testing$/);
+    expect(env.NEON_PILOT_STATE_ROOT).toBeTruthy();
+    expect(env.NEON_PILOT_STATE_ROOT).toMatch(/neon-pilot-testing$/);
     expect(env.CODEX_PORT).toBeUndefined();
-    expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('0');
-    expect(env.PERSONAL_AGENT_RUNTIME_CHANNEL).toBe('test');
-    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toMatch(/^test-[0-9a-f-]+$/u);
+    expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
+    expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('test');
+    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toMatch(/^test-[0-9a-f-]+$/u);
   });
 
   it('applies dev overrides directly onto the process environment', () => {
     const env: NodeJS.ProcessEnv = {
-      PERSONAL_AGENT_RUNTIME_CHANNEL: 'dev',
+      NEON_PILOT_RUNTIME_CHANNEL: 'dev',
       XDG_STATE_HOME: '/state',
     };
 
     applyDesktopRuntimeEnvironmentOverrides(env);
 
-    expect(env.PERSONAL_AGENT_STATE_ROOT).toBe('/state/personal-agent-dev');
+    expect(env.NEON_PILOT_STATE_ROOT).toBe('/state/neon-pilot-dev');
     expect(env.CODEX_PORT).toBeUndefined();
-    expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('0');
-    expect(env.PERSONAL_AGENT_RUNTIME_CHANNEL).toBe('dev');
-    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toMatch(/^dev-[0-9a-f-]+$/u);
+    expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
+    expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('dev');
+    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toMatch(/^dev-[0-9a-f-]+$/u);
   });
 
   it('respects explicit daemon namespace for dev launches', () => {
     const env: NodeJS.ProcessEnv = {
-      PERSONAL_AGENT_RUNTIME_CHANNEL: 'dev',
-      PERSONAL_AGENT_DAEMON_NAMESPACE: 'pinned',
+      NEON_PILOT_RUNTIME_CHANNEL: 'dev',
+      NEON_PILOT_DAEMON_NAMESPACE: 'pinned',
       XDG_STATE_HOME: '/state',
     };
 
     applyDesktopRuntimeEnvironmentOverrides(env);
 
-    expect(env.PERSONAL_AGENT_DAEMON_NAMESPACE).toBe('pinned');
+    expect(env.NEON_PILOT_DAEMON_NAMESPACE).toBe('pinned');
   });
 
   it('applies RC overrides directly onto the process environment', () => {
@@ -97,25 +97,25 @@ describe('desktop runtime environment overrides', () => {
 
     applyDesktopRuntimeEnvironmentOverrides(env, { version: '0.7.9-rc.10', packaged: true });
 
-    expect(env.PERSONAL_AGENT_STATE_ROOT).toBe('/state/personal-agent-rc');
+    expect(env.NEON_PILOT_STATE_ROOT).toBe('/state/neon-pilot-rc');
     expect(env.CODEX_PORT).toBe('3847');
-    expect(env.PERSONAL_AGENT_COMPANION_PORT).toBe('3843');
-    expect(env.PERSONAL_AGENT_RUNTIME_CHANNEL).toBe('rc');
+    expect(env.NEON_PILOT_COMPANION_PORT).toBe('3843');
+    expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('rc');
   });
 
   it('seeds testing auth from the stable runtime when the testing auth file is empty', () => {
-    const root = mkdtempSync(join(tmpdir(), 'pa-desktop-runtime-env-'));
-    const stableAgentDir = join(root, 'personal-agent', 'pi-agent-runtime');
-    const testingStateRoot = join(root, 'personal-agent-testing');
-    const testingAgentDir = join(testingStateRoot, 'pi-agent-runtime');
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-runtime-env-'));
+    const stableAgentDir = join(root, 'neon-pilot', 'neon-pilot-runtime');
+    const testingStateRoot = join(root, 'neon-pilot-testing');
+    const testingAgentDir = join(testingStateRoot, 'neon-pilot-runtime');
     mkdirSync(stableAgentDir, { recursive: true });
     mkdirSync(testingAgentDir, { recursive: true });
     writeFileSync(join(stableAgentDir, 'auth.json'), JSON.stringify({ 'openai-codex': { accessToken: 'token' } }));
     writeFileSync(join(testingAgentDir, 'auth.json'), '{}');
 
     const env: NodeJS.ProcessEnv = {
-      PERSONAL_AGENT_DESKTOP_VARIANT: 'testing',
-      PERSONAL_AGENT_STATE_ROOT: testingStateRoot,
+      NEON_PILOT_DESKTOP_VARIANT: 'testing',
+      NEON_PILOT_STATE_ROOT: testingStateRoot,
       XDG_STATE_HOME: root,
     };
 
@@ -127,10 +127,10 @@ describe('desktop runtime environment overrides', () => {
   });
 
   it('seeds missing stable credentials without overwriting testing auth', () => {
-    const root = mkdtempSync(join(tmpdir(), 'pa-desktop-runtime-env-'));
-    const stableAgentDir = join(root, 'personal-agent', 'pi-agent-runtime');
-    const testingStateRoot = join(root, 'personal-agent-testing');
-    const testingAgentDir = join(testingStateRoot, 'pi-agent-runtime');
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-runtime-env-'));
+    const stableAgentDir = join(root, 'neon-pilot', 'neon-pilot-runtime');
+    const testingStateRoot = join(root, 'neon-pilot-testing');
+    const testingAgentDir = join(testingStateRoot, 'neon-pilot-runtime');
     mkdirSync(stableAgentDir, { recursive: true });
     mkdirSync(testingAgentDir, { recursive: true });
     writeFileSync(
@@ -149,8 +149,8 @@ describe('desktop runtime environment overrides', () => {
     );
 
     const env: NodeJS.ProcessEnv = {
-      PERSONAL_AGENT_DESKTOP_VARIANT: 'testing',
-      PERSONAL_AGENT_STATE_ROOT: testingStateRoot,
+      NEON_PILOT_DESKTOP_VARIANT: 'testing',
+      NEON_PILOT_STATE_ROOT: testingStateRoot,
       XDG_STATE_HOME: root,
     };
 

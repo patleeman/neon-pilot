@@ -1,5 +1,5 @@
-import type { ComposerControlContext } from '@personal-agent/extensions/composer';
-import { cx } from '@personal-agent/extensions/ui';
+import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
+import { cx } from '@neon-pilot/extensions/ui';
 
 const SELECT_CLASS =
   'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 pr-6 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';

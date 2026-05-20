@@ -1,9 +1,9 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   readTelegramGatewayServiceStatus,
   startTelegramGatewayService,
   stopTelegramGatewayService,
-} from '@personal-agent/extensions/backend/gateways';
+} from '@neon-pilot/extensions/backend/gateways';
 
 export async function startTelegramGateway(_input: unknown, ctx: ExtensionBackendContext): Promise<() => Promise<void>> {
   await startTelegramGatewayService();

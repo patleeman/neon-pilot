@@ -61,7 +61,7 @@ interface DurableProjectPaths {
 }
 
 function getRepoRoot(repoRoot?: string): string {
-  return resolve(repoRoot ?? process.env.PERSONAL_AGENT_REPO_ROOT ?? process.cwd());
+  return resolve(repoRoot ?? process.env.NEON_PILOT_REPO_ROOT ?? process.cwd());
 }
 
 function expandHome(pathValue: string): string {

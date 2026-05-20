@@ -1,13 +1,13 @@
 export { ActivityShelf } from './ActivityShelf.js';
 
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { useAppData } from '@personal-agent/extensions/data';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { useAppData } from '@neon-pilot/extensions/data';
 import {
   ConversationBackgroundWorkRailContent,
   ConversationBackgroundWorkWorkbenchPane,
   getConversationRunIdFromSearch,
   setConversationRunIdInSearch,
-} from '@personal-agent/extensions/workbench-runs';
+} from '@neon-pilot/extensions/workbench-runs';
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 

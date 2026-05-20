@@ -1,4 +1,4 @@
-import type { ExtensionStatusBarItemProps } from '@personal-agent/extensions';
+import type { ExtensionStatusBarItemProps } from '@neon-pilot/extensions';
 import React from 'react';
 
 export function GitStatusIndicator({ statusBarContext }: ExtensionStatusBarItemProps) {

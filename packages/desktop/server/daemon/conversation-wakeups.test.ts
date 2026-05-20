@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { acknowledgeAlert, type DeferredResumeRecord, getAlert } from '@personal-agent/core';
+import { acknowledgeAlert, type DeferredResumeRecord, getAlert } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { buildDeferredResumeAlertId, surfaceReadyDeferredResume } from './conversation-wakeups.js';

@@ -7,5 +7,5 @@ export type { ExtensionBackendContext } from './index';
  * contract; runtime implementations are provided by the desktop host alias.
  */
 export function assertHostResolvedBackendImport(): never {
-  throw new Error('@personal-agent/extensions/backend must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend must be resolved by the Neon Pilot host runtime.');
 }

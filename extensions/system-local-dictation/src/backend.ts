@@ -1,6 +1,6 @@
 import { dirname, join } from 'node:path';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 import { LocalWhisperTranscriptionProvider } from './localWhisperProvider.js';
 import { buildDictationSettingsState, readDictationSettings, writeDictationSettings } from './settings.js';

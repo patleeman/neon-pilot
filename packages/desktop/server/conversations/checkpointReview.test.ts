@@ -11,8 +11,8 @@ const { getConversationCommitCheckpointMock, listConversationCommitCheckpointsMo
   readSessionMetaMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', async () => {
-  const actual = await vi.importActual<typeof import('@personal-agent/core')>('@personal-agent/core');
+vi.mock('@neon-pilot/core', async () => {
+  const actual = await vi.importActual<typeof import('@neon-pilot/core')>('@neon-pilot/core');
   return {
     ...actual,
     getConversationCommitCheckpoint: getConversationCommitCheckpointMock,
@@ -88,16 +88,16 @@ function createCommittedRepo() {
 
 describe('checkpointReview', () => {
   it('parses common GitHub remote URL formats', () => {
-    expect(parseGitHubRemoteUrl('git@github.com:user/personal-agent.git')).toEqual({
+    expect(parseGitHubRemoteUrl('git@github.com:user/neon-pilot.git')).toEqual({
       owner: 'user',
-      repo: 'personal-agent',
-      repoUrl: 'https://github.com/user/personal-agent',
+      repo: 'neon-pilot',
+      repoUrl: 'https://github.com/patleeman/neon-pilot',
     });
 
-    expect(parseGitHubRemoteUrl('https://github.com/user/personal-agent')).toEqual({
+    expect(parseGitHubRemoteUrl('https://github.com/patleeman/neon-pilot')).toEqual({
       owner: 'user',
-      repo: 'personal-agent',
-      repoUrl: 'https://github.com/user/personal-agent',
+      repo: 'neon-pilot',
+      repoUrl: 'https://github.com/patleeman/neon-pilot',
     });
   });
 

@@ -1,4 +1,4 @@
-export const EXTENSION_REGISTRY_CHANGED_EVENT = 'pa-extension-registry-changed';
+export const EXTENSION_REGISTRY_CHANGED_EVENT = 'neon-pilot-extension-registry-changed';
 
 let extensionRegistryRevision = 0;
 

@@ -58,8 +58,8 @@ function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents
 }
 
 afterEach(() => {
-  delete process.env.PERSONAL_AGENT_STATE_ROOT;
-  delete process.env.PERSONAL_AGENT_DESKTOP_DEV_BUNDLE;
+  delete process.env.NEON_PILOT_STATE_ROOT;
+  delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
   if (originalResourcesPathDescriptor) {
     Object.defineProperty(process, 'resourcesPath', originalResourcesPathDescriptor);
   } else {
@@ -126,7 +126,7 @@ describe('registerExtensionRoutes', () => {
 
   it('dispatches namespaced extension backend routes', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
@@ -157,7 +157,7 @@ describe('registerExtensionRoutes', () => {
 
   it('serves per-extension manifest and surfaces', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
     const view = { id: 'page', title: 'Agent Board', location: 'main', route: '/ext/agent-board', component: 'AgentBoardPage' };
@@ -184,7 +184,7 @@ describe('registerExtensionRoutes', () => {
 
   it('serves runtime extension bundles inside the package root', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'agent-board', name: 'Agent Board' }));
@@ -200,7 +200,7 @@ describe('registerExtensionRoutes', () => {
 
   it('rejects extension file traversal', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
@@ -215,7 +215,7 @@ describe('registerExtensionRoutes', () => {
 
   it('serves command and slash command registrations for enabled extensions', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(
@@ -287,7 +287,7 @@ describe('registerExtensionRoutes', () => {
 
   it('serves extension state documents with optimistic concurrency', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
 
     const putRes = createResponse();
@@ -320,7 +320,7 @@ describe('registerExtensionRoutes', () => {
 
   it('creates starter runtime extensions', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
 
     const res = createResponse();
@@ -341,7 +341,7 @@ describe('registerExtensionRoutes', () => {
 
   it('validates runtime extensions through the extension doctor route', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
 
     const createRes = createResponse();
@@ -362,7 +362,7 @@ describe('registerExtensionRoutes', () => {
 
   it('creates paired workbench starter runtime extensions', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
 
     const res = createResponse();
@@ -389,7 +389,7 @@ describe('registerExtensionRoutes', () => {
 
   it('exports and imports runtime extension bundles', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
@@ -414,7 +414,7 @@ describe('registerExtensionRoutes', () => {
     expect(exportRes.status).toHaveBeenCalledWith(201);
     expect(existsSync(exportPayload.exportPath)).toBe(true);
 
-    process.env.PERSONAL_AGENT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'pa-ext-route-import-'));
+    process.env.NEON_PILOT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'pa-ext-route-import-'));
     const importHarness = createHarness();
     const importRes = createResponse();
     importHarness.postHandler('/api/extensions/import')({ body: { zipPath: exportPayload.exportPath } }, importRes);
@@ -422,7 +422,7 @@ describe('registerExtensionRoutes', () => {
     expect(importRes.status).toHaveBeenCalledWith(201);
     expect(importRes.json).toHaveBeenCalledWith({
       ok: true,
-      packageRoot: join(process.env.PERSONAL_AGENT_STATE_ROOT, 'extensions', 'agent-board'),
+      packageRoot: join(process.env.NEON_PILOT_STATE_ROOT, 'extensions', 'agent-board'),
       extension: expect.objectContaining({ id: 'agent-board', name: 'Agent Board' }),
     });
   });
@@ -440,7 +440,7 @@ describe('registerExtensionRoutes', () => {
     execFileSync('zip', ['-q', unsafeZip, '../escape.txt', 'agent-board/extension.json'], { cwd: payloadRoot });
 
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
     const res = createResponse();
     harness.postHandler('/api/extensions/import')({ body: { zipPath: unsafeZip } }, res);
@@ -451,7 +451,7 @@ describe('registerExtensionRoutes', () => {
 
   it('snapshots runtime extensions', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
@@ -470,7 +470,7 @@ describe('registerExtensionRoutes', () => {
 
   it('toggles runtime extensions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
@@ -484,7 +484,7 @@ describe('registerExtensionRoutes', () => {
 
   it('rejects toggles and reloads for invalid runtime extensions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'bad-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(
@@ -511,7 +511,7 @@ describe('registerExtensionRoutes', () => {
 
   it('toggles system extensions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
     const res = createResponse();
     await harness.patchHandler('/api/extensions/:id')({ params: { id: 'system-automations' }, body: { enabled: false } }, res);
@@ -521,7 +521,7 @@ describe('registerExtensionRoutes', () => {
 
   it('invokes runtime extension backend actions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
@@ -571,7 +571,7 @@ describe('registerExtensionRoutes', () => {
 
   it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'src'), { recursive: true });
     writeFileSync(
@@ -600,7 +600,7 @@ describe('registerExtensionRoutes', () => {
 
   it('reloads prebuilt runtime extension backends without rebuilding in packaged desktop mode', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(

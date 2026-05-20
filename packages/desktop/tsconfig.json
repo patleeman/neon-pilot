@@ -7,9 +7,9 @@
     "moduleResolution": "bundler",
     "noEmitOnError": false,
     "paths": {
-      "@personal-agent/core": ["../core/src"],
-      "@personal-agent/daemon": ["./server/daemon"],
-      "@personal-agent/extensions/host-view-components": ["../extensions/dist/host-view-components.d.ts"]
+      "@neon-pilot/core": ["../core/src"],
+      "@neon-pilot/daemon": ["./server/daemon"],
+      "@neon-pilot/extensions/host-view-components": ["../extensions/dist/host-view-components.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "server/**/*.ts", "server/**/*.tsx"],

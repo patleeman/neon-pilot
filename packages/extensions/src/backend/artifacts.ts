@@ -30,7 +30,7 @@ export interface ConversationArtifactSelector {
  * contract; runtime implementations are provided by the desktop host alias.
  */
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/artifacts must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/artifacts must be resolved by the Neon Pilot host runtime.');
 }
 
 export function listConversationArtifacts(_input: ConversationArtifactSelector): ConversationArtifactSummary[] {

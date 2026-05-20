@@ -1,5 +1,5 @@
 import type { DaemonConfig } from '../config.js';
-import type { PersonalAgentDaemon } from './server.js';
+import type { NeonPilotDaemon } from './server.js';
 import type {
   CancelDurableRunResult,
   DaemonEvent,
@@ -54,7 +54,7 @@ export function clearDaemonClientTransportOverride(): void {
   daemonClientTransportOverride = undefined;
 }
 
-export function bindInProcessDaemonClient(daemon: PersonalAgentDaemon): () => void {
+export function bindInProcessDaemonClient(daemon: NeonPilotDaemon): () => void {
   const transport = createInProcessDaemonClient(daemon);
   setDaemonClientTransportOverride(transport);
   return () => {
@@ -64,7 +64,7 @@ export function bindInProcessDaemonClient(daemon: PersonalAgentDaemon): () => vo
   };
 }
 
-export function createInProcessDaemonClient(daemon: PersonalAgentDaemon): DaemonClientTransport {
+export function createInProcessDaemonClient(daemon: NeonPilotDaemon): DaemonClientTransport {
   return {
     ping: async () => daemon.isRunning(),
     getStatus: async () => daemon.getStatus(),

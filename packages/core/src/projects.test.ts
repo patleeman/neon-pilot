@@ -32,11 +32,11 @@ afterEach(async () => {
 });
 
 function createTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-projects-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-projects-'));
   tempDirs.push(dir);
-  process.env.PERSONAL_AGENT_STATE_ROOT = dir;
-  process.env.PERSONAL_AGENT_PROFILES_ROOT = join(dir, 'sync', 'profiles');
-  process.env.PERSONAL_AGENT_VAULT_ROOT = join(dir, 'sync');
+  process.env.NEON_PILOT_STATE_ROOT = dir;
+  process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'sync', 'profiles');
+  process.env.NEON_PILOT_VAULT_ROOT = join(dir, 'sync');
   return dir;
 }
 

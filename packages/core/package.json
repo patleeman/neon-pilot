@@ -1,11 +1,11 @@
 {
-  "name": "@personal-agent/core",
+  "name": "@neon-pilot/core",
   "version": "0.8.0-rc.19",
   "license": "MIT",
-  "description": "Core personal agent library",
+  "description": "Core Neon Pilot core library",
   "repository": "github:patleeman/neon-pilot",
   "bugs": "https://github.com/patleeman/neon-pilot/issues",
-  "homepage": "https://github.com/user/personal-agent",
+  "homepage": "https://github.com/patleeman/neon-pilot",
   "type": "module",
   "exports": {
     ".": {

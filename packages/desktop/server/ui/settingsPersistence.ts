@@ -1,14 +1,14 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getConfigRoot, getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 const DEFAULT_LOCAL_PROFILE_DIR = join(getConfigRoot(), 'local');
 
 export const DEFAULT_RUNTIME_SETTINGS_FILE = join(getPiAgentRuntimeDir(), 'settings.json');
 
 function readLocalProfileDir(explicitLocalProfileDir?: string): string {
-  const value = explicitLocalProfileDir ?? process.env.PERSONAL_AGENT_LOCAL_PROFILE_DIR;
+  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
 
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();

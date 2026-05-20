@@ -11,8 +11,8 @@ import {
   readSessionConversationId,
   retryDeferredResume,
   saveDeferredResumeState,
-} from '@personal-agent/core';
-import { loadDaemonConfig, markDeferredResumeConversationRunSnoozed, resolveDaemonPaths } from '@personal-agent/daemon';
+} from '@neon-pilot/core';
+import { loadDaemonConfig, markDeferredResumeConversationRunSnoozed, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 export interface AlertSummary extends AlertRecord {}
 

@@ -5,7 +5,7 @@ import {
   resolveAutomationThreadTitle,
   setStoredAutomationThreadBinding,
   type StoredAutomation,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { resolveConversationSessionFile } from '../conversations/conversationService.js';
 import { readSessionMeta } from '../conversations/sessions.js';

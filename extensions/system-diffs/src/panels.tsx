@@ -1,5 +1,5 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { cx, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
 import {
   ConversationCheckpointWorkbenchPane,
   ConversationDiffRailContent,
@@ -7,7 +7,7 @@ import {
   readCheckpointPresentation,
   setConversationCheckpointIdInSearch,
   useConversationCheckpointSummaries,
-} from '@personal-agent/extensions/workbench-diffs';
+} from '@neon-pilot/extensions/workbench-diffs';
 import React, { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 

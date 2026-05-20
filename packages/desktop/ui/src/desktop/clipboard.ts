@@ -1,5 +1,5 @@
 export async function writeClipboardText(text: string): Promise<void> {
-  const desktopClipboard = window.personalAgentDesktop?.writeClipboardText;
+  const desktopClipboard = window.neonPilotDesktop?.writeClipboardText;
   if (desktopClipboard) {
     const result = await desktopClipboard(text);
     if (!result.ok) {

@@ -16,7 +16,7 @@ export async function resolveRequestedCwd(...args: unknown[]) {
 }
 
 export async function querySessionSuggestedPointerIds(...args: unknown[]) {
-  return callModuleExport('@personal-agent/core', 'querySessionSuggestedPointerIds', ...args);
+  return callModuleExport('@neon-pilot/core', 'querySessionSuggestedPointerIds', ...args);
 }
 
 async function callModuleExport<T>(specifier: string, name: string, ...args: unknown[]): Promise<T> {

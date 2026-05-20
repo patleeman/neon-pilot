@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearResolvedChildProcessEnvCache, hydrateProcessEnvFromShell, resolveChildProcessEnv } from './shell-env.js';
 
-const START = '__PERSONAL_AGENT_ENV_START__';
-const END = '__PERSONAL_AGENT_ENV_END__';
+const START = '__NEON_PILOT_ENV_START__';
+const END = '__NEON_PILOT_ENV_END__';
 const tempDirs: string[] = [];
 
 function createTempDir(prefix: string): string {

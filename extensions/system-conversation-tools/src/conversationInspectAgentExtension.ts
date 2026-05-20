@@ -10,7 +10,7 @@ import {
   persistTraceContextPointerInspect,
   querySessionSuggestedPointerIds,
   readConversationSessionsCapability,
-} from '@personal-agent/extensions/backend/conversations';
+} from '@neon-pilot/extensions/backend/conversations';
 import { Type } from '@sinclair/typebox';
 
 export const ConversationInspectToolParams = Type.Object({

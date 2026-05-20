@@ -14,8 +14,8 @@ import { ensureDesktopAppProtocolForHost, getDesktopAppBaseUrl } from './app-pro
 // ── app-protocol — helper functions ──────────────────────────────────────
 
 describe('getDesktopAppBaseUrl', () => {
-  it('returns the personal-agent://app/ base URL', () => {
-    expect(getDesktopAppBaseUrl()).toBe('personal-agent://app/');
+  it('returns the neon-pilot://app/ base URL', () => {
+    expect(getDesktopAppBaseUrl()).toBe('neon-pilot://app/');
   });
 });
 

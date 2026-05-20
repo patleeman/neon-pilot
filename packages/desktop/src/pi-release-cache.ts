@@ -72,7 +72,7 @@ function run(command: string, args: string[], cwd?: string): Promise<void> {
 async function downloadRelease(url: string, outputPath: string): Promise<void> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'personal-agent-desktop',
+      'User-Agent': 'neon-pilot-desktop',
       Accept: 'application/octet-stream',
     },
   });
@@ -159,7 +159,7 @@ export async function ensurePiReleaseBinary(
   }
 
   onProgress?.({ phase: 'extracting', version, assetName });
-  const extractDir = await mkdtemp(join(tmpdir(), `personal-agent-pi-release-${platform.key}-`));
+  const extractDir = await mkdtemp(join(tmpdir(), `neon-pilot-pi-release-${platform.key}-`));
   try {
     await run('tar', ['-xzf', archivePath, '-C', extractDir]);
     const extractedBundleDir = findExtractedPiBundleDir(extractDir);

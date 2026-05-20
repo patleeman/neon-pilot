@@ -18,7 +18,7 @@ import {
   scanDurableRunsForRecovery,
   type ScannedDurableRun,
   summarizeScannedDurableRuns,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import type { DurableRunStatus } from '../runs/store.js';
 import { createInitialDurableRunStatus, saveDurableRunStatus } from '../runs/store.js';
@@ -82,7 +82,7 @@ function isActiveRunStatus(status: string | undefined): boolean {
 function parseTerminalStatusFromOutput(
   log: string,
 ): { exitCode: number; endedAt?: string; status: Extract<DurableRunStatus, 'completed' | 'failed'> } | null {
-  const exitMatch = /(?:^|\n)__PA_RUN_EXIT_CODE=(-?\d+)\s*(?:\n|$)/.exec(log);
+  const exitMatch = /(?:^|\n)__NEON_PILOT_RUN_EXIT_CODE=(-?\d+)\s*(?:\n|$)/.exec(log);
   if (!exitMatch) return null;
 
   const exitCode = Number.parseInt(exitMatch[1] ?? '', 10);

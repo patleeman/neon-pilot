@@ -6,13 +6,13 @@ import {
   loadAttentionEventsState,
   retryAttentionEvents,
   saveAttentionEventsState,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 import {
   completeDeferredResumeConversationRun,
   markDeferredResumeConversationRunReady,
   markDeferredResumeConversationRunRetryScheduled,
   surfaceReadyDeferredResume,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import {
   activateDueDeferredResumesForSessionFile,

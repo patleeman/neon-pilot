@@ -1,5 +1,5 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { inspectCliBinary, readPackageSourceTargetState } from '@personal-agent/core';
+import { inspectCliBinary, readPackageSourceTargetState } from '@neon-pilot/core';
 import type { Express, Response } from 'express';
 
 import { inspectAvailableTools } from '../conversations/liveSessions.js';
@@ -60,13 +60,13 @@ async function handleToolsRequest(_req: unknown, res: Response): Promise<void> {
         extensionFactories: buildLiveSessionExtensionFactoriesFn(),
       }),
     );
-    const onePasswordCommand = process.env.PERSONAL_AGENT_OP_BIN?.trim() || 'op';
+    const onePasswordCommand = process.env.NEON_PILOT_OP_BIN?.trim() || 'op';
     const dependentCliTools = [
       {
         id: '1password-cli',
         name: '1Password CLI',
         description: 'Resolves op:// secret references used by Neon Pilot features and extensions.',
-        configuredBy: 'PERSONAL_AGENT_OP_BIN',
+        configuredBy: 'NEON_PILOT_OP_BIN',
         usedBy: ['op:// secret references', 'web-tools extension'],
         binary: inspectCliBinary({ command: onePasswordCommand, cwd: getRepoRootFn() }),
       },

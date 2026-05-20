@@ -12,7 +12,7 @@ Telemetry explains where Neon Pilot stores local observability data, which path 
 
 ## Storage locations
 
-Telemetry is local to the active state root. The default state root is `~/.local/state/personal-agent`, or `$PERSONAL_AGENT_STATE_ROOT` when set.
+Telemetry is local to the active state root. The default state root is `~/.local/state/neon-pilot`, or `$NEON_PILOT_STATE_ROOT` when set.
 
 | Data                      | Location                                                                                  | Role                                                            |
 | ------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -74,7 +74,7 @@ The desktop server adds an in-process queue in `packages/desktop/server/traces/a
 Renderer events go through `POST /api/telemetry/event`. Backend extensions can use `ctx.telemetry.record(...)`, which adds the extension id to metadata, or the SDK seam:
 
 ```ts
-import { recordTelemetryEvent } from '@personal-agent/extensions/backend/telemetry';
+import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 
 recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_completed', durationMs: 42 });
 ```
@@ -107,10 +107,10 @@ The export endpoint writes a combined JSONL bundle under `<state-root>/exports/t
 
 App telemetry has independent log and SQLite limits:
 
-- `PERSONAL_AGENT_APP_TELEMETRY_LOG_RETENTION_DAYS` controls best-effort JSONL file retention. Default: `30` days.
-- `PERSONAL_AGENT_APP_TELEMETRY_LOG_MAX_BYTES` controls size-based rollover within a day. Default: `10485760` bytes. When the daily file would exceed this, writes continue in `app-telemetry-YYYY-MM-DD.1.jsonl`, `.2.jsonl`, and so on.
-- `PERSONAL_AGENT_APP_TELEMETRY_MAX_EVENTS` controls the derived SQLite app telemetry row cap. Default: `50000` rows. Values below `1000` are ignored.
-- `PERSONAL_AGENT_TRACE_TABLE_MAX_ROWS` controls the per-table trace cap. Default: `50000` rows. Trace tables also prune rows older than 90 days on open/maintenance.
+- `NEON_PILOT_APP_TELEMETRY_LOG_RETENTION_DAYS` controls best-effort JSONL file retention. Default: `30` days.
+- `NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES` controls size-based rollover within a day. Default: `10485760` bytes. When the daily file would exceed this, writes continue in `app-telemetry-YYYY-MM-DD.1.jsonl`, `.2.jsonl`, and so on.
+- `NEON_PILOT_APP_TELEMETRY_MAX_EVENTS` controls the derived SQLite app telemetry row cap. Default: `50000` rows. Values below `1000` are ignored.
+- `NEON_PILOT_TRACE_TABLE_MAX_ROWS` controls the per-table trace cap. Default: `50000` rows. Trace tables also prune rows older than 90 days on open/maintenance.
 
 Retention is best-effort and runs during writes. Manual Settings maintenance runs pruning and SQLite vacuuming on demand. Neither path should crash the app; failures are emitted to the server logs.
 

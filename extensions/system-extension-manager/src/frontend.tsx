@@ -1,4 +1,4 @@
-import type { ExtensionSurfaceProps, NativeExtensionClient } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/extensions';
 import React, { lazy, Suspense } from 'react';
 
 const LazyExtensionManagerPage = lazy(async () => ({ default: (await import('./panels.js')).ExtensionManagerPage }));

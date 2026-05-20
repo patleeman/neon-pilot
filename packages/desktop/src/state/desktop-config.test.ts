@@ -19,7 +19,7 @@ describe('desktop-config', () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'pa-desktop-config-'));
+    dir = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-config-'));
     mocks.resolveDesktopRuntimePaths.mockReturnValue({
       desktopConfigFile: join(dir, 'config.json'),
       desktopStateDir: dir,

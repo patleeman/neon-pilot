@@ -6,10 +6,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DaemonConfig } from '../config.js';
-import { PersonalAgentDaemon } from './server.js';
+import { NeonPilotDaemon } from './server.js';
 
 const tempDirs: string[] = [];
-let daemon: PersonalAgentDaemon | undefined;
+let daemon: NeonPilotDaemon | undefined;
 
 function createTempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
@@ -56,21 +56,21 @@ describe('daemon logging', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const sink = vi.fn();
-    const socketPath = join(createTempDir('daemon-logging-'), 'personal-agentd.sock');
+    const socketPath = join(createTempDir('daemon-logging-'), 'neon-pilotd.sock');
 
-    daemon = new PersonalAgentDaemon({ config: createTestConfig(socketPath), stopRequestBehavior: 'reject', logSink: sink });
+    daemon = new NeonPilotDaemon({ config: createTestConfig(socketPath), stopRequestBehavior: 'reject', logSink: sink });
     await daemon.start();
 
     const consoleLines = vi.mocked(console.log).mock.calls.map(([line]) => String(line));
     const sinkLines = sink.mock.calls.map(([line]) => String(line));
 
-    expect(consoleLines.some((line) => line.includes('personal-agentd started'))).toBe(true);
-    expect(sinkLines.some((line) => line.includes('personal-agentd started'))).toBe(true);
+    expect(consoleLines.some((line) => line.includes('neon-pilotd started'))).toBe(true);
+    expect(sinkLines.some((line) => line.includes('neon-pilotd started'))).toBe(true);
   });
 
   it('stops even when an IPC client keeps the socket open', async () => {
-    const socketPath = join(createTempDir('daemon-stop-open-socket-'), 'personal-agentd.sock');
-    daemon = new PersonalAgentDaemon({ config: createTestConfig(socketPath), stopRequestBehavior: 'reject' });
+    const socketPath = join(createTempDir('daemon-stop-open-socket-'), 'neon-pilotd.sock');
+    daemon = new NeonPilotDaemon({ config: createTestConfig(socketPath), stopRequestBehavior: 'reject' });
     await daemon.start();
 
     const socket = createConnection(socketPath);

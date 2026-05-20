@@ -4,8 +4,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-import { getDurableAgentFilePath, getVaultRoot } from '@personal-agent/core';
-import { resolveRuntimeResources } from '@personal-agent/core';
+import { getDurableAgentFilePath, getVaultRoot } from '@neon-pilot/core';
+import { resolveRuntimeResources } from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import { buildRecentReadUsage, listMemoryDocs, listSkillsForProfile, normalizeMemoryPath } from '../knowledge/memoryDocs.js';

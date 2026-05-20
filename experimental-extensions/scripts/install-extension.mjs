@@ -22,8 +22,8 @@ cpSync(extensionRoot, destination, { recursive: true });
 console.log(`Installed ${extensionId} to ${destination}`);
 
 function resolveTargetStateRoot(value) {
-  if (value === 'testing') return resolve(homedir(), '.local/state/personal-agent-testing');
-  if (value === 'production' || value === 'prod') return resolve(homedir(), '.local/state/personal-agent');
+  if (value === 'testing') return resolve(homedir(), '.local/state/neon-pilot-testing');
+  if (value === 'production' || value === 'prod') return resolve(homedir(), '.local/state/neon-pilot');
   return resolve(value);
 }
 

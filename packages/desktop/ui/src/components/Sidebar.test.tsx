@@ -45,7 +45,7 @@ function createSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
     file: '/tmp/conv-123.jsonl',
     timestamp: '2026-03-16T09:30:00.000Z',
     cwd: '/home/user/project',
-    cwdSlug: 'personal-agent',
+    cwdSlug: 'neon-pilot',
     model: 'openai/gpt-5.4',
     title: 'Clarify background run link',
     messageCount: 4,
@@ -366,14 +366,14 @@ describe('Sidebar', () => {
     storage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     storage.setItem(
       SAVED_WORKSPACE_PATHS_STORAGE_KEY,
-      JSON.stringify(['/home/user/personal/personal-agent', '/home/user/documents/personal-agent']),
+      JSON.stringify(['/home/user/personal/neon-pilot', '/home/user/documents/neon-pilot']),
     );
 
     const html = renderSidebar('/conversations/new', { sessions: [] });
 
-    expect(html).toContain('personal/personal-agent');
-    expect(html).toContain('documents/personal-agent');
-    expect(html).not.toContain('aria-label="Collapse personal-agent"');
+    expect(html).toContain('personal/neon-pilot');
+    expect(html).toContain('documents/neon-pilot');
+    expect(html).not.toContain('aria-label="Collapse neon-pilot"');
   });
 
   it('coalesces saved workspaces and threads that only differ by trailing slashes', () => {
@@ -404,7 +404,7 @@ describe('Sidebar', () => {
     const html = renderSidebar('/conversations/new');
 
     expect(html).toContain('Desktop');
-    expect(html).not.toContain('aria-label="Collapse personal-agent"');
+    expect(html).not.toContain('aria-label="Collapse neon-pilot"');
     expect(html).toContain('aria-label="Collapse Desktop"');
   });
 

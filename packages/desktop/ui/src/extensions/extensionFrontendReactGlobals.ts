@@ -8,18 +8,18 @@ declare global {
   // Extension bundles must not ship their own React copy or hooks will read a
   // different dispatcher than the host renderer.
   // eslint-disable-next-line no-var
-  var __PA_REACT__: typeof React | undefined;
+  var __NEON_PILOT_REACT__: typeof React | undefined;
   // eslint-disable-next-line no-var
-  var __PA_REACT_DOM__: typeof ReactDom | undefined;
+  var __NEON_PILOT_REACT_DOM__: typeof ReactDom | undefined;
   // eslint-disable-next-line no-var
-  var __PA_REACT_DOM_CLIENT__: typeof ReactDomClient | undefined;
+  var __NEON_PILOT_REACT_DOM_CLIENT__: typeof ReactDomClient | undefined;
   // eslint-disable-next-line no-var
-  var __PA_REACT_JSX_RUNTIME__: typeof ReactJsxRuntime | undefined;
+  var __NEON_PILOT_REACT_JSX_RUNTIME__: typeof ReactJsxRuntime | undefined;
 }
 
 export function ensureExtensionFrontendReactGlobals() {
-  globalThis.__PA_REACT__ ??= React;
-  globalThis.__PA_REACT_DOM__ ??= ReactDom;
-  globalThis.__PA_REACT_DOM_CLIENT__ ??= ReactDomClient;
-  globalThis.__PA_REACT_JSX_RUNTIME__ ??= ReactJsxRuntime;
+  globalThis.__NEON_PILOT_REACT__ ??= React;
+  globalThis.__NEON_PILOT_REACT_DOM__ ??= ReactDom;
+  globalThis.__NEON_PILOT_REACT_DOM_CLIENT__ ??= ReactDomClient;
+  globalThis.__NEON_PILOT_REACT_JSX_RUNTIME__ ??= ReactJsxRuntime;
 }

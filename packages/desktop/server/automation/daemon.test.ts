@@ -12,7 +12,7 @@ const { getDaemonStatusMock, loadDaemonConfigMock, pingDaemonMock, resolveDaemon
   resolveDaemonPathsMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   getDaemonStatus: getDaemonStatusMock,
   loadDaemonConfig: loadDaemonConfigMock,
   pingDaemon: pingDaemonMock,
@@ -38,9 +38,9 @@ describe('automation daemon', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.PERSONAL_AGENT_DESKTOP_RUNTIME;
-    delete process.env.PERSONAL_AGENT_DESKTOP_DAEMON_LOG_FILE;
-    delete process.env.PERSONAL_AGENT_DESKTOP_DAEMON_OWNERSHIP;
+    delete process.env.NEON_PILOT_DESKTOP_RUNTIME;
+    delete process.env.NEON_PILOT_DESKTOP_DAEMON_LOG_FILE;
+    delete process.env.NEON_PILOT_DESKTOP_DAEMON_OWNERSHIP;
     getDaemonStatusMock.mockReset();
     loadDaemonConfigMock.mockReset();
     pingDaemonMock.mockReset();
@@ -49,7 +49,7 @@ describe('automation daemon', () => {
 
   it('reads healthy daemon state and filters removed sync log lines', async () => {
     const dir = createTempDir();
-    const logFile = join(dir, 'personal-agentd.log');
+    const logFile = join(dir, 'neon-pilotd.log');
     writeFileSync(logFile, 'line one\n[module:sync] hidden\nline two\n', 'utf-8');
 
     loadDaemonConfigMock.mockReturnValue({ ipc: { socketPath: join(dir, 'daemon.sock') } });
@@ -87,7 +87,7 @@ describe('automation daemon', () => {
 
   it('reports offline daemon warnings when the daemon is not responding', async () => {
     const dir = createTempDir();
-    const logFile = join(dir, 'personal-agentd.log');
+    const logFile = join(dir, 'neon-pilotd.log');
 
     loadDaemonConfigMock.mockReturnValue({ ipc: { socketPath: join(dir, 'daemon.sock') } });
     resolveDaemonPathsMock.mockReturnValue({ root: dir, socketPath: '/tmp/runtime.sock', logFile });

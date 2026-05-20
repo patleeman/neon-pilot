@@ -3,7 +3,7 @@ import { hostname } from 'node:os';
 import type { MethodHandler } from '../codexJsonRpcServer.js';
 
 function defaultCwd(ctx: Parameters<MethodHandler>[1]): string {
-  return ctx.runtime?.getRepoRoot?.() || process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
+  return ctx.runtime?.getRepoRoot?.() || process.env.NEON_PILOT_REPO_ROOT || process.cwd();
 }
 
 export const config = {
@@ -18,7 +18,7 @@ export const config = {
       config: {
         cwd,
         default_cwd: cwd,
-        model_provider: 'personal-agent',
+        model_provider: 'neon-pilot',
         sandbox: 'danger-full-access',
         approval_policy: 'on-failure',
         platform: process.platform,

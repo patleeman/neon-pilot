@@ -148,7 +148,7 @@ function parseEnvFile(content) {
 
 function loadReleaseEnv() {
   const env = { ...process.env };
-  const envPaths = process.env.PERSONAL_AGENT_RELEASE_ENV ? [process.env.PERSONAL_AGENT_RELEASE_ENV] : [repoEnvPath, defaultEnvPath];
+  const envPaths = process.env.NEON_PILOT_RELEASE_ENV ? [process.env.NEON_PILOT_RELEASE_ENV] : [repoEnvPath, defaultEnvPath];
 
   for (const envPath of envPaths) {
     if (!envPath || !existsSync(envPath)) {
@@ -169,8 +169,8 @@ function loadReleaseEnv() {
     env.APPLE_APP_SPECIFIC_PASSWORD = env.APPLE_PASSWORD;
   }
 
-  if (!env.PERSONAL_AGENT_RELEASE_REPO) {
-    env.PERSONAL_AGENT_RELEASE_REPO = defaultReleaseRepo;
+  if (!env.NEON_PILOT_RELEASE_REPO) {
+    env.NEON_PILOT_RELEASE_REPO = defaultReleaseRepo;
   }
 
   return env;
@@ -299,11 +299,11 @@ function createCleanReleaseSnapshot(env) {
     rmSync(buildRoot, { recursive: true, force: true });
   });
   console.log(`Creating clean release snapshot in ${buildRoot}...`);
-  run('bash', ['-lc', 'git archive --format=tar HEAD | tar -xf - -C "$PERSONAL_AGENT_RELEASE_BUILD_ROOT"'], {
+  run('bash', ['-lc', 'git archive --format=tar HEAD | tar -xf - -C "$NEON_PILOT_RELEASE_BUILD_ROOT"'], {
     cwd: repoRoot,
     env: {
       ...env,
-      PERSONAL_AGENT_RELEASE_BUILD_ROOT: buildRoot,
+      NEON_PILOT_RELEASE_BUILD_ROOT: buildRoot,
     },
   });
 
@@ -527,10 +527,10 @@ function collectExpectedRuntimePackages(buildRoot) {
     }
   }
 
-  visitWorkspacePackage('@personal-agent/desktop');
+  visitWorkspacePackage('@neon-pilot/desktop');
 
   return [
-    ...[...visitedWorkspacePackages].filter((packageName) => packageName !== '@personal-agent/desktop').sort(),
+    ...[...visitedWorkspacePackages].filter((packageName) => packageName !== '@neon-pilot/desktop').sort(),
     ...[...visitedExternalPackages].sort(),
   ];
 }
@@ -664,8 +664,8 @@ function notarizeDistributionContainers(env, files) {
 }
 
 function requireSmokeTestApproval(env, releaseDir, buildRoot) {
-  if (isTruthyEnv(env.PERSONAL_AGENT_RELEASE_SMOKE_TESTED)) {
-    console.log('Release smoke test gate acknowledged via PERSONAL_AGENT_RELEASE_SMOKE_TESTED=1.');
+  if (isTruthyEnv(env.NEON_PILOT_RELEASE_SMOKE_TESTED)) {
+    console.log('Release smoke test gate acknowledged via NEON_PILOT_RELEASE_SMOKE_TESTED=1.');
     return;
   }
 
@@ -675,7 +675,7 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
   }
   const smokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs');
 
-  if (!isTruthyEnv(env.PERSONAL_AGENT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
+  if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
     return;
@@ -686,8 +686,8 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
       [
         'Release smoke test is required before pushing/uploading artifacts.',
         `Test the built app at: ${appPath}`,
-        'Then rerun with PERSONAL_AGENT_RELEASE_SMOKE_TESTED=1 once startup and core app flows pass.',
-        'Automated smoke was skipped by PERSONAL_AGENT_RELEASE_SKIP_AUTOMATED_SMOKE=1.',
+        'Then rerun with NEON_PILOT_RELEASE_SMOKE_TESTED=1 once startup and core app flows pass.',
+        'Automated smoke was skipped by NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1.',
       ].join('\n'),
     );
   }
@@ -704,7 +704,7 @@ const packageJson = readJsonFile(packageJsonPath);
 const version = packageJson.version;
 const tag = `v${version}`;
 const env = loadReleaseEnv();
-const releaseRepo = env.PERSONAL_AGENT_RELEASE_REPO;
+const releaseRepo = env.NEON_PILOT_RELEASE_REPO;
 
 ensureCleanRepo();
 ensureTagAtHead(tag);

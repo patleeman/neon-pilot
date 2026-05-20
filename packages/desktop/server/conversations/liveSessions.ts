@@ -6,7 +6,7 @@
 import { join } from 'node:path';
 
 import { AgentSession } from '@earendil-works/pi-coding-agent';
-import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { persistTraceStats } from '../traces/tracePersistence.js';

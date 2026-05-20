@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@personal-agent/extensions/backend/webContent', () => ({
+vi.mock('@neon-pilot/extensions/backend/webContent', () => ({
   parseDuckDuckGoHtml: vi.fn(async ({ html }) =>
     html.includes('result__a')
       ? [{ title: 'Example Title', url: 'https://example.org/page', snippet: 'This is a sample snippet text.' }]
@@ -8,7 +8,7 @@ vi.mock('@personal-agent/extensions/backend/webContent', () => ({
   ),
 }));
 
-import { parseDuckDuckGoHtml } from '@personal-agent/extensions/backend/webContent';
+import { parseDuckDuckGoHtml } from '@neon-pilot/extensions/backend/webContent';
 
 import { duckDuckGoSearch } from './backend.js';
 

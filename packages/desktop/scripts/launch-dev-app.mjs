@@ -54,13 +54,13 @@ function splitDesktopLaunchArgs(args = []) {
 function buildDesktopLaunchEnv(baseEnv = process.env) {
   return {
     ...baseEnv,
-    PERSONAL_AGENT_DESKTOP_VARIANT: desktopVariant,
-    PERSONAL_AGENT_RUNTIME_CHANNEL: 'test',
+    NEON_PILOT_DESKTOP_VARIANT: desktopVariant,
+    NEON_PILOT_RUNTIME_CHANNEL: 'test',
     // Use only the first 8 hex chars of the UUID to keep the socket path within
     // macOS's 103-char Unix socket path limit (UNIX_PATH_MAX = 104 incl. null).
-    PERSONAL_AGENT_DAEMON_NAMESPACE: baseEnv.PERSONAL_AGENT_DAEMON_NAMESPACE || `dev-${randomUUID().slice(0, 8)}`,
-    PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR: readElectronNativeModulesDir(),
-    PERSONAL_AGENT_REPO_ROOT: repoRoot,
+    NEON_PILOT_DAEMON_NAMESPACE: baseEnv.NEON_PILOT_DAEMON_NAMESPACE || `dev-${randomUUID().slice(0, 8)}`,
+    NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR: readElectronNativeModulesDir(),
+    NEON_PILOT_REPO_ROOT: repoRoot,
   };
 }
 
@@ -212,7 +212,7 @@ async function launchMacDevApp() {
     cwd: packageDir,
     env: {
       ...buildDesktopLaunchEnv(process.env, desktopLaunchArgs),
-      PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1',
+      NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
     },
     detached: true,
   });

@@ -1,4 +1,4 @@
-import type { PersonalAgentClient } from '@personal-agent/extensions';
+import type { NeonPilotClient } from '@neon-pilot/extensions';
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -12,7 +12,7 @@ function canAutoOpenOnboarding(pathname: string): boolean {
   return pathname === '/' || pathname === '/conversations' || pathname === '/conversations/new';
 }
 
-export function OnboardingBootstrap({ pa }: { pa: PersonalAgentClient }) {
+export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   const location = useLocation();

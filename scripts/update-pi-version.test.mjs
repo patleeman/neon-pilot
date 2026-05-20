@@ -5,7 +5,7 @@ import { applyLatestPiVersion, resolvePiDependencyRange } from './update-pi-vers
 describe('update-pi-version', () => {
   it('updates the root pi dependency to the latest caret range', () => {
     const rootPackage = {
-      name: 'personal-agent',
+      name: 'neon-pilot',
       dependencies: {
         '@earendil-works/pi-ai': '^0.69.0',
         '@earendil-works/pi-agent-core': '^0.69.0',
@@ -26,7 +26,7 @@ describe('update-pi-version', () => {
 
   it('is a no-op when pi is already at the latest range', () => {
     const rootPackage = {
-      name: 'personal-agent',
+      name: 'neon-pilot',
       dependencies: {
         '@earendil-works/pi-ai': '^0.70.0',
         '@earendil-works/pi-agent-core': '^0.70.0',

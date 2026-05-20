@@ -1,5 +1,5 @@
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/runtime must be resolved by the Neon Pilot host runtime.');
+  throw new Error('@neon-pilot/extensions/backend/runtime must be resolved by the Neon Pilot host runtime.');
 }
 
 export const buildLiveSessionExtensionFactoriesForRuntime = (..._args: unknown[]): unknown => hostResolved();

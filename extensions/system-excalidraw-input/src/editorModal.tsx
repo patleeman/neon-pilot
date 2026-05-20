@@ -1,12 +1,12 @@
 import excalidrawCss from '@excalidraw/excalidraw/index.css?raw';
-import { type NativeExtensionClient } from '@personal-agent/extensions';
+import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import {
   buildDrawingFileNames,
   type ExcalidrawComponent,
   type ExcalidrawSceneData,
   loadExcalidrawComponent,
   serializeExcalidrawScene,
-} from '@personal-agent/extensions/excalidraw';
+} from '@neon-pilot/extensions/excalidraw';
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ExcalidrawEditorSavePayload {
@@ -50,7 +50,7 @@ class ExcalidrawErrorBoundary extends Component<{ children: ReactNode }, Excalid
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('Excalidraw failed to render:', error, info);
     window.dispatchEvent(
-      new CustomEvent('pa-notification', {
+      new CustomEvent('neon-pilot-notification', {
         detail: {
           type: 'error',
           message: 'Drawing editor crashed',

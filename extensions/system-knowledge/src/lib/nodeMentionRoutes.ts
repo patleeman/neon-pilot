@@ -1,4 +1,4 @@
-import type { MentionItem } from '@personal-agent/extensions/data';
+import type { MentionItem } from '@neon-pilot/extensions/data';
 
 export type NodeMentionSurface = 'main' | 'compact';
 

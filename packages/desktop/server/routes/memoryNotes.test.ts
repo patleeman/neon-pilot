@@ -39,7 +39,7 @@ vi.mock('node:fs', async (importOriginal) => {
   };
 });
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getDurableAgentFilePath: getDurableAgentFilePathMock,
   getProfilesRoot: getProfilesRootMock,
   getVaultRoot: getVaultRootMock,

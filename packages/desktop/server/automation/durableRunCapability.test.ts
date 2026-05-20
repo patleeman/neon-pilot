@@ -24,7 +24,7 @@ const {
   writeAppTelemetryEventMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   writeAppTelemetryEvent: writeAppTelemetryEventMock,
   markDurableRunAttentionRead: markDurableRunAttentionReadMock,
   markDurableRunAttentionUnread: markDurableRunAttentionUnreadMock,

@@ -13,7 +13,7 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-function createTempDir(prefix = 'pa-web-settings-persist-'): string {
+function createTempDir(prefix = 'neon-pilot-web-settings-persist-'): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(dir);
   return dir;

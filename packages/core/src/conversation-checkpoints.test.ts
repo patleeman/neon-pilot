@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function createTempStateRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-conversation-checkpoints-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-checkpoints-'));
   tempDirs.push(dir);
   return dir;
 }

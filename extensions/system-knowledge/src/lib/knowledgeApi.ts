@@ -9,7 +9,7 @@ import {
   type VaultSearchResponse,
   type VaultShareImportResult,
   type VaultTreeResult,
-} from '@personal-agent/extensions/data';
+} from '@neon-pilot/extensions/data';
 
 const EXTENSION_ID = 'system-knowledge';
 const KNOWLEDGE_ACTION_TIMEOUT_MS = 15_000;

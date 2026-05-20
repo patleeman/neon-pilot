@@ -4,7 +4,7 @@ import type { HostManager } from './hosts/host-manager.js';
 import { captureDesktopScreenshot } from './screenshot.js';
 import type { DesktopWindowController } from './window.js';
 
-const CHANNEL_PREFIX = 'personal-agent-desktop';
+const CHANNEL_PREFIX = 'neon-pilot-desktop';
 const API_STREAM_CHANNEL = `${CHANNEL_PREFIX}:api-stream`;
 const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
 const APP_EVENTS_CHANNEL = `${CHANNEL_PREFIX}:app-events`;

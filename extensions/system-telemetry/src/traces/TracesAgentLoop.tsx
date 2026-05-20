@@ -2,7 +2,7 @@
  * Agent Loop Health & Run Waterfall
  */
 
-import type { TraceAgentLoop } from '@personal-agent/extensions/data';
+import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {

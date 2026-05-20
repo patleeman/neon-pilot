@@ -1,4 +1,4 @@
-import type { ScannedDurableRun } from '@personal-agent/daemon';
+import type { ScannedDurableRun } from '@neon-pilot/daemon';
 
 import {
   cancelDurableRun,

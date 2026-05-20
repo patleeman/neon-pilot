@@ -7,7 +7,7 @@ interface PersistedConversationBootstrapEntry {
   updatedAt: number;
 }
 
-const CONVERSATION_BOOTSTRAP_DB_NAME = 'pa-web-cache';
+const CONVERSATION_BOOTSTRAP_DB_NAME = 'neon-pilot-web-cache';
 const CONVERSATION_BOOTSTRAP_DB_VERSION = 1;
 const CONVERSATION_BOOTSTRAP_STORE = 'conversation-bootstrap';
 const MAX_PERSISTED_CONVERSATION_BOOTSTRAPS = 24;

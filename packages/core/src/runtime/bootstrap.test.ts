@@ -149,7 +149,7 @@ describe('bootstrapStateOrThrow', () => {
 
     await expect(bootstrapStateOrThrow(paths)).rejects.toThrow('Runtime state bootstrap failed');
     await expect(bootstrapStateOrThrow(paths)).rejects.toThrow('Suggestions');
-    await expect(bootstrapStateOrThrow(paths)).rejects.toThrow('PERSONAL_AGENT_STATE_ROOT');
+    await expect(bootstrapStateOrThrow(paths)).rejects.toThrow('NEON_PILOT_STATE_ROOT');
 
     // Restore permissions for cleanup
     await chmod(readOnlyParent, 0o700);
@@ -234,7 +234,7 @@ describe('integration: path resolution with bootstrap', () => {
   });
 
   it('should use environment variable overrides in bootstrap', async () => {
-    process.env.PERSONAL_AGENT_STATE_ROOT = join(tempDir, 'custom-state');
+    process.env.NEON_PILOT_STATE_ROOT = join(tempDir, 'custom-state');
 
     const { resolveStatePaths } = await import('./paths.js');
     const paths = resolveStatePaths();
@@ -246,9 +246,9 @@ describe('integration: path resolution with bootstrap', () => {
   });
 
   it('should use individual path overrides in bootstrap', async () => {
-    process.env.PERSONAL_AGENT_AUTH_PATH = join(tempDir, 'secure', 'auth');
-    process.env.PERSONAL_AGENT_SESSION_PATH = join(tempDir, 'tmp', 'sessions');
-    process.env.PERSONAL_AGENT_CACHE_PATH = join(tempDir, 'var', 'cache');
+    process.env.NEON_PILOT_AUTH_PATH = join(tempDir, 'secure', 'auth');
+    process.env.NEON_PILOT_SESSION_PATH = join(tempDir, 'tmp', 'sessions');
+    process.env.NEON_PILOT_CACHE_PATH = join(tempDir, 'var', 'cache');
 
     const { resolveStatePaths } = await import('./paths.js');
     const paths = resolveStatePaths();
@@ -285,8 +285,8 @@ describe('preparePiAgentDir', () => {
       statePaths,
     });
 
-    expect(result.agentDir).toBe(join(statePaths.root, 'pi-agent-runtime'));
-    expect(result.sessionsDir).toBe(join(statePaths.root, 'pi-agent-runtime', 'sessions'));
+    expect(result.agentDir).toBe(join(statePaths.root, 'neon-pilot-runtime'));
+    expect(result.sessionsDir).toBe(join(statePaths.root, 'neon-pilot-runtime', 'sessions'));
     expect(lstatSync(result.sessionsDir).isSymbolicLink()).toBe(true);
     expect(resolve(dirname(result.sessionsDir), readlinkSync(result.sessionsDir))).toBe(
       join(statePaths.root, 'sync', 'pi-agent', 'sessions'),
@@ -323,7 +323,7 @@ describe('preparePiAgentDir', () => {
       cache: join(tempDir, 'state', 'cache'),
     };
 
-    const runtimeSessionsDir = join(statePaths.root, 'pi-agent-runtime', 'sessions');
+    const runtimeSessionsDir = join(statePaths.root, 'neon-pilot-runtime', 'sessions');
     await mkdir(dirname(runtimeSessionsDir), { recursive: true });
     symlinkSync('../pi-agent/sessions', runtimeSessionsDir, 'dir');
 

@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe('prompt catalog helpers', () => {
   it('reads and trims a prompt catalog entry from the provided repo root', () => {
-    const repo = createTempRepo('pa-prompt-catalog-');
+    const repo = createTempRepo('neon-pilot-prompt-catalog-');
     mkdirSync(join(repo, 'prompt-catalog', 'utilities'), { recursive: true });
     writeFileSync(join(repo, 'prompt-catalog', 'utilities', 'title.md'), '  test prompt\n');
 
@@ -49,7 +49,7 @@ describe('prompt catalog helpers', () => {
   });
 
   it('returns undefined for missing optional entries and throws for required ones', () => {
-    const repo = createTempRepo('pa-prompt-catalog-');
+    const repo = createTempRepo('neon-pilot-prompt-catalog-');
     mkdirSync(join(repo, 'prompt-catalog'), { recursive: true });
 
     expect(readPromptCatalogEntry('missing.md', { repoRoot: repo })).toBeUndefined();

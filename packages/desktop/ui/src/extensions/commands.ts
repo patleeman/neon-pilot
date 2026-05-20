@@ -52,7 +52,7 @@ export function setExtensionCommandContext(key: string, value: ExtensionCommandC
   if (!key.trim()) return;
   if (value === undefined || value === null) extensionCommandContext.delete(key);
   else extensionCommandContext.set(key, value);
-  window.dispatchEvent(new CustomEvent('pa-extension-command-context-changed', { detail: { key, value } }));
+  window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-context-changed', { detail: { key, value } }));
 }
 
 export function evaluateCommandEnablement(expression: string | undefined, context: ExtensionCommandContext = {}): boolean {

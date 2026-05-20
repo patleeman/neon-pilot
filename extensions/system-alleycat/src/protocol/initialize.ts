@@ -25,7 +25,7 @@ export const initialize: { handler: MethodHandler } = {
     const version = '0.125.0';
 
     return {
-      userAgent: `codex_cli_rs/${version} (${type()} ${release()}; ${machine()}) personal-agent`,
+      userAgent: `codex_cli_rs/${version} (${type()} ${release()}; ${machine()}) neon-pilot`,
       codexHome,
       platformFamily,
       platformOs,

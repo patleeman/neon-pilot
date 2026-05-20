@@ -13,7 +13,7 @@ describe('subscribeDesktopProviderOAuthLogin', () => {
     const unsubscribeProviderOAuthLogin = vi.fn().mockResolvedValue(undefined);
     const eventTarget = new EventTarget();
     const fakeWindow = {
-      personalAgentDesktop: {
+      neonPilotDesktop: {
         subscribeProviderOAuthLogin,
         unsubscribeProviderOAuthLogin,
       },

@@ -6,7 +6,7 @@ Install Neon Pilot from source and verify the setup.
 
 ```bash
 git clone <repo-url>
-cd personal-agent
+cd neon-pilot
 pnpm install
 pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
 pnpm run build
@@ -24,7 +24,7 @@ The desktop app manages the local daemon automatically.
 
 ## Important paths
 
-- `<state-root>` — machine-local runtime state. Default: `~/.local/state/personal-agent`
+- `<state-root>` — machine-local runtime state. Default: `~/.local/state/neon-pilot`
 - `<config-root>` — machine-local config. Default: `<state-root>/config`
 - `<vault-root>` — durable knowledge root
 

@@ -6,7 +6,7 @@ export interface WorkbenchBrowserToolHost {
   cdp(input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }): Promise<unknown>;
 }
 
-const WORKBENCH_BROWSER_TOOL_HOST_KEY = Symbol.for('personal-agent.workbenchBrowserToolHost');
+const WORKBENCH_BROWSER_TOOL_HOST_KEY = Symbol.for('neon-pilot.workbenchBrowserToolHost');
 
 type WorkbenchBrowserToolHostGlobal = typeof globalThis & {
   [WORKBENCH_BROWSER_TOOL_HOST_KEY]?: WorkbenchBrowserToolHost | null;

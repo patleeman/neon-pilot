@@ -35,7 +35,7 @@ function startServer(app: express.Express): Promise<{ baseUrl: string; close: ()
 }
 
 describe('registerServerRoutes smoke test', () => {
-  const tempRoot = mkdtempSync(join(tmpdir(), 'pa-web-server-smoke-'));
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-web-server-smoke-'));
   const workspaceDir = join(tempRoot, 'workspace');
   const settingsFile = join(tempRoot, 'settings.json');
   const authFile = join(tempRoot, 'auth.json');

@@ -48,7 +48,7 @@ vi.mock('node:fs', () => ({
   statSync: statSyncMock,
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   cancelDurableRun: cancelDurableRunFromDaemonMock,
   followUpDurableRun: followUpDurableRunFromDaemonMock,
   getDurableRun: getDurableRunFromDaemonMock,

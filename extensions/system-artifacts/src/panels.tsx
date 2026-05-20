@@ -1,11 +1,11 @@
-import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   ConversationArtifactRailContent,
   ConversationArtifactWorkbenchPane,
   readArtifactPresentation,
   setConversationArtifactIdInSearch,
   useConversationArtifactSummaries,
-} from '@personal-agent/extensions/workbench-artifacts';
+} from '@neon-pilot/extensions/workbench-artifacts';
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 

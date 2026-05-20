@@ -10,7 +10,7 @@ const { readSavedModelPreferencesMock, runAgentTaskMock } = vi.hoisted(() => ({
   runAgentTaskMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
+vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
@@ -25,12 +25,12 @@ import { clearImageProbeAttachmentCacheForTests } from '../extensions/imageProbe
 import { runPromptOnLiveEntry } from './liveSessionPromptOps.js';
 
 const tempDirs: string[] = [];
-const originalStateRoot = process.env.PERSONAL_AGENT_STATE_ROOT;
+const originalStateRoot = process.env.NEON_PILOT_STATE_ROOT;
 
 beforeEach(() => {
   const dir = mkdtempSync(join(tmpdir(), 'pa-live-image-probe-e2e-'));
   tempDirs.push(dir);
-  process.env.PERSONAL_AGENT_STATE_ROOT = dir;
+  process.env.NEON_PILOT_STATE_ROOT = dir;
   readSavedModelPreferencesMock.mockReset();
   runAgentTaskMock.mockReset();
   readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: 'openai/gpt-4o' });
@@ -40,9 +40,9 @@ beforeEach(() => {
 afterEach(async () => {
   clearImageProbeAttachmentCacheForTests();
   if (originalStateRoot === undefined) {
-    delete process.env.PERSONAL_AGENT_STATE_ROOT;
+    delete process.env.NEON_PILOT_STATE_ROOT;
   } else {
-    process.env.PERSONAL_AGENT_STATE_ROOT = originalStateRoot;
+    process.env.NEON_PILOT_STATE_ROOT = originalStateRoot;
   }
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });

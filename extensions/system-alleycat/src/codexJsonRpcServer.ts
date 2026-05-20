@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage } from 'node:http';
 import { createServer as createNetServer, type Socket } from 'node:net';
 import { createInterface } from 'node:readline';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { type WebSocket, WebSocketServer } from 'ws';
 
 import type { CodexAuth } from './codexAuth.js';

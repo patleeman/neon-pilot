@@ -15,10 +15,10 @@ The Settings page is the main desktop UI for configuration, but settings are not
 The Settings page coordinates multiple stores:
 
 - Machine config in `<config-root>/config.json` for knowledge roots, extra instruction files, and skill folders.
-- Runtime agent settings in `<state-root>/pi-agent-runtime/settings.json` for model defaults, vision model, thinking level, service tier, default cwd, and UI/runtime preferences.
+- Runtime agent settings in `<state-root>/neon-pilot-runtime/settings.json` for model defaults, vision model, thinking level, service tier, default cwd, and UI/runtime preferences.
 - Extension scalar setting overrides in `<state-root>/settings.json`, backed by `contributes.settings` and `/api/settings`.
 - Extension component panels declared with `contributes.settingsComponent` for richer first-party configuration UI.
-- Provider definitions in `<config-root>/profiles/shared/models.json` and credentials in `<state-root>/pi-agent-runtime/auth.json`.
+- Provider definitions in `<config-root>/profiles/shared/models.json` and credentials in `<state-root>/neon-pilot-runtime/auth.json`.
 
 ```
 Extension manifests ──► Schema registry ──► Settings page extension settings
@@ -93,7 +93,7 @@ expanded by default.
 ### Accessing settings from a backend action
 
 ```typescript
-import { createSettingsStore } from '@personal-agent/desktop/server/settings/settingsStore.js';
+import { createSettingsStore } from '@neon-pilot/desktop/server/settings/settingsStore.js';
 
 const store = createSettingsStore();
 const allSettings = store.read();
@@ -181,7 +181,7 @@ Providers connect the agent to LLM APIs. Models define which specific model to u
 Credentials are resolved in this order:
 
 1. **Environment variables** — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`
-2. **Auth file** — stored in `<state-root>/pi-agent-runtime/auth.json`, managed through Settings
+2. **Auth file** — stored in `<state-root>/neon-pilot-runtime/auth.json`, managed through Settings
 3. **OAuth login** — subscription providers like Claude Pro/Max and GitHub Copilot use OAuth via `/login` in the agent
 
 ### Subscription login

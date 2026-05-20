@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import type { PromptImageAttachment } from '../conversations/liveSessionQueue.js';
 

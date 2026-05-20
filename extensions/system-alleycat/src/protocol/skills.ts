@@ -11,7 +11,7 @@ export const skills = {
     const p = params as Record<string, unknown> | undefined;
     const cwd = (p?.cwd as string) ?? process.cwd();
 
-    const skillDirs = [join(cwd, '.personal-agent', 'skills'), join(cwd, '.pi', 'skills')];
+    const skillDirs = [join(cwd, '.neon-pilot', 'skills'), join(cwd, '.pi', 'skills')];
 
     const result: Array<{ name: string; path: string; description?: string }> = [];
 

@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { getConfigRoot, getDurableSessionsDir, getStateRoot } from '@personal-agent/core';
+import { getConfigRoot, getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppEvent } from './appEvents.js';
@@ -46,7 +46,7 @@ async function waitFor(predicate: () => boolean, timeoutMs = 12_000): Promise<vo
 beforeEach(() => {
   process.env = {
     ...originalEnv,
-    PERSONAL_AGENT_STATE_ROOT: createTempDir('pa-web-app-events-state-'),
+    NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-app-events-state-'),
   };
 });
 
@@ -70,7 +70,7 @@ describe('app event monitor', () => {
   });
 
   it('invalidates sessionFiles when an existing session file changes', async () => {
-    const repoRoot = createTempDir('pa-web-app-events-repo-');
+    const repoRoot = createTempDir('neon-pilot-web-app-events-repo-');
     const sessionsDir = getDurableSessionsDir();
     const taskStateFile = join(getStateRoot(), 'daemon', 'task-state.json');
     const profileConfigFile = join(getConfigRoot(), 'profile.json');
@@ -111,7 +111,7 @@ describe('app event monitor', () => {
   }, 15_000);
 
   it('invalidates sessionFiles when a session file is created', async () => {
-    const repoRoot = createTempDir('pa-web-app-events-repo-');
+    const repoRoot = createTempDir('neon-pilot-web-app-events-repo-');
     const sessionsDir = getDurableSessionsDir();
     const taskStateFile = join(getStateRoot(), 'daemon', 'task-state.json');
     const profileConfigFile = join(getConfigRoot(), 'profile.json');
@@ -151,7 +151,7 @@ describe('app event monitor', () => {
   }, 15_000);
 
   it('rebuilds watches and invalidates all topics when the active profile changes', async () => {
-    const repoRoot = createTempDir('pa-web-app-events-repo-');
+    const repoRoot = createTempDir('neon-pilot-web-app-events-repo-');
     const sessionsDir = getDurableSessionsDir();
     const taskStateFile = join(getStateRoot(), 'daemon', 'task-state.json');
     const profileConfigFile = join(getConfigRoot(), 'profile.json');

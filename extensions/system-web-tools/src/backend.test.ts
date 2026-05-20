@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@personal-agent/extensions/backend/webContent', () => ({
+vi.mock('@neon-pilot/extensions/backend/webContent', () => ({
   extractReadableHtml: vi.fn(async ({ html }) => ({ markdown: html.replace(/<[^>]+>/g, '').trim(), title: 'Example' })),
 }));
 

@@ -152,7 +152,7 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
     </main>
     <script>
       const logsDir = ${JSON.stringify(input.logsDir)};
-      const desktop = window.personalAgentDesktop;
+      const desktop = window.neonPilotDesktop;
 
       document.getElementById('open-logs')?.addEventListener('click', async () => {
         if (!desktop?.openPath) {
@@ -167,7 +167,7 @@ export function buildDesktopStartupErrorPageHtml(input: { message: string; logsD
       });
 
       document.getElementById('try-again')?.addEventListener('click', () => {
-        window.location.href = 'personal-agent://app/';
+        window.location.href = 'neon-pilot://app/';
       });
     </script>
   </body>

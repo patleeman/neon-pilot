@@ -6,7 +6,7 @@ const { getVaultRootMock, listVaultFilesMock, pickFolderMock } = vi.hoisted(() =
   pickFolderMock: vi.fn(),
 }));
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getVaultRoot: getVaultRootMock,
 }));
 

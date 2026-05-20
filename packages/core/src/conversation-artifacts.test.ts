@@ -22,7 +22,7 @@ afterEach(async () => {
 });
 
 function createTempStateRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'personal-agent-conversation-artifacts-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-artifacts-'));
   tempDirs.push(dir);
   return dir;
 }

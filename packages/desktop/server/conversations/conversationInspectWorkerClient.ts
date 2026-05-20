@@ -109,8 +109,8 @@ export function resolveConversationInspectWorkerUrlFrom(importMetaUrl: string): 
 
   const candidates = [
     ...packagedCandidates,
-    ...(process.env.PERSONAL_AGENT_REPO_ROOT
-      ? [resolve(process.env.PERSONAL_AGENT_REPO_ROOT, 'packages/desktop/server/dist/conversations/conversationInspectWorker.js')]
+    ...(process.env.NEON_PILOT_REPO_ROOT
+      ? [resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/dist/conversations/conversationInspectWorker.js')]
       : []),
     resolve(process.cwd(), 'packages/desktop/server/dist/conversations/conversationInspectWorker.js'),
     resolve(currentDir, '../../packages/desktop/server/dist/conversations/conversationInspectWorker.js'),

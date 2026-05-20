@@ -1,5 +1,5 @@
-import { timeAgo } from '@personal-agent/extensions/data';
-import { cx, Pill, SurfacePanel } from '@personal-agent/extensions/ui';
+import { timeAgo } from '@neon-pilot/extensions/data';
+import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({

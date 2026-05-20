@@ -26,7 +26,7 @@ interface VaultEntry {
 }
 
 async function getVaultRoot(): Promise<string> {
-  return callServerModuleExport<string>('@personal-agent/core', 'getVaultRoot');
+  return callServerModuleExport<string>('@neon-pilot/core', 'getVaultRoot');
 }
 
 async function vaultRoot(access: FileAccess[], reason: string): Promise<ScopedFileSystem> {

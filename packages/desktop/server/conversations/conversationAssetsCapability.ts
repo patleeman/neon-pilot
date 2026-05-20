@@ -10,7 +10,7 @@ import {
   listConversationCommitCheckpoints,
   readConversationAttachmentDownload,
   saveConversationAttachment,
-} from '@personal-agent/core';
+} from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationCheckpointReviewContext, resolveConversationCheckpointRecord } from './checkpointReview.js';

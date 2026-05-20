@@ -24,7 +24,7 @@ describe('WorkbenchBrowserTab', () => {
       act(() => root?.unmount());
       root = null;
     }
-    delete window.personalAgentDesktop;
+    delete window.neonPilotDesktop;
     vi.restoreAllMocks();
   });
 
@@ -53,7 +53,7 @@ describe('WorkbenchBrowserTab', () => {
     const activeBrowserTab: BrowserTabItem =
       browserTabsState.tabs.find((t) => t.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
 
-    window.personalAgentDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.personalAgentDesktop;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
 
     const container = document.createElement('div');
     document.body.appendChild(container);

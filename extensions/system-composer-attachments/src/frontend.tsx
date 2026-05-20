@@ -1,4 +1,4 @@
-import type { ComposerControlContext } from '@personal-agent/extensions/composer';
+import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 
 export function AttachFilesComposerControl({
   controlContext,

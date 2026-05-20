@@ -24,7 +24,7 @@ const originalEnv = process.env;
 const tempDirs: string[] = [];
 
 function createTempSessionsDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-web-sessions-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-sessions-'));
   tempDirs.push(dir);
   return dir;
 }
@@ -1663,8 +1663,8 @@ describe('sessions', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
     const stateRoot = join(sessionsDir, 'state');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    const chatCwd = join(stateRoot, 'pi-agent-runtime', 'chat-workspaces', 'shared');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const chatCwd = join(stateRoot, 'neon-pilot-runtime', 'chat-workspaces', 'shared');
 
     writeSessionFile({
       sessionsDir,
@@ -1682,8 +1682,8 @@ describe('sessions', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
     const stateRoot = join(sessionsDir, 'state');
-    process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
-    const chatCwd = join(stateRoot, 'pi-agent-runtime', 'chat-workspaces', 'shared');
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const chatCwd = join(stateRoot, 'neon-pilot-runtime', 'chat-workspaces', 'shared');
 
     const filePath = writeSessionFile({
       sessionsDir,
@@ -1739,13 +1739,13 @@ describe('sessions', () => {
       sessionFile: filePath,
       previousCwd: '/tmp/original-chat-workspace',
       previousWorkspaceCwd: null,
-      cwd: '/tmp/personal-agent',
+      cwd: '/tmp/neon-pilot',
       workspaceCwd: null,
       visibleMessage: true,
     });
 
     const detail = readSessionBlocks('session-stale-chat-workspace-marker');
-    expect(detail?.meta.cwd).toBe('/tmp/personal-agent');
+    expect(detail?.meta.cwd).toBe('/tmp/neon-pilot');
     expect(detail?.meta).not.toHaveProperty('workspaceCwd');
   });
 

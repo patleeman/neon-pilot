@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
-import { getPiAgentRuntimeDir } from '@personal-agent/core';
+import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
 import { type ExtensionBackendServerContext, invokeExtensionProtocolEntrypoint } from './extensions/extensionBackend.js';
@@ -34,7 +34,7 @@ function buildServerContext(): ExtensionBackendServerContext {
 }
 
 function usage(): string {
-  return ['Usage: personal-agent protocol <protocol-id>', '', 'Example: personal-agent protocol acp'].join('\n');
+  return ['Usage: neon-pilot protocol <protocol-id>', '', 'Example: neon-pilot protocol acp'].join('\n');
 }
 
 function classifyError(error: unknown): number {

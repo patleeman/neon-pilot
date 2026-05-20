@@ -2,7 +2,7 @@
  * Cache Efficiency & System Prompt display
  */
 
-import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@personal-agent/extensions/data';
+import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@neon-pilot/extensions/data';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,

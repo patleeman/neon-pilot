@@ -40,7 +40,7 @@ const {
   };
 });
 
-vi.mock('@personal-agent/core', () => ({
+vi.mock('@neon-pilot/core', () => ({
   getProfilesRoot: getProfilesRootMock,
   getStateRoot: getStateRootMock,
   getDurableSkillsDir: getDurableSkillsDirMock,
@@ -112,10 +112,10 @@ describe('createRuntimeState', () => {
     authStorageMock.hasAuth.mockReset();
     authStorageMock.hasAuth.mockReturnValue(false);
     authStorageMock.create.mockClear();
-    delete process.env.PERSONAL_AGENT_ACTIVE_PROFILE;
-    delete process.env.PERSONAL_AGENT_PROFILE;
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
-    delete process.env.PERSONAL_AGENT_RESOURCES_ROOT;
+    delete process.env.NEON_PILOT_ACTIVE_PROFILE;
+    delete process.env.NEON_PILOT_PROFILE;
+    delete process.env.NEON_PILOT_REPO_ROOT;
+    delete process.env.NEON_PILOT_RESOURCES_ROOT;
   });
 
   it('materializes the shared runtime and builds live session helpers', async () => {
@@ -135,10 +135,10 @@ describe('createRuntimeState', () => {
       }),
     );
     expect(state.getRuntimeScope()).toBe('shared');
-    expect(process.env.PERSONAL_AGENT_ACTIVE_PROFILE).toBe('shared');
-    expect(process.env.PERSONAL_AGENT_PROFILE).toBe('shared');
-    expect(process.env.PERSONAL_AGENT_REPO_ROOT).toBeUndefined();
-    expect(process.env.PERSONAL_AGENT_RESOURCES_ROOT).toBe('/repo-root');
+    expect(process.env.NEON_PILOT_ACTIVE_PROFILE).toBe('shared');
+    expect(process.env.NEON_PILOT_PROFILE).toBe('shared');
+    expect(process.env.NEON_PILOT_REPO_ROOT).toBeUndefined();
+    expect(process.env.NEON_PILOT_RESOURCES_ROOT).toBe('/repo-root');
 
     expect(state.buildLiveSessionResourceOptions()).toEqual({
       additionalExtensionPaths: ['/ext/shared'],

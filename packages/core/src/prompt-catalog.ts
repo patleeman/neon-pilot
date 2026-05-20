@@ -13,7 +13,7 @@ function normalizePromptText(text: string): string {
 }
 
 export function getPromptCatalogRoot(explicitRepoRoot?: string): string {
-  const repoRoot = resolve(explicitRepoRoot ?? process.env.PERSONAL_AGENT_REPO_ROOT ?? PACKAGE_ROOT);
+  const repoRoot = resolve(explicitRepoRoot ?? process.env.NEON_PILOT_REPO_ROOT ?? PACKAGE_ROOT);
   return join(repoRoot, 'prompt-catalog');
 }
 

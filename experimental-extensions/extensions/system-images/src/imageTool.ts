@@ -3,7 +3,7 @@ import { arch, platform } from 'node:os';
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import type { Api, ImageContent, Model } from '@earendil-works/pi-ai';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { buildSessionContextForRuntime } from '@personal-agent/extensions/backend/runtime';
+import { buildSessionContextForRuntime } from '@neon-pilot/extensions/backend/runtime';
 import { Type } from '@sinclair/typebox';
 
 const IMAGE_QUALITY_VALUES = ['auto', 'low', 'medium', 'high'] as const;
@@ -130,7 +130,7 @@ function buildHeaders(input: { model: Model<Api>; apiKey: string; headers?: Reco
       headers.set('chatgpt-account-id', accountId);
     }
     headers.set('originator', 'pi');
-    headers.set('user-agent', `personal-agent/image-tool (${platform()}; ${arch()})`);
+    headers.set('user-agent', `neon-pilot/image-tool (${platform()}; ${arch()})`);
     headers.set('OpenAI-Beta', 'responses=experimental');
   }
 

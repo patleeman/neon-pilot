@@ -110,13 +110,13 @@ vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
 }));
 
-vi.mock('@personal-agent/core', () => ({
-  getStateRoot: vi.fn(() => '/tmp/personal-agent-state'),
+vi.mock('@neon-pilot/core', () => ({
+  getStateRoot: vi.fn(() => '/tmp/neon-pilot-state'),
   resolveConversationAttachmentPromptFiles: resolveConversationAttachmentPromptFilesMock,
   writeAppTelemetryEvent: writeAppTelemetryEventMock,
 }));
 
-vi.mock('@personal-agent/daemon', () => ({
+vi.mock('@neon-pilot/daemon', () => ({
   listPendingBackgroundRunResults: listPendingBackgroundRunResultsMock,
   loadDaemonConfig: loadDaemonConfigMock,
   markBackgroundRunResultsDelivered: markBackgroundRunResultsDeliveredMock,

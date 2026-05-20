@@ -9,7 +9,7 @@ import { readDictationSettings } from './settings.js';
 const tempDirs: string[] = [];
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'pa-dictation-settings-'));
+  const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-dictation-settings-'));
   tempDirs.push(dir);
   return dir;
 }

@@ -7,8 +7,8 @@ import {
   resolveAskUserQuestionNavigationHotkey,
   resolveAskUserQuestionOptionHotkey,
   shouldAdvanceAskUserQuestionAfterSelection,
-} from '@personal-agent/extensions/data';
-import { cx, Pill } from '@personal-agent/extensions/ui';
+} from '@neon-pilot/extensions/data';
+import { cx, Pill } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface AskUserQuestionState {

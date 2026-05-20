@@ -3,18 +3,18 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { markDurableRunAttentionRead } from '@personal-agent/core';
+import { markDurableRunAttentionRead } from '@neon-pilot/core';
 import {
   createDurableRunManifest,
   createInitialDurableRunStatus,
   type DaemonConfig,
-  PersonalAgentDaemon,
+  NeonPilotDaemon,
   resolveDaemonPaths,
   resolveDurableRunPaths,
   resolveDurableRunsRoot,
   saveDurableRunManifest,
   saveDurableRunStatus,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -67,7 +67,7 @@ describe('durable run reads', () => {
   });
 
   it('does not floor fractional durable run log cursors', () => {
-    const dir = createTempDir('pa-web-durable-run-log-delta-');
+    const dir = createTempDir('neon-pilot-web-durable-run-log-delta-');
     const logPath = join(dir, 'run.log');
     writeFileSync(logPath, 'abcdef');
 
@@ -94,14 +94,14 @@ describe('durable run reads', () => {
   });
 
   it('repairs active background command status from terminal output markers', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-terminal-repair-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-terminal-repair-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-drt-state-');
+    const daemonSocketDir = createTempDir('np-drt-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
     const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths().root);
@@ -127,7 +127,7 @@ describe('durable run reads', () => {
       }),
     );
     mkdirSync(runPaths.root, { recursive: true });
-    writeFileSync(runPaths.outputLogPath, 'boom\n__PA_RUN_EXIT_CODE=1\n# endedAt=2026-05-17T22:51:15.965Z\n# status=failed\n');
+    writeFileSync(runPaths.outputLogPath, 'boom\n__NEON_PILOT_RUN_EXIT_CODE=1\n# endedAt=2026-05-17T22:51:15.965Z\n# status=failed\n');
 
     const result = await getDurableRun('run-terminal-repair');
 
@@ -139,14 +139,14 @@ describe('durable run reads', () => {
   });
 
   it('reports cache telemetry when durable runs fall back to filesystem scanning', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-cache-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-cache-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-drc-state-');
+    const daemonSocketDir = createTempDir('np-drc-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
     const firstRead = await listDurableRunsWithTelemetry();
@@ -169,14 +169,14 @@ describe('durable run reads', () => {
   });
 
   it('decorates runs with reviewed attention state from local storage', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-attention-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-attention-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-dra-state-');
+    const daemonSocketDir = createTempDir('np-dra-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
     const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths().root);
@@ -234,14 +234,14 @@ describe('durable run reads', () => {
   });
 
   it('falls back to filesystem scan when daemon connection times out', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-timeout-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-timeout-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-drtm-state-');
+    const daemonSocketDir = createTempDir('np-drtm-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
     clearDurableRunsListCache();
@@ -252,14 +252,14 @@ describe('durable run reads', () => {
   });
 
   it('falls back to filesystem scan when daemon socket is missing', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-nodaemon-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-nodaemon-sock-');
+    const stateRoot = createTempDir('np-drn-state-');
+    const daemonSocketDir = createTempDir('np-drn-sock-');
     const socketPath = join(daemonSocketDir, 'missing.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
     clearDurableRunsListCache();
@@ -269,17 +269,17 @@ describe('durable run reads', () => {
   });
 
   it('returns undefined instead of throwing when daemon reports a missing run', async () => {
-    const stateRoot = createTempDir('pa-web-durable-runs-state-');
-    const daemonSocketDir = createTempDir('pa-web-durable-runs-sock-');
-    const socketPath = join(daemonSocketDir, 'personal-agentd.sock');
+    const stateRoot = createTempDir('np-dr-state-');
+    const daemonSocketDir = createTempDir('np-dr-sock-');
+    const socketPath = join(daemonSocketDir, 'neon-pilotd.sock');
 
     process.env = {
       ...originalEnv,
-      PERSONAL_AGENT_STATE_ROOT: stateRoot,
-      PERSONAL_AGENT_DAEMON_SOCKET_PATH: socketPath,
+      NEON_PILOT_STATE_ROOT: stateRoot,
+      NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
-    const daemon = new PersonalAgentDaemon(createTestConfig(socketPath));
+    const daemon = new NeonPilotDaemon(createTestConfig(socketPath));
     await daemon.start();
 
     try {

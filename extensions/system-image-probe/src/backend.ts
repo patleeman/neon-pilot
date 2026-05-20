@@ -1,10 +1,10 @@
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
-import { runAgentTask } from '@personal-agent/extensions/backend/agent';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 import {
   getImageProbeAttachments,
   getImageProbeAttachmentsById,
   type StoredImageProbeAttachment,
-} from '@personal-agent/extensions/backend/images';
+} from '@neon-pilot/extensions/backend/images';
 
 interface ProbeImageInput {
   imageIds?: unknown;

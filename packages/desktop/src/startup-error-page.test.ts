@@ -13,7 +13,7 @@ describe('startup error page helpers', () => {
     expect(html).toContain('Port 3741 &lt;busy&gt; &amp; blocked');
     expect(html).toContain('Logs: <code>/tmp/logs</code>');
     expect(html).toContain('desktop.openPath(logsDir)');
-    expect(html).toContain("window.location.href = 'personal-agent://app/'");
+    expect(html).toContain("window.location.href = 'neon-pilot://app/'");
   });
 
   it('encodes the HTML into a data URL for BrowserWindow.loadURL', () => {

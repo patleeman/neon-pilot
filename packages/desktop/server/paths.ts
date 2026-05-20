@@ -1,12 +1,12 @@
-import { resolveStatePaths } from '@personal-agent/core';
+import { resolveStatePaths } from '@neon-pilot/core';
 import { mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { dirname, join, resolve } from 'path';
 
 import type { DaemonPaths } from './daemon/types.js';
 
-const DAEMON_SOCKET_FILE_NAME = 'personal-agentd.sock';
-const DAEMON_PID_FILE_NAME = 'personal-agentd.pid';
+const DAEMON_SOCKET_FILE_NAME = 'neon-pilotd.sock';
+const DAEMON_PID_FILE_NAME = 'neon-pilotd.pid';
 
 function normalizeDaemonNamespace(value: string | undefined): string | undefined {
   const normalized = value?.trim();
@@ -39,7 +39,7 @@ function expandHome(path: string): string {
 // in EADDRINUSE when the truncated path collides with an existing directory entry.
 const UNIX_SOCKET_PATH_MAX = 103;
 
-export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.PERSONAL_AGENT_DAEMON_NAMESPACE): DaemonPaths {
+export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.NEON_PILOT_DAEMON_NAMESPACE): DaemonPaths {
   const statePaths = resolveStatePaths();
   const normalizedNamespace = explicitSocketPath ? undefined : normalizeDaemonNamespace(namespace);
   const daemonDirName = normalizedNamespace ? `daemon-${normalizedNamespace}` : 'daemon';
@@ -52,7 +52,7 @@ export function resolveDaemonPaths(explicitSocketPath?: string, namespace = proc
     throw new Error(
       `Daemon socket path exceeds the Unix socket path limit (${UNIX_SOCKET_PATH_MAX} chars): ` +
         `${socketPath} (${String(socketPath.length)} chars). ` +
-        `Shorten PERSONAL_AGENT_DAEMON_NAMESPACE or set PERSONAL_AGENT_DAEMON_SOCKET_PATH to an explicit short path.`,
+        `Shorten NEON_PILOT_DAEMON_NAMESPACE or set NEON_PILOT_DAEMON_SOCKET_PATH to an explicit short path.`,
     );
   }
 

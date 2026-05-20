@@ -130,7 +130,7 @@ async function updateDesktopAppPreferencesState(input: {
 
 app.setName(resolveDesktopLaunchPresentation(process.env, { version: app.getVersion(), packaged: app.isPackaged }).appName);
 
-const desktopUserDataDir = process.env.PERSONAL_AGENT_DESKTOP_USER_DATA_DIR?.trim();
+const desktopUserDataDir = process.env.NEON_PILOT_DESKTOP_USER_DATA_DIR?.trim();
 if (desktopUserDataDir) {
   app.setPath('userData', resolve(desktopUserDataDir));
 }
@@ -140,7 +140,7 @@ const hasDesktopSingleInstanceLock = claimDesktopSingleInstance(app, () => {
 });
 
 function readInitialDesktopRoute(): string {
-  const route = process.env.PERSONAL_AGENT_DESKTOP_INITIAL_ROUTE?.trim();
+  const route = process.env.NEON_PILOT_DESKTOP_INITIAL_ROUTE?.trim();
   if (!route || !route.startsWith('/') || route.startsWith('//')) {
     return '/';
   }
@@ -240,22 +240,22 @@ function configureDesktopRuntimeEnvironment(): void {
   applyDesktopRuntimeEnvironmentOverrides(process.env, { version: app.getVersion(), packaged: app.isPackaged });
 
   const runtime = resolveDesktopRuntimePaths();
-  process.env.PERSONAL_AGENT_DESKTOP_RUNTIME = '1';
+  process.env.NEON_PILOT_DESKTOP_RUNTIME = '1';
   if (runtime.devRepoRoot) {
-    process.env.PERSONAL_AGENT_REPO_ROOT = runtime.devRepoRoot;
+    process.env.NEON_PILOT_REPO_ROOT = runtime.devRepoRoot;
   } else {
-    delete process.env.PERSONAL_AGENT_REPO_ROOT;
+    delete process.env.NEON_PILOT_REPO_ROOT;
   }
   if (runtime.resourcesRoot) {
-    process.env.PERSONAL_AGENT_RESOURCES_ROOT = runtime.resourcesRoot;
+    process.env.NEON_PILOT_RESOURCES_ROOT = runtime.resourcesRoot;
   } else {
-    delete process.env.PERSONAL_AGENT_RESOURCES_ROOT;
+    delete process.env.NEON_PILOT_RESOURCES_ROOT;
   }
-  process.env.PERSONAL_AGENT_APP_ROOT = runtime.appRoot;
+  process.env.NEON_PILOT_APP_ROOT = runtime.appRoot;
   if (runtime.desktopNativeModulesDir) {
-    process.env.PERSONAL_AGENT_DESKTOP_NATIVE_MODULES_DIR = runtime.desktopNativeModulesDir;
+    process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR = runtime.desktopNativeModulesDir;
   }
-  process.env.PERSONAL_AGENT_DESKTOP_DAEMON_LOG_FILE = `${runtime.desktopLogsDir}/daemon.log`;
+  process.env.NEON_PILOT_DESKTOP_DAEMON_LOG_FILE = `${runtime.desktopLogsDir}/daemon.log`;
 }
 
 async function ensureDesktopBackendAvailable(): Promise<boolean> {

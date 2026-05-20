@@ -54,7 +54,7 @@ describe('background runs', () => {
   });
 
   it('prefers the bundled repo runner over tsc output when repo root is set', () => {
-    const previousRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT;
+    const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
     const repoRoot = createTempDir('pa-background-runner-repo-');
     const bundledRunner = join(repoRoot, 'packages/desktop/server/dist/daemon/background-agent-runner.js');
     const tscRunner = join(repoRoot, 'packages/desktop/dist/server/daemon/background-agent-runner.js');
@@ -65,22 +65,22 @@ describe('background runs', () => {
     writeFileSync(tscRunner, '');
 
     try {
-      process.env.PERSONAL_AGENT_REPO_ROOT = repoRoot;
+      process.env.NEON_PILOT_REPO_ROOT = repoRoot;
       const argv = buildBackgroundAgentArgv({ prompt: 'Review the latest diff' });
       expect(argv[1]).toBe(bundledRunner);
     } finally {
       if (previousRepoRoot === undefined) {
-        delete process.env.PERSONAL_AGENT_REPO_ROOT;
+        delete process.env.NEON_PILOT_REPO_ROOT;
       } else {
-        process.env.PERSONAL_AGENT_REPO_ROOT = previousRepoRoot;
+        process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
       }
     }
   });
 
   it('resolves the packaged app.asar runner from explicit packaged roots', () => {
-    const previousRepoRoot = process.env.PERSONAL_AGENT_REPO_ROOT;
-    const previousResourcesRoot = process.env.PERSONAL_AGENT_RESOURCES_ROOT;
-    const previousAppRoot = process.env.PERSONAL_AGENT_APP_ROOT;
+    const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+    const previousResourcesRoot = process.env.NEON_PILOT_RESOURCES_ROOT;
+    const previousAppRoot = process.env.NEON_PILOT_APP_ROOT;
     const resourcesRoot = createTempDir('pa-background-runner-resources-');
     const appRoot = join(resourcesRoot, 'app.asar');
     const appAsarRunner = join(appRoot, 'server/dist/daemon/background-agent-runner.js');
@@ -89,26 +89,26 @@ describe('background runs', () => {
     writeFileSync(appAsarRunner, '');
 
     try {
-      delete process.env.PERSONAL_AGENT_REPO_ROOT;
-      process.env.PERSONAL_AGENT_RESOURCES_ROOT = resourcesRoot;
-      process.env.PERSONAL_AGENT_APP_ROOT = appRoot;
+      delete process.env.NEON_PILOT_REPO_ROOT;
+      process.env.NEON_PILOT_RESOURCES_ROOT = resourcesRoot;
+      process.env.NEON_PILOT_APP_ROOT = appRoot;
       const argv = buildBackgroundAgentArgv({ prompt: 'Review the latest diff' });
       expect(argv[1]).toBe(appAsarRunner);
     } finally {
       if (previousRepoRoot === undefined) {
-        delete process.env.PERSONAL_AGENT_REPO_ROOT;
+        delete process.env.NEON_PILOT_REPO_ROOT;
       } else {
-        process.env.PERSONAL_AGENT_REPO_ROOT = previousRepoRoot;
+        process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
       }
       if (previousResourcesRoot === undefined) {
-        delete process.env.PERSONAL_AGENT_RESOURCES_ROOT;
+        delete process.env.NEON_PILOT_RESOURCES_ROOT;
       } else {
-        process.env.PERSONAL_AGENT_RESOURCES_ROOT = previousResourcesRoot;
+        process.env.NEON_PILOT_RESOURCES_ROOT = previousResourcesRoot;
       }
       if (previousAppRoot === undefined) {
-        delete process.env.PERSONAL_AGENT_APP_ROOT;
+        delete process.env.NEON_PILOT_APP_ROOT;
       } else {
-        process.env.PERSONAL_AGENT_APP_ROOT = previousAppRoot;
+        process.env.NEON_PILOT_APP_ROOT = previousAppRoot;
       }
     }
   });
@@ -345,7 +345,7 @@ describe('background runs', () => {
       }),
     );
     const failedOutput = readFileSync(failedRecord.paths.outputLogPath, 'utf-8');
-    expect(failedOutput).toContain('__PA_RUN_EXIT_CODE=2');
+    expect(failedOutput).toContain('__NEON_PILOT_RUN_EXIT_CODE=2');
     expect(failedOutput).toContain('# status=failed');
 
     const summarizedRecord = await createBackgroundRunRecord(runsRoot, {

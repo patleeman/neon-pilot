@@ -53,7 +53,7 @@ function createSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
     file: '/tmp/conv-123.jsonl',
     timestamp: '2026-03-16T09:30:00.000Z',
     cwd: '/home/user/project',
-    cwdSlug: 'personal-agent',
+    cwdSlug: 'neon-pilot',
     model: 'openai/gpt-5.4',
     title: 'Clarify background run link',
     messageCount: 4,

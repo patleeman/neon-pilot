@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getStateRoot } from '@personal-agent/core';
+import { getStateRoot } from '@neon-pilot/core';
 
 export const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
 
@@ -36,7 +36,7 @@ export function readConfiguredExtensionPaths(stateRoot: string = getStateRoot())
 }
 
 export function readEnvironmentExtensionPaths(): string[] {
-  const value = process.env.PERSONAL_AGENT_EXTENSION_PATHS;
+  const value = process.env.NEON_PILOT_EXTENSION_PATHS;
   if (!value) return [];
   return value
     .split(/[,\n:]/)

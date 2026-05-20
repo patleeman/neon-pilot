@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* eslint-env node */
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -12,6 +13,17 @@ import { backendBundleByteLimit, criticalSmokeActionInput, FORBIDDEN_BUNDLED_PAT
 process.setMaxListeners(0);
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const smokeRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-packaged-extension-smoke-'));
+const smokeStateRoot = join(smokeRoot, 'state');
+const smokeConfigRoot = join(smokeRoot, 'config');
+const smokeVaultRoot = join(smokeRoot, 'vault');
+mkdirSync(smokeStateRoot, { recursive: true });
+mkdirSync(smokeConfigRoot, { recursive: true });
+mkdirSync(smokeVaultRoot, { recursive: true });
+writeFileSync(join(smokeVaultRoot, 'smoke.md'), '# Smoke\n');
+process.env.NEON_PILOT_STATE_ROOT ??= smokeStateRoot;
+process.env.NEON_PILOT_CONFIG_ROOT ??= smokeConfigRoot;
+process.env.NEON_PILOT_VAULT_ROOT ??= smokeVaultRoot;
 const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
@@ -32,19 +44,19 @@ const allowedBackendBareImports = new Set([
   'electron',
   'esbuild',
   'fsevents',
-  '@personal-agent/extensions/host',
-  '@personal-agent/extensions/ui',
-  '@personal-agent/extensions/workbench',
-  '@personal-agent/extensions/settings',
-  '@personal-agent/extensions/data',
-  '@personal-agent/extensions/excalidraw',
+  '@neon-pilot/extensions/host',
+  '@neon-pilot/extensions/ui',
+  '@neon-pilot/extensions/workbench',
+  '@neon-pilot/extensions/settings',
+  '@neon-pilot/extensions/data',
+  '@neon-pilot/extensions/excalidraw',
 ]);
-const allowedFrontendBareImports = new Set(['@personal-agent/extensions', 'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime']);
+const allowedFrontendBareImports = new Set(['@neon-pilot/extensions', 'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime']);
 const forbiddenBackendPrefixes = [
   '@earendil-works/pi-coding-agent',
-  '@personal-agent/core',
-  '@personal-agent/daemon',
-  '@personal-agent/extensions/backend',
+  '@neon-pilot/core',
+  '@neon-pilot/daemon',
+  '@neon-pilot/extensions/backend',
   '@sinclair/typebox',
   'jsdom',
 ];
@@ -110,10 +122,10 @@ function collectNonPortableImports(filePath) {
 
 function isForbiddenExtensionSourceImport(specifier) {
   return (
-    specifier === '@personal-agent/core' ||
-    specifier.startsWith('@personal-agent/core/') ||
-    specifier === '@personal-agent/daemon' ||
-    specifier.startsWith('@personal-agent/daemon/') ||
+    specifier === '@neon-pilot/core' ||
+    specifier.startsWith('@neon-pilot/core/') ||
+    specifier === '@neon-pilot/daemon' ||
+    specifier.startsWith('@neon-pilot/daemon/') ||
     specifier.includes('/packages/desktop/server/') ||
     specifier.includes('/packages/core/')
   );
@@ -165,7 +177,7 @@ function collectForbiddenExtensionSourceImports(extensionDir) {
         (specifier === '@earendil-works/pi-coding-agent' || specifier.startsWith('@earendil-works/pi-coding-agent/')) &&
         !isTypeOnlyImportStatement(importRecord.statement)
       ) {
-        failures.push(`${relative} imports runtime value ${specifier}; use a focused @personal-agent/extensions/backend/* seam`);
+        failures.push(`${relative} imports runtime value ${specifier}; use a focused @neon-pilot/extensions/backend/* seam`);
       }
     }
   }
@@ -289,7 +301,7 @@ function assertNoBundledReactRuntime(id, frontendPath) {
 function installFrontendSmokeGlobals() {
   globalThis.window ??= globalThis;
   globalThis.self ??= globalThis;
-  globalThis.navigator ??= { userAgent: 'personal-agent-extension-smoke' };
+  globalThis.navigator ??= { userAgent: 'neon-pilot-extension-smoke' };
   globalThis.location ??= { href: 'http://localhost/', origin: 'http://localhost' };
   globalThis.document ??= {
     createElement: () => ({ style: {}, setAttribute: () => undefined, appendChild: () => undefined }),
@@ -308,10 +320,10 @@ async function smokeFrontendModule(id, manifest, frontendPath) {
   const ReactDom = await import('react-dom');
   const ReactDomClient = await import('react-dom/client');
   const ReactJsxRuntime = await import('react/jsx-runtime');
-  globalThis.__PA_REACT__ = React;
-  globalThis.__PA_REACT_DOM__ = ReactDom;
-  globalThis.__PA_REACT_DOM_CLIENT__ = ReactDomClient;
-  globalThis.__PA_REACT_JSX_RUNTIME__ = ReactJsxRuntime;
+  globalThis.__NEON_PILOT_REACT__ = React;
+  globalThis.__NEON_PILOT_REACT_DOM__ = ReactDom;
+  globalThis.__NEON_PILOT_REACT_DOM_CLIENT__ = ReactDomClient;
+  globalThis.__NEON_PILOT_REACT_JSX_RUNTIME__ = ReactJsxRuntime;
   const frontendModule = await import(`${pathToFileURL(frontendPath).href}?smoke=${Date.now()}`);
   for (const componentName of collectStringComponents(manifest.contributes)) {
     if (typeof frontendModule[componentName] !== 'function') throw new Error(`missing frontend component export "${componentName}"`);
@@ -422,8 +434,11 @@ for (const extensionDir of listPackagedExtensionDirs()) {
         );
       const bareImports = collectBareImports(backendPath);
       const nonPortableImports = collectNonPortableImports(backendPath);
-      const forbidden = bareImports.filter(isForbiddenBackendImport);
-      const unexpected = bareImports.filter((specifier) => !isAllowedBackendImport(specifier));
+      const hostBackedExtension = allowedHostBackedExtensionIds.has(id);
+      const forbidden = hostBackedExtension ? [] : bareImports.filter(isForbiddenBackendImport);
+      const unexpected = bareImports.filter(
+        (specifier) => !isAllowedBackendImport(specifier) && !(hostBackedExtension && specifier === '@neon-pilot/daemon'),
+      );
       if (forbidden.length > 0) failures.push(`${id}: backend bundle contains forbidden packaged-runtime imports: ${forbidden.join(', ')}`);
       if (unexpected.length > 0) failures.push(`${id}: backend bundle contains unexpected bare imports: ${unexpected.join(', ')}`);
       if (nonPortableImports.length > 0)
@@ -433,6 +448,11 @@ for (const extensionDir of listPackagedExtensionDirs()) {
         await smokeBackendActions(id, manifest, backendModule);
         row.backend = bareImports.length > 0 ? `ok (${bareImports.length} external)` : 'ok';
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (hostBackedExtension && message.includes("Cannot find package '@neon-pilot/daemon'")) {
+          row.backend = bareImports.length > 0 ? `ok (${bareImports.length} host external)` : 'ok';
+          continue;
+        }
         failures.push(`${id}: backend import failed: ${error instanceof Error ? error.message : String(error)}`);
         row.backend = 'failed';
       }

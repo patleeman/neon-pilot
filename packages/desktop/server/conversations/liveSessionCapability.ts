@@ -1,14 +1,14 @@
 import { existsSync } from 'node:fs';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { resolveConversationAttachmentPromptFiles } from '@personal-agent/core';
+import { resolveConversationAttachmentPromptFiles } from '@neon-pilot/core';
 import {
   listPendingBackgroundRunResults,
   loadDaemonConfig,
   markBackgroundRunResultsDelivered,
   resolveDaemonPaths,
   resolveDurableRunsRoot,
-} from '@personal-agent/daemon';
+} from '@neon-pilot/daemon';
 
 import { resolveExtensionPromptReferences } from '../extensions/promptReferenceResolvers.js';
 import {
