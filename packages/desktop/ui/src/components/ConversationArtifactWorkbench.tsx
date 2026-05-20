@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
@@ -25,16 +26,40 @@ export function ConversationArtifactRailContent({
   error: string | null;
   onOpenArtifact: (artifactId: string) => void;
 }) {
+  let content: ReactNode;
+
   if (loading && artifacts.length === 0) {
-    return <LoadingState label="Loading artifacts…" className="justify-center h-full" />;
-  }
-
-  if (error && artifacts.length === 0) {
-    return <ErrorState message={error} className="px-4 py-4" />;
-  }
-
-  if (artifacts.length === 0) {
-    return <div className="px-4 py-5 text-[12px] text-dim">No artifacts in this conversation.</div>;
+    content = <LoadingState label="Loading artifacts…" className="justify-center h-full" />;
+  } else if (error && artifacts.length === 0) {
+    content = <ErrorState message={error} className="px-4 py-4" />;
+  } else if (artifacts.length === 0) {
+    content = <div className="px-4 py-3 text-[12px] text-dim">No artifacts in this conversation.</div>;
+  } else {
+    content = (
+      <div className="flex flex-col gap-1.5">
+        {artifacts.map((artifact) => {
+          const selected = artifact.id === activeArtifactId;
+          return (
+            <button
+              key={artifact.id}
+              type="button"
+              onClick={() => onOpenArtifact(artifact.id)}
+              className={cx(
+                'rounded-xl px-3 py-2.5 text-left transition-colors',
+                selected ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
+              )}
+              title={`${artifact.title} · ${artifact.id} · rev ${artifact.revision}`}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{artifact.title}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/70">{artifact.kind}</span>
+              </div>
+              <div className="mt-0.5 truncate font-mono text-[10px] text-dim">{artifact.id}</div>
+            </button>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -42,31 +67,7 @@ export function ConversationArtifactRailContent({
       <div className="shrink-0 px-3 py-2">
         <p className="ui-section-label">Artifacts</p>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-        <div className="flex flex-col gap-1.5">
-          {artifacts.map((artifact) => {
-            const selected = artifact.id === activeArtifactId;
-            return (
-              <button
-                key={artifact.id}
-                type="button"
-                onClick={() => onOpenArtifact(artifact.id)}
-                className={cx(
-                  'rounded-xl px-3 py-2.5 text-left transition-colors',
-                  selected ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
-                )}
-                title={`${artifact.title} · ${artifact.id} · rev ${artifact.revision}`}
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{artifact.title}</span>
-                  <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/70">{artifact.kind}</span>
-                </div>
-                <div className="mt-0.5 truncate font-mono text-[10px] text-dim">{artifact.id}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">{content}</div>
     </div>
   );
 }
