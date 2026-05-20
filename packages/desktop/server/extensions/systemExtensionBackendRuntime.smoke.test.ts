@@ -252,7 +252,8 @@ const smokes = {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);
   },
   async 'system-video-probe'() {
-    await expectReject(() => module.probeVideo({ path: '', question: '' }, ctx), /path|question/i);
+    const result = await module.readSettings({}, ctx);
+    assert(result.ok === true && result.settings && typeof result.settings.backend === 'string', 'readSettings failed');
   },
   async 'system-images'() {
     await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);

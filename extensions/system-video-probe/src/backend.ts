@@ -1,8 +1,10 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { extname, join } from 'node:path';
 
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { Type } from '@sinclair/typebox';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -16,14 +18,76 @@ const VENV_DIR = join(CACHE_DIR, 'venv');
 const VENV_PYTHON = join(VENV_DIR, 'bin', 'python');
 const VENV_MLX_VLM_SERVER = join(VENV_DIR, 'bin', 'mlx_vlm.server');
 const LOG_FILE = join(CACHE_DIR, 'latest.log');
+const SETTINGS_FILE = join(CACHE_DIR, 'settings.json');
 
 const SERVER_PID_KEY = 'videoProbe/process/serverPid';
 const SETUP_PID_KEY = 'videoProbe/process/setupPid';
 
 const SUPPORTED_EXTENSIONS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm', '.mpg', '.mpeg', '.m4v', '.3gp', '.wmv', '.flv']);
 
+const MIME_MAP: Record<string, string> = {
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
+  '.avi': 'video/x-msvideo',
+  '.mkv': 'video/x-matroska',
+  '.webm': 'video/webm',
+  '.mpg': 'video/mpeg',
+  '.mpeg': 'video/mpeg',
+  '.m4v': 'video/mp4',
+  '.3gp': 'video/3gpp',
+  '.wmv': 'video/x-ms-wmv',
+  '.flv': 'video/x-flv',
+};
+
 // ---------------------------------------------------------------------------
-// Helpers
+// Settings (shared file — readable from both agent extension and backend actions)
+// ---------------------------------------------------------------------------
+
+interface VideoProbeSettings {
+  backend: 'openrouter' | 'local';
+  cloudModel: string;
+}
+
+const DEFAULT_SETTINGS: VideoProbeSettings = {
+  backend: 'openrouter',
+  cloudModel: 'google/gemini-2.5-flash',
+};
+
+function loadSettings(): VideoProbeSettings {
+  try {
+    if (!existsSync(SETTINGS_FILE)) return { ...DEFAULT_SETTINGS };
+    const raw = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')) as Partial<VideoProbeSettings>;
+    return {
+      backend: raw.backend === 'local' ? 'local' : 'openrouter',
+      cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : DEFAULT_SETTINGS.cloudModel,
+    };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function saveSettings(settings: VideoProbeSettings): void {
+  mkdirSync(CACHE_DIR, { recursive: true });
+  writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+}
+
+export async function readSettings(_input: unknown, _ctx: ExtensionBackendContext) {
+  return { ok: true, settings: loadSettings() };
+}
+
+export async function writeSettings(input: unknown, _ctx: ExtensionBackendContext) {
+  const raw = input as Partial<VideoProbeSettings>;
+  const current = loadSettings();
+  const next: VideoProbeSettings = {
+    backend: raw.backend === 'local' ? 'local' : raw.backend === 'openrouter' ? 'openrouter' : current.backend,
+    cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : current.cloudModel,
+  };
+  saveSettings(next);
+  return { ok: true, settings: next };
+}
+
+// ---------------------------------------------------------------------------
+// Shell helpers (for backend actions only)
 // ---------------------------------------------------------------------------
 
 function shellQuote(value: string) {
@@ -60,7 +124,11 @@ async function isPidRunning(ctx: ExtensionBackendContext, pid: number | null) {
   return result.stdout.trim() === 'yes';
 }
 
-async function readServerHealth() {
+// ---------------------------------------------------------------------------
+// Server health (used by both backend actions and agent extension)
+// ---------------------------------------------------------------------------
+
+async function readServerHealth(): Promise<{ reachable: boolean; models?: string[] }> {
   try {
     const response = await fetch(`${BASE_URL}/v1/models`, { signal: AbortSignal.timeout(2000) });
     if (!response.ok) return { reachable: false };
@@ -72,7 +140,7 @@ async function readServerHealth() {
 }
 
 // ---------------------------------------------------------------------------
-// Status
+// Backend actions — server lifecycle
 // ---------------------------------------------------------------------------
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
@@ -83,7 +151,6 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     isPidRunning(ctx, setupPid),
     readServerHealth(),
   ]);
-
   return {
     ok: true,
     modelId: MODEL_ID,
@@ -92,20 +159,15 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     venvReady: existsSync(VENV_PYTHON),
     server: health,
     process: { serverPid, serverRunning, setupPid, setupRunning },
+    settings: loadSettings(),
     log: readLog(),
   };
 }
 
-// ---------------------------------------------------------------------------
-// Setup — install mlx-vlm and download model
-// ---------------------------------------------------------------------------
-
 export async function setup(_input: unknown, ctx: ExtensionBackendContext) {
   const setupRunning = await isPidRunning(ctx, await readPid(ctx, SETUP_PID_KEY));
   if (setupRunning) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
-
   mkdirSync(CACHE_DIR, { recursive: true });
-
   const script = [
     `: > ${shellQuote(LOG_FILE)}`,
     `echo "--- setup ${new Date().toISOString()} ---" >> ${shellQuote(LOG_FILE)}`,
@@ -114,31 +176,22 @@ export async function setup(_input: unknown, ctx: ExtensionBackendContext) {
     `HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(join(VENV_DIR, 'bin', 'hf'))} download ${shellQuote(MODEL_ID)} >> ${shellQuote(LOG_FILE)} 2>&1`,
     `echo "--- setup complete ---" >> ${shellQuote(LOG_FILE)}`,
   ].join(' && ');
-
   const result = await ctx.shell.exec({
     command: 'sh',
     args: ['-c', `nohup sh -c ${shellQuote(script)} >/dev/null 2>&1 & echo $!`],
   });
   await ctx.storage.put(SETUP_PID_KEY, Number(result.stdout.trim()));
-
   return { ok: true, started: true, status: await status({}, ctx) };
 }
-
-// ---------------------------------------------------------------------------
-// Server start / stop
-// ---------------------------------------------------------------------------
 
 export async function startServer(_input: unknown, ctx: ExtensionBackendContext) {
   const health = await readServerHealth();
   if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
-
   const serverRunning = await isPidRunning(ctx, await readPid(ctx, SERVER_PID_KEY));
   if (serverRunning) return { ok: true, starting: true, status: await status({}, ctx) };
-
   if (!existsSync(VENV_MLX_VLM_SERVER)) {
     return { ok: false, error: 'mlx-vlm is not installed. Run setup first.', status: await status({}, ctx) };
   }
-
   const command = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(MODEL_ID)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
@@ -146,7 +199,6 @@ export async function startServer(_input: unknown, ctx: ExtensionBackendContext)
   });
   const pid = Number(result.stdout.trim());
   await ctx.storage.put(SERVER_PID_KEY, pid);
-
   return { ok: true, started: true, pid, status: await status({}, ctx) };
 }
 
@@ -160,26 +212,17 @@ export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) 
 }
 
 // ---------------------------------------------------------------------------
-// Probe
+// Agent extension — probe_video tool
 // ---------------------------------------------------------------------------
 
-const MIME_MAP: Record<string, string> = {
-  '.mp4': 'video/mp4',
-  '.mov': 'video/quicktime',
-  '.avi': 'video/x-msvideo',
-  '.mkv': 'video/x-matroska',
-  '.webm': 'video/webm',
-  '.mpg': 'video/mpeg',
-  '.mpeg': 'video/mpeg',
-  '.m4v': 'video/mp4',
-  '.3gp': 'video/3gpp',
-  '.wmv': 'video/x-ms-wmv',
-  '.flv': 'video/x-flv',
-};
+const ProbeVideoParams = Type.Object({
+  path: Type.String({ description: 'Absolute path to the video file on disk.' }),
+  question: Type.String({ minLength: 1, maxLength: 8000, description: 'What to ask or analyze about the video.' }),
+});
 
-function readPath(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) throw new Error('probe_video: path is required.');
+function validatePath(value: string): string {
   const p = value.trim();
+  if (!p) throw new Error('probe_video: path is required.');
   if (!existsSync(p)) throw new Error(`Video file not found: ${p}`);
   const ext = extname(p).toLowerCase();
   if (ext && !SUPPORTED_EXTENSIONS.has(ext)) {
@@ -188,33 +231,12 @@ function readPath(value: unknown): string {
   return p;
 }
 
-function readQuestion(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) throw new Error('probe_video: question is required.');
-  if (value.length > 8000) throw new Error('Question too long (max 8000 chars).');
-  return value.trim();
-}
-
-function readSettings(profileSettingsFilePath: string) {
-  try {
-    if (!existsSync(profileSettingsFilePath)) return { backend: 'openrouter' as const, openrouterModel: 'google/gemini-2.5-flash' };
-    const root = JSON.parse(readFileSync(profileSettingsFilePath, 'utf8')) as Record<string, unknown>;
-    const raw = root.videoProbe as Record<string, unknown> | undefined;
-    return {
-      backend: raw?.backend === 'local' ? ('local' as const) : ('openrouter' as const),
-      openrouterModel:
-        typeof raw?.openrouterModel === 'string' && raw.openrouterModel.trim() ? raw.openrouterModel.trim() : 'google/gemini-2.5-flash',
-    };
-  } catch {
-    return { backend: 'openrouter' as const, openrouterModel: 'google/gemini-2.5-flash' };
-  }
-}
-
-async function callVideoEndpoint(
+async function callChatCompletions(
   endpoint: string,
   model: string,
   filePath: string,
   question: string,
-  extraHeaders: Record<string, string> = {},
+  headers: Record<string, string>,
   signal?: AbortSignal,
 ): Promise<string> {
   const videoData = readFileSync(filePath);
@@ -223,7 +245,7 @@ async function callVideoEndpoint(
 
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify({
       model,
       messages: [
@@ -251,85 +273,78 @@ async function callVideoEndpoint(
     }
     throw new Error(msg);
   }
-
   const parsed = JSON.parse(text) as { choices?: Array<{ message?: { content?: string } }> };
   const content = parsed.choices?.[0]?.message?.content?.trim();
   if (!content) throw new Error('Model returned an empty response.');
   return content;
 }
 
-async function ensureServerRunning(ctx: ExtensionBackendContext): Promise<void> {
-  const health = await readServerHealth();
-  if (health.reachable) return;
+export function createVideoProbeAgentExtension(): (pi: ExtensionAPI) => void {
+  return (pi: ExtensionAPI) => {
+    pi.registerTool({
+      name: 'probe_video',
+      label: 'Probe video',
+      description:
+        'Analyze a video file using a video-capable model. Provide the absolute path to a video file and a question about its contents.',
+      promptGuidelines: [
+        'Use this tool when the user references a video file by path and asks about its content.',
+        'Do not guess at video content — always call this tool when visual inspection of a video is needed.',
+      ],
+      parameters: ProbeVideoParams,
+      async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+        const filePath = validatePath(params.path);
+        const question = params.question.trim();
+        const settings = loadSettings();
 
-  // Auto-start if runtime is installed
-  if (!existsSync(VENV_MLX_VLM_SERVER)) {
-    throw new Error(
-      'mlx-vlm is not installed. Open the Video Probe page and click "Set Up" to install the runtime and download the model.',
-    );
-  }
+        if (settings.backend === 'local') {
+          // Check server health; auto-start if installed but not running
+          let health = await readServerHealth();
+          if (!health.reachable && existsSync(VENV_MLX_VLM_SERVER)) {
+            const startCommand = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(MODEL_ID)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+            await pi.exec('sh', ['-c', `nohup sh -c ${shellQuote(startCommand)} >/dev/null 2>&1 &`]);
+            // Wait up to 60s for server to come up
+            for (let i = 0; i < 60; i++) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              health = await readServerHealth();
+              if (health.reachable) break;
+            }
+          }
+          if (!health.reachable) {
+            if (!existsSync(VENV_MLX_VLM_SERVER)) {
+              const msg = 'mlx-vlm is not installed. Open the Video Probe page and click "Set Up" to install it.';
+              return { text: msg, content: [{ type: 'text' as const, text: msg }], isError: true };
+            }
+            const msg = 'mlx-vlm server did not become ready in time. Check the Video Probe page for logs.';
+            return { text: msg, content: [{ type: 'text' as const, text: msg }], isError: true };
+          }
 
-  await startServer({}, ctx);
+          const text = await callChatCompletions(`${BASE_URL}/v1/chat/completions`, MODEL_ID, filePath, question, {}, signal);
+          return { text, content: [{ type: 'text' as const, text }], details: { backend: 'local', model: MODEL_ID, filePath } };
+        }
 
-  // Wait up to 60s for the server to come up (model load takes time)
-  for (let i = 0; i < 60; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const h = await readServerHealth();
-    if (h.reachable) return;
-  }
+        // OpenRouter — resolve API key from the existing provider config
+        const cloudModel = settings.cloudModel;
+        const orModel = ctx.modelRegistry.find('openrouter', cloudModel);
+        if (!orModel) {
+          const msg = `OpenRouter model "${cloudModel}" is not configured in Pi. Add it via the model picker or update the model in the Video Probe page settings.`;
+          return { text: msg, content: [{ type: 'text' as const, text: msg }], isError: true };
+        }
+        const auth = await ctx.modelRegistry.getApiKeyAndHeaders(orModel);
+        if (!auth.ok || !auth.apiKey) {
+          const msg = 'OpenRouter is not authenticated. Configure it via Settings → Providers.';
+          return { text: msg, content: [{ type: 'text' as const, text: msg }], isError: true };
+        }
 
-  throw new Error('mlx-vlm server did not become ready in time. Check the Video Probe page for logs.');
-}
-
-export async function probeVideo(input: { path?: unknown; question?: unknown }, ctx: ExtensionBackendContext) {
-  const filePath = readPath(input.path);
-  const question = readQuestion(input.question);
-  const settings = readSettings(ctx.profileSettingsFilePath);
-
-  let text: string;
-  let modelRef: string;
-
-  try {
-    if (settings.backend === 'local') {
-      await ensureServerRunning(ctx);
-      modelRef = MODEL_ID;
-      text = await callVideoEndpoint(`${BASE_URL}/v1/chat/completions`, MODEL_ID, filePath, question, {}, ctx.signal);
-    } else {
-      const apiKey = (await ctx.secrets.get('openrouterApiKey'))?.trim();
-      if (!apiKey) throw new Error('No OpenRouter API key configured. Add one in Settings → Video Probe.');
-      modelRef = settings.openrouterModel;
-      text = await callVideoEndpoint(
-        'https://openrouter.ai/api/v1/chat/completions',
-        settings.openrouterModel,
-        filePath,
-        question,
-        {
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://github.com/neon-pilot/personal-agent',
-          'X-Title': 'Personal Agent Video Probe',
-        },
-        ctx.signal,
-      );
-    }
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const normalized = msg.toLowerCase();
-    let friendly = msg;
-
-    if (/(402|insufficient.*balance|payment required|billing|credits)/.test(normalized)) {
-      friendly = `Video probe billing error (${settings.backend}, ${modelRef!}): ${msg}`;
-    } else if (/(connection refused|econnrefused|fetch failed|enotfound)/.test(normalized) && settings.backend === 'local') {
-      friendly = `Could not reach mlx-vlm server. Open the Video Probe page to check status. Error: ${msg}`;
-    } else if (/(too large|413|size limit|content_too_large)/.test(normalized)) {
-      friendly = `Video file too large for this backend. Try a shorter clip. Error: ${msg}`;
-    }
-
-    return { text: friendly, content: [{ type: 'text' as const, text: friendly }], isError: true };
-  }
-
-  return {
-    text,
-    content: [{ type: 'text' as const, text }],
-    details: { backend: settings.backend, model: modelRef!, filePath },
+        const text = await callChatCompletions(
+          'https://openrouter.ai/api/v1/chat/completions',
+          cloudModel,
+          filePath,
+          question,
+          { Authorization: `Bearer ${auth.apiKey}`, ...(auth.headers ?? {}) },
+          signal,
+        );
+        return { text, content: [{ type: 'text' as const, text }], details: { backend: 'openrouter', model: cloudModel, filePath } };
+      },
+    });
   };
 }

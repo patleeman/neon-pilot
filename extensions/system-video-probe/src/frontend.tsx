@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type ServerHealth = { reachable: boolean; models?: string[] };
 type ProcessState = { serverPid: number | null; serverRunning: boolean; setupPid: number | null; setupRunning: boolean };
+type Settings = { backend: 'openrouter' | 'local'; cloudModel: string };
 
 type Status = {
   ok: boolean;
@@ -13,6 +14,7 @@ type Status = {
   venvReady: boolean;
   server: ServerHealth;
   process: ProcessState;
+  settings: Settings;
   log: string;
 };
 
@@ -32,20 +34,47 @@ function Pill({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 
   );
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1 text-xs text-secondary">
+      <span className="font-medium">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cx(
+        'w-full rounded-md border border-border-subtle/60 bg-surface px-2.5 py-1.5 text-sm text-primary outline-none focus-visible:border-accent/80',
+        props.className,
+      )}
+    />
+  );
+}
+
 export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cloudModel, setCloudModel] = useState('');
+  const [settingsDirty, setSettingsDirty] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
       const result = await pa.extension.invoke<Status>('videoProbeStatus', {});
       setStatus(result);
+      // Sync local form state on first load (not while editing)
+      if (!settingsDirty) {
+        setCloudModel((current) => current || result.settings.cloudModel);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [pa]);
+  }, [pa, settingsDirty]);
 
   useEffect(() => {
     void fetchStatus();
@@ -55,11 +84,18 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     };
   }, [fetchStatus]);
 
-  async function runAction(label: string, actionId: string) {
+  // Sync cloudModel when status first loads
+  useEffect(() => {
+    if (status && !settingsDirty && !cloudModel) {
+      setCloudModel(status.settings.cloudModel);
+    }
+  }, [status, settingsDirty, cloudModel]);
+
+  async function runAction(label: string, actionId: string, input: Record<string, unknown> = {}) {
     setBusy(label);
     setError(null);
     try {
-      const result = await pa.extension.invoke<{ ok: boolean; error?: string; status?: Status }>(actionId, {});
+      const result = await pa.extension.invoke<{ ok: boolean; error?: string; status?: Status }>(actionId, input);
       if (result.status) setStatus(result.status);
       if (!result.ok && result.error) setError(result.error);
     } catch (err) {
@@ -69,17 +105,34 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     }
   }
 
+  async function saveSettings(patch: Partial<Settings>) {
+    setError(null);
+    try {
+      const result = await pa.extension.invoke<{ ok: boolean; settings: Settings }>('videoProbeWriteSettings', patch);
+      if (result.settings) {
+        setStatus((prev) => (prev ? { ...prev, settings: result.settings } : prev));
+        setSettingsDirty(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function setBackend(backend: 'openrouter' | 'local') {
+    await saveSettings({ backend });
+  }
+
   const setupRunning = status?.process.setupRunning ?? false;
   const serverRunning = status?.process.serverRunning ?? false;
   const serverReachable = status?.server.reachable ?? false;
   const runtimeInstalled = status?.runtimeInstalled ?? false;
+  const currentBackend = status?.settings.backend ?? 'openrouter';
+  const serverEnabled = serverReachable || serverRunning;
 
   const statusLabel =
     busy ??
     (serverReachable ? 'Running' : serverRunning ? 'Starting' : setupRunning ? 'Installing' : runtimeInstalled ? 'Ready' : 'Not set up');
-
   const statusDotClass = serverReachable ? 'bg-success' : serverRunning || setupRunning ? 'bg-warning animate-pulse' : 'bg-dim';
-  const serverEnabled = serverReachable || serverRunning;
 
   async function toggleServer() {
     if (serverReachable || serverRunning) {
@@ -94,10 +147,10 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
       <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
         <AppPageIntro
           title="Video Probe"
-          summary="Run the probe_video agent tool against local video files. Uses Nemotron Nano Omni via mlx-vlm for on-device inference on Apple Silicon, or routes to OpenRouter for cloud inference."
+          summary="Analyze video files with the probe_video agent tool. Uses Nemotron Nano Omni via mlx-vlm on Apple Silicon, or any configured OpenRouter model."
           actions={
             <div className="flex flex-wrap items-center gap-3">
-              {runtimeInstalled ? (
+              {currentBackend === 'local' && runtimeInstalled ? (
                 <button
                   type="button"
                   role="switch"
@@ -144,7 +197,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
             <div className="flex items-center justify-between gap-3 text-sm">
               <div className="min-w-0 text-secondary">
                 <span className="font-medium text-primary">Installing mlx-vlm and downloading model…</span>
-                <div className="mt-1 text-xs text-dim">This may take a while — the model is ~18 GB. Check the log below for progress.</div>
+                <div className="mt-1 text-xs text-dim">~18 GB download. Check the log below for progress.</div>
               </div>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
@@ -153,63 +206,138 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
           </div>
         ) : null}
 
-        {/* Runtime section */}
-        <section className="rounded-xl border border-border-subtle bg-surface p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Local Runtime</h2>
-              <p className="mt-1 text-sm text-secondary">
-                mlx-vlm runs Nemotron Nano Omni on Apple Silicon. Set up once; the agent auto-starts it when needed.
-              </p>
-            </div>
-            {!runtimeInstalled || setupRunning ? (
-              <ToolbarButton disabled={Boolean(busy) || setupRunning} onClick={() => void runAction('Installing…', 'videoProbeSetup')}>
-                {setupRunning ? 'Installing…' : 'Set Up'}
-              </ToolbarButton>
-            ) : null}
-          </div>
-
-          <div className="mt-5 grid gap-2 text-xs sm:grid-cols-3">
-            <div className="rounded-md border border-border-subtle bg-elevated p-2">
-              <div className="text-dim">Runtime</div>
-              <div className="mt-1 flex items-center gap-1.5">
-                {runtimeInstalled ? <Pill tone="success">Installed</Pill> : <Pill tone="warning">Not installed</Pill>}
-              </div>
-            </div>
-            <div className="rounded-md border border-border-subtle bg-elevated p-2">
-              <div className="text-dim">Server</div>
-              <div className="mt-1">
-                {serverReachable ? (
-                  <Pill tone="success">Running</Pill>
-                ) : serverRunning ? (
-                  <Pill tone="warning">Starting</Pill>
-                ) : (
-                  <Pill>Stopped</Pill>
-                )}
-              </div>
-            </div>
-            <div className="rounded-md border border-border-subtle bg-elevated p-2">
-              <div className="text-dim">Endpoint</div>
-              <div className="mt-1 truncate font-mono text-primary">{status?.baseUrl ?? '…'}/v1</div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-md border border-border-subtle bg-elevated p-3">
-            <div className="text-xs text-dim">Model</div>
-            <div className="mt-1 text-sm font-medium text-primary">{status?.modelId ?? '…'}</div>
-          </div>
-        </section>
-
-        {/* Log section */}
+        {/* Backend settings */}
         <section className="rounded-xl border border-border-subtle bg-surface p-5">
           <div>
-            <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Runtime Logs</h2>
-            <p className="mt-1 text-sm text-secondary">Live logs from setup and server. Refreshes automatically.</p>
+            <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Backend</h2>
+            <p className="mt-1 text-sm text-secondary">Choose where video analysis runs.</p>
           </div>
-          <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
-            {status?.log || 'No logs yet.'}
-          </pre>
+
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            {(
+              [
+                {
+                  id: 'openrouter',
+                  label: 'OpenRouter',
+                  description: 'Any configured OpenRouter model. Uses your existing provider credentials.',
+                },
+                {
+                  id: 'local',
+                  label: 'Local mlx-vlm',
+                  description: 'Nemotron Nano Omni on Apple Silicon. Private, on-device. Requires setup below.',
+                },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => void setBackend(option.id)}
+                className={cx(
+                  'rounded-xl border p-4 text-left transition-colors',
+                  currentBackend === option.id ? 'border-accent/55 bg-accent/10' : 'border-border-subtle hover:bg-surface/60',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cx(
+                      'h-3 w-3 rounded-full border-2',
+                      currentBackend === option.id ? 'border-accent bg-accent' : 'border-dim bg-transparent',
+                    )}
+                  />
+                  <span className="text-sm font-medium text-primary">{option.label}</span>
+                </div>
+                <p className="mt-1.5 pl-5 text-xs text-secondary">{option.description}</p>
+              </button>
+            ))}
+          </div>
+
+          {currentBackend === 'openrouter' ? (
+            <div className="mt-4 space-y-3">
+              <Field label="Model">
+                <div className="flex gap-2">
+                  <TextInput
+                    value={cloudModel}
+                    placeholder="google/gemini-2.5-flash"
+                    onChange={(e) => {
+                      setCloudModel(e.target.value);
+                      setSettingsDirty(true);
+                    }}
+                  />
+                  <ToolbarButton disabled={!settingsDirty || !cloudModel.trim()} onClick={() => void saveSettings({ cloudModel })}>
+                    Save
+                  </ToolbarButton>
+                </div>
+              </Field>
+              <div className="rounded-md border border-border-subtle bg-elevated p-3 text-xs text-secondary">
+                Uses your existing OpenRouter API key from Pi's provider settings — no separate key needed. The model must support video
+                input (e.g. <span className="font-mono text-primary">google/gemini-2.5-flash</span>,{' '}
+                <span className="font-mono text-primary">qwen/qwen3.5-35b-a3b</span>).
+              </div>
+            </div>
+          ) : null}
         </section>
+
+        {/* Local runtime section */}
+        {currentBackend === 'local' ? (
+          <section className="rounded-xl border border-border-subtle bg-surface p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Local Runtime</h2>
+                <p className="mt-1 text-sm text-secondary">
+                  mlx-vlm runs Nemotron Nano Omni on Apple Silicon. Set up once; the agent auto-starts it when needed.
+                </p>
+              </div>
+              {!runtimeInstalled || setupRunning ? (
+                <ToolbarButton disabled={Boolean(busy) || setupRunning} onClick={() => void runAction('Installing…', 'videoProbeSetup')}>
+                  {setupRunning ? 'Installing…' : 'Set Up'}
+                </ToolbarButton>
+              ) : null}
+            </div>
+
+            <div className="mt-5 grid gap-2 text-xs sm:grid-cols-3">
+              <div className="rounded-md border border-border-subtle bg-elevated p-2">
+                <div className="text-dim">Runtime</div>
+                <div className="mt-1">
+                  {runtimeInstalled ? <Pill tone="success">Installed</Pill> : <Pill tone="warning">Not installed</Pill>}
+                </div>
+              </div>
+              <div className="rounded-md border border-border-subtle bg-elevated p-2">
+                <div className="text-dim">Server</div>
+                <div className="mt-1">
+                  {serverReachable ? (
+                    <Pill tone="success">Running</Pill>
+                  ) : serverRunning ? (
+                    <Pill tone="warning">Starting</Pill>
+                  ) : (
+                    <Pill>Stopped</Pill>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-md border border-border-subtle bg-elevated p-2">
+                <div className="text-dim">Endpoint</div>
+                <div className="mt-1 truncate font-mono text-primary">{status?.baseUrl ?? '…'}/v1</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-md border border-border-subtle bg-elevated p-3">
+              <div className="text-xs text-dim">Model</div>
+              <div className="mt-1 text-sm font-medium text-primary">{status?.modelId ?? '…'}</div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* Log */}
+        {currentBackend === 'local' ? (
+          <section className="rounded-xl border border-border-subtle bg-surface p-5">
+            <div>
+              <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Runtime Logs</h2>
+              <p className="mt-1 text-sm text-secondary">Setup and server output. Refreshes automatically.</p>
+            </div>
+            <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
+              {status?.log || 'No logs yet.'}
+            </pre>
+          </section>
+        ) : null}
       </AppPageLayout>
     </div>
   );

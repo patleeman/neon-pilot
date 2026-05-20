@@ -11,12 +11,14 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
+    "agentExtension": "createVideoProbeAgentExtension",
     "actions": [
-      { "id": "probeVideo", "handler": "probeVideo", "title": "Probe video" },
       { "id": "videoProbeStatus", "handler": "status", "title": "Video probe status" },
       { "id": "videoProbeSetup", "handler": "setup", "title": "Install runtime and download model" },
       { "id": "videoProbeStart", "handler": "startServer", "title": "Start mlx-vlm server" },
-      { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server" }
+      { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server" },
+      { "id": "videoProbeReadSettings", "handler": "readSettings", "title": "Read video probe settings" },
+      { "id": "videoProbeWriteSettings", "handler": "writeSettings", "title": "Write video probe settings" }
     ]
   },
   "contributes": {
@@ -37,60 +39,7 @@
         "route": "/ext/system-video-probe"
       }
     ],
-    "tools": [
-      {
-        "id": "probe-video",
-        "name": "probe_video",
-        "title": "Probe video",
-        "description": "Analyze a video file using a video-capable model. Provide the absolute path to a video file and a question about its contents.",
-        "action": "probeVideo",
-        "promptGuidelines": [
-          "Use this tool when the user references a video file by path and asks about its content.",
-          "Do not guess at video content — always call this tool when visual inspection of a video is needed."
-        ],
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "Absolute path to the video file on disk."
-            },
-            "question": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 8000,
-              "description": "What to ask or analyze about the video."
-            }
-          },
-          "required": ["path", "question"],
-          "additionalProperties": false
-        }
-      }
-    ],
-    "settings": {
-      "videoProbe.backend": {
-        "type": "select",
-        "group": "Video Probe",
-        "title": "Backend",
-        "description": "Which backend to use for video analysis.",
-        "enum": ["openrouter", "local"],
-        "enumLabels": ["OpenRouter (cloud)", "Local mlx-vlm (Apple Silicon)"],
-        "default": "openrouter"
-      },
-      "videoProbe.openrouterModel": {
-        "type": "string",
-        "group": "Video Probe",
-        "title": "OpenRouter model",
-        "description": "OpenRouter model ID for video analysis.",
-        "default": "google/gemini-2.5-flash"
-      }
-    },
-    "secrets": {
-      "openrouterApiKey": {
-        "label": "OpenRouter API Key",
-        "env": "OPENROUTER_API_KEY"
-      }
-    }
+    "tools": []
   },
   "permissions": ["secrets:read", "shell:execute"]
 }
