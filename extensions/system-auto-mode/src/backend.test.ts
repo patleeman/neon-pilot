@@ -27,6 +27,17 @@ function activeGoal(objective = 'ship goal mode', noProgressTurns = 0, updatedAt
   });
 }
 
+function pausedGoal(objective = 'ship goal mode', updatedAt = '2026-05-09T00:00:00.000Z') {
+  return customEntry('conversation-goal', {
+    objective,
+    status: 'paused',
+    tasks: [],
+    stopReason: 'paused',
+    updatedAt,
+    noProgressTurns: 0,
+  });
+}
+
 function completeGoal(stopReason = 'goal achieved', updatedAt = '2026-05-09T00:00:01.000Z') {
   return customEntry('conversation-goal', {
     objective: '',
@@ -153,6 +164,49 @@ describe('system-goal-mode extension', () => {
     );
     expect(abort).not.toHaveBeenCalled();
     expect(result.content?.[0]?.text).toBe('Goal complete!');
+  });
+
+  it('goal pause preserves the objective and suppresses continuations', async () => {
+    const harness = createHarness([activeGoal('wait for CI')]);
+    const { goal, appendEntry, sendMessage, ctx } = harness;
+
+    const result = await goal.execute('goal-pause', { status: 'pause' }, new AbortController().signal, vi.fn(), ctx);
+    await finishAgentRun(harness);
+
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: 'wait for CI', status: 'paused', stopReason: 'paused', noProgressTurns: 0 }),
+    );
+    expect(result.content?.[0]?.text).toBe('Goal paused: "wait for CI"');
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('goal resume reactivates a paused goal and re-arms continuation', async () => {
+    const harness = createHarness([pausedGoal('finish after CI')]);
+    const { goal, appendEntry, sendMessage, ctx } = harness;
+
+    const result = await goal.execute('goal-resume', { status: 'resume' }, new AbortController().signal, vi.fn(), ctx);
+    await finishAgentRun(harness);
+
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: 'finish after CI', status: 'active', stopReason: null, noProgressTurns: 0 }),
+    );
+    expect(result.content?.[0]?.text).toBe('Goal resumed: "finish after CI"');
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ customType: 'goal-continuation', content: expect.stringContaining('Objective: finish after CI') }),
+      { deliverAs: 'followUp', triggerTurn: true },
+    );
+  });
+
+  it('does not re-arm paused goal continuation on session_start recovery', async () => {
+    const harness = createHarness([pausedGoal('wait for deploy')]);
+
+    await harness.sessionStart({}, harness.ctx);
+    await flushTimers();
+
+    expect(harness.sendMessage).not.toHaveBeenCalled();
   });
 
   it('agent_end is the only scheduler and queues one continuation while goal mode is active', async () => {
@@ -454,5 +508,25 @@ describe('system-goal-mode extension', () => {
       expect.objectContaining({ objective: '', status: 'complete', stopReason: 'cleared', noProgressTurns: 0 }),
     );
     expect(sendUserMessage).toHaveBeenCalledWith('Goal cleared. Previous objective: ship it');
+  });
+
+  it('slash command pause and resume update the same canonical state', async () => {
+    const { appendEntry, sendUserMessage, registeredCommands, ctx } = createHarness([activeGoal('wait cleanly')]);
+
+    await registeredCommands.get('goal')?.handler('pause', ctx);
+    await registeredCommands.get('goal')?.handler('resume', ctx);
+
+    expect(appendEntry).toHaveBeenNthCalledWith(
+      1,
+      'conversation-goal',
+      expect.objectContaining({ objective: 'wait cleanly', status: 'paused', stopReason: 'paused' }),
+    );
+    expect(appendEntry).toHaveBeenNthCalledWith(
+      2,
+      'conversation-goal',
+      expect.objectContaining({ objective: 'wait cleanly', status: 'active', stopReason: null }),
+    );
+    expect(sendUserMessage).toHaveBeenCalledWith('Goal paused: wait cleanly');
+    expect(sendUserMessage).toHaveBeenCalledWith('Goal resumed: wait cleanly');
   });
 });

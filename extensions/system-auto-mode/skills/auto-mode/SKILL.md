@@ -19,7 +19,9 @@ Goal mode is a single active objective. The system injects the current objective
 ## How it works
 
 1. **`goal(objective: "...")`** — enable goal mode or replace the active objective.
-2. **`goal(status: "complete")`** — disable goal mode when the objective is met.
+2. **`goal(status: "pause")`** — pause the active objective without losing it.
+3. **`goal(status: "resume")`** — resume a paused objective.
+4. **`goal(status: "complete")`** — disable goal mode when the objective is met.
 
 The system automatically schedules a visible goal-continuation block after each turn while the goal is active, then uses it to trigger the next turn.
 
@@ -27,6 +29,7 @@ The system automatically schedules a visible goal-continuation block after each 
 
 - Do not create a goal for every ordinary request — only for sustained multi-turn tasks.
 - Calling `goal` with an objective while goal mode is active replaces the objective and keeps goal mode running.
+- If the goal needs to wait, schedule a `conversation` deferred resume, then call `goal` with `status: "pause"`. Include instructions in the deferred resume prompt to call `goal` with `status: "resume"` when work should continue.
 - Mark the goal complete with `goal { status: "complete" }` only when the objective is actually achieved.
 - The system's continuation prompt already includes the current objective.
 

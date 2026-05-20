@@ -87,6 +87,26 @@ function createCompleteGoalState(stopReason: string): GoalState {
   };
 }
 
+function createPausedGoalState(state: GoalState): GoalState {
+  return {
+    ...state,
+    status: 'paused',
+    stopReason: 'paused',
+    updatedAt: new Date().toISOString(),
+    noProgressTurns: 0,
+  };
+}
+
+function createResumedGoalState(state: GoalState): GoalState {
+  return {
+    ...state,
+    status: 'active',
+    stopReason: null,
+    updatedAt: new Date().toISOString(),
+    noProgressTurns: 0,
+  };
+}
+
 function buildContinuationPrompt(state: GoalState): string {
   return [
     'Goal continuation.',
@@ -138,8 +158,8 @@ function hasPendingMessages(ctx: { hasPendingMessages?: () => boolean }): boolea
 const GoalParams = Type.Object({
   objective: Type.Optional(Type.String({ description: 'Start or replace the active goal objective.' })),
   status: Type.Optional(
-    Type.Union([Type.Literal('complete')], {
-      description: 'Mark the active goal complete only when the objective is achieved.',
+    Type.Union([Type.Literal('pause'), Type.Literal('resume'), Type.Literal('complete')], {
+      description: 'Pause the active goal, resume a paused goal, or mark the active goal complete only when the objective is achieved.',
     }),
   ),
 });
@@ -203,25 +223,55 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       promptGuidelines: [
         'Use goal mode only for explicit requests or sustained autonomous work; ordinary one-shot tasks do not need a goal.',
         'Set objective to start or replace the active goal.',
+        'Use status="pause" when the goal must wait on time or an external event; schedule a deferred resume with instructions to call status="resume" when work should continue.',
         'Use status="complete" only when the objective is actually achieved.',
       ],
       parameters: GoalParams,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         const objective = typeof params.objective === 'string' ? params.objective.trim() : undefined;
-        if (params.status === 'complete' && objective) {
-          throw new Error('Use either objective or status="complete", not both.');
+        if (params.status && objective) {
+          throw new Error('Use either objective or status, not both.');
         }
-        if (params.status !== 'complete' && !objective) {
-          throw new Error('Provide objective to start/update the goal, or status: "complete" to finish it.');
+        if (!params.status && !objective) {
+          throw new Error('Provide objective to start/update the goal, or status: "pause", "resume", or "complete".');
         }
 
         const state = readGoalState(ctx.sessionManager);
-        if (params.status === 'complete' && state.status !== 'active') {
+        if (params.status === 'complete' && state.status === 'complete') {
           clearPendingContinuation();
           return {
             content: [{ type: 'text' as const, text: 'Goal already complete.' }],
             details: { state },
           };
+        }
+
+        if (params.status === 'pause') {
+          if (state.status === 'complete' || !state.objective) {
+            clearPendingContinuation();
+            return { content: [{ type: 'text' as const, text: 'No active goal to pause.' }], details: { state } };
+          }
+          if (state.status === 'paused') {
+            clearPendingContinuation();
+            return { content: [{ type: 'text' as const, text: 'Goal already paused.' }], details: { state } };
+          }
+          const paused = createPausedGoalState(state);
+          writeGoalState(pi, paused);
+          clearPendingContinuation();
+          return { content: [{ type: 'text' as const, text: `Goal paused: "${paused.objective}"` }], details: { state: paused } };
+        }
+
+        if (params.status === 'resume') {
+          if (state.status === 'complete' || !state.objective) {
+            clearPendingContinuation();
+            return { content: [{ type: 'text' as const, text: 'No paused goal to resume.' }], details: { state } };
+          }
+          if (state.status === 'active') {
+            return { content: [{ type: 'text' as const, text: `Goal already active: "${state.objective}"` }], details: { state } };
+          }
+          const resumed = createResumedGoalState(state);
+          writeGoalState(pi, resumed);
+          clearPendingContinuation();
+          return { content: [{ type: 'text' as const, text: `Goal resumed: "${resumed.objective}"` }], details: { state: resumed } };
         }
 
         const newState = params.status === 'complete' ? createCompleteGoalState('goal achieved') : createActiveGoalState(objective!);
@@ -238,7 +288,8 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
 
     // ── Register /goal slash command ────────────────────────────────────
     pi.registerCommand('goal', {
-      description: 'Set, view, or clear the current goal. Usage: /goal <objective>, /goal, or /goal clear',
+      description:
+        'Set, view, pause, resume, or clear the current goal. Usage: /goal <objective>, /goal, /goal pause, /goal resume, or /goal clear',
       async handler(args, ctx) {
         const trimmed = args.trim();
 
@@ -252,6 +303,40 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
           writeGoalState(pi, cleared);
           clearPendingContinuation();
           pi.sendUserMessage(`Goal cleared. Previous objective: ${state.objective}`);
+          return;
+        }
+
+        if (trimmed.toLowerCase() === 'pause' || trimmed.toLowerCase() === 'p') {
+          const state = readGoalState(ctx.sessionManager);
+          if (state.status === 'complete' || !state.objective) {
+            pi.sendUserMessage('No active goal to pause.');
+            return;
+          }
+          if (state.status === 'paused') {
+            pi.sendUserMessage('Goal already paused.');
+            return;
+          }
+          const paused = createPausedGoalState(state);
+          writeGoalState(pi, paused);
+          clearPendingContinuation();
+          pi.sendUserMessage(`Goal paused: ${paused.objective}`);
+          return;
+        }
+
+        if (trimmed.toLowerCase() === 'resume' || trimmed.toLowerCase() === 'r') {
+          const state = readGoalState(ctx.sessionManager);
+          if (state.status === 'complete' || !state.objective) {
+            pi.sendUserMessage('No paused goal to resume.');
+            return;
+          }
+          if (state.status === 'active') {
+            pi.sendUserMessage(`Goal already active: ${state.objective}`);
+            return;
+          }
+          const resumed = createResumedGoalState(state);
+          writeGoalState(pi, resumed);
+          clearPendingContinuation();
+          pi.sendUserMessage(`Goal resumed: ${resumed.objective}`);
           return;
         }
 

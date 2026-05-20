@@ -20,12 +20,13 @@
         "id": "goal",
         "name": "goal",
         "title": "Goal",
-        "description": "Start, replace, or complete the current goal.",
+        "description": "Start, replace, pause, resume, or complete the current goal.",
         "nativeRegistration": true,
-        "promptSnippet": "Use goal for explicit sustained objectives; set objective to start/replace, or status=\"complete\" when done.",
+        "promptSnippet": "Use goal for explicit sustained objectives; set objective to start/replace, status=\"pause\" to wait, status=\"resume\" to continue, or status=\"complete\" when done.",
         "promptGuidelines": [
           "Use goal mode only for explicit requests or sustained autonomous work; ordinary one-shot tasks do not need a goal.",
           "Set objective to start or replace the active goal.",
+          "Use status=\"pause\" when the goal must wait on time or an external event; schedule a deferred resume with instructions to call status=\"resume\" when work should continue.",
           "Use status=\"complete\" only when the objective is actually achieved."
         ],
         "inputSchema": {
@@ -34,8 +35,8 @@
             "objective": { "type": "string", "description": "Start or replace the active goal objective." },
             "status": {
               "type": "string",
-              "enum": ["complete"],
-              "description": "Mark the active goal complete only when the objective is achieved."
+              "enum": ["pause", "resume", "complete"],
+              "description": "Pause the active goal, resume a paused goal, or mark the active goal complete only when the objective is achieved."
             }
           },
           "additionalProperties": false
