@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "id": "template-data-dashboard",
+  "name": "Template: Data Dashboard",
+  "description": "Starter template — read-only page that loads data from a backend action and renders it as a table.",
+  "version": "0.1.0",
+  "defaultEnabled": false,
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "templateDashboardLoad",
+        "handler": "load",
+        "title": "Load dashboard data"
+      }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "page",
+        "title": "Template: Data Dashboard",
+        "location": "main",
+        "route": "/ext/template-data-dashboard",
+        "component": "DataDashboardPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "Data Dashboard",
+        "route": "/ext/template-data-dashboard",
+        "icon": "chart"
+      }
+    ]
+  },
+  "permissions": []
+}
