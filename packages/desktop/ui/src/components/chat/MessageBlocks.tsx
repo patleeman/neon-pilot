@@ -201,104 +201,113 @@ export const ContextShelf = memo(function ContextShelf({
     );
   }
 
+  const topologyBlocks = blocks.filter((b) => isTopologyBlock(b));
+
   return (
-    <details
-      className="group w-[78%] rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
-      data-context-shelf="1"
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-        <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
-          ›
-        </span>
-        <span className="shrink-0 font-medium text-secondary/85">Context</span>
-        <span className="text-dim">
-          · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
-        </span>
-        {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
-        {blocks[blocks.length - 1]?.ts ? (
-          <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
-        ) : null}
-      </summary>
-      <div className="mt-2 ml-1 space-y-1.5 border-l border-border-subtle pl-4">
-        {hasSystemPrompt ? (
-          <details
-            className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-            data-context-type="system_prompt"
-          >
-            <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-              <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
-              <span className="min-w-0 flex-1 truncate text-dim/90">
-                {toolDefinitions.length > 0
-                  ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
-                  : 'Runtime instructions available for inspection.'}
-              </span>
-            </summary>
-            <div className="space-y-4 pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
-              {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
-              {toolDefinitions.length > 0 ? (
-                <div>
-                  <div className="mb-2 font-medium text-primary">Available tool definitions</div>
-                  {renderText(formatToolDefinitions(toolDefinitions))}
-                </div>
-              ) : null}
-            </div>
-          </details>
-        ) : null}
-        {remoteControlled ? (
-          <details
-            className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-            data-context-type="remote_control"
-          >
-            <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-              <span className="min-w-36 shrink-0 font-medium text-primary/80">Remote control</span>
-              <span className="min-w-0 flex-1 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
-            </summary>
-            <div className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">Controlled remotely from Kitty Litter.</div>
-          </details>
-        ) : null}
-        {blocks.map((block, index) => {
-          const blockId = block.id?.trim() || undefined;
-          const replySelectionScopeProps = buildReplySelectionScopeProps(
-            typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
-            blockId,
-            onSelectionGesture,
-          );
-
-          // Topology blocks (parent backlinks, child tombstones) have navigable links;
-          // render them inline with proper navigation instead of as collapsed details.
-          if (isTopologyBlock(block)) {
-            return (
-              <div key={block.id ?? index} className="px-2 py-0.5">
-                <TopologyBlock block={block} />
-              </div>
-            );
-          }
-
-          return (
+    <div data-context-shelf-wrapper="1">
+      {topologyBlocks.map((block) => (
+        <div key={block.id ?? `topology-${block.ts}`} className="w-[78%] px-2 py-0.5">
+          <TopologyBlock block={block as Extract<MessageBlock, { type: 'context' }>} />
+        </div>
+      ))}
+      <details
+        className="group w-[78%] rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
+        data-context-shelf="1"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+          <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+            ›
+          </span>
+          <span className="shrink-0 font-medium text-secondary/85">Context</span>
+          <span className="text-dim">
+            · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
+          </span>
+          {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
+          {blocks[blocks.length - 1]?.ts ? (
+            <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
+          ) : null}
+        </summary>
+        <div className="mt-2 ml-1 space-y-1.5 border-l border-border-subtle pl-4">
+          {hasSystemPrompt ? (
             <details
-              key={block.id ?? index}
               className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-              data-context-type={block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`}
-              data-summary-kind={block.type === 'summary' ? block.kind : undefined}
+              data-context-type="system_prompt"
             >
               <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
-                <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
-                {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+                <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
+                <span className="min-w-0 flex-1 truncate text-dim/90">
+                  {toolDefinitions.length > 0
+                    ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
+                    : 'Runtime instructions available for inspection.'}
+                </span>
               </summary>
-              <div {...replySelectionScopeProps} className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
-                {block.type === 'summary' && block.kind === 'compaction' ? (
-                  <p className="mb-2 text-[12px] leading-relaxed text-secondary">
-                    {resolveCompactionSummaryDetail(block.title, block.detail)}
-                  </p>
+              <div className="space-y-4 pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+                {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
+                {toolDefinitions.length > 0 ? (
+                  <div>
+                    <div className="mb-2 font-medium text-primary">Available tool definitions</div>
+                    {renderText(formatToolDefinitions(toolDefinitions))}
+                  </div>
                 ) : null}
-                {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
               </div>
             </details>
-          );
-        })}
-      </div>
-    </details>
+          ) : null}
+          {remoteControlled ? (
+            <details
+              className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+              data-context-type="remote_control"
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                <span className="min-w-36 shrink-0 font-medium text-primary/80">Remote control</span>
+                <span className="min-w-0 flex-1 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+              </summary>
+              <div className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">Controlled remotely from Kitty Litter.</div>
+            </details>
+          ) : null}
+          {blocks.map((block, index) => {
+            const blockId = block.id?.trim() || undefined;
+            const replySelectionScopeProps = buildReplySelectionScopeProps(
+              typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
+              blockId,
+              onSelectionGesture,
+            );
+
+            // Topology blocks (parent backlinks, child tombstones) have navigable links;
+            // render them inline with proper navigation instead of as collapsed details.
+            if (isTopologyBlock(block)) {
+              return (
+                <div key={block.id ?? index} className="px-2 py-0.5">
+                  <TopologyBlock block={block} />
+                </div>
+              );
+            }
+
+            return (
+              <details
+                key={block.id ?? index}
+                className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+                data-context-type={block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`}
+                data-summary-kind={block.type === 'summary' ? block.kind : undefined}
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
+                  <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                  {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+                </summary>
+                <div {...replySelectionScopeProps} className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+                  {block.type === 'summary' && block.kind === 'compaction' ? (
+                    <p className="mb-2 text-[12px] leading-relaxed text-secondary">
+                      {resolveCompactionSummaryDetail(block.title, block.detail)}
+                    </p>
+                  ) : null}
+                  {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </details>
+    </div>
   );
 });
 
