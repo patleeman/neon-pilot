@@ -513,8 +513,12 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
         '.cm-cursor': {
           borderLeftColor: 'rgb(var(--color-primary))',
         },
-        '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-          backgroundColor: 'rgb(var(--color-accent) / 0.24)',
+        '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
+          backgroundColor: theme === 'dark' ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
+        },
+        '::selection': {
+          backgroundColor: theme === 'dark' ? 'rgb(var(--color-selection))' : 'rgb(var(--color-accent) / 0.24)',
+          color: theme === 'dark' ? 'rgb(var(--color-primary))' : undefined,
         },
         '.workspace-added-line': { backgroundColor: 'rgba(34, 197, 94, 0.12)' },
         '.workspace-deleted-lines': {
