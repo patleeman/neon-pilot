@@ -79,6 +79,15 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     (serverReachable ? 'Running' : serverRunning ? 'Starting' : setupRunning ? 'Installing' : runtimeInstalled ? 'Ready' : 'Not set up');
 
   const statusDotClass = serverReachable ? 'bg-success' : serverRunning || setupRunning ? 'bg-warning animate-pulse' : 'bg-dim';
+  const serverEnabled = serverReachable || serverRunning;
+
+  async function toggleServer() {
+    if (serverReachable || serverRunning) {
+      await runAction('Stopping…', 'videoProbeStop');
+    } else if (runtimeInstalled) {
+      await runAction('Starting…', 'videoProbeStart');
+    }
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -88,6 +97,35 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
           summary="Run the probe_video agent tool against local video files. Uses Nemotron Nano Omni via mlx-vlm for on-device inference on Apple Silicon, or routes to OpenRouter for cloud inference."
           actions={
             <div className="flex flex-wrap items-center gap-3">
+              {runtimeInstalled ? (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={serverEnabled}
+                  aria-label="Enable local server"
+                  disabled={Boolean(busy) || setupRunning}
+                  onClick={() => void toggleServer()}
+                  className="group inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cx(
+                      'relative inline-flex h-[18px] w-[32px] shrink-0 rounded-full border p-[1px] transition-all',
+                      serverEnabled
+                        ? 'border-accent/55 bg-accent/75 shadow-sm'
+                        : 'border-border-default bg-surface/40 group-hover:bg-surface/60',
+                    )}
+                  >
+                    <span
+                      className={cx(
+                        'h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform',
+                        serverEnabled ? 'translate-x-[14px]' : 'translate-x-0',
+                      )}
+                    />
+                  </span>
+                  <span>Server</span>
+                </button>
+              ) : null}
               <div className="inline-flex items-center gap-2 text-sm text-secondary">
                 <span className={cx('h-2 w-2 rounded-full', statusDotClass)} />
                 <span className="font-medium text-primary">{statusLabel}</span>
@@ -124,23 +162,11 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                 mlx-vlm runs Nemotron Nano Omni on Apple Silicon. Set up once; the agent auto-starts it when needed.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {!runtimeInstalled || setupRunning ? (
-                <ToolbarButton disabled={Boolean(busy) || setupRunning} onClick={() => void runAction('Installing…', 'videoProbeSetup')}>
-                  {setupRunning ? 'Installing…' : 'Set Up'}
-                </ToolbarButton>
-              ) : null}
-              {runtimeInstalled && !serverReachable && !serverRunning ? (
-                <ToolbarButton disabled={Boolean(busy)} onClick={() => void runAction('Starting…', 'videoProbeStart')}>
-                  Start Server
-                </ToolbarButton>
-              ) : null}
-              {serverRunning || serverReachable ? (
-                <ToolbarButton disabled={Boolean(busy)} onClick={() => void runAction('Stopping…', 'videoProbeStop')}>
-                  Stop Server
-                </ToolbarButton>
-              ) : null}
-            </div>
+            {!runtimeInstalled || setupRunning ? (
+              <ToolbarButton disabled={Boolean(busy) || setupRunning} onClick={() => void runAction('Installing…', 'videoProbeSetup')}>
+                {setupRunning ? 'Installing…' : 'Set Up'}
+              </ToolbarButton>
+            ) : null}
           </div>
 
           <div className="mt-5 grid gap-2 text-xs sm:grid-cols-3">
