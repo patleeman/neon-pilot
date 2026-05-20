@@ -4,9 +4,9 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.0** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
+**v0.9.0-rc.1** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
 
-Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.0
+Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.1
 
 Highlights in this train:
 
@@ -14,6 +14,7 @@ Highlights in this train:
 - Refreshed desktop shell styling with new logo assets, cobalt accent defaults, accent-aware surfaces, and tighter command palette/workbench behavior.
 - Improved workspace, prompt assembly, knowledge onboarding, extension, and settings layouts.
 - Hardened agent tooling, extension runtime activation, browser routing, and release test inventory coverage.
+- Fixed rc.1 release smoke blockers around host-backed extension imports and isolated daemon socket paths.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## Release Commands

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0-rc.1 — 2026-05-20
+
+### Highlights
+
+- Skips the aborted rc.0 publish and retags the current release train as rc.1.
+- Fixes release smoke coverage for host-backed prompt assembly and skills extensions that resolve daemon APIs through the packaged app host.
+- Fixes packaged smoke startup with isolated daemon sockets by honoring the explicit daemon socket override when reading durable runs.
+- Keeps the 0.9 RC user-facing scope from rc.0: Neon Pilot rebrand, refreshed desktop shell styling, workspace polish, and hardened extension/tooling validation.
+
+### Notes
+
+- 0 commits since the previous release.
+
 ## 0.9.0-rc.0 — 2026-05-20
 
 ### Highlights
