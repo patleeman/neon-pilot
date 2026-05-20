@@ -38,7 +38,7 @@
   }
 
   .ui-desktop-top-bar__controls {
-    @apply flex items-center gap-0.5;
+    @apply flex -translate-y-px items-center gap-0.5;
   }
 
   .ui-desktop-top-bar__mode-badge {
@@ -47,7 +47,7 @@
 
   .ui-toolbar-button.ui-desktop-top-bar__icon-button,
   .ui-icon-button.ui-desktop-top-bar__icon-button {
-    @apply h-7 min-h-0 min-w-[26px] rounded-md border-0 bg-transparent px-1.5 text-[11px] text-secondary shadow-none transition-colors hover:border-0 hover:bg-elevated/55 hover:text-primary disabled:border-0 disabled:bg-transparent disabled:text-dim disabled:opacity-100;
+    @apply h-7 min-h-0 min-w-[26px] rounded-md border-0 bg-transparent px-1.5 text-[11px] leading-none text-secondary shadow-none transition-colors hover:border-0 hover:bg-elevated/55 hover:text-primary disabled:border-0 disabled:bg-transparent disabled:text-dim disabled:opacity-100;
   }
 
   .ui-icon-button.ui-desktop-top-bar__connections-button--off {

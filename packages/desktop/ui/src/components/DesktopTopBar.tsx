@@ -287,7 +287,9 @@ export function DesktopTopBar({
         </div>
         <div className="ml-1 flex h-6 items-center gap-1.5 border-l border-border-subtle pl-2" style={noDragStyle}>
           <NeonPilotMarkIcon />
-          <span className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</span>
+          <span className="inline-block translate-y-px text-[12.5px] font-semibold leading-none tracking-[-0.012em] text-primary">
+            Neon Pilot
+          </span>
         </div>
         <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
           {environmentBadgeLabel}
