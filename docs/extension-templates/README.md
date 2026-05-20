@@ -1,20 +1,20 @@
 # Extension templates
 
 Ready-to-copy starting points for common extension patterns. Each template lives as a real, buildable
-extension under `experimental-extensions/extensions/template-*` — copy the folder, rename the extension
-id, fill in your domain logic, build, and reload.
+example under `docs/extension-templates/templates/template-*` — copy the folder, rename the extension
+id, fill in your domain logic, build, and reload. Templates are documentation/scaffolding, not runtime-loaded extensions.
 
-| Template           | Pattern                                                   | Location                                                                                                                              |
-| ------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-dashboard`   | Read-only page — load from backend, render table or cards | [`experimental-extensions/extensions/template-data-dashboard`](../../experimental-extensions/extensions/template-data-dashboard/)     |
-| `crud-page`        | List + slide-in form editor. Full create/edit/delete.     | [`experimental-extensions/extensions/template-crud-page`](../../experimental-extensions/extensions/template-crud-page/)               |
-| `settings-section` | Section in the shared Settings page. No separate route.   | [`experimental-extensions/extensions/template-settings-section`](../../experimental-extensions/extensions/template-settings-section/) |
+| Template           | Pattern                                                   | Location                                                                                               |
+| ------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `data-dashboard`   | Read-only page — load from backend, render table or cards | [`docs/extension-templates/templates/template-data-dashboard`](templates/template-data-dashboard/)     |
+| `crud-page`        | List + slide-in form editor. Full create/edit/delete.     | [`docs/extension-templates/templates/template-crud-page`](templates/template-crud-page/)               |
+| `settings-section` | Section in the shared Settings page. No separate route.   | [`docs/extension-templates/templates/template-settings-section`](templates/template-settings-section/) |
 
 ## Quick-start
 
 ```bash
 # Copy the template to your extensions directory
-cp -r experimental-extensions/extensions/template-crud-page \
+cp -r docs/extension-templates/templates/template-crud-page \
       ~/.local/state/neon-pilot/extensions/my-extension
 
 # 1. Edit extension.json: change "id", route, component name, action ids
