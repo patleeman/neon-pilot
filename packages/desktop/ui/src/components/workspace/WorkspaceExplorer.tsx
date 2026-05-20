@@ -39,7 +39,6 @@ interface WorkspaceExplorerProps {
   cwd: string | null;
   onDraftPrompt: (prompt: string) => void;
   onOpenFile?: (file: { cwd: string; path: string }) => void;
-  onCloseFile?: (path: string | null) => void;
   activeFilePath?: string | null;
   railOnly?: boolean;
 }
@@ -61,6 +60,7 @@ interface DiffDecorationSpec {
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
 const WORKSPACE_OPEN_FILES_KEY_PREFIX = 'pa:workspace-open-files:';
+const WORKSPACE_OPEN_FILES_CHANGED_EVENT = 'pa:workspace-open-files-changed';
 const MAX_WORKSPACE_OPEN_FILES = 24;
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
@@ -384,11 +384,13 @@ function readWorkspaceOpenFiles(cwd: string | null): string[] {
 
 function writeWorkspaceOpenFiles(cwd: string | null, paths: readonly string[]): void {
   if (!cwd) return;
+  const nextPaths = [...new Set(paths)].slice(0, MAX_WORKSPACE_OPEN_FILES);
   try {
-    localStorage.setItem(workspaceOpenFilesKey(cwd), JSON.stringify([...new Set(paths)].slice(0, MAX_WORKSPACE_OPEN_FILES)));
+    localStorage.setItem(workspaceOpenFilesKey(cwd), JSON.stringify(nextPaths));
   } catch {
     /* ignore */
   }
+  window.dispatchEvent(new CustomEvent(WORKSPACE_OPEN_FILES_CHANGED_EVENT, { detail: { cwd, paths: nextPaths } }));
 }
 
 function addWorkspaceOpenFile(paths: readonly string[], path: string): string[] {
@@ -406,83 +408,6 @@ function parentDirectory(path: string): string {
   const parts = path.split('/').filter(Boolean);
   parts.pop();
   return parts.join('/');
-}
-
-function WorkspaceOpenFilesSection({
-  openFilePaths,
-  activePath,
-  onSelect,
-  onClose,
-  onCloseAll,
-}: {
-  openFilePaths: readonly string[];
-  activePath: string | null;
-  onSelect: (path: string) => void;
-  onClose: (path: string) => void;
-  onCloseAll: () => void;
-}) {
-  return (
-    <div className="flex flex-col border-b border-border-subtle bg-surface/80">
-      <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
-        <p className="ui-section-label">Open Files</p>
-        {openFilePaths.length > 0 ? (
-          <button
-            type="button"
-            aria-label="Close all open files"
-            title="Close all open files"
-            className="ui-icon-button ui-icon-button-compact text-dim hover:text-primary"
-            onClick={onCloseAll}
-          >
-            <Ico d={ICON.x} size={11} />
-          </button>
-        ) : null}
-      </div>
-      {openFilePaths.length === 0 ? (
-        <p className="px-3 pb-3 text-[12px] text-dim">No open files.</p>
-      ) : (
-        <div className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-2">
-          {openFilePaths.map((path) => {
-            const isActive = activePath === path;
-            const fileName = path.split('/').filter(Boolean).pop() ?? path;
-            return (
-              <div key={path} className="group relative shrink-0">
-                <button
-                  type="button"
-                  title={path}
-                  className={cx(
-                    'flex h-[34px] max-w-[180px] min-w-0 items-center gap-2 border-r border-border-subtle px-3 pr-8 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/35',
-                    isActive
-                      ? 'bg-panel text-primary shadow-[inset_0_-2px_0_rgb(var(--color-accent))]'
-                      : 'text-secondary hover:bg-panel/80 hover:text-primary',
-                  )}
-                  onClick={() => onSelect(path)}
-                >
-                  <span className="shrink-0 text-dim">
-                    <Ico d={ICON.file} size={12} />
-                  </span>
-                  <span className="block min-w-0 flex-1 truncate font-mono text-[12px]">{fileName}</span>
-                </button>
-                <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
-                  <button
-                    type="button"
-                    aria-label={`Close file ${path}`}
-                    className="pointer-events-auto ui-icon-button ui-icon-button-compact shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onClose(path);
-                    }}
-                  >
-                    <Ico d={ICON.x} size={10} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function WorkspaceTreeContextMenu({
@@ -746,21 +671,13 @@ function WorkspaceTreeBranch(props: Parameters<typeof WorkspaceTreeRow>[0]) {
   return <WorkspaceTreeRow {...props} />;
 }
 
-export function WorkspaceExplorer({
-  cwd,
-  onDraftPrompt,
-  onOpenFile,
-  onCloseFile,
-  activeFilePath = null,
-  railOnly = false,
-}: WorkspaceExplorerProps) {
+export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePath = null, railOnly = false }: WorkspaceExplorerProps) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_OPEN_KEY, true));
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
   const [rootListing, setRootListing] = useState<LoadState<WorkspaceDirectoryListing>>({ status: 'idle', data: null, error: null });
   const [nodes, setNodes] = useState<Record<string, TreeNodeState>>({});
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [openFilePaths, setOpenFilePaths] = useState<string[]>(() => readWorkspaceOpenFiles(cwd));
   const [fileState, setFileState] = useState<LoadState<WorkspaceFileContent>>({ status: 'idle', data: null, error: null });
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
   const refreshSerial = useRef(0);
@@ -788,17 +705,15 @@ export function WorkspaceExplorer({
       void api
         .renameWorkspacePath(cwd, entry.path, nextName)
         .then((renamed) => {
-          setOpenFilePaths((current) => {
-            const next = current.map((path) =>
-              path === entry.path
-                ? renamed.path
-                : path.startsWith(`${entry.path}/`)
-                  ? `${renamed.path}/${path.slice(entry.path.length + 1)}`
-                  : path,
-            );
-            writeWorkspaceOpenFiles(cwd, next);
-            return next;
-          });
+          const current = readWorkspaceOpenFiles(cwd);
+          const next = current.map((path) =>
+            path === entry.path
+              ? renamed.path
+              : path.startsWith(`${entry.path}/`)
+                ? `${renamed.path}/${path.slice(entry.path.length + 1)}`
+                : path,
+          );
+          writeWorkspaceOpenFiles(cwd, next);
           void loadRoot();
           const parent = parentDirectory(entry.path);
           if (parent) void loadDirectory(parent);
@@ -833,7 +748,6 @@ export function WorkspaceExplorer({
   useEffect(() => {
     setNodes({});
     setSelectedPath(null);
-    setOpenFilePaths(readWorkspaceOpenFiles(cwd));
     setFileState({ status: 'idle', data: null, error: null });
     setDiffState({ status: 'idle', data: null, error: null });
     void loadRoot();
@@ -841,11 +755,7 @@ export function WorkspaceExplorer({
 
   useEffect(() => {
     if (!cwd || !activeFilePath) return;
-    setOpenFilePaths((current) => {
-      const next = addWorkspaceOpenFile(current, activeFilePath);
-      writeWorkspaceOpenFiles(cwd, next);
-      return next;
-    });
+    writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd), activeFilePath));
   }, [activeFilePath, cwd]);
 
   useEffect(
@@ -925,11 +835,7 @@ export function WorkspaceExplorer({
   const openWorkspaceFile = useCallback(
     (path: string) => {
       if (!cwd) return;
-      setOpenFilePaths((current) => {
-        const next = addWorkspaceOpenFile(current, path);
-        writeWorkspaceOpenFiles(cwd, next);
-        return next;
-      });
+      writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd), path));
       if (onOpenFile) {
         onOpenFile({ cwd, path });
         return;
@@ -938,28 +844,6 @@ export function WorkspaceExplorer({
     },
     [cwd, onDraftPrompt, onOpenFile, rootListing.data?.root],
   );
-
-  const closeWorkspaceFile = useCallback(
-    (path: string) => {
-      setOpenFilePaths((current) => {
-        const next = removeWorkspaceOpenFile(current, path);
-        writeWorkspaceOpenFiles(cwd, next);
-        return next;
-      });
-      if (activeFilePath === path) {
-        onCloseFile?.(path);
-      }
-    },
-    [activeFilePath, cwd, onCloseFile],
-  );
-
-  const closeAllWorkspaceFiles = useCallback(() => {
-    setOpenFilePaths([]);
-    writeWorkspaceOpenFiles(cwd, []);
-    if (activeFilePath) {
-      onCloseFile?.(null);
-    }
-  }, [activeFilePath, cwd, onCloseFile]);
 
   const [createPathPrompt, setCreatePathPrompt] = useState<{ kind: 'file' | 'folder'; directory: string } | null>(null);
   const [movePathPrompt, setMovePathPrompt] = useState<WorkspaceEntry | null>(null);
@@ -992,14 +876,12 @@ export function WorkspaceExplorer({
       if (!cwd) return;
       if (!window.confirm(`Delete ${entry.path}? This cannot be undone.`)) return;
       await api.deleteWorkspacePath(cwd, entry.path);
-      setOpenFilePaths((current) => {
-        const next =
-          entry.kind === 'directory'
-            ? current.filter((path) => !path.startsWith(`${entry.path}/`))
-            : removeWorkspaceOpenFile(current, entry.path);
-        writeWorkspaceOpenFiles(cwd, next);
-        return next;
-      });
+      const current = readWorkspaceOpenFiles(cwd);
+      const next =
+        entry.kind === 'directory'
+          ? current.filter((path) => !path.startsWith(`${entry.path}/`))
+          : removeWorkspaceOpenFile(current, entry.path);
+      writeWorkspaceOpenFiles(cwd, next);
       await loadRoot();
       const parent = parentDirectory(entry.path);
       if (parent) await loadDirectory(parent);
@@ -1017,17 +899,11 @@ export function WorkspaceExplorer({
       setMovePathPrompt(null);
       const normalizedTargetDir = targetDir.trim();
       const moved = await api.moveWorkspacePath(cwd, entry.path, normalizedTargetDir);
-      setOpenFilePaths((current) => {
-        const next = current.map((path) =>
-          path === entry.path
-            ? moved.path
-            : path.startsWith(`${entry.path}/`)
-              ? `${moved.path}/${path.slice(entry.path.length + 1)}`
-              : path,
-        );
-        writeWorkspaceOpenFiles(cwd, next);
-        return next;
-      });
+      const current = readWorkspaceOpenFiles(cwd);
+      const next = current.map((path) =>
+        path === entry.path ? moved.path : path.startsWith(`${entry.path}/`) ? `${moved.path}/${path.slice(entry.path.length + 1)}` : path,
+      );
+      writeWorkspaceOpenFiles(cwd, next);
       await loadRoot();
       await loadDirectory(parentDirectory(entry.path));
       if (normalizedTargetDir) await loadDirectory(normalizedTargetDir);
@@ -1141,15 +1017,6 @@ export function WorkspaceExplorer({
   if (railOnly) {
     return (
       <div className="flex h-full flex-col bg-panel text-sm">
-        <div className="shrink-0 overflow-hidden">
-          <WorkspaceOpenFilesSection
-            openFilePaths={openFilePaths}
-            activePath={activeFilePath}
-            onSelect={openWorkspaceFile}
-            onClose={closeWorkspaceFile}
-            onCloseAll={closeAllWorkspaceFiles}
-          />
-        </div>
         <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
           <div className="flex items-center gap-1">
             <p className="ui-section-label flex-1">File explorer</p>
