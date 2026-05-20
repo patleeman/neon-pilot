@@ -1473,7 +1473,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     lightTheme,
     darkTheme,
     availableThemes,
-    accent = 'lime',
+    accent = 'cobalt',
     availableAccents = [],
     setThemePreference,
     setLightTheme,
