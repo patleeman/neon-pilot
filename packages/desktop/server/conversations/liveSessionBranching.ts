@@ -39,17 +39,20 @@ export async function branchLiveSession(
     throw new Error('Unable to create a branched session file.');
   }
 
-  const resumed = await callbacks.resumeSession(branchedSessionFile, {
-    ...options,
-    cwdOverride: entry.cwd,
-  });
-
+  // Append offshoot metadata BEFORE resumeSession so the SDK loads it as part of
+  // the branch chain. If appended after, the SDK's leafId doesn't include the
+  // metadata entry and new messages bypass it — orphaning the metadata on reload.
   appendConversationOffshootMetadata({
     sessionFile: branchedSessionFile,
     kind: 'fork',
     parentSessionFile: sourceSessionFile,
     parentSessionId: entry.sessionId,
     parentMessageId: entryId,
+  });
+
+  const resumed = await callbacks.resumeSession(branchedSessionFile, {
+    ...options,
+    cwdOverride: entry.cwd,
   });
 
   return { newSessionId: resumed.id, sessionFile: branchedSessionFile };
@@ -115,6 +118,17 @@ export async function forkLiveSession(
     throw new Error('Unable to create a forked session file.');
   }
 
+  // Append offshoot metadata BEFORE resumeSession so the SDK loads it as part of
+  // the branch chain. If appended after, the SDK's leafId doesn't include the
+  // metadata entry and new messages bypass it — orphaning the metadata on reload.
+  appendConversationOffshootMetadata({
+    sessionFile: forkedSessionFile,
+    kind: beforeEntry ? 'rewind' : 'fork',
+    parentSessionFile: sourceSessionFile,
+    parentSessionId: entry.sessionId,
+    parentMessageId: entryId,
+  });
+
   const resumed = await callbacks.resumeSession(forkedSessionFile, {
     ...loaderOptions,
     cwdOverride: entry.cwd,
@@ -123,14 +137,6 @@ export async function forkLiveSession(
   if (!preserveSource) {
     callbacks.destroySession(entry.sessionId);
   }
-
-  appendConversationOffshootMetadata({
-    sessionFile: forkedSessionFile,
-    kind: beforeEntry ? 'rewind' : 'fork',
-    parentSessionFile: sourceSessionFile,
-    parentSessionId: entry.sessionId,
-    parentMessageId: entryId,
-  });
 
   return { newSessionId: resumed.id, sessionFile: forkedSessionFile };
 }
