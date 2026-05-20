@@ -4,17 +4,24 @@ This file defines the shared product language for Neon Pilot. It is a glossary o
 
 When a term is resolved or corrected, update this file immediately. If a decision needs rationale, use an ADR instead.
 
-## Product and runtime
+## Taxonomy
+
+Use these groups when adding terms:
+
+1. **Product boundary** — what Neon Pilot is and where core, runtime, app, and extensions begin/end.
+2. **Agent capability model** — agent-facing inputs and capabilities: prompts, tools, skills, MCP, and prompt assembly.
+3. **Conversation model** — user/agent dialogue objects, transcript structure, branching, and queued continuation behavior.
+4. **Execution model** — foreground and background work: executions, runs, subagents, commands, automations, and scheduled tasks.
+5. **Knowledge model** — durable knowledge, vault files, projects, instruction files, and sync.
+6. **Desktop layout model** — app shell, sidebars, rails, panes, views, and workbench surfaces.
+7. **Browser model** — the built-in Workbench Browser versus agent-owned browser automation.
+8. **Development workflow** — repo/development-only terms such as checkpoints.
+
+## 1. Product boundary
 
 ### Neon Pilot
 
 The product in this repository: a durable AI agent runtime with a desktop app, background automation, extensions, and knowledge management.
-
-### Agent
-
-The AI actor executing a user request. An agent can call tools, read context, produce assistant messages, and delegate work to subagents.
-
-Use **agent** for the executing AI worker. Use **assistant message** for text the agent writes into a conversation.
 
 ### Runtime
 
@@ -48,7 +55,47 @@ A bundled extension shipped with the app or repo. System extensions can still ow
 
 A runtime-installed extension owned by the user rather than bundled with the app.
 
-## Conversations and transcript
+## 2. Agent capability model
+
+### Agent
+
+The AI actor executing a user request. An agent can call tools, read context, produce assistant messages, and delegate work to subagents.
+
+Use **agent** for the executing AI worker. Use **assistant message** for text the agent writes into a conversation.
+
+### Prompt assembly
+
+The process that builds the agent’s effective prompt from system files, instruction files, AGENTS.md/CLAUDE.md files, available skills, selected context, tools, and runtime metadata.
+
+### Instruction file
+
+A durable markdown file that defines standing behavior or policy for the agent.
+
+Instruction files are behavior inputs, not general reference docs.
+
+### AGENTS.md
+
+A repo or directory instruction file discovered from the current working directory walk and injected into prompt assembly.
+
+### Skill
+
+A reusable workflow stored as `SKILL.md` and loaded into agent context when available/relevant. Skills tell the agent how to perform a class of task.
+
+Do not use **skill** for an agent-callable function; that is a tool.
+
+### Tool
+
+An agent-callable capability with structured input and output, such as reading files, running commands, searching, or calling extension-provided actions.
+
+### MCP server
+
+An external Model Context Protocol server that exposes tools or resources to the agent through MCP.
+
+### Prompt template
+
+Reusable prompt text selectable or contributed through prompt assembly surfaces.
+
+## 3. Conversation model
 
 ### Conversation
 
@@ -110,7 +157,7 @@ A copy of the current active branch into a new conversation file.
 
 Tool-created side work pinned inside the transcript shelf, such as subagents, artifacts, checkpoints, prompts, and visual captures.
 
-## Work execution
+## 4. Execution model
 
 ### Run
 
@@ -154,41 +201,7 @@ Use **scheduled task** for daemon/API/tooling details; use **automation** for th
 
 The time window in which a missed scheduled automation may still fire after the daemon restarts or wakes.
 
-## Prompt and capability model
-
-### Prompt assembly
-
-The process that builds the agent’s effective prompt from system files, instruction files, AGENTS.md/CLAUDE.md files, available skills, selected context, tools, and runtime metadata.
-
-### Instruction file
-
-A durable markdown file that defines standing behavior or policy for the agent.
-
-Instruction files are behavior inputs, not general reference docs.
-
-### AGENTS.md
-
-A repo or directory instruction file discovered from the current working directory walk and injected into prompt assembly.
-
-### Skill
-
-A reusable workflow stored as `SKILL.md` and loaded into agent context when available/relevant. Skills tell the agent how to perform a class of task.
-
-Do not use **skill** for an agent-callable function; that is a tool.
-
-### Tool
-
-An agent-callable capability with structured input and output, such as reading files, running commands, searching, or calling extension-provided actions.
-
-### MCP server
-
-An external Model Context Protocol server that exposes tools or resources to the agent through MCP.
-
-### Prompt template
-
-Reusable prompt text selectable or contributed through prompt assembly surfaces.
-
-## Knowledge and files
+## 5. Knowledge model
 
 ### Knowledge base
 
@@ -220,7 +233,7 @@ The filesystem directory used for agent tools, shell commands, and context disco
 
 Use **cwd** only when referring to the concrete execution field or command environment.
 
-## UI layout taxonomy
+## 6. Desktop layout model
 
 ### App shell
 
@@ -264,8 +277,6 @@ A focused content view for a selected item, often rendered in the workbench pane
 
 Examples include a file detail, knowledge file, diff detail, artifact preview, browser page, or extension-contributed workbench detail.
 
-## UI product surfaces
-
 ### Workbench
 
 A split-pane workspace for conversation-adjacent surfaces such as file detail views, browser panels, knowledge files, and extension-provided detail views.
@@ -282,13 +293,7 @@ The shared model and UI surface for conversations, runs/executions, and future s
 
 A compact transcript shelf that groups low-level tool-call plumbing or internal work while keeping important side outputs visible.
 
-### Checkpoint
-
-A targeted git commit created by the checkpoint tool to save the agent’s current work.
-
-Do not use **checkpoint** for arbitrary save points in conversation history.
-
-## Browser terms
+## 7. Browser model
 
 ### Workbench Browser
 
@@ -299,3 +304,11 @@ The built-in desktop browser surface visible to the user inside Neon Pilot.
 The automation skill/CLI used by agents for autonomous browser or Electron validation.
 
 Do not use Workbench Browser tools for unattended product testing when agent-browser is the right boundary.
+
+## 8. Development workflow
+
+### Checkpoint
+
+A targeted git commit created by the checkpoint tool to save the agent’s current work.
+
+Do not use **checkpoint** for arbitrary save points in conversation history.
