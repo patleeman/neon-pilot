@@ -4,9 +4,9 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.3** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
+**v0.9.0-rc.4** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
 
-Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.3
+Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.4
 
 Highlights in this train:
 
@@ -17,6 +17,7 @@ Highlights in this train:
 - Fixed rc.1 release smoke blockers around host-backed extension imports and isolated daemon socket paths.
 - Added rc.2 local model server controls, live-session bash/API fixes, model-optional release smoke, memory diagnostics, and leaner package output.
 - Added rc.3 video probe, fork/rewind topology fixes, extension templates, canonical web search tooling, and release supply-chain audit coverage.
+- Retagged the same release train as rc.4 after confirming `master` was already up to date with rc.3.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

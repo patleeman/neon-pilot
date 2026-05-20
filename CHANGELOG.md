@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0-rc.4 — 2026-05-20
+
+### Highlights
+
+- Retags the current 0.9 RC train after verifying `master` is already up to date with rc.3.
+- Keeps the rc.3 scope intact: video probe, fork/rewind topology fixes, extension templates, canonical web search tooling, and release hardening.
+- Refreshes release artifacts and updater metadata for a clean rc.4 publish.
+
+### Notes
+
+- 0 commits since the previous release.
+
 ## 0.9.0-rc.3 — 2026-05-20
 
 ### Highlights
