@@ -8,6 +8,15 @@ import {
 
 export const CONVERSATION_LAYOUT_CHANGED_EVENT = 'pa:conversation-layout-changed';
 
+// Grace period (ms) after a local write during which remote re-syncs are skipped.
+// Prevents the race where a server fetch returns stale data before our persist lands.
+const LOCAL_WRITE_GRACE_MS = 3000;
+let lastLocalWriteAt = 0;
+
+export function isWithinLocalWriteGrace(): boolean {
+  return Date.now() - lastLocalWriteAt < LOCAL_WRITE_GRACE_MS;
+}
+
 export type OpenConversationDropPosition = 'before' | 'after';
 export type ConversationShelf = 'open' | 'pinned';
 
@@ -172,7 +181,10 @@ function writeStoredSessionIds(storageKey: string, sessionIds: readonly string[]
   }
 }
 
-function writeConversationLayout(layout: ConversationLayout): ConversationLayout {
+function writeConversationLayout(layout: ConversationLayout, options: { local?: boolean } = {}): ConversationLayout {
+  if (options.local) {
+    lastLocalWriteAt = Date.now();
+  }
   const normalizedLayout = normalizeConversationLayout(layout);
 
   writeStoredSessionIds(OPEN_SESSION_IDS_STORAGE_KEY, normalizedLayout.sessionIds);
@@ -205,7 +217,7 @@ export function replaceConversationLayout(layout: ConversationLayoutInput): Conv
     return current;
   }
 
-  return writeConversationLayout(next);
+  return writeConversationLayout(next, { local: true });
 }
 
 export function applyRemoteConversationLayout(layout: ConversationLayoutInput): ConversationLayout {
@@ -227,7 +239,7 @@ export function setActiveConversationTab(sessionId: string | null | undefined): 
     return current;
   }
 
-  return writeConversationLayout({ ...current, activeSessionId: nextActiveSessionId });
+  return writeConversationLayout({ ...current, activeSessionId: nextActiveSessionId }, { local: true });
 }
 
 export function ensureConversationTabOpen(sessionId: string | null | undefined): string[] {
@@ -237,11 +249,14 @@ export function ensureConversationTabOpen(sessionId: string | null | undefined):
     return layout.sessionIds;
   }
 
-  return writeConversationLayout({
-    ...layout,
-    sessionIds: [...layout.sessionIds, normalizedSessionId],
-    activeSessionId: normalizedSessionId,
-  }).sessionIds;
+  return writeConversationLayout(
+    {
+      ...layout,
+      sessionIds: [...layout.sessionIds, normalizedSessionId],
+      activeSessionId: normalizedSessionId,
+    },
+    { local: true },
+  ).sessionIds;
 }
 
 export function openConversationTab(sessionId: string): string[] {
@@ -391,7 +406,7 @@ export function moveConversationTab(
     return current;
   }
 
-  return writeConversationLayout(next);
+  return writeConversationLayout(next, { local: true });
 }
 
 export function shiftConversationTab(sessionId: string, direction: -1 | 1): ConversationLayout {

@@ -21,6 +21,7 @@ import {
   CONVERSATION_LAYOUT_CHANGED_EVENT,
   type ConversationLayout,
   type ConversationShelf,
+  isWithinLocalWriteGrace,
   moveConversationTab,
   type OpenConversationDropPosition,
   openConversationTab,
@@ -165,6 +166,11 @@ export function useConversations() {
       .openConversationTabs()
       .then(({ sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId }) => {
         if (cancelled) {
+          return;
+        }
+        // Skip if we wrote locally within the grace window — the server may not
+        // have persisted our change yet and would overwrite it.
+        if (isWithinLocalWriteGrace()) {
           return;
         }
         const currentLayout = readConversationLayout();
