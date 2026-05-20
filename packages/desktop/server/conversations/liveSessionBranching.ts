@@ -61,7 +61,6 @@ export async function branchLiveSession(
     parentSessionFile: sourceSessionFile,
     childSessionId: resumed.id,
     kind: 'fork',
-    anchorEntryId: entryId,
   });
 
   return { newSessionId: resumed.id, sessionFile: branchedSessionFile };
@@ -120,7 +119,6 @@ export async function forkLiveSession(
         parentSessionFile: sourceSessionFile,
         childSessionId: created.id,
         kind: 'rewind',
-        anchorEntryId: entryId,
       });
     }
 
@@ -159,7 +157,6 @@ export async function forkLiveSession(
       parentSessionFile: sourceSessionFile,
       childSessionId: resumed.id,
       kind: beforeEntry ? 'rewind' : 'fork',
-      anchorEntryId: entryId,
     });
   }
 

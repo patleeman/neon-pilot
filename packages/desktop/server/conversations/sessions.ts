@@ -1840,13 +1840,15 @@ export function appendChildConversationTopologyEntry(input: {
   childSessionId: string;
   childTitle?: string;
   kind: ConversationOffshootKind;
-  anchorEntryId?: string;
 }): void {
   const kind = input.kind;
   const label = kind.charAt(0).toUpperCase() + kind.slice(1);
   const title = input.childTitle || input.childSessionId;
   const text = `${label} conversation created: ${title}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}`;
-  const parentId = input.anchorEntryId ? input.anchorEntryId : readCurrentSessionLeafId(input.parentSessionFile);
+  // Always chain from the current leaf so getBranch() traversal includes all
+  // messages. anchorEntryId is for display positioning only — the UI uses
+  // mergeTopologyBlocks to place the tombstone near the fork point.
+  const parentId = readCurrentSessionLeafId(input.parentSessionFile);
 
   appendFileSync(
     input.parentSessionFile,
