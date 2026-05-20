@@ -983,7 +983,7 @@ export function CommandPalette() {
 
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto px-2 py-2"
+          className="flex-1 overflow-y-auto px-1.5 py-1.5"
           style={{ overscrollBehavior: 'contain' }}
           onScroll={(event) => {
             if (!canLoadMoreArchivedThreads) {
@@ -1000,9 +1000,9 @@ export function CommandPalette() {
           }}
         >
           {groups.map((group) => (
-            <section key={group.section} className="pb-2 last:pb-0">
+            <section key={group.section} className="pb-1 last:pb-0">
               {showSectionHeaders && (
-                <div className="px-2.5 pb-1 flex items-center gap-2">
+                <div className="px-2.5 pb-0.5 flex items-center gap-2">
                   <p className="ui-section-label">{group.label}</p>
                   <span className="ui-section-count">
                     {group.items.length}
@@ -1029,7 +1029,7 @@ export function CommandPalette() {
                     }}
                     disabled={item.disabled || isBusy}
                     className={cx(
-                      'group flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed',
+                      'group flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed',
                       isSelected ? 'bg-accent/12 text-accent' : 'hover:bg-surface/70',
                       item.disabled && 'opacity-55',
                     )}
@@ -1037,15 +1037,15 @@ export function CommandPalette() {
                   >
                     <span
                       className={cx(
-                        'mt-0.5 h-4 w-px shrink-0 rounded-full transition-colors',
+                        'mt-[3px] h-3.5 w-px shrink-0 rounded-full transition-colors',
                         isSelected ? 'bg-accent' : 'bg-border-subtle',
                       )}
                     />
 
                     <div className="min-w-0 flex-1">
-                      <p className={cx('truncate text-[13.5px] leading-snug', isSelected ? 'text-accent' : 'text-primary')}>{item.title}</p>
+                      <p className={cx('truncate text-[13px] leading-[1.2]', isSelected ? 'text-accent' : 'text-primary')}>{item.title}</p>
                       {secondaryText && (
-                        <p className="mt-0.5 truncate text-[11px] text-secondary" title={secondaryText}>
+                        <p className="mt-px truncate text-[10.5px] leading-[1.15] text-secondary" title={secondaryText}>
                           {secondaryText}
                         </p>
                       )}
