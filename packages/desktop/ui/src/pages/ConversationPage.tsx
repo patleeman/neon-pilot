@@ -3678,7 +3678,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       const clickedBlock = realMessages[localMessageIndex];
-      if (clickedBlock?.type !== 'text') {
+      if (clickedBlock?.type !== 'text' && clickedBlock?.type !== 'user') {
         await rewindConversationFromMessage(messageIndex);
         return;
       }
@@ -3693,7 +3693,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           entryId = resolveBranchEntryIdFromSessionDetailResult(clickedBlock, messageIndex, detail);
         }
         if (!entryId) {
-          throw new Error('The selected assistant message is not ready to branch yet. Try again in a moment.');
+          throw new Error('The selected message is not ready to branch yet. Try again in a moment.');
         }
 
         if (!ensureConversationCanControl('branch from this message')) {
@@ -3707,17 +3707,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         showNotice('danger', `Fork failed: ${(error as Error).message}`);
       }
     },
-    [
-      currentSurfaceId,
-      ensureConversationCanControl,
-      ensureConversationIsLive,
-      id,
-      messageIndexOffset,
-      navigate,
-      realMessages,
-      rewindConversationFromMessage,
-      showNotice,
-    ],
+    [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
   );
 
   async function saveModelPreference(modelId: string) {
