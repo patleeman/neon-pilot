@@ -5632,7 +5632,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 </div>
               ) : null}
               {visibleConversationBootstrap?.integrityWarning && (
-                <div className="mt-1 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-400">
+                <div className="mt-1 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-warning">
                   <svg
                     width="14"
                     height="14"

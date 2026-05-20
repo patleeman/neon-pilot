@@ -518,7 +518,7 @@ class RouteContentBoundary extends Component<
             <h1 className="mt-2 text-[22px] font-semibold text-primary">{title}</h1>
             <p className="mt-2 text-[13px] leading-6 text-secondary">{body}</p>
             {errorMessage ? (
-              <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/8 px-4 py-3">
+              <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-dim">Error details</p>
                 <p className="mt-2 whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-primary">{errorMessage}</p>
               </div>

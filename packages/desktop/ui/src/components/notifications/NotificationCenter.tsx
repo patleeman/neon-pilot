@@ -20,7 +20,7 @@ const FILTER_LABELS: Record<FilterMode, string> = {
 
 const TYPE_DOT_CLASS: Record<NotificationType, string> = {
   info: 'bg-steel',
-  warning: 'bg-amber-500',
+  warning: 'bg-warning',
   error: 'bg-red-500',
 };
 

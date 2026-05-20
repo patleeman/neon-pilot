@@ -28,13 +28,13 @@ interface ToastDisplay {
 
 const TYPE_BORDER_CLASS: Record<NotificationType, string> = {
   info: 'border-border-subtle',
-  warning: 'border-amber-500/30',
+  warning: 'border-warning/30',
   error: 'border-red-500/30',
 };
 
 const TYPE_BG_CLASS: Record<NotificationType, string> = {
   info: 'bg-surface',
-  warning: 'bg-amber-50 dark:bg-amber-950',
+  warning: 'bg-warning/10',
   error: 'bg-red-50 dark:bg-red-950',
 };
 
