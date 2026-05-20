@@ -262,10 +262,7 @@ export class DesktopUpdateManager {
 
       if (this.shouldAutoInstallUpdates()) {
         void this.maybeAutoInstallDownloadedUpdate();
-        return;
       }
-
-      void this.promptToInstall(info);
     });
 
     this.updater.on('error', (error: unknown) => {

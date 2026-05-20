@@ -97,8 +97,7 @@ describe('DesktopUpdateManager', () => {
     manager.dispose();
   });
 
-  it('shows an install popup when auto-install is disabled', async () => {
-    mocks.showMessageBox.mockResolvedValueOnce({ response: 1 });
+  it('marks downloaded updates ready without prompting when auto-install is disabled', async () => {
     const onBeforeQuitForUpdate = vi.fn();
 
     const manager = new DesktopUpdateManager({
@@ -109,17 +108,11 @@ describe('DesktopUpdateManager', () => {
     mocks.lastUpdater?.emit('update-downloaded', { version: '1.1.0' });
     await flushAsyncWork();
 
-    expect(mocks.showMessageBox).toHaveBeenCalledTimes(1);
-    expect(mocks.showMessageBox).toHaveBeenCalledWith(
-      expect.objectContaining({
-        buttons: ['Later', 'Restart to Update'],
-        message: 'Neon Pilot 1.1.0 is ready to install',
-      }),
-    );
-    expect(onBeforeQuitForUpdate).toHaveBeenCalledTimes(1);
-    expect(mocks.lastUpdater?.quitAndInstall).toHaveBeenCalledTimes(1);
+    expect(mocks.showMessageBox).not.toHaveBeenCalled();
+    expect(onBeforeQuitForUpdate).not.toHaveBeenCalled();
+    expect(mocks.lastUpdater?.quitAndInstall).not.toHaveBeenCalled();
     expect(manager.getState()).toMatchObject({
-      status: 'installing',
+      status: 'ready',
       downloadedVersion: '1.1.0',
     });
 
@@ -128,7 +121,6 @@ describe('DesktopUpdateManager', () => {
 
   it('re-checks a downloaded update when auto-install is enabled later', async () => {
     let autoInstallEnabled = false;
-    mocks.showMessageBox.mockResolvedValueOnce({ response: 0 });
     const onBeforeQuitForUpdate = vi.fn();
 
     const manager = new DesktopUpdateManager({
@@ -139,7 +131,7 @@ describe('DesktopUpdateManager', () => {
     mocks.lastUpdater?.emit('update-downloaded', { version: '1.1.0' });
     await flushAsyncWork();
 
-    expect(mocks.showMessageBox).toHaveBeenCalledTimes(1);
+    expect(mocks.showMessageBox).not.toHaveBeenCalled();
     expect(manager.getState()).toMatchObject({
       status: 'ready',
       downloadedVersion: '1.1.0',
