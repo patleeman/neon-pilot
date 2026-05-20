@@ -240,6 +240,36 @@ export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) 
   return { ok: true, stopped: true, pid: serverPid, status: await status({}, ctx) };
 }
 
+export async function cancelSetup(_input: unknown, ctx: ExtensionBackendContext) {
+  const setupPid = await readPid(ctx, SETUP_PID_KEY);
+  if (setupPid) {
+    // Kill the whole process group to catch child processes (pip, hf, etc.)
+    await ctx.shell.exec({
+      command: 'sh',
+      args: ['-c', `kill -- -${setupPid} >/dev/null 2>&1 || kill ${setupPid} >/dev/null 2>&1 || true`],
+    });
+    await ctx.storage.put(SETUP_PID_KEY, null);
+  }
+  return { ok: true, status: await status({}, ctx) };
+}
+
+export async function resetInstallation(_input: unknown, ctx: ExtensionBackendContext) {
+  // Kill server and setup if running
+  const [serverPid, setupPid] = await Promise.all([readPid(ctx, SERVER_PID_KEY), readPid(ctx, SETUP_PID_KEY)]);
+  const killCmds = [
+    serverPid ? `kill ${serverPid} >/dev/null 2>&1 || true` : '',
+    setupPid ? `kill -- -${setupPid} >/dev/null 2>&1 || kill ${setupPid} >/dev/null 2>&1 || true` : '',
+  ]
+    .filter(Boolean)
+    .join('; ');
+  if (killCmds) await ctx.shell.exec({ command: 'sh', args: ['-c', killCmds] });
+  // Delete the entire cache dir (venv + model weights + logs)
+  await ctx.shell.exec({ command: 'sh', args: ['-c', `rm -rf ${shellQuote(CACHE_DIR)}`], timeoutMs: 30_000 });
+  await ctx.storage.put(SERVER_PID_KEY, null);
+  await ctx.storage.put(SETUP_PID_KEY, null);
+  return { ok: true, status: await status({}, ctx) };
+}
+
 // ---------------------------------------------------------------------------
 // Agent extension — probe_video tool
 // ---------------------------------------------------------------------------

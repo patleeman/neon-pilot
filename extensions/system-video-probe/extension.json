@@ -18,7 +18,9 @@
       { "id": "videoProbeStart", "handler": "startServer", "title": "Start mlx-vlm server" },
       { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server" },
       { "id": "videoProbeReadSettings", "handler": "readSettings", "title": "Read video probe settings" },
-      { "id": "videoProbeWriteSettings", "handler": "writeSettings", "title": "Write video probe settings" }
+      { "id": "videoProbeWriteSettings", "handler": "writeSettings", "title": "Write video probe settings" },
+      { "id": "videoProbeCancel", "handler": "cancelSetup", "title": "Cancel setup" },
+      { "id": "videoProbeReset", "handler": "resetInstallation", "title": "Reset installation" }
     ]
   },
   "contributes": {
