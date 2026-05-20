@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { THEME_STORAGE_KEY } from '../local/localSettings';
+import { ACCENT_STORAGE_KEY, THEME_STORAGE_KEY } from '../local/localSettings';
 import { ThemeProvider, useTheme } from './theme';
 
 function createStorage(): Storage {
@@ -32,6 +32,7 @@ function createStorage(): Storage {
 let lastThemeState: {
   theme: string;
   themePreference: string;
+  accent: string;
 } | null = null;
 
 function ThemeProbe() {
@@ -39,6 +40,7 @@ function ThemeProbe() {
   lastThemeState = {
     theme: themeState.theme,
     themePreference: themeState.themePreference,
+    accent: themeState.accent,
   };
   return null;
 }
@@ -63,6 +65,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'tokyo-night-light',
       themePreference: 'system',
+      accent: 'lime',
     });
   });
 
@@ -72,6 +75,17 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'tokyo-night-dark',
       themePreference: 'dark',
+      accent: 'lime',
+    });
+  });
+
+  it('reads a stored accent preference', () => {
+    localStorage.setItem(ACCENT_STORAGE_KEY, 'violet');
+
+    expect(renderThemeProbe()).toEqual({
+      theme: 'tokyo-night-light',
+      themePreference: 'system',
+      accent: 'violet',
     });
   });
 
@@ -81,6 +95,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'tokyo-night-light',
       themePreference: 'system',
+      accent: 'lime',
     });
   });
 
@@ -98,6 +113,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'tokyo-night-dark',
       themePreference: 'system',
+      accent: 'lime',
     });
   });
 });
