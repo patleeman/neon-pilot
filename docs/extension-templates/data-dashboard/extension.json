@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "id": "my-data-dashboard",
+  "name": "My Dashboard",
+  "description": "Short description of what this page shows.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "myDashboardLoad",
+        "handler": "load",
+        "title": "Load dashboard data"
+      }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "page",
+        "title": "My Dashboard",
+        "location": "main",
+        "route": "/ext/my-data-dashboard",
+        "component": "DataDashboardPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "My Dashboard",
+        "route": "/ext/my-data-dashboard",
+        "icon": "chart"
+      }
+    ]
+  },
+  "permissions": []
+}

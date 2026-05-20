@@ -19,6 +19,19 @@ Implement it with editable source files, build it, reload it, visually test it, 
 
 Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done” looks like.
 
+## Templates
+
+Before writing from scratch, check [`docs/extension-templates/`](extension-templates/README.md) for copy-paste stubs
+derived from real first-party extensions:
+
+| Template                                                    | Pattern                                                   |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| [`data-dashboard`](extension-templates/data-dashboard/)     | Read-only page — load from backend, render table or cards |
+| [`crud-page`](extension-templates/crud-page/)               | List + slide-in form editor. Full CRUD.                   |
+| [`settings-section`](extension-templates/settings-section/) | Section in the shared Settings page. No separate route.   |
+
+Copy the matching folder, rename the extension id, replace domain types, and build.
+
 ## Pick the right surface
 
 Use this as agent guidance, not homework for the user:

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "id": "my-settings-section",
+  "name": "My Integration",
+  "description": "Settings for My Integration.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "mySettingsLoad", "handler": "loadSettings", "title": "Load settings" },
+      { "id": "mySettingsSave", "handler": "saveSettings", "title": "Save settings" }
+    ]
+  },
+  "contributes": {
+    "settingsSections": [
+      {
+        "id": "my-settings-section",
+        "title": "My Integration",
+        "summary": "One sentence describing this integration.",
+        "component": "MySettingsSection",
+        "order": 100
+      }
+    ]
+  },
+  "permissions": ["settings:read", "settings:write"]
+}

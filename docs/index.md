@@ -31,6 +31,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
 - [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
+- [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [System extensions](../extensions) — feature-owned docs and implementation packages
