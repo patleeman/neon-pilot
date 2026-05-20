@@ -1377,6 +1377,12 @@ export const api = {
     });
   },
 
+  executeLiveSessionBash: async (id: string, command: string, options?: { excludeFromContext?: boolean }) =>
+    post<{ ok: boolean; result: unknown }>(`/live-sessions/${encodeURIComponent(id)}/bash`, {
+      command,
+      excludeFromContext: options?.excludeFromContext,
+    }),
+
   gateways: async () => get<GatewayState>('/gateways'),
   ensureGatewayConnection: async (provider: GatewayProviderId) => post<GatewayState>('/gateways/connections', { provider }),
   updateGatewayConnection: async (

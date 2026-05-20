@@ -1170,6 +1170,9 @@ export function Layout() {
   const [selectedToolByConversation, setSelectedToolByConversation] = useState<Record<string, WorkbenchRailMode>>({});
   const [selectedFileByConversation, setSelectedFileByConversation] = useState<Record<string, string | null>>({});
   const [selectedWorkspaceFileByConversation, setSelectedWorkspaceFileByConversation] = useState<Record<string, string | null>>({});
+  const selectedWorkspaceFileByConversationRef = useRef(selectedWorkspaceFileByConversation);
+  selectedWorkspaceFileByConversationRef.current = selectedWorkspaceFileByConversation;
+  const activeWorkbenchWorkspaceFileIdRef = useRef<string | null>(null);
   const [selectedArtifactByConversation, setSelectedArtifactByConversation] = useState<Record<string, string | null>>({});
   const [selectedRunByConversation, setSelectedRunByConversation] = useState<Record<string, string | null>>({});
   const viewportWidth = useViewportWidth();
@@ -1269,6 +1272,7 @@ export function Layout() {
     showWorkbench && activeConversationId
       ? (searchParams.get('workspaceFile') ?? selectedWorkspaceFileByConversation[activeConversationId] ?? null)
       : null;
+  activeWorkbenchWorkspaceFileIdRef.current = activeWorkbenchWorkspaceFileId;
   const activeWorkbenchArtifactId =
     showWorkbench && activeConversationId
       ? (getConversationArtifactIdFromSearch(location.search) ?? selectedArtifactByConversation[activeConversationId] ?? null)
@@ -1552,7 +1556,7 @@ export function Layout() {
       }));
       setSelectedWorkspaceFileByConversation((current) => ({
         ...current,
-        [previousConversationId]: activeWorkbenchWorkspaceFileId,
+        [previousConversationId]: activeWorkbenchWorkspaceFileIdRef.current,
       }));
       setSelectedArtifactByConversation((current) => ({
         ...current,
@@ -1607,7 +1611,7 @@ export function Layout() {
         setActiveWorkbenchTool('files');
       }
 
-      const savedWorkspaceFile = selectedWorkspaceFileByConversation[activeConversationId];
+      const savedWorkspaceFile = selectedWorkspaceFileByConversationRef.current[activeConversationId];
       setSearchParams(
         (current) => {
           const next = new URLSearchParams(current);
@@ -1629,11 +1633,9 @@ export function Layout() {
     activeConversationId,
     activeWorkbenchArtifactId,
     activeWorkbenchKnowledgeFileId,
-    activeWorkbenchWorkspaceFileId,
     activeWorkbenchRunFromSearch,
     activeWorkbenchTool,
     activeWorkspaceCwd,
-    selectedWorkspaceFileByConversation,
     selectedToolByConversation,
     setSearchParams,
   ]);
