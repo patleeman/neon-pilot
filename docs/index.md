@@ -63,6 +63,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Local Dictation](../extensions/system-local-dictation/README.md)
 - [MCP](../extensions/system-mcp/README.md)
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
+- [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Runs](../extensions/system-runs/README.md)
 - [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
 - [Settings](../extensions/system-settings/README.md)
