@@ -37,6 +37,7 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
         cwd={context.cwd}
         railOnly
         activeFilePath={activeFilePath}
+        openFilesScope={context.conversationId}
         onOpenFile={handleOpenFile}
         onDraftPrompt={(prompt) => {
           window.dispatchEvent(new CustomEvent(WORKSPACE_DRAFT_PROMPT_EVENT, { detail: { prompt } }));

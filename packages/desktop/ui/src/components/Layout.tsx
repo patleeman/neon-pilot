@@ -1169,6 +1169,7 @@ export function Layout() {
   const [selectedCheckpointByConversation, setSelectedCheckpointByConversation] = useState<Record<string, string | null>>({});
   const [selectedToolByConversation, setSelectedToolByConversation] = useState<Record<string, WorkbenchRailMode>>({});
   const [selectedFileByConversation, setSelectedFileByConversation] = useState<Record<string, string | null>>({});
+  const [selectedWorkspaceFileByConversation, setSelectedWorkspaceFileByConversation] = useState<Record<string, string | null>>({});
   const [selectedArtifactByConversation, setSelectedArtifactByConversation] = useState<Record<string, string | null>>({});
   const [selectedRunByConversation, setSelectedRunByConversation] = useState<Record<string, string | null>>({});
   const viewportWidth = useViewportWidth();
@@ -1264,7 +1265,10 @@ export function Layout() {
   const activeWorkbenchKnowledgeFileId = showWorkbench
     ? (searchParams.get('file') ?? (activeConversationId ? selectedFileByConversation[activeConversationId] : null) ?? null)
     : null;
-  const activeWorkbenchWorkspaceFileId = showWorkbench ? searchParams.get('workspaceFile') : null;
+  const activeWorkbenchWorkspaceFileId =
+    showWorkbench && activeConversationId
+      ? (searchParams.get('workspaceFile') ?? selectedWorkspaceFileByConversation[activeConversationId] ?? null)
+      : null;
   const activeWorkbenchArtifactId =
     showWorkbench && activeConversationId
       ? (getConversationArtifactIdFromSearch(location.search) ?? selectedArtifactByConversation[activeConversationId] ?? null)
@@ -1546,6 +1550,10 @@ export function Layout() {
         ...current,
         [previousConversationId]: activeWorkbenchKnowledgeFileId,
       }));
+      setSelectedWorkspaceFileByConversation((current) => ({
+        ...current,
+        [previousConversationId]: activeWorkbenchWorkspaceFileId,
+      }));
       setSelectedArtifactByConversation((current) => ({
         ...current,
         [previousConversationId]: activeWorkbenchArtifactId,
@@ -1598,17 +1606,54 @@ export function Layout() {
       } else {
         setActiveWorkbenchTool('files');
       }
+
+      const savedWorkspaceFile = selectedWorkspaceFileByConversation[activeConversationId];
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (savedWorkspaceFile) {
+            next.delete('file');
+            next.delete('artifact');
+            next.delete('checkpoint');
+            next.delete('run');
+            next.set('workspaceFile', savedWorkspaceFile);
+          } else {
+            next.delete('workspaceFile');
+          }
+          return next;
+        },
+        { replace: true },
+      );
     }
   }, [
     activeConversationId,
     activeWorkbenchArtifactId,
     activeWorkbenchKnowledgeFileId,
+    activeWorkbenchWorkspaceFileId,
     activeWorkbenchRunFromSearch,
     activeWorkbenchTool,
     activeWorkspaceCwd,
+    selectedWorkspaceFileByConversation,
     selectedToolByConversation,
     setSearchParams,
   ]);
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      return;
+    }
+
+    const workspaceFile = new URLSearchParams(location.search).get('workspaceFile');
+    if (!workspaceFile) {
+      return;
+    }
+
+    setSelectedWorkspaceFileByConversation((current) => ({
+      ...current,
+      [activeConversationId]: workspaceFile,
+    }));
+    setActiveConversationTool('files');
+  }, [activeConversationId, location.search, setActiveConversationTool]);
 
   useEffect(() => {
     if (!activeConversationId || !activeWorkbenchCheckpointFromSearch) {

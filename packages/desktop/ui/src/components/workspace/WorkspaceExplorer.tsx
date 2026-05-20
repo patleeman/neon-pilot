@@ -40,6 +40,7 @@ interface WorkspaceExplorerProps {
   onDraftPrompt: (prompt: string) => void;
   onOpenFile?: (file: { cwd: string; path: string }) => void;
   activeFilePath?: string | null;
+  openFilesScope?: string | null;
   railOnly?: boolean;
 }
 
@@ -366,14 +367,14 @@ function buildWorkspaceBreadcrumbs(path: string): string[] {
   return ['…', ...parts.slice(-3)];
 }
 
-function workspaceOpenFilesKey(cwd: string): string {
-  return `${WORKSPACE_OPEN_FILES_KEY_PREFIX}${cwd}`;
+function workspaceOpenFilesKey(cwd: string, scope?: string | null): string {
+  return `${WORKSPACE_OPEN_FILES_KEY_PREFIX}${scope ? `${scope}:` : ''}${cwd}`;
 }
 
-function readWorkspaceOpenFiles(cwd: string | null): string[] {
+function readWorkspaceOpenFiles(cwd: string | null, scope?: string | null): string[] {
   if (!cwd) return [];
   try {
-    const parsed = JSON.parse(localStorage.getItem(workspaceOpenFilesKey(cwd)) ?? '[]');
+    const parsed = JSON.parse(localStorage.getItem(workspaceOpenFilesKey(cwd, scope)) ?? '[]');
     return Array.isArray(parsed)
       ? parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_WORKSPACE_OPEN_FILES)
       : [];
@@ -382,11 +383,11 @@ function readWorkspaceOpenFiles(cwd: string | null): string[] {
   }
 }
 
-function writeWorkspaceOpenFiles(cwd: string | null, paths: readonly string[]): void {
+function writeWorkspaceOpenFiles(cwd: string | null, paths: readonly string[], scope?: string | null): void {
   if (!cwd) return;
   const nextPaths = [...new Set(paths)].slice(0, MAX_WORKSPACE_OPEN_FILES);
   try {
-    localStorage.setItem(workspaceOpenFilesKey(cwd), JSON.stringify(nextPaths));
+    localStorage.setItem(workspaceOpenFilesKey(cwd, scope), JSON.stringify(nextPaths));
   } catch {
     /* ignore */
   }
@@ -675,7 +676,14 @@ function WorkspaceTreeBranch(props: Parameters<typeof WorkspaceTreeRow>[0]) {
   return <WorkspaceTreeRow {...props} />;
 }
 
-export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePath = null, railOnly = false }: WorkspaceExplorerProps) {
+export function WorkspaceExplorer({
+  cwd,
+  onDraftPrompt,
+  onOpenFile,
+  activeFilePath = null,
+  openFilesScope = null,
+  railOnly = false,
+}: WorkspaceExplorerProps) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_OPEN_KEY, true));
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
@@ -709,7 +717,7 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
       void api
         .renameWorkspacePath(cwd, entry.path, nextName)
         .then((renamed) => {
-          const current = readWorkspaceOpenFiles(cwd);
+          const current = readWorkspaceOpenFiles(cwd, openFilesScope);
           const next = current.map((path) =>
             path === entry.path
               ? renamed.path
@@ -717,7 +725,7 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
                 ? `${renamed.path}/${path.slice(entry.path.length + 1)}`
                 : path,
           );
-          writeWorkspaceOpenFiles(cwd, next);
+          writeWorkspaceOpenFiles(cwd, next, openFilesScope);
           void loadRoot();
           const parent = parentDirectory(entry.path);
           if (parent) void loadDirectory(parent);
@@ -759,8 +767,8 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
 
   useEffect(() => {
     if (!cwd || !activeFilePath) return;
-    writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd), activeFilePath));
-  }, [activeFilePath, cwd]);
+    writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd, openFilesScope), activeFilePath), openFilesScope);
+  }, [activeFilePath, cwd, openFilesScope]);
 
   useEffect(
     () => () => {
@@ -839,14 +847,14 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
   const openWorkspaceFile = useCallback(
     (path: string) => {
       if (!cwd) return;
-      writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd), path));
+      writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd, openFilesScope), path), openFilesScope);
       if (onOpenFile) {
         onOpenFile({ cwd, path });
         return;
       }
       onDraftPrompt(buildPrompt(rootListing.data?.root ?? cwd, 'inspect this file', path));
     },
-    [cwd, onDraftPrompt, onOpenFile, rootListing.data?.root],
+    [cwd, onDraftPrompt, onOpenFile, openFilesScope, rootListing.data?.root],
   );
 
   const [createPathPrompt, setCreatePathPrompt] = useState<{ kind: 'file' | 'folder'; directory: string } | null>(null);
@@ -880,17 +888,17 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
       if (!cwd) return;
       if (!window.confirm(`Delete ${entry.path}? This cannot be undone.`)) return;
       await api.deleteWorkspacePath(cwd, entry.path);
-      const current = readWorkspaceOpenFiles(cwd);
+      const current = readWorkspaceOpenFiles(cwd, openFilesScope);
       const next =
         entry.kind === 'directory'
           ? current.filter((path) => !path.startsWith(`${entry.path}/`))
           : removeWorkspaceOpenFile(current, entry.path);
-      writeWorkspaceOpenFiles(cwd, next);
+      writeWorkspaceOpenFiles(cwd, next, openFilesScope);
       await loadRoot();
       const parent = parentDirectory(entry.path);
       if (parent) await loadDirectory(parent);
     },
-    [cwd, loadDirectory, loadRoot],
+    [cwd, loadDirectory, loadRoot, openFilesScope],
   );
 
   const movePath = useCallback((entry: WorkspaceEntry) => {
@@ -903,16 +911,16 @@ export function WorkspaceExplorer({ cwd, onDraftPrompt, onOpenFile, activeFilePa
       setMovePathPrompt(null);
       const normalizedTargetDir = targetDir.trim();
       const moved = await api.moveWorkspacePath(cwd, entry.path, normalizedTargetDir);
-      const current = readWorkspaceOpenFiles(cwd);
+      const current = readWorkspaceOpenFiles(cwd, openFilesScope);
       const next = current.map((path) =>
         path === entry.path ? moved.path : path.startsWith(`${entry.path}/`) ? `${moved.path}/${path.slice(entry.path.length + 1)}` : path,
       );
-      writeWorkspaceOpenFiles(cwd, next);
+      writeWorkspaceOpenFiles(cwd, next, openFilesScope);
       await loadRoot();
       await loadDirectory(parentDirectory(entry.path));
       if (normalizedTargetDir) await loadDirectory(normalizedTargetDir);
     },
-    [cwd, loadDirectory, loadRoot],
+    [cwd, loadDirectory, loadRoot, openFilesScope],
   );
 
   const root = rootListing.data?.root ?? null;
