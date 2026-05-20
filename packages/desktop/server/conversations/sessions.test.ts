@@ -2,6 +2,7 @@ import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFile
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
+import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -2004,6 +2005,48 @@ describe('sessions', () => {
         details: expect.objectContaining({ childConversationId: 'subagent-child-session', branchKind: 'subagent' }),
       }),
     );
+  });
+
+  it('preserves conversation history in getBranch() after offshoot metadata is appended', () => {
+    // Regression: appendConversationOffshootMetadata used parentId: null which made the
+    // offshoot entry become the new session leaf. getBranch() then started traversal from
+    // the offshoot entry (parentId: null → empty path) → empty transcript in forked sessions.
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'offshoot-parent',
+      title: 'Offshoot parent',
+      assistantTexts: ['Hello from parent'],
+    });
+
+    // Simulate the branch: create a SessionManager on the parent file and branch from the last entry.
+    const sourceManager = SessionManager.open(parentSessionFile);
+    const leafId = sourceManager.getLeafId();
+    expect(leafId).toBeTruthy();
+    const branchedFile = sourceManager.createBranchedSession(leafId!);
+    expect(branchedFile).toBeTruthy();
+
+    // Append offshoot metadata — this must NOT break getBranch().
+    appendConversationOffshootMetadata({
+      sessionFile: branchedFile!,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'offshoot-parent',
+      parentMessageId: leafId!,
+    });
+
+    // The branched session must still expose its full history via getBranch().
+    const branchedManager = SessionManager.open(branchedFile!);
+    const branch = branchedManager.getBranch();
+    // Branch should contain the real conversation entries, not just the offshoot entry.
+    const messageEntries = branch.filter((e) => e.type === 'message');
+    expect(messageEntries.length).toBeGreaterThan(0);
+
+    // And readSessionBlocks on the branched file must return display blocks.
+    const blocks = readSessionBlocks(branchedManager.getSessionId()!)?.blocks ?? [];
+    expect(blocks.some((b) => b.type === 'user' || b.type === 'text')).toBe(true);
   });
 
   it('anchors fork offshoot events after their source message and adds a child backlink', () => {

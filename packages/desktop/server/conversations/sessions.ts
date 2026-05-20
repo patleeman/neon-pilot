@@ -1743,12 +1743,24 @@ export function appendConversationOffshootMetadata(input: {
   parentMessageId?: string;
   sourceRunId?: string;
 }): void {
+  // Use the current leaf entry as parentId so the SDK's getBranch() / buildSessionContext()
+  // traversal continues to work correctly after this entry is appended.
+  // Without this, parentId: null makes the offshoot entry the new "root" leaf,
+  // causing getBranch() to return only this single entry and the transcript to appear empty.
+  let leafId: string | null = null;
+  try {
+    const manager = SessionManager.open(input.sessionFile);
+    leafId = manager.getLeafId() ?? null;
+  } catch {
+    // Non-fatal: if we can't read the leaf, fall back to null.
+  }
+
   appendFileSync(
     input.sessionFile,
     `${JSON.stringify({
       type: 'custom',
       id: randomUUID(),
-      parentId: null,
+      parentId: leafId,
       timestamp: new Date().toISOString(),
       customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
       data: {
