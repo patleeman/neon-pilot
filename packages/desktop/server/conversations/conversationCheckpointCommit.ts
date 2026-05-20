@@ -100,16 +100,44 @@ function parseCheckpointCommitMetadata(raw: string): LocalCheckpointCommitMetada
   };
 }
 
+function decodeCheckpointGitQuotedPath(trimmed: string): string {
+  const bytes: number[] = [];
+  const inner = trimmed.slice(1, -1);
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index] ?? '';
+    if (char !== '\\') {
+      bytes.push(char.charCodeAt(0));
+      continue;
+    }
+    const next = inner[index + 1] ?? '';
+    const octal = inner.slice(index + 1, index + 4);
+    if (/^[0-7]{3}$/.test(octal)) {
+      bytes.push(parseInt(octal, 8));
+      index += 3;
+      continue;
+    }
+    const escapes: Record<string, number> = { '\\': 92, '"': 34, n: 10, r: 13, t: 9, b: 8, f: 12 };
+    bytes.push(escapes[next] ?? next.charCodeAt(0));
+    index += 1;
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
 function unquoteCheckpointGitPath(value: string): string {
   const trimmed = value.trim();
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     try {
       return JSON.parse(trimmed) as string;
     } catch {
-      return trimmed.slice(1, -1);
+      return decodeCheckpointGitQuotedPath(trimmed);
     }
   }
   return trimmed;
+}
+
+function parseCheckpointGitDiffHeader(diffHeader: string): [string, string, string] | null {
+  const match = /^diff --git ("(?:\\.|[^"\\])+"|\S+) ("(?:\\.|[^"\\])+"|\S+)$/.exec(diffHeader);
+  return match ? ['', match[1] ?? '', match[2] ?? ''] : null;
 }
 
 function stripCheckpointGitDiffPrefix(value: string, prefix: 'a/' | 'b/'): string {
@@ -144,7 +172,7 @@ export function parseCheckpointDiffSections(rawPatch: string): LocalCheckpointCo
   return sections.map((section) => {
     const lines = section.split('\n');
     const diffHeader = lines[0] ?? '';
-    const diffMatch = /^diff --git a\/(.+) b\/(.+)$/.exec(diffHeader);
+    const diffMatch = parseCheckpointGitDiffHeader(diffHeader);
     if (!diffMatch) {
       throw new Error('Could not parse git diff header for checkpoint review.');
     }

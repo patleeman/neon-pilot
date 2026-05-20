@@ -102,11 +102,27 @@ function parseCommitMetadata(raw: string): ParsedCommitMetadata {
   };
 }
 
-function decodeGitOctal(value: string): string {
-  // Git quotes non-ASCII bytes as \NNN octal escapes (e.g. \303\251 for é).
-  // JSON.parse rejects \NNN, so decode them to raw bytes before parsing.
-  // eslint-disable-next-line no-control-regex
-  return value.replace(/\\d{3}/g, (match) => String.fromCharCode(parseInt(match.slice(1), 8)));
+function decodeGitQuotedPath(trimmed: string): string {
+  const bytes: number[] = [];
+  const inner = trimmed.slice(1, -1);
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index] ?? '';
+    if (char !== '\\') {
+      bytes.push(char.charCodeAt(0));
+      continue;
+    }
+    const next = inner[index + 1] ?? '';
+    const octal = inner.slice(index + 1, index + 4);
+    if (/^[0-7]{3}$/.test(octal)) {
+      bytes.push(parseInt(octal, 8));
+      index += 3;
+      continue;
+    }
+    const escapes: Record<string, number> = { '\\': 92, '"': 34, n: 10, r: 13, t: 9, b: 8, f: 12 };
+    bytes.push(escapes[next] ?? next.charCodeAt(0));
+    index += 1;
+  }
+  return Buffer.from(bytes).toString('utf8');
 }
 
 function unquoteGitPath(value: string): string {
@@ -115,11 +131,15 @@ function unquoteGitPath(value: string): string {
     try {
       return JSON.parse(trimmed) as string;
     } catch {
-      // JSON.parse chokes on git's \NNN octal escapes; decode them first.
-      return JSON.parse(decodeGitOctal(trimmed)) as string;
+      return decodeGitQuotedPath(trimmed);
     }
   }
   return trimmed;
+}
+
+function parseGitDiffHeader(diffHeader: string): [string, string, string] | null {
+  const match = /^diff --git ("(?:\\.|[^"\\])+"|\S+) ("(?:\\.|[^"\\])+"|\S+)$/.exec(diffHeader);
+  return match ? ['', match[1] ?? '', match[2] ?? ''] : null;
 }
 
 function stripGitDiffPrefix(value: string, prefix: 'a/' | 'b/'): string {
@@ -141,7 +161,7 @@ function parseDiffSections(rawPatch: string): ConversationCommitCheckpointFile[]
 
   return sections.map((section) => {
     const lines = section.split('\n');
-    const match = (lines[0] ?? '').match(/^diff --git a\/(.+) b\/(.+)$/);
+    const match = parseGitDiffHeader(lines[0] ?? '');
     if (!match) throw new Error('Could not parse git diff header for checkpoint review.');
     const originalPath = stripGitDiffPrefix(match[1] ?? '', 'a/');
     const nextPath = stripGitDiffPrefix(match[2] ?? '', 'b/');
