@@ -13,6 +13,7 @@ import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
 import { renderMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
+import { isTopologyBlock } from './transcriptItems.js';
 
 function formatSystemEventLabel(customType?: string): string {
   switch (customType) {
@@ -172,7 +173,7 @@ export const ContextShelf = memo(function ContextShelf({
   if (remoteControlled) {
     counts.set('Remote control', 1);
   }
-  const nonTopologyBlocks = blocks.filter((b) => !(b.type === 'context' && TOPOLOGY_CONTEXT_TYPES.has(b.customType ?? '')));
+  const nonTopologyBlocks = blocks.filter((b) => !isTopologyBlock(b));
   for (const block of nonTopologyBlocks) {
     const label = contextShelfLabel(block);
     counts.set(label, (counts.get(label) ?? 0) + 1);
@@ -265,7 +266,7 @@ export const ContextShelf = memo(function ContextShelf({
 
           // Topology blocks (parent backlinks, child tombstones) have navigable links;
           // render them inline with proper navigation instead of as collapsed details.
-          if (block.type === 'context' && TOPOLOGY_CONTEXT_TYPES.has(block.customType ?? '')) {
+          if (isTopologyBlock(block)) {
             return (
               <div key={block.id ?? index} className="px-2 py-0.5">
                 <TopologyBlock block={block} />
@@ -771,7 +772,8 @@ export function resolveCompactionSummaryDetail(title: string | undefined, extraD
   return normalizedExtraDetail ? `${baseDetail} ${normalizedExtraDetail}` : baseDetail;
 }
 
-export const TOPOLOGY_CONTEXT_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
+// Exported for consumers that need to identify topology blocks by type without importing transcriptItems.
+export { isTopologyBlock as isTopologyContextBlock } from './transcriptItems.js';
 
 function parseTopologyBlockKind(firstLine: string): string {
   // "Fork conversation created: ..." → "Fork"
