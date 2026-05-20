@@ -77,7 +77,7 @@ export async function captureDesktopScreenshot(deps: CaptureDesktopScreenshotDep
     }
 
     if (/not authorized|not permitted|permission/i.test(stderr)) {
-      throw new Error('macOS blocked screenshot capture. Enable Screen Recording for Personal Agent in System Settings and try again.');
+      throw new Error('macOS blocked screenshot capture. Enable Screen Recording for Neon Pilot in System Settings and try again.');
     }
 
     if (stderr.length > 0) {

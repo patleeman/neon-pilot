@@ -20,16 +20,16 @@ async function showDaemonHealthNotification(kind: DaemonHealthNotificationKind, 
     const copy =
       kind === 'unhealthy'
         ? {
-            title: 'Personal Agent daemon stopped',
+            title: 'Neon Pilot daemon stopped',
             body: 'Background commands, subagents, and automations were unavailable. Restarting runtime…',
           }
         : kind === 'recovered'
           ? {
-              title: 'Personal Agent daemon recovered',
+              title: 'Neon Pilot daemon recovered',
               body: 'Background commands, subagents, and automations are available again.',
             }
           : {
-              title: 'Personal Agent daemon restart failed',
+              title: 'Neon Pilot daemon restart failed',
               body: detail ? `Runtime is still unavailable: ${detail}` : 'Runtime is still unavailable. Open logs for details.',
             };
 

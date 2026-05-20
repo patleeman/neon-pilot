@@ -59,7 +59,7 @@ export async function importClipboardUrlToKnowledge(input: {
       kind: 'url',
       url,
       directoryId: 'Inbox',
-      sourceApp: 'Personal Agent Desktop',
+      sourceApp: 'Neon Pilot Desktop',
       ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     },
   });
