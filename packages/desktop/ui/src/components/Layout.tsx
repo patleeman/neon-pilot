@@ -1962,7 +1962,7 @@ export function Layout() {
                         <ResizeHandle onMouseDown={workbenchExplorer.onMouseDown} onDoubleClick={workbenchExplorer.reset} />
                         <aside
                           style={{ width: workbenchExplorer.width }}
-                          className="flex-shrink-0 overflow-hidden bg-surface select-text"
+                          className="flex-shrink-0 overflow-hidden bg-panel select-text"
                           aria-label="Workbench sidebar"
                         >
                           <WorkbenchKnowledgeRail
@@ -1990,7 +1990,7 @@ export function Layout() {
                     <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
                     <aside
                       style={{ width: railWidth }}
-                      className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-surface select-text [&>[data-extension-id]]:bg-surface"
+                      className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
                     >
                       <NativeExtensionSurfaceHost
                         surface={routePrimaryRailSurface ?? systemKnowledgeExtensionSurface}
@@ -2005,7 +2005,7 @@ export function Layout() {
                 ) : showContextRail ? (
                   <>
                     <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
-                    <div style={{ width: railWidth }} className="relative z-10 flex-shrink-0 overflow-hidden bg-surface select-text">
+                    <div style={{ width: railWidth }} className="relative z-10 flex-shrink-0 overflow-hidden bg-panel select-text">
                       <Suspense
                         fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}
                       >
