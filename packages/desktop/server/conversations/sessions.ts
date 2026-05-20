@@ -1502,6 +1502,11 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
     customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
     text: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
   };
+  // For forks and rewinds, place the backlink at the end (the fork point) rather than
+  // the top. The user scrolls to the bottom to see where the conversation diverged.
+  if (kind === 'fork' || kind === 'rewind' || kind === 'duplicate') {
+    return [...blocks, backlink];
+  }
   return [backlink, ...blocks];
 }
 

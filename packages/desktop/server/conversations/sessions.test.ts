@@ -2086,7 +2086,9 @@ describe('sessions', () => {
       }),
     );
 
-    expect(readSessionBlocks('fork-child-session')?.blocks[0]).toEqual(
+    // For forks, the backlink is at the end (the fork point), not the beginning.
+    const childBlocks = readSessionBlocks('fork-child-session')?.blocks ?? [];
+    expect(childBlocks[childBlocks.length - 1]).toEqual(
       expect.objectContaining({
         type: 'context',
         customType: 'parent_conversation_backlink',
