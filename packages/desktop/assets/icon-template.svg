@@ -1,3 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <text x="2.2" y="16.9" fill="#000" font-family="Avenir Next, Inter, Helvetica Neue, Arial, sans-serif" font-size="15.4" font-weight="800" letter-spacing="-0.9">PA</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g transform="translate(10 10)" fill="none" stroke="#000">
+    <circle cx="22" cy="22" r="14" stroke-width="4" stroke-dasharray="68 20" stroke-dashoffset="-10" transform="rotate(-90 22 22)"/>
+  </g>
+  <polygon points="32,8 40,18 24,18" fill="#000"/>
 </svg>

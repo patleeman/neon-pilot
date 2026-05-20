@@ -51,6 +51,29 @@ function WorkbenchViewIcon() {
   );
 }
 
+function NeonPilotMarkIcon() {
+  return (
+    <svg
+      className="h-[18px] w-[18px] text-accent drop-shadow-[0_0_8px_rgb(var(--color-accent)/0.35)]"
+      viewBox="0 0 240 240"
+      aria-hidden="true"
+    >
+      <g fill="none" stroke="currentColor">
+        <circle
+          cx="120"
+          cy="120"
+          r="78"
+          strokeWidth="16"
+          strokeDasharray="380 110"
+          strokeDashoffset="-58"
+          transform="rotate(-90 120 120)"
+        />
+      </g>
+      <polygon points="120,26 142,58 98,58" fill="currentColor" />
+    </svg>
+  );
+}
+
 const MAX_BROWSER_NAVIGATION_INDEX = 10_000;
 
 function isSafeNavigationIndex(value: number): boolean {
@@ -252,9 +275,7 @@ export function DesktopTopBar({
           </ToolbarButton>
         </div>
         <div className="ml-1 flex h-6 items-center gap-1.5 border-l border-border-subtle pl-2" style={noDragStyle}>
-          <div className="grid h-[18px] w-[18px] place-items-center rounded bg-accent font-mono text-[11px] font-bold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)]">
-            N
-          </div>
+          <NeonPilotMarkIcon />
           <span className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</span>
         </div>
         <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>

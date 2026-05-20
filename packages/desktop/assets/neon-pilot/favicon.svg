@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Neon Pilot favicon">
+  <rect width="64" height="64" rx="12" fill="#0c0c08"></rect>
+  <g transform="translate(10 10)" fill="none" stroke="#caff33">
+    
+    <circle cx="22" cy="22" r="14" stroke-width="4" stroke-dasharray="68 20" stroke-dashoffset="-10" transform="rotate(-90 22 22)"></circle>
+  </g>
+  <polygon points="32,8 40,18 24,18" fill="#caff33"></polygon>
+</svg>

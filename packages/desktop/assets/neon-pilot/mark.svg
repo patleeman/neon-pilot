@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Neon Pilot mark">
+  <g fill="none" stroke="currentColor">
+    <circle cx="120" cy="120" r="78" stroke-width="16" stroke-dasharray="380 110" stroke-dashoffset="-58" transform="rotate(-90 120 120)"></circle>
+  </g>
+  <polygon points="120,26 142,58 98,58" fill="currentColor"></polygon>
+</svg>

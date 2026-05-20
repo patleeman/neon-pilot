@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Neon Pilot icon — paper">
+  <rect width="512" height="512" rx="96" fill="#f5f3e8"></rect>
+  <g transform="translate(136 136)">
+    <g fill="none" stroke="#14140f">
+      <circle cx="120" cy="120" r="78" stroke-width="16" stroke-dasharray="380 110" stroke-dashoffset="-58" transform="rotate(-90 120 120)"></circle>
+    </g>
+    <polygon points="120,26 142,58 98,58" fill="#14140f"></polygon>
+  </g>
+</svg>
