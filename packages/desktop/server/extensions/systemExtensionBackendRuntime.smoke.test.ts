@@ -251,6 +251,9 @@ const smokes = {
   async 'system-image-probe'() {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);
   },
+  async 'system-video-probe'() {
+    await expectReject(() => module.probeVideo({ path: '', question: '' }, ctx), /path|question/i);
+  },
   async 'system-images'() {
     await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
   },

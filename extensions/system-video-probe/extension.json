@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 2,
+  "id": "system-video-probe",
+  "name": "Video Probe",
+  "packageType": "system",
+  "defaultEnabled": false,
+  "description": "Analyze video files using a video-capable model. Supports OpenRouter (cloud) and Nemotron Omni via mlx-vlm (local, Apple Silicon).",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "probeVideo",
+        "handler": "probeVideo",
+        "title": "Probe video"
+      }
+    ]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "probe-video",
+        "name": "probe_video",
+        "title": "Probe video",
+        "description": "Analyze a video file using a video-capable model. Provide the absolute path to a video file and a question about its contents.",
+        "action": "probeVideo",
+        "promptGuidelines": [
+          "Use this tool when the user references a video file by path and asks about its content.",
+          "Do not guess at video content — always call this tool when visual inspection of a video is needed.",
+          "Requires either an OpenRouter API key (cloud) or mlx-vlm running locally (Apple Silicon)."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Absolute path to the video file on disk."
+            },
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8000,
+              "description": "What to ask or analyze about the video."
+            }
+          },
+          "required": ["path", "question"],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "settings": {
+      "videoProbe.backend": {
+        "type": "select",
+        "title": "Backend",
+        "description": "Which backend to use for video analysis.",
+        "enum": ["openrouter", "local"],
+        "enumLabels": ["OpenRouter (cloud)", "Local mlx-vlm (Apple Silicon)"],
+        "default": "openrouter"
+      },
+      "videoProbe.openrouterModel": {
+        "type": "string",
+        "title": "OpenRouter model",
+        "description": "OpenRouter model ID to use for video analysis.",
+        "default": "google/gemini-2.5-flash"
+      },
+      "videoProbe.localModel": {
+        "type": "string",
+        "title": "Local model",
+        "description": "mlx-vlm model to use for local inference.",
+        "default": "mlx-community/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-nvfp4"
+      },
+      "videoProbe.localBaseUrl": {
+        "type": "string",
+        "title": "Local server URL",
+        "description": "Base URL of the mlx-vlm server when using the local backend.",
+        "default": "http://localhost:8000"
+      }
+    },
+    "secrets": {
+      "openrouterApiKey": {
+        "label": "OpenRouter API Key",
+        "env": "OPENROUTER_API_KEY"
+      }
+    }
+  },
+  "permissions": ["secrets:read", "shell:execute"]
+}
