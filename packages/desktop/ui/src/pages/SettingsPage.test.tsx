@@ -59,13 +59,13 @@ describe('SettingsPage', () => {
     });
 
     vi.mocked(useTheme).mockReturnValue({
-      theme: 'tokyo-night-dark',
+      theme: 'studio-dark',
       themePreference: 'system',
-      lightTheme: 'tokyo-night-light',
-      darkTheme: 'tokyo-night-dark',
+      lightTheme: 'studio-light',
+      darkTheme: 'studio-dark',
       availableThemes: [
-        { id: 'tokyo-night-light', label: 'Tokyo Night Light', appearance: 'light' },
-        { id: 'tokyo-night-dark', label: 'Tokyo Night Dark', appearance: 'dark' },
+        { id: 'studio-light', label: 'Light', appearance: 'light' },
+        { id: 'studio-dark', label: 'Dark', appearance: 'dark' },
       ],
       setThemePreference: vi.fn(),
       setLightTheme: vi.fn(),

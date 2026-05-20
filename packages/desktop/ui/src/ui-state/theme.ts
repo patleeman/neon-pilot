@@ -5,7 +5,7 @@ import type { ExtensionManifest } from '../extensions/types';
 import { ACCENT_STORAGE_KEY, DARK_THEME_STORAGE_KEY, LIGHT_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from '../local/localSettings';
 
 type ThemeAppearance = 'light' | 'dark';
-type Theme = 'tokyo-night-light' | 'tokyo-night-dark' | 'light' | 'dark' | string;
+type Theme = 'light' | 'dark' | string;
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ThemeAccent = 'lime' | 'forest' | 'cobalt' | 'ember' | 'violet' | 'ink';
 
@@ -228,10 +228,8 @@ export interface ColorTheme {
 }
 
 const BUILT_IN_THEMES: ColorTheme[] = [
-  { id: 'studio-light', label: 'Studio Light', appearance: 'light' },
-  { id: 'studio-dark', label: 'Studio Dark', appearance: 'dark' },
-  { id: 'tokyo-night-light', label: 'Tokyo Night Light', appearance: 'light' },
-  { id: 'tokyo-night-dark', label: 'Tokyo Night Dark', appearance: 'dark' },
+  { id: 'studio-light', label: 'Light', appearance: 'light' },
+  { id: 'studio-dark', label: 'Dark', appearance: 'dark' },
 ];
 
 const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
@@ -258,8 +256,8 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function normalizeThemeId(theme: Theme): Theme {
-  if (theme === 'light') return 'studio-light';
-  if (theme === 'dark') return 'studio-dark';
+  if (theme === 'light' || theme === 'tokyo-night-light') return 'studio-light';
+  if (theme === 'dark' || theme === 'tokyo-night-dark') return 'studio-dark';
   return theme;
 }
 
@@ -377,8 +375,8 @@ function readStoredThemePreference(): ThemePreference {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'system') return 'system';
-    if (stored === 'light' || stored === 'tokyo-night-light' || stored === 'studio-light') return 'light';
-    if (stored === 'dark' || stored === 'tokyo-night-dark' || stored === 'studio-dark') return 'dark';
+    if (stored === 'light' || stored === 'studio-light') return 'light';
+    if (stored === 'dark' || stored === 'studio-dark') return 'dark';
   } catch {
     // ignore
   }
