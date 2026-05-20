@@ -300,8 +300,29 @@ async fn bridge_jsonl(mut tcp: TcpStream, iroh_stream: IrohBiStream) -> anyhow::
     let (mut tcp_read, mut tcp_write) = tcp.split();
     let (mut iroh_read, mut iroh_write) = iroh_stream.split();
 
+    bridge_streams(
+        &mut tcp_read,
+        &mut tcp_write,
+        &mut iroh_read,
+        &mut iroh_write,
+    )
+    .await
+}
+
+async fn bridge_streams<TcpRead, TcpWrite, ClientRead, ClientWrite>(
+    tcp_read: &mut TcpRead,
+    tcp_write: &mut TcpWrite,
+    client_read: &mut ClientRead,
+    client_write: &mut ClientWrite,
+) -> anyhow::Result<()>
+where
+    TcpRead: AsyncRead + Unpin,
+    TcpWrite: AsyncWrite + Unpin,
+    ClientRead: AsyncRead + Unpin,
+    ClientWrite: AsyncWrite + Unpin,
+{
     let client_to_pa = async {
-        tokio::io::copy(&mut iroh_read, &mut tcp_write)
+        tokio::io::copy(client_read, tcp_write)
             .await
             .context("copying client to PA JSONL bridge")?;
         tcp_write
@@ -312,10 +333,10 @@ async fn bridge_jsonl(mut tcp: TcpStream, iroh_stream: IrohBiStream) -> anyhow::
     };
 
     let pa_to_client = async {
-        tokio::io::copy(&mut tcp_read, &mut iroh_write)
+        tokio::io::copy(tcp_read, client_write)
             .await
             .context("copying PA JSONL bridge to client")?;
-        iroh_write
+        client_write
             .shutdown()
             .await
             .context("shutting down client write half")?;
@@ -543,6 +564,55 @@ mod tests {
             }
             _ => panic!("unexpected request variant"),
         }
+    }
+
+    #[tokio::test]
+    async fn bridge_streams_proxies_jsonl_bytes_both_directions() {
+        let (mut tcp_peer, tcp_bridge) = tokio::io::duplex(1024);
+        let (client_bridge, mut client_peer) = tokio::io::duplex(1024);
+        let (mut tcp_read, mut tcp_write) = tokio::io::split(tcp_bridge);
+        let (mut client_read, mut client_write) = tokio::io::split(client_bridge);
+
+        let bridge = tokio::spawn(async move {
+            bridge_streams(
+                &mut tcp_read,
+                &mut tcp_write,
+                &mut client_read,
+                &mut client_write,
+            )
+            .await
+        });
+
+        client_peer
+            .write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1}\n")
+            .await
+            .expect("client request write");
+        client_peer.shutdown().await.expect("client shutdown");
+
+        let mut request = Vec::new();
+        tcp_peer
+            .read_to_end(&mut request)
+            .await
+            .expect("PA bridge read");
+        assert_eq!(request, b"{\"jsonrpc\":\"2.0\",\"id\":1}\n");
+
+        tcp_peer
+            .write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n")
+            .await
+            .expect("PA response write");
+        tcp_peer.shutdown().await.expect("PA shutdown");
+
+        let mut response = Vec::new();
+        client_peer
+            .read_to_end(&mut response)
+            .await
+            .expect("client response read");
+        assert_eq!(response, b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n");
+
+        bridge
+            .await
+            .expect("bridge task joins")
+            .expect("bridge succeeds");
     }
 }
 

@@ -107,6 +107,32 @@ describe('system-alleycat Codex JSON-RPC server', () => {
     expect(logs).toContain('jsonl unauthorized connection rejected');
   });
 
+  it('rejects malformed or wrong-token JSONL auth lines before processing RPC', async () => {
+    const logs: string[] = [];
+    const handle = await startServer(logs);
+
+    for (const line of ['not-json', JSON.stringify({ type: 'auth', token: 'wrong' })]) {
+      const socket = await connectJsonl(handle.jsonlPort);
+      const reader = new SocketLineReader(socket);
+      socket.write(`${line}\n`);
+      await expect(reader.readLine()).resolves.toBeNull();
+    }
+
+    expect(logs.filter((line) => line === 'jsonl unauthorized connection rejected')).toHaveLength(2);
+  });
+
+  it('returns Not initialized for authenticated JSONL requests before initialize', async () => {
+    const handle = await startServer();
+    const socket = await connectJsonl(handle.jsonlPort);
+    const reader = new SocketLineReader(socket);
+
+    socket.write(`${JSON.stringify({ type: 'auth', token: TOKEN })}\n`);
+    socket.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'model/list', params: {} })}\n`);
+
+    const response = JSON.parse((await reader.readLine())!);
+    expect(response).toMatchObject({ id: 1, error: { code: -32000, message: 'Not initialized' } });
+  });
+
   it('authenticates JSONL clients and serves initialize plus follow-up protocol calls in order', async () => {
     const handle = await startServer();
     const socket = await connectJsonl(handle.jsonlPort);
