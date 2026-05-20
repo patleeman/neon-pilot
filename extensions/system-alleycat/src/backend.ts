@@ -3,7 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { ExtensionBackendContext } from '@personal-agent/extensions';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 import { createCodexAuth } from './codexAuth.js';
 
@@ -15,11 +15,12 @@ let sidecarPid: number | null = null;
 let sidecarLogPath: string | null = null;
 let sidecarLogs: string[] = [];
 let startPromise: Promise<AlleycatStatus> | null = null;
+let sidecarStopReason: string | null = null;
 
 const DEFAULT_COMPAT_PORT = 3850;
 const SECRET_KEY = 'alleycat-secret-key';
 const STABLE_IDENTITY_FILE = 'kitty-litter-alleycat/identity.json';
-const SIDECAR_READY_TIMEOUT_MS = 12_000;
+const SIDECAR_READY_TIMEOUT_MS = 30_000;
 const SIDECAR_PROCESS_NAME = 'pa-alleycat-host';
 
 export interface AlleycatPairPayload {
@@ -31,12 +32,12 @@ export interface AlleycatPairPayload {
 }
 
 export interface AlleycatAgentInfo {
-  name: 'personal-agent';
-  display_name: 'Personal Agent';
+  name: 'neon-pilot';
+  display_name: 'Neon Pilot';
   wire: 'jsonl';
   available: boolean;
   presentation: {
-    title: 'Personal Agent';
+    title: 'Neon Pilot';
     is_beta: boolean;
     sort_order: number;
     description: string;
@@ -62,15 +63,15 @@ export interface AlleycatStatus {
 
 function personalAgentInfo(available: boolean): AlleycatAgentInfo {
   return {
-    name: 'personal-agent',
-    display_name: 'Personal Agent',
+    name: 'neon-pilot',
+    display_name: 'Neon Pilot',
     wire: 'jsonl',
     available,
     presentation: {
-      title: 'Personal Agent',
+      title: 'Neon Pilot',
       is_beta: true,
       sort_order: 0,
-      description: 'Personal Agent conversations exposed to Kitty Litter.',
+      description: 'Neon Pilot conversations exposed to Kitty Litter.',
       aliases: ['pa', 'personalagent'],
     },
     capabilities: {
@@ -294,7 +295,9 @@ async function startSidecar(ctx: ExtensionBackendContext): Promise<void> {
     onStdout: (chunk) => appendSidecarOutput(Buffer.from(chunk)),
     onStderr: (chunk) => appendSidecarOutput(Buffer.from(chunk)),
     onExit: (event) => {
-      rememberLog(`Alleycat sidecar exited code=${event.code ?? 'null'} signal=${event.signal ?? 'null'}`);
+      const reason = sidecarStopReason ? ` reason=${sidecarStopReason}` : '';
+      rememberLog(`Alleycat sidecar exited code=${event.code ?? 'null'} signal=${event.signal ?? 'null'}${reason}`);
+      sidecarStopReason = null;
       if (sidecarProcess === child) {
         sidecarProcess = null;
         sidecarPid = null;
@@ -325,7 +328,7 @@ async function startOnce(_input: unknown, ctx: ExtensionBackendContext): Promise
     const port = Number(process.env.PERSONAL_AGENT_ALLEYCAT_COMPAT_PORT) || DEFAULT_COMPAT_PORT;
     setCodexProtocolLogger(rememberLog);
     codexServer = await createCodexServer({ port, auth, ctx, bindAddress: '127.0.0.1', fallbackToEphemeralPortOnConflict: true });
-    ctx.log.info('Personal Agent Alleycat compatibility server started', { port: codexServer.port, jsonlPort: codexServer.jsonlPort });
+    ctx.log.info('Neon Pilot Alleycat compatibility server started', { port: codexServer.port, jsonlPort: codexServer.jsonlPort });
   }
   await startSidecar(ctx);
   pairPayloadCache = await buildPairPayload(ctx);
@@ -341,19 +344,31 @@ export async function start(input: unknown, ctx: ExtensionBackendContext): Promi
 }
 
 export async function startService(input: unknown, ctx: ExtensionBackendContext): Promise<() => Promise<void>> {
-  await start(input, ctx);
+  try {
+    await start(input, ctx);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    rememberLog(`Alleycat service start degraded: ${message}`);
+    ctx.log.warn('Alleycat service start degraded', { error: message });
+  }
   return async () => {
     await stop(undefined, ctx);
   };
 }
 
-async function stopSidecar(ctx?: ExtensionBackendContext): Promise<void> {
+async function stopSidecar(ctx?: ExtensionBackendContext, reason = 'requested'): Promise<void> {
   if (sidecarProcess) {
+    sidecarStopReason = reason;
+    rememberLog(`stopping Alleycat sidecar: ${reason}`);
     sidecarProcess.kill();
     sidecarProcess = null;
   }
   if (sidecarPid) {
-    if (ctx) await ctx.shell.exec({ command: 'sh', args: ['-lc', `kill ${sidecarPid} >/dev/null 2>&1 || true`], timeoutMs: 5_000 });
+    if (ctx) {
+      sidecarStopReason = reason;
+      rememberLog(`stopping Alleycat sidecar pid ${sidecarPid}: ${reason}`);
+      await ctx.shell.exec({ command: 'sh', args: ['-lc', `kill ${sidecarPid} >/dev/null 2>&1 || true`], timeoutMs: 5_000 });
+    }
     sidecarPid = null;
   }
   pairPayloadCache = null;
@@ -362,7 +377,7 @@ async function stopSidecar(ctx?: ExtensionBackendContext): Promise<void> {
 export async function stop(_input?: unknown, ctx?: ExtensionBackendContext): Promise<{ ok: true }> {
   await startPromise?.catch(() => null);
   startPromise = null;
-  await stopSidecar(ctx);
+  await stopSidecar(ctx, 'extension stop/disable/reload');
   if (ctx) await stopStaleSidecars(ctx);
   if (codexServer) {
     codexServer.stop();
@@ -384,7 +399,7 @@ export async function status(_input?: unknown, ctx?: ExtensionBackendContext): P
     sidecarRunning: Boolean(sidecarPid),
     logs: sidecarLogs.slice(-50),
     note: sidecarPid
-      ? 'The PA-owned iroh Alleycat host is running and forwards Personal Agent JSON-RPC over a JSONL bridge.'
+      ? 'The PA-owned iroh Alleycat host is running and forwards Neon Pilot JSON-RPC over a JSONL bridge.'
       : 'The Codex-shaped JSON-RPC compatibility server is available, but the iroh sidecar binary is not running yet.',
   };
 }
@@ -393,7 +408,7 @@ export async function rotateToken(_input: unknown, ctx: ExtensionBackendContext)
   const auth = codexAuth ?? createCodexAuth(ctx);
   codexAuth = auth;
   auth.rotateToken();
-  await stopSidecar(ctx);
+  await stopSidecar(ctx, 'pairing token rotation');
   if (codexServer) await startSidecar(ctx);
   pairPayloadCache = await buildPairPayload(ctx);
   return status(_input, ctx);

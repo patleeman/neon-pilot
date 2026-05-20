@@ -1,12 +1,12 @@
 {
-  "name": "personal-agent",
+  "name": "neon-pilot",
   "version": "0.8.0-rc.19",
   "private": false,
   "license": "MIT",
-  "description": "Personal agent monorepo",
-  "repository": "github:patleeman/personal-agent",
-  "bugs": "https://github.com/patleeman/personal-agent/issues",
-  "homepage": "https://github.com/patleeman/personal-agent",
+  "description": "Neon Pilot monorepo",
+  "repository": "github:patleeman/neon-pilot",
+  "bugs": "https://github.com/patleeman/neon-pilot/issues",
+  "homepage": "https://github.com/patleeman/neon-pilot",
   "bin": {
     "personal-agent": "./scripts/personal-agent-cli.mjs",
     "pa-extension": "./scripts/pa-extension-cli.mjs"

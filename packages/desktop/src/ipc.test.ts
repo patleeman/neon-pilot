@@ -15,8 +15,8 @@ vi.mock('electron', () => ({
   },
   app: {
     getPath: vi.fn().mockReturnValue('/tmp'),
-    getName: vi.fn().mockReturnValue('Personal Agent'),
-    name: 'Personal Agent',
+    getName: vi.fn().mockReturnValue('Neon Pilot'),
+    name: 'Neon Pilot',
   },
   dialog: {
     showOpenDialog: vi.fn(),

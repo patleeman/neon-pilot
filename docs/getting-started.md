@@ -1,6 +1,6 @@
 # Getting Started
 
-Install Personal Agent from source and verify the setup.
+Install Neon Pilot from source and verify the setup.
 
 ## Install from source
 

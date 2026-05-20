@@ -387,7 +387,7 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
 
     const runtime = await resolveCompanionRuntime(loadDaemonConfig());
     if (!runtime) {
-      throw new Error('Conversation runtime unavailable; scheduled automations require the Personal Agent backend runtime.');
+      throw new Error('Conversation runtime unavailable; scheduled automations require the Neon Pilot backend runtime.');
     }
 
     const conversationId = await resolveTaskConversation(runtime, request.task);

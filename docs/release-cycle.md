@@ -6,7 +6,7 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 **v0.8.0-rc.18** — published 2026-05-17.
 
-Release page: https://github.com/patleeman/personal-agent/releases/tag/v0.8.0-rc.18
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.8.0-rc.18
 
 Highlights:
 
@@ -33,16 +33,16 @@ pnpm run release:desktop:major
 
 Runtime identity is centralized as `stable`, `rc`, `dev`, or `test`. The channel owns app presentation, state-root suffixes, ports, and updater support.
 
-| Channel  | App name               | State root suffix | Updates  |
-| -------- | ---------------------- | ----------------- | -------- |
-| `stable` | Personal Agent         | none              | enabled  |
-| `rc`     | Personal Agent RC      | `-rc`             | enabled  |
-| `dev`    | Personal Agent Dev     | `-dev`            | disabled |
-| `test`   | Personal Agent Testing | `-testing`        | disabled |
+| Channel  | App name           | State root suffix | Updates  |
+| -------- | ------------------ | ----------------- | -------- |
+| `stable` | Neon Pilot         | none              | enabled  |
+| `rc`     | Neon Pilot RC      | `-rc`             | enabled  |
+| `dev`    | Neon Pilot Dev     | `-dev`            | disabled |
+| `test`   | Neon Pilot Testing | `-testing`        | disabled |
 
-Versions with an `-rc` prerelease suffix are packaged as **Personal Agent RC** instead of **Personal Agent**. The RC app uses a separate macOS bundle identifier (`com.personal-agent.desktop.rc`), runtime state root (`personal-agent-rc`), and artifact prefix (`Personal-Agent-RC-*`), so it can be installed next to the stable app without replacing it.
+Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`personal-agent-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it.
 
-Stable versions keep the existing app name, bundle identifier, and `Personal-Agent-*` artifact names. Dev/test launches disable update checks so local builds do not emit packaged updater metadata warnings.
+Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. Dev/test launches disable update checks so local builds do not emit packaged updater metadata warnings.
 
 ## Release Flow
 

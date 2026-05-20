@@ -1,6 +1,6 @@
 # Configuration and Settings
 
-Personal Agent has several configuration stores. Do not treat `config.json` as the whole settings system: machine config, runtime agent settings, extension settings, provider definitions, credentials, desktop preferences, and browser-local UI state each have different owners.
+Neon Pilot has several configuration stores. Do not treat `config.json` as the whole settings system: machine config, runtime agent settings, extension settings, provider definitions, credentials, desktop preferences, and browser-local UI state each have different owners.
 
 ## Path roots
 
@@ -92,7 +92,7 @@ Provider credentials should be managed through Settings. Manual edits to `auth.j
 
 Enabled extensions may contribute `modelProfiles` that match provider/model refs with simple globs over `<provider>/<model>`, for example `openai-codex/*` or `*/gpt-5.5`. Profile extensions own their runtime behavior through normal extension hooks and tools; disabled extensions do not participate, and models do not declare profiles.
 
-If no enabled profile extension matches, Personal Agent uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.
+If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.
 
 ## Knowledge vault resolution
 

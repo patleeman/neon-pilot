@@ -12,13 +12,13 @@
 
 Neon Pilot is built for agents that can improve their own workspace instead of waiting for the next product release. Skills, tools, automations, UI surfaces, and local extensions are first-class parts of the runtime, so useful workflows can move from one-off chats into reusable capabilities without bloating core.
 
-The result is a personal agent environment that gets sharper as you use it: teach it a workflow, package it as an extension or skill, and let future sessions pick it up automatically.
+The result is a Neon Pilot environment that gets sharper as you use it: teach it a workflow, package it as an extension or skill, and let future sessions pick it up automatically.
 
 ---
 
 ## Installation
 
-Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patleeman/personal-agent/releases/latest)
+Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest)
 
 ---
 

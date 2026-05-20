@@ -80,7 +80,7 @@ function writeNativeModulesPackageJson() {
   const packageJson = {
     name: 'personal-agent-electron-native',
     private: true,
-    description: 'Electron-native development modules for Personal Agent desktop.',
+    description: 'Electron-native development modules for Neon Pilot desktop.',
     dependencies: {
       'better-sqlite3': readBetterSqliteVersion(),
     },

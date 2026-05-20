@@ -19,8 +19,8 @@ import {
 
 describe('desktop release config', () => {
   it('uses the public release-only repository', () => {
-    expect(DESKTOP_RELEASE_REPO_SLUG).toBe('patleeman/personal-agent');
-    expect(buildDesktopReleasePageUrl('0.1.14')).toBe('https://github.com/patleeman/personal-agent/releases/tag/v0.1.14');
+    expect(DESKTOP_RELEASE_REPO_SLUG).toBe('patleeman/neon-pilot');
+    expect(buildDesktopReleasePageUrl('0.1.14')).toBe('https://github.com/patleeman/neon-pilot/releases/tag/v0.1.14');
   });
 
   it('keeps the packaged updater feed pointed at the same release repo', () => {
@@ -53,26 +53,26 @@ describe('desktop release config', () => {
 
   it('normalizes version tags and asset names for updater artifacts', () => {
     expect(buildDesktopReleaseTag('v0.1.14')).toBe('v0.1.14');
-    expect(buildDesktopReleaseAssetName({ version: 'v0.1.14', ext: 'zip' })).toBe('Personal-Agent-0.1.14-mac-arm64.zip');
-    expect(buildDesktopReleaseAssetName({ version: '0.1.14', ext: 'zip.blockmap' })).toBe('Personal-Agent-0.1.14-mac-arm64.zip.blockmap');
+    expect(buildDesktopReleaseAssetName({ version: 'v0.1.14', ext: 'zip' })).toBe('Neon-Pilot-0.1.14-mac-arm64.zip');
+    expect(buildDesktopReleaseAssetName({ version: '0.1.14', ext: 'zip.blockmap' })).toBe('Neon-Pilot-0.1.14-mac-arm64.zip.blockmap');
   });
 
   it('uses a separate app identity and artifact prefix for RC releases', () => {
     expect(isRcDesktopReleaseVersion('0.7.9-rc.10')).toBe(true);
-    expect(resolveDesktopReleaseArtifactPrefix('0.7.9-rc.10')).toBe('Personal-Agent-RC');
-    expect(buildDesktopReleaseAssetName({ version: 'v0.7.9-rc.10', ext: 'zip' })).toBe('Personal-Agent-RC-0.7.9-rc.10-mac-arm64.zip');
+    expect(resolveDesktopReleaseArtifactPrefix('0.7.9-rc.10')).toBe('Neon-Pilot-RC');
+    expect(buildDesktopReleaseAssetName({ version: 'v0.7.9-rc.10', ext: 'zip' })).toBe('Neon-Pilot-RC-0.7.9-rc.10-mac-arm64.zip');
     expect(resolveDesktopReleaseIdentity('0.7.9-rc.10')).toEqual({
-      appId: 'com.personal-agent.desktop.rc',
-      artifactPrefix: 'Personal-Agent-RC',
-      productName: 'Personal Agent RC',
+      appId: 'com.neon-pilot.desktop.rc',
+      artifactPrefix: 'Neon-Pilot-RC',
+      productName: 'Neon Pilot RC',
     });
   });
 
   it('keeps stable releases on the stable app identity', () => {
     expect(resolveDesktopReleaseIdentity('0.7.9')).toEqual({
-      appId: 'com.personal-agent.desktop',
-      artifactPrefix: 'Personal-Agent',
-      productName: 'Personal Agent',
+      appId: 'com.neon-pilot.desktop',
+      artifactPrefix: 'Neon-Pilot',
+      productName: 'Neon Pilot',
     });
   });
 

@@ -1,4 +1,4 @@
-import type { NativeExtensionClient } from '@personal-agent/extensions';
+import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface AlleycatPairPayload {
@@ -101,9 +101,9 @@ function AlleycatPanel({ pa }: AlleycatSettingsPanelProps) {
         <div className={CALLOUT}>
           <div className="font-medium text-primary">Use the Kitty Litter iOS app — not the Kitty Litter npm host.</div>
           <ol className="mt-2 list-decimal space-y-1 pl-4">
-            <li>Enable this extension in Personal Agent; the companion host starts automatically.</li>
+            <li>Enable this extension in Neon Pilot; the companion host starts automatically.</li>
             <li>Open Kitty Litter on your phone and scan this QR code.</li>
-            <li>Select Personal Agent. It should be the only advertised agent.</li>
+            <li>Select Neon Pilot. It should be the only advertised agent.</li>
           </ol>
           <p className="mt-2 text-tertiary">
             Disable the extension to stop the host. Do not install or run <span className="font-mono">npx kittylitter</span>; that starts

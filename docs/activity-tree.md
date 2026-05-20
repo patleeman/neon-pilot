@@ -2,7 +2,7 @@
 
 The activity tree is the shared model for showing conversations, executions, terminals, artifacts, and other work items in one sidebar tree.
 
-Personal Agent's thread sidebar is moving toward an activity tree instead of a conversation-only list. The tree consumes the product-facing **Execution** projection for background work. Durable runs remain the daemon/runtime storage record for logs, checkpoints, recovery, and compatibility; product UI should not infer visible background work from raw run records.
+Neon Pilot's thread sidebar is moving toward an activity tree instead of a conversation-only list. The tree consumes the product-facing **Execution** projection for background work. Durable runs remain the daemon/runtime storage record for logs, checkpoints, recovery, and compatibility; product UI should not infer visible background work from raw run records.
 
 ## Item model
 

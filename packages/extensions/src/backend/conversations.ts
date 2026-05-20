@@ -3,7 +3,7 @@ import type { ExtensionBackendContext } from '../index';
 export type { ExtensionBackendContext };
 
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/conversations must be resolved by the Personal Agent host runtime.');
+  throw new Error('@personal-agent/extensions/backend/conversations must be resolved by the Neon Pilot host runtime.');
 }
 
 export const CONVERSATION_INSPECT_ACTION_VALUES: readonly string[] = [];

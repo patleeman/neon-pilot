@@ -8,7 +8,7 @@ import { ConversationCheckpointWorkbenchPane, ConversationDiffRailContent } from
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 
 describe('resolveDiffThemeType', () => {
-  it('maps active Personal Agent themes to the light/dark diff theme type', () => {
+  it('maps active Neon Pilot themes to the light/dark diff theme type', () => {
     expect(
       resolveDiffThemeType('tokyo-night-dark', [
         { id: 'tokyo-night-dark', label: 'Tokyo Night Dark', appearance: 'dark' },

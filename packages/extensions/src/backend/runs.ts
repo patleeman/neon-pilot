@@ -1,5 +1,5 @@
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/runs must be resolved by the Personal Agent host runtime.');
+  throw new Error('@personal-agent/extensions/backend/runs must be resolved by the Neon Pilot host runtime.');
 }
 
 export const cancelDurableRun = (..._args: unknown[]): unknown => hostResolved();

@@ -192,7 +192,7 @@ function synthesizeStaticClientInfo(input: {
     grant_types: ['authorization_code', 'refresh_token'],
     response_types: ['code'],
     token_endpoint_auth_method: input.clientSecret ? 'client_secret_post' : 'none',
-    client_name: typeof input.clientMetadata?.client_name === 'string' ? input.clientMetadata.client_name : 'Personal Agent MCP Client',
+    client_name: typeof input.clientMetadata?.client_name === 'string' ? input.clientMetadata.client_name : 'Neon Pilot MCP Client',
     client_uri: typeof input.clientMetadata?.client_uri === 'string' ? input.clientMetadata.client_uri : 'https://github.com/patrickc/pa',
     scope: typeof input.clientMetadata?.scope === 'string' ? input.clientMetadata.scope : undefined,
     software_id: typeof input.clientMetadata?.software_id === 'string' ? input.clientMetadata.software_id : undefined,

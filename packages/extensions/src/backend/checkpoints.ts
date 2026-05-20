@@ -61,12 +61,12 @@ export interface SaveConversationCommitCheckpointInput extends ConversationCommi
 }
 
 /**
- * Backend imports are resolved by the Personal Agent host when building trusted
+ * Backend imports are resolved by the Neon Pilot host when building trusted
  * local extensions. This package subpath exists so tooling has a real public
  * contract; runtime implementations are provided by the desktop host alias.
  */
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/checkpoints must be resolved by the Personal Agent host runtime.');
+  throw new Error('@personal-agent/extensions/backend/checkpoints must be resolved by the Neon Pilot host runtime.');
 }
 
 export function listConversationCommitCheckpoints(_input: ConversationCommitCheckpointSelector): ConversationCommitCheckpointSummary[] {

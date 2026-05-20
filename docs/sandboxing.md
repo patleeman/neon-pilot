@@ -1,6 +1,6 @@
 # Sandboxing and Process Execution
 
-Personal Agent routes host-owned process execution through a shared process launcher so sandboxing extensions can wrap commands consistently. Filesystem access should converge on the same authority model through the [Filesystem Authority](filesystem-authority.md): direct file APIs and command sandboxes should share scoped root grants instead of inventing separate policy vocabularies.
+Neon Pilot routes host-owned process execution through a shared process launcher so sandboxing extensions can wrap commands consistently. Filesystem access should converge on the same authority model through the [Filesystem Authority](filesystem-authority.md): direct file APIs and command sandboxes should share scoped root grants instead of inventing separate policy vocabularies.
 
 ## Execution boundary
 

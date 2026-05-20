@@ -4,7 +4,7 @@ const clearCacheMock = vi.fn().mockResolvedValue(undefined);
 const setProxyMock = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('electron', () => ({
-  app: { name: 'Personal Agent' },
+  app: { name: 'Neon Pilot' },
   protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
   session: { fromPartition: () => ({ protocol: { handle: vi.fn() }, setProxy: setProxyMock, clearCache: clearCacheMock }) },
 }));

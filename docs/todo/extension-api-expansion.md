@@ -6,7 +6,7 @@ Living backlog for extension API pressure tests. Add use cases here when an exte
 
 ### Use case
 
-Build an extension that syncs Personal Agent conversation transcripts/sessions across a user's devices through an online service.
+Build an extension that syncs Neon Pilot conversation transcripts/sessions across a user's devices through an online service.
 
 Expected behavior:
 
@@ -159,7 +159,7 @@ The extension should own the online-service integration, account UX, conflict UI
 
 ### Use case
 
-Build a dark factory style Kanban board extension where each card is backed by one Personal Agent conversation. Moving a card through columns changes task state; opening a card opens or focuses the associated conversation.
+Build a dark factory style Kanban board extension where each card is backed by one Neon Pilot conversation. Moving a card through columns changes task state; opening a card opens or focuses the associated conversation.
 
 Expected behavior:
 
@@ -539,7 +539,7 @@ The reminder rules are extension-owned, but turn context assembly is core runtim
 
 ### Use case
 
-Build an extension that provisions a Personal Agent runtime on a remote machine over SSH, then lets selected conversations run on that remote host instead of the local machine.
+Build an extension that provisions a Neon Pilot runtime on a remote machine over SSH, then lets selected conversations run on that remote host instead of the local machine.
 
 Expected behavior:
 

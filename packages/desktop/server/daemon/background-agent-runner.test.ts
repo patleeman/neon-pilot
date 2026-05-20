@@ -39,7 +39,7 @@ describe('background agent runner output capture', () => {
 
   it('runs from daemon-spawned Electron Node children even when argv path differs', () => {
     const moduleUrl = pathToFileURL(
-      '/Applications/Personal Agent RC.app/Contents/Resources/app.asar/server/dist/background-agent-runner.js',
+      '/Applications/Neon Pilot RC.app/Contents/Resources/app.asar/server/dist/background-agent-runner.js',
     ).href;
 
     expect(shouldRunBackgroundAgentMain(moduleUrl, '/private/var/folders/runner.js', { PERSONAL_AGENT_RUN_ID: 'run-123' })).toBe(true);

@@ -1,16 +1,16 @@
 # Extension Manager Extension
 
-This extension owns the UI and operations for discovering, creating, building, reloading, enabling, disabling, importing, exporting, and inspecting Personal Agent native extensions.
+This extension owns the UI and operations for discovering, creating, building, reloading, enabling, disabling, importing, exporting, and inspecting Neon Pilot native extensions.
 
-The normal user-facing flow is agent-first: ask Personal Agent to build the extension, then let the agent use Extension Manager to create, build, validate, reload, and inspect it. The manual buttons and APIs exist so agents and advanced users have a reliable control surface.
+The normal user-facing flow is agent-first: ask Neon Pilot to build the extension, then let the agent use Extension Manager to create, build, validate, reload, and inspect it. The manual buttons and APIs exist so agents and advanced users have a reliable control surface.
 
 For the extension authoring contract, read [`packages/extensions/README.md`](../../packages/extensions/README.md) in a repo checkout, or use the packaged `local-extension-development` skill when operating from the built app. Those are the source of truth for agents building extensions: package layout, manifests, frontend/backend APIs, dependencies, skills, tools, storage, permissions, and the build loop. Do not duplicate that contract here.
 
 ## Product direction
 
-Extensions are Personal Agent's native product-module system. They let Patrick or an agent add app functionality without editing the core shell for every workflow.
+Extensions are Neon Pilot's native product-module system. They let Patrick or an agent add app functionality without editing the core shell for every workflow.
 
-The old iframe/HTML extension model is deprecated. New extensions render native React inside the Personal Agent UI, declare their surfaces in `extension.json`, call stable PA capabilities from `@personal-agent/extensions`, and use separate frontend/backend entries.
+The old iframe/HTML extension model is deprecated. New extensions render native React inside the Neon Pilot UI, declare their surfaces in `extension.json`, call stable PA capabilities from `@personal-agent/extensions`, and use separate frontend/backend entries.
 
 The Extension Manager should make that loop boring:
 

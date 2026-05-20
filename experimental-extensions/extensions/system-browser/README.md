@@ -93,7 +93,7 @@ For desktop QA, launch the testing app with a remote debugging port and quit-con
 npm run desktop:dev -- --remote-debugging-port=9222 --no-quit-confirmation
 ```
 
-After QA, close `Personal Agent Testing.app` and run `npm run ab:cleanup -- --session <name>` for any named wrapper session used during the check.
+After QA, close `Neon Pilot Testing.app` and run `npm run ab:cleanup -- --session <name>` for any named wrapper session used during the check.
 
 | Feature       | Built-in Browser           | agent-browser CLI   |
 | ------------- | -------------------------- | ------------------- |

@@ -56,7 +56,7 @@ function resolveDevRepoRoot(context: DesktopRuntimePathContext): string {
     }
   }
 
-  throw new Error('Could not resolve personal-agent repo root for the desktop app.');
+  throw new Error('Could not resolve Neon Pilot repo root for the desktop app.');
 }
 
 function resolveExistingFile(label: string, candidates: string[]): string {

@@ -1,6 +1,6 @@
 # Host view components
 
-Host view components let an extension reuse Personal Agent workbench UI without bundling or cloning the host implementation.
+Host view components let an extension reuse Neon Pilot workbench UI without bundling or cloning the host implementation.
 
 Use a string `component` when the extension owns the full React surface. Use an object `component` with a `host` id when the host owns the renderer. A host-only view does not load the extension frontend entry for that surface.
 
@@ -16,7 +16,7 @@ Use a string `component` when the extension owns the full React surface. Use an 
 
 ## When to use this
 
-Use a host component when the extension wants standard Personal Agent UI behavior and only needs small customization. Keep a string component when the extension owns a genuinely custom surface.
+Use a host component when the extension wants standard Neon Pilot UI behavior and only needs small customization. Keep a string component when the extension owns a genuinely custom surface.
 
 This split keeps the extension manifest as the routing/contribution layer while the host owns reusable UI primitives. The win is not just smaller initial bundles; it also removes cloned workbench panels that drift and break independently.
 

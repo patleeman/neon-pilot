@@ -11,7 +11,7 @@ const repoRoot = process.cwd();
 const packageJsonPath = resolve(repoRoot, 'package.json');
 const repoEnvPath = resolve(repoRoot, '.env');
 const defaultEnvPath = undefined;
-const defaultReleaseRepo = 'patleeman/personal-agent';
+const defaultReleaseRepo = 'patleeman/neon-pilot';
 
 function fail(message) {
   console.error(message);
@@ -294,7 +294,7 @@ function pushReleaseRef(tag) {
 }
 
 function createCleanReleaseSnapshot(env) {
-  const buildRoot = mkdtempSync(join(tmpdir(), 'personal-agent-release-'));
+  const buildRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-release-'));
   process.on('exit', () => {
     rmSync(buildRoot, { recursive: true, force: true });
   });
@@ -741,8 +741,8 @@ const releaseProductName = packagedAppPath
   ? packagedAppPath
       .split('/')
       .pop()
-      ?.replace(/\.app$/u, '') || 'Personal Agent'
-  : 'Personal Agent';
+      ?.replace(/\.app$/u, '') || 'Neon Pilot'
+  : 'Neon Pilot';
 const releaseNotes = [
   getChangelogReleaseNotes(version),
   '',

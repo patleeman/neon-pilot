@@ -6,7 +6,7 @@ import type { ExtensionProtocolContext } from '@personal-agent/extensions';
 const SESSION_KEY_PREFIX = 'session/';
 const DEFAULT_MODE_ID = 'code';
 const MODES: acp.SessionMode[] = [
-  { id: 'code', name: 'Code', description: 'Normal coding-agent mode for Personal Agent.' },
+  { id: 'code', name: 'Code', description: 'Normal coding-agent mode for Neon Pilot.' },
   { id: 'ask', name: 'Ask', description: 'Discussion-oriented mode for lighter guidance.' },
 ];
 const DEFAULT_ACP_PROMPT_TIMEOUT_MS = 120_000;
@@ -154,7 +154,7 @@ class PersonalAgentAcpAgent implements acp.Agent {
       protocolVersion: acp.PROTOCOL_VERSION,
       agentInfo: {
         name: 'personal-agent',
-        title: 'Personal Agent',
+        title: 'Neon Pilot',
         version: '0.8.0',
       },
       agentCapabilities: {

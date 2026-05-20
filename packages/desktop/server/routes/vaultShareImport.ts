@@ -151,7 +151,7 @@ async function extractReadableUrlShare(url: string): Promise<{
 }> {
   const response = await fetch(url, {
     headers: {
-      'user-agent': 'Personal Agent Knowledge Import/1.0',
+      'user-agent': 'Neon Pilot Knowledge Import/1.0',
       accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
     },
     signal: AbortSignal.timeout(15000),

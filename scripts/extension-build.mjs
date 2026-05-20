@@ -202,7 +202,7 @@ function createFrontendRawCssPlugin() {
 
 function createFrontendSharedReactPlugin() {
   const reactFacade = `const React = globalThis.__PA_REACT__;
-if (!React) throw new Error('Personal Agent React host runtime is unavailable.');
+if (!React) throw new Error('Neon Pilot React host runtime is unavailable.');
 export const Children = React.Children;
 export const Component = React.Component;
 export const Fragment = React.Fragment;
@@ -241,7 +241,7 @@ export const version = React.version;
 export default React;
 `;
   const reactDomFacade = `const ReactDom = globalThis.__PA_REACT_DOM__;
-if (!ReactDom) throw new Error('Personal Agent React DOM host runtime is unavailable.');
+if (!ReactDom) throw new Error('Neon Pilot React DOM host runtime is unavailable.');
 export const createPortal = ReactDom.createPortal;
 export const flushSync = ReactDom.flushSync;
 export const findDOMNode = ReactDom.findDOMNode;
@@ -253,13 +253,13 @@ export const version = ReactDom.version;
 export default ReactDom;
 `;
   const reactDomClientFacade = `const ReactDomClient = globalThis.__PA_REACT_DOM_CLIENT__;
-if (!ReactDomClient) throw new Error('Personal Agent React DOM client host runtime is unavailable.');
+if (!ReactDomClient) throw new Error('Neon Pilot React DOM client host runtime is unavailable.');
 export const createRoot = ReactDomClient.createRoot;
 export const hydrateRoot = ReactDomClient.hydrateRoot;
 export default ReactDomClient;
 `;
   const jsxRuntimeFacade = `const runtime = globalThis.__PA_REACT_JSX_RUNTIME__;
-if (!runtime) throw new Error('Personal Agent React JSX runtime is unavailable.');
+if (!runtime) throw new Error('Neon Pilot React JSX runtime is unavailable.');
 export const Fragment = runtime.Fragment;
 export const jsx = runtime.jsx;
 export const jsxs = runtime.jsxs;

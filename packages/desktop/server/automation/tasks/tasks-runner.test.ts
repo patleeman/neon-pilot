@@ -222,7 +222,7 @@ describe('runTaskInIsolatedPi', () => {
     expect(result).toMatchObject({
       success: false,
       exitCode: 1,
-      error: 'Conversation runtime unavailable; scheduled automations require the Personal Agent backend runtime.',
+      error: 'Conversation runtime unavailable; scheduled automations require the Neon Pilot backend runtime.',
     });
   });
 

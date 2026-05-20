@@ -209,7 +209,7 @@ const smokes = {
   async 'system-alleycat'() {
     const result = await module.status({}, ctx);
     assert(result.running === false, 'alleycat status should not auto-start service');
-    assert(result.agents.length === 1 && result.agents[0].name === 'personal-agent', 'alleycat should advertise only Personal Agent');
+    assert(result.agents.length === 1 && result.agents[0].name === 'neon-pilot', 'alleycat should advertise only Neon Pilot');
   },
   async 'system-caffeinate'() {
     const before = await module.status({}, ctx);

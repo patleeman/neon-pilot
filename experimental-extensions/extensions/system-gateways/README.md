@@ -8,7 +8,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Telegram Gateway
 
-The Telegram Gateway connects Telegram to Personal Agent conversations. It is a first-class routing surface: provider credentials live in Settings, while the Telegram Gateway page owns attachment, health, and recent activity.
+The Telegram Gateway connects Telegram to Neon Pilot conversations. It is a first-class routing surface: provider credentials live in Settings, while the Telegram Gateway page owns attachment, health, and recent activity.
 
 ## V1 model
 
@@ -17,7 +17,7 @@ Telegram is implemented behind a generic gateway model.
 - One Telegram bot token is one gateway connection.
 - Telegram uses managed long polling from the host-owned `backend.services` runtime declared by this extension.
 - One Telegram chat/user maps to one conversation.
-- If a Telegram message arrives with no attached gateway thread, Personal Agent creates/reuses the chat conversation and attaches it.
+- If a Telegram message arrives with no attached gateway thread, Neon Pilot creates/reuses the chat conversation and attaches it.
 - Later inbound messages from other Telegram chats create/reuse their own conversations but do not steal the attached thread.
 - Assistant replies mirror back to Telegram only when the gateway is enabled, attached, and the conversation has a Telegram chat target.
 - Completed assistant replies are delivered back to Telegram after each turn when the conversation has an enabled Telegram chat target and is the attached gateway thread.

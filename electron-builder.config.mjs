@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/personal-agent';
+const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
 function resolveDesktopReleaseRepoSlug(value = process.env.PERSONAL_AGENT_RELEASE_REPO) {
   const normalizedValue = value?.trim() || DEFAULT_DESKTOP_RELEASE_REPO_SLUG;
@@ -48,9 +48,9 @@ export function isRcDesktopVersion(version = readDesktopPackageVersion()) {
 export function resolveDesktopReleaseIdentity(version = readDesktopPackageVersion()) {
   const isRc = isRcDesktopVersion(version);
   return {
-    appId: isRc ? 'com.personal-agent.desktop.rc' : 'com.personal-agent.desktop',
-    artifactPrefix: isRc ? 'Personal-Agent-RC' : 'Personal-Agent',
-    productName: isRc ? 'Personal Agent RC' : 'Personal Agent',
+    appId: isRc ? 'com.neon-pilot.desktop.rc' : 'com.neon-pilot.desktop',
+    artifactPrefix: isRc ? 'Neon-Pilot-RC' : 'Neon-Pilot',
+    productName: isRc ? 'Neon Pilot RC' : 'Neon Pilot',
   };
 }
 
@@ -159,7 +159,7 @@ const electronBuilderConfig = {
     entitlementsInherit: 'apps/mac/entitlements.mac.inherit.plist',
     extendInfo: {
       LSUIElement: true,
-      NSMicrophoneUsageDescription: 'Personal Agent uses the microphone to capture composer dictation.',
+      NSMicrophoneUsageDescription: 'Neon Pilot uses the microphone to capture composer dictation.',
     },
     target: [
       {

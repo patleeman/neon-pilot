@@ -60,7 +60,7 @@ export interface ExtensionAgentConversationMessageResult extends ExtensionAgentC
 }
 
 function hostResolved(): never {
-  throw new Error('@personal-agent/extensions/backend/agent must be resolved by the Personal Agent host runtime.');
+  throw new Error('@personal-agent/extensions/backend/agent must be resolved by the Neon Pilot host runtime.');
 }
 
 export async function createAgentConversation(

@@ -1,14 +1,14 @@
-# Personal Agent Extension SDK
+# Neon Pilot Extension SDK
 
-The normal way to create a Personal Agent extension is to ask your agent to build it for you. Start with [`docs/build-an-extension.md`](../../docs/build-an-extension.md) for the agent-first workflow and copy-paste prompt.
+The normal way to create a Neon Pilot extension is to ask your agent to build it for you. Start with [`docs/build-an-extension.md`](../../docs/build-an-extension.md) for the agent-first workflow and copy-paste prompt.
 
-This package is the public import surface for native Personal Agent extensions. Extension code should import from `@personal-agent/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
+This package is the public import surface for native Neon Pilot extensions. Extension code should import from `@personal-agent/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
 
 This doc is written for agents building extensions. Read it before creating or editing an extension, then inspect the current schema/types and nearby system extensions for exact examples.
 
 ## Platform rule
 
-Build new Personal Agent product features as extensions by default. Core is the small, stable platform: agent/conversation runtime, model and tool protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, app shell/routing, install/update plumbing, and shared UI primitives.
+Build new Neon Pilot product features as extensions by default. Core is the small, stable platform: agent/conversation runtime, model and tool protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, app shell/routing, install/update plumbing, and shared UI primitives.
 
 User-facing, domain-specific, and workflow-specific behavior belongs in extensions: pages, panels, tool renderers, commands, integrations, context providers, automations, import/export flows, diagnostics views, settings sections, and opinionated UX.
 
@@ -28,7 +28,7 @@ When asked to build or modify an extension:
 6. Visually inspect any UI surface you changed.
 7. Checkpoint only the files you touched.
 
-Do not create new iframe or webview extensions. Native extensions render React components inside the Personal Agent UI.
+Do not create new iframe or webview extensions. Native extensions render React components inside the Neon Pilot UI.
 
 ## Where extensions live
 
@@ -65,7 +65,7 @@ agent-board/
 
 ## Build and reload loop
 
-Personal Agent owns the build command. Run it from the repo root:
+Neon Pilot owns the build command. Run it from the repo root:
 
 ```bash
 pnpm run extension:build -- ~/.local/state/personal-agent/extensions/agent-board
@@ -727,7 +727,7 @@ Backend actions use `ctx.storage` against the same per-extension document store.
 
 V1 native extensions are trusted local code. They are not sandboxed.
 
-That is acceptable because Personal Agent already runs local agent tools with broad authority. The goal is not fake security theater; the goal is a clear contract and review surface.
+That is acceptable because Neon Pilot already runs local agent tools with broad authority. The goal is not fake security theater; the goal is a clear contract and review surface.
 
 Rules:
 

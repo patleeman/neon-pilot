@@ -12,9 +12,10 @@ use tracing::{info, warn};
 
 const PROTOCOL_VERSION: u32 = 1;
 const ALLEYCAT_ALPN: &[u8] = b"alleycat/1";
-const AGENT_NAME: &str = "personal-agent";
+const AGENT_NAME: &str = "neon-pilot";
 const MAX_FRAME_BYTES: usize = 1024 * 1024;
 const INITIAL_FRAME_TIMEOUT: Duration = Duration::from_secs(10);
+const ENDPOINT_ONLINE_TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -115,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = load_config()?;
     let endpoint = bind_endpoint(config.secret_key.clone()).await?;
+    wait_for_dialable_endpoint(&endpoint).await?;
     let pair = PairPayload {
         v: PROTOCOL_VERSION,
         node_id: config.secret_key.public().to_string(),
@@ -163,6 +165,26 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+}
+
+async fn wait_for_dialable_endpoint(endpoint: &Endpoint) -> anyhow::Result<()> {
+    tokio::time::timeout(ENDPOINT_ONLINE_TIMEOUT, endpoint.online())
+        .await
+        .context("timed out waiting for iroh endpoint to connect to a relay")?;
+
+    let relay = endpoint
+        .addr()
+        .relay_urls()
+        .next()
+        .map(|url| url.to_string());
+    if relay.is_none() {
+        return Err(anyhow!(
+            "iroh endpoint reported online but no relay address is available"
+        ));
+    }
+
+    info!(relay = relay.as_deref(), "PA Alleycat endpoint is dialable");
+    Ok(())
 }
 
 fn load_config() -> anyhow::Result<Config> {
@@ -322,14 +344,14 @@ fn validate_request(request: &Request, expected_token: &str) -> anyhow::Result<(
 fn personal_agent(available: bool) -> AgentInfo {
     AgentInfo {
         name: AGENT_NAME,
-        display_name: "Personal Agent",
+        display_name: "Neon Pilot",
         wire: "jsonl",
         available,
         presentation: AgentPresentation {
-            title: "Personal Agent",
+            title: "Neon Pilot",
             is_beta: true,
             sort_order: 0,
-            description: "Personal Agent conversations exposed to Kitty Litter.",
+            description: "Neon Pilot conversations exposed to Kitty Litter.",
             aliases: vec!["pa", "personalagent"],
         },
         capabilities: AgentCapabilities {

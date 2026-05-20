@@ -304,7 +304,7 @@ function assertPackagedAgentReadableResources(appBundlePath) {
 
 async function main() {
   if (!appPath) {
-    fail('Usage: node scripts/smoke-desktop-release.mjs <path-to-Personal Agent.app>');
+    fail('Usage: node scripts/smoke-desktop-release.mjs <path-to-Neon Pilot.app>');
   }
 
   assertPackagedAgentReadableResources(appPath);

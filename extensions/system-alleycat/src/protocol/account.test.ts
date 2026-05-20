@@ -14,8 +14,8 @@ describe('system-alleycat account protocol', () => {
 
     expect(result).toMatchObject({
       rateLimits: {
-        limitId: 'personal-agent',
-        limitName: 'Personal Agent',
+        limitId: 'neon-pilot',
+        limitName: 'Neon Pilot',
         primary: { usedPercent: 0 },
         credits: { hasCredits: true, unlimited: true },
       },

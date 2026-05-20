@@ -1,29 +1,29 @@
 # Alleycat Remote Host
 
-Personal Agent-owned remote host for Kitty Litter / Alleycat-compatible clients.
+Neon Pilot-owned remote host for Kitty Litter / Alleycat-compatible clients.
 
 ## Intent
 
-This extension should replace external `kittylitter` process management for Personal Agent users:
+This extension should replace external `kittylitter` process management for Neon Pilot users:
 
 - run a PA-managed Alleycat-compatible host
 - advertise **only** `personal-agent`
 - show pairing payload / QR in Settings
-- expose Personal Agent conversations through the Codex-shaped JSON-RPC API Kitty expects
+- expose Neon Pilot conversations through the Codex-shaped JSON-RPC API Kitty expects
 
 ## Setup / QA
 
 The same setup instructions are shown in the extension settings panel so users do not need to read this file.
 
-Do **not** install or run `npx kittylitter` for Personal Agent pairing. That starts the upstream Kitty Litter host and advertises its built-in agents.
+Do **not** install or run `npx kittylitter` for Neon Pilot pairing. That starts the upstream Kitty Litter host and advertises its built-in agents.
 
 Use the PA extension instead:
 
 1. Build/reload the default-disabled `system-alleycat` system extension.
-2. Enable it in Personal Agent; the companion host starts automatically while the extension is enabled.
-3. Open Personal Agent Settings → **Kitty Litter Mobile Pairing**, or the Kitty Litter page.
-4. In Kitty Litter, scan the QR code shown by Personal Agent.
-5. Select **Personal Agent**. It should be the only advertised agent.
+2. Enable it in Neon Pilot; the companion host starts automatically while the extension is enabled.
+3. Open Neon Pilot Settings → **Kitty Litter Mobile Pairing**, or the Kitty Litter page.
+4. In Kitty Litter, scan the QR code shown by Neon Pilot.
+5. Select **Neon Pilot**. It should be the only advertised agent.
 
 For cwd QA:
 
@@ -34,7 +34,7 @@ For cwd QA:
 
 ## Current implementation state
 
-The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams to a local JSONL Personal Agent bridge. Its local bridge implements the Kitty-compatible conversation protocol directly:
+The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams to a local JSONL Neon Pilot bridge. Its local bridge implements the Kitty-compatible conversation protocol directly:
 
 - `initialize`
 - `thread/list`

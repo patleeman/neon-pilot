@@ -59,7 +59,7 @@ function toThreadResponse(
     forkedFromId: (detail?.forkedFromId as string) || null,
     preview,
     ephemeral: false,
-    modelProvider: (detail?.modelProvider as string) || 'personal-agent',
+    modelProvider: (detail?.modelProvider as string) || 'neon-pilot',
     createdAt,
     updatedAt,
     status: detail?.status && typeof detail.status === 'object' ? detail.status : threadStatus(detail),
@@ -81,7 +81,7 @@ function toThreadResponse(
 
 function threadSessionFields(thread: ReturnType<typeof toThreadResponse>) {
   return {
-    model: 'personal-agent',
+    model: 'neon-pilot',
     modelProvider: thread.modelProvider,
     serviceTier: null,
     cwd: thread.cwd,
@@ -142,7 +142,7 @@ function blockToCodexItem(block: Record<string, unknown>, index: number): Record
       return {
         id: typeof block._toolCallId === 'string' && block._toolCallId ? block._toolCallId : id,
         type: 'dynamicToolCall',
-        namespace: 'personal-agent',
+        namespace: 'neon-pilot',
         tool: typeof block.tool === 'string' ? block.tool : 'tool',
         arguments: block.input && typeof block.input === 'object' ? block.input : {},
         status: block.status === 'running' ? 'inProgress' : 'completed',
@@ -154,7 +154,7 @@ function blockToCodexItem(block: Record<string, unknown>, index: number): Record
       return {
         id,
         type: 'dynamicToolCall',
-        namespace: 'personal-agent',
+        namespace: 'neon-pilot',
         tool: typeof block.tool === 'string' ? block.tool : 'error',
         arguments: {},
         status: 'completed',
@@ -518,7 +518,7 @@ export const thread = {
     const options = p?.options as Record<string, unknown> | undefined;
     const customInstructions = options?.customInstructions as string | undefined;
     if (customInstructions?.trim()) {
-      throw new Error('thread/compact/start customInstructions are unsupported by Personal Agent compact.');
+      throw new Error('thread/compact/start customInstructions are unsupported by Neon Pilot compact.');
     }
 
     await ctx.conversations.compact(threadId);

@@ -55,7 +55,7 @@ export function parseTelegramGatewayCommand(text: string): TelegramGatewayComman
 
 export function formatTelegramGatewayHelp(): string {
   return [
-    'Personal Agent Telegram commands:',
+    'Neon Pilot Telegram commands:',
     '/status — show gateway status',
     '/new — start a new conversation',
     '/attach — attach this chat as the main gateway thread',

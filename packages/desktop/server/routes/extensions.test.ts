@@ -48,7 +48,7 @@ function createHarness() {
   };
 }
 
-function setPackagedResourcesPath(value = '/Applications/Personal Agent.app/Contents/Resources') {
+function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents/Resources') {
   Object.defineProperty(process, 'resourcesPath', {
     configurable: true,
     enumerable: true,

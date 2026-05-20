@@ -1,6 +1,6 @@
 ---
 name: local-extension-development
-description: Use when creating, editing, externally building, validating, reloading, importing, or debugging Personal Agent native extensions.
+description: Use when creating, editing, externally building, validating, reloading, importing, or debugging Neon Pilot native extensions.
 metadata:
   id: local-extension-development
   title: Local Extension Development
@@ -10,7 +10,7 @@ metadata:
 
 # Local Extension Development
 
-Use this skill when an agent is asked to build, fix, or inspect a Personal Agent extension locally. It is packaged with the built app, so it must be self-contained enough to use without a source checkout.
+Use this skill when an agent is asked to build, fix, or inspect a Neon Pilot extension locally. It is packaged with the built app, so it must be self-contained enough to use without a source checkout.
 
 ## Fast rule
 
@@ -32,7 +32,7 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 Copy-paste user prompt:
 
 ```text
-Build a Personal Agent extension that [does what].
+Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow

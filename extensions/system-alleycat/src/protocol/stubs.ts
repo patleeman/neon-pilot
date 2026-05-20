@@ -24,7 +24,7 @@ function ok(extra: Record<string, unknown> = {}) {
 
 function unsupported(method: string, reason: string): MethodHandler {
   return async () => {
-    throw new Error(`${method} is unsupported by Personal Agent Kitty Litter bridge: ${reason}`);
+    throw new Error(`${method} is unsupported by Neon Pilot Kitty Litter bridge: ${reason}`);
   };
 }
 
@@ -44,7 +44,7 @@ export const threadRealtime = {
     await ctx.storage.delete(storageKey('thread/realtime', threadId)).catch(() => null);
     return ok({ status: 'stopped' });
   }) as MethodHandler,
-  appendAudio: unsupported('thread/realtime/appendAudio', 'Personal Agent does not expose a realtime audio stream over this protocol'),
+  appendAudio: unsupported('thread/realtime/appendAudio', 'Neon Pilot does not expose a realtime audio stream over this protocol'),
   appendText: (async (params, ctx) => {
     const p = paramsObject(params);
     const threadId = typeof p.threadId === 'string' ? p.threadId : undefined;
@@ -123,7 +123,7 @@ export const fsWatch = {
 
 export const modelProvider = {
   capabilitiesRead: (async () => ({
-    modelProvider: 'personal-agent',
+    modelProvider: 'neon-pilot',
     capabilities: {
       supportsReasoningEffort: false,
       supportsServiceTier: false,
@@ -154,9 +154,9 @@ export const hooksList = (async () => ({ data: [], nextCursor: null })) as Metho
 // ── Marketplace ───────────────────────────────────────────────────────────
 
 export const marketplace = {
-  add: unsupported('marketplace/add', 'Personal Agent extensions are installed through the desktop extension manager'),
-  remove: unsupported('marketplace/remove', 'Personal Agent extensions are removed through the desktop extension manager'),
-  upgrade: unsupported('marketplace/upgrade', 'Personal Agent extensions are upgraded through the desktop extension manager'),
+  add: unsupported('marketplace/add', 'Neon Pilot extensions are installed through the desktop extension manager'),
+  remove: unsupported('marketplace/remove', 'Neon Pilot extensions are removed through the desktop extension manager'),
+  upgrade: unsupported('marketplace/upgrade', 'Neon Pilot extensions are upgraded through the desktop extension manager'),
 };
 
 // ── Plugins ───────────────────────────────────────────────────────────────
@@ -172,8 +172,8 @@ export const plugin = {
     const id = String(p.id ?? p.name ?? 'unknown');
     return { plugin: await ctx.storage.get(storageKey('plugin', id)).catch(() => null) };
   }) as MethodHandler,
-  install: unsupported('plugin/install', 'Personal Agent does not install Codex plugins through Kitty'),
-  uninstall: unsupported('plugin/uninstall', 'Personal Agent does not uninstall Codex plugins through Kitty'),
+  install: unsupported('plugin/install', 'Neon Pilot does not install Codex plugins through Kitty'),
+  uninstall: unsupported('plugin/uninstall', 'Neon Pilot does not uninstall Codex plugins through Kitty'),
 };
 
 // ── Review ─────────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export const reviewStart = (async (params, ctx) => {
 
 export const collaborationModeList = (async () => ({
   data: [
-    { id: 'default', name: 'Default', description: 'Standard Personal Agent mode', isDefault: true },
+    { id: 'default', name: 'Default', description: 'Standard Neon Pilot mode', isDefault: true },
     { id: 'plan', name: 'Plan', description: 'Planning-oriented mode', isDefault: false },
   ],
   nextCursor: null,
@@ -199,7 +199,7 @@ export const collaborationModeList = (async () => ({
 // ── MCP Server ────────────────────────────────────────────────────────────
 
 export const mcpServer = {
-  oauthLogin: unsupported('mcpServer/oauth/login', 'MCP OAuth is managed by Personal Agent desktop'),
+  oauthLogin: unsupported('mcpServer/oauth/login', 'MCP OAuth is managed by Neon Pilot desktop'),
 };
 
 export const mcpServerStatusList = (async () => ({ data: [], nextCursor: null })) as MethodHandler;
@@ -236,13 +236,13 @@ export const configStubs = {
 
 // ── Feedback ───────────────────────────────────────────────────────────────
 
-export const feedbackUpload = unsupported('feedback/upload', 'feedback upload is not routed through the Personal Agent bridge');
+export const feedbackUpload = unsupported('feedback/upload', 'feedback upload is not routed through the Neon Pilot bridge');
 
 // ── External Agent Config ─────────────────────────────────────────────────
 
 export const externalAgentConfig = {
   detect: (async () => ({ data: [], detected: [] })) as MethodHandler,
-  import_: unsupported('externalAgentConfig/import', 'external agent config import is not applicable to Personal Agent'),
+  import_: unsupported('externalAgentConfig/import', 'external agent config import is not applicable to Neon Pilot'),
 };
 
 // ── Tool ───────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ export const remoteControlStatusChanged = (async () => ok({ status: 'disabled' }
 
 export const windowsSandboxSetupStart = unsupported(
   'windowsSandbox/setupStart',
-  'Windows sandbox setup is not applicable on this Personal Agent host',
+  'Windows sandbox setup is not applicable on this Neon Pilot host',
 );
 
 // ── Environment ────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@
         "id": "telegram-runtime",
         "handler": "startTelegramGateway",
         "title": "Telegram gateway runtime",
-        "description": "Polls Telegram and routes messages to attached Personal Agent conversations.",
+        "description": "Polls Telegram and routes messages to attached Neon Pilot conversations.",
         "healthCheck": "telegramGatewayStatus",
         "restart": "on-failure"
       }

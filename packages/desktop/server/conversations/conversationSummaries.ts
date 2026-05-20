@@ -456,7 +456,7 @@ async function generateConversationSummary(meta: SessionMeta): Promise<Conversat
     model,
     {
       systemPrompt: [
-        'You summarize old Personal Agent conversations for future context recovery.',
+        'You summarize old Neon Pilot conversations for future context recovery.',
         'Return only strict JSON. No markdown. No commentary.',
         'Optimize for ranking, human scanning, and concise prompt injection.',
       ].join('\n'),

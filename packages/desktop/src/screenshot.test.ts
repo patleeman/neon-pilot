@@ -63,6 +63,6 @@ describe('captureDesktopScreenshot', () => {
         rm: vi.fn().mockResolvedValue(undefined),
         runInteractiveScreencapture: vi.fn().mockResolvedValue({ code: 2, signal: null, stderr: 'permission denied' }),
       }),
-    ).rejects.toThrow('Enable Screen Recording for Personal Agent');
+    ).rejects.toThrow('Enable Screen Recording for Neon Pilot');
   });
 });

@@ -1,6 +1,6 @@
-# Personal Agent Experimental Extensions
+# Neon Pilot Experimental Extensions
 
-This repo area is for rough Personal Agent extensions that should stay out of the bundled system extension set until they earn their keep.
+This repo area is for rough Neon Pilot extensions that should stay out of the bundled system extension set until they earn their keep.
 
 Each folder under `extensions/` is a complete extension package. Build one with the root `build` script, then install it into a PA state root by copying the extension folder or using the `install` script.
 

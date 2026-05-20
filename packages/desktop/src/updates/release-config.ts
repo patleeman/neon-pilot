@@ -1,4 +1,4 @@
-const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/personal-agent';
+const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
 function resolveDesktopReleaseRepoSlug(): string {
   const value = process.env.PERSONAL_AGENT_RELEASE_REPO?.trim() || DEFAULT_DESKTOP_RELEASE_REPO_SLUG;
@@ -17,8 +17,8 @@ export const DESKTOP_RELEASE_REPO_SLUG = resolveDesktopReleaseRepoSlug();
 const [DESKTOP_RELEASE_REPO_OWNER_VALUE, DESKTOP_RELEASE_REPO_NAME_VALUE] = DESKTOP_RELEASE_REPO_SLUG.split('/', 2);
 export const DESKTOP_RELEASE_REPO_OWNER = DESKTOP_RELEASE_REPO_OWNER_VALUE;
 export const DESKTOP_RELEASE_REPO_NAME = DESKTOP_RELEASE_REPO_NAME_VALUE;
-const STABLE_DESKTOP_RELEASE_ARTIFACT_PREFIX = 'Personal-Agent';
-const RC_DESKTOP_RELEASE_ARTIFACT_PREFIX = 'Personal-Agent-RC';
+const STABLE_DESKTOP_RELEASE_ARTIFACT_PREFIX = 'Neon-Pilot';
+const RC_DESKTOP_RELEASE_ARTIFACT_PREFIX = 'Neon-Pilot-RC';
 
 function normalizeVersion(version: string): string {
   return version.trim().replace(/^v/i, '');

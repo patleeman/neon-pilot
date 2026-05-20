@@ -1,6 +1,6 @@
 # ACP Protocol
 
-This extension exposes Personal Agent as an ACP agent over stdio.
+This extension exposes Neon Pilot as an ACP agent over stdio.
 
 ## Usage
 

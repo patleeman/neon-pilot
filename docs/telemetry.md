@@ -1,6 +1,6 @@
 # Telemetry
 
-Telemetry explains where Personal Agent stores local observability data, which path is authoritative, and how the Settings and Telemetry pages read it.
+Telemetry explains where Neon Pilot stores local observability data, which path is authoritative, and how the Settings and Telemetry pages read it.
 
 ## Storage locations
 

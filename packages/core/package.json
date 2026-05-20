@@ -3,8 +3,8 @@
   "version": "0.8.0-rc.19",
   "license": "MIT",
   "description": "Core personal agent library",
-  "repository": "github:user/personal-agent",
-  "bugs": "https://github.com/user/personal-agent/issues",
+  "repository": "github:patleeman/neon-pilot",
+  "bugs": "https://github.com/patleeman/neon-pilot/issues",
   "homepage": "https://github.com/user/personal-agent",
   "type": "module",
   "exports": {

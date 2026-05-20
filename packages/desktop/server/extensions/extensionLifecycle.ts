@@ -73,7 +73,7 @@ function createSafeTimestamp(): string {
 }
 
 function starterHelpText(): string {
-  return 'Edit <code>src/frontend.tsx</code>, run <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from the personal-agent repo, then reload extensions.';
+  return 'Edit <code>src/frontend.tsx</code>, run <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from the neon-pilot repo, then reload extensions.';
 }
 
 function createStarterFrontend(name: string, template: RuntimeExtensionTemplate): string {
@@ -169,7 +169,7 @@ export async function onSettingsChanged(input: unknown, ctx: ExtensionBackendCon
 function createStarterReadme(name: string): string {
   return `# ${name}
 
-Native Personal Agent extension.
+Native Neon Pilot extension.
 
 ## Useful manifest examples
 

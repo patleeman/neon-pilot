@@ -44,7 +44,7 @@ export function parseSlackMcpGatewayCommand(text: string): SlackMcpGatewayComman
 
 export function formatSlackMcpGatewayHelp(): string {
   return [
-    'Personal Agent Slack commands:',
+    'Neon Pilot Slack commands:',
     '!agent help — show commands',
     '!agent status — show gateway status',
     '!agent stop — stop the current agent turn',

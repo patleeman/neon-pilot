@@ -18,24 +18,20 @@ describe('resolveLocalApiModuleUrl', () => {
   it('resolves the packaged local API module from the bundled server directory', () => {
     expect(
       resolveLocalApiModuleUrl({
-        currentDir: '/Applications/Personal Agent.app/Contents/Resources/app.asar/dist',
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist',
         isPackaged: true,
-        appPath: '/Applications/Personal Agent.app/Contents/Resources/app.asar',
+        appPath: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
       }),
-    ).toBe(
-      pathToFileURL(resolve('/Applications/Personal Agent.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href,
-    );
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href);
   });
 
   it('can auto-resolve the packaged bundle path without importing electron', () => {
     expect(
       resolveLocalApiModuleUrl({
-        currentDir: '/Applications/Personal Agent.app/Contents/Resources/app.asar/dist',
-        appPath: '/Applications/Personal Agent.app/Contents/Resources/app.asar',
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist',
+        appPath: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
       }),
-    ).toBe(
-      pathToFileURL(resolve('/Applications/Personal Agent.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href,
-    );
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href);
   });
 });
 

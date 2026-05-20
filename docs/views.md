@@ -1,6 +1,6 @@
 # Views
 
-Personal Agent has two view modes. Switch between them with `F1`/`F2` or the dropdown in the top bar.
+Neon Pilot has two view modes. Switch between them with `F1`/`F2` or the dropdown in the top bar.
 
 ## Conversation View (F1)
 

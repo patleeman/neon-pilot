@@ -1,6 +1,6 @@
 # Extension Authoring Reference
 
-The normal way to create a Personal Agent extension is to ask your agent to build it for you. Start with [Build an extension with your agent](build-an-extension.md) for the user-facing workflow and copy-paste prompt.
+The normal way to create a Neon Pilot extension is to ask your agent to build it for you. Start with [Build an extension with your agent](build-an-extension.md) for the user-facing workflow and copy-paste prompt.
 
 This reference covers the extension package contract: manifests, frontend/backend entries, tools, skills, agent hooks, event bus, permissions, build behavior, and integration testing. Use it when implementing or debugging an extension, not as the first stop for a user who just wants a new feature.
 
@@ -27,7 +27,7 @@ This reference covers the extension package contract: manifests, frontend/backen
 Users should usually describe the feature they want and let their agent create the extension:
 
 ```text
-Build a Personal Agent extension that [does what].
+Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
@@ -41,7 +41,7 @@ The agent should create editable `src/` files, declare contributions in `extensi
 
 ## Core vs extensions
 
-Personal Agent core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
+Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
 
 Everything user-facing, domain-specific, or workflow-specific should be an extension: pages, panels, tool renderers, slash/command surfaces, integrations, context providers, automations, import/export flows, diagnostics views, settings sections, and opinionated UX built on top of the platform.
 
@@ -980,7 +980,7 @@ Use the same `max-w-[72rem]`, `space-y-10`, and `AppPageIntro` title/summary pat
 
 ## Styling guidance
 
-Extension UIs should look native to Personal Agent, not like embedded websites. Default to the shared primitives from `@personal-agent/extensions/ui` and Tailwind utility classes that use app theme tokens.
+Extension UIs should look native to Neon Pilot, not like embedded websites. Default to the shared primitives from `@personal-agent/extensions/ui` and Tailwind utility classes that use app theme tokens.
 
 ```tsx
 <section className="space-y-4 border-t border-border-subtle pt-6">

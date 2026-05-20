@@ -540,7 +540,7 @@ saveConversationCommitCheckpoint({
   commitSha: 'abc1234deadbeefabc1234deadbeefabc12345',
   shortSha: 'abc1234',
   subject: 'feat: seed desktop demo environment',
-  authorName: 'Personal Agent',
+  authorName: 'Neon Pilot',
   authorEmail: 'demo@local',
   committedAt: now,
   createdAt: now,

@@ -1,6 +1,6 @@
 # Filesystem Authority
 
-Personal Agent should route host-owned filesystem access through a shared Filesystem Authority, the same way host-owned process execution routes through the shared process launcher. The goal is one product boundary for workspace files, extension storage files, artifacts, temp workspaces, archive extraction, and future command sandbox root grants.
+Neon Pilot should route host-owned filesystem access through a shared Filesystem Authority, the same way host-owned process execution routes through the shared process launcher. The goal is one product boundary for workspace files, extension storage files, artifacts, temp workspaces, archive extraction, and future command sandbox root grants.
 
 ## Problem
 

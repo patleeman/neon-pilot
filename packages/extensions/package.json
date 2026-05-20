@@ -2,7 +2,7 @@
   "name": "@personal-agent/extensions",
   "version": "0.8.0-rc.19",
   "license": "MIT",
-  "description": "Public extension API types for Personal Agent",
+  "description": "Public extension API types for Neon Pilot",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

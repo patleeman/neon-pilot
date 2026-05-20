@@ -1,13 +1,13 @@
 # Build an extension with your agent
 
-The normal way to create a Personal Agent extension is to ask your agent to build it for you.
+The normal way to create a Neon Pilot extension is to ask your agent to build it for you.
 
-Extensions are how Personal Agent grows new product features. You usually should not hand-write one from scratch: describe the workflow you want, then ask your agent to create, build, reload, and test the extension. The manifest and SDK docs are reference material for the agent and for debugging.
+Extensions are how Neon Pilot grows new product features. You usually should not hand-write one from scratch: describe the workflow you want, then ask your agent to create, build, reload, and test the extension. The manifest and SDK docs are reference material for the agent and for debugging.
 
 ## Copy-paste prompt
 
 ```text
-Build a Personal Agent extension that [does what].
+Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow

@@ -3180,7 +3180,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         setModelProviderDraft((current) => ({ ...current, headersText: event.target.value }));
                                       }}
                                       className={JSON_TEXTAREA_CLASS}
-                                      placeholder={'{\n  "x-app": "personal-agent"\n}'}
+                                      placeholder={'{\n  "x-app": "neon-pilot"\n}'}
                                       spellCheck={false}
                                       disabled={modelProviderAction !== null}
                                     />

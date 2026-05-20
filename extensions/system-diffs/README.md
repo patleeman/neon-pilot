@@ -146,7 +146,7 @@ See [Checkpoints](README.md) for creating and managing checkpoints.
 
 # Git Integration
 
-Personal Agent uses git in several features. This page describes how each feature interacts with git and how they relate to each other.
+Neon Pilot uses git in several features. This page describes how each feature interacts with git and how they relate to each other.
 
 ## Checkpoints
 

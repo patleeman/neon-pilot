@@ -52,7 +52,7 @@ const SLOW_RETRY_MS = 60_000;
  *
  * Slack requires a fixed, marketplace-approved app client ID — no dynamic
  * registration. We reuse Claude Code's client (the same one used by
- * `claude plugin install slack`) so Personal Agent is treated as a known
+ * `claude plugin install slack`) so Neon Pilot is treated as a known
  * integration by Slack admins.
  *
  * Source: https://docs.slack.dev/ai/slack-mcp-server/connect-to-claude/

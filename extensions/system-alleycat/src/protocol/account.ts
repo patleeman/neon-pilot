@@ -10,8 +10,8 @@ export const account = {
   /** `account/rateLimits/read` — PA does not expose Codex quota buckets; return a harmless unlimited snapshot. */
   rateLimitsRead: (async () => ({
     rateLimits: {
-      limitId: 'personal-agent',
-      limitName: 'Personal Agent',
+      limitId: 'neon-pilot',
+      limitName: 'Neon Pilot',
       primary: { usedPercent: 0, windowDurationMins: null, resetsAt: null },
       secondary: null,
       credits: { hasCredits: true, unlimited: true, balance: null },

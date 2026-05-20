@@ -4,7 +4,7 @@
   "name": "ACP Protocol",
   "packageType": "system",
   "defaultEnabled": false,
-  "description": "Expose Personal Agent as an Agent Client Protocol server over stdio.",
+  "description": "Expose Neon Pilot as an Agent Client Protocol server over stdio.",
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",

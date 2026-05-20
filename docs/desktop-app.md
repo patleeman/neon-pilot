@@ -1,6 +1,6 @@
 # Desktop App
 
-The Electron desktop app is the primary Personal Agent operator UI. It hosts the React renderer, manages the local daemon lifecycle, and provides the full feature surface.
+The Electron desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, manages the local daemon lifecycle, and provides the full feature surface.
 
 ## Starting
 
@@ -17,7 +17,7 @@ pnpm run desktop:demo
 
 Both `desktop:start` and `desktop:dev` build the Electron shell and launch it through `packages/desktop/scripts/launch-dev-app.mjs`.
 
-For packaged builds, launch `Personal Agent.app` from the output directory. RC builds launch as `Personal Agent RC.app` so they can coexist with the stable app.
+For packaged builds, launch `Neon Pilot.app` from the output directory. RC builds launch as `Neon Pilot RC.app` so they can coexist with the stable app.
 
 ## Runtime Model
 

@@ -96,7 +96,7 @@ interface PathChangeResolution {
   remoteChanged: boolean;
 }
 
-const SYNC_COMMIT_AUTHOR_NAME = 'Personal Agent';
+const SYNC_COMMIT_AUTHOR_NAME = 'Neon Pilot';
 const SYNC_COMMIT_AUTHOR_EMAIL = 'kb@personal-agent.local';
 const KNOWLEDGE_BASE_SYNC_INTERVAL_MS = 5 * 60 * 1_000;
 const KNOWLEDGE_BASE_LOCAL_CHANGE_QUIET_MS = 2 * 60 * 1_000;

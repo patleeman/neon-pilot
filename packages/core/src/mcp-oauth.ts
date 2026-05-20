@@ -652,7 +652,7 @@ class PersonalAgentOAuthClientProvider implements OAuthClientProvider {
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none',
-      client_name: 'Personal Agent MCP Client',
+      client_name: 'Neon Pilot MCP Client',
       client_uri: 'https://github.com/patrickc/pa',
       software_id: 'personal-agent-mcp',
       software_version: '1',

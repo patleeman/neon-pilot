@@ -65,7 +65,7 @@ async function handleToolsRequest(_req: unknown, res: Response): Promise<void> {
       {
         id: '1password-cli',
         name: '1Password CLI',
-        description: 'Resolves op:// secret references used by personal-agent features and extensions.',
+        description: 'Resolves op:// secret references used by Neon Pilot features and extensions.',
         configuredBy: 'PERSONAL_AGENT_OP_BIN',
         usedBy: ['op:// secret references', 'web-tools extension'],
         binary: inspectCliBinary({ command: onePasswordCommand, cwd: getRepoRootFn() }),

@@ -125,7 +125,7 @@ function ensureMacDevAppBundle() {
   const baseProductName =
     typeof desktopPackage.productName === 'string' && desktopPackage.productName.trim().length > 0
       ? desktopPackage.productName.trim()
-      : 'Personal Agent';
+      : 'Neon Pilot';
   const productName = `${baseProductName}${testingProductSuffix}`;
   const appVersion =
     typeof desktopPackage.version === 'string' && desktopPackage.version.trim().length > 0 ? desktopPackage.version.trim() : '0.0.0';
@@ -155,7 +155,7 @@ function ensureMacDevAppBundle() {
   replacePlistString(infoPlistPath, 'CFBundleName', productName);
   replacePlistString(infoPlistPath, 'CFBundleExecutable', productName);
   replacePlistString(infoPlistPath, 'CFBundleIconFile', 'icon.icns');
-  replacePlistString(infoPlistPath, 'CFBundleIdentifier', 'com.personal-agent.desktop.dev');
+  replacePlistString(infoPlistPath, 'CFBundleIdentifier', 'com.neon-pilot.desktop.dev');
   replacePlistString(infoPlistPath, 'CFBundleShortVersionString', appVersion);
   replacePlistString(infoPlistPath, 'CFBundleVersion', appVersion);
 

@@ -82,7 +82,7 @@ describe('resolveDesktopRuntimePathsForContext', () => {
 
   it('resolves packaged resources and uses the bundled runtime', () => {
     const appBundleRoot = createTempDir('pa-desktop-app-');
-    const resourcesPath = join(appBundleRoot, 'Personal Agent.app', 'Contents', 'Resources');
+    const resourcesPath = join(appBundleRoot, 'Neon Pilot.app', 'Contents', 'Resources');
     const appRoot = join(resourcesPath, 'app.asar');
     const stateRoot = createTempDir('pa-desktop-state-');
     seedPackagedApp(appRoot, resourcesPath);
@@ -92,14 +92,14 @@ describe('resolveDesktopRuntimePathsForContext', () => {
       isPackaged: true,
       appRoot,
       resourcesPath,
-      execPath: '/Applications/Personal Agent.app/Contents/MacOS/Personal Agent',
+      execPath: '/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot',
     });
 
     expect(result.repoRoot).toBe(resourcesPath);
     expect(result.devRepoRoot).toBeUndefined();
     expect(result.resourcesRoot).toBe(resourcesPath);
     expect(result.appRoot).toBe(appRoot);
-    expect(result.nodeCommand).toBe('/Applications/Personal Agent.app/Contents/MacOS/Personal Agent');
+    expect(result.nodeCommand).toBe('/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot');
     expect(result.useElectronRunAsNode).toBe(true);
     expect(result.desktopNativeModulesDir).toBe(join(resourcesPath, 'app.asar.unpacked'));
     expect(result.daemonEntryFile).toBe(join(appRoot, 'node_modules', '@personal-agent', 'daemon', 'dist', 'index.js'));
@@ -122,7 +122,7 @@ describe('resolveDesktopRuntimePathsForContext', () => {
         PERSONAL_AGENT_DESKTOP_DEV_BUNDLE: '1',
         PERSONAL_AGENT_REPO_ROOT: repoRoot,
       },
-      execPath: '/Applications/Personal Agent.app/Contents/MacOS/Personal Agent',
+      execPath: '/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot',
       isPackaged: false,
     });
 
@@ -136,7 +136,7 @@ describe('resolveDesktopRuntimePathsForContext', () => {
   it('can recover the repo root from a dev app bundle appRoot when cwd is elsewhere', () => {
     const repoRoot = createTempDir('pa-desktop-dev-app-root-');
     const stateRoot = createTempDir('pa-desktop-state-');
-    const appRoot = join(repoRoot, 'packages', 'desktop', 'dist', 'mac-arm64', 'Personal Agent.app', 'Contents', 'Resources', 'app.asar');
+    const appRoot = join(repoRoot, 'packages', 'desktop', 'dist', 'mac-arm64', 'Neon Pilot.app', 'Contents', 'Resources', 'app.asar');
     seedDevRepo(repoRoot);
     process.env.PERSONAL_AGENT_STATE_ROOT = stateRoot;
 
@@ -146,7 +146,7 @@ describe('resolveDesktopRuntimePathsForContext', () => {
       env: {
         ...process.env,
       },
-      execPath: '/Applications/Personal Agent.app/Contents/MacOS/Personal Agent',
+      execPath: '/Applications/Neon Pilot.app/Contents/MacOS/Neon Pilot',
       isPackaged: false,
       appRoot,
     });
