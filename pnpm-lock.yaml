@@ -19,7 +19,7 @@ importers:
       '@excalidraw/excalidraw':
         specifier: ^0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@personal-agent/desktop':
+      '@neon-pilot/desktop':
         specifier: workspace:*
         version: link:packages/desktop
       '@pierre/trees':
@@ -313,6 +313,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.2.1
         version: 4.7.0(vite@5.4.21(@types/node@20.19.35)(sass@1.51.0))
+      '@welldone-software/why-did-you-render':
+        specifier: ^8.0.0
+        version: 8.0.3(react@18.3.1)
       autoprefixer:
         specifier: ^10.4.17
         version: 10.4.27(postcss@8.5.6)
@@ -2938,6 +2941,11 @@ packages:
 
   '@vitest/utils@4.0.18':
     resolution: { integrity: sha512-msMRKLMVLWygpK3u2Hybgi4MNjcYJvwTb0Ru09+fOyCXIgT5raYP041DRRdiJiI3k/2U6SEbAETB3YtBrUkCFA== }
+
+  '@welldone-software/why-did-you-render@8.0.3':
+    resolution: { integrity: sha512-bb5bKPMStYnocyTBVBu4UTegZdBqzV1mPhxc0UIV/S43KFUSRflux9gvzJfu2aM4EWLJ3egTvdjOi+viK+LKGA== }
+    peerDependencies:
+      react: ^18
 
   '@whisper-cpp-node/darwin-arm64@0.2.12':
     resolution: { integrity: sha512-8sQE1pNzi/Osy1OfGMLes9Mwc5hWh59u2lJWKyM4HVLTl6h9LIb44bZINtgmlwUKVxECIpzQ7VnCKyY6eWJOnQ== }
@@ -9661,6 +9669,11 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.0.18
       tinyrainbow: 3.0.3
+
+  '@welldone-software/why-did-you-render@8.0.3(react@18.3.1)':
+    dependencies:
+      lodash: 4.18.1
+      react: 18.3.1
 
   '@whisper-cpp-node/darwin-arm64@0.2.12':
     optional: true

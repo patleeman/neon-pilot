@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0-rc.2 — 2026-05-20
+
+### Highlights
+
+- Adds a header-level enable/disable control for local model servers, making the running state easier to manage from the Local Models page.
+- Fixes live-session bash execution from the desktop API surface and resolves a Layout render loop that could grow memory usage.
+- Adds release smoke coverage for heap growth, makes packaged smoke work without configured models, and enables why-did-you-render diagnostics in development.
+- Reduces packaged app size and startup pressure by excluding bundled node_modules from packaging and splitting lazy server modules.
+- Moves extension API and network authority backlog notes out of the repo and into tracked GitHub issues.
+
+### Notes
+
+- 5 commits since the previous release.
+
 ## 0.9.0-rc.1 — 2026-05-20
 
 ### Highlights

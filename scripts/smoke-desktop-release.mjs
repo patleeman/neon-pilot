@@ -297,12 +297,15 @@ async function assertLiveSessionBash(cdp, child, logs, cwd) {
       };
 
       const models = await get('/api/models');
-      let model = 'gpt-5.4';
+      let model = '';
       try {
-        model = JSON.parse(models.body).currentModel || model;
+        const modelState = JSON.parse(models.body);
+        model = modelState.currentModel || modelState.models?.[0]?.id || '';
       } catch {}
 
-      const created = await post('/api/live-sessions', { cwd: ${JSON.stringify(cwd)}, model, thinkingLevel: 'medium' });
+      const createBody = { cwd: ${JSON.stringify(cwd)}, thinkingLevel: 'medium' };
+      if (model) createBody.model = model;
+      const created = await post('/api/live-sessions', createBody);
       let sessionId = '';
       try {
         sessionId = JSON.parse(created.body).id || '';
