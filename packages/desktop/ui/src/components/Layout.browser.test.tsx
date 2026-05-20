@@ -90,4 +90,84 @@ describe('WorkbenchBrowserTab', () => {
       }
     }
   });
+
+  it('applies delayed browser state updates to the tab that requested them', async () => {
+    let resolveFirstBounds: ((value: unknown) => void) | null = null;
+    const setWorkbenchBrowserBounds = vi.fn((input: { sessionKey?: string | null }) => {
+      if (input.sessionKey === '@global:tab-first' && !resolveFirstBounds) {
+        return new Promise((resolve) => {
+          resolveFirstBounds = resolve;
+        });
+      }
+      return Promise.resolve(null);
+    });
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    window.personalAgentDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.personalAgentDesktop;
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 20, top: 30, width: 640, height: 480, right: 660, bottom: 510, x: 20, y: 30, toJSON: () => ({}) }),
+    });
+
+    const firstTab: BrowserTabItem = { id: 'first', url: 'https://first.example/', urlDraft: 'https://first.example/', title: 'First' };
+    const secondTab: BrowserTabItem = {
+      id: 'second',
+      url: 'https://second.example/',
+      urlDraft: 'https://second.example/',
+      title: 'Second',
+    };
+    let browserTabsState: BrowserTabsState = { tabs: [firstTab, secondTab], activeTabId: 'first', closedTabs: [] };
+    const onSetTabsState = vi.fn((updater: React.SetStateAction<BrowserTabsState>) => {
+      browserTabsState = typeof updater === 'function' ? updater(browserTabsState) : updater;
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    function render(activeTab: BrowserTabItem) {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeTab}
+          onSetTabsState={onSetTabsState}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    }
+
+    act(() => render(firstTab));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    browserTabsState = { ...browserTabsState, activeTabId: 'second' };
+    act(() => render(secondTab));
+    await act(async () => {
+      resolveFirstBounds?.({
+        url: 'https://first.example/updated',
+        title: 'First updated',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false,
+        browserRevision: 2,
+        snapshotRevision: 0,
+        changedSinceSnapshot: true,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(browserTabsState.tabs.find((tab) => tab.id === 'first')).toMatchObject({
+      url: 'https://first.example/updated',
+      title: 'First updated',
+    });
+    expect(browserTabsState.tabs.find((tab) => tab.id === 'second')).toMatchObject({
+      url: 'https://second.example/',
+      title: 'Second',
+    });
+  });
 });
