@@ -78,6 +78,7 @@ function createHarness(initialEntries: unknown[] = []) {
     turnEnd: handlers.get('turn_end')?.[0] as AgentEventHandler,
     agentStart: handlers.get('agent_start')?.[0] as AgentEventHandler,
     agentEnd: handlers.get('agent_end')?.[0] as AgentEventHandler,
+    sessionStart: handlers.get('session_start')?.[0] as AgentEventHandler,
     compactionStart: handlers.get('compaction_start')?.[0] as AgentEventHandler,
     compactionEnd: handlers.get('compaction_end')?.[0] as AgentEventHandler,
     ctx,
@@ -337,6 +338,29 @@ describe('system-goal-mode extension', () => {
     await flushTimers();
 
     expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('re-arms active goal continuation on session_start recovery', async () => {
+    const harness = createHarness([activeGoal('recover stranded goal')]);
+
+    await harness.sessionStart({}, harness.ctx);
+    await flushTimers();
+
+    expect(harness.sendMessage).toHaveBeenCalledTimes(1);
+    expect(harness.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ customType: 'goal-continuation', content: expect.stringContaining('Objective: recover stranded goal') }),
+      { deliverAs: 'followUp', triggerTurn: true },
+    );
+  });
+
+  it('does not re-arm active goal continuation on session_start when messages are pending', async () => {
+    const harness = createHarness([activeGoal('wait for queued work')]);
+    const pendingCtx = { ...harness.ctx, hasPendingMessages: () => true };
+
+    await harness.sessionStart({}, pendingCtx);
+    await flushTimers();
+
+    expect(harness.sendMessage).not.toHaveBeenCalled();
   });
 
   it('lets overflow recovery own the retry before scheduling another goal continuation', async () => {

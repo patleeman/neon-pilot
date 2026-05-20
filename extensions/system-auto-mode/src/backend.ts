@@ -129,6 +129,10 @@ function isOverflowRecoveryFailure(event: unknown): boolean {
   );
 }
 
+function hasPendingMessages(ctx: { hasPendingMessages?: () => boolean }): boolean {
+  return typeof ctx.hasPendingMessages === 'function' ? ctx.hasPendingMessages() : false;
+}
+
 // ── Tool parameter schemas ───────────────────────────────────────────────────
 
 const GoalParams = Type.Object({
@@ -152,6 +156,42 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
         clearTimeout(pendingContinuationTimer);
         pendingContinuationTimer = null;
       }
+    };
+
+    const scheduleContinuationIfActive = (ctx: { sessionManager: { getEntries: () => unknown[] }; hasPendingMessages?: () => boolean }) => {
+      const state = readGoalState(ctx.sessionManager);
+      if (state.status !== 'active') {
+        clearPendingContinuation();
+        return;
+      }
+
+      if (overflowRecoveryActive || hasPendingMessages(ctx) || pendingContinuationTimer) {
+        return;
+      }
+
+      const prompt = buildContinuationPrompt(state);
+      const continuationId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const scheduledObjective = state.objective;
+      const scheduledUpdatedAt = state.updatedAt;
+
+      pendingContinuationTimer = setTimeout(() => {
+        pendingContinuationTimer = null;
+        const latest = readGoalState(ctx.sessionManager);
+        if (latest.status !== 'active' || latest.objective !== scheduledObjective || latest.updatedAt !== scheduledUpdatedAt) {
+          return;
+        }
+        if (overflowRecoveryActive || hasPendingMessages(ctx)) {
+          return;
+        }
+        pi.sendMessage(
+          {
+            customType: CONTINUATION_CUSTOM_TYPE,
+            content: prompt,
+            details: { source: 'goal-mode', continuationId },
+          },
+          { deliverAs: 'followUp', triggerTurn: true },
+        );
+      }, 0);
     };
 
     // ── Register goal tool ───────────────────────────────────────────────
@@ -297,57 +337,21 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
 
     // ── Agent end: schedule one continuation if goal is still active ───
     pi.on('agent_end', async (_event, ctx) => {
-      const state = readGoalState(ctx.sessionManager);
-      if (state.status !== 'active') {
-        clearPendingContinuation();
-        return;
-      }
-
-      // Overflow recovery compaction owns the automatic retry. Goal mode must
-      // wait for that retry to run and complete before it can continue again.
-      if (overflowRecoveryActive) {
-        return;
-      }
-
-      // Check if model has pending messages (user or system input waiting)
-      if (ctx.hasPendingMessages()) {
-        return;
-      }
-
-      if (pendingContinuationTimer) {
-        return;
-      }
-
-      const prompt = buildContinuationPrompt(state);
-      const continuationId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const scheduledObjective = state.objective;
-      const scheduledUpdatedAt = state.updatedAt;
-
-      pendingContinuationTimer = setTimeout(() => {
-        pendingContinuationTimer = null;
-        const latest = readGoalState(ctx.sessionManager);
-        if (latest.status !== 'active' || latest.objective !== scheduledObjective || latest.updatedAt !== scheduledUpdatedAt) {
-          return;
-        }
-        if (overflowRecoveryActive || ctx.hasPendingMessages()) {
-          return;
-        }
-        pi.sendMessage(
-          {
-            customType: CONTINUATION_CUSTOM_TYPE,
-            content: prompt,
-            details: { source: 'goal-mode', continuationId },
-          },
-          { deliverAs: 'followUp', triggerTurn: true },
-        );
-      }, 0);
+      scheduleContinuationIfActive(ctx);
     });
 
     pi.on('session_start', async (_event, ctx) => {
       const state = readGoalState(ctx.sessionManager);
       if (state.status !== 'active') {
         clearPendingContinuation();
+        return;
       }
+
+      // Recovery path: if a prior active goal turn stranded before agent_end
+      // (for example after a tool result or app restart), session_start is the
+      // next safe point to re-arm continuation instead of leaving the goal
+      // visibly active but inert.
+      scheduleContinuationIfActive(ctx);
     });
   };
 }
