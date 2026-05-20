@@ -1466,9 +1466,12 @@ function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): Display
   const merged: DisplayBlock[] = [];
   for (const block of blocks) {
     merged.push(block);
-    const anchoredForBlock = remainingTopologyBlocks.filter(
-      (topologyBlock) => childById.get(topologyBlock.id.replace(/^topology-child-/, ''))?.parentMessageId === block.id,
-    );
+    const anchoredForBlock = remainingTopologyBlocks.filter((topologyBlock) => {
+      const parentMessageId = childById.get(topologyBlock.id.replace(/^topology-child-/, ''))?.parentMessageId;
+      if (!parentMessageId) return false;
+      // parentMessageId is the raw entry ID (e.g. "abc123"); block.id may have a type suffix ("abc123-u0").
+      return block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`);
+    });
     for (const anchored of anchoredForBlock) {
       merged.push(anchored);
       remainingTopologyBlocks.splice(remainingTopologyBlocks.indexOf(anchored), 1);

@@ -971,7 +971,10 @@ export async function branchSession(
 ): Promise<{ newSessionId: string; sessionFile: string }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
-  return branchLiveSession(entry, entryId, options, { resumeSession });
+  const result = await branchLiveSession(entry, entryId, options, { resumeSession });
+  // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
+  publishSessionMetaChanged(sessionId);
+  return result;
 }
 
 export async function forkSession(
@@ -982,7 +985,7 @@ export async function forkSession(
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
   const availableModelsForTier = await getAvailableModelObjects();
-  return forkLiveSession(entry, entryId, options, {
+  const result = await forkLiveSession(entry, entryId, options, {
     createSession,
     resumeSession,
     destroySession,
@@ -991,6 +994,11 @@ export async function forkSession(
         resolveConversationPreferenceStateForSession(candidate.session.sessionManager, availableModelsForTier),
       ),
   });
+  // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
+  if (options.preserveSource) {
+    publishSessionMetaChanged(sessionId);
+  }
+  return result;
 }
 
 /** Cleanly dispose a live session. */
