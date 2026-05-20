@@ -26,6 +26,21 @@
         "description": "Conversation transcript details. Auto keeps completed tool and thinking blocks collapsed; Expanded keeps them open.",
         "group": "Conversation",
         "order": 10
+      },
+      "conversation.diffDisclosure": {
+        "type": "select",
+        "default": "collapsed",
+        "enum": ["collapsed", "expanded"],
+        "description": "Inline file diffs in conversations. Collapsed shows a View diff button; Expanded opens file-changing diffs by default.",
+        "group": "Conversation",
+        "order": 11
+      },
+      "conversation.pinnedToolCalls": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show important tool calls below collapsed internal-work groups, including edits, checkpoints, artifacts, images, questions, and subagents.",
+        "group": "Conversation",
+        "order": 12
       }
     },
     "nav": [

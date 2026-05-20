@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppData } from '../../app/contexts';
@@ -15,6 +15,7 @@ import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } fro
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
+  type ConversationDiffDisclosureMode,
   type DisclosurePreference,
   isBackgroundShellStart,
   resolveDisclosureOpen,
@@ -97,6 +98,7 @@ export function ToolBlock({
   messageIndex,
   onSubmitAskUserQuestion,
   askUserQuestionDisplayMode = 'inline',
+  diffDisclosureMode = 'collapsed',
 }: {
   block: Extract<MessageBlock, { type: 'tool_use' }>;
   autoOpen: boolean;
@@ -112,10 +114,14 @@ export function ToolBlock({
   messageIndex?: number;
   onSubmitAskUserQuestion?: (presentation: AskUserQuestionPresentation, answers: AskUserQuestionAnswers) => Promise<void> | void;
   askUserQuestionDisplayMode?: 'inline' | 'composer';
+  diffDisclosureMode?: ConversationDiffDisclosureMode;
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllRuns, setShowAllRuns] = useState(false);
-  const [pinnedDiffOpen, setPinnedDiffOpen] = useState(false);
+  const [pinnedDiffOpen, setPinnedDiffOpen] = useState(() => diffDisclosureMode === 'expanded');
+  useEffect(() => {
+    setPinnedDiffOpen(diffDisclosureMode === 'expanded');
+  }, [diffDisclosureMode]);
   const open = resolveDisclosureOpen(autoOpen, preference);
   const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();

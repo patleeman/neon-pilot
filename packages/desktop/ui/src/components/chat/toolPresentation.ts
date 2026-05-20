@@ -44,11 +44,18 @@ export function isBackgroundShellStart(block: Extract<MessageBlock, { type: 'too
 export type DisclosurePreference = 'auto' | 'open' | 'closed';
 
 export type ConversationTranscriptDisclosureMode = 'auto' | 'expanded';
+export type ConversationDiffDisclosureMode = 'collapsed' | 'expanded';
 
 export const CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY = 'conversation.transcriptDisclosure';
+export const CONVERSATION_DIFF_DISCLOSURE_SETTING_KEY = 'conversation.diffDisclosure';
+export const CONVERSATION_PINNED_TOOL_CALLS_SETTING_KEY = 'conversation.pinnedToolCalls';
 
 export function normalizeConversationTranscriptDisclosureMode(value: unknown): ConversationTranscriptDisclosureMode {
   return value === 'expanded' ? 'expanded' : 'auto';
+}
+
+export function normalizeConversationDiffDisclosureMode(value: unknown): ConversationDiffDisclosureMode {
+  return value === 'expanded' ? 'expanded' : 'collapsed';
 }
 
 export function resolveDisclosureOpen(autoOpen: boolean, preference: DisclosurePreference): boolean {

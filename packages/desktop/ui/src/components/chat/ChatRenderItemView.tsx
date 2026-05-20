@@ -7,7 +7,11 @@ import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
 import { AssistantMessage, ContextShelf, SummaryMessage, SystemEventMessage, UserMessage } from './MessageBlocks.js';
 import type { ReplySelectionGestureHandler } from './replySelection.js';
 import { ToolBlock } from './ToolBlock.js';
-import { type ConversationTranscriptDisclosureMode, resolveConversationBlockAutoOpen } from './toolPresentation.js';
+import {
+  type ConversationDiffDisclosureMode,
+  type ConversationTranscriptDisclosureMode,
+  resolveConversationBlockAutoOpen,
+} from './toolPresentation.js';
 import { ErrorBlock, SubagentBlock, ThinkingBlock, TraceClusterBlock } from './TraceBlocks.js';
 import type { ChatRenderItem } from './transcriptItems.js';
 
@@ -43,6 +47,8 @@ export function ChatRenderItemView({
   onInspectImage,
   onSelectionGesture,
   transcriptDisclosureMode,
+  diffDisclosureMode,
+  showPinnedToolCalls,
 }: {
   item: ChatRenderItem;
   itemIndex: number;
@@ -75,6 +81,8 @@ export function ChatRenderItemView({
   onInspectImage: (image: InspectableImage) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
   transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
+  diffDisclosureMode: ConversationDiffDisclosureMode;
+  showPinnedToolCalls: boolean;
 }) {
   const isTailItem = itemIndex === renderItemsLength - 1;
 
@@ -106,6 +114,8 @@ export function ChatRenderItemView({
           resumeTitle={resumeConversationTitle}
           resumeLabel={resumeConversationLabel}
           transcriptDisclosureMode={transcriptDisclosureMode}
+          diffDisclosureMode={diffDisclosureMode}
+          showPinnedToolCalls={showPinnedToolCalls}
         />
       </div>
     );
@@ -216,6 +226,7 @@ export function ChatRenderItemView({
             messageIndex={item.index}
             onSubmitAskUserQuestion={onSubmitAskUserQuestion}
             askUserQuestionDisplayMode={askUserQuestionDisplayMode}
+            diffDisclosureMode={diffDisclosureMode}
           />
         );
       case 'subagent':

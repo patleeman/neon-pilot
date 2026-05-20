@@ -13,8 +13,11 @@ import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChat
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
 import { ContextShelf, SystemPromptMessage } from './MessageBlocks.js';
 import {
+  CONVERSATION_DIFF_DISCLOSURE_SETTING_KEY,
+  CONVERSATION_PINNED_TOOL_CALLS_SETTING_KEY,
   CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY,
   getStreamingStatusLabel,
+  normalizeConversationDiffDisclosureMode,
   normalizeConversationTranscriptDisclosureMode,
 } from './toolPresentation.js';
 import { buildChatRenderItems, type ChatRenderItem } from './transcriptItems.js';
@@ -148,6 +151,8 @@ export const ChatView = memo(function ChatView({
   const transcriptDisclosureMode = normalizeConversationTranscriptDisclosureMode(
     settingsValues?.[CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY],
   );
+  const diffDisclosureMode = normalizeConversationDiffDisclosureMode(settingsValues?.[CONVERSATION_DIFF_DISCLOSURE_SETTING_KEY]);
+  const showPinnedToolCalls = settingsValues?.[CONVERSATION_PINNED_TOOL_CALLS_SETTING_KEY] !== false;
   const standaloneTools = useMemo(() => {
     const tools = new Set<string>();
     for (const extension of extensionRegistry.extensions) {
@@ -320,6 +325,8 @@ export const ChatView = memo(function ChatView({
       onInspectImage={setSelectedImage}
       onSelectionGesture={scheduleReplySelectionSync}
       transcriptDisclosureMode={transcriptDisclosureMode}
+      diffDisclosureMode={diffDisclosureMode}
+      showPinnedToolCalls={showPinnedToolCalls}
     />
   );
 

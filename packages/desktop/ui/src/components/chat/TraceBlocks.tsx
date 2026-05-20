@@ -9,6 +9,7 @@ import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
 import {
+  type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
   type DisclosurePreference,
   resolveConversationBlockAutoOpen,
@@ -155,6 +156,8 @@ function PinnedToolBlocks({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  showPinnedToolCalls,
+  diffDisclosureMode,
 }: {
   blocks: TraceConversationBlock[];
   onOpenArtifact?: (artifactId: string) => void;
@@ -163,7 +166,10 @@ function PinnedToolBlocks({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  showPinnedToolCalls: boolean;
+  diffDisclosureMode: ConversationDiffDisclosureMode;
 }) {
+  if (!showPinnedToolCalls) return null;
   const pinned = blocks.filter(hasPinnedToolBlock);
   if (pinned.length === 0) return null;
 
@@ -180,6 +186,7 @@ function PinnedToolBlocks({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          diffDisclosureMode={diffDisclosureMode}
         />
       ))}
     </div>
@@ -232,6 +239,8 @@ export function TraceClusterBlock({
   resumeTitle,
   resumeLabel,
   transcriptDisclosureMode,
+  diffDisclosureMode,
+  showPinnedToolCalls,
 }: {
   blocks: TraceConversationBlock[];
   summary: TraceClusterSummary;
@@ -247,6 +256,8 @@ export function TraceClusterBlock({
   resumeTitle?: string | null;
   resumeLabel?: string;
   transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
+  diffDisclosureMode: ConversationDiffDisclosureMode;
+  showPinnedToolCalls: boolean;
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllBlocks, setShowAllBlocks] = useState(false);
@@ -332,6 +343,8 @@ export function TraceClusterBlock({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          showPinnedToolCalls={showPinnedToolCalls}
+          diffDisclosureMode={diffDisclosureMode}
         />
       )}
 
@@ -369,6 +382,7 @@ export function TraceClusterBlock({
                     activeCheckpointId={activeCheckpointId}
                     onOpenBrowser={onOpenBrowser}
                     onOpenFilePath={onOpenFilePath}
+                    diffDisclosureMode={diffDisclosureMode}
                   />
                 );
               case 'subagent':
