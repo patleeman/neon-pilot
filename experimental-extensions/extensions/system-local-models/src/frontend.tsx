@@ -672,7 +672,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-8">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
         <AppPageIntro
           title="Local Models"
           summary="Manage downloaded local models separately from the server that runs them. Acquisition over here; serving over there. Sanity restored."
@@ -682,15 +682,9 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                 <span className={cx('h-2 w-2 rounded-full', running ? 'bg-success' : setupRunning ? 'bg-warning' : 'bg-dim')} />
                 <span className="font-medium text-primary">{runtimeStatus}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => void refresh()}
-                className="text-secondary hover:text-primary"
-                aria-label="Refresh local models"
-                title="Refresh"
-              >
+              <ToolbarButton type="button" onClick={() => void refresh()} aria-label="Refresh local models" title="Refresh local models">
                 ↻
-              </button>
+              </ToolbarButton>
             </div>
           }
         />
@@ -721,7 +715,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
 
         {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
-        <div className="inline-flex w-fit rounded-md border border-border-subtle bg-elevated p-1">
+        <div className="flex flex-wrap items-center gap-1 border-b border-border-subtle/70 pb-5 text-[12px]">
           {[
             ['server', 'Server'],
             ['library', 'Library'],
@@ -731,8 +725,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
               type="button"
               onClick={() => setPage(id as PageId)}
               className={cx(
-                'rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors',
-                page === id ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:bg-surface hover:text-primary',
+                'rounded-xl px-3 py-2 font-medium transition-colors',
+                page === id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:bg-surface/60 hover:text-primary',
               )}
             >
               {label}

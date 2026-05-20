@@ -83,9 +83,7 @@ export function TelemetryPage() {
           actions={
             <div className="flex items-center gap-2">
               <TimeRangeSelector value={range} onChange={setRange} />
-              <ToolbarButton className="rounded-lg px-3 py-1.5 text-[12px] text-primary shadow-none" onClick={refetch}>
-                Refresh
-              </ToolbarButton>
+              <ToolbarButton onClick={refetch}>Refresh</ToolbarButton>
             </div>
           }
         />
@@ -141,14 +139,14 @@ function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (
   ];
 
   return (
-    <div className="flex gap-1 border-r border-border-subtle pr-2">
+    <div className="flex gap-1 rounded-xl bg-surface/40 p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
-            value === opt.value ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:bg-elevated hover:text-primary'
+          className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
+            value === opt.value ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:bg-surface/60 hover:text-primary'
           }`}
         >
           {opt.label}
