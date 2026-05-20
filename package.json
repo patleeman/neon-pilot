@@ -85,6 +85,7 @@
     "@agentclientprotocol/sdk": "^0.21.1",
     "@earendil-works/pi-ai": "^0.75.3",
     "@earendil-works/pi-coding-agent": "^0.75.3",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@personal-agent/desktop": "workspace:*",
     "@pierre/trees": "^1.0.0-beta.3",
     "@sinclair/typebox": "^0.34.49",
