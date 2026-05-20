@@ -887,9 +887,11 @@ export function CommandPalette() {
     return null;
   }
 
-  const anchoredPanelWidth = anchorRect ? Math.min(anchorRect.width, window.innerWidth - 32) : undefined;
+  const anchoredPanelWidth = anchorRect ? Math.min(560, window.innerWidth - 32) : undefined;
   const anchoredPanelLeft =
-    anchorRect && anchoredPanelWidth ? Math.min(Math.max(16, anchorRect.left), window.innerWidth - anchoredPanelWidth - 16) : undefined;
+    anchorRect && anchoredPanelWidth
+      ? Math.min(Math.max(16, anchorRect.left + anchorRect.width / 2 - anchoredPanelWidth / 2), window.innerWidth - anchoredPanelWidth - 16)
+      : undefined;
   let runningIndex = -1;
 
   return (
@@ -913,21 +915,20 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className={cx('ui-dialog-shell', anchorRect && 'rounded-t-none border-accent/35 shadow-xl')}
+        className="ui-dialog-shell"
         style={{
           position: anchorRect ? 'fixed' : undefined,
           left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
-          top: anchorRect ? `${anchorRect.top + anchorRect.height - 1}px` : undefined,
+          top: anchorRect ? `${anchorRect.top + anchorRect.height + 6}px` : undefined,
           width: anchoredPanelWidth !== undefined ? `${anchoredPanelWidth}px` : undefined,
           maxWidth: anchorRect ? undefined : '560px',
           maxHeight: anchorRect
-            ? `min(560px, calc(100vh - ${anchorRect.top + anchorRect.height + 12}px))`
+            ? `min(560px, calc(100vh - ${anchorRect.top + anchorRect.height + 18}px))`
             : 'min(560px, calc(100vh - 7rem))',
           overscrollBehavior: 'contain',
-          boxShadow: anchorRect ? '0 18px 45px rgb(20 20 15 / 0.18)' : undefined,
         }}
       >
-        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-3 py-2')}>
+        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'pt-3 pb-2.5')}>
           {!anchorRect && (
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[13px] text-dim">⌕</span>

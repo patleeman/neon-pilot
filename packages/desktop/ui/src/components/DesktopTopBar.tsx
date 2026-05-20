@@ -263,7 +263,7 @@ export function DesktopTopBar({
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div
-          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:rounded-b-none focus-within:border-accent/35 focus-within:bg-surface hover:border-accent/25 hover:bg-surface hover:text-secondary"
+          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:border-accent/35 focus-within:bg-surface hover:border-accent/25 hover:bg-surface hover:text-secondary"
           style={noDragStyle}
         >
           <span aria-hidden="true">⌕</span>
