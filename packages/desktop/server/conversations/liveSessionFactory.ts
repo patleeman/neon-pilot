@@ -10,9 +10,10 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { resolveChildProcessEnv } from '@personal-agent/core';
 
-import { readSavedModelPreferences } from '../models/modelPreferences.js';
+import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
+import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
 import {
@@ -81,6 +82,19 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
+function applyExtensionToolSelection(session: AgentSession, settingsFile: string): void {
+  const patchable = session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
+  if (typeof patchable.setActiveTools !== 'function') return;
+
+  const plan = buildToolInjectionPlan({
+    profile: process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
+    repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
+    modelRef: readSavedModelRef(settingsFile),
+  });
+  const activeToolNames = [...new Set([...(patchable.getActiveToolNames?.() ?? []), ...plan.activeToolNames])];
+  patchable.setActiveTools(activeToolNames);
+}
+
 export async function createPreparedLiveAgentSession(input: {
   cwd: string;
   agentDir: string;
@@ -140,6 +154,8 @@ export async function createPreparedLiveAgentSession(input: {
     session,
     resolveConversationPreferenceStateForSession(input.settingsFile, session.sessionManager, availableModels).currentServiceTier,
   );
+
+  applyExtensionToolSelection(session, input.settingsFile);
 
   return { session, modelRegistry };
 }
