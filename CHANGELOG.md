@@ -7,6 +7,7 @@
 - Skips the aborted rc.0 publish and retags the current release train as rc.1.
 - Fixes release smoke coverage for host-backed prompt assembly and skills extensions that resolve daemon APIs through the packaged app host.
 - Fixes packaged smoke startup with isolated daemon sockets by honoring the explicit daemon socket override when reading durable runs.
+- Fixes the packaged `/api/models` smoke path by making the model route complete only after async model state loading finishes.
 - Keeps the 0.9 RC user-facing scope from rc.0: Neon Pilot rebrand, refreshed desktop shell styling, workspace polish, and hardened extension/tooling validation.
 
 ### Notes

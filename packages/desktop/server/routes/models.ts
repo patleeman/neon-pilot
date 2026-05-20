@@ -93,16 +93,16 @@ export function registerModelRoutes(
   initializeModelRoutesContext(context);
   // ── Models ────────────────────────────────────────────────────────────────
 
-  router.get('/api/models', (_req, res) => {
-    readModelState(SETTINGS_FILE)
-      .then((state) => res.json(state))
-      .catch((err) => {
-        logError('request handler error', {
-          message: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
-        res.status(500).json({ error: String(err) });
+  router.get('/api/models', async (_req, res) => {
+    try {
+      res.json(await readModelState(SETTINGS_FILE));
+    } catch (err) {
+      logError('request handler error', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
       });
+      res.status(500).json({ error: String(err) });
+    }
   });
 
   router.patch('/api/models/current', (req, res) => {
