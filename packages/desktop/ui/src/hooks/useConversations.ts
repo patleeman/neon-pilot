@@ -289,7 +289,7 @@ export function useConversations() {
     () =>
       new Map(
         (tasks ?? []).flatMap((task) =>
-          task.threadConversationId
+          task.running && task.threadConversationId
             ? [[task.threadConversationId, task.threadTitle ?? task.title ?? `Automation: ${task.id}`] as const]
             : [],
         ),
