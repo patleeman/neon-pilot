@@ -79,6 +79,8 @@ Compatibility notes:
 
 `sidecar/` contains the Rust host process. The backend launches the packaged `bin/pa-alleycat-host-<platform>-<arch>` through `ctx.shell`, passes it the PA token/secret and local JSONL port, then reads the sidecar ready event for the real iroh pair payload.
 
+The sidecar waits for Iroh to report an online, relay-backed endpoint before emitting the ready event used for the pairing QR. This prevents Kitty from scanning a node/token payload that has no dialable addressing information yet.
+
 The sidecar implements Alleycat host ops:
 
 - `list_agents` returns only `personal-agent`

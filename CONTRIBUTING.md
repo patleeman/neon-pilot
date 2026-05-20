@@ -1,22 +1,47 @@
 # Contributing
 
-Thanks for considering contributing. This is a personal project, so please keep expectations proportional.
+For contributors building from source:
 
-## I don't accept pull requests
+```bash
+pnpm install
+pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
+pnpm run build
+pnpm test
+pnpm run lint
+```
 
-Please don't open PRs — they will be closed unmerged. If you have a bug fix or improvement, open an issue describing the problem with clear reproduction steps and the intended fix. I'll implement it myself when I have time.
+This repo intentionally has no first-party `postinstall`. Third-party build scripts are allowlisted in `pnpm-workspace.yaml`; review anything newly blocked with `pnpm ignored-builds`. ESLint is configured for actionable errors; dynamic extension/API boundary code may use `any` where stricter typing would add noise.
 
-## Bug reports
+Useful dev commands:
 
-- Search existing issues before filing a new one.
-- Include reproduction steps, expected vs actual behavior, and your environment (OS, version).
-- Screenshots or logs help.
+```bash
+pnpm run desktop:start      # launch the Electron app
+pnpm run desktop:dev        # same dev launcher
 
-## Feature requests
+# Extension integration validation (run before starting the app)
+pnpm run check:extensions        # full suite (~30s, includes module runtime checks)
+pnpm run check:extensions:quick  # quick check (~5s, skips slow dynamic import)
+```
 
-- Open an issue with the "enhancement" label.
-- Explain the use case and why it matters. I'll prioritize based on my own roadmap.
+Platform prerequisites:
 
-## Questions
+- **macOS arm64** (the desktop app targets macOS; no Windows or Linux build)
+- **Node.js 20+** and **pnpm 11+** recommended
 
-Open a discussion. I'll get to it when I can.
+Set `CSC_IDENTITY_AUTO_DISCOVERY=false` to skip code signing for local Electron builds.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for PR policy and issue guidelines.
+
+---
+
+## Release flow
+
+Desktop releases are built, signed, notarized, and published to GitHub Releases locally.
+
+```bash
+pnpm run release:desktop:patch
+pnpm run release:desktop:minor
+pnpm run release:desktop:major
+```
+
+See [`docs/release-cycle.md`](docs/release-cycle.md) for the full details.
