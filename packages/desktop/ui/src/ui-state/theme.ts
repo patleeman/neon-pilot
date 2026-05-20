@@ -14,44 +14,208 @@ interface AccentTokenSet {
   accentBg: string;
   selection: string;
   warning: string;
+  base: string;
+  surface: string;
+  elevated: string;
+  panel: string;
+  borderSubtle: string;
+  borderDefault: string;
+  hover: string;
+  active: string;
 }
 
 export const THEME_ACCENTS: Array<{ id: ThemeAccent; label: string; light: AccentTokenSet; dark: AccentTokenSet }> = [
   {
     id: 'lime',
     label: 'Lime',
-    light: { accent: '62 184 0', accentBg: '226 246 215', selection: '202 255 51', warning: '184 115 10' },
-    dark: { accent: '202 255 51', accentBg: '45 56 14', selection: '71 88 24', warning: '255 180 73' },
+    light: {
+      accent: '62 184 0',
+      accentBg: '226 246 215',
+      selection: '202 255 51',
+      warning: '184 115 10',
+      base: '247 246 241',
+      surface: '255 255 255',
+      elevated: '251 250 245',
+      panel: '240 238 229',
+      borderSubtle: '227 224 212',
+      borderDefault: '211 207 190',
+      hover: '240 238 229',
+      active: '232 229 216',
+    },
+    dark: {
+      accent: '202 255 51',
+      accentBg: '45 56 14',
+      selection: '71 88 24',
+      warning: '255 180 73',
+      base: '12 12 8',
+      surface: '26 26 19',
+      elevated: '36 36 28',
+      panel: '20 20 15',
+      borderSubtle: '44 44 36',
+      borderDefault: '61 61 49',
+      hover: '36 36 28',
+      active: '46 46 36',
+    },
   },
   {
     id: 'forest',
     label: 'Forest',
-    light: { accent: '47 122 58', accentBg: '226 240 228', selection: '108 229 138', warning: '47 122 58' },
-    dark: { accent: '108 229 138', accentBg: '22 52 31', selection: '34 82 49', warning: '108 229 138' },
+    light: {
+      accent: '47 122 58',
+      accentBg: '226 240 228',
+      selection: '108 229 138',
+      warning: '47 122 58',
+      base: '246 247 243',
+      surface: '255 255 252',
+      elevated: '249 251 246',
+      panel: '238 242 234',
+      borderSubtle: '224 230 220',
+      borderDefault: '208 216 202',
+      hover: '238 242 234',
+      active: '229 235 224',
+    },
+    dark: {
+      accent: '108 229 138',
+      accentBg: '22 52 31',
+      selection: '34 82 49',
+      warning: '108 229 138',
+      base: '8 12 9',
+      surface: '18 25 19',
+      elevated: '27 37 29',
+      panel: '13 19 14',
+      borderSubtle: '33 45 35',
+      borderDefault: '48 65 51',
+      hover: '25 34 27',
+      active: '34 47 36',
+    },
   },
   {
     id: 'cobalt',
     label: 'Cobalt',
-    light: { accent: '31 95 200', accentBg: '225 234 251', selection: '116 168 255', warning: '31 95 200' },
-    dark: { accent: '116 168 255', accentBg: '24 41 74', selection: '37 64 115', warning: '116 168 255' },
+    light: {
+      accent: '31 95 200',
+      accentBg: '225 234 251',
+      selection: '116 168 255',
+      warning: '31 95 200',
+      base: '245 246 249',
+      surface: '252 253 255',
+      elevated: '247 249 253',
+      panel: '235 239 246',
+      borderSubtle: '220 226 237',
+      borderDefault: '202 211 227',
+      hover: '235 239 246',
+      active: '225 231 242',
+    },
+    dark: {
+      accent: '116 168 255',
+      accentBg: '24 41 74',
+      selection: '37 64 115',
+      warning: '116 168 255',
+      base: '7 9 13',
+      surface: '15 18 24',
+      elevated: '25 30 40',
+      panel: '11 14 19',
+      borderSubtle: '31 38 52',
+      borderDefault: '45 55 76',
+      hover: '23 28 38',
+      active: '33 40 55',
+    },
   },
   {
     id: 'ember',
     label: 'Ember',
-    light: { accent: '196 77 18', accentBg: '249 231 220', selection: '255 147 82', warning: '196 77 18' },
-    dark: { accent: '255 147 82', accentBg: '72 36 20', selection: '113 57 32', warning: '255 147 82' },
+    light: {
+      accent: '196 77 18',
+      accentBg: '249 231 220',
+      selection: '255 147 82',
+      warning: '196 77 18',
+      base: '249 246 243',
+      surface: '255 253 250',
+      elevated: '252 248 244',
+      panel: '244 236 229',
+      borderSubtle: '232 222 214',
+      borderDefault: '218 205 194',
+      hover: '244 236 229',
+      active: '235 225 216',
+    },
+    dark: {
+      accent: '255 147 82',
+      accentBg: '72 36 20',
+      selection: '113 57 32',
+      warning: '255 147 82',
+      base: '13 9 7',
+      surface: '25 18 14',
+      elevated: '39 28 22',
+      panel: '19 13 10',
+      borderSubtle: '52 38 30',
+      borderDefault: '76 55 43',
+      hover: '36 26 20',
+      active: '51 37 29',
+    },
   },
   {
     id: 'violet',
     label: 'Violet',
-    light: { accent: '106 61 209', accentBg: '235 228 251', selection: '182 156 255', warning: '106 61 209' },
-    dark: { accent: '182 156 255', accentBg: '47 36 82', selection: '74 56 128', warning: '182 156 255' },
+    light: {
+      accent: '106 61 209',
+      accentBg: '235 228 251',
+      selection: '182 156 255',
+      warning: '106 61 209',
+      base: '247 245 250',
+      surface: '254 252 255',
+      elevated: '250 247 254',
+      panel: '239 235 247',
+      borderSubtle: '226 220 237',
+      borderDefault: '211 202 228',
+      hover: '239 235 247',
+      active: '230 224 242',
+    },
+    dark: {
+      accent: '182 156 255',
+      accentBg: '47 36 82',
+      selection: '74 56 128',
+      warning: '182 156 255',
+      base: '10 8 13',
+      surface: '20 16 26',
+      elevated: '32 26 43',
+      panel: '15 12 20',
+      borderSubtle: '41 34 55',
+      borderDefault: '60 49 82',
+      hover: '29 24 39',
+      active: '42 34 57',
+    },
   },
   {
     id: 'ink',
     label: 'Ink',
-    light: { accent: '20 20 15', accentBg: '235 234 229', selection: '20 20 15', warning: '20 20 15' },
-    dark: { accent: '245 243 232', accentBg: '46 46 36', selection: '82 80 66', warning: '245 243 232' },
+    light: {
+      accent: '20 20 15',
+      accentBg: '235 234 229',
+      selection: '20 20 15',
+      warning: '20 20 15',
+      base: '247 246 243',
+      surface: '255 255 252',
+      elevated: '249 248 245',
+      panel: '239 238 233',
+      borderSubtle: '226 224 218',
+      borderDefault: '210 207 199',
+      hover: '239 238 233',
+      active: '230 228 221',
+    },
+    dark: {
+      accent: '245 243 232',
+      accentBg: '46 46 36',
+      selection: '82 80 66',
+      warning: '245 243 232',
+      base: '10 10 10',
+      surface: '22 22 21',
+      elevated: '34 34 32',
+      panel: '16 16 15',
+      borderSubtle: '40 40 37',
+      borderDefault: '58 57 52',
+      hover: '32 32 30',
+      active: '44 43 39',
+    },
   },
 ];
 
@@ -118,6 +282,14 @@ function applyAccent(accent: ThemeAccent, appearance: ThemeAppearance) {
 
   const tokens = accentTokensFor(accent, appearance);
   document.documentElement.setAttribute('data-accent', accent);
+  document.documentElement.style.setProperty('--color-base', tokens.base);
+  document.documentElement.style.setProperty('--color-surface', tokens.surface);
+  document.documentElement.style.setProperty('--color-elevated', tokens.elevated);
+  document.documentElement.style.setProperty('--color-panel', tokens.panel);
+  document.documentElement.style.setProperty('--color-border-subtle', tokens.borderSubtle);
+  document.documentElement.style.setProperty('--color-border-default', tokens.borderDefault);
+  document.documentElement.style.setProperty('--color-hover', tokens.hover);
+  document.documentElement.style.setProperty('--color-active', tokens.active);
   document.documentElement.style.setProperty('--color-accent', tokens.accent);
   document.documentElement.style.setProperty('--color-steel', tokens.accent);
   document.documentElement.style.setProperty('--color-mission-glow', tokens.accent);

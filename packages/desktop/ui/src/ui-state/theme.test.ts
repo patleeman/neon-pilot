@@ -63,7 +63,7 @@ describe('theme preferences', () => {
 
   it('defaults to the system preference when nothing is stored', () => {
     expect(renderThemeProbe()).toEqual({
-      theme: 'tokyo-night-light',
+      theme: 'studio-light',
       themePreference: 'system',
       accent: 'lime',
     });
@@ -73,7 +73,7 @@ describe('theme preferences', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
 
     expect(renderThemeProbe()).toEqual({
-      theme: 'tokyo-night-dark',
+      theme: 'studio-dark',
       themePreference: 'dark',
       accent: 'lime',
     });
@@ -83,7 +83,7 @@ describe('theme preferences', () => {
     localStorage.setItem(ACCENT_STORAGE_KEY, 'violet');
 
     expect(renderThemeProbe()).toEqual({
-      theme: 'tokyo-night-light',
+      theme: 'studio-light',
       themePreference: 'system',
       accent: 'violet',
     });
@@ -93,7 +93,7 @@ describe('theme preferences', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
 
     expect(renderThemeProbe()).toEqual({
-      theme: 'tokyo-night-light',
+      theme: 'studio-light',
       themePreference: 'system',
       accent: 'lime',
     });
@@ -111,7 +111,7 @@ describe('theme preferences', () => {
     });
 
     expect(renderThemeProbe()).toEqual({
-      theme: 'tokyo-night-dark',
+      theme: 'studio-dark',
       themePreference: 'system',
       accent: 'lime',
     });
