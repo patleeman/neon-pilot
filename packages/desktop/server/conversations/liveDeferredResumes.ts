@@ -70,19 +70,28 @@ function resolveDeliveryMode(entry: DeferredResumeLike): DeliveryMode {
 }
 
 /**
- * Wrap an auto-injected prompt so the model knows this is a system-triggered
- * wakeup and not a message typed by the user.
+ * Build the context block content for a deferred auto-resume so the model
+ * understands this is a system wakeup, not a human message.
  */
-function wrapAutoResumePrompt(prompt: string): string {
+function buildDeferredAutoResumeContextContent(prompt: string): string {
   return [
-    '<system_auto_resume>',
-    'This message was automatically injected by the system (scheduled wakeup / deferred resume).',
-    'It is NOT from the user. Do not treat it as a new user request.',
-    'Execute the stated task, then stop. Do not queue additional wakeups or resumes unless explicitly asked.',
-    '</system_auto_resume>',
+    'Automated wakeup · agent resumed automatically by the system.',
+    'This is NOT a message from the user.',
+    'Execute the task below, then stop. Do not queue additional wakeups unless the task explicitly requires it.',
     '',
     prompt,
   ].join('\n');
+}
+
+/** Derive a short human-readable title for the visible user-turn prompt. */
+function buildDeferredResumeVisibleTitle(entry: DeferredResumeLike): string {
+  const title = entry.title?.trim();
+  if (title) return title;
+  const firstLine = entry.prompt
+    .split('\n')
+    .map((l) => l.trim())
+    .find(Boolean);
+  return firstLine ? firstLine.slice(0, 100) : 'Scheduled wakeup';
 }
 
 function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
@@ -91,8 +100,13 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
 } {
   if (entry.source?.kind !== 'background-run') {
     return {
-      visiblePrompt: wrapAutoResumePrompt(entry.prompt),
-      contextMessages: [],
+      visiblePrompt: buildDeferredResumeVisibleTitle(entry),
+      contextMessages: [
+        {
+          customType: 'deferred_auto_resume',
+          content: buildDeferredAutoResumeContextContent(entry.prompt),
+        },
+      ],
     };
   }
 
@@ -148,12 +162,20 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
       return;
     }
 
-    lines.push(`   Prompt: ${entry.prompt}`);
+    lines.push('   Details are available in internal context.');
+    contextMessages.push({
+      customType: 'deferred_auto_resume',
+      content: buildDeferredAutoResumeContextContent(entry.prompt),
+    });
   });
 
-  lines.push('', 'Give the user one concise update unless an event requires a separate action.');
+  lines.push(
+    '',
+    'Automated wakeup · all events above were injected by the system, not the user.',
+    'Execute each task and give the user one concise update unless an event requires a separate action.',
+  );
   return {
-    visiblePrompt: wrapAutoResumePrompt(lines.join('\n')),
+    visiblePrompt: lines.join('\n'),
     contextMessages,
   };
 }

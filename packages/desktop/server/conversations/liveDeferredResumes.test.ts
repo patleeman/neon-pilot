@@ -400,8 +400,13 @@ describe('createAttentionEventFlusher', () => {
 
     expect(promptSessionMock).toHaveBeenCalledTimes(1);
     expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Multiple wakeups are ready'), undefined);
-    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Continue from here.');
-    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Check the second thing.');
+    // Task payloads now go into context blocks, not the visible prompt
+    expect(queuePromptContextMock).toHaveBeenCalledWith('conv-1', 'deferred_auto_resume', expect.stringContaining('Continue from here.'));
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'deferred_auto_resume',
+      expect.stringContaining('Check the second thing.'),
+    );
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' });
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-2' });
     expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledTimes(2);

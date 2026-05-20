@@ -24,6 +24,10 @@ function formatSystemEventLabel(customType?: string): string {
       return 'Context added';
     case 'background_auto_resume':
       return 'Auto-resume';
+    case 'deferred_auto_resume':
+      return 'Scheduled wakeup';
+    case 'after_turn_auto_resume':
+      return 'After-turn wakeup';
     case 'remote_control':
       return 'Remote control';
     case 'browser-comments':
@@ -51,21 +55,37 @@ function formatSystemEventLabel(customType?: string): string {
   }
 }
 
+const AUTO_RESUME_CONTEXT_TYPES = new Set([
+  'goal-continuation',
+  'background_auto_resume',
+  'deferred_auto_resume',
+  'after_turn_auto_resume',
+]);
+
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
-  return block.type === 'context' && (block.customType === 'goal-continuation' || block.customType === 'background_auto_resume');
+  return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
 }
 
 function autoResumeLifecycleText(blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]): string {
   const goalCount = blocks.filter((block) => block.type === 'context' && block.customType === 'goal-continuation').length;
   const backgroundCount = blocks.filter((block) => block.type === 'context' && block.customType === 'background_auto_resume').length;
+  const deferredCount = blocks.filter((block) => block.type === 'context' && block.customType === 'deferred_auto_resume').length;
+  const afterTurnCount = blocks.filter((block) => block.type === 'context' && block.customType === 'after_turn_auto_resume').length;
 
-  if (goalCount > 0 && backgroundCount > 0) {
-    return `Resumed automatically · ${goalCount + backgroundCount} events`;
+  const total = goalCount + backgroundCount + deferredCount + afterTurnCount;
+
+  if (total > 1) {
+    if (goalCount > 0 && backgroundCount === 0 && deferredCount === 0 && afterTurnCount === 0) {
+      return `Goal resumed automatically · ${total} times`;
+    }
+    return `Resumed automatically · ${total} events`;
   }
-  if (goalCount > 1) return `Goal resumed automatically · ${goalCount} times`;
+
   if (goalCount === 1) return 'Goal resumed automatically';
-  if (backgroundCount > 1) return `Background tasks completed · resumed automatically · ${backgroundCount} events`;
-  return 'Background task completed · resumed automatically';
+  if (backgroundCount === 1) return 'Background task completed · resumed automatically';
+  if (deferredCount === 1) return 'Scheduled wakeup fired';
+  if (afterTurnCount === 1) return 'After-turn wakeup fired';
+  return 'Resumed automatically';
 }
 
 function summarizeSystemEventText(text: string): string {

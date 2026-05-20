@@ -116,6 +116,9 @@ export async function cancelQueuedPrompt(sessionId: string, behavior: string, pr
 export async function promptSession(sessionId: string, prompt: string, behavior: string) {
   return callModuleExport<void>('../../conversations/liveSessions.js', 'promptSession', sessionId, prompt, behavior);
 }
+export async function queuePromptContext(sessionId: string, customType: string, content: string) {
+  return callModuleExport<void>('../../conversations/liveSessions.js', 'queuePromptContext', sessionId, customType, content);
+}
 export async function invalidateAppTopics(topics: string | string[]): Promise<void> {
   try {
     await callModuleExport<void>('../../shared/appEvents.js', 'invalidateAppTopics', topics);

@@ -13,6 +13,7 @@ import {
   parseFutureHumanDateTime,
   promptSession,
   type QueuedPromptPreview,
+  queuePromptContext,
   scheduleDeferredResumeForSessionFile,
 } from '@neon-pilot/extensions/backend/automations';
 import { getDurableRun } from '@neon-pilot/extensions/backend/runs';
@@ -254,16 +255,18 @@ export async function deferredResume(input: QueueFollowupInput, ctx: QueueFollow
       const deliverAs = input.deliverAs === 'steer' || input.deliverAs === 'followUp' ? input.deliverAs : undefined;
       if (trigger === 'after_turn') {
         if (!sessionId) throw new Error('trigger="after_turn" requires a live conversation.');
-        const wrappedPrompt = [
-          '<system_auto_resume>',
-          'This message was automatically injected by the system (after_turn wakeup).',
-          'It is NOT from the user. Do not treat it as a new user request.',
-          'Execute the stated task, then stop. Do not queue additional wakeups or resumes unless explicitly asked.',
-          '</system_auto_resume>',
-          '',
-          prompt,
-        ].join('\n');
-        await promptSession(sessionId, wrappedPrompt, deliverAs ?? 'followUp');
+        await queuePromptContext(
+          sessionId,
+          'after_turn_auto_resume',
+          [
+            'Automated after-turn wakeup · agent self-queued continuation.',
+            'This is NOT a message from the user.',
+            'Execute the task below, then stop. Do not re-queue unless the task explicitly requires it.',
+            '',
+            prompt,
+          ].join('\n'),
+        );
+        await promptSession(sessionId, prompt.split('\n').find((l) => l.trim()) ?? 'Queued continuation', deliverAs ?? 'followUp');
         ctx.ui?.invalidate?.(['sessions', 'runs']);
         return {
           text: `Queued follow-up after the current turn (${deliverAs ?? 'followUp'}).`,

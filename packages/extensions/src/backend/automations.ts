@@ -28,6 +28,7 @@ export const resolveScheduledTaskThreadBinding = (..._args: unknown[]): unknown 
 export const cancelQueuedPrompt = (..._args: unknown[]): unknown => hostResolved();
 export const listQueuedPromptPreviews = (..._args: unknown[]): unknown => hostResolved();
 export const promptSession = (..._args: unknown[]): unknown => hostResolved();
+export const queuePromptContext = (..._args: unknown[]): unknown => hostResolved();
 export const invalidateAppTopics = (..._args: unknown[]): unknown => hostResolved();
 export const clearTaskCallbackBinding = (..._args: unknown[]): unknown => hostResolved();
 export const getSessionDeferredResumeEntries = (..._args: unknown[]): unknown => hostResolved();
