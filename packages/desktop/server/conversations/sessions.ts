@@ -1490,12 +1490,14 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
   if (!parentId) return blocks;
   const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
   const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
+  const parentMeta = scanSessionMetas().find((m) => m.id === parentId);
+  const parentTitle = parentMeta?.title?.trim() || parentId;
   const backlink: DisplayBlock = {
     type: 'context',
     id: `topology-parent-${meta.id}`,
     ts: meta.timestamp,
     customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
-    text: `${label} conversation from parent: ${parentId}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
+    text: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
   };
   return [backlink, ...blocks];
 }

@@ -746,8 +746,8 @@ function parseTopologyBlockText(text: string): { title: string; conversationId: 
   const titleMatch = firstLine.match(/^[^:]+:\s*(.+)$/);
   const title = titleMatch?.[1]?.trim() || firstLine.trim();
 
-  const openLine = lines.find((l) => l.startsWith('Open: /conversations/'));
-  const conversationId = openLine?.replace('Open: /conversations/', '').trim() || null;
+  const openLine = lines.find((l) => l.startsWith('Open: /conversations/') || l.startsWith('Open parent: /conversations/'));
+  const conversationId = openLine?.replace(/^Open(?: parent)?: \/conversations\//, '').trim() || null;
   return { title, conversationId };
 }
 
@@ -762,7 +762,7 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
     }
   }, [conversationId, navigate]);
 
-  const label = isChild ? 'Forked →' : '← Branched from';
+  const label = isChild ? 'Forked →' : '← Forked from';
 
   return (
     <div className="flex items-center gap-1.5 py-0.5 text-[11px] text-dim/70" data-topology-kind={block.customType}>
