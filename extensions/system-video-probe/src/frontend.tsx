@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type ServerHealth = { reachable: boolean; models?: string[] };
 type ProcessState = { serverPid: number | null; serverRunning: boolean; setupPid: number | null; setupRunning: boolean };
-type Settings = { backend: 'openrouter' | 'local'; cloudModel: string };
+type Settings = { backend: 'openrouter' | 'local'; cloudModel: string; localModel: string };
 
 type Status = {
   ok: boolean;
@@ -12,7 +12,7 @@ type Status = {
   baseUrl: string;
   runtimeInstalled: boolean;
   venvReady: boolean;
-  server: ServerHealth;
+  server: ServerHealth & { listening?: boolean };
   process: ProcessState;
   settings: Settings;
   log: string;
@@ -60,6 +60,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
+  const [localModel, setLocalModel] = useState('');
   const [settingsDirty, setSettingsDirty] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -70,6 +71,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
       // Sync local form state on first load (not while editing)
       if (!settingsDirty) {
         setCloudModel((current) => current || result.settings.cloudModel);
+        setLocalModel((current) => current || result.settings.localModel);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -84,12 +86,13 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     };
   }, [fetchStatus]);
 
-  // Sync cloudModel when status first loads
+  // Sync form fields when status first loads
   useEffect(() => {
-    if (status && !settingsDirty && !cloudModel) {
-      setCloudModel(status.settings.cloudModel);
+    if (status && !settingsDirty) {
+      if (!cloudModel) setCloudModel(status.settings.cloudModel);
+      if (!localModel) setLocalModel(status.settings.localModel);
     }
-  }, [status, settingsDirty, cloudModel]);
+  }, [status, settingsDirty, cloudModel, localModel]);
 
   async function runAction(label: string, actionId: string, input: Record<string, unknown> = {}) {
     setBusy(label);
@@ -125,14 +128,27 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const setupRunning = status?.process.setupRunning ?? false;
   const serverRunning = status?.process.serverRunning ?? false;
   const serverReachable = status?.server.reachable ?? false;
+  const serverListening = status?.server.listening ?? false;
   const runtimeInstalled = status?.runtimeInstalled ?? false;
   const currentBackend = status?.settings.backend ?? 'openrouter';
   const serverEnabled = serverReachable || serverRunning;
 
   const statusLabel =
     busy ??
-    (serverReachable ? 'Running' : serverRunning ? 'Starting' : setupRunning ? 'Installing' : runtimeInstalled ? 'Ready' : 'Not set up');
-  const statusDotClass = serverReachable ? 'bg-success' : serverRunning || setupRunning ? 'bg-warning animate-pulse' : 'bg-dim';
+    (serverReachable
+      ? 'Running'
+      : serverRunning || serverListening
+        ? 'Loading model…'
+        : setupRunning
+          ? 'Installing'
+          : runtimeInstalled
+            ? 'Ready'
+            : 'Not set up');
+  const statusDotClass = serverReachable
+    ? 'bg-success'
+    : serverRunning || serverListening || setupRunning
+      ? 'bg-warning animate-pulse'
+      : 'bg-dim';
 
   async function toggleServer() {
     if (serverReachable || serverRunning) {
@@ -306,8 +322,8 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                 <div className="mt-1">
                   {serverReachable ? (
                     <Pill tone="success">Running</Pill>
-                  ) : serverRunning ? (
-                    <Pill tone="warning">Starting</Pill>
+                  ) : serverRunning || serverListening ? (
+                    <Pill tone="warning">Loading model…</Pill>
                   ) : (
                     <Pill>Stopped</Pill>
                   )}
@@ -319,9 +335,22 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
               </div>
             </div>
 
-            <div className="mt-4 rounded-md border border-border-subtle bg-elevated p-3">
-              <div className="text-xs text-dim">Model</div>
-              <div className="mt-1 text-sm font-medium text-primary">{status?.modelId ?? '…'}</div>
+            <div className="mt-4">
+              <Field label="Model">
+                <div className="flex gap-2">
+                  <TextInput
+                    value={localModel}
+                    placeholder={status?.modelId ?? 'mlx-community/...'}
+                    onChange={(e) => {
+                      setLocalModel(e.target.value);
+                      setSettingsDirty(true);
+                    }}
+                  />
+                  <ToolbarButton disabled={!settingsDirty || !localModel.trim()} onClick={() => void saveSettings({ localModel })}>
+                    Save
+                  </ToolbarButton>
+                </div>
+              </Field>
             </div>
           </section>
         ) : null}

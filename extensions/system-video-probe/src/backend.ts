@@ -46,11 +46,13 @@ const MIME_MAP: Record<string, string> = {
 interface VideoProbeSettings {
   backend: 'openrouter' | 'local';
   cloudModel: string;
+  localModel: string;
 }
 
 const DEFAULT_SETTINGS: VideoProbeSettings = {
   backend: 'openrouter',
   cloudModel: 'google/gemini-2.5-flash',
+  localModel: MODEL_ID,
 };
 
 function loadSettings(): VideoProbeSettings {
@@ -60,6 +62,7 @@ function loadSettings(): VideoProbeSettings {
     return {
       backend: raw.backend === 'local' ? 'local' : 'openrouter',
       cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : DEFAULT_SETTINGS.cloudModel,
+      localModel: typeof raw.localModel === 'string' && raw.localModel.trim() ? raw.localModel.trim() : DEFAULT_SETTINGS.localModel,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -81,6 +84,7 @@ export async function writeSettings(input: unknown, _ctx: ExtensionBackendContex
   const next: VideoProbeSettings = {
     backend: raw.backend === 'local' ? 'local' : raw.backend === 'openrouter' ? 'openrouter' : current.backend,
     cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : current.cloudModel,
+    localModel: typeof raw.localModel === 'string' && raw.localModel.trim() ? raw.localModel.trim() : current.localModel,
   };
   saveSettings(next);
   return { ok: true, settings: next };
@@ -128,14 +132,26 @@ async function isPidRunning(ctx: ExtensionBackendContext, pid: number | null) {
 // Server health (used by both backend actions and agent extension)
 // ---------------------------------------------------------------------------
 
-async function readServerHealth(): Promise<{ reachable: boolean; models?: string[] }> {
+async function readServerHealth(): Promise<{ reachable: boolean; listening: boolean; models?: string[] }> {
+  // First check if the port is accepting connections at all (server started but model may still be loading)
+  let listening = false;
   try {
-    const response = await fetch(`${BASE_URL}/v1/models`, { signal: AbortSignal.timeout(2000) });
-    if (!response.ok) return { reachable: false };
-    const body = (await response.json()) as { data?: Array<{ id?: string }> };
-    return { reachable: true, models: (body.data ?? []).map((m) => m.id ?? '').filter(Boolean) };
+    const probe = await fetch(`${BASE_URL}/`, { signal: AbortSignal.timeout(1000) });
+    listening = probe.status < 600; // any response means port is open
   } catch {
-    return { reachable: false };
+    // ECONNREFUSED = not listening; timeout = listening but slow
+    // A timeout likely means it IS listening (model loading)
+    listening = false;
+  }
+
+  // Then check if the API is fully ready
+  try {
+    const response = await fetch(`${BASE_URL}/v1/models`, { signal: AbortSignal.timeout(3000) });
+    if (!response.ok) return { reachable: false, listening };
+    const body = (await response.json()) as { data?: Array<{ id?: string }> };
+    return { reachable: true, listening: true, models: (body.data ?? []).map((m) => m.id ?? '').filter(Boolean) };
+  } catch {
+    return { reachable: false, listening };
   }
 }
 
@@ -151,15 +167,16 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     isPidRunning(ctx, setupPid),
     readServerHealth(),
   ]);
+  const settings = loadSettings();
   return {
     ok: true,
-    modelId: MODEL_ID,
+    modelId: settings.localModel,
     baseUrl: BASE_URL,
     runtimeInstalled: existsSync(VENV_MLX_VLM_SERVER),
     venvReady: existsSync(VENV_PYTHON),
     server: health,
-    process: { serverPid, serverRunning, setupPid, setupRunning },
-    settings: loadSettings(),
+    process: { serverPid, serverRunning: serverRunning || health.reachable, setupPid, setupRunning },
+    settings,
     log: readLog(),
   };
 }
@@ -192,7 +209,8 @@ export async function startServer(_input: unknown, ctx: ExtensionBackendContext)
   if (!existsSync(VENV_MLX_VLM_SERVER)) {
     return { ok: false, error: 'mlx-vlm is not installed. Run setup first.', status: await status({}, ctx) };
   }
-  const command = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(MODEL_ID)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const { localModel } = loadSettings();
+  const command = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
     args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`],
@@ -300,7 +318,7 @@ export function createVideoProbeAgentExtension(): (pi: ExtensionAPI) => void {
           // Check server health; auto-start if installed but not running
           let health = await readServerHealth();
           if (!health.reachable && existsSync(VENV_MLX_VLM_SERVER)) {
-            const startCommand = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(MODEL_ID)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+            const startCommand = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(settings.localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
             await pi.exec('sh', ['-c', `nohup sh -c ${shellQuote(startCommand)} >/dev/null 2>&1 &`]);
             // Wait up to 60s for server to come up
             for (let i = 0; i < 60; i++) {
@@ -318,8 +336,8 @@ export function createVideoProbeAgentExtension(): (pi: ExtensionAPI) => void {
             return { text: msg, content: [{ type: 'text' as const, text: msg }], isError: true };
           }
 
-          const text = await callChatCompletions(`${BASE_URL}/v1/chat/completions`, MODEL_ID, filePath, question, {}, signal);
-          return { text, content: [{ type: 'text' as const, text }], details: { backend: 'local', model: MODEL_ID, filePath } };
+          const text = await callChatCompletions(`${BASE_URL}/v1/chat/completions`, settings.localModel, filePath, question, {}, signal);
+          return { text, content: [{ type: 'text' as const, text }], details: { backend: 'local', model: settings.localModel, filePath } };
         }
 
         // OpenRouter — resolve API key from the existing provider config
