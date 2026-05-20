@@ -631,7 +631,7 @@ function WorkbenchDocumentPane({
       <div className="max-w-sm">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
         <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a file</h2>
-        <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the right rail to keep it beside the transcript.</p>
+        <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the Files tab to keep it beside the transcript.</p>
       </div>
     </div>
   );
@@ -930,11 +930,11 @@ function WorkbenchKnowledgeRail({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
-      <div className="flex shrink-0 flex-col gap-1 px-1.5 py-1.5">
+      <div className="flex min-h-[36px] shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-border-subtle bg-base px-1.5 py-1">
         <button
           type="button"
           className={cx(
-            'ui-sidebar-nav-item w-full text-left',
+            'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
             (activeTool === 'files' ||
               (systemFilesExtensionSurface && activeTool === extensionToolPanelMode(systemFilesExtensionSurface))) &&
               'ui-sidebar-nav-item-active',
@@ -956,12 +956,15 @@ function WorkbenchKnowledgeRail({
           >
             <path d="M3.75 6.75h5.379a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H20.25m-16.5-3A2.25 2.25 0 0 0 1.5 9v8.25A2.25 2.25 0 0 0 3.75 19.5h16.5a2.25 2.25 0 0 0 2.25-2.25v-5.25a2.25 2.25 0 0 0-2.25-2.25H3.75" />
           </svg>
-          <span className="flex-1 text-left">File Explorer</span>
+          <span className="flex-1 text-left">Files</span>
         </button>
         {!systemDiffsExtensionSurface && (checkpoints.length > 0 || activeCheckpointId || uncommittedResult) ? (
           <button
             type="button"
-            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'diffs' && 'ui-sidebar-nav-item-active')}
+            className={cx(
+              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
+              activeTool === 'diffs' && 'ui-sidebar-nav-item-active',
+            )}
             title="Diffs"
             onClick={handleDiffsModeSelect}
           >
@@ -990,7 +993,10 @@ function WorkbenchKnowledgeRail({
         {!systemArtifactsExtensionSurface && artifacts.length > 0 ? (
           <button
             type="button"
-            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'artifacts' && 'ui-sidebar-nav-item-active')}
+            className={cx(
+              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
+              activeTool === 'artifacts' && 'ui-sidebar-nav-item-active',
+            )}
             title="Artifacts"
             onClick={handleArtifactsModeSelect}
           >
@@ -1017,7 +1023,10 @@ function WorkbenchKnowledgeRail({
         {!systemRunsExtensionSurface && showRunsTab ? (
           <button
             type="button"
-            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'runs' && 'ui-sidebar-nav-item-active')}
+            className={cx(
+              'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
+              activeTool === 'runs' && 'ui-sidebar-nav-item-active',
+            )}
             title="Runs"
             onClick={handleRunsModeSelect}
           >
@@ -1047,7 +1056,7 @@ function WorkbenchKnowledgeRail({
               key={`${surface.extensionId}:${surface.id}`}
               type="button"
               className={cx(
-                'ui-sidebar-nav-item w-full text-left',
+                'ui-sidebar-nav-item h-7 w-auto shrink-0 whitespace-nowrap px-2.5 text-left',
                 (activeTool === extensionToolPanelMode(surface) ||
                   (inferSurfaceToolSlot(surface) === 'runs' && isRunsRailMode(activeTool)) ||
                   (inferSurfaceToolSlot(surface) === 'diffs' && isDiffsRailMode(activeTool)) ||
