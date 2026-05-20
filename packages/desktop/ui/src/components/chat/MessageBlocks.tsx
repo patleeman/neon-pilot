@@ -21,6 +21,8 @@ function formatSystemEventLabel(customType?: string): string {
       return 'System prompt';
     case 'referenced_context':
       return 'Context added';
+    case 'background_auto_resume':
+      return 'Auto-resume';
     case 'remote_control':
       return 'Remote control';
     case 'browser-comments':
@@ -97,6 +99,8 @@ function normalizeContextChipLabel(label: string): string {
       return 'related conversations';
     case 'Context added':
       return 'context';
+    case 'Auto-resume':
+      return 'auto-resume';
     default:
       return label.toLowerCase();
   }

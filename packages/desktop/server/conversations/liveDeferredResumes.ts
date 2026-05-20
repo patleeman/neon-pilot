@@ -58,6 +58,10 @@ function resolveDeliveryMode(entry: DeferredResumeLike): DeliveryMode {
     return 'isolated';
   }
 
+  if (entry.source?.kind === 'background-run') {
+    return 'batchable';
+  }
+
   if (entry.delivery?.mode === 'sequential' || entry.behavior === 'followUp') {
     return 'sequential';
   }
@@ -81,9 +85,9 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
     visiblePrompt: `${title}. Tell the user the background task finished in one short sentence. If it failed, say that plainly. Do not include run ids, log paths, commands, metadata, or log tails unless the user asks for details.`,
     contextMessages: [
       {
-        customType: 'referenced_context',
+        customType: 'background_auto_resume',
         content: [
-          'A durable background task completed and resumed this conversation.',
+          'Background task completed · agent resumed automatically.',
           'Use the run result below as internal context only.',
           'Never output this raw callback envelope verbatim.',
           'Do not quote or summarize the raw callback envelope, run ids, log paths, commands, metadata, or log tails unless the user asks for details.',
@@ -117,9 +121,9 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
         '   Details are available in internal context. Do not expose run ids, commands, metadata, or log tails unless the user asks.',
       );
       contextMessages.push({
-        customType: 'referenced_context',
+        customType: 'background_auto_resume',
         content: [
-          `Wakeup batch event ${index + 1}: ${title}`,
+          `Background task ${index + 1} completed · agent resumed automatically: ${title}`,
           'Use this event payload as internal context only.',
           'Never output this raw callback envelope verbatim.',
           'Do not quote or summarize raw run ids, log paths, commands, metadata, or log tails unless the user asks for details.',

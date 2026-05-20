@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   activateDueDeferredResumesForSessionFileMock,
+  backfillDeferredResumesToAttentionEventsMock,
   completeDeferredResumeForSessionFileMock,
   listDeferredResumesForSessionFileMock,
   retryDeferredResumeForSessionFileMock,
@@ -22,6 +23,7 @@ const {
   liveRegistry,
 } = vi.hoisted(() => ({
   activateDueDeferredResumesForSessionFileMock: vi.fn(),
+  backfillDeferredResumesToAttentionEventsMock: vi.fn(),
   completeDeferredResumeForSessionFileMock: vi.fn(),
   listDeferredResumesForSessionFileMock: vi.fn(),
   retryDeferredResumeForSessionFileMock: vi.fn(),
@@ -54,6 +56,7 @@ const {
 
 vi.mock('../automation/deferredResumes.js', () => ({
   activateDueDeferredResumesForSessionFile: activateDueDeferredResumesForSessionFileMock,
+  backfillDeferredResumesToAttentionEvents: backfillDeferredResumesToAttentionEventsMock,
   completeDeferredResumeForSessionFile: completeDeferredResumeForSessionFileMock,
   listDeferredResumesForSessionFile: listDeferredResumesForSessionFileMock,
   retryDeferredResumeForSessionFile: retryDeferredResumeForSessionFileMock,
@@ -116,6 +119,7 @@ function createReadyResume(id = 'resume-1') {
 
 beforeEach(() => {
   activateDueDeferredResumesForSessionFileMock.mockReset();
+  backfillDeferredResumesToAttentionEventsMock.mockReset();
   completeDeferredResumeForSessionFileMock.mockReset();
   listDeferredResumesForSessionFileMock.mockReset();
   retryDeferredResumeForSessionFileMock.mockReset();
@@ -319,7 +323,7 @@ describe('createAttentionEventFlusher', () => {
       'Background task information-architecture-eval completed. Tell the user the background task finished in one short sentence. If it failed, say that plainly. Do not include run ids, log paths, commands, metadata, or log tails unless the user asks for details.';
     expect(queuePromptContextMock).toHaveBeenCalledWith(
       'conv-1',
-      'referenced_context',
+      'background_auto_resume',
       expect.stringContaining('Background task run-123 has finished.'),
     );
     expect(promptSessionMock).toHaveBeenCalledWith('conv-1', visiblePrompt, undefined);
@@ -329,7 +333,7 @@ describe('createAttentionEventFlusher', () => {
           text: visiblePrompt,
           contextMessages: [
             expect.objectContaining({
-              customType: 'referenced_context',
+              customType: 'background_auto_resume',
               content: expect.stringContaining('taskSlug=information-architecture-eval'),
             }),
           ],
@@ -402,6 +406,67 @@ describe('createAttentionEventFlusher', () => {
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' });
     expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-2' });
     expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('batches background run follow-up wakeups into one prompt', async () => {
+    const first = {
+      ...createReadyResume('run-resume-1'),
+      prompt: 'Background task publish failed. status=failed',
+      title: 'Background task publish failed',
+      behavior: 'followUp' as const,
+      delivery: { requireAck: false, mode: 'sequential' as const },
+      source: { kind: 'background-run', id: 'run-1' },
+    };
+    const second = {
+      ...createReadyResume('run-resume-2'),
+      prompt: 'Background task publish retry failed. status=failed',
+      title: 'Background task publish retry failed',
+      behavior: 'followUp' as const,
+      delivery: { requireAck: false, mode: 'sequential' as const },
+      source: { kind: 'background-run', id: 'run-2' },
+    };
+
+    getLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conv-1',
+        cwd: '/repo',
+        sessionFile: '/tmp/session-1.jsonl',
+        title: 'Conversation 1',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+    ]);
+    liveRegistry.set('conv-1', {
+      cwd: '/repo',
+      title: 'Conversation 1',
+      session: {
+        sessionFile: '/tmp/session-1.jsonl',
+        isStreaming: false,
+      },
+    });
+    activateDueDeferredResumesForSessionFileMock.mockReturnValue([]);
+    listDeferredResumesForSessionFileMock.mockReturnValue([first, second]);
+    completeDeferredResumeForSessionFileMock.mockImplementation(({ id }: { id: string }) => (id === 'run-resume-1' ? first : second));
+
+    const flush = createAttentionEventFlusher({
+      getCurrentProfile: () => 'shared',
+      getStateRoot: () => '/state',
+      resolveDaemonRoot: () => '/daemon',
+      publishConversationSessionMetaChanged: vi.fn(),
+    });
+
+    await flush();
+
+    expect(promptSessionMock).toHaveBeenCalledTimes(1);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Multiple wakeups are ready'), undefined);
+    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Background task publish failed');
+    expect(promptSessionMock.mock.calls[0]?.[1]).toContain('Background task publish retry failed');
+    expect(queuePromptContextMock).toHaveBeenCalledTimes(2);
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'conv-1',
+      'background_auto_resume',
+      expect.stringContaining('agent resumed automatically'),
+    );
   });
 
   it('delivers extension attention events without deferred resume records', async () => {
