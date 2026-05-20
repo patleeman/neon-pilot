@@ -63,6 +63,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const [localModel, setLocalModel] = useState('');
   const [settingsDirty, setSettingsDirty] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const logRef = useRef<HTMLPreElement | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -85,6 +86,12 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [fetchStatus]);
+
+  // Auto-scroll log to bottom on updates
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [status?.log]);
 
   // Sync form fields when status first loads
   useEffect(() => {
@@ -362,7 +369,10 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
               <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Runtime Logs</h2>
               <p className="mt-1 text-sm text-secondary">Setup and server output. Refreshes automatically.</p>
             </div>
-            <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
+            <pre
+              ref={logRef}
+              className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary"
+            >
               {status?.log || 'No logs yet.'}
             </pre>
           </section>
