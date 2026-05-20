@@ -22,7 +22,7 @@
     "tools": [
       {
         "id": "exa-search",
-        "name": "exa_search",
+        "name": "web_search",
         "title": "Search web",
         "description": "Search Exa and return titles, URLs, and snippets.",
         "action": "exaSearch",

@@ -254,8 +254,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Web/search/image tools
 
 - `web_fetch` (`system-web-tools`): URL fetch, raw HTML option, invalid URL, network failure, large page.
-- `duckduckgo_search` (`system-duckduckgo-search`): query, count, page, empty/no-result, network failure.
-- `exa_search` (`system-exa-search`): query, count, page, API/config failure.
+- `web_search` (`system-duckduckgo-search`): query, count, page, empty/no-result, network failure.
+- `web_search` (`system-exa-search`): query, count, page, API/config failure.
 - `probe_image` (`system-image-probe`): image IDs, question, missing image, multiple images.
 - `image` (`system-images`, default disabled): generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.
 
@@ -388,12 +388,12 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-duckduckgo-search — DuckDuckGo Search
 
-- tools: duckduckgo-search/duckduckgo_search
+- tools: duckduckgo-search/web_search
 - backend actions: duckDuckGoSearch
 
 ### system-exa-search — Exa Search
 
-- tools: exa-search/exa_search
+- tools: exa-search/web_search
 - secrets: exaApiKey
 - backend actions: exaSearch
 

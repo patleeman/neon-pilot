@@ -297,19 +297,7 @@ describe('extension manifests - structural validation', () => {
   });
 
   it('no tool declares a replaces field that references a non-existent built-in tool', () => {
-    const validBuiltInTools = [
-      'bash',
-      'read',
-      'write',
-      'edit',
-      'grep',
-      'find',
-      'ls',
-      'notify',
-      'web_fetch',
-      'duckduckgo_search',
-      'exa_search',
-    ];
+    const validBuiltInTools = ['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web_fetch', 'web_search'];
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
       const tools = ext.manifest.contributes?.tools ?? [];
@@ -683,7 +671,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of ['duckduckgo_search', 'exa_search', 'web_fetch', 'background_bash', 'subagent']) {
+    for (const expected of ['web_search', 'web_fetch', 'background_bash', 'subagent']) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);

@@ -29,5 +29,5 @@ Content beyond these limits is truncated, and the tool reports truncation detail
 
 Search tools live in separate system extensions:
 
-- `system-duckduckgo-search` contributes `duckduckgo_search`.
-- `system-exa-search` contributes `exa_search` and owns the Exa API key secret.
+- `system-duckduckgo-search` contributes `web_search`.
+- `system-exa-search` contributes `web_search` and owns the Exa API key secret.

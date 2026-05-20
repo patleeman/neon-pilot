@@ -1,12 +1,12 @@
 # DuckDuckGo Search Extension
 
-This extension owns the `duckduckgo_search` agent tool.
+This extension owns the `web_search` agent tool.
 
 ## Tool
 
-| Tool                | Parameters                          | Description                            |
-| ------------------- | ----------------------------------- | -------------------------------------- |
-| `duckduckgo_search` | `query`, `count?` (max 20), `page?` | Scrape DuckDuckGo HTML search results. |
+| Tool         | Parameters                          | Description                            |
+| ------------ | ----------------------------------- | -------------------------------------- |
+| `web_search` | `query`, `count?` (max 20), `page?` | Scrape DuckDuckGo HTML search results. |
 
 Scrapes `https://html.duckduckgo.com/html/` and falls back to `https://lite.duckduckgo.com/lite/` when the HTML page yields no parsed results.
 

@@ -5,6 +5,7 @@ import {
 } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
+import { resolveSecret } from '../secrets/secretStore.js';
 
 export interface ToolDefinition {
   id: string;
@@ -48,7 +49,7 @@ export interface ToolRuntimeHook {
 }
 
 const runtimeHooks: ToolRuntimeHook[] = [];
-const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify']);
+const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web_fetch', 'web_search']);
 
 export function registerToolRuntimeHook(hook: ToolRuntimeHook): () => void {
   runtimeHooks.push(hook);
@@ -142,14 +143,16 @@ function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ct
   let tools = definitions.map((tool): RuntimeTool => {
     const diagnostics = validateTool(tool);
     const condition = toolConditionMatches(tool, ctx);
+    const availability = toolAvailabilityMatches(tool);
     const replacementValid = !tool.replaces || OVERRIDABLE_TOOLS.has(tool.replaces);
-    const enabled = diagnostics.every((diagnostic) => diagnostic.severity !== 'error') && condition && replacementValid;
+    const enabled = diagnostics.every((diagnostic) => diagnostic.severity !== 'error') && condition && availability.ok && replacementValid;
     return {
       ...tool,
       diagnostics: replacementValid
-        ? diagnostics
+        ? [...diagnostics, ...availability.diagnostics]
         : [
             ...diagnostics,
+            ...availability.diagnostics,
             {
               severity: 'warning',
               code: 'non-overridable-replacement',
@@ -159,16 +162,23 @@ function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ct
           ],
       enabled,
       active: enabled,
-      reason: enabled ? 'enabled' : condition ? 'disabled by diagnostics or replacement policy' : 'model/provider condition did not match',
+      reason: enabled
+        ? 'enabled'
+        : condition
+          ? availability.ok
+            ? 'disabled by diagnostics or replacement policy'
+            : 'required configuration is missing'
+          : 'model/provider condition did not match',
     };
   });
   for (const hook of runtimeHooks) {
     if (hook.beforeToolInjection) tools = hook.beforeToolInjection(tools, ctx);
   }
-  const active = tools.filter((tool) => tool.active && tool.raw);
+  tools = markDuplicateToolNamesInactive(tools);
+  const active = tools.filter((tool) => tool.active && tool.raw).sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   const plan: ToolInjectionPlan = {
     tools,
-    activeToolNames: active.map((tool) => (tool.replaces && OVERRIDABLE_TOOLS.has(tool.replaces) ? tool.replaces : tool.name)),
+    activeToolNames: active.map(effectiveToolName),
     registrations: active.map((tool) => tool.raw!),
     promptGuidelines: active.flatMap((tool) => tool.promptGuidelines ?? []),
     diagnostics: tools.flatMap((tool) => tool.diagnostics),
@@ -197,6 +207,31 @@ function extensionToolToDefinition(tool: ExtensionToolRegistration): ToolDefinit
   };
 }
 
+function effectiveToolName(tool: ToolDefinition): string {
+  return tool.replaces && OVERRIDABLE_TOOLS.has(tool.replaces) ? tool.replaces : tool.name;
+}
+
+function markDuplicateToolNamesInactive(tools: RuntimeTool[]): RuntimeTool[] {
+  const byName = new Map<string, RuntimeTool>();
+  for (const tool of tools) {
+    if (!tool.active || !tool.raw) continue;
+    const name = effectiveToolName(tool);
+    const existing = byName.get(name);
+    if (!existing || tool.priority > existing.priority || (tool.priority === existing.priority && tool.id.localeCompare(existing.id) < 0)) {
+      byName.set(name, tool);
+    }
+  }
+  return tools.map((tool) => {
+    if (!tool.active || !tool.raw) return tool;
+    if (byName.get(effectiveToolName(tool)) === tool) return tool;
+    return {
+      ...tool,
+      active: false,
+      reason: `shadowed by higher-priority ${effectiveToolName(tool)} provider`,
+    };
+  });
+}
+
 function toolConditionMatches(tool: ToolDefinition, ctx: AssemblyRuntimeContext): boolean {
   if (!tool.when) return true;
   const providers = new Set((tool.when.providers ?? []).map((value) => value.trim()).filter(Boolean));
@@ -206,6 +241,24 @@ function toolConditionMatches(tool: ToolDefinition, ctx: AssemblyRuntimeContext)
   const [providerFromModel, modelFromRef] = modelRef.includes('/') ? modelRef.split('/', 2) : ['', modelRef];
   const provider = ctx.provider || providerFromModel;
   return (provider.length > 0 && providers.has(provider)) || models.has(modelRef) || models.has(modelFromRef);
+}
+
+function toolAvailabilityMatches(tool: ToolDefinition): { ok: boolean; diagnostics: AssemblyDiagnostic[] } {
+  if (tool.raw?.extensionId === 'system-exa-search' && tool.name === 'web_search') {
+    if (resolveSecret('system-exa-search', 'exaApiKey')) return { ok: true, diagnostics: [] };
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          severity: 'info',
+          code: 'missing-exa-api-key',
+          message: `${tool.id} requires an Exa API key. Falling back to another web_search provider if available.`,
+          sourceId: tool.id,
+        },
+      ],
+    };
+  }
+  return { ok: true, diagnostics: [] };
 }
 
 function validateTool(tool: ToolDefinition): AssemblyDiagnostic[] {
