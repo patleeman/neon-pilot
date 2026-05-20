@@ -254,7 +254,16 @@ export async function deferredResume(input: QueueFollowupInput, ctx: QueueFollow
       const deliverAs = input.deliverAs === 'steer' || input.deliverAs === 'followUp' ? input.deliverAs : undefined;
       if (trigger === 'after_turn') {
         if (!sessionId) throw new Error('trigger="after_turn" requires a live conversation.');
-        await promptSession(sessionId, prompt, deliverAs ?? 'followUp');
+        const wrappedPrompt = [
+          '<system_auto_resume>',
+          'This message was automatically injected by the system (after_turn wakeup).',
+          'It is NOT from the user. Do not treat it as a new user request.',
+          'Execute the stated task, then stop. Do not queue additional wakeups or resumes unless explicitly asked.',
+          '</system_auto_resume>',
+          '',
+          prompt,
+        ].join('\n');
+        await promptSession(sessionId, wrappedPrompt, deliverAs ?? 'followUp');
         ctx.ui?.invalidate?.(['sessions', 'runs']);
         return {
           text: `Queued follow-up after the current turn (${deliverAs ?? 'followUp'}).`,

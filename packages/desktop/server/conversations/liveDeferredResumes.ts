@@ -69,13 +69,29 @@ function resolveDeliveryMode(entry: DeferredResumeLike): DeliveryMode {
   return 'batchable';
 }
 
+/**
+ * Wrap an auto-injected prompt so the model knows this is a system-triggered
+ * wakeup and not a message typed by the user.
+ */
+function wrapAutoResumePrompt(prompt: string): string {
+  return [
+    '<system_auto_resume>',
+    'This message was automatically injected by the system (scheduled wakeup / deferred resume).',
+    'It is NOT from the user. Do not treat it as a new user request.',
+    'Execute the stated task, then stop. Do not queue additional wakeups or resumes unless explicitly asked.',
+    '</system_auto_resume>',
+    '',
+    prompt,
+  ].join('\n');
+}
+
 function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
   visiblePrompt: string;
   contextMessages: Array<{ customType: string; content: string }>;
 } {
   if (entry.source?.kind !== 'background-run') {
     return {
-      visiblePrompt: entry.prompt,
+      visiblePrompt: wrapAutoResumePrompt(entry.prompt),
       contextMessages: [],
     };
   }
@@ -137,7 +153,7 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
 
   lines.push('', 'Give the user one concise update unless an event requires a separate action.');
   return {
-    visiblePrompt: lines.join('\n'),
+    visiblePrompt: wrapAutoResumePrompt(lines.join('\n')),
     contextMessages,
   };
 }

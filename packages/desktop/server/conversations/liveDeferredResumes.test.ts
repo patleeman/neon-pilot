@@ -211,11 +211,11 @@ describe('createAttentionEventFlusher', () => {
         state: 'running',
         pendingOperation: expect.objectContaining({
           type: 'prompt',
-          text: 'Continue from here.',
+          text: expect.stringContaining('Continue from here.'),
         }),
       }),
     );
-    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', 'Continue from here.', undefined);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Continue from here.'), undefined);
     expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         daemonRoot: '/daemon',
@@ -269,7 +269,7 @@ describe('createAttentionEventFlusher', () => {
         }),
       }),
     );
-    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', 'Continue from here.', undefined);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Continue from here.'), undefined);
   });
 
   it('keeps background run callback details in internal context behind a clean visible prompt', async () => {
@@ -517,7 +517,7 @@ describe('createAttentionEventFlusher', () => {
 
     await flush();
 
-    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', 'Extension event is ready.', undefined);
+    expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Extension event is ready.'), undefined);
     expect(completeAttentionEventsMock).toHaveBeenCalledWith(expect.any(Object), {
       ids: ['attention-1'],
       completedAt: expect.any(String),
