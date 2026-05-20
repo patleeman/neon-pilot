@@ -703,10 +703,6 @@ export function CommandPalette() {
       return;
     }
 
-    if (anchorRect) {
-      return;
-    }
-
     const handle = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -919,39 +915,38 @@ export function CommandPalette() {
         style={{
           position: anchorRect ? 'fixed' : undefined,
           left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
-          top: anchorRect ? `${anchorRect.top + anchorRect.height + 6}px` : undefined,
+          top: anchorRect ? `${anchorRect.top}px` : undefined,
           width: anchoredPanelWidth !== undefined ? `${anchoredPanelWidth}px` : undefined,
           maxWidth: anchorRect ? undefined : '560px',
-          maxHeight: anchorRect
-            ? `min(560px, calc(100vh - ${anchorRect.top + anchorRect.height + 18}px))`
-            : 'min(560px, calc(100vh - 7rem))',
+          maxHeight: anchorRect ? `min(560px, calc(100vh - ${anchorRect.top + 12}px))` : 'min(560px, calc(100vh - 7rem))',
           overscrollBehavior: 'contain',
         }}
       >
-        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'pt-3 pb-2.5')}>
-          {!anchorRect && (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[13px] text-dim">⌕</span>
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setCursor(0);
-                  setActionError(null);
-                  setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-                }}
-                placeholder={searchPlaceholder}
-                aria-label="Search command palette"
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-primary placeholder:text-dim outline-none"
-              />
-              <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
-                {macPlatform ? '⌘K' : 'Ctrl+K'}
-              </span>
-            </div>
-          )}
+        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'px-2.5 py-2')}>
+          <div className={cx('flex items-center gap-2 min-w-0', anchorRect && 'h-7')}>
+            <span className="text-[13px] text-dim">⌕</span>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setCursor(0);
+                setActionError(null);
+                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
+              }}
+              placeholder={searchPlaceholder}
+              aria-label="Search command palette"
+              className={cx(
+                'min-w-0 flex-1 bg-transparent text-primary placeholder:text-dim outline-none',
+                anchorRect ? 'font-mono text-[11px] tracking-[0.05em]' : 'text-[15px]',
+              )}
+            />
+            <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
+              {macPlatform ? '⌘K' : 'Ctrl+K'}
+            </span>
+          </div>
 
-          <div className={cx('flex items-center justify-between gap-3', !anchorRect && 'mt-3')}>
+          <div className="mt-3 flex items-center justify-between gap-3">
             <div className="inline-flex items-center gap-1 rounded-md bg-surface p-0.5">
               {scopeOptions.map((option) => (
                 <button
