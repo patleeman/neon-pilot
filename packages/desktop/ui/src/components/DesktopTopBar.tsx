@@ -5,7 +5,7 @@ import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMA
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
-import type { DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
+import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
 import type { AppLayoutMode } from '../ui-state/appLayoutMode';
 import { cx, ToolbarButton } from './ui';
 
@@ -46,6 +46,16 @@ function WorkbenchViewIcon() {
       <rect x="1.7" y="2.3" width="10.6" height="9.4" rx="1.7" />
       <path d="M4.8 2.3v9.4" />
       <path d="M9.1 2.3v9.4" />
+    </svg>
+  );
+}
+
+function UpdateReadyIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
+      <path d="M7 1.8v7" />
+      <path d="M4.2 6.2 7 9l2.8-2.8" />
+      <path d="M2.2 11.7h9.6" />
     </svg>
   );
 }
@@ -145,6 +155,8 @@ export function DesktopTopBar({
     canGoBack: false,
     canGoForward: false,
   });
+  const [appPreferences, setAppPreferences] = useState<DesktopAppPreferencesState | null>(null);
+  const bridge = getDesktopBridge();
 
   useEffect(() => {
     const bridge = getDesktopBridge();
@@ -172,7 +184,34 @@ export function DesktopTopBar({
     };
   }, [location.key, location.pathname, location.search]);
 
-  const bridge = getDesktopBridge();
+  useEffect(() => {
+    if (!bridge?.readDesktopAppPreferences) return;
+
+    let cancelled = false;
+    let timeout: number | null = null;
+
+    const refresh = () => {
+      void bridge
+        .readDesktopAppPreferences()
+        .then((state) => {
+          if (!cancelled) setAppPreferences(state);
+        })
+        .catch(() => {
+          if (!cancelled) setAppPreferences(null);
+        })
+        .finally(() => {
+          if (!cancelled) timeout = window.setTimeout(refresh, 30_000);
+        });
+    };
+
+    refresh();
+
+    return () => {
+      cancelled = true;
+      if (timeout !== null) window.clearTimeout(timeout);
+    };
+  }, [bridge]);
+
   const desktopShell = isDesktopShell();
   const showDesktopChrome = bridge !== null || environment !== null || desktopShell;
 
@@ -206,10 +245,17 @@ export function DesktopTopBar({
     setNavigation(state);
   }
 
+  async function handleUpdateClick() {
+    if (!bridge?.checkForUpdates) return;
+    const state = await bridge.checkForUpdates();
+    setAppPreferences(state);
+  }
+
   const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
   const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
   const environmentBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : 'Local';
   const environmentBadgeTitle = environment?.launchMode === 'testing' ? 'Launched from the command line' : environment?.activeHostSummary;
+  const readyUpdateVersion = appPreferences?.update.status === 'ready' ? appPreferences.update.downloadedVersion : undefined;
 
   function openPaletteFromSearch(query = searchQuery) {
     const rect = searchShellRef.current?.getBoundingClientRect();
@@ -324,6 +370,18 @@ export function DesktopTopBar({
         {topBarElements.map((element) => (
           <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
         ))}
+        {readyUpdateVersion ? (
+          <ToolbarButton
+            className="ui-desktop-top-bar__icon-button"
+            onClick={() => {
+              void handleUpdateClick();
+            }}
+            aria-label={`Restart to update to Neon Pilot ${readyUpdateVersion}`}
+            title={`Restart to update to Neon Pilot ${readyUpdateVersion}`}
+          >
+            <UpdateReadyIcon />
+          </ToolbarButton>
+        ) : null}
         {trailingExtra}
         <div className="ui-desktop-layout-switcher" role="radiogroup" aria-label="View mode">
           <button

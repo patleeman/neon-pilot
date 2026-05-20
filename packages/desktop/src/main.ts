@@ -378,11 +378,13 @@ async function restartActiveHost(): Promise<void> {
   }
 }
 
-async function checkForDesktopUpdates(): Promise<void> {
+async function checkForDesktopUpdates() {
   try {
     await updateManager?.checkForUpdates({ userInitiated: true });
+    return buildDesktopAppPreferencesState();
   } catch (error) {
     reportDesktopError(error);
+    return buildDesktopAppPreferencesState();
   }
 }
 

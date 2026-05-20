@@ -14,7 +14,7 @@ export function registerDesktopIpc(options: {
   hostManager: HostManager;
   windowController: DesktopWindowController;
   onHostStateChanged?: () => void;
-  onCheckForUpdates?: () => Promise<void> | void;
+  onCheckForUpdates?: () => Promise<unknown> | unknown;
   readDesktopAppPreferences?: () => Promise<unknown> | unknown;
   updateDesktopAppPreferences?: (input: {
     autoInstallUpdates?: boolean;
@@ -189,6 +189,14 @@ export function registerDesktopIpc(options: {
     }
 
     return options.updateDesktopAppPreferences(input ?? {});
+  });
+
+  ipcMain.handle(`${CHANNEL_PREFIX}:check-for-updates`, async () => {
+    if (!options.onCheckForUpdates) {
+      throw new Error('Desktop update checks are unavailable.');
+    }
+
+    return options.onCheckForUpdates();
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:read-app-status`, async (event) => {

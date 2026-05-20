@@ -82,6 +82,7 @@ const desktopBridge = {
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:update-desktop-app-preferences`, input),
+  checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
   readAppStatus: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-app-status`),
   readDaemonState: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-daemon-state`),
   readSessions: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-sessions`),
