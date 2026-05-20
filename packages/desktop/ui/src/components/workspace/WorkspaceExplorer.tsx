@@ -576,7 +576,7 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
           height: '28px',
           border: '1px solid rgb(var(--color-border-subtle))',
           borderRadius: '8px',
-          background: 'rgb(var(--color-surface-raised) / 0.82)',
+          background: 'rgb(var(--color-base) / 0.82)',
           color: 'rgb(var(--color-secondary))',
           padding: '0 9px',
           fontSize: '11px',
@@ -584,7 +584,7 @@ function createWorkspaceEditorExtensions(path: string, theme: 'light' | 'dark') 
         },
         '.cm-panel.cm-search button:hover': {
           borderColor: 'rgb(var(--color-border))',
-          background: 'rgb(var(--color-surface-raised))',
+          background: 'rgb(var(--color-base))',
           color: 'rgb(var(--color-primary))',
         },
         '.cm-panel.cm-search button[name="close"]': {
