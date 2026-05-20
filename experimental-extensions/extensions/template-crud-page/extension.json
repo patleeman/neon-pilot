@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "id": "template-crud-page",
+  "id": "system-template-crud-page",
   "name": "Template: CRUD Page",
   "description": "Starter template — management page with a list view and slide-in editor form. Full create/edit/delete.",
   "version": "0.1.0",
@@ -35,7 +35,7 @@
         "id": "nav",
         "label": "CRUD Page",
         "route": "/ext/template-crud-page",
-        "icon": "list"
+        "icon": "kanban"
       }
     ]
   },

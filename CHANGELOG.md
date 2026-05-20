@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0-rc.3 — 2026-05-20
+
+### Highlights
+
+- Adds the system video probe extension with OpenRouter/local mlx-vlm backends, server lifecycle controls, setup cancellation/reset actions, and UI styling aligned with Local Models.
+- Hardens fork/rewind topology so child conversations remain visible, parent/child tombstones persist, backlinks render correctly, and context shelves keep topology blocks visible.
+- Improves live session resume and auto-injected prompt context with clearer system-tagged prompts, distinct UI labels, and safer branch-chain metadata.
+- Adds canonical web search tooling, fixes tool availability fallbacks, and includes release supply-chain audit coverage.
+- Adds loadable extension templates and docs for CRUD pages, dashboards, and settings sections, while untracking the generated Alleycat sidecar binary.
+- Improves runtime performance with async session index writes, skipped unchanged index persistence, and parallelized extension startup/health checks.
+
+### Notes
+
+- 42 commits since the previous release.
+
 ## 0.9.0-rc.2 — 2026-05-20
 
 ### Highlights

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "id": "template-settings-section",
+  "id": "system-template-settings-section",
   "name": "Template: Settings Section",
   "description": "Starter template — contributes a section to the main Settings page. No separate route.",
   "version": "0.1.0",
@@ -18,7 +18,7 @@
   "contributes": {
     "settingsSections": [
       {
-        "id": "template-settings-section",
+        "id": "system-template-settings-section",
         "title": "Template: My Integration",
         "summary": "One sentence describing this integration.",
         "component": "MySettingsSection",

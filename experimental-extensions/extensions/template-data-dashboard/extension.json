@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "id": "template-data-dashboard",
+  "id": "system-template-data-dashboard",
   "name": "Template: Data Dashboard",
   "description": "Starter template — read-only page that loads data from a backend action and renders it as a table.",
   "version": "0.1.0",
@@ -36,7 +36,7 @@
         "id": "nav",
         "label": "Data Dashboard",
         "route": "/ext/template-data-dashboard",
-        "icon": "chart"
+        "icon": "graph"
       }
     ]
   },
