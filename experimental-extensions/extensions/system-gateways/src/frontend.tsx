@@ -287,10 +287,10 @@ export function GatewaysPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="max-w-[112rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
         <AppPageIntro
           title="Telegram Gateway"
-          summary="Configure Telegram and route it into conversation threads. One bot, one saved chat, attached to the thread that should handle it. Civilized."
+          summary="Configure one Telegram bot, save the chat ID, and attach incoming messages to the conversation thread that should handle them."
           actions={
             <div className="inline-flex items-center gap-2 text-sm text-secondary">
               <span className={`h-2 w-2 rounded-full ${gatewayActive ? 'bg-success' : telegramConfigured ? 'bg-warning' : 'bg-dim'}`} />
