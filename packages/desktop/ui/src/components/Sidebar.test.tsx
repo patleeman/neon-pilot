@@ -301,6 +301,42 @@ describe('Sidebar', () => {
     expect(html).toContain('Morning briefing thread');
   });
 
+  it('does not keep a stale scheduled-run hourglass after the owning automation is idle', () => {
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-auto']));
+
+    const html = renderSidebar('/conversations/new', {
+      sessions: [createSession({ id: 'conv-auto', title: 'Morning briefing thread', isRunning: false })],
+      tasks: [
+        {
+          id: 'morning-briefing',
+          title: 'Morning briefing',
+          scheduleType: 'cron',
+          running: false,
+          enabled: true,
+          prompt: 'Assemble the morning briefing.',
+          threadConversationId: 'conv-auto',
+        },
+      ],
+      executions: {
+        executions: [
+          {
+            id: 'run-1',
+            kind: 'scheduled-task',
+            visibility: 'system',
+            conversationId: 'conv-auto',
+            title: 'Morning briefing',
+            status: 'running',
+            taskId: 'morning-briefing',
+            capabilities: { canCancel: false, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+          },
+        ],
+      },
+    });
+
+    expect(html).toContain('Morning briefing thread');
+    expect(html).not.toContain('aria-label="Pending background work"');
+  });
+
   it('groups open conversations by working directory with collapsible headers and quick-start actions', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-a1', 'conv-b1', 'conv-a2']));
 

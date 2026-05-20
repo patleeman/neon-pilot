@@ -2116,18 +2116,39 @@ export function Sidebar() {
     () => new Set((tasks ?? []).flatMap((task) => (task.running && task.threadConversationId ? [task.threadConversationId] : []))),
     [tasks],
   );
+  const automationTaskRunningById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, Boolean(task.running)] as const)), [tasks]);
+  const automationTaskRunningByConversationId = useMemo(
+    () =>
+      new Map(
+        (tasks ?? []).flatMap((task) => (task.threadConversationId ? [[task.threadConversationId, Boolean(task.running)] as const] : [])),
+      ),
+    [tasks],
+  );
   const pendingExecutionConversationIdSet = useMemo(
     () =>
       new Set(
-        (executions?.executions ?? []).flatMap((execution) =>
-          execution.conversationId &&
-          execution.visibility !== 'hidden' &&
-          ['queued', 'waiting', 'running', 'recovering'].includes(execution.status)
-            ? [execution.conversationId]
-            : [],
-        ),
+        (executions?.executions ?? []).flatMap((execution) => {
+          if (
+            !execution.conversationId ||
+            execution.visibility === 'hidden' ||
+            !['queued', 'waiting', 'running', 'recovering'].includes(execution.status)
+          ) {
+            return [];
+          }
+
+          if (execution.kind === 'scheduled-task' && tasks) {
+            const taskRunning = execution.taskId
+              ? automationTaskRunningById.get(execution.taskId)
+              : automationTaskRunningByConversationId.get(execution.conversationId);
+            if (taskRunning === false) {
+              return [];
+            }
+          }
+
+          return [execution.conversationId];
+        }),
       ),
-    [executions],
+    [automationTaskRunningByConversationId, automationTaskRunningById, executions, tasks],
   );
   const filteredConversationItems = useMemo(
     () =>
