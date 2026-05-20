@@ -245,7 +245,13 @@ function toolConditionMatches(tool: ToolDefinition, ctx: AssemblyRuntimeContext)
 
 function toolAvailabilityMatches(tool: ToolDefinition): { ok: boolean; diagnostics: AssemblyDiagnostic[] } {
   if (tool.raw?.extensionId === 'system-exa-search' && tool.name === 'web_search') {
-    if (resolveSecret('system-exa-search', 'exaApiKey')) return { ok: true, diagnostics: [] };
+    let hasKey = false;
+    try {
+      hasKey = Boolean(resolveSecret('system-exa-search', 'exaApiKey'));
+    } catch {
+      hasKey = false;
+    }
+    if (hasKey) return { ok: true, diagnostics: [] };
     return {
       ok: false,
       diagnostics: [
