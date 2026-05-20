@@ -148,7 +148,7 @@ describe('SettingsPage provider model editor', () => {
       setThemePreference: vi.fn(),
       setLightTheme: vi.fn(),
       setDarkTheme: vi.fn(),
-      accent: 'lime',
+      accent: 'cobalt',
       availableAccents: [
         {
           id: 'lime',

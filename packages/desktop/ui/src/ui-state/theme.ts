@@ -237,7 +237,7 @@ const BUILT_IN_THEMES: ColorTheme[] = [
 const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
 const DEFAULT_LIGHT_THEME: Theme = 'studio-light';
 const DEFAULT_DARK_THEME: Theme = 'studio-dark';
-const DEFAULT_ACCENT: ThemeAccent = 'lime';
+const DEFAULT_ACCENT: ThemeAccent = 'cobalt';
 const SYSTEM_THEME_QUERY = '(prefers-color-scheme: dark)';
 
 interface ThemeContextValue {

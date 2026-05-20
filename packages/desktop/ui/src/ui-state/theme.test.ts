@@ -65,7 +65,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'studio-light',
       themePreference: 'system',
-      accent: 'lime',
+      accent: 'cobalt',
     });
   });
 
@@ -75,7 +75,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'studio-dark',
       themePreference: 'dark',
-      accent: 'lime',
+      accent: 'cobalt',
     });
   });
 
@@ -95,7 +95,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'studio-light',
       themePreference: 'system',
-      accent: 'lime',
+      accent: 'cobalt',
     });
   });
 
@@ -113,7 +113,7 @@ describe('theme preferences', () => {
     expect(renderThemeProbe()).toEqual({
       theme: 'studio-dark',
       themePreference: 'system',
-      accent: 'lime',
+      accent: 'cobalt',
     });
   });
 });

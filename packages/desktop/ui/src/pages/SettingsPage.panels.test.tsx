@@ -64,7 +64,7 @@ describe('SettingsPage — untested panel rendering', () => {
       setThemePreference: vi.fn(),
       setLightTheme: vi.fn(),
       setDarkTheme: vi.fn(),
-      accent: 'lime',
+      accent: 'cobalt',
       availableAccents: [
         {
           id: 'lime',
