@@ -17,7 +17,6 @@ describe('ConversationComposerChrome', () => {
     expect(renderToString(<FolderIcon className="folder" />)).toContain('folder');
     expect(renderToString(<ChatBubbleIcon className="chat" />)).toContain('chat');
     expect(renderToString(<ComposerActionIcon label="Follow up" className="follow" />)).toContain('follow');
-    expect(renderToString(<ComposerActionIcon label="Parallel" />)).toContain('M7 7h10');
 
     const browseHtml = renderToString(
       <BrowsePathButton busy title="Choose workspace folder" ariaLabel="Choose workspace folder" onClick={vi.fn()} />,

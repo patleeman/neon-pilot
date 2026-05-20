@@ -803,8 +803,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           surfaceId: desktopConversation.surfaceId,
           reconnect: desktopConversation.reconnect,
           send: desktopConversation.send,
-          parallel: desktopConversation.parallel,
-          manageParallelJob: desktopConversation.manageParallelJob,
           abort: desktopConversation.abort,
           takeover: desktopConversation.takeover,
         }
@@ -813,14 +811,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           surfaceId: '',
           reconnect: async () => {},
           send: async () => undefined,
-          parallel: async () => {},
-          manageParallelJob: async () => {},
           abort: async () => {},
           takeover: async () => {},
         };
   const streamSend = stream.send;
-  const streamParallel = stream.parallel;
-  const streamManageParallelJob = stream.manageParallelJob;
   const streamAbort = stream.abort;
   const streamReconnect = stream.reconnect;
   const streamTakeover = stream.takeover;
@@ -1033,7 +1027,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   // Pending steer/followup queue as reported by the live session.
   const pendingQueue = useMemo(() => buildConversationPendingQueueItems(stream.pendingQueue), [stream.pendingQueue]);
-  const parallelJobs = useMemo(() => (Array.isArray(stream.parallelJobs) ? stream.parallelJobs : []), [stream.parallelJobs]);
 
   // Live sessions hydrate from the SSE snapshot; until that arrives, fall back to
   // JSONL + live deltas only when we have at least one source of blocks.
@@ -1639,7 +1632,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [contextDocsBusy, setContextDocsBusy] = useState(false);
   const [drawingsBusy, setDrawingsBusy] = useState(false);
   const [drawingsError, setDrawingsError] = useState<string | null>(null);
-  const { composerAltHeld, composerParallelHeld } = useComposerModifierKeys();
+  const { composerAltHeld } = useComposerModifierKeys();
   const [dragOver, setDragOver] = useState(false);
   const composerHistoryScopeId = draft ? null : (id ?? null);
   const [composerHistory, setComposerHistory] = useState<string[]>(() => readComposerHistory(composerHistoryScopeId));
@@ -4861,104 +4854,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
   }
 
-  async function submitParallelComposer() {
-    if (draft || !id || !isLiveSession) {
-      showNotice('danger', 'Parallel prompts require a live conversation.', 4000);
-      return;
-    }
-
-    if (!allowQueuedPrompts) {
-      showNotice('danger', 'Parallel prompts are only available while this conversation is busy.', 4000);
-      return;
-    }
-
-    const inputSnapshot = input;
-    const text = inputSnapshot.trim();
-    const pendingImageAttachments = attachments;
-    const pendingDrawingAttachments = drawingAttachments;
-    if (!text && pendingImageAttachments.length === 0 && pendingDrawingAttachments.length === 0) {
-      return;
-    }
-
-    try {
-      const filePromptImages = buildPromptImages(pendingImageAttachments);
-      const drawingPromptImages = pendingDrawingAttachments.map((drawing) => drawingAttachmentToPromptImage(drawing));
-      const promptImages = [...filePromptImages, ...drawingPromptImages];
-
-      const persistPromptDrawings = async (): Promise<PromptAttachmentRefInput[]> => {
-        if (pendingDrawingAttachments.length === 0) {
-          return [];
-        }
-
-        setDrawingsBusy(true);
-        try {
-          const persistedDrawings = await persistDrawingsForConversation(id, pendingDrawingAttachments);
-          return persistedDrawings
-            .map((drawing) => drawingAttachmentToPromptRef(drawing))
-            .filter((attachmentRef): attachmentRef is PromptAttachmentRefInput => attachmentRef !== null);
-        } finally {
-          setDrawingsBusy(false);
-        }
-      };
-
-      const attachmentRefs = await persistPromptDrawings();
-      rememberComposerInput(inputSnapshot);
-      composerController.clear();
-      setAttachments([]);
-      setDrawingAttachments([]);
-      setDrawingsError(null);
-
-      await streamParallel(text, promptImages, attachmentRefs, browserContextMessages);
-      await refetchConversationAttachments();
-      showNotice('accent', 'Parallel prompt started.', 2500);
-    } catch (error) {
-      await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingDrawingAttachments);
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-    }
-  }
-
-  async function submitComposerActionForModifiers(altKeyHeld: boolean, parallelKeyHeld: boolean) {
+  async function submitComposerActionForModifiers(altKeyHeld: boolean) {
     const nextSubmit = resolveConversationComposerSubmitState(
       composerRunState.streamControlsActive,
       altKeyHeld,
       liveSessionHasStaleTurnState,
-      parallelKeyHeld,
     );
 
-    if (nextSubmit.action === 'parallel') {
-      await submitParallelComposer();
-      return;
-    }
-
     await submitComposer(nextSubmit.behavior);
-  }
-
-  async function manageParallelJob(jobId: string, action: 'importNow' | 'skip' | 'cancel') {
-    if (draft || !id || !isLiveSession) {
-      showNotice('danger', 'Parallel prompts require a live conversation.', 4000);
-      return;
-    }
-
-    try {
-      const result = await streamManageParallelJob(jobId, action);
-      if (!result) {
-        return;
-      }
-
-      if (action === 'importNow') {
-        showNotice('accent', result.status === 'imported' ? 'Parallel response appended.' : 'Parallel response queued for append.', 2500);
-        return;
-      }
-
-      if (action === 'skip') {
-        showNotice('accent', 'Parallel response skipped.', 2500);
-        return;
-      }
-
-      showNotice('accent', 'Parallel prompt cancelled.', 2500);
-    } catch (error) {
-      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-    }
   }
 
   async function stopStreamAndRestoreQueuedPrompts() {
@@ -5225,13 +5128,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       const altKeyHeld = e.altKey || e.nativeEvent.getModifierState('Alt') || composerAltHeld;
-      const parallelKeyHeld =
-        e.ctrlKey ||
-        e.metaKey ||
-        e.nativeEvent.getModifierState('Control') ||
-        e.nativeEvent.getModifierState('Meta') ||
-        composerParallelHeld;
-      await submitComposerActionForModifiers(altKeyHeld, parallelKeyHeld);
+      await submitComposerActionForModifiers(altKeyHeld);
     }
   }
 
@@ -5310,7 +5207,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     composerRunState.streamControlsActive,
     composerAltHeld,
     liveSessionHasStaleTurnState,
-    composerParallelHeld,
   );
   const showScrollToBottomControl = shouldShowScrollToBottomControl(messageCount, atBottom);
   const renameConversationDisabled = conversationNeedsTakeover || conversationCwdEditorOpen || conversationCwdBusy;
@@ -5403,7 +5299,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     attachedContextDocs.length > 0 ||
     draftMentionItems.length > 0 ||
     pendingQueue.length > 0 ||
-    parallelJobs.length > 0 ||
     activeConversationBackgroundExecutions.length > 0 ||
     (!draft && orderedDeferredResumes.length > 0) ||
     pendingBrowserComments.length > 0 ||
@@ -6092,17 +5987,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
                   <ConversationQueueShelf
                     pendingQueue={pendingQueue}
-                    parallelJobs={parallelJobs}
                     conversationNeedsTakeover={conversationNeedsTakeover}
                     onRestoreQueuedPrompt={(behavior, queueIndex, previewId) => {
                       void restoreQueuedPromptToComposer(behavior, queueIndex, previewId);
-                    }}
-                    onManageParallelJob={(jobId, action) => {
-                      void manageParallelJob(jobId, action);
-                    }}
-                    onOpenConversation={(conversationId) => {
-                      ensureConversationTabOpen(conversationId);
-                      navigate(`/conversations/${conversationId}`);
                     }}
                   />
 
@@ -6179,7 +6066,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 composerQuestionSubmitting={composerQuestionSubmitting}
                 composerSubmitLabel={composerSubmit.label}
                 composerAltHeld={composerAltHeld}
-                composerParallelHeld={composerParallelHeld}
                 onFilesSelected={(files) => {
                   void addComposerFiles(files);
                 }}
@@ -6206,8 +6092,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 onSubmitComposerQuestion={() => {
                   void submitComposerQuestionIfReady();
                 }}
-                onSubmitComposerActionForModifiers={(altKeyHeld, parallelKeyHeld) => {
-                  void submitComposerActionForModifiers(altKeyHeld, parallelKeyHeld);
+                onSubmitComposerActionForModifiers={(altKeyHeld) => {
+                  void submitComposerActionForModifiers(altKeyHeld);
                 }}
                 onAbortStream={() => {
                   void stopStreamAndRestoreQueuedPrompts();

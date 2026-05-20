@@ -101,7 +101,6 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       composerQuestionSubmitting={false}
       composerSubmitLabel="Send"
       composerAltHeld={false}
-      composerParallelHeld={false}
       onFilesSelected={vi.fn()}
       onInputChange={vi.fn()}
       onRememberComposerSelection={vi.fn()}
@@ -125,7 +124,7 @@ describe('ConversationComposerInputControls', () => {
   it('renders textarea, attachment controls, preferences, and disabled send', () => {
     const html = renderControls();
 
-    expect(html).toContain('Message… / commands, @ notes');
+    expect(html).toContain('Message Neon Pilot');
     expect(html).toContain('Attach image or file');
     expect(html).toContain('Conversation model');
     expect(html).toContain('aria-label="Send"');

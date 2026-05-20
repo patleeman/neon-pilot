@@ -86,7 +86,7 @@ export function BrowsePathButton({
   );
 }
 
-export function ComposerActionIcon({ label, className }: { label: 'Steer' | 'Follow up' | 'Parallel'; className?: string }) {
+export function ComposerActionIcon({ label, className }: { label: 'Steer' | 'Follow up'; className?: string }) {
   if (label === 'Follow up') {
     return (
       <svg
@@ -103,29 +103,6 @@ export function ComposerActionIcon({ label, className }: { label: 'Steer' | 'Fol
       >
         <path d="M9 14 4 9l5-5" />
         <path d="M20 20c0-6-4-11-11-11H4" />
-      </svg>
-    );
-  }
-
-  if (label === 'Parallel') {
-    return (
-      <svg
-        className={className}
-        width="13"
-        height="13"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M7 7h10" />
-        <path d="M7 12h10" />
-        <path d="M7 17h10" />
-        <path d="m15 5 4 2-4 2" />
-        <path d="m9 15-4 2 4 2" />
       </svg>
     );
   }

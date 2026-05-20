@@ -1,6 +1,6 @@
 interface ConversationComposerSubmitState {
-  label: 'Send' | 'Steer' | 'Follow up' | 'Parallel';
-  action: 'submit' | 'parallel';
+  label: 'Send' | 'Steer' | 'Follow up';
+  action: 'submit';
   behavior?: 'followUp';
 }
 
@@ -43,14 +43,9 @@ export function resolveConversationComposerSubmitState(
   isStreaming: boolean,
   altKeyHeld: boolean,
   queuesFollowUpsWhenIdle = false,
-  parallelKeyHeld = false,
 ): ConversationComposerSubmitState {
   if (!isStreaming) {
     if (queuesFollowUpsWhenIdle) {
-      if (!altKeyHeld && parallelKeyHeld) {
-        return { label: 'Parallel', action: 'parallel' };
-      }
-
       return { label: 'Follow up', action: 'submit', behavior: 'followUp' };
     }
 
@@ -59,10 +54,6 @@ export function resolveConversationComposerSubmitState(
 
   if (altKeyHeld) {
     return { label: 'Follow up', action: 'submit', behavior: 'followUp' };
-  }
-
-  if (parallelKeyHeld) {
-    return { label: 'Parallel', action: 'parallel' };
   }
 
   return { label: 'Steer', action: 'submit' };

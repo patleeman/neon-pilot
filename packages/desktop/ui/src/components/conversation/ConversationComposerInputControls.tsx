@@ -40,7 +40,6 @@ export function ConversationComposerInputControls({
   composerQuestionSubmitting,
   composerSubmitLabel,
   composerAltHeld,
-  composerParallelHeld,
   onFilesSelected,
   onInputChange,
   onRememberComposerSelection,
@@ -78,7 +77,6 @@ export function ConversationComposerInputControls({
   composerQuestionSubmitting: boolean;
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
-  composerParallelHeld: boolean;
   onFilesSelected: (files: File[]) => void;
   onInputChange: (value: string, textarea: HTMLTextAreaElement) => void;
   onRememberComposerSelection: (textarea: HTMLTextAreaElement) => void;
@@ -92,7 +90,7 @@ export function ConversationComposerInputControls({
   onToggleGoal: () => void;
   onInsertComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
-  onSubmitComposerActionForModifiers: (altKeyHeld: boolean, parallelKeyHeld: boolean) => void;
+  onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
 }) {
   const { composerControls = [], composerInputTools } = useExtensionRegistry();
@@ -196,7 +194,7 @@ export function ConversationComposerInputControls({
             title={
               pendingAskUserQuestion
                 ? '1-9 selects the current answer. Tab/Shift+Tab or ←/→ moves between questions. Enter selects or submits. Ctrl+C clears the composer.'
-                : 'Ctrl+C clears the composer. Ctrl/⌘+Enter starts a parallel prompt while the conversation is busy. Alt+Enter queues a follow up. ↑/↓ recalls recent prompts.'
+                : 'Ctrl+C clears the composer. Alt+Enter queues a follow up while the conversation is busy. ↑/↓ recalls recent prompts.'
             }
             style={{ minHeight: '44px', maxHeight: '160px', WebkitOverflowScrolling: 'touch' }}
           />
@@ -242,7 +240,6 @@ export function ConversationComposerInputControls({
             composerQuestionSubmitting={composerQuestionSubmitting}
             composerSubmitLabel={composerSubmitLabel}
             composerAltHeld={composerAltHeld}
-            composerParallelHeld={composerParallelHeld}
             onInsertComposerText={onInsertComposerText}
             onSubmitComposerQuestion={onSubmitComposerQuestion}
             onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}

@@ -7,7 +7,7 @@ import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { cx } from '../ui';
 import { ComposerActionIcon } from './ConversationComposerChrome';
 
-export type ConversationComposerSubmitLabel = 'Send' | 'Steer' | 'Follow up' | 'Parallel';
+export type ConversationComposerSubmitLabel = 'Send' | 'Steer' | 'Follow up';
 
 export function ConversationComposerActions({
   composerDisabled,
@@ -20,7 +20,6 @@ export function ConversationComposerActions({
   composerQuestionSubmitting,
   composerSubmitLabel,
   composerAltHeld,
-  composerParallelHeld,
   onInsertComposerText,
   onSubmitComposerQuestion,
   onSubmitComposerActionForModifiers,
@@ -36,10 +35,9 @@ export function ConversationComposerActions({
   composerQuestionSubmitting: boolean;
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
-  composerParallelHeld: boolean;
   onInsertComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
-  onSubmitComposerActionForModifiers: (altKeyHeld: boolean, parallelKeyHeld: boolean) => void;
+  onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
 }) {
   const { composerControls, toolbarActions } = useExtensionRegistry();
@@ -79,7 +77,7 @@ export function ConversationComposerActions({
   );
 
   const streamingSubmitLabel: Exclude<ConversationComposerSubmitLabel, 'Send'> =
-    composerSubmitLabel === 'Follow up' || composerSubmitLabel === 'Parallel' ? composerSubmitLabel : 'Steer';
+    composerSubmitLabel === 'Follow up' ? composerSubmitLabel : 'Steer';
 
   const paClientByExtension = useRef<Map<string, ReturnType<typeof createNativeExtensionClient>>>(new Map());
   function getPaClient(extensionId: string) {
@@ -141,28 +139,16 @@ export function ConversationComposerActions({
             <button
               type="button"
               onClick={(event) => {
-                onSubmitComposerActionForModifiers(
-                  streamingSubmitLabel === 'Follow up' || composerAltHeld || event.altKey,
-                  streamingSubmitLabel === 'Parallel' || composerParallelHeld || event.ctrlKey || event.metaKey,
-                );
-              }}
-              onContextMenu={(event) => {
-                if (streamingSubmitLabel !== 'Parallel' || (!composerParallelHeld && !event.ctrlKey && !event.metaKey)) {
-                  return;
-                }
-                event.preventDefault();
-                onSubmitComposerActionForModifiers(false, true);
+                onSubmitComposerActionForModifiers(streamingSubmitLabel === 'Follow up' || composerAltHeld || event.altKey);
               }}
               disabled={composerDisabled}
               className={cx(
                 'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium transition-colors disabled:cursor-default disabled:opacity-40',
-                streamingSubmitLabel === 'Parallel'
-                  ? 'bg-steel/12 text-steel hover:bg-steel/20'
-                  : streamingSubmitLabel === 'Follow up'
-                    ? 'bg-elevated text-primary hover:bg-elevated/80'
-                    : 'bg-warning/15 text-warning hover:bg-warning/25',
+                streamingSubmitLabel === 'Follow up'
+                  ? 'bg-elevated text-primary hover:bg-elevated/80'
+                  : 'bg-warning/15 text-warning hover:bg-warning/25',
               )}
-              title={streamingSubmitLabel === 'Parallel' ? 'Parallel (Ctrl/⌘+Enter)' : streamingSubmitLabel}
+              title={streamingSubmitLabel}
               aria-label={streamingSubmitLabel}
             >
               <ComposerActionIcon label={streamingSubmitLabel} className="shrink-0" />
@@ -216,17 +202,7 @@ export function ConversationComposerActions({
         <button
           type="button"
           onClick={(event) => {
-            onSubmitComposerActionForModifiers(
-              composerSubmitLabel === 'Follow up' || composerAltHeld || event.altKey,
-              composerSubmitLabel === 'Parallel' || composerParallelHeld || event.ctrlKey || event.metaKey,
-            );
-          }}
-          onContextMenu={(event) => {
-            if (composerSubmitLabel !== 'Parallel' || (!composerParallelHeld && !event.ctrlKey && !event.metaKey)) {
-              return;
-            }
-            event.preventDefault();
-            onSubmitComposerActionForModifiers(false, true);
+            onSubmitComposerActionForModifiers(composerSubmitLabel === 'Follow up' || composerAltHeld || event.altKey);
           }}
           disabled={composerDisabled}
           className={cx(
@@ -236,11 +212,9 @@ export function ConversationComposerActions({
               ? 'bg-warning/15 text-warning hover:bg-warning/25'
               : composerSubmitLabel === 'Follow up'
                 ? 'bg-elevated text-primary hover:bg-elevated/80'
-                : composerSubmitLabel === 'Parallel'
-                  ? 'bg-steel/12 text-steel hover:bg-steel/20'
-                  : '',
+                : '',
           )}
-          title={composerSubmitLabel === 'Parallel' ? 'Parallel (Ctrl/⌘+Enter)' : composerSubmitLabel}
+          title={composerSubmitLabel}
           aria-label={composerSubmitLabel}
         >
           {composerSubmitLabel === 'Send' ? (

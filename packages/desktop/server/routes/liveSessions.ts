@@ -12,11 +12,9 @@ import {
   forkLiveSessionCapability,
   type LiveSessionCapabilityContext,
   LiveSessionCapabilityInputError,
-  manageLiveSessionParallelJobCapability,
   reloadLiveSessionCapability,
   restoreQueuedLiveSessionMessageCapability,
   resumeLiveSessionCapability,
-  submitLiveSessionParallelPromptCapability,
   submitLiveSessionPromptCapability,
   takeOverLiveSessionCapability,
 } from '../conversations/liveSessionCapability.js';
@@ -199,64 +197,6 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
       return;
     }
     res.status(500).json({ error: String(err) });
-  }
-}
-
-export async function handleLiveSessionParallelPrompt(req: Request, res: Response): Promise<void> {
-  try {
-    const result = await submitLiveSessionParallelPromptCapability(
-      {
-        conversationId: req.params.id,
-        text: typeof req.body?.text === 'string' ? req.body.text : '',
-        images: readPromptImages(req.body?.images),
-        attachmentRefs: req.body?.attachmentRefs,
-        contextMessages: req.body?.contextMessages,
-        relatedConversationIds: req.body?.relatedConversationIds,
-        surfaceId: readRequestSurfaceId(req.body),
-      },
-      getLiveSessionCapabilityContext(),
-    );
-    res.json(result);
-  } catch (err) {
-    logError('request handler error', {
-      message: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    if (err instanceof LiveSessionCapabilityInputError) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    if (writeLiveConversationControlError(res, err)) {
-      return;
-    }
-    res.status(500).json({ error: String(err) });
-  }
-}
-
-export async function handleLiveSessionParallelJobAction(req: Request, res: Response): Promise<void> {
-  try {
-    ensureRequestControlsLocalLiveConversation(req.params.id, req.body);
-    const result = await manageLiveSessionParallelJobCapability({
-      conversationId: req.params.id,
-      jobId: req.params.jobId,
-      action: (typeof req.body?.action === 'string' ? req.body.action : '') as 'importNow' | 'skip' | 'cancel',
-    });
-    res.json(result);
-  } catch (err) {
-    logError('request handler error', {
-      message: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
-    if (err instanceof LiveSessionCapabilityInputError) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    if (writeLiveConversationControlError(res, err)) {
-      return;
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    const status = message.includes('Parallel prompt no longer exists') ? 409 : 500;
-    res.status(status).json({ error: message });
   }
 }
 
@@ -472,8 +412,6 @@ export function registerLiveSessionRoutes(
   });
 
   router.post('/api/live-sessions/:id/prompt', handleLiveSessionPrompt);
-  router.post('/api/live-sessions/:id/parallel-prompt', handleLiveSessionParallelPrompt);
-  router.post('/api/live-sessions/:id/parallel-jobs/:jobId', handleLiveSessionParallelJobAction);
 
   router.post('/api/live-sessions/:id/bash', async (req, res) => {
     try {

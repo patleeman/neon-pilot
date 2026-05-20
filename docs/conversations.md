@@ -87,25 +87,22 @@ The send button changes behavior based on streaming state and modifier keys. You
 | ------------------------ | ----------------------------------- | ----------------------------------- |
 | Enter (no modifier)      | Send message                        | Steer (interrupts current turn)     |
 | **Alt+Enter**            | Follow-up (queues after completion) | Follow-up (queues after completion) |
-| **Ctrl+Enter / ⌘+Enter** | Parallel (runs alongside)           | Parallel (runs alongside)           |
+| **Ctrl+Enter / ⌘+Enter** | Send/steer (same as Enter)          | Send/steer (same as Enter)          |
 
-The button label reflects the current mode: **Send** → **Steer** → **Follow up** → **Parallel**.
+The button label reflects the current mode: **Send** → **Steer** → **Follow up**.
 
 ## Async Follow-Through
 
 While the agent is processing, you can queue additional messages. The composer remains active during streaming.
 
-| Mode      | How to send                                                    | What happens                                                                                                                                          |
-| --------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Steer     | Press Enter while the agent is streaming                       | Queues guidance for the current turn. It is injected after the current assistant turn finishes its tool calls, before the next LLM call.              |
-| Follow-up | Hold Option/Alt and press Enter while the agent is streaming   | Queues a new prompt after the agent completes all current work. Use this when the next instruction should not interrupt the current chain of thought. |
-| Parallel  | Hold Command/Ctrl and press Enter while the agent is streaming | Starts a side conversation from the current context. The result can be imported back into the main thread, skipped, cancelled, or opened separately.  |
+| Mode      | How to send                                                  | What happens                                                                                                                                          |
+| --------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Steer     | Press Enter while the agent is streaming                     | Queues guidance for the current turn. It is injected after the current assistant turn finishes its tool calls, before the next LLM call.              |
+| Follow-up | Hold Option/Alt and press Enter while the agent is streaming | Queues a new prompt after the agent completes all current work. Use this when the next instruction should not interrupt the current chain of thought. |
 
-When the run mode has a pending continuation (Nudge/Mission/Loop), normal submits become follow-ups. Holding Command/Ctrl still starts a parallel side conversation.
+When the run mode has a pending continuation (Nudge/Mission/Loop), normal submits become follow-ups.
 
 Queued steer and follow-up prompts appear in the queue shelf above the composer. Use `restore` to pull a queued prompt back into the composer. Press Escape to abort the active response and restore queued messages to the editor. Press Alt+Up to retrieve queued messages back.
-
-Parallel prompts appear in the Parallel shelf. A running parallel prompt can be cancelled. A completed or failed parallel prompt can be imported into the main thread, skipped, or opened as its own conversation.
 
 Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above the composer. They are tied to the saved conversation and can be fired now, cancelled, or auto-resumed when the thread is reopened.
 
