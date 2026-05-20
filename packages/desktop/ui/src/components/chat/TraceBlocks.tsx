@@ -4,6 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
 import { cx, Pill, SurfacePanel } from '../ui';
 import { readFileChangesForToolBlock } from './FileChangesToolDiff.js';
+import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
@@ -102,6 +103,8 @@ function traceSummaryTone(category: TraceClusterSummaryCategory) {
       return 'steel';
     case 'error':
       return 'danger';
+    case 'context':
+      return 'muted';
     case 'tool':
       return toolMeta(category.tool ?? category.label).tone;
   }
@@ -372,6 +375,17 @@ export function TraceClusterBlock({
                 return <SubagentBlock key={`subagent-${blockIndex}`} block={block} />;
               case 'error':
                 return <ErrorBlock key={`error-${blockIndex}`} block={block} onOpenFilePath={onOpenFilePath} />;
+              case 'context':
+              case 'summary':
+                return (
+                  <ContextShelf
+                    key={`context-${blockIndex}`}
+                    blocks={[block]}
+                    messageIndexOffset={blockIndex}
+                    onOpenFilePath={onOpenFilePath}
+                    onOpenCheckpoint={onOpenCheckpoint}
+                  />
+                );
               default:
                 return null;
             }

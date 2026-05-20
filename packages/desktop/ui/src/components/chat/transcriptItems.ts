@@ -3,12 +3,14 @@ import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { formatToolExecutionWrapperChain, readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers.js';
 import { isBackgroundShellStart } from './toolPresentation.js';
 
-export type TraceConversationBlock = Extract<MessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>;
 export type ContextConversationBlock = Extract<MessageBlock, { type: 'context' | 'summary' }>;
+export type TraceConversationBlock =
+  | Extract<MessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>
+  | ContextConversationBlock;
 
 export interface TraceClusterSummaryCategory {
   key: string;
-  kind: 'thinking' | 'tool' | 'subagent' | 'error';
+  kind: 'thinking' | 'tool' | 'subagent' | 'error' | 'context';
   label: string;
   count: number;
   tool?: string;
@@ -78,6 +80,10 @@ function summarizeTraceCluster(blocks: TraceConversationBlock[]): TraceClusterSu
       case 'error':
         addSummaryCategory(categories, { key: 'error', kind: 'error', label: 'error' });
         hasError = true;
+        break;
+      case 'context':
+      case 'summary':
+        addSummaryCategory(categories, { key: 'context', kind: 'context', label: 'context' });
         break;
       case 'tool_use': {
         const backgroundShellStart = isBackgroundShellStart(block);
@@ -159,20 +165,29 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
 
   for (const [index, block] of messages.entries()) {
     if (isTraceConversationBlock(block, standaloneTools)) {
-      flushContextBlocks();
       if (pendingTraceBlocks.length === 0) {
-        traceStartIndex = index;
+        if (pendingContextBlocks.length > 0 && contextStartIndex >= 0) {
+          traceStartIndex = contextStartIndex;
+          pendingTraceBlocks.push(...pendingContextBlocks);
+          pendingContextBlocks = [];
+          contextStartIndex = -1;
+        } else {
+          traceStartIndex = index;
+        }
       }
       pendingTraceBlocks.push(block);
       continue;
     }
 
     if (isContextConversationBlock(block)) {
-      flushTraceBlocks();
-      if (pendingContextBlocks.length === 0) {
+      if (pendingTraceBlocks.length > 0) {
+        pendingTraceBlocks.push(block);
+      } else if (pendingContextBlocks.length === 0) {
         contextStartIndex = index;
+        pendingContextBlocks.push(block);
+      } else {
+        pendingContextBlocks.push(block);
       }
-      pendingContextBlocks.push(block);
       continue;
     }
 

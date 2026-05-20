@@ -52,6 +52,32 @@ describe('chat transcript items', () => {
     expect(items[2]).toMatchObject({ type: 'message', index: 4 });
   });
 
+  it('folds context blocks adjacent to internal work into the same cluster', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', ts: '2026-03-12T18:00:00.000Z', text: 'Continue' },
+      { type: 'context', ts: '2026-03-12T18:00:01.000Z', text: 'Goal continuation', title: 'Goal continuation' },
+      { type: 'tool_use', ts: '2026-03-12T18:00:02.000Z', tool: 'read', input: { path: 'file.ts' }, output: '...', status: 'ok' },
+      { type: 'summary', ts: '2026-03-12T18:00:03.000Z', text: 'Overflow recovery compaction', kind: 'compaction' },
+      { type: 'text', ts: '2026-03-12T18:00:04.000Z', text: 'Done.' },
+    ];
+
+    const items = buildChatRenderItems(messages);
+
+    expect(items).toHaveLength(3);
+    expect(items[1]).toMatchObject({
+      type: 'trace_cluster',
+      startIndex: 1,
+      endIndex: 3,
+      summary: {
+        stepCount: 3,
+        categories: [
+          { key: 'context', kind: 'context', label: 'context', count: 2 },
+          { key: 'tool:read', kind: 'tool', label: 'read', tool: 'read', count: 1 },
+        ],
+      },
+    });
+  });
+
   it('keeps artifact tool blocks inside internal-work even when extension marks them standalone', () => {
     const standaloneTools = new Set(['artifact']);
     const messages: MessageBlock[] = [
