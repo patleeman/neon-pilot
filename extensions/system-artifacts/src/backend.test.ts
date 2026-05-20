@@ -91,6 +91,30 @@ describe('system-artifacts backend', () => {
       expect(mockInvalidate).toHaveBeenCalledWith('artifacts');
     });
 
+    it('preserves existing content when updating without content', async () => {
+      mockGet.mockReturnValue({
+        id: 'a1',
+        kind: 'html',
+        title: 'Old',
+        revision: 1,
+        updatedAt: '2025-01-01T00:00:00Z',
+        content: '<p>keep me</p>',
+      });
+      mockSave.mockReturnValue({
+        id: 'a1',
+        kind: 'html',
+        title: 'New',
+        revision: 2,
+        updatedAt: '2025-01-02T00:00:00Z',
+        content: '<p>keep me</p>',
+      });
+
+      await artifact({ action: 'save', artifactId: 'a1', title: 'New', kind: 'html' }, createCtx());
+
+      expect(mockGet).toHaveBeenCalledWith({ profile: 'test-profile', conversationId: 'conv-1', artifactId: 'a1' });
+      expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ artifactId: 'a1', content: '<p>keep me</p>' }));
+    });
+
     it('saves with explicit artifactId for updates', async () => {
       mockSave.mockReturnValue({
         id: 'a1',

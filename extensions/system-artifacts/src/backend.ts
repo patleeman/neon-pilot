@@ -70,7 +70,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
       // When updating an existing artifact, preserve current content if not provided
       let content = input.content;
       if (content === undefined && input.artifactId !== undefined) {
-        const existing = getConversationArtifact(input.artifactId, { profile, conversationId });
+        const existing = getConversationArtifact({ profile, conversationId, artifactId: input.artifactId });
         if (existing) {
           content = existing.content;
         }
