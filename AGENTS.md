@@ -13,6 +13,7 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 
 ## Prompt and knowledge rules
 
+- Use `CONTEXT.md` as the canonical glossary for product/domain vocabulary. Prefer its terms in code, docs, UI copy, and agent-facing instructions; update it immediately when a term is clarified. Keep it glossary-only: no implementation details, specs, scratch notes, or architecture decisions.
 - Never modify the system prompt from extension `before_agent_start` handlers. Use file-based instruction layers instead: repo defaults, vault root `AGENTS.md`, or cwd `AGENTS.md`.
 - Docs are for agents. Update docs whenever behavior or workflow changes.
 - Before changing feature behavior, read the owning extension README plus relevant docs from `docs/index.md`.
