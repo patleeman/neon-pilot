@@ -60,7 +60,7 @@ interface Counts {
   context: number;
 }
 
-export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
+export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [activeTab, setActiveTab] = useState<Tab>('assembly');
   const [capabilityFilter, setCapabilityFilter] = useState<CapabilityFilter>('all');
   const [query, setQuery] = useState('');
@@ -70,12 +70,12 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const result = await pa.extension.invoke('inspectPromptAssembly', {});
+      const result = await pa.extension.invoke('inspectPromptAssembly', { repoRoot: context.cwd ?? undefined });
       setData(result as InspectResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [pa]);
+  }, [context.cwd, pa]);
 
   useEffect(() => {
     void load();
@@ -83,7 +83,7 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
 
   async function toggleSkill(id: string, enabled: boolean) {
     await pa.extension.invoke('updatePromptAssemblySkillEnabled', { id, enabled });
-    const result = (await pa.extension.invoke('inspectPromptAssembly', {})) as InspectResult;
+    const result = (await pa.extension.invoke('inspectPromptAssembly', { repoRoot: context.cwd ?? undefined })) as InspectResult;
     setData(result);
   }
 
