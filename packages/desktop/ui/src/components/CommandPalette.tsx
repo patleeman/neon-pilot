@@ -204,6 +204,7 @@ export function CommandPalette() {
   const { pinnedSessions, tabs, archivedSessions, openSession, loading: sessionsLoading, refetch } = useConversations();
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<CommandPaletteScope>(THREADS_COMMAND_PALETTE_SCOPE);
+  const [anchorRect, setAnchorRect] = useState<OpenCommandPaletteDetail['anchorRect'] | null>(null);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
@@ -358,6 +359,7 @@ export function CommandPalette() {
   const openPalette = useCallback((options: OpenCommandPaletteDetail = {}) => {
     setQuery(options.query ?? '');
     setScope(options.scope ?? THREADS_COMMAND_PALETTE_SCOPE);
+    setAnchorRect(options.anchorRect ?? null);
     setCursor(0);
     setBusyItemId(null);
     setActionError(null);
@@ -700,13 +702,17 @@ export function CommandPalette() {
       return;
     }
 
+    if (anchorRect) {
+      return;
+    }
+
     const handle = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 0);
 
     return () => window.clearTimeout(handle);
-  }, [open]);
+  }, [anchorRect, open]);
 
   useEffect(() => {
     if (!open) {
@@ -867,6 +873,11 @@ export function CommandPalette() {
     return null;
   }
 
+  const anchoredPanelWidth = anchorRect ? Math.min(Math.max(anchorRect.width, 560), window.innerWidth - 32) : undefined;
+  const anchoredPanelLeft =
+    anchorRect && anchoredPanelWidth
+      ? Math.min(Math.max(16, anchorRect.left + anchorRect.width / 2 - anchoredPanelWidth / 2), window.innerWidth - anchoredPanelWidth - 16)
+      : undefined;
   let runningIndex = -1;
 
   return (
@@ -874,11 +885,11 @@ export function CommandPalette() {
       className="ui-overlay-backdrop"
       data-command-palette="true"
       style={{
-        background: 'color-mix(in srgb, rgb(var(--color-base)) 62%, transparent)',
-        backdropFilter: 'blur(8px)',
+        background: 'transparent',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '5.5rem 1.75rem 1.75rem',
+        padding: anchorRect ? 0 : '5.5rem 1.75rem 1.75rem',
+        pointerEvents: 'none',
       }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -892,33 +903,40 @@ export function CommandPalette() {
         aria-label="Command palette"
         className="ui-dialog-shell"
         style={{
-          maxWidth: '560px',
+          position: anchorRect ? 'fixed' : undefined,
+          left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
+          top: anchorRect ? `${anchorRect.top + anchorRect.height + 6}px` : undefined,
+          width: anchoredPanelWidth !== undefined ? `${anchoredPanelWidth}px` : undefined,
+          pointerEvents: 'auto',
+          maxWidth: anchorRect ? undefined : '560px',
           maxHeight: 'min(560px, calc(100vh - 7rem))',
           overscrollBehavior: 'contain',
         }}
       >
-        <div className="border-b border-border-subtle px-4 py-3.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[13px] text-dim">⌕</span>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setCursor(0);
-                setActionError(null);
-                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-              }}
-              placeholder={searchPlaceholder}
-              aria-label="Search command palette"
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-primary placeholder:text-dim outline-none"
-            />
-            <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
-              {macPlatform ? '⌘K' : 'Ctrl+K'}
-            </span>
-          </div>
+        <div className={cx('border-b border-border-subtle px-4 py-3.5', anchorRect && 'pt-3 pb-2.5')}>
+          {!anchorRect && (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[13px] text-dim">⌕</span>
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCursor(0);
+                  setActionError(null);
+                  setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
+                }}
+                placeholder={searchPlaceholder}
+                aria-label="Search command palette"
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-primary placeholder:text-dim outline-none"
+              />
+              <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
+                {macPlatform ? '⌘K' : 'Ctrl+K'}
+              </span>
+            </div>
+          )}
 
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className={cx('flex items-center justify-between gap-3', !anchorRect && 'mt-3')}>
             <div className="inline-flex items-center gap-1 rounded-md bg-surface p-0.5">
               {scopeOptions.map((option) => (
                 <button

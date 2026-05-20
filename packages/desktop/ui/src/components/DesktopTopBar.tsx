@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
@@ -115,6 +115,8 @@ export function DesktopTopBar({
 }) {
   const location = useLocation();
   const { topBarElements } = useExtensionRegistry();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [navigation, setNavigation] = useState<DesktopNavigationState>({
     canGoBack: false,
     canGoForward: false,
@@ -185,6 +187,34 @@ export function DesktopTopBar({
   const environmentBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : 'Local';
   const environmentBadgeTitle = environment?.launchMode === 'testing' ? 'Launched from the command line' : environment?.activeHostSummary;
 
+  function openPaletteFromSearch(query = searchQuery) {
+    const rect = searchInputRef.current?.getBoundingClientRect();
+    window.dispatchEvent(
+      new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
+        detail: {
+          query,
+          anchorRect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined,
+        },
+      }),
+    );
+  }
+
+  useEffect(() => {
+    function handlePaletteShortcut(event: Event) {
+      const detail = (event as CustomEvent<{ anchorRect?: unknown; query?: string }>).detail;
+      if (detail?.anchorRect) return;
+      event.stopImmediatePropagation();
+      const input = searchInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+      window.requestAnimationFrame(() => openPaletteFromSearch(detail?.query ?? searchQuery));
+    }
+
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
+  }, [searchQuery]);
+
   return (
     <div className="ui-desktop-top-bar">
       <div className="ui-desktop-top-bar__leading">
@@ -232,17 +262,25 @@ export function DesktopTopBar({
         </div>
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
-        <button
-          type="button"
-          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors hover:border-accent/25 hover:bg-surface hover:text-secondary"
+        <div
+          className="flex h-7 w-full max-w-[380px] items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2.5 text-left text-[11px] text-dim shadow-sm transition-colors focus-within:border-accent/35 hover:border-accent/25 hover:bg-surface hover:text-secondary"
           style={noDragStyle}
-          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: {} }))}
-          aria-label="Search threads, models, settings"
         >
           <span aria-hidden="true">⌕</span>
-          <span className="min-w-0 flex-1 truncate font-mono tracking-[0.05em]">Search threads, models, settings…</span>
+          <input
+            ref={searchInputRef}
+            value={searchQuery}
+            onFocus={() => openPaletteFromSearch()}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              openPaletteFromSearch(event.target.value);
+            }}
+            placeholder="Search threads, models, settings…"
+            aria-label="Search threads, models, settings"
+            className="min-w-0 flex-1 bg-transparent font-mono tracking-[0.05em] text-secondary placeholder:text-dim outline-none"
+          />
           <span className="ui-kbd">⌘K</span>
-        </button>
+        </div>
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
         {topBarElements.map((element) => (
