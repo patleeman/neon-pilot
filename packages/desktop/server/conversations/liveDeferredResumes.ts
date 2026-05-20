@@ -82,7 +82,7 @@ function buildPromptDeliveryForDeferredResume(entry: DeferredResumeLike): {
 
   const title = entry.title?.trim() || (entry.source.id ? `Background task ${entry.source.id} finished` : 'Background task finished');
   return {
-    visiblePrompt: `${title}. Tell the user the background task finished in one short sentence. If it failed, say that plainly. Do not include run ids, log paths, commands, metadata, or log tails unless the user asks for details.`,
+    visiblePrompt: title,
     contextMessages: [
       {
         customType: 'background_auto_resume',
@@ -117,9 +117,7 @@ function buildPromptDeliveryForDeferredResumeBatch(entries: DeferredResumeLike[]
     lines.push('', `${index + 1}. [${kind}] ${title}`);
 
     if (entry.source?.kind === 'background-run') {
-      lines.push(
-        '   Details are available in internal context. Do not expose run ids, commands, metadata, or log tails unless the user asks.',
-      );
+      lines.push('   Details are available in internal context.');
       contextMessages.push({
         customType: 'background_auto_resume',
         content: [
