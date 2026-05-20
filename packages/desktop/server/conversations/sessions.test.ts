@@ -2047,7 +2047,59 @@ describe('sessions', () => {
       expect.objectContaining({
         type: 'context',
         customType: 'parent_conversation_backlink',
-        text: expect.stringContaining('Fork conversation from parent: fork-parent-session'),
+        text: expect.stringContaining('Fork conversation from parent: Fork parent session'),
+      }),
+    );
+  });
+
+  it('anchors tombstone when parentMessageId is the bare entry id (assistant block suffix stripped)', () => {
+    // In the real fork flow, resolveSessionEntryIdFromBlockId strips block ID suffixes
+    // like "-t0" or "-x0" from assistant blocks so parentMessageId is the bare entry id.
+    // mergeTopologyBlocks must match this against block.id which still has the suffix.
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'stripped-parent',
+      title: 'Stripped parent',
+      assistantTexts: ['Reply'],
+    });
+    const childSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'stripped-child',
+      title: 'Stripped child',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    // Assistant blocks get IDs like "{entryId}-t0" (not the bare entry id).
+    const assistantBlock = readSessionBlocks('stripped-parent')?.blocks.find((b) => b.type === 'text');
+    expect(assistantBlock).toBeDefined();
+    const assistantBlockId = assistantBlock!.id; // e.g. "stripped-parent-assistant-1"
+    // Strip the "-t0" / "-x0" style suffix. In this test the entry id IS the message id
+    // as written by writeSessionFile; we derive the bare entry id to simulate the real flow.
+    // The assistant entry id in writeSessionFile is `${sessionId}-assistant-1`.
+    // readSessionBlocks rewrites assistant blocks to "{entryId}-t{n}" so we strip that suffix.
+    const bareEntryId = assistantBlockId.replace(/-[txceim]\d+$/, '');
+    expect(bareEntryId).not.toBe(assistantBlockId); // Confirm suffix was stripped.
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'stripped-parent',
+      parentMessageId: bareEntryId, // bare entry id, not the block id with suffix
+    });
+
+    const parentBlocks = readSessionBlocks('stripped-parent')?.blocks ?? [];
+    const assistantIndex = parentBlocks.findIndex((b) => b.type === 'text');
+    // Tombstone should be anchored immediately after the assistant block, not at the end.
+    expect(parentBlocks[assistantIndex + 1]).toEqual(
+      expect.objectContaining({
+        type: 'context',
+        customType: 'child_conversation_topology',
+        text: expect.stringContaining('Fork conversation created: Stripped child'),
       }),
     );
   });

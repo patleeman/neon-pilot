@@ -92,6 +92,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 
 vi.mock('../shared/appEvents.js', () => ({
   publishAppEvent: publishAppEventMock,
+  invalidateAppTopics: vi.fn(),
 }));
 
 vi.mock('./conversationAutoTitle.js', () => ({
@@ -111,6 +112,7 @@ vi.mock('./conversationRuns.js', () => ({
 
 vi.mock('./sessions.js', () => ({
   appendConversationWorkspaceMetadata: appendConversationWorkspaceMetadataMock,
+  appendConversationOffshootMetadata: vi.fn(),
   buildDisplayBlocksFromEntries: vi.fn(() => []),
   getAssistantErrorDisplayMessage: vi.fn(() => null),
   readSessionBlocksByFile: readSessionBlocksByFileMock,

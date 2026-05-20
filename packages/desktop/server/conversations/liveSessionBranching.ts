@@ -43,6 +43,15 @@ export async function branchLiveSession(
     ...options,
     cwdOverride: entry.cwd,
   });
+
+  appendConversationOffshootMetadata({
+    sessionFile: branchedSessionFile,
+    kind: 'fork',
+    parentSessionFile: sourceSessionFile,
+    parentSessionId: entry.sessionId,
+    parentMessageId: entryId,
+  });
+
   return { newSessionId: resumed.id, sessionFile: branchedSessionFile };
 }
 
