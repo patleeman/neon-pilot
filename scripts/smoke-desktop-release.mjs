@@ -208,6 +208,66 @@ async function assertDesktopApiEndpoints(cdp, child, logs) {
   }
 }
 
+/**
+ * Sample renderer process memory metrics via CDP and fail if the heap or DOM
+ * node count is growing unboundedly during an idle window. Catches infinite
+ * render loops and event-listener leaks before they ship.
+ *
+ * Strategy:
+ *   1. Force a GC pass so we get a clean baseline.
+ *   2. Record heap size + DOM node count.
+ *   3. Wait idleMs with no user activity.
+ *   4. Force GC again and re-sample.
+ *   5. Fail if heap grew by more than maxHeapGrowthMb OR node count grew by
+ *      more than maxDomNodeGrowth during the idle window.
+ */
+async function assertNoMemoryLeak(cdp, child, logs, { idleMs = 10_000, maxHeapGrowthMb = 30, maxDomNodeGrowth = 2_000 } = {}) {
+  if (child.exitCode !== null) {
+    throw new Error(`App exited before memory leak check.\n${logs()}`);
+  }
+
+  const collectGarbage = () =>
+    cdp.send('HeapProfiler.collectGarbage').catch(() => {
+      // HeapProfiler may not be available in all builds; best-effort.
+    });
+
+  const sample = async () => {
+    const result = await cdp.send('Performance.getMetrics');
+    const metrics = Object.fromEntries((result?.metrics ?? []).map(({ name, value }) => [name, value]));
+    return {
+      heapMb: (metrics.JSHeapUsedSize ?? 0) / 1024 / 1024,
+      domNodes: metrics.Nodes ?? 0,
+    };
+  };
+
+  await cdp.send('Performance.enable');
+  await collectGarbage();
+  const before = await sample();
+
+  console.log(`  memory baseline — heap: ${before.heapMb.toFixed(1)} MB, DOM nodes: ${before.domNodes}`);
+  await sleep(idleMs);
+
+  await collectGarbage();
+  const after = await sample();
+  const heapGrowthMb = after.heapMb - before.heapMb;
+  const domGrowth = after.domNodes - before.domNodes;
+
+  console.log(
+    `  memory after ${idleMs / 1000}s idle — heap: ${after.heapMb.toFixed(1)} MB (+${heapGrowthMb.toFixed(1)} MB), DOM nodes: ${after.domNodes} (+${domGrowth})`,
+  );
+
+  if (heapGrowthMb > maxHeapGrowthMb) {
+    throw new Error(
+      `Memory leak detected: JS heap grew ${heapGrowthMb.toFixed(1)} MB during a ${idleMs / 1000}s idle window (limit: ${maxHeapGrowthMb} MB).\n${logs()}`,
+    );
+  }
+  if (domGrowth > maxDomNodeGrowth) {
+    throw new Error(
+      `Memory leak detected: DOM node count grew by ${domGrowth} during a ${idleMs / 1000}s idle window (limit: ${maxDomNodeGrowth}).\n${logs()}`,
+    );
+  }
+}
+
 async function assertLiveSessionBash(cdp, child, logs, cwd) {
   if (child.exitCode !== null) {
     throw new Error(`App exited before live session bash smoke check.\n${logs()}`);
@@ -353,6 +413,12 @@ async function main() {
     await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/', 'conversation route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
     await assertLiveSessionBash(cdp, child, renderLogs, process.cwd());
+
+    // Navigate back to the main conversation route and let the app sit idle
+    // while we watch for memory growth. Catches infinite render loops and
+    // event-listener leaks that manifest as unbounded heap expansion.
+    await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/', 'conversation route (pre-memory check)');
+    await assertNoMemoryLeak(cdp, child, renderLogs);
 
     console.log(`Release desktop smoke test passed with isolated state root: ${stateRoot}`);
   } finally {

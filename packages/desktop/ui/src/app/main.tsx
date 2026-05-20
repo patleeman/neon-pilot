@@ -1,3 +1,7 @@
+// Must be first — patches React.createElement before any component is imported.
+// eslint-disable-next-line simple-import-sort/imports
+import './wdyr.ts';
+
 import '@fontsource/geist/400.css';
 import '@fontsource/geist/500.css';
 import '@fontsource/geist/600.css';
