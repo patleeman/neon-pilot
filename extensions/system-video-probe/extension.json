@@ -70,6 +70,7 @@
     "settings": {
       "videoProbe.backend": {
         "type": "select",
+        "group": "Video Probe",
         "title": "Backend",
         "description": "Which backend to use for video analysis.",
         "enum": ["openrouter", "local"],
@@ -78,6 +79,7 @@
       },
       "videoProbe.openrouterModel": {
         "type": "string",
+        "group": "Video Probe",
         "title": "OpenRouter model",
         "description": "OpenRouter model ID for video analysis.",
         "default": "google/gemini-2.5-flash"
