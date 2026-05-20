@@ -10,6 +10,7 @@ import {
   OPEN_SESSION_IDS_STORAGE_KEY,
   PINNED_SESSION_IDS_STORAGE_KEY,
 } from '../local/localSettings.js';
+import { resetLocalWriteGrace } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
 import { useConversations } from './useConversations.js';
 
@@ -141,6 +142,7 @@ describe('useConversations', () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    resetLocalWriteGrace();
     latestHookResult = null;
   });
 

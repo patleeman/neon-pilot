@@ -17,6 +17,11 @@ export function isWithinLocalWriteGrace(): boolean {
   return Date.now() - lastLocalWriteAt < LOCAL_WRITE_GRACE_MS;
 }
 
+/** Reset the grace timer. Exposed for test isolation. */
+export function resetLocalWriteGrace(): void {
+  lastLocalWriteAt = 0;
+}
+
 export type OpenConversationDropPosition = 'before' | 'after';
 export type ConversationShelf = 'open' | 'pinned';
 
