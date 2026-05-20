@@ -86,14 +86,13 @@ async function startOneExtensionService(
 export async function startExtensionServices(
   serverContext?: ExtensionBackendServerContext,
 ): Promise<Array<{ extensionId: string; serviceId: string; ok: boolean; error?: string }>> {
-  const results: Array<{ extensionId: string; serviceId: string; ok: boolean; error?: string }> = [];
-  for (const summary of listExtensionInstallSummaries()) {
-    if (summary.status !== 'enabled') continue;
-    const entry = findExtensionEntry(summary.id);
-    for (const service of entry?.manifest.backend?.services ?? []) {
-      results.push(await startOneExtensionService(summary.id, service, serverContext));
-    }
-  }
+  const enabled = listExtensionInstallSummaries().filter((s) => s.status === 'enabled');
+  const results = await Promise.all(
+    enabled.flatMap((summary) => {
+      const entry = findExtensionEntry(summary.id);
+      return (entry?.manifest.backend?.services ?? []).map((service) => startOneExtensionService(summary.id, service, serverContext));
+    }),
+  );
   return results;
 }
 

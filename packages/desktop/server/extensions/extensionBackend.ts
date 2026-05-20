@@ -836,27 +836,30 @@ export async function runExtensionSelfTest(
  * not block other extensions from starting.
  */
 export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ extensionId: string; ok: boolean; error?: string }>> {
-  const results: Array<{ extensionId: string; ok: boolean; error?: string }> = [];
+  const enabledWithBackend = listExtensionInstallSummaries().filter((s) => s.status === 'enabled' && s.manifest.backend?.entry);
 
-  for (const summary of listExtensionInstallSummaries()) {
-    if (summary.status !== 'enabled' || !summary.manifest.backend?.entry) continue;
-    try {
-      await loadExtensionBackend(summary.id);
-      clearExtensionHealthError(summary.id);
-      results.push({ extensionId: summary.id, ok: true });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setExtensionHealthError(summary.id, message);
-      logError('extension backend health check failed', { extensionId: summary.id, message });
-      publishAppEvent({
-        type: 'notification',
-        extensionId: summary.id,
-        message: `Extension backend failed to load: ${message}`,
-        severity: 'error',
-      });
-      results.push({ extensionId: summary.id, ok: false, error: message });
-    }
-  }
+  // Load all backends in parallel — they are isolated ESM modules with no
+  // cross-extension dependencies at load time.
+  const results = await Promise.all(
+    enabledWithBackend.map(async (summary): Promise<{ extensionId: string; ok: boolean; error?: string }> => {
+      try {
+        await loadExtensionBackend(summary.id);
+        clearExtensionHealthError(summary.id);
+        return { extensionId: summary.id, ok: true };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setExtensionHealthError(summary.id, message);
+        logError('extension backend health check failed', { extensionId: summary.id, message });
+        publishAppEvent({
+          type: 'notification',
+          extensionId: summary.id,
+          message: `Extension backend failed to load: ${message}`,
+          severity: 'error',
+        });
+        return { extensionId: summary.id, ok: false, error: message };
+      }
+    }),
+  );
 
   invalidateAppTopics('extensions');
   return results;

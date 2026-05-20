@@ -31,10 +31,8 @@ export async function publishExtensionHostEvent(source: string, payload: unknown
  * are skipped.  Call after enabling an extension to wire up its subscriptions.
  */
 export async function installExtensionSubscriptions(serverContext?: ExtensionBackendServerContext): Promise<void> {
-  for (const summary of listExtensionInstallSummaries()) {
-    if (summary.status !== 'enabled') continue;
-    await installSubscriptionsForExtension(summary.id, serverContext);
-  }
+  const enabled = listExtensionInstallSummaries().filter((s) => s.status === 'enabled');
+  await Promise.all(enabled.map((s) => installSubscriptionsForExtension(s.id, serverContext)));
 }
 
 /**
