@@ -289,6 +289,7 @@ function applyAccent(accent: ThemeAccent, appearance: ThemeAppearance) {
   document.documentElement.style.setProperty('--color-hover', tokens.hover);
   document.documentElement.style.setProperty('--color-active', tokens.active);
   document.documentElement.style.setProperty('--color-accent', tokens.accent);
+  document.documentElement.style.setProperty('--color-teal', tokens.accent);
   document.documentElement.style.setProperty('--color-steel', tokens.accent);
   document.documentElement.style.setProperty('--color-mission-glow', tokens.accent);
   document.documentElement.style.setProperty('--color-streaming-glow', tokens.accent);
