@@ -82,14 +82,14 @@ function seedTestingAgentRuntimeFile(sourceFile: string, targetFile: string, opt
 }
 
 function seedTestingAuthFile(sourceFile: string, targetFile: string): void {
-  const stableAuth = readJsonRecord(sourceFile);
-  if (!stableAuth) {
+  const sourceAuth = readJsonRecord(sourceFile);
+  if (!sourceAuth) {
     return;
   }
 
-  const testingAuth = readJsonRecord(targetFile) ?? {};
+  const variantAuth = readJsonRecord(targetFile) ?? {};
   mkdirSync(dirname(targetFile), { recursive: true });
-  writeJsonRecord(targetFile, { ...testingAuth, ...stableAuth });
+  writeJsonRecord(targetFile, { ...sourceAuth, ...variantAuth });
 }
 
 function writeJsonRecord(filePath: string, record: Record<string, unknown>): void {

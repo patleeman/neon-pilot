@@ -126,14 +126,20 @@ describe('desktop runtime environment overrides', () => {
     });
   });
 
-  it('refreshes stable credentials without removing testing-only auth', () => {
+  it('seeds missing stable credentials without overwriting testing auth', () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-desktop-runtime-env-'));
     const stableAgentDir = join(root, 'personal-agent', 'pi-agent-runtime');
     const testingStateRoot = join(root, 'personal-agent-testing');
     const testingAgentDir = join(testingStateRoot, 'pi-agent-runtime');
     mkdirSync(stableAgentDir, { recursive: true });
     mkdirSync(testingAgentDir, { recursive: true });
-    writeFileSync(join(stableAgentDir, 'auth.json'), JSON.stringify({ 'openai-codex': { accessToken: 'stable-token' } }));
+    writeFileSync(
+      join(stableAgentDir, 'auth.json'),
+      JSON.stringify({
+        'openai-codex': { accessToken: 'stable-token' },
+        openrouter: { type: 'api_key', key: 'stable-openrouter-token' },
+      }),
+    );
     writeFileSync(
       join(testingAgentDir, 'auth.json'),
       JSON.stringify({
@@ -151,7 +157,8 @@ describe('desktop runtime environment overrides', () => {
     seedTestingRuntimeState(env);
 
     expect(JSON.parse(readFileSync(join(testingAgentDir, 'auth.json'), 'utf-8'))).toEqual({
-      'openai-codex': { accessToken: 'stable-token' },
+      'openai-codex': { accessToken: 'testing-token' },
+      openrouter: { type: 'api_key', key: 'stable-openrouter-token' },
       telegram: { type: 'api_key', key: 'telegram-token' },
     });
   });
