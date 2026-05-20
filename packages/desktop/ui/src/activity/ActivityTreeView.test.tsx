@@ -20,7 +20,7 @@ const items: ActivityTreeItem[] = [
   },
 ];
 
-function renderTree(renderItems: ActivityTreeItem[] = items) {
+function renderTree(renderItems: ActivityTreeItem[] = items, activeItemId?: string) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -29,6 +29,7 @@ function renderTree(renderItems: ActivityTreeItem[] = items) {
     root.render(
       <ActivityTreeView
         items={renderItems}
+        activeItemId={activeItemId}
         renderContextMenu={(item) => (
           <div role="menu" aria-label={`${item.title} actions`}>
             <button type="button" role="menuitem">
@@ -42,6 +43,23 @@ function renderTree(renderItems: ActivityTreeItem[] = items) {
 
   return {
     container,
+    rerender: (nextItems: ActivityTreeItem[] = renderItems, nextActiveItemId?: string) => {
+      act(() => {
+        root.render(
+          <ActivityTreeView
+            items={nextItems}
+            activeItemId={nextActiveItemId}
+            renderContextMenu={(item) => (
+              <div role="menu" aria-label={`${item.title} actions`}>
+                <button type="button" role="menuitem">
+                  Open
+                </button>
+              </div>
+            )}
+          />,
+        );
+      });
+    },
     unmount: () => {
       act(() => root.unmount());
       container.remove();
@@ -106,6 +124,41 @@ describe('ActivityTreeView', () => {
       });
 
       expect(container.textContent).toContain('Child branch');
+    } finally {
+      unmount();
+    }
+  });
+
+  it('auto-expands every ancestor for a selected nested branch and keeps descendants visible after selecting the parent', () => {
+    const nestedItems: ActivityTreeItem[] = [
+      { id: 'conversation:root', kind: 'conversation', title: 'Root thread', status: 'idle', metadata: { conversationId: 'root' } },
+      {
+        id: 'conversation:parent',
+        kind: 'conversation',
+        parentId: 'conversation:root',
+        title: 'Parent branch',
+        status: 'idle',
+        metadata: { conversationId: 'parent' },
+      },
+      {
+        id: 'conversation:child',
+        kind: 'conversation',
+        parentId: 'conversation:parent',
+        title: 'Nested child branch',
+        status: 'idle',
+        metadata: { conversationId: 'child' },
+      },
+    ];
+    const { container, rerender, unmount } = renderTree(nestedItems, 'conversation:child');
+
+    try {
+      expect(container.textContent).toContain('Root thread');
+      expect(container.textContent).toContain('Parent branch');
+      expect(container.textContent).toContain('Nested child branch');
+
+      rerender(nestedItems, 'conversation:parent');
+
+      expect(container.textContent).toContain('Nested child branch');
     } finally {
       unmount();
     }

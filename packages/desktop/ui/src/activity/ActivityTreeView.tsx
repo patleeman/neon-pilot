@@ -170,31 +170,59 @@ export function ActivityTreeView({
     });
   }, []);
 
-  // Auto-expand parent when navigating to a child item (e.g. fork conversations)
-  // so the child stays visible in the tree after the user navigates away.
+  const ancestorIdsById = useMemo(() => {
+    const ancestors = new Map<string, string[]>();
+    for (const item of items) {
+      const ids: string[] = [];
+      const seen = new Set<string>([item.id]);
+      let parentId = item.parentId;
+      while (parentId) {
+        if (seen.has(parentId)) break;
+        seen.add(parentId);
+        ids.push(parentId);
+        parentId = itemById.get(parentId)?.parentId;
+      }
+      ancestors.set(item.id, ids);
+    }
+    return ancestors;
+  }, [itemById, items]);
+
+  // Auto-expand the full ancestor chain when navigating to a child item (e.g.
+  // nested fork/rewind conversations) so the selected thread stays visible and
+  // remains visible after moving between related parent/child threads.
   useEffect(() => {
     if (!activeItemId) return;
-    const activeItem = itemById.get(activeItemId);
-    if (!activeItem?.parentId) return;
-    const parent = itemById.get(activeItem.parentId);
-    if (!parent || parent.kind === 'group') return;
+    const ancestorIds = (ancestorIdsById.get(activeItemId) ?? []).filter((id) => itemById.get(id)?.kind !== 'group');
+    if (ancestorIds.length === 0) return;
     setExpandedIds((current) => {
-      if (current.has(activeItem.parentId!)) return current;
+      if (ancestorIds.every((id) => current.has(id))) return current;
       const next = new Set(current);
-      next.add(activeItem.parentId!);
+      for (const id of ancestorIds) next.add(id);
       return next;
     });
-  }, [activeItemId, itemById]);
+  }, [activeItemId, ancestorIdsById, itemById]);
 
   const visibleEntries = useMemo(
     () =>
       pathModel.entries.filter(({ item, path }) => {
         if (!item.parentId) return true;
-        const parent = itemById.get(item.parentId);
-        if (parent?.kind === 'group') return !(collapsedGroupItemIds ?? collapsedGroupIds).has(parent.id);
-        return expandedIds.has(item.parentId) || path === selectedPath || Boolean(selectedPath?.startsWith(`${path}/`));
+        const ancestorIds = ancestorIdsById.get(item.id) ?? [];
+        for (const ancestorId of ancestorIds) {
+          const ancestor = itemById.get(ancestorId);
+          if (!ancestor) return true;
+          if (ancestor.kind === 'group') {
+            if ((collapsedGroupItemIds ?? collapsedGroupIds).has(ancestor.id)) return false;
+            continue;
+          }
+          const ancestorPath = pathModel.pathById.get(ancestor.id);
+          if (expandedIds.has(ancestor.id) || path === selectedPath || Boolean(ancestorPath && selectedPath?.startsWith(ancestorPath))) {
+            continue;
+          }
+          return false;
+        }
+        return true;
       }),
-    [collapsedGroupIds, collapsedGroupItemIds, expandedIds, itemById, pathModel.entries, selectedPath],
+    [ancestorIdsById, collapsedGroupIds, collapsedGroupItemIds, expandedIds, itemById, pathModel.entries, pathModel.pathById, selectedPath],
   );
 
   function getDropPosition(event: DragEvent<HTMLElement>): ActivityTreeDropPosition {

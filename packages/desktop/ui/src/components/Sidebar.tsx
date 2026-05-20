@@ -2307,12 +2307,52 @@ export function Sidebar() {
   );
   const activityTreeSessions = useMemo(() => {
     const byId = new Map<string, SessionMeta>();
+    const allConversationSessions = (sessions ?? []).map((session) => {
+      const liveTitle = liveTitles.get(session.id);
+      return liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
+    });
+    const allSessionsById = new Map(allConversationSessions.map((session) => [session.id, session] as const));
+    const childSessionIdsByParentId = new Map<string, string[]>();
+    for (const session of allConversationSessions) {
+      if (!session.parentSessionId) continue;
+      const childIds = childSessionIdsByParentId.get(session.parentSessionId) ?? [];
+      childIds.push(session.id);
+      childSessionIdsByParentId.set(session.parentSessionId, childIds);
+    }
+
+    const includeSessionAndLineage = (session: SessionMeta) => {
+      if (byId.has(session.id)) return;
+      byId.set(session.id, session);
+
+      const seenAncestors = new Set<string>([session.id]);
+      let parentSessionId = session.parentSessionId;
+      while (parentSessionId && !seenAncestors.has(parentSessionId)) {
+        seenAncestors.add(parentSessionId);
+        const parent = allSessionsById.get(parentSessionId);
+        if (!parent) break;
+        byId.set(parent.id, parent);
+        parentSessionId = parent.parentSessionId;
+      }
+
+      const descendantQueue = [...(childSessionIdsByParentId.get(session.id) ?? [])];
+      const seenDescendants = new Set<string>([session.id]);
+      while (descendantQueue.length > 0) {
+        const childId = descendantQueue.shift();
+        if (!childId || seenDescendants.has(childId)) continue;
+        seenDescendants.add(childId);
+        const child = allSessionsById.get(childId);
+        if (!child) continue;
+        byId.set(child.id, child);
+        descendantQueue.push(...(childSessionIdsByParentId.get(child.id) ?? []));
+      }
+    };
+
     for (const item of renderedConversationItems) {
-      byId.set(item.session.id, item.session);
+      includeSessionAndLineage(item.session);
     }
 
     return [...byId.values()];
-  }, [renderedConversationItems]);
+  }, [liveTitles, renderedConversationItems, sessions]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({
