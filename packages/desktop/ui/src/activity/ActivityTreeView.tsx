@@ -170,6 +170,22 @@ export function ActivityTreeView({
     });
   }, []);
 
+  // Auto-expand parent when navigating to a child item (e.g. fork conversations)
+  // so the child stays visible in the tree after the user navigates away.
+  useEffect(() => {
+    if (!activeItemId) return;
+    const activeItem = itemById.get(activeItemId);
+    if (!activeItem?.parentId) return;
+    const parent = itemById.get(activeItem.parentId);
+    if (!parent || parent.kind === 'group') return;
+    setExpandedIds((current) => {
+      if (current.has(activeItem.parentId!)) return current;
+      const next = new Set(current);
+      next.add(activeItem.parentId!);
+      return next;
+    });
+  }, [activeItemId, itemById]);
+
   const visibleEntries = useMemo(
     () =>
       pathModel.entries.filter(({ item, path }) => {
