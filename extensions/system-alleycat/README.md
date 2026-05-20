@@ -32,6 +32,26 @@ For cwd QA:
 - If Kitty sends its local default `/root`, PA maps that to the desktop default repo/root cwd instead of creating useless `/root` sessions.
 - File/cwd picker calls can use the fuzzy file search bridge; pass desktop roots such as `/Users/patrick/workingdir`.
 
+## Automated E2E coverage
+
+Run the focused mobile bridge checks before shipping compatibility changes:
+
+```bash
+pnpm run test:alleycat
+```
+
+These tests cover the hookable surface Kitty uses without requiring the native mobile app:
+
+- JSONL bridge auth rejects bad clients cleanly and accepts sidecar-authenticated clients.
+- WebSocket bearer auth behaves the same way for compatibility clients.
+- `initialize` plus follow-up JSON-RPC calls are serialized on one connection, matching mobile startup behavior.
+- Discovery/config/model/account/skills/app surfaces return renderable shapes.
+- Filesystem picker and shell/process hooks execute through the extension-facing APIs.
+- Unsupported upstream Codex hooks fail explicitly instead of returning fake success shapes that make Kitty spin.
+- The Rust sidecar validates Alleycat request framing, token/protocol rejection, single-agent advertisement, and connect session acknowledgements.
+
+Manual phone QA is still required for native app release confidence: scan the QR code, verify only **Neon Pilot** is advertised, start a thread, send a prompt, verify desktop workspace/open-thread state updates, use file picker roots, and interrupt/steer a running turn.
+
 ## Current implementation state
 
 The extension runs a PA-owned Rust iroh sidecar and forwards `connect` streams to a local JSONL Neon Pilot bridge. Its local bridge implements the Kitty-compatible conversation protocol directly:

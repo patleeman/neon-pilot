@@ -79,7 +79,7 @@ export const fs = {
     // Validate base64 by round-tripping: decode then re-encode.  Malformed
     // input (truncated, missing padding, invalid chars) silently decodes to
     // garbage bytes; this catches that case and prevents silent corruption.
-    if (decoded.toString('base64') !== dataBase64 || decoded.length === 0) {
+    if (decoded.toString('base64') !== dataBase64) {
       throw new Error('dataBase64 contains invalid base64 encoding');
     }
     writeFileSync(path, decoded);

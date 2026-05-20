@@ -456,7 +456,9 @@ export const turn = {
     // Look up by turnId when provided so we interrupt the correct turn,
     // not whichever turn was last started on this thread.
     const requestedTurnId = p?.turnId as string | undefined;
-    const turnState = requestedTurnId ? activeTurns.get(requestedTurnId) : findActiveTurnForThread(threadId);
+    const turnState = requestedTurnId
+      ? (activeTurns.get(requestedTurnId) ?? findActiveTurnForThread(threadId))
+      : findActiveTurnForThread(threadId);
     if (turnState) turnState.interrupted = true;
     conn.activeTurnThreads.delete(threadId);
 

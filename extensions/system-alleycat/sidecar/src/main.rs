@@ -62,7 +62,7 @@ struct AgentCapabilities {
     uses_direct_codex_port: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
     ListAgents {
@@ -82,7 +82,7 @@ enum Request {
     },
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Resume {
     #[allow(dead_code)]
     last_seq: u64,
@@ -188,16 +188,18 @@ async fn wait_for_dialable_endpoint(endpoint: &Endpoint) -> anyhow::Result<()> {
 }
 
 fn load_config() -> anyhow::Result<Config> {
-    let token = env::var("NEON_PILOT_ALLEYCAT_TOKEN").context("NEON_PILOT_ALLEYCAT_TOKEN is required")?;
-    let secret =
-        env::var("NEON_PILOT_ALLEYCAT_SECRET_KEY").context("NEON_PILOT_ALLEYCAT_SECRET_KEY is required")?;
+    let token =
+        env::var("NEON_PILOT_ALLEYCAT_TOKEN").context("NEON_PILOT_ALLEYCAT_TOKEN is required")?;
+    let secret = env::var("NEON_PILOT_ALLEYCAT_SECRET_KEY")
+        .context("NEON_PILOT_ALLEYCAT_SECRET_KEY is required")?;
     let secret_bytes = base64::engine::general_purpose::STANDARD
         .decode(secret.as_bytes())
         .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(secret.as_bytes()))
         .context("decoding NEON_PILOT_ALLEYCAT_SECRET_KEY")?;
     let secret_key = SecretKey::try_from(secret_bytes.as_slice())
         .map_err(|_| anyhow!("invalid NEON_PILOT_ALLEYCAT_SECRET_KEY"))?;
-    let jsonl_host = env::var("NEON_PILOT_ALLEYCAT_JSONL_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let jsonl_host =
+        env::var("NEON_PILOT_ALLEYCAT_JSONL_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let jsonl_port = env::var("NEON_PILOT_ALLEYCAT_JSONL_PORT")
         .context("NEON_PILOT_ALLEYCAT_JSONL_PORT is required")?
         .parse::<u16>()
@@ -439,6 +441,107 @@ impl Response {
             agents: None,
             session: None,
             error: Some(error.into()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn token() -> &'static str {
+        "kitty-token"
+    }
+
+    #[test]
+    fn validates_matching_protocol_version_and_token() {
+        let request = Request::ListAgents {
+            v: PROTOCOL_VERSION,
+            token: token().to_string(),
+        };
+
+        validate_request(&request, token()).expect("valid request should pass");
+    }
+
+    #[test]
+    fn rejects_protocol_mismatch_before_agent_handling() {
+        let request = Request::ListAgents {
+            v: PROTOCOL_VERSION + 1,
+            token: token().to_string(),
+        };
+
+        let error = validate_request(&request, token()).expect_err("version mismatch should fail");
+        assert!(error.to_string().contains("protocol mismatch"));
+    }
+
+    #[test]
+    fn rejects_invalid_token_before_bridge_connect() {
+        let request = Request::Connect {
+            v: PROTOCOL_VERSION,
+            token: "wrong".to_string(),
+            agent: AGENT_NAME.to_string(),
+            resume: None,
+        };
+
+        let error = validate_request(&request, token()).expect_err("wrong token should fail");
+        assert!(error.to_string().contains("invalid token"));
+    }
+
+    #[test]
+    fn advertises_only_neon_pilot_jsonl_agent() {
+        let agent = personal_agent(true);
+        let json = serde_json::to_value(Response::agents(vec![agent]))
+            .expect("agent response should serialize");
+
+        assert_eq!(json["ok"], true);
+        assert_eq!(json["agents"].as_array().expect("agents array").len(), 1);
+        assert_eq!(json["agents"][0]["name"], AGENT_NAME);
+        assert_eq!(json["agents"][0]["display_name"], "Neon Pilot");
+        assert_eq!(json["agents"][0]["wire"], "jsonl");
+        assert_eq!(
+            json["agents"][0]["capabilities"]["uses_direct_codex_port"],
+            false
+        );
+    }
+
+    #[test]
+    fn connect_session_ack_reports_fresh_or_resumed_attachment() {
+        let fresh =
+            serde_json::to_value(Response::ok_with_session(None)).expect("fresh session response");
+        assert_eq!(fresh["ok"], true);
+        assert_eq!(fresh["session"]["attached"], "fresh");
+        assert_eq!(fresh["session"]["current_seq"], 0);
+        assert_eq!(fresh["session"]["floor_seq"], 0);
+
+        let resumed =
+            serde_json::to_value(Response::ok_with_session(Some(Resume { last_seq: 12 })))
+                .expect("resumed session response");
+        assert_eq!(resumed["session"]["attached"], "resumed");
+    }
+
+    #[tokio::test]
+    async fn length_prefixed_json_frames_round_trip() {
+        let (mut client, mut server) = tokio::io::duplex(1024);
+        let request = Request::RestartAgent {
+            v: PROTOCOL_VERSION,
+            token: token().to_string(),
+            agent: AGENT_NAME.to_string(),
+        };
+
+        let write = write_json_frame(&mut client, &request);
+        let read = read_json_frame::<Request, _>(&mut server);
+        let (_, decoded) = tokio::join!(write, read);
+        match decoded.expect("request should decode") {
+            Request::RestartAgent {
+                v,
+                token: decoded_token,
+                agent,
+            } => {
+                assert_eq!(v, PROTOCOL_VERSION);
+                assert_eq!(decoded_token, token());
+                assert_eq!(agent, AGENT_NAME);
+            }
+            _ => panic!("unexpected request variant"),
         }
     }
 }

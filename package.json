@@ -47,6 +47,7 @@
     "extensions:bundle-report": "node scripts/report-extension-bundles.mjs",
     "fix": "pnpm run fmt:fix && pnpm run lint:fix",
     "test": "vitest run",
+    "test:alleycat": "vitest run extensions/system-alleycat/src/codexJsonRpcServer.test.ts extensions/system-alleycat/src/protocol/*.test.ts && cargo test --manifest-path extensions/system-alleycat/sidecar/Cargo.toml",
     "clean": "pnpm -r run clean --if-present && rm -f tsconfig.tsbuildinfo",
     "ab:run": "node scripts/agent-browser-session.mjs run",
     "ab:cleanup": "node scripts/agent-browser-session.mjs cleanup",
