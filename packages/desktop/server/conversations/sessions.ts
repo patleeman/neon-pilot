@@ -24,7 +24,7 @@ import {
   readFileSync,
   readSync,
   statSync,
-  writeFileSync,
+  writeFile,
 } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
@@ -367,6 +367,12 @@ let persistedIndexJson: string | null = null;
 // Set to true whenever the session cache is mutated so persistSessionIndex() can
 // skip the expensive JSON build-and-compare on unchanged scans.
 let sessionCacheDirty = false;
+let pendingIndexWrite: Promise<void> | null = null;
+
+/** Flush any pending async session index write. Use in tests only. */
+export async function flushSessionIndexWrite(): Promise<void> {
+  if (pendingIndexWrite) await pendingIndexWrite;
+}
 
 const MAX_SESSION_DETAIL_CACHE_ENTRIES = 24;
 const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -2151,14 +2157,16 @@ function persistSessionIndex(): void {
     return;
   }
 
-  try {
-    mkdirSync(dirname(indexFile), { recursive: true });
-    writeFileSync(indexFile, nextJson);
-    persistedIndexJson = nextJson;
-    sessionCacheDirty = false;
-  } catch {
-    // Ignore persistence failures; the in-memory cache still helps.
-  }
+  // Update in-memory state synchronously so re-entrant calls skip redundant work,
+  // then write to disk asynchronously to avoid blocking the worker thread.
+  persistedIndexJson = nextJson;
+  sessionCacheDirty = false;
+  mkdirSync(dirname(indexFile), { recursive: true });
+  pendingIndexWrite = new Promise<void>((resolve) => {
+    writeFile(indexFile, nextJson, () => {
+      resolve(); // Ignore write failures — in-memory cache is the source of truth.
+    });
+  });
 }
 
 function resolveSessionFileCwdSlug(filePath: string): string {

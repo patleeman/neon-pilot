@@ -10,6 +10,7 @@ import {
   buildAppendOnlySessionDetailResponse,
   buildDisplayBlocksFromEntries,
   clearSessionCaches,
+  flushSessionIndexWrite,
   listSessions,
   readSessionBlock,
   readSessionBlocks,
@@ -1772,7 +1773,7 @@ describe('sessions', () => {
     expect(readSessionBlocks('session-renamed-twice')?.meta.title).toBe('Updated manual title');
   });
 
-  it('writes a persistent session index and reuses it after cache clear', () => {
+  it('writes a persistent session index and reuses it after cache clear', async () => {
     const sessionsDir = createTempSessionsDir();
     const indexFile = configureSessionEnv(sessionsDir);
 
@@ -1791,6 +1792,7 @@ describe('sessions', () => {
     const first = listSessions();
     expect(first[0]?.title).toBe('Persistent title');
     expect(first[0]?.workspaceCwd).toBe('/tmp/persistent-project');
+    await flushSessionIndexWrite();
     expect(existsSync(indexFile)).toBe(true);
     expect(readFileSync(indexFile, 'utf-8')).toContain('session-persist');
 
@@ -2165,7 +2167,7 @@ describe('sessions', () => {
     );
   });
 
-  it('refreshes persisted metadata after a restart when the file changes', () => {
+  it('refreshes persisted metadata after a restart when the file changes', async () => {
     const sessionsDir = createTempSessionsDir();
     const indexFile = configureSessionEnv(sessionsDir);
 
@@ -2177,6 +2179,7 @@ describe('sessions', () => {
     });
 
     expect(listSessions()[0]?.title).toBe('Before restart');
+    await flushSessionIndexWrite();
     expect(existsSync(indexFile)).toBe(true);
 
     clearSessionCaches();
@@ -2429,7 +2432,7 @@ describe('sessions', () => {
     ]);
   });
 
-  it('removes deleted session files from the cache and persistent index', () => {
+  it('removes deleted session files from the cache and persistent index', async () => {
     const sessionsDir = createTempSessionsDir();
     const indexFile = configureSessionEnv(sessionsDir);
 
@@ -2445,6 +2448,7 @@ describe('sessions', () => {
 
     expect(listSessions()).toEqual([]);
     expect(readSessionBlocks('session-3')).toBeNull();
+    await flushSessionIndexWrite();
     expect(readFileSync(indexFile, 'utf-8')).toContain('"entries":[]');
   });
 
