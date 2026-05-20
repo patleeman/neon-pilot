@@ -1347,6 +1347,7 @@
 /* ─── Neon Pilot studio theme (default) ───────────────────────────────────── */
 :root,
 :root[data-theme='light'],
+:root[data-theme='studio-light'],
 :root[data-theme='tokyo-night-light'] {
   color-scheme: light;
   --color-base: 247 246 241;
@@ -1379,6 +1380,7 @@
 
 /* ─── Adapted Tokyo Night dark theme ──────────────────────────────────────── */
 :root[data-theme='dark'],
+:root[data-theme='studio-dark'],
 :root[data-theme='tokyo-night-dark'] {
   color-scheme: dark;
   --color-base: 12 12 8;
