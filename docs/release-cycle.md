@@ -62,17 +62,18 @@ Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*
 
 Each release command performs these steps in order:
 
-1. **Version bump** — `pnpm version` bumps the version following semver
-2. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
-3. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
-4. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
-5. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
-6. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, and packaged extension validation
-7. **Build** — builds signed desktop artifacts locally
-8. **Notarize** — submits the built `.app` for Apple notarization
-9. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
-10. **Git push** — pushes the version commit and tag to the remote
-11. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+1. **Supply-chain audit** — runs `scfw audit npm` against installed packages; blocks the release if any critical/malicious findings are reported. Requires [`scfw`](https://github.com/DataDog/supply-chain-firewall) installed via `pipx install scfw`. Bypassable with `NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1` in emergencies.
+2. **Version bump** — `pnpm version` bumps the version following semver
+3. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
+4. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
+5. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
+6. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
+7. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, and packaged extension validation
+8. **Build** — builds signed desktop artifacts locally
+9. **Notarize** — submits the built `.app` for Apple notarization
+10. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
+11. **Git push** — pushes the version commit and tag to the remote
+12. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
 
 ## Automated Smoke Test
 

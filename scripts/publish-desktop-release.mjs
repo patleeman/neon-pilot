@@ -262,6 +262,38 @@ function ensureGhAuth() {
   run('gh', ['auth', 'status']);
 }
 
+function ensureSupplyChainAudit() {
+  const scfw = tryCapture('scfw', ['--version']);
+  if (scfw.status !== 0) {
+    fail(
+      [
+        'scfw (Supply-Chain Firewall) is not installed or not on PATH.',
+        'Install it with: pipx install scfw',
+        'Then rerun the release.',
+        'To skip this check set NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1 (not recommended).',
+      ].join('\n'),
+    );
+  }
+
+  console.log('Running supply-chain audit on installed npm packages...');
+  const audit = tryCapture('scfw', ['audit', 'npm']);
+  const output = `${audit.stdout}${audit.stderr}`.trim();
+  if (output) {
+    console.log(output);
+  }
+  if (audit.status !== 0) {
+    fail(
+      [
+        'Supply-chain audit found critical issues in installed npm packages.',
+        'Resolve the flagged packages before publishing a release.',
+        'To skip this check set NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1 (not recommended).',
+      ].join('\n'),
+    );
+  }
+
+  console.log('Supply-chain audit passed.');
+}
+
 function ensureReleaseRepoExists(releaseRepo) {
   const repoView = tryCapture('gh', ['repo', 'view', releaseRepo, '--json', 'name,visibility,url']);
   if (repoView.status !== 0) {
@@ -708,6 +740,9 @@ const releaseRepo = env.NEON_PILOT_RELEASE_REPO;
 
 ensureCleanRepo();
 ensureTagAtHead(tag);
+if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT)) {
+  ensureSupplyChainAudit();
+}
 ensureSigningIdentity(env);
 ensureNotarizationCredentials(env);
 ensureGhAuth();
