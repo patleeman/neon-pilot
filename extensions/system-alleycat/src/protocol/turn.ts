@@ -442,7 +442,7 @@ export const turn = {
     await ctx.conversations.ensureLive(threadId, typeof p?.cwd === 'string' ? { cwd: p.cwd } : undefined);
     await markThreadControlledRemotely(threadId, ctx, { active: false });
     await ctx.conversations.sendMessage(threadId, text, images.length > 0 ? { steer: true, images } : { steer: true });
-    return { turnId: threadId };
+    return { turnId: findActiveTurnForThread(threadId)?.turnId ?? null, threadId };
   }) as MethodHandler,
 
   /**

@@ -73,12 +73,13 @@ export const threadMemoryMode = {
 const processes = new Map<string, { pid: number | null; kill: () => void; stdout: string; stderr: string; exit: unknown }>();
 
 export const processStubs = {
-  spawn: (async (params, ctx) => {
+  spawn: (async (params, ctx, _conn, notify) => {
     const p = paramsObject(params);
     const command = typeof p.command === 'string' ? p.command : undefined;
     if (!command) throw new Error('command is required');
     const args = Array.isArray(p.args) ? p.args.filter((arg): arg is string => typeof arg === 'string') : [];
     const id = `proc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    processes.set(id, { pid: null, kill: () => undefined, stdout: '', stderr: '', exit: null });
     const child = await ctx.shell.spawn({
       command,
       args,
@@ -87,17 +88,24 @@ export const processStubs = {
       onStdout: (chunk) => {
         const proc = processes.get(id);
         if (proc) proc.stdout += chunk;
+        notify('process/outputDelta', { processId: id, stream: 'stdout', dataBase64: Buffer.from(chunk).toString('base64') });
       },
       onStderr: (chunk) => {
         const proc = processes.get(id);
         if (proc) proc.stderr += chunk;
+        notify('process/outputDelta', { processId: id, stream: 'stderr', dataBase64: Buffer.from(chunk).toString('base64') });
       },
       onExit: (event) => {
         const proc = processes.get(id);
         if (proc) proc.exit = event;
+        notify('process/exited', { processId: id, ...event });
       },
     });
-    processes.set(id, { pid: child.pid, kill: child.kill, stdout: '', stderr: '', exit: null });
+    const proc = processes.get(id);
+    if (proc) {
+      proc.pid = child.pid;
+      proc.kill = child.kill;
+    }
     return { processId: id, pid: child.pid, executionWrappers: child.executionWrappers };
   }) as MethodHandler,
   writeStdin: unsupported('process/writeStdin', 'managed extension processes do not expose stdin handles yet'),

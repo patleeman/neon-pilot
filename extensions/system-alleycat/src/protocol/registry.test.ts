@@ -53,10 +53,10 @@ function ctx(): ExtensionBackendContext {
   } as unknown as ExtensionBackendContext;
 }
 
-async function call(method: string, params: unknown, context = ctx()) {
+async function call(method: string, params: unknown, context = ctx(), notify = vi.fn()) {
   const handler = REGISTERED_HANDLERS[method];
   expect(handler, `${method} should be registered`).toBeTypeOf('function');
-  return await handler(params, context, conn(), vi.fn());
+  return await handler(params, context, conn(), notify);
 }
 
 describe('system-alleycat protocol registry compatibility surface', () => {
@@ -103,10 +103,16 @@ describe('system-alleycat protocol registry compatibility surface', () => {
       stdout: 'ok\n',
       exitCode: 7,
     });
-    await expect(call('process/spawn', { command: 'echo', args: ['ok'] })).resolves.toMatchObject({
+    const notify = vi.fn();
+    await expect(call('process/spawn', { command: 'echo', args: ['ok'] }, ctx(), notify)).resolves.toMatchObject({
       processId: expect.stringMatching(/^proc-/),
       pid: 123,
     });
+    expect(notify).toHaveBeenCalledWith(
+      'process/outputDelta',
+      expect.objectContaining({ stream: 'stdout', dataBase64: Buffer.from('spawned\n').toString('base64') }),
+    );
+    expect(notify).toHaveBeenCalledWith('process/exited', expect.objectContaining({ code: 0, signal: null }));
   });
 
   it('returns explicit unsupported errors for hooks Neon Pilot cannot back yet', async () => {

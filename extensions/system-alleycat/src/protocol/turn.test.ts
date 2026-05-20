@@ -187,6 +187,46 @@ describe('system-alleycat turn protocol', () => {
     expect(order).toEqual(['ensureLive', 'runTurn']);
   });
 
+  it('returns the active turn id when Kitty steers an in-flight turn', async () => {
+    const ctx = makeContext();
+    const releases: Array<() => void> = [];
+    ctx.conversations.runTurn.mockImplementation(
+      async (_threadId: string, _text: string, options?: { onEvent?: (event: unknown) => void }) => {
+        await new Promise<void>((resolve) =>
+          releases.push(() => {
+            options?.onEvent?.({ type: 'turn_end' });
+            resolve();
+          }),
+        );
+        return { accepted: true };
+      },
+    );
+    const notify = vi.fn();
+
+    const started = (await turn.start(
+      { threadId: 'thread-1', input: [{ type: 'text', text: 'Hi' }] },
+      ctx as never,
+      makeConn(),
+      notify,
+    )) as {
+      turn: { id: string };
+    };
+    await flushAsyncTurnStart();
+
+    const steered = await turn.steer(
+      { threadId: 'thread-1', input: [{ type: 'text', text: 'Actually...' }] },
+      ctx as never,
+      makeConn(),
+      notify,
+    );
+
+    expect(steered).toEqual({ threadId: 'thread-1', turnId: started.turn.id });
+    expect(ctx.conversations.sendMessage).toHaveBeenLastCalledWith('thread-1', 'Actually...', { steer: true });
+
+    releases[0]?.();
+    await flushAsyncTurnStart();
+  });
+
   it('returns turn/start immediately and streams PA response events asynchronously', async () => {
     const ctx = makeContext();
     const notify = vi.fn();
