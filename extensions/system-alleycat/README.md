@@ -95,6 +95,16 @@ Compatibility notes:
 - Compatibility endpoints must either be PA-backed or fail with a clear unsupported error. Do not add silent `not_implemented` placeholders; Kitty often spins forever on fake success shapes.
 - If Kitty adds stricter Codex rendering assumptions, update the protocol mapper here rather than changing PA conversation internals.
 
+## Compatibility boundary and trust model
+
+The bridge treats a paired Kitty client as a trusted remote control surface for this desktop profile. After QR pairing, the client can exercise the same broad local capabilities Neon Pilot exposes to agents through this extension: read/write/remove/copy host files by absolute path and run shell commands through the extension shell boundary. Do not share the QR/token with untrusted clients; rotate the token from Settings if a device is lost.
+
+Compatibility handlers fall into three buckets:
+
+- **PA-backed:** conversations, workspace open/close/archive state, turns, steering/interruption, transcript reads, model/config/account discovery, skills, filesystem, command execution, and process spawn/output notifications.
+- **Probe-safe disabled:** endpoints Kitty may probe to decide whether to render optional UI, such as realtime sessions and remote-control status, return explicit disabled/status shapes rather than pretending the feature is active.
+- **Unsupported:** endpoints Neon Pilot cannot honestly back, such as MCP tool calls through Kitty, marketplace/plugin install, feedback upload, Windows sandbox setup, file watching, and interactive PTY stdin/resize, throw a stable unsupported error so mobile does not spin on fake success.
+
 ## Transport
 
 `sidecar/` contains the Rust host process. The backend launches the packaged `bin/neon-pilot-alleycat-host-<platform>-<arch>` through `ctx.shell`, passes it the Neon Pilot Alleycat token/secret and local JSONL port, then reads the sidecar ready event for the real iroh pair payload.

@@ -59,7 +59,9 @@ export const command = {
           dataBase64: Buffer.from(result.stderr).toString('base64'),
         });
       }
-      return { processId, exitCode: exitCodeFromResult(result), signal: null, stdout: result.stdout, stderr: result.stderr };
+      const exitCode = exitCodeFromResult(result);
+      notify('command/exec/exited', { processId, exitCode, signal: null });
+      return { processId, exitCode, signal: null, stdout: result.stdout, stderr: result.stderr };
     } finally {
       activeSessions.delete(processId);
     }
