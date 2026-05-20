@@ -394,7 +394,8 @@ export async function createCodexServer(options: CodexServerOptions): Promise<Co
         } catch {
           // Fall through to close.
         }
-        socket.destroy(new Error('Unauthorized JSONL bridge connection'));
+        logProtocol('jsonl unauthorized connection rejected');
+        socket.end();
         return;
       }
       enqueueJsonRpcMessage({ raw: line, conn, ctx, notify, sendJson, getHandlers });
