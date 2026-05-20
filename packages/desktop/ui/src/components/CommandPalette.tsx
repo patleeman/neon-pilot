@@ -897,9 +897,29 @@ export function CommandPalette() {
           overscrollBehavior: 'contain',
         }}
       >
-        <div className="border-b border-border-subtle px-3.5 pt-3 pb-2.5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-1 rounded-lg bg-elevated p-1">
+        <div className="border-b border-border-subtle px-4 py-3.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[13px] text-dim">⌕</span>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setCursor(0);
+                setActionError(null);
+                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
+              }}
+              placeholder={searchPlaceholder}
+              aria-label="Search command palette"
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-primary placeholder:text-dim outline-none"
+            />
+            <span className="shrink-0 rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">
+              {macPlatform ? '⌘K' : 'Ctrl+K'}
+            </span>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-1 rounded-md bg-surface p-0.5">
               {scopeOptions.map((option) => (
                 <button
                   key={option.value}
@@ -912,8 +932,8 @@ export function CommandPalette() {
                     window.requestAnimationFrame(() => inputRef.current?.focus());
                   }}
                   className={cx(
-                    'rounded-md px-2.5 py-1 text-[11px] transition-colors',
-                    scope === option.value ? 'bg-surface text-primary' : 'text-dim hover:bg-surface/60 hover:text-secondary',
+                    'rounded px-2 py-0.5 font-mono text-[10px] transition-colors',
+                    scope === option.value ? 'bg-panel text-primary shadow-sm' : 'text-dim hover:bg-panel/70 hover:text-secondary',
                   )}
                 >
                   {option.label}
@@ -921,30 +941,11 @@ export function CommandPalette() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] text-dim/70 font-mono">
+            <div className="flex items-center gap-2 font-mono text-[10px] text-dim/70">
               <span>{visibleCount > 0 ? `${cursor + 1}/${visibleCount}` : '0/0'}</span>
-              <span>tab switches</span>
               <span>↵ open</span>
               <span>esc close</span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-elevated px-3 py-2 min-w-0">
-            <span className="text-[12px] text-dim">⌕</span>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setCursor(0);
-                setActionError(null);
-                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-              }}
-              placeholder={searchPlaceholder}
-              aria-label="Search command palette"
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-primary placeholder:text-dim outline-none"
-            />
-            <span className="shrink-0 text-[10px] text-dim/70 font-mono">{macPlatform ? '⌘K' : 'Ctrl+K'}</span>
           </div>
 
           {actionError && <p className="pt-2 text-[11px] text-danger">{actionError}</p>}
@@ -998,8 +999,8 @@ export function CommandPalette() {
                     }}
                     disabled={item.disabled || isBusy}
                     className={cx(
-                      'group flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors disabled:cursor-not-allowed',
-                      isSelected ? 'bg-elevated' : 'hover:bg-elevated/50',
+                      'group flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed',
+                      isSelected ? 'bg-accent/12 text-accent' : 'hover:bg-surface/70',
                       item.disabled && 'opacity-55',
                     )}
                     title={item.subtitle ?? item.title}
@@ -1012,7 +1013,7 @@ export function CommandPalette() {
                     />
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] leading-snug text-primary">{item.title}</p>
+                      <p className={cx('truncate text-[13.5px] leading-snug', isSelected ? 'text-accent' : 'text-primary')}>{item.title}</p>
                       {secondaryText && (
                         <p className="mt-0.5 truncate text-[11px] text-secondary" title={secondaryText}>
                           {secondaryText}
