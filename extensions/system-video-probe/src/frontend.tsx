@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type ServerHealth = { reachable: boolean; models?: string[] };
 type ProcessState = { serverPid: number | null; serverRunning: boolean; setupPid: number | null; setupRunning: boolean };
-type Settings = { backend: 'openrouter' | 'local'; cloudModel: string; localModel: string };
+type Settings = { backend: 'openrouter' | 'local'; cloudModel: string; localModel: string; hfToken: string };
 
 type Status = {
   ok: boolean;
@@ -61,6 +61,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
   const [localModel, setLocalModel] = useState('');
+  const [hfToken, setHfToken] = useState('');
   const [settingsDirty, setSettingsDirty] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLPreElement | null>(null);
@@ -73,6 +74,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
       if (!settingsDirty) {
         setCloudModel((current) => current || result.settings.cloudModel);
         setLocalModel((current) => current || result.settings.localModel);
+        setHfToken((current) => current || result.settings.hfToken);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -98,6 +100,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     if (status && !settingsDirty) {
       if (!cloudModel) setCloudModel(status.settings.cloudModel);
       if (!localModel) setLocalModel(status.settings.localModel);
+      if (!hfToken) setHfToken(status.settings.hfToken);
     }
   }, [status, settingsDirty, cloudModel, localModel]);
 
@@ -220,7 +223,19 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
             <div className="flex items-center justify-between gap-3 text-sm">
               <div className="min-w-0 text-secondary">
                 <span className="font-medium text-primary">Installing mlx-vlm and downloading model…</span>
-                <div className="mt-1 text-xs text-dim">~18 GB download. Check the log below for progress.</div>
+                <div className="mt-1 text-xs text-dim">
+                  ~18 GB download. Check the log below for progress.
+                  {!status?.settings.hfToken ? (
+                    <span>
+                      {' '}
+                      Add a{' '}
+                      <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer" className="text-accent underline">
+                        HF token
+                      </a>{' '}
+                      below to skip rate limits and speed things up.
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
@@ -342,7 +357,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Field label="Model">
                 <div className="flex gap-2">
                   <TextInput
@@ -357,6 +372,29 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                     Save
                   </ToolbarButton>
                 </div>
+              </Field>
+              <Field label="Hugging Face Token (optional)">
+                <div className="flex gap-2">
+                  <TextInput
+                    type="password"
+                    value={hfToken}
+                    placeholder="hf_..."
+                    onChange={(e) => {
+                      setHfToken(e.target.value);
+                      setSettingsDirty(true);
+                    }}
+                  />
+                  <ToolbarButton disabled={!settingsDirty} onClick={() => void saveSettings({ hfToken })}>
+                    Save
+                  </ToolbarButton>
+                </div>
+                <span className="mt-1 block text-xs text-dim">
+                  Speeds up downloads significantly. Get one at{' '}
+                  <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer" className="text-accent underline">
+                    huggingface.co/settings/tokens
+                  </a>
+                  . Read-only scope is enough.
+                </span>
               </Field>
             </div>
           </section>

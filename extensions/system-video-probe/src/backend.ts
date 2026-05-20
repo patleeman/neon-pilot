@@ -47,12 +47,14 @@ interface VideoProbeSettings {
   backend: 'openrouter' | 'local';
   cloudModel: string;
   localModel: string;
+  hfToken: string;
 }
 
 const DEFAULT_SETTINGS: VideoProbeSettings = {
   backend: 'openrouter',
   cloudModel: 'google/gemini-2.5-flash',
   localModel: MODEL_ID,
+  hfToken: '',
 };
 
 function loadSettings(): VideoProbeSettings {
@@ -63,6 +65,7 @@ function loadSettings(): VideoProbeSettings {
       backend: raw.backend === 'local' ? 'local' : 'openrouter',
       cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : DEFAULT_SETTINGS.cloudModel,
       localModel: typeof raw.localModel === 'string' && raw.localModel.trim() ? raw.localModel.trim() : DEFAULT_SETTINGS.localModel,
+      hfToken: typeof raw.hfToken === 'string' ? raw.hfToken : '',
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -85,6 +88,7 @@ export async function writeSettings(input: unknown, _ctx: ExtensionBackendContex
     backend: raw.backend === 'local' ? 'local' : raw.backend === 'openrouter' ? 'openrouter' : current.backend,
     cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : current.cloudModel,
     localModel: typeof raw.localModel === 'string' && raw.localModel.trim() ? raw.localModel.trim() : current.localModel,
+    hfToken: typeof raw.hfToken === 'string' ? raw.hfToken : current.hfToken,
   };
   saveSettings(next);
   return { ok: true, settings: next };
@@ -96,6 +100,11 @@ export async function writeSettings(input: unknown, _ctx: ExtensionBackendContex
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function hfEnv(token: string) {
+  const base = `HF_HOME=${shellQuote(CACHE_DIR)}`;
+  return token.trim() ? `${base} HF_TOKEN=${shellQuote(token.trim())}` : base;
 }
 
 function pickPythonCommand() {
@@ -185,12 +194,14 @@ export async function setup(_input: unknown, ctx: ExtensionBackendContext) {
   const setupRunning = await isPidRunning(ctx, await readPid(ctx, SETUP_PID_KEY));
   if (setupRunning) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
   mkdirSync(CACHE_DIR, { recursive: true });
+  const { localModel, hfToken } = loadSettings();
+  const env = hfEnv(hfToken);
   const script = [
     `: > ${shellQuote(LOG_FILE)}`,
     `echo "--- setup ${new Date().toISOString()} ---" >> ${shellQuote(LOG_FILE)}`,
     `[ -x ${shellQuote(VENV_PYTHON)} ] || ${shellQuote(pickPythonCommand())} -m venv ${shellQuote(VENV_DIR)} >> ${shellQuote(LOG_FILE)} 2>&1`,
     `${shellQuote(VENV_PYTHON)} -m pip install -U pip mlx-vlm huggingface_hub >> ${shellQuote(LOG_FILE)} 2>&1`,
-    `HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(join(VENV_DIR, 'bin', 'hf'))} download ${shellQuote(MODEL_ID)} >> ${shellQuote(LOG_FILE)} 2>&1`,
+    `${env} ${shellQuote(join(VENV_DIR, 'bin', 'hf'))} download ${shellQuote(localModel)} >> ${shellQuote(LOG_FILE)} 2>&1`,
     `echo "--- setup complete ---" >> ${shellQuote(LOG_FILE)}`,
   ].join(' && ');
   const result = await ctx.shell.exec({
@@ -209,8 +220,8 @@ export async function startServer(_input: unknown, ctx: ExtensionBackendContext)
   if (!existsSync(VENV_MLX_VLM_SERVER)) {
     return { ok: false, error: 'mlx-vlm is not installed. Run setup first.', status: await status({}, ctx) };
   }
-  const { localModel } = loadSettings();
-  const command = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+  const { localModel, hfToken } = loadSettings();
+  const command = `exec env ${hfEnv(hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
     args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`],
@@ -318,7 +329,7 @@ export function createVideoProbeAgentExtension(): (pi: ExtensionAPI) => void {
           // Check server health; auto-start if installed but not running
           let health = await readServerHealth();
           if (!health.reachable && existsSync(VENV_MLX_VLM_SERVER)) {
-            const startCommand = `exec env HF_HOME=${shellQuote(CACHE_DIR)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(settings.localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+            const startCommand = `exec env ${hfEnv(settings.hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(settings.localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
             await pi.exec('sh', ['-c', `nohup sh -c ${shellQuote(startCommand)} >/dev/null 2>&1 &`]);
             // Wait up to 60s for server to come up
             for (let i = 0; i < 60; i++) {
