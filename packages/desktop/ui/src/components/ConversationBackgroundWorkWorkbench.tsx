@@ -90,52 +90,44 @@ export function ConversationBackgroundWorkRailContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 px-3 py-2">
-        <p className="ui-section-label">Background work</p>
-      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
         {!hasRuns ? (
           <div className="px-3 py-4 text-[12px] text-dim">No background commands or subagents for this conversation.</div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
             {orderedGroups.map((group) => {
               const items = grouped[group];
               if (items.length === 0) return null;
               const config = RUN_GROUP_CONFIG[group];
               return (
-                <div key={group}>
-                  <div className="flex items-center gap-2 px-1.5 py-1.5">
-                    <span className={cx('font-mono text-[10px]', config.tone)}>{config.icon}</span>
-                    <span className="ui-section-label">{config.label}</span>
-                    <span className="text-[9px] text-dim">{items.length}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    {items.map((execution) => {
-                      const selected = execution.id === activeRunId;
-                      const moment = execution.updatedAt ?? execution.startedAt ?? execution.createdAt;
-                      return (
-                        <button
-                          key={execution.id}
-                          type="button"
-                          onClick={() => onOpenRun(execution.id)}
-                          className={cx(
-                            'flex w-full min-w-0 items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20',
-                            selected ? 'bg-elevated/80 text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
-                          )}
-                          title={execution.title}
-                        >
-                          <span className={cx('mt-0.5 shrink-0 font-mono text-[10px]', config.tone)}>{config.icon}</span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[12px] font-medium text-primary">{execution.title}</span>
-                            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-dim">
-                              <span className={cx('shrink-0', executionStatusTone(execution))}>{execution.status}</span>
-                            </span>
+                <div key={group} className="contents">
+                  {items.map((execution) => {
+                    const selected = execution.id === activeRunId;
+                    const moment = execution.updatedAt ?? execution.startedAt ?? execution.createdAt;
+                    return (
+                      <button
+                        key={execution.id}
+                        type="button"
+                        onClick={() => onOpenRun(execution.id)}
+                        className={cx(
+                          'flex w-full min-w-0 items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20',
+                          selected ? 'bg-elevated/80 text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
+                        )}
+                        title={execution.title}
+                      >
+                        <span className={cx('mt-0.5 shrink-0 font-mono text-[10px]', config.tone)}>{config.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12px] font-medium text-primary">{execution.title}</span>
+                          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-dim">
+                            <span className="shrink-0">{group === 'command' ? 'command' : 'subagent'}</span>
+                            <span className="shrink-0 text-dim/60">·</span>
+                            <span className={cx('shrink-0', executionStatusTone(execution))}>{execution.status}</span>
                           </span>
-                          <span className="shrink-0 text-[10px] text-dim">{timeAgo(moment)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </span>
+                        <span className="shrink-0 text-[10px] text-dim">{timeAgo(moment)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               );
             })}
