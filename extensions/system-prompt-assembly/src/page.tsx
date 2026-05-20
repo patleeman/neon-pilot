@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@personal-agent/extensions';
-import { AppPageIntro, AppPageLayout, cx, ErrorState, LoadingState } from '@personal-agent/extensions/ui';
+import { AppPageIntro, AppPageLayout, cx, ErrorState, LoadingState, ToolbarButton } from '@personal-agent/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 
 type Tab = 'summary' | 'instructions' | 'skills' | 'tools' | 'templates' | 'context' | 'diagnostics';
@@ -73,7 +73,7 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
   useEffect(() => load(), [pa]);
 
   async function toggleSkill(id: string, enabled: boolean) {
-    await pa.extension.invoke('updateSkillEnabled', { id, enabled });
+    await pa.extension.invoke('updatePromptAssemblySkillEnabled', { id, enabled });
     const result = (await pa.extension.invoke('inspectPromptAssembly', {})) as InspectResult;
     setData(result);
   }
@@ -95,23 +95,24 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
   if (!data) return <LoadingState label="Inspecting prompt assembly…" />;
 
   return (
-    <AppPageLayout>
+    <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
       <AppPageIntro
         title="Prompt Assembly"
-        description="Single inspection surface for skills, tools, prompt templates, context, and diagnostics."
+        summary="Inspect the instruction layers, skills, tools, templates, context, and diagnostics that shape each agent run."
+        actions={<ToolbarButton onClick={load}>Refresh</ToolbarButton>}
       />
-      <div className="flex gap-5 border-b border-subtle text-[12px]">
+      <div className="flex flex-wrap gap-1 border-b border-border-subtle/70 pb-5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             className={cx(
-              'border-b-2 px-1 pb-2 pt-1',
-              activeTab === tab.id ? 'border-accent text-primary' : 'border-transparent text-secondary',
+              'rounded-lg px-3 py-1.5 text-[13px] transition-colors',
+              activeTab === tab.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
             )}
             onClick={() => setActiveTab(tab.id)}
           >
-            {tab.label} {tab.id === 'summary' ? null : <span className="text-dim">{counts[tab.id]}</span>}
+            {tab.label} {tab.id === 'summary' ? null : <span className="ml-1 text-dim">{counts[tab.id]}</span>}
           </button>
         ))}
       </div>
@@ -148,19 +149,15 @@ export function PromptAssemblyPage({ pa }: ExtensionSurfaceProps) {
           meta={(row) => `${row.enabled ? 'Enabled' : 'Disabled'} · ${row.location?.path ?? ''}`}
         />
       ) : null}
-      {activeTab === 'context' ? (
-        <pre className="overflow-auto rounded-md bg-muted p-3 text-[12px]">{JSON.stringify(data.plan.context?.blocks ?? [], null, 2)}</pre>
-      ) : null}
-      {activeTab === 'diagnostics' ? (
-        <pre className="overflow-auto rounded-md bg-muted p-3 text-[12px]">{JSON.stringify(data.plan.diagnostics ?? [], null, 2)}</pre>
-      ) : null}
+      {activeTab === 'context' ? <JsonPanel value={data.plan.context?.blocks ?? []} /> : null}
+      {activeTab === 'diagnostics' ? <JsonPanel value={data.plan.diagnostics ?? []} /> : null}
     </AppPageLayout>
   );
 }
 
 function Summary({ data }: { data: InspectResult }) {
   return (
-    <div className="grid grid-cols-5 gap-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Stat label="Instruction layers" value={data.instructions?.length ?? data.plan.instructions?.layers?.length ?? 0} />
       <Stat label="Skill paths" value={data.plan.skills?.skillPaths?.length ?? 0} />
       <Stat label="Active tools" value={data.plan.tools?.activeToolNames?.length ?? 0} />
@@ -172,9 +169,9 @@ function Summary({ data }: { data: InspectResult }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border-y border-subtle py-3">
-      <div className="text-[20px] font-semibold">{value}</div>
-      <div className="text-[12px] text-secondary">{label}</div>
+    <div className="rounded-xl bg-surface/30 p-4">
+      <div className="text-[24px] font-semibold tracking-[-0.03em] text-primary">{value}</div>
+      <div className="mt-1 text-[12px] text-secondary">{label}</div>
     </div>
   );
 }
@@ -191,17 +188,39 @@ function Rows<T extends Record<string, unknown>>({
   action?: (row: T) => React.ReactNode;
 }) {
   return (
-    <div className="divide-y divide-subtle border-y border-subtle">
-      {rows.map((row, index) => (
-        <div key={String(row.id ?? index)} className="py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[13px] font-semibold">{String(row[titleKey] ?? row.id)}</div>
-            {action?.(row)}
-          </div>
-          <div className="text-[12px] text-secondary">{meta(row)}</div>
-          {typeof row.description === 'string' ? <div className="mt-1 text-[12px] text-dim">{row.description}</div> : null}
-        </div>
-      ))}
-    </div>
+    <section className="min-w-0 overflow-auto">
+      <table className="w-full border-collapse text-left text-[13px]">
+        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
+          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
+            <th className="py-2 pr-4 font-semibold">Name</th>
+            <th className="px-3 py-2 font-semibold">Details</th>
+            {action ? <th className="py-2 pl-3 text-right font-semibold">Actions</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={String(row.id ?? index)} className="border-t border-border-subtle/60 align-top">
+              <td className="py-3 pr-4">
+                <div className="font-semibold text-primary">{String(row[titleKey] ?? row.id)}</div>
+                {typeof row.id === 'string' ? <div className="mt-0.5 font-mono text-[11px] text-dim">{row.id}</div> : null}
+              </td>
+              <td className="px-3 py-3">
+                <div className="text-[12px] leading-5 text-secondary">{meta(row)}</div>
+                {typeof row.description === 'string' ? (
+                  <div className="mt-1 max-w-[44rem] text-[12px] leading-5 text-dim">{row.description}</div>
+                ) : null}
+              </td>
+              {action ? <td className="py-3 pl-3 text-right">{action(row)}</td> : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function JsonPanel({ value }: { value: unknown }) {
+  return (
+    <pre className="overflow-auto rounded-xl bg-surface/30 p-4 font-mono text-[12px] text-secondary">{JSON.stringify(value, null, 2)}</pre>
   );
 }
