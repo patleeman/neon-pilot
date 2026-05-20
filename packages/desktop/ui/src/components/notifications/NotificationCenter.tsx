@@ -9,15 +9,6 @@ import { useMemo, useState } from 'react';
 import { cx } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
-type FilterMode = 'all' | 'error' | 'warning' | 'info';
-
-const FILTER_LABELS: Record<FilterMode, string> = {
-  all: 'All',
-  error: 'Errors',
-  warning: 'Warnings',
-  info: 'Info',
-};
-
 const TYPE_DOT_CLASS: Record<NotificationType, string> = {
   info: 'bg-steel',
   warning: 'bg-warning',
@@ -171,15 +162,8 @@ function NotificationRow({
 
 export function NotificationCenter({ onClose }: { onClose: () => void }) {
   const { notifications, unreadCount, dismiss, dismissAll, markRead, markAllRead } = useNotificationStore();
-  const [filter, setFilter] = useState<FilterMode>('all');
+  const filtered = useMemo(() => notifications.filter((n) => !n.dismissed), [notifications]);
 
-  const filtered = useMemo(() => {
-    const active = notifications.filter((n) => !n.dismissed);
-    if (filter === 'all') return active;
-    return active.filter((n) => n.type === filter);
-  }, [notifications, filter]);
-
-  const filterModes: FilterMode[] = ['all', 'error', 'warning', 'info'];
   const hasNotifications = notifications.some((n) => !n.dismissed);
   const hasUnread = unreadCount > 0;
 
@@ -249,30 +233,6 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex shrink-0 gap-0.5 border-b border-border-subtle px-2 py-1.5">
-          {filterModes.map((mode) => {
-            const count =
-              mode === 'all'
-                ? notifications.filter((n) => !n.dismissed).length
-                : notifications.filter((n) => !n.dismissed && n.type === mode).length;
-            return (
-              <button
-                key={mode}
-                type="button"
-                className={cx(
-                  'rounded px-2 py-0.5 text-[10px] font-medium transition-colors',
-                  filter === mode ? 'bg-steel/15 text-primary' : 'text-dim hover:bg-steel/8 hover:text-secondary',
-                )}
-                onClick={() => setFilter(mode)}
-              >
-                {FILTER_LABELS[mode]}
-                {count > 0 ? <span className="ml-0.5 text-[9px] opacity-60">({count})</span> : null}
-              </button>
-            );
-          })}
-        </div>
-
         {/* List */}
         <div className="flex-1 overflow-y-auto px-2 py-1.5">
           {filtered.length === 0 ? (
@@ -293,7 +253,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
-                <p className="mt-2 text-[11px] text-dim">No {filter === 'all' ? '' : filter} notifications</p>
+                <p className="mt-2 text-[11px] text-dim">No notifications</p>
               </div>
             </div>
           ) : (
