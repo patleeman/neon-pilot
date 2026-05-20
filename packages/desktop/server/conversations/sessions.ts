@@ -364,6 +364,9 @@ const sessionSearchTextCache = new LRUMap<string, CachedSessionSearchText>(MAX_S
 let sessionFileById = new Map<string, string>();
 let loadedPersistentIndexKey: string | null = null;
 let persistedIndexJson: string | null = null;
+// Set to true whenever the session cache is mutated so persistSessionIndex() can
+// skip the expensive JSON build-and-compare on unchanged scans.
+let sessionCacheDirty = false;
 
 const MAX_SESSION_DETAIL_CACHE_ENTRIES = 24;
 const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -2015,7 +2018,9 @@ function buildPersistentSessionIndexDocument(sessionsDir: string): PersistentSes
       signature: cached.signature,
       meta: cached.meta,
     }))
-    .sort((left, right) => left.filePath.localeCompare(right.filePath));
+    // Use basic string comparison — file paths are ASCII-safe and locale-aware
+    // sort is ~5x slower with no benefit for path ordering.
+    .sort((left, right) => (left.filePath < right.filePath ? -1 : left.filePath > right.filePath ? 1 : 0));
 
   return {
     version: 1,
@@ -2091,6 +2096,7 @@ function ensurePersistentIndexLoaded(): void {
   sessionFileById.clear();
   loadedPersistentIndexKey = indexKey;
   persistedIndexJson = null;
+  sessionCacheDirty = true;
 
   if (!existsSync(indexFile)) {
     return;
@@ -2129,10 +2135,19 @@ function ensurePersistentIndexLoaded(): void {
 }
 
 function persistSessionIndex(): void {
+  // Skip the expensive JSON build-and-compare if the cache hasn't changed since
+  // the last persist. This is called on every listSessions() which fires in tight
+  // loops (e.g. the search indexer batch loop), so avoiding redundant work here
+  // is critical for performance with large session counts.
+  if (!sessionCacheDirty) {
+    return;
+  }
+
   const sessionsDir = resolveSessionsDir();
   const indexFile = resolveSessionsIndexFile();
   const nextJson = serializePersistentSessionIndex(buildPersistentSessionIndexDocument(sessionsDir));
   if (nextJson === persistedIndexJson) {
+    sessionCacheDirty = false;
     return;
   }
 
@@ -2140,6 +2155,7 @@ function persistSessionIndex(): void {
     mkdirSync(dirname(indexFile), { recursive: true });
     writeFileSync(indexFile, nextJson);
     persistedIndexJson = nextJson;
+    sessionCacheDirty = false;
   } catch {
     // Ignore persistence failures; the in-memory cache still helps.
   }
@@ -2203,10 +2219,12 @@ function readCachedSessionMeta(filePath: string, cwdSlug: string): SessionMeta |
   const meta = readSessionMetaFromFile(filePath, cwdSlug);
   if (!meta) {
     sessionMetaCache.delete(filePath);
+    sessionCacheDirty = true;
     return null;
   }
 
   sessionMetaCache.set(filePath, { signature, meta });
+  sessionCacheDirty = true;
   return meta;
 }
 
@@ -2240,6 +2258,7 @@ function scanSessionMetas(): SessionMeta[] {
   for (const filePath of sessionMetaCache.keys()) {
     if (!seenFiles.has(filePath)) {
       sessionMetaCache.delete(filePath);
+      sessionCacheDirty = true;
     }
   }
 
@@ -2272,6 +2291,7 @@ export function clearSessionCaches(): void {
   sessionFileById.clear();
   loadedPersistentIndexKey = null;
   persistedIndexJson = null;
+  sessionCacheDirty = true;
 }
 
 export function buildDisplayMessageEntriesFromSessionEntries(entries: SessionEntry[]): DisplayMessageEntryLike[] {
