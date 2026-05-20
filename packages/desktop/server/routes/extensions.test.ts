@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -324,7 +324,7 @@ describe('registerExtensionRoutes', () => {
     const harness = createHarness();
 
     const res = createResponse();
-    harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board', description: 'Track work' } }, res);
+    harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: "Patrick's <Tool>", description: 'Track work' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
@@ -332,11 +332,17 @@ describe('registerExtensionRoutes', () => {
       packageRoot: join(stateRoot, 'extensions', 'agent-board'),
       extension: expect.objectContaining({
         id: 'agent-board',
-        name: 'Agent Board',
+        name: "Patrick's <Tool>",
         packageRoot: join(stateRoot, 'extensions', 'agent-board'),
         routes: [{ route: '/ext/agent-board', surfaceId: 'page' }],
       }),
     });
+
+    const frontend = readFileSync(join(stateRoot, 'extensions', 'agent-board', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain(`const EXTENSION_NAME = "Patrick's <Tool>";`);
+    expect(frontend).toContain('{EXTENSION_NAME}</h1>');
+    expect(frontend).toContain("pa.ui.toast(EXTENSION_NAME + ' is wired up.')");
+    expect(frontend).not.toContain("pa.ui.toast('Patrick's <Tool>");
   });
 
   it('validates runtime extensions through the extension doctor route', async () => {
