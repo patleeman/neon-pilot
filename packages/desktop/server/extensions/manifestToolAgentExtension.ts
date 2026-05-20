@@ -1,6 +1,7 @@
 import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import type { ServerRouteContext } from '../routes/context.js';
+import { listModelDefinitions } from '../models/modelState.js';
 import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { invokeExtensionAction } from './extensionBackend.js';
 import { listExtensionToolRegistrations } from './extensionRegistry.js';
@@ -23,6 +24,25 @@ export interface ManifestToolFactoryOptions {
  */
 const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify']);
 
+type ModelDefinition = Awaited<ReturnType<typeof listModelDefinitions>>[number];
+
+let modelDefinitionsCache: ModelDefinition[] | null = null;
+let modelDefinitionsLoad: Promise<void> | null = null;
+
+function refreshModelDefinitionsCache(): void {
+  if (modelDefinitionsLoad) return;
+  modelDefinitionsLoad = listModelDefinitions()
+    .then((models) => {
+      modelDefinitionsCache = models;
+    })
+    .catch(() => {
+      modelDefinitionsCache = null;
+    })
+    .finally(() => {
+      modelDefinitionsLoad = null;
+    });
+}
+
 function isOverridableTool(toolName: string): boolean {
   return OVERRIDABLE_TOOLS.has(toolName);
 }
@@ -38,12 +58,11 @@ function parseModelRef(modelRef: string): { provider: string; model: string; ful
 
 function modelSupportsImages(modelRef: string): boolean {
   const current = parseModelRef(modelRef);
-  if (!current.provider || !current.model) return false;
-  if (current.provider === 'anthropic') return true;
-  if (current.provider === 'google') return true;
-  if (current.provider === 'openai') return current.model.includes('gpt-4o') || current.model.includes('gpt-5');
-  if (current.provider === 'openai-codex') return /^gpt-5\.(?:[245]|4-mini)$/.test(current.model);
-  return false;
+  refreshModelDefinitionsCache();
+  return (modelDefinitionsCache ?? []).some(
+    (model) =>
+      model.provider === current.provider && model.id === current.model && Array.isArray(model.input) && model.input.includes('image'),
+  );
 }
 
 function shouldExposeManifestTool(tool: { name: string }, modelRef: string): boolean {
