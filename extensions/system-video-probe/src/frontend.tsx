@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, cx, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type ServerHealth = { reachable: boolean; models?: string[] };
@@ -16,15 +16,31 @@ type Status = {
   log: string;
 };
 
+function Pill({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'success' | 'warning' | 'accent' }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium',
+        tone === 'success' && 'bg-success/15 text-success',
+        tone === 'warning' && 'bg-warning/15 text-warning',
+        tone === 'accent' && 'bg-accent/15 text-accent',
+        tone === 'muted' && 'bg-surface text-secondary',
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const [status, setStatus] = useState<Status | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const result = (await pa.extension.invoke('videoProbeStatus', {})) as Status;
+      const result = await pa.extension.invoke<Status>('videoProbeStatus', {});
       setStatus(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -39,17 +55,17 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     };
   }, [fetchStatus]);
 
-  async function invoke(actionId: string) {
-    setBusy(true);
+  async function runAction(label: string, actionId: string) {
+    setBusy(label);
     setError(null);
     try {
-      const result = (await pa.extension.invoke(actionId, {})) as { ok: boolean; error?: string; status?: Status };
+      const result = await pa.extension.invoke<{ ok: boolean; error?: string; status?: Status }>(actionId, {});
       if (result.status) setStatus(result.status);
       if (!result.ok && result.error) setError(result.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -58,81 +74,117 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const serverReachable = status?.server.reachable ?? false;
   const runtimeInstalled = status?.runtimeInstalled ?? false;
 
+  const statusLabel =
+    busy ??
+    (serverReachable ? 'Running' : serverRunning ? 'Starting' : setupRunning ? 'Installing' : runtimeInstalled ? 'Ready' : 'Not set up');
+
+  const statusDotClass = serverReachable ? 'bg-success' : serverRunning || setupRunning ? 'bg-warning animate-pulse' : 'bg-dim';
+
   return (
-    <AppPageLayout title="Video Probe" description="Analyze video files with a video-capable model.">
-      <AppPageIntro
-        title="Video Probe"
-        description="Enables the probe_video agent tool. Uses mlx-vlm to run Nemotron Nano Omni locally on Apple Silicon, or routes to OpenRouter for cloud inference. Configure the backend in Settings → Video Probe."
-      />
+    <div className="h-full overflow-y-auto">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
+        <AppPageIntro
+          title="Video Probe"
+          summary="Run the probe_video agent tool against local video files. Uses Nemotron Nano Omni via mlx-vlm for on-device inference on Apple Silicon, or routes to OpenRouter for cloud inference."
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 text-sm text-secondary">
+                <span className={cx('h-2 w-2 rounded-full', statusDotClass)} />
+                <span className="font-medium text-primary">{statusLabel}</span>
+              </div>
+              <ToolbarButton onClick={() => void fetchStatus()} title="Refresh" aria-label="Refresh">
+                ↻
+              </ToolbarButton>
+            </div>
+          }
+        />
 
-      {error && <div style={{ color: 'var(--color-error)', marginBottom: 12, fontSize: 13 }}>{error}</div>}
+        {error ? <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div> : null}
 
-      {/* Status row */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20, fontSize: 13 }}>
-        <div>
-          <strong>Runtime:</strong> {!status ? '…' : runtimeInstalled ? '✅ mlx-vlm installed' : '❌ Not installed'}
-        </div>
-        <div>
-          <strong>Model:</strong> {status?.modelId ?? '…'}
-        </div>
-        <div>
-          <strong>Server:</strong>{' '}
-          {!status
-            ? '…'
-            : serverReachable
-              ? `✅ Running (${status.server.models?.[0] ?? 'ready'})`
-              : serverRunning
-                ? '⏳ Starting…'
-                : '⏹ Stopped'}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-        {!runtimeInstalled || setupRunning ? (
-          <ToolbarButton onClick={() => void invoke('videoProbeSetup')} disabled={busy || setupRunning}>
-            {setupRunning ? 'Setting up…' : 'Set Up (install + download model)'}
-          </ToolbarButton>
+        {setupRunning ? (
+          <div className="rounded-lg border border-border-subtle bg-surface/25 px-3 py-3">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="min-w-0 text-secondary">
+                <span className="font-medium text-primary">Installing mlx-vlm and downloading model…</span>
+                <div className="mt-1 text-xs text-dim">This may take a while — the model is ~18 GB. Check the log below for progress.</div>
+              </div>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-accent/70" />
+            </div>
+          </div>
         ) : null}
 
-        {runtimeInstalled && !serverReachable && !serverRunning && (
-          <ToolbarButton onClick={() => void invoke('videoProbeStart')} disabled={busy}>
-            Start Server
-          </ToolbarButton>
-        )}
+        {/* Runtime section */}
+        <section className="rounded-xl border border-border-subtle bg-surface p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Local Runtime</h2>
+              <p className="mt-1 text-sm text-secondary">
+                mlx-vlm runs Nemotron Nano Omni on Apple Silicon. Set up once; the agent auto-starts it when needed.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!runtimeInstalled || setupRunning ? (
+                <ToolbarButton disabled={Boolean(busy) || setupRunning} onClick={() => void runAction('Installing…', 'videoProbeSetup')}>
+                  {setupRunning ? 'Installing…' : 'Set Up'}
+                </ToolbarButton>
+              ) : null}
+              {runtimeInstalled && !serverReachable && !serverRunning ? (
+                <ToolbarButton disabled={Boolean(busy)} onClick={() => void runAction('Starting…', 'videoProbeStart')}>
+                  Start Server
+                </ToolbarButton>
+              ) : null}
+              {serverRunning || serverReachable ? (
+                <ToolbarButton disabled={Boolean(busy)} onClick={() => void runAction('Stopping…', 'videoProbeStop')}>
+                  Stop Server
+                </ToolbarButton>
+              ) : null}
+            </div>
+          </div>
 
-        {(serverRunning || serverReachable) && (
-          <ToolbarButton onClick={() => void invoke('videoProbeStop')} disabled={busy}>
-            Stop Server
-          </ToolbarButton>
-        )}
+          <div className="mt-5 grid gap-2 text-xs sm:grid-cols-3">
+            <div className="rounded-md border border-border-subtle bg-elevated p-2">
+              <div className="text-dim">Runtime</div>
+              <div className="mt-1 flex items-center gap-1.5">
+                {runtimeInstalled ? <Pill tone="success">Installed</Pill> : <Pill tone="warning">Not installed</Pill>}
+              </div>
+            </div>
+            <div className="rounded-md border border-border-subtle bg-elevated p-2">
+              <div className="text-dim">Server</div>
+              <div className="mt-1">
+                {serverReachable ? (
+                  <Pill tone="success">Running</Pill>
+                ) : serverRunning ? (
+                  <Pill tone="warning">Starting</Pill>
+                ) : (
+                  <Pill>Stopped</Pill>
+                )}
+              </div>
+            </div>
+            <div className="rounded-md border border-border-subtle bg-elevated p-2">
+              <div className="text-dim">Endpoint</div>
+              <div className="mt-1 truncate font-mono text-primary">{status?.baseUrl ?? '…'}/v1</div>
+            </div>
+          </div>
 
-        <ToolbarButton onClick={() => void fetchStatus()} disabled={busy}>
-          Refresh
-        </ToolbarButton>
-      </div>
+          <div className="mt-4 rounded-md border border-border-subtle bg-elevated p-3">
+            <div className="text-xs text-dim">Model</div>
+            <div className="mt-1 text-sm font-medium text-primary">{status?.modelId ?? '…'}</div>
+          </div>
+        </section>
 
-      {/* Log */}
-      {status?.log && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, opacity: 0.6 }}>LOG</div>
-          <pre
-            style={{
-              fontSize: 11,
-              fontFamily: 'monospace',
-              background: 'var(--color-bg-subtle)',
-              padding: 12,
-              borderRadius: 6,
-              overflowX: 'auto',
-              whiteSpace: 'pre-wrap',
-              maxHeight: 300,
-              overflowY: 'auto',
-            }}
-          >
-            {status.log}
+        {/* Log section */}
+        <section className="rounded-xl border border-border-subtle bg-surface p-5">
+          <div>
+            <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-primary">Runtime Logs</h2>
+            <p className="mt-1 text-sm text-secondary">Live logs from setup and server. Refreshes automatically.</p>
+          </div>
+          <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
+            {status?.log || 'No logs yet.'}
           </pre>
-        </div>
-      )}
-    </AppPageLayout>
+        </section>
+      </AppPageLayout>
+    </div>
   );
 }
