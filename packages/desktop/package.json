@@ -26,7 +26,6 @@
     "@excalidraw/excalidraw": "0.18.1",
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
-    "@fontsource/instrument-serif": "^5.2.8",
     "@personal-agent/core": "workspace:*",
     "@personal-agent/extensions": "workspace:*",
     "electron-updater": "^6.8.3",
