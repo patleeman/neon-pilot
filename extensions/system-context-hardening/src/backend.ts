@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 export const TOOL_RESULT_TEXT_MAX_CHARS = 64 * 1024;
-const MARKER = '[Personal Agent truncated oversized tool output';
+const MARKER = '[Neon Pilot truncated oversized tool output';
 
 type TextContent = { type: 'text'; text: string };
 type ToolResultMessage = {

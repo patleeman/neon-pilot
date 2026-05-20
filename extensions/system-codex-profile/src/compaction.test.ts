@@ -781,7 +781,7 @@ describe('openai native compaction extension', () => {
 
     const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     const outputText = requestBody.input[1].output[0].text;
-    expect(outputText).toContain('Personal Agent truncated oversized tool output');
+    expect(outputText).toContain('Neon Pilot truncated oversized tool output');
     expect(outputText.length).toBeLessThanOrEqual(64 * 1024);
   });
 

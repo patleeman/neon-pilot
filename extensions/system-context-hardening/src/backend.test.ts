@@ -11,7 +11,7 @@ describe('context hardening', () => {
 
     expect(truncateToolResultMessage(message)).toBe(true);
     expect(message.content[0].text.length).toBeLessThanOrEqual(TOOL_RESULT_TEXT_MAX_CHARS);
-    expect(message.content[0].text).toContain('Personal Agent truncated oversized tool output');
+    expect(message.content[0].text).toContain('Neon Pilot truncated oversized tool output');
     expect(message.truncated).toBe(true);
     expect(message.details?.contextHardening).toMatchObject({ truncated: true, maxChars: TOOL_RESULT_TEXT_MAX_CHARS });
   });
@@ -32,7 +32,7 @@ describe('context hardening', () => {
 
     await handlers.get('message_end')?.[0]?.(event);
 
-    expect((event.message.content[0] as { text: string }).text).toContain('Personal Agent truncated oversized tool output');
+    expect((event.message.content[0] as { text: string }).text).toContain('Neon Pilot truncated oversized tool output');
   });
 
   it('caps OpenAI Responses function call output payloads as a provider-request backstop', () => {
@@ -49,6 +49,6 @@ describe('context hardening', () => {
     const rewritten = handlers.get('before_provider_request')?.[0]?.({ type: 'before_provider_request', payload });
 
     expect(rewritten).toBe(payload);
-    expect((payload.input[0] as { output: string }).output).toContain('Personal Agent truncated oversized tool output');
+    expect((payload.input[0] as { output: string }).output).toContain('Neon Pilot truncated oversized tool output');
   });
 });

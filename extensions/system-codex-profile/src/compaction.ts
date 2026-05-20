@@ -491,7 +491,7 @@ function sanitizeResponseContent(content: unknown): ResponseContentItem[] {
 
 function truncateOversizedToolOutput(output: string): string {
   if (output.length <= TOOL_RESULT_TEXT_MAX_CHARS) return output;
-  const marker = `\n\n[Personal Agent truncated oversized tool output: ${output.length - TOOL_RESULT_TEXT_MAX_CHARS} characters omitted]\n\n`;
+  const marker = `\n\n[Neon Pilot truncated oversized tool output: ${output.length - TOOL_RESULT_TEXT_MAX_CHARS} characters omitted]\n\n`;
   const budget = Math.max(0, TOOL_RESULT_TEXT_MAX_CHARS - marker.length);
   const head = Math.ceil(budget * 0.6);
   const tail = Math.floor(budget * 0.4);
