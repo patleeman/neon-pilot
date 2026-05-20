@@ -26,6 +26,15 @@
         "args": { "draftText": "👎 Disagree" }
       },
       {
+        "id": "reply-do-it",
+        "title": "Do it",
+        "action": "composer.replyToSelection",
+        "kinds": ["text", "transcriptRange"],
+        "icon": "✅",
+        "priority": 85,
+        "args": { "draftText": "✅ Do it" }
+      },
+      {
         "id": "reply-question",
         "title": "Ask / clarify",
         "action": "composer.replyToSelection",
@@ -35,31 +44,22 @@
         "args": { "draftText": "❓ Clarify" }
       },
       {
-        "id": "reply-think-harder",
-        "title": "Think harder",
+        "id": "reply-explain",
+        "title": "Explain",
         "action": "composer.replyToSelection",
         "kinds": ["text", "transcriptRange"],
-        "icon": "🤔",
+        "icon": "💡",
         "priority": 70,
-        "args": { "draftText": "🤔 Think harder" }
+        "args": { "draftText": "💡 Explain" }
       },
       {
-        "id": "reply-try-again",
-        "title": "Try again",
+        "id": "reply-summarize",
+        "title": "Summarize",
         "action": "composer.replyToSelection",
         "kinds": ["text", "transcriptRange"],
-        "icon": "🔁",
+        "icon": "📋",
         "priority": 60,
-        "args": { "draftText": "🔁 Try again" }
-      },
-      {
-        "id": "reply-do-it",
-        "title": "Do it",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "✅",
-        "priority": 50,
-        "args": { "draftText": "✅ Do it" }
+        "args": { "draftText": "📋 Summarize" }
       }
     ]
   }
