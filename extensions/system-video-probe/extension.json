@@ -4,19 +4,39 @@
   "name": "Video Probe",
   "packageType": "system",
   "defaultEnabled": false,
-  "description": "Analyze video files using a video-capable model. Supports OpenRouter (cloud) and Nemotron Omni via mlx-vlm (local, Apple Silicon).",
+  "description": "Analyze video files using a video-capable model. Manages a local mlx-vlm runtime (Apple Silicon) or routes to OpenRouter.",
   "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
   "backend": {
-    "entry": "src/backend.ts",
+    "entry": "dist/backend.mjs",
     "actions": [
-      {
-        "id": "probeVideo",
-        "handler": "probeVideo",
-        "title": "Probe video"
-      }
+      { "id": "probeVideo", "handler": "probeVideo", "title": "Probe video" },
+      { "id": "videoProbeStatus", "handler": "status", "title": "Video probe status" },
+      { "id": "videoProbeSetup", "handler": "setup", "title": "Install runtime and download model" },
+      { "id": "videoProbeStart", "handler": "startServer", "title": "Start mlx-vlm server" },
+      { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server" }
     ]
   },
   "contributes": {
+    "views": [
+      {
+        "id": "main",
+        "title": "Video Probe",
+        "location": "main",
+        "route": "/ext/system-video-probe",
+        "component": "VideoProbePage"
+      }
+    ],
+    "nav": [
+      {
+        "id": "system-video-probe",
+        "label": "Video Probe",
+        "icon": "app",
+        "route": "/ext/system-video-probe"
+      }
+    ],
     "tools": [
       {
         "id": "probe-video",
@@ -26,8 +46,7 @@
         "action": "probeVideo",
         "promptGuidelines": [
           "Use this tool when the user references a video file by path and asks about its content.",
-          "Do not guess at video content — always call this tool when visual inspection of a video is needed.",
-          "Requires either an OpenRouter API key (cloud) or mlx-vlm running locally (Apple Silicon)."
+          "Do not guess at video content — always call this tool when visual inspection of a video is needed."
         ],
         "inputSchema": {
           "type": "object",
@@ -60,20 +79,8 @@
       "videoProbe.openrouterModel": {
         "type": "string",
         "title": "OpenRouter model",
-        "description": "OpenRouter model ID to use for video analysis.",
+        "description": "OpenRouter model ID for video analysis.",
         "default": "google/gemini-2.5-flash"
-      },
-      "videoProbe.localModel": {
-        "type": "string",
-        "title": "Local model",
-        "description": "mlx-vlm model to use for local inference.",
-        "default": "mlx-community/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-nvfp4"
-      },
-      "videoProbe.localBaseUrl": {
-        "type": "string",
-        "title": "Local server URL",
-        "description": "Base URL of the mlx-vlm server when using the local backend.",
-        "default": "http://localhost:8000"
       }
     },
     "secrets": {
