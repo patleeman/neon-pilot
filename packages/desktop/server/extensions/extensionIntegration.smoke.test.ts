@@ -272,6 +272,23 @@ describe('extension manifests - structural validation', () => {
     }
   });
 
+  it('tool inputSchemas avoid top-level composition keywords rejected by function-call providers', () => {
+    const rejectedTopLevelKeywords = ['oneOf', 'anyOf', 'allOf', 'enum', 'not'];
+    for (const ext of summaries) {
+      if (ext.packageType !== 'system') continue;
+      const tools = ext.manifest.contributes?.tools ?? [];
+      for (const tool of tools) {
+        const schema = tool.inputSchema ?? {};
+        for (const keyword of rejectedTopLevelKeywords) {
+          expect(
+            Object.prototype.hasOwnProperty.call(schema, keyword),
+            `${ext.id}: tool "${tool.id}" inputSchema must not use top-level "${keyword}"`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
   it('no tool declares a replaces field that references a non-existent built-in tool', () => {
     const validBuiltInTools = [
       'bash',
