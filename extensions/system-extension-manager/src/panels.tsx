@@ -1906,7 +1906,7 @@ export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClien
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <ReadOnlyPathRow label="Default install location" path={state.defaultLocation} detail="Personal Agent always scans this folder." />
+        <ReadOnlyPathRow label="Default install location" path={state.defaultLocation} detail="Neon Pilot always scans this folder." />
         {state.environmentPaths.map((path) => (
           <ReadOnlyPathRow key={path} label="Environment search path" path={path} detail="Set by PERSONAL_AGENT_EXTENSION_PATHS." />
         ))}
