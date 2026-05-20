@@ -182,7 +182,8 @@ export function DesktopTopBar({
 
   const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
   const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
-  const launchBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : null;
+  const environmentBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : 'Local';
+  const environmentBadgeTitle = environment?.launchMode === 'testing' ? 'Launched from the command line' : environment?.activeHostSummary;
 
   return (
     <div className="ui-desktop-top-bar">
@@ -226,11 +227,9 @@ export function DesktopTopBar({
           </div>
           <span className="text-[12.5px] font-semibold tracking-[-0.012em] text-primary">Neon Pilot</span>
         </div>
-        {launchBadgeLabel ? (
-          <div className="ui-desktop-top-bar__mode-badge" title="Launched from the command line">
-            {launchBadgeLabel}
-          </div>
-        ) : null}
+        <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
+          {environmentBadgeLabel}
+        </div>
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <button
