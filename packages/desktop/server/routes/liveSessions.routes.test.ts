@@ -8,7 +8,6 @@ const {
   createLocalSessionMock,
   prewarmLiveSessionLoaderMock,
   destroySessionMock,
-  executeSessionBashMock,
   existsSyncMock,
   exportSessionHtmlMock,
   forkSessionMock,
@@ -61,7 +60,6 @@ const {
   prewarmLiveSessionLoaderMock: vi.fn(),
   createSessionListenerUnsubscribeMock: vi.fn(),
   destroySessionMock: vi.fn(),
-  executeSessionBashMock: vi.fn(),
   existsSyncMock: vi.fn(),
   exportSessionHtmlMock: vi.fn(),
   forkSessionMock: vi.fn(),
@@ -132,7 +130,6 @@ vi.mock('../conversations/liveSessions.js', () => ({
   createSession: createLocalSessionMock,
   prewarmLiveSessionLoader: prewarmLiveSessionLoaderMock,
   destroySession: destroySessionMock,
-  executeSessionBash: executeSessionBashMock,
   exportSessionHtml: exportSessionHtmlMock,
   forkSession: forkSessionMock,
   getLiveSessionForkEntries: getLiveSessionForkEntriesMock,
@@ -314,7 +311,6 @@ describe('live session routes', () => {
     prewarmLiveSessionLoaderMock.mockReset();
     createSessionListenerUnsubscribeMock.mockReset();
     destroySessionMock.mockReset();
-    executeSessionBashMock.mockReset();
     existsSyncMock.mockReset();
     exportSessionHtmlMock.mockReset();
     forkSessionMock.mockReset();
@@ -363,7 +359,6 @@ describe('live session routes', () => {
     createLocalSessionMock.mockResolvedValue({ id: 'live-new', sessionFile: '/sessions/live-new.jsonl' });
     prewarmLiveSessionLoaderMock.mockResolvedValue(undefined);
     existsSyncMock.mockReturnValue(true);
-    executeSessionBashMock.mockResolvedValue({ exitCode: 0, output: 'ok' });
     exportSessionHtmlMock.mockResolvedValue('/tmp/export.html');
     forkSessionMock.mockResolvedValue({ id: 'fork-1' });
     getLiveSessionForkEntriesMock.mockReturnValue([{ id: 'fork-entry-1' }]);
@@ -921,40 +916,6 @@ describe('live session routes', () => {
     );
     expect(dequeueConflictRes.status).toHaveBeenCalledWith(409);
     expect(dequeueConflictRes.json).toHaveBeenCalledWith({ error: 'Queued prompt restore is unavailable' });
-
-    const missingBashCommandRes = createResponse();
-    await postHandler('/api/live-sessions/:id/bash')(
-      createRequest({
-        params: { id: 'live-1' },
-        body: {},
-      }),
-      missingBashCommandRes,
-    );
-    expect(missingBashCommandRes.status).toHaveBeenCalledWith(400);
-    expect(missingBashCommandRes.json).toHaveBeenCalledWith({ error: 'command required' });
-
-    const bashRes = createResponse();
-    await postHandler('/api/live-sessions/:id/bash')(
-      createRequest({
-        params: { id: 'live-1' },
-        body: { command: '  git status  ', excludeFromContext: true },
-      }),
-      bashRes,
-    );
-    expect(executeSessionBashMock).toHaveBeenCalledWith('live-1', 'git status', { excludeFromContext: true });
-    expect(bashRes.json).toHaveBeenCalledWith({ ok: true, result: { exitCode: 0, output: 'ok' } });
-
-    executeSessionBashMock.mockRejectedValueOnce(new Error('A bash command is already running.'));
-    const bashConflictRes = createResponse();
-    await postHandler('/api/live-sessions/:id/bash')(
-      createRequest({
-        params: { id: 'live-1' },
-        body: { command: 'pwd' },
-      }),
-      bashConflictRes,
-    );
-    expect(bashConflictRes.status).toHaveBeenCalledWith(409);
-    expect(bashConflictRes.json).toHaveBeenCalledWith({ error: 'A bash command is already running.' });
 
     const compactRes = createResponse();
     await postHandler('/api/live-sessions/:id/compact')(

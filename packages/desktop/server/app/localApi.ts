@@ -111,6 +111,7 @@ import {
   takeOverLiveSessionCapability,
 } from '../conversations/liveSessionCapability.js';
 import {
+  executeSessionBash,
   exportSessionHtml,
   getLiveSessionForkEntries,
   getLiveSessions as getLocalLiveSessions,
@@ -2174,6 +2175,15 @@ export async function exportDesktopLiveSession(input: {
 
 export async function reloadDesktopLiveSession(input: { conversationId: string }) {
   return reloadLiveSessionCapability(input);
+}
+
+export async function executeDesktopLiveSessionBash(input: {
+  conversationId: string;
+  command: string;
+  excludeFromContext?: boolean;
+}): Promise<{ ok: true; result: unknown }> {
+  const result = await executeSessionBash(input.conversationId, input.command, { excludeFromContext: input.excludeFromContext });
+  return { ok: true, result };
 }
 
 export async function destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }> {

@@ -310,6 +310,8 @@ const desktopBridge = {
     relatedConversationIds?: string[];
     surfaceId?: string;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:submit-live-session-prompt`, input),
+  executeLiveSessionBash: (input: { conversationId: string; command: string; excludeFromContext?: boolean }) =>
+    ipcRenderer.invoke(`${CHANNEL_PREFIX}:execute-live-session-bash`, input),
   abortLiveSession: (conversationId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:abort-live-session`, conversationId),
   subscribeConversationState: (input: {
     conversationId: string;

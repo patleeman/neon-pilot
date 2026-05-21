@@ -430,6 +430,11 @@ export interface HostController {
   branchLiveSession?(input: DesktopLiveSessionBranchRequest): Promise<{ newSessionId: string; sessionFile: string }>;
   forkLiveSession?(input: DesktopLiveSessionForkRequest): Promise<{ newSessionId: string; sessionFile: string }>;
   submitLiveSessionPrompt?(input: DesktopLiveSessionPromptRequest): Promise<DesktopLiveSessionPromptResult>;
+  executeLiveSessionBash?(input: {
+    conversationId: string;
+    command: string;
+    excludeFromContext?: boolean;
+  }): Promise<{ ok: true; result: unknown }>;
   abortLiveSession?(conversationId: string): Promise<{ ok: true }>;
   subscribeConversationState?(
     input: DesktopConversationStateSubscriptionRequest,

@@ -146,6 +146,31 @@ describe('api desktop transport', () => {
     });
   });
 
+  it('executes live-session bash through the local desktop bridge', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const executeLiveSessionBash = vi.fn().mockResolvedValue({ ok: true, result: { exitCode: 0, output: 'ok' } });
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment: vi.fn().mockResolvedValue({
+          isElectron: true,
+          activeHostId: 'local',
+          activeHostLabel: 'Local',
+          activeHostKind: 'local',
+          activeHostSummary: 'Local backend is healthy.',
+        }),
+        executeLiveSessionBash,
+      },
+    });
+
+    const { api } = await import('./api');
+    const result = await api.executeLiveSessionBash('live-1', 'git status', { excludeFromContext: true });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(executeLiveSessionBash).toHaveBeenCalledWith({ conversationId: 'live-1', command: 'git status', excludeFromContext: true });
+    expect(result).toEqual({ ok: true, result: { exitCode: 0, output: 'ok' } });
+  });
+
   it('rejects queued message restore on non-local desktop hosts instead of falling back to HTTP', async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
     vi.stubGlobal('fetch', fetchMock);
@@ -1823,9 +1848,7 @@ describe('api desktop transport', () => {
           replayedPendingOperation: false,
           usedFallbackPrompt: false,
         }),
-      )
-      .mockResolvedValueOnce(createJsonResponse([{ entryId: 'entry-9', text: 'fork remote' }]))
-      .mockResolvedValueOnce(createJsonResponse({ ok: true, path: '/tmp/remote-live.html' }));
+      );
     vi.stubGlobal('fetch', fetchMock);
     const invokeLocalApi = vi.fn();
     Object.assign(window as { neonPilotDesktop?: unknown }, {
@@ -1848,8 +1871,7 @@ describe('api desktop transport', () => {
     });
     const renamed = await api.renameConversation('remote-conversation', 'Remote rename', 'surface-1');
     const recovered = await api.recoverConversation('remote-conversation');
-    const forkEntries = await api.forkEntries('remote-live');
-    const exported = await api.exportSession('remote-live', '/tmp/remote-live.html');
+    await expect(api.forkEntries('remote-live')).rejects.toThrow('Reading live session fork entries requires the local desktop host.');
 
     expect(invokeLocalApi).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -1867,12 +1889,7 @@ describe('api desktop transport', () => {
       headers: { 'Content-Type': 'application/json' },
       body: undefined,
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/live-sessions/remote-live/fork-entries', { method: 'GET', cache: 'no-store' });
-    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/live-sessions/remote-live/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ outputPath: '/tmp/remote-live.html' }),
-    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(result.conversationId).toBe('remote-conversation');
     expect(renamed).toEqual({ ok: true, title: 'Remote rename' });
     expect(recovered).toEqual({
@@ -1882,7 +1899,5 @@ describe('api desktop transport', () => {
       replayedPendingOperation: false,
       usedFallbackPrompt: false,
     });
-    expect(forkEntries).toEqual([{ entryId: 'entry-9', text: 'fork remote' }]);
-    expect(exported).toEqual({ ok: true, path: '/tmp/remote-live.html' });
   });
 });

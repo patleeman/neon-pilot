@@ -391,6 +391,11 @@ export interface NeonPilotDesktopBridge {
     referencedAttachmentIds: string[];
     relatedConversationPointerWarnings?: string[];
   }>;
+  executeLiveSessionBash(input: {
+    conversationId: string;
+    command: string;
+    excludeFromContext?: boolean;
+  }): Promise<{ ok: true; result: unknown }>;
   abortLiveSession(conversationId: string): Promise<{ ok: true }>;
   subscribeConversationState(input: {
     conversationId: string;

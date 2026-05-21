@@ -639,6 +639,15 @@ export class LocalHostController implements HostController {
     return module.submitDesktopLiveSessionPrompt(input);
   }
 
+  async executeLiveSessionBash(input: {
+    conversationId: string;
+    command: string;
+    excludeFromContext?: boolean;
+  }): Promise<{ ok: true; result: unknown }> {
+    const module = await this.loadLocalApi();
+    return module.executeDesktopLiveSessionBash(input);
+  }
+
   async abortLiveSession(conversationId: string): Promise<{ ok: true }> {
     const module = await this.loadLocalApi();
     return module.abortDesktopLiveSession(conversationId);

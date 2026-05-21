@@ -978,6 +978,16 @@ export function registerDesktopIpc(options: {
     return controller.submitLiveSessionPrompt(input);
   });
 
+  ipcMain.handle(`${CHANNEL_PREFIX}:execute-live-session-bash`, async (event, input) => {
+    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
+    const controller = options.hostManager.getHostController(hostId);
+    if (!controller.executeLiveSessionBash) {
+      throw new Error('Dedicated desktop live-session bash execution is only available for the local host.');
+    }
+
+    return controller.executeLiveSessionBash(input);
+  });
+
   ipcMain.handle(`${CHANNEL_PREFIX}:abort-live-session`, async (event, conversationId: string) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);

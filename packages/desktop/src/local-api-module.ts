@@ -264,6 +264,11 @@ export interface LocalApiModule {
     referencedAttachmentIds: string[];
     relatedConversationPointerWarnings?: string[];
   }>;
+  executeDesktopLiveSessionBash(input: {
+    conversationId: string;
+    command: string;
+    excludeFromContext?: boolean;
+  }): Promise<{ ok: true; result: unknown }>;
   abortDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
   subscribeDesktopConversationState(
     input: DesktopConversationStateSubscriptionRequest,
