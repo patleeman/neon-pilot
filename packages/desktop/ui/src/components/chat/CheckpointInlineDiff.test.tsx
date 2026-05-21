@@ -73,11 +73,7 @@ describe('CheckpointInlineDiff', () => {
         <AppEventsContext.Provider
           value={{ versions: INITIAL_APP_EVENT_VERSIONS, conversationVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS }}
         >
-          <CheckpointInlineDiff
-            conversationId="conv-123"
-            checkpointId="abc1234def567890abc1234def567890abc12345"
-            onOpenCheckpoint={() => undefined}
-          />
+          <CheckpointInlineDiff conversationId="conv-123" checkpointId="abc1234def567890abc1234def567890abc12345" />
         </AppEventsContext.Provider>
       </ThemeProvider>,
     );
@@ -85,7 +81,6 @@ describe('CheckpointInlineDiff', () => {
     expect(html).toContain('Diff peek');
     expect(html).toContain('Scroll inline or click the preview to expand it.');
     expect(html).toContain('Show diff');
-    expect(html).toContain('View diff');
     expect(html).toContain('packages/desktop/ui/src/components/chat/ChatView.tsx');
     expect(html).toContain('Modified');
   });

@@ -1,13 +1,11 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CheckpointInlineDiff, cx, DiffActionButton, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CheckpointInlineDiff, cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo } from 'react';
 
 const CheckpointToolBlock = memo(function CheckpointToolBlock({
   block,
   checkpoint,
-  onOpenCheckpoint,
-  activeCheckpointId,
 }: {
   block: { status?: string; running?: boolean; error?: boolean | string; output?: string };
   checkpoint: NonNullable<ReturnType<typeof readCheckpointPresentation>>;
@@ -16,7 +14,6 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
 }) {
   const isRunning = block.status === 'running' || !!block.running;
   const isError = block.status === 'error' || !!block.error;
-  const isActive = activeCheckpointId === checkpoint.checkpointId;
   const commentCount = (checkpoint as { commentCount?: number }).commentCount;
 
   return (
@@ -62,21 +59,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
               </span>
             </div>
           ) : !isError && checkpoint.conversationId ? (
-            <CheckpointInlineDiff
-              conversationId={checkpoint.conversationId}
-              checkpointId={checkpoint.checkpointId}
-              onOpenCheckpoint={onOpenCheckpoint}
-              modalOpen={isActive}
-            />
-          ) : !isError && onOpenCheckpoint ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-              <DiffActionButton
-                onClick={() => onOpenCheckpoint(checkpoint.checkpointId)}
-                className={cx('text-[11px]', isActive ? 'text-secondary' : 'text-accent')}
-              >
-                {isActive ? 'Viewing diff' : 'View diff'}
-              </DiffActionButton>
-            </div>
+            <CheckpointInlineDiff conversationId={checkpoint.conversationId} checkpointId={checkpoint.checkpointId} />
           ) : null}
         </div>
       </div>

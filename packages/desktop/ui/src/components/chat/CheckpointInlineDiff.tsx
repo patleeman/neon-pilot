@@ -10,17 +10,7 @@ import { DiffActionButton } from './DiffActionButton.js';
 const COLLAPSED_INLINE_DIFF_HEIGHT = 'clamp(12rem, 24vh, 16rem)';
 const EXPANDED_INLINE_DIFF_HEIGHT = 'clamp(24rem, 56vh, 44rem)';
 
-export function CheckpointInlineDiff({
-  conversationId,
-  checkpointId,
-  onOpenCheckpoint,
-  modalOpen = false,
-}: {
-  conversationId?: string | null;
-  checkpointId: string;
-  onOpenCheckpoint?: (checkpointId: string) => void;
-  modalOpen?: boolean;
-}) {
+export function CheckpointInlineDiff({ conversationId, checkpointId }: { conversationId?: string | null; checkpointId: string }) {
   const { versions } = useAppEvents();
   const [expanded, setExpanded] = useState(false);
   const previewEnabled = Boolean(conversationId?.trim());
@@ -83,14 +73,6 @@ export function CheckpointInlineDiff({
           {hasFiles ? (
             <DiffActionButton onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} className="px-2 py-1 text-[10px]">
               {expanded ? 'Hide diff' : 'Show diff'}
-            </DiffActionButton>
-          ) : null}
-          {onOpenCheckpoint ? (
-            <DiffActionButton
-              onClick={() => onOpenCheckpoint(checkpointId)}
-              className={cx('px-2 py-1 text-[10px]', modalOpen ? 'text-secondary' : 'text-accent')}
-            >
-              {modalOpen ? 'Viewing diff' : 'View diff'}
             </DiffActionButton>
           ) : null}
         </div>
