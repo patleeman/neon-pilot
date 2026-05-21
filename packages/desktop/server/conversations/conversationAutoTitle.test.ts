@@ -131,4 +131,10 @@ describe('normalizeGeneratedConversationTitle', () => {
       'Fix live conversation renaming',
     );
   });
+
+  it('keeps the full generated title instead of hard truncating display text', () => {
+    const title = 'It should be impossible for an extension to: 1. Kill the whole application 2. Exfiltrate local files';
+
+    expect(normalizeGeneratedConversationTitle(title, 32)).toBe(title);
+  });
 });

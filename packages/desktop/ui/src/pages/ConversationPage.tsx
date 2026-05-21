@@ -5472,7 +5472,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                       </button>
                     </form>
                   ) : draft ? (
-                    <h1 className="max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
+                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
                       {title}
                     </h1>
                   ) : (

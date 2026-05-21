@@ -662,6 +662,13 @@
     @apply mt-1 break-words text-[12px] font-medium leading-snug text-primary;
   }
 
+  .ui-conversation-title-clamp {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
   .ui-browser-entry-summary {
     @apply mt-1 text-[12px] leading-relaxed text-secondary;
     display: -webkit-box;
