@@ -67,7 +67,9 @@ const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-general', label: 'General', summary: 'Appearance, workspace, and conversation defaults' },
-  { id: 'settings-capabilities', label: 'Capabilities', summary: 'MCP wrappers and extension settings' },
+  { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
+  { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
+  { id: 'settings-capabilities', label: 'Capabilities', summary: 'MCP wrappers and agent-adjacent settings' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
@@ -137,6 +139,39 @@ type ShortcutListItem = {
   enabled?: boolean;
   defaultShortcuts?: string[];
 };
+
+interface CommandSettingsEntry {
+  id?: string;
+  surfaceId?: string;
+  extensionId?: string;
+  packageType?: 'system' | 'user';
+  title?: string;
+  category?: string;
+  action?: string;
+  args?: unknown;
+  argsSchema?: unknown;
+  enablement?: string;
+}
+
+interface CommandKeybindingSettingsEntry extends ExtensionKeybindingRegistration {
+  packageType?: 'system' | 'user';
+}
+
+interface CommandWithKeybindings extends CommandSettingsEntry {
+  keybindings: CommandKeybindingSettingsEntry[];
+}
+
+interface SettingsExtensionSummary {
+  id: string;
+  name: string;
+  packageType?: 'system' | 'user';
+  enabled: boolean;
+  status?: 'enabled' | 'disabled' | 'invalid';
+  description?: string;
+  errors?: string[];
+  diagnostics?: string[];
+  buildError?: string;
+}
 
 function normalizeShortcutForConflict(shortcut: string): string {
   return shortcut
@@ -868,6 +903,284 @@ export function DesktopKeyboardShortcutsSettingsSection() {
       ) : null}
     </SettingsPanel>
   );
+}
+
+function CommandsSettingsSection() {
+  const [commands, setCommands] = useState<CommandSettingsEntry[]>([]);
+  const [keybindings, setKeybindings] = useState<CommandKeybindingSettingsEntry[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [nextCommands, nextKeybindings] = await Promise.all([api.extensionCommands(), api.extensionKeybindings()]);
+      setCommands(nextCommands as CommandSettingsEntry[]);
+      setKeybindings(nextKeybindings as CommandKeybindingSettingsEntry[]);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const rows = useMemo<CommandWithKeybindings[]>(() => {
+    return commands.map((command) => {
+      const matches = keybindings.filter((keybinding) => keybindingMatchesCommandSetting(keybinding, command));
+      return { ...command, keybindings: matches.length ? matches : [emptyKeybindingForCommand(command)] };
+    });
+  }, [commands, keybindings]);
+
+  const visibleRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return rows;
+    return rows.filter((row) =>
+      [
+        row.title,
+        commandDisplayId(row),
+        row.extensionId,
+        row.category,
+        row.action,
+        ...row.keybindings.flatMap((keybinding) => keybinding.keys),
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle)),
+    );
+  }, [query, rows]);
+
+  async function saveKeybinding(keybinding: CommandKeybindingSettingsEntry, shortcut: string) {
+    const keys = shortcut
+      .split(',')
+      .map((key) => key.trim())
+      .filter(Boolean);
+    if (!keys.length) {
+      setError('Shortcut cannot be blank. Disable the keybinding instead.');
+      return;
+    }
+    const id = keybindingSettingId(keybinding);
+    setBusyId(id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
+        title: keybinding.title,
+        command: keybinding.command,
+        args: keybinding.args,
+        scope: keybinding.scope,
+        packageType: keybinding.packageType,
+        keys,
+        enabled: true,
+      });
+      await load();
+      setDrafts((current) => ({ ...current, [id]: keys.join(', ') }));
+      setNotice('Saved shortcut.');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function toggleKeybinding(keybinding: CommandKeybindingSettingsEntry) {
+    const id = keybindingSettingId(keybinding);
+    setBusyId(id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
+        title: keybinding.title,
+        command: keybinding.command,
+        args: keybinding.args,
+        scope: keybinding.scope,
+        packageType: keybinding.packageType,
+        enabled: !keybinding.enabled,
+      });
+      await load();
+      setNotice(keybinding.enabled ? 'Disabled shortcut.' : 'Enabled shortcut.');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <SettingsPanel title="Commands" description="Search actions and assign keyboard shortcuts. Any command can have a user keybinding.">
+      <div className="space-y-4">
+        <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
+        {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
+        <div className="divide-y divide-border-subtle/70">
+          {visibleRows.map((command) => (
+            <div key={commandDisplayId(command)} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_22rem] sm:items-start">
+              <div className="min-w-0 space-y-1">
+                <div className="text-[13px] font-medium text-primary">{command.title ?? commandDisplayId(command)}</div>
+                <div className="font-mono text-[11px] text-dim">{commandDisplayId(command)}</div>
+                <div className="text-[12px] text-secondary">
+                  {command.category ?? 'Command'} · {command.extensionId ?? 'host'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                {command.keybindings.map((keybinding) => {
+                  const id = keybindingSettingId(keybinding);
+                  const value = drafts[id] ?? keybinding.keys.join(', ');
+                  const busy = busyId === id;
+                  return (
+                    <div key={id} className="flex flex-wrap items-center justify-end gap-2">
+                      <KeyboardShortcutCaptureInput
+                        id={`settings-command-keybinding-${id}`}
+                        value={keybinding.enabled ? value : 'Disabled'}
+                        disabled={busy || !keybinding.enabled}
+                        onChange={(shortcut) => {
+                          setDrafts((current) => ({ ...current, [id]: shortcut }));
+                          void saveKeybinding(keybinding, shortcut);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={ACTION_BUTTON_CLASS}
+                        disabled={busy}
+                        onClick={() => void toggleKeybinding(keybinding)}
+                      >
+                        {keybinding.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        {!loading && visibleRows.length === 0 ? <p className="ui-card-meta">No commands match that search.</p> : null}
+        {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+        {notice ? <p className="text-[12px] text-success">{notice}</p> : null}
+      </div>
+    </SettingsPanel>
+  );
+}
+
+function ExtensionsSettingsSection() {
+  const [extensions, setExtensions] = useState<SettingsExtensionSummary[]>([]);
+  const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setExtensions((await api.extensions()) as unknown as SettingsExtensionSummary[]);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return extensions;
+    return extensions.filter((extension) =>
+      `${extension.name} ${extension.id} ${extension.description ?? ''}`.toLowerCase().includes(needle),
+    );
+  }, [extensions, query]);
+
+  async function toggleExtension(extension: SettingsExtensionSummary) {
+    setBusyId(extension.id);
+    setError(null);
+    try {
+      await api.updateExtension(extension.id, { enabled: !extension.enabled });
+      await load();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <SettingsPanel title="Extensions" description="Enable, disable, and inspect installed product modules.">
+      <div className="space-y-4">
+        <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search extensions…" />
+        {loading ? <p className="ui-card-meta">Loading extensions…</p> : null}
+        <div className="divide-y divide-border-subtle/70">
+          {visible.map((extension) => (
+            <div key={extension.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
+              <div className="min-w-0 space-y-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-[13px] font-medium text-primary">{extension.name}</span>
+                  <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-dim">
+                    {extension.packageType ?? 'user'}
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-dim">{extension.id}</div>
+                <div className="text-[12px] text-secondary">{extension.description ?? 'No description provided.'}</div>
+                {extension.status === 'invalid' || extension.errors?.length || extension.buildError ? (
+                  <div className="text-[12px] text-danger">{extension.errors?.[0] ?? extension.buildError ?? 'Invalid extension'}</div>
+                ) : null}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className={ACTION_BUTTON_CLASS}
+                  disabled={busyId === extension.id || extension.status === 'invalid'}
+                  onClick={() => void toggleExtension(extension)}
+                >
+                  {extension.enabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!loading && visible.length === 0 ? <p className="ui-card-meta">No extensions match that search.</p> : null}
+        {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+      </div>
+    </SettingsPanel>
+  );
+}
+
+function commandDisplayId(command: CommandSettingsEntry): string {
+  const id = command.id ?? command.surfaceId ?? 'unknown';
+  return command.extensionId ? `${command.extensionId}.${id}` : id;
+}
+
+function keybindingSettingId(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'surfaceId'>): string {
+  return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function keybindingMatchesCommandSetting(keybinding: CommandKeybindingSettingsEntry, command: CommandSettingsEntry): boolean {
+  if (!command.extensionId || command.extensionId !== keybinding.extensionId) return false;
+  const id = command.id ?? command.surfaceId ?? '';
+  const action = command.action ?? '';
+  const keybindingCommand = keybinding.command.replace(`${keybinding.extensionId}.`, '');
+  return keybindingCommand === id || keybindingCommand === action || keybinding.command === `${command.extensionId}.${id}`;
+}
+
+function emptyKeybindingForCommand(command: CommandSettingsEntry): CommandKeybindingSettingsEntry {
+  const commandId = commandDisplayId(command);
+  return {
+    extensionId: command.extensionId ?? 'host',
+    surfaceId: `command:${commandId}`,
+    packageType: command.extensionId ? (command.packageType ?? 'user') : 'system',
+    title: command.title ?? commandId,
+    keys: [],
+    command: commandId,
+    args: command.args,
+    scope: 'global',
+    defaultKeys: [],
+    enabled: true,
+  };
 }
 
 function formatTelemetryLogBytes(bytes: number): string {
@@ -2813,7 +3126,16 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </div>
             </SettingsSection>
 
-            <SettingsSection id="settings-capabilities" label="Capabilities" description="MCP wrappers and extension settings.">
+            <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
+              <CommandsSettingsSection />
+            </SettingsSection>
+
+            <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
+              <ExtensionsSettingsSection />
+              <ExtensionSettingsSection />
+            </SettingsSection>
+
+            <SettingsSection id="settings-capabilities" label="Capabilities" description="MCP wrappers and agent-adjacent settings.">
               <div className="space-y-0">
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (
@@ -2903,8 +3225,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                   <SettingsPanelHost registration={settingsComponent} />
                 </SettingsPanel>
               ))}
-
-              <ExtensionSettingsSection />
             </SettingsSection>
 
             <SettingsSection id="settings-security" label="Security" description="Secret storage and extension credentials.">
@@ -3901,11 +4221,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </div>
             </SettingsSection>
 
-            <SettingsSection id="settings-desktop" label="Desktop" description="App behavior and keyboard shortcuts for the desktop app.">
+            <SettingsSection id="settings-desktop" label="Desktop" description="Desktop app behavior and telemetry.">
               <DesktopConnectionsSettingsPanel />
               <TelemetryLogsSettingsPanel />
-
-              {desktopEnvironment?.isElectron || isDesktopShell() ? <DesktopKeyboardShortcutsSettingsSection /> : null}
             </SettingsSection>
           </div>
         </AppPageLayout>

@@ -18,6 +18,7 @@ The Settings page coordinates multiple stores:
 - Runtime agent settings in `<state-root>/neon-pilot-runtime/settings.json` for model defaults, vision model, thinking level, service tier, default cwd, and UI/runtime preferences.
 - Extension scalar setting overrides in `<state-root>/settings.json`, backed by `contributes.settings` and `/api/settings`.
 - Extension component panels declared with `contributes.settingsComponent` for richer first-party configuration UI.
+- Command and keybinding preferences in the extension registry config, surfaced as a VS Code-style command/keybinding editor.
 - Provider definitions in `<config-root>/profiles/shared/models.json` and credentials in `<state-root>/neon-pilot-runtime/auth.json`.
 
 ```
@@ -69,16 +70,16 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 
 ## Sections
 
-| Section      | Source                                    |
-| ------------ | ----------------------------------------- |
-| Appearance   | Built-in (theme picker)                   |
-| Conversation | Built-in (model, thinking)                |
-| Workspace    | Built-in (default working dir)            |
-| Skills       | Built-in (folders, AGENTS.md)             |
-| Tools        | Extension-contributed settings components |
-| Providers    | Built-in (model providers, credentials)   |
-| Desktop      | Built-in (updates, app behavior)          |
-| Keyboard     | Built-in (shortcut editor)                |
+| Section      | Source                                               |
+| ------------ | ---------------------------------------------------- |
+| Appearance   | Built-in (theme picker)                              |
+| Conversation | Built-in (model, thinking)                           |
+| Workspace    | Built-in (default working dir)                       |
+| Commands     | Built-in command/keybinding editor                   |
+| Extensions   | Built-in extension enablement and extension settings |
+| Capabilities | Built-in AGENTS.md files and extension components    |
+| Providers    | Built-in (model providers, credentials)              |
+| Desktop      | Built-in (updates, app behavior)                     |
 
 Knowledge setup lives in the Knowledge extension and is surfaced in Settings
 through its component-backed Knowledge Base panel. Manifest-declared extension
