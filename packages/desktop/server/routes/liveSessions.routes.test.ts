@@ -4,7 +4,6 @@ const {
   LiveSessionControlErrorClass,
   abortLocalSessionMock,
   branchSessionMock,
-  clearQueuedPromptsMock,
   compactSessionMock,
   createLocalSessionMock,
   prewarmLiveSessionLoaderMock,
@@ -57,7 +56,6 @@ const {
   LiveSessionControlErrorClass: class LiveSessionControlError extends Error {},
   abortLocalSessionMock: vi.fn(),
   branchSessionMock: vi.fn(),
-  clearQueuedPromptsMock: vi.fn(),
   compactSessionMock: vi.fn(),
   createLocalSessionMock: vi.fn(),
   prewarmLiveSessionLoaderMock: vi.fn(),
@@ -130,7 +128,6 @@ vi.mock('../conversations/liveSessions.js', () => ({
   LiveSessionControlError: LiveSessionControlErrorClass,
   abortSession: abortLocalSessionMock,
   branchSession: branchSessionMock,
-  clearQueuedPrompts: clearQueuedPromptsMock,
   compactSession: compactSessionMock,
   createSession: createLocalSessionMock,
   prewarmLiveSessionLoader: prewarmLiveSessionLoaderMock,
@@ -362,7 +359,6 @@ describe('live session routes', () => {
 
     abortLocalSessionMock.mockResolvedValue(undefined);
     branchSessionMock.mockResolvedValue({ id: 'branch-1' });
-    clearQueuedPromptsMock.mockReturnValue([]);
     compactSessionMock.mockResolvedValue('compacted');
     createLocalSessionMock.mockResolvedValue({ id: 'live-new', sessionFile: '/sessions/live-new.jsonl' });
     prewarmLiveSessionLoaderMock.mockResolvedValue(undefined);
@@ -925,24 +921,6 @@ describe('live session routes', () => {
     );
     expect(dequeueConflictRes.status).toHaveBeenCalledWith(409);
     expect(dequeueConflictRes.json).toHaveBeenCalledWith({ error: 'Queued prompt restore is unavailable' });
-
-    clearQueuedPromptsMock.mockReturnValueOnce([
-      { behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' },
-      { behavior: 'steer', text: 'User steer', images: [], author: 'user' },
-    ]);
-    const clearQueueRes = createResponse();
-    await postHandler('/api/live-sessions/:id/clear-queue')(
-      createRequest({ params: { id: 'live-1' }, body: { surfaceId: 'surface-1' } }),
-      clearQueueRes,
-    );
-    expect(clearQueuedPromptsMock).toHaveBeenCalledWith('live-1');
-    expect(clearQueueRes.json).toHaveBeenCalledWith({
-      ok: true,
-      items: [
-        { behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' },
-        { behavior: 'steer', text: 'User steer', images: [], author: 'user' },
-      ],
-    });
 
     const missingBashCommandRes = createResponse();
     await postHandler('/api/live-sessions/:id/bash')(

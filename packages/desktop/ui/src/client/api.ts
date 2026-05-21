@@ -1354,15 +1354,8 @@ export const api = {
       return desktopBridge.clearQueuedLiveSessionMessages({ conversationId: id });
     }
 
-    return post<{
-      ok: true;
-      items: Array<{
-        behavior: 'steer' | 'followUp';
-        text: string;
-        images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
-        author: 'user' | 'agent';
-      }>;
-    }>(`/live-sessions/${encodeURIComponent(id)}/clear-queue`, surfaceId ? { surfaceId } : {});
+    void surfaceId;
+    throw new Error('Clearing queued conversation prompts requires the local desktop host.');
   },
   abortSession: async (id: string, surfaceId?: string) => {
     const desktopBridge = getDesktopBridge();
