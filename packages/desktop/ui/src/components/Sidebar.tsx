@@ -3480,60 +3480,54 @@ export function Sidebar() {
   }
 
   function handleArchiveConversation(sessionId: string) {
-    const archiveConversation = () => {
-      archiveSession(sessionId);
-    };
-    const archivingActiveConversation = location.pathname === `/conversations/${sessionId}`;
+    const archivingActiveConversation = activeConversationId === sessionId;
 
     if (draggingSessionId === sessionId) {
       clearDragState();
     }
 
     if (archivingActiveConversation) {
-      navigate(resolveCloseRedirectPath(sessionId));
-      window.setTimeout(archiveConversation, 0);
+      const redirectPath = resolveCloseRedirectPath(sessionId);
+      archiveSession(sessionId);
+      navigate(redirectPath);
       return;
     }
 
-    archiveConversation();
+    archiveSession(sessionId);
   }
 
   function handleCloseConversation(sessionId: string) {
-    const closeConversation = () => {
-      closeSession(sessionId);
-    };
-    const closingActiveConversation = location.pathname === `/conversations/${sessionId}`;
+    const closingActiveConversation = activeConversationId === sessionId;
 
     if (draggingSessionId === sessionId) {
       clearDragState();
     }
 
     if (closingActiveConversation) {
-      navigate(resolveCloseRedirectPath(sessionId));
-      window.setTimeout(closeConversation, 0);
+      const redirectPath = resolveCloseRedirectPath(sessionId);
+      closeSession(sessionId);
+      navigate(redirectPath);
       return;
     }
 
-    closeConversation();
+    closeSession(sessionId);
   }
 
   function handleClosePinnedConversation(sessionId: string) {
-    const closeConversation = () => {
-      unpinSession(sessionId, { open: false });
-    };
-    const closingActiveConversation = location.pathname === `/conversations/${sessionId}`;
+    const closingActiveConversation = activeConversationId === sessionId;
 
     if (draggingSessionId === sessionId) {
       clearDragState();
     }
 
     if (closingActiveConversation) {
-      navigate(resolveCloseRedirectPath(sessionId));
-      window.setTimeout(closeConversation, 0);
+      const redirectPath = resolveCloseRedirectPath(sessionId);
+      unpinSession(sessionId, { open: false });
+      navigate(redirectPath);
       return;
     }
 
-    closeConversation();
+    unpinSession(sessionId, { open: false });
   }
 
   function handleCloseActiveConversation() {

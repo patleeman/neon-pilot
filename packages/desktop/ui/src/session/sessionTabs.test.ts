@@ -281,6 +281,31 @@ describe('sessionTabs', () => {
     });
   });
 
+  it('clears the active conversation when closing or archiving it out of the workspace', () => {
+    replaceConversationLayout({ sessionIds: ['parent', 'child'], pinnedSessionIds: [], activeSessionId: 'child' });
+    dispatchEvent.mockReset();
+
+    closeConversationTab('child');
+
+    expect(readConversationLayout()).toEqual({
+      sessionIds: ['parent'],
+      pinnedSessionIds: [],
+      archivedSessionIds: ['child'],
+      activeSessionId: null,
+    });
+
+    replaceConversationLayout({ sessionIds: ['parent', 'child'], pinnedSessionIds: [], archivedSessionIds: [], activeSessionId: 'child' });
+
+    setConversationArchivedState('child', true);
+
+    expect(readConversationLayout()).toEqual({
+      sessionIds: ['parent'],
+      pinnedSessionIds: [],
+      archivedSessionIds: ['child'],
+      activeSessionId: null,
+    });
+  });
+
   it('can archive and reopen a conversation regardless of whether it was open or pinned', () => {
     replaceConversationLayout({ sessionIds: ['session-1'], pinnedSessionIds: ['session-2'] });
     dispatchEvent.mockReset();
