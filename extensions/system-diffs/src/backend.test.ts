@@ -256,7 +256,7 @@ describe('system-diffs backend', () => {
       expect(commands.some((command) => command.startsWith('commit --only'))).toBe(false);
     });
 
-    it('refuses to commit unrelated staged paths', async () => {
+    it('returns a tool error for unrelated staged paths without throwing', async () => {
       const shell = {
         exec: vi.fn(async ({ args }: { args: string[] }) => {
           const command = args.join(' ');
@@ -268,9 +268,37 @@ describe('system-diffs backend', () => {
         }),
       };
 
-      await expect(checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell }))).rejects.toThrow(
-        'Refusing to checkpoint unrelated staged changes: other.ts',
-      );
+      const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell }));
+
+      expect(result).toMatchObject({
+        isError: true,
+        action: 'save',
+        text: 'Refusing to checkpoint unrelated staged changes: other.ts',
+      });
+      expect(mockSaveCheckpoint).not.toHaveBeenCalled();
+    });
+
+    it('returns a tool error for git commit validation failures without throwing', async () => {
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command.startsWith('add --all --')) return { stdout: '' };
+          if (command === 'diff --cached --name-only -- src/file.ts') return { stdout: 'src/file.ts\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'src/file.ts\n' };
+          if (command === 'commit -m msg') throw new Error('Code style issues found. Run Prettier with --write to fix.');
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+
+      const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell }));
+
+      expect(result).toMatchObject({
+        isError: true,
+        action: 'save',
+        text: 'Code style issues found. Run Prettier with --write to fix.',
+      });
+      expect(mockSaveCheckpoint).not.toHaveBeenCalled();
     });
   });
 

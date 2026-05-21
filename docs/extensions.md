@@ -1029,7 +1029,7 @@ that the frontend can call via `pa.extension.invoke()`. A backend can also decla
 
 Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions, services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)`, the call is blocked, surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
 
-Repeated backend failures trip a circuit breaker: three failures in ten minutes disables the extension and adds an Extension Manager diagnostic. Startup also has a safe-mode marker. If the previous launch did not finish extension backend health checks, startup actions, service startup, and subscription installation, the next launch disables enabled runtime/user extensions before loading them again.
+Repeated backend infrastructure failures trip a circuit breaker: three failures in ten minutes disables the extension and adds an Extension Manager diagnostic. This covers backend load/import failures, health checks, service startup, and similar host-level failures; normal action handler errors are returned to the caller and do not quarantine the extension. Startup also has a safe-mode marker. If the previous launch did not finish extension backend health checks, startup actions, service startup, and subscription installation, the next launch disables enabled runtime/user extensions before loading them again.
 
 ```typescript
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';

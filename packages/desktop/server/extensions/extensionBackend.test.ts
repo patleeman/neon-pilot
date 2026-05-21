@@ -70,6 +70,36 @@ describe('extension backend action invocation', () => {
     expect(isExtensionEnabled('exit-action-ext', stateRoot)).toBe(false);
   });
 
+  it('does not quarantine an extension for repeated action handler errors', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'validation-action-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'validation-action-ext',
+        name: 'Validation Action Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function doThing() { throw new Error("validation failed"); }\n');
+
+    await invokeExtensionAction('validation-action-ext', 'doThing', {});
+    await invokeExtensionAction('validation-action-ext', 'doThing', {});
+    const result = await invokeExtensionAction('validation-action-ext', 'doThing', {});
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Extension "validation-action-ext" action "doThing" failed: validation failed',
+    });
+    expect(isExtensionEnabled('validation-action-ext', stateRoot)).toBe(true);
+  });
+
   it('blocks process termination during extension backend import', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

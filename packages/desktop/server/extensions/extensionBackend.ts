@@ -747,7 +747,7 @@ export async function invokeExtensionAction(
         message: `${error.message} The extension was disabled to prevent a startup loop.`,
         severity: 'error',
       });
-    } else if (!(error instanceof ExtensionLoadError && error.code === 'extension_disabled')) {
+    } else if (error instanceof ExtensionLoadError && error.code !== 'extension_disabled') {
       const circuit = recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
       if (circuit.quarantined) {
         publishAppEvent({

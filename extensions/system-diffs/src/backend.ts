@@ -22,6 +22,10 @@ interface CheckpointInput {
   paths?: string[];
 }
 
+function formatCheckpointFailure(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 interface ParsedCommitMetadata {
   commitSha: string;
   shortSha: string;
@@ -277,7 +281,20 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
       const cwd = readRequiredString(ctx.toolContext?.cwd, 'cwd');
       const message = readRequiredString(input.message, 'message');
       const paths = readPathInputs(cwd, input.paths);
-      const created = await createCheckpointCommit(ctx, { cwd, message, paths });
+      const created = await createCheckpointCommit(ctx, { cwd, message, paths }).catch((error: unknown) => ({
+        error: formatCheckpointFailure(error),
+      }));
+      if ('error' in created) {
+        return {
+          text: created.error,
+          isError: true,
+          action: 'save',
+          conversationId,
+          cwd,
+          paths,
+        };
+      }
+
       const linesAdded = created.files.reduce((sum, file) => sum + file.additions, 0);
       const linesDeleted = created.files.reduce((sum, file) => sum + file.deletions, 0);
       const record = saveConversationCommitCheckpoint({
