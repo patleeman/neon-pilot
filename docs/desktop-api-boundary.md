@@ -36,6 +36,8 @@ When touching a renderer API method:
 4. Delete server routes that no remaining non-renderer caller uses.
 5. If an endpoint remains for companion/gateway/extension use, keep it out of the renderer path and document why it remains.
 
-## Current cleanup direction
+## Current cleanup status
 
-The first cleanup target is live conversation control. The renderer should use IPC/local-api for live-session creation, prompt submission, queue restore/clear, stop, branch/fork, and destroy. Existing HTTP routes in this area may remain only while companion/mobile or other non-renderer callers still use them.
+The Electron renderer now uses the typed desktop bridge/local-api path for desktop-only product controls, including live conversation control, conversation state, model/provider/default-cwd settings, open conversation tabs, scheduled tasks, durable-run reads/actions, native folder picking, and conversation artifacts/attachments/deferred resumes.
+
+The remaining HTTP surfaces in these areas are intentional protocol edges, such as SSE streams (`/api/live-sessions/:id/events`, `/api/runs/:id/events`), binary/session image assets, OAuth event streams, extension/gateway/workspace routes, and companion-owned `/companion/v1/*` APIs.
