@@ -140,7 +140,7 @@ function blockToCodexItem(block: Record<string, unknown>, index: number): Record
       };
     case 'tool_use':
       return {
-        id: typeof block._toolCallId === 'string' && block._toolCallId ? block._toolCallId : id,
+        id: typeof block.toolCallId === 'string' && block.toolCallId ? block.toolCallId : id,
         type: 'dynamicToolCall',
         namespace: 'neon-pilot',
         tool: typeof block.tool === 'string' ? block.tool : 'tool',
@@ -212,7 +212,7 @@ function blocksToTurns(blocks: Record<string, unknown>[]): unknown[] {
   for (const turn of turns) {
     const lastItem = (turn.items as unknown[]).at(-1) as Record<string, unknown> | undefined;
     const sourceBlock = lastItem
-      ? blocks.find((block) => blockId(block, '') === lastItem.id || block._toolCallId === lastItem.id)
+      ? blocks.find((block) => blockId(block, '') === lastItem.id || block.toolCallId === lastItem.id)
       : undefined;
     turn.completedAt = Math.floor(tsMs(sourceBlock?.ts) / 1000);
   }
@@ -254,10 +254,11 @@ export const thread = {
     const meta = await ctx.conversations.getMeta(created.id);
     const detail = meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : {};
     const threadId = created.id;
+    const turns = await readTurns(threadId, ctx);
 
     subscribeConnectionToThread(threadId, notify, ctx, conn);
 
-    const thread = toThreadResponse(threadId, detail, [], ctx);
+    const thread = toThreadResponse(threadId, detail, turns, ctx);
     notify('thread/started', { thread });
     broadcastToThread(threadId, 'thread/status/changed', {
       threadId,
@@ -275,10 +276,11 @@ export const thread = {
 
     const meta = await ctx.conversations.getMeta(threadId).catch(() => null);
     const detail = meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : {};
+    const turns = await readTurns(threadId, ctx);
 
     subscribeConnectionToThread(threadId, notify, ctx, conn);
 
-    const thread = toThreadResponse(threadId, detail, [], ctx);
+    const thread = toThreadResponse(threadId, detail, turns, ctx);
     notify('thread/started', { thread });
     broadcastToThread(threadId, 'thread/status/changed', {
       threadId,

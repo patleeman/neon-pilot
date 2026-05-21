@@ -93,6 +93,7 @@ Compatibility notes:
 - `model/list` maps PA model metadata into Codex fields. Reasoning effort options use Codex's object shape; if PA metadata is unavailable the bridge returns deterministic PA model defaults so Kitty's model picker can render.
 - Tool calls are emitted as Codex `dynamicToolCall` items under the `neon-pilot` namespace so Kitty can render them instead of seeing opaque PA events.
 - `turn/start` uses the extension conversation `runTurn` boundary so resume, live-event subscription, prompt dispatch, and terminal event handling are one atomic operation. It opens the thread in the shared desktop workspace and marks it with a visible remote-control note the first time Kitty drives it. `turn/start` and `turn/steer` preserve Kitty image input items and forward them as PA prompt images. Supported forms are data URLs, base64 fields with image MIME metadata, and local/file URLs readable by the desktop host.
+- `thread/start`, `thread/resume`, and `thread/read` return hydrated turns from the PA transcript. Do not return metadata-only thread payloads for reopened threads; mobile clients may render that as a blank conversation instead of issuing a second read.
 - Compatibility endpoints must either be PA-backed or fail with a clear unsupported error. Do not add silent `not_implemented` placeholders; Kitty often spins forever on fake success shapes.
 - If Kitty adds stricter Codex rendering assumptions, update the protocol mapper here rather than changing PA conversation internals.
 

@@ -211,7 +211,9 @@ function forwardConversationEvent(threadId: string, ev: Record<string, unknown>)
     case 'user_message':
       broadcastToThread(threadId, 'thread/userMessage', {
         threadId,
-        content: (ev.block as Record<string, unknown> | undefined)?.content as string | undefined,
+        content:
+          ((ev.block as Record<string, unknown> | undefined)?.text as string | undefined) ??
+          ((ev.block as Record<string, unknown> | undefined)?.content as string | undefined),
       });
       break;
     case 'stats_update': {

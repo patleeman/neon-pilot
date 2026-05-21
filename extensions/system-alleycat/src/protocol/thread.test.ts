@@ -12,7 +12,9 @@ function makeContext(overrides: Record<string, unknown> = {}) {
     },
     conversations: {
       list: vi.fn().mockResolvedValue([]),
+      create: vi.fn().mockResolvedValue({ id: 'thread-1' }),
       getMeta: vi.fn().mockResolvedValue({ id: 'thread-1', title: 'Test thread', cwd: '/repo', updatedAt: 1_700_000_001_000 }),
+      subscribe: vi.fn(() => undefined),
       getBlocks: vi.fn().mockResolvedValue({
         detail: {
           blocks: [
@@ -21,6 +23,7 @@ function makeContext(overrides: Record<string, unknown> = {}) {
             {
               type: 'tool_use',
               id: 't1',
+              toolCallId: 'call-read-1',
               ts: '2026-05-15T10:00:02.000Z',
               tool: 'read',
               input: { path: 'README.md' },
@@ -52,6 +55,7 @@ describe('system-alleycat thread protocol', () => {
       { type: 'userMessage', content: [{ type: 'text', text: 'hello' }] },
       { type: 'reasoning', content: ['thinking'] },
       {
+        id: 'call-read-1',
         type: 'dynamicToolCall',
         namespace: 'neon-pilot',
         tool: 'read',
@@ -70,6 +74,37 @@ describe('system-alleycat thread protocol', () => {
         contentItems: [{ type: 'text', text: 'boom' }],
       },
     ]);
+  });
+
+  it('hydrates thread/resume with existing turns so Kitty does not render a blank reopened thread', async () => {
+    const ctx = makeContext();
+    const notify = vi.fn();
+    const result = (await thread.resume(
+      { threadId: 'thread-1' },
+      ctx as never,
+      { initialized: true, subscribedThreads: new Set(), activeTurnThreads: new Set() },
+      notify,
+    )) as { thread: { turns: Array<{ items: Array<Record<string, unknown>> }> } };
+
+    expect(result.thread.turns).toHaveLength(2);
+    expect(result.thread.turns[0].items[0]).toMatchObject({ type: 'userMessage', content: [{ type: 'text', text: 'hello' }] });
+    expect(notify).toHaveBeenCalledWith(
+      'thread/started',
+      expect.objectContaining({ thread: expect.objectContaining({ turns: expect.arrayContaining([expect.any(Object)]) }) }),
+    );
+  });
+
+  it('hydrates thread/start response after create so prompt-created threads have renderable items', async () => {
+    const ctx = makeContext();
+    const result = (await thread.start(
+      { cwd: '/repo', prompt: 'hello' },
+      ctx as never,
+      { initialized: true, subscribedThreads: new Set(), activeTurnThreads: new Set() },
+      vi.fn(),
+    )) as { thread: { turns: Array<{ items: Array<Record<string, unknown>> }> } };
+
+    expect(ctx.conversations.create).toHaveBeenCalledWith({ cwd: '/repo', model: undefined, prompt: 'hello' });
+    expect(result.thread.turns).toHaveLength(2);
   });
 
   it('hydrates thread/read turns by default for Kitty clients', async () => {

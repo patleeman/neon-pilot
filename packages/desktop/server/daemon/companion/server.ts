@@ -68,7 +68,7 @@ import {
 
 const DEFAULT_DAEMON_VERSION = '0.0.0';
 const JSON_LIMIT_BYTES = 12 * 1024 * 1024;
-const MAX_COMPANION_TAIL_BLOCKS = 1;
+const MAX_COMPANION_TAIL_BLOCKS = 10_000;
 const MAX_COMPANION_SOCKET_STRING_LENGTH = 4_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1569,6 +1569,7 @@ export class DaemonCompanionServer {
 
   private async handleSocketConnection(websocket: WebSocket, device: CompanionPairedDeviceSummary): Promise<void> {
     const subscriptions = new Map<string, () => void>();
+    let messageQueue = Promise.resolve();
     const hello = buildHello(this.stateRoot);
     writeSocketMessage(websocket, {
       type: 'ready',
@@ -1588,7 +1589,7 @@ export class DaemonCompanionServer {
     };
 
     websocket.on('message', (data) => {
-      void (async () => {
+      messageQueue = messageQueue.then(async () => {
         try {
           const message = parseSocketMessage(typeof data === 'string' ? data : data.toString('utf-8'));
           if (message.type === 'command') {
@@ -1638,7 +1639,8 @@ export class DaemonCompanionServer {
           const id = parsed && typeof parsed.id === 'string' ? parsed.id : 'unknown';
           writeSocketMessage(websocket, buildSocketErrorResponse(id, error));
         }
-      })();
+      });
+      void messageQueue.catch(() => undefined);
     });
 
     websocket.on('close', () => {
