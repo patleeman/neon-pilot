@@ -146,7 +146,7 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('restores queued messages through HTTP for non-local desktop hosts', async () => {
+  it('rejects queued message restore on non-local desktop hosts instead of falling back to HTTP', async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
     vi.stubGlobal('fetch', fetchMock);
     const getEnvironment = vi.fn().mockResolvedValue({
@@ -165,15 +165,13 @@ describe('api desktop transport', () => {
     });
 
     const { api } = await import('./api');
-    const restored = await api.restoreQueuedMessage('live-1', { behavior: 'steer', index: 2, previewId: 'queue-2' }, 'surface-1');
+
+    await expect(api.restoreQueuedMessage('live-1', { behavior: 'steer', index: 2, previewId: 'queue-2' }, 'surface-1')).rejects.toThrow(
+      'Restoring queued prompts requires the local desktop host.',
+    );
 
     expect(restoreQueuedLiveSessionMessage).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledWith('/api/live-sessions/live-1/dequeue', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ behavior: 'steer', index: 2, previewId: 'queue-2', surfaceId: 'surface-1' }),
-    });
-    expect(restored).toEqual({ ok: true, text: 'queued hello', images: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('uses dedicated desktop capability bridges on the local Electron host', async () => {

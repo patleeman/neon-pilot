@@ -20,6 +20,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Views](views.md) — Conversation, Workbench layouts
 - [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
+- [Desktop API Boundary](desktop-api-boundary.md) — renderer IPC/local-api contract and HTTP edge policy
 - [Knowledge](../extensions/system-knowledge/README.md) — vault, docs, skills, instruction files, and managed sync
 - [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
 - [Configuration](configuration.md) — file-based config, env vars
