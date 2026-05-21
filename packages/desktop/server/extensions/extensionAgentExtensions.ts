@@ -1,7 +1,14 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 
 import { loadExtensionAgentFactory } from './extensionBackend.js';
-import { listExtensionAgentRegistrations } from './extensionRegistry.js';
+import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { listExtensionAgentRegistrations, setExtensionEnabled, setExtensionHealthError } from './extensionRegistry.js';
+
+function quarantineExtensionFatalError(extensionId: string, error: unknown): void {
+  if (!(error instanceof ExtensionProcessTerminationBlockedError)) return;
+  setExtensionHealthError(extensionId, error.message);
+  setExtensionEnabled(extensionId, false);
+}
 
 export function createManifestAgentExtensions(options: { onError?: (message: string, fields?: Record<string, unknown>) => void } = {}): {
   factories: ExtensionFactory[];
@@ -39,14 +46,26 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
           // Preloaded — call synchronously. Since this function is async,
           // await factory(api) in the SDK will still await the returned
           // promise, which resolves on the next microtask.
-          factory(pi);
+          try {
+            await withExtensionProcessGuard(reg.extensionId, 'agent extension factory', () => Promise.resolve(factory(pi)));
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            quarantineExtensionFatalError(reg.extensionId, error);
+            errors.push({ extensionId: reg.extensionId, message });
+            options.onError?.('failed to run extension agent factory', {
+              extensionId: reg.extensionId,
+              exportName: reg.exportName,
+              message,
+            });
+          }
         } else {
           // Edge case: session starts before preload finishes.
           try {
             const f = await loadExtensionAgentFactory(reg.extensionId, reg.exportName);
-            f(pi);
+            await withExtensionProcessGuard(reg.extensionId, 'agent extension factory', () => Promise.resolve(f(pi)));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            quarantineExtensionFatalError(reg.extensionId, error);
             errors.push({ extensionId: reg.extensionId, message });
             options.onError?.('failed to load extension agent factory', {
               extensionId: reg.extensionId,

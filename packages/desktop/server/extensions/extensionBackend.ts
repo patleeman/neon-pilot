@@ -19,6 +19,7 @@ import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEven
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
+import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
 import {
   clearBuildError,
   clearExtensionHealthError,
@@ -557,7 +558,11 @@ function loadCompiledExtensionBackendModule(extensionId: string, compiled: Exten
     return cached.module;
   }
 
-  const module = import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>;
+  const module = withExtensionProcessGuard(
+    extensionId,
+    'backend import',
+    () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
+  );
   backendModuleCache.set(extensionId, { cacheKey, module });
   return module;
 }
@@ -665,9 +670,13 @@ export async function invokeExtensionRoute(
   if (typeof handler !== 'function') {
     return { status: 500, body: { error: `Extension route handler not found: ${route.handler}` } };
   }
-  const result = await (handler as (request: ExtensionRouteRequest, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-    request,
-    createBackendContext(extensionId, serverContext),
+  const result = await withExtensionProcessGuard(extensionId, `route ${method} ${routePath}`, () =>
+    Promise.resolve(
+      (handler as (request: ExtensionRouteRequest, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
+        request,
+        createBackendContext(extensionId, serverContext),
+      ),
+    ),
   );
   if (result && typeof result === 'object' && ('body' in result || 'status' in result || 'headers' in result)) {
     return result as ExtensionRouteResponse;
@@ -712,9 +721,13 @@ export async function invokeExtensionAction(
       });
     }
 
-    const result = await (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-      input,
-      createBackendContext(extensionId, serverContext, toolContext, agentToolContext),
+    const result = await withExtensionProcessGuard(extensionId, `action ${actionId}`, () =>
+      Promise.resolve(
+        (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
+          input,
+          createBackendContext(extensionId, serverContext, toolContext, agentToolContext),
+        ),
+      ),
     );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
@@ -723,6 +736,17 @@ export async function invokeExtensionAction(
       error instanceof ExtensionLoadError
         ? error.message
         : `Extension "${extensionId}" action "${actionId}" failed: ${error instanceof Error ? error.message : String(error)}`;
+    if (error instanceof ExtensionProcessTerminationBlockedError) {
+      setExtensionHealthError(extensionId, error.message);
+      setExtensionEnabled(extensionId, false);
+      invalidateAppTopics('extensions');
+      publishAppEvent({
+        type: 'notification',
+        extensionId,
+        message: `${error.message} The extension was disabled to prevent a startup loop.`,
+        severity: 'error',
+      });
+    }
     recordActionTelemetry({
       extensionId,
       actionId,
@@ -769,9 +793,13 @@ export async function invokeExtensionProtocolEntrypoint(
     throw new Error(`Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}`);
   }
 
-  await (handler as (entryInput: unknown, ctx: ExtensionProtocolContext) => unknown | Promise<unknown>)(
-    input,
-    createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext),
+  await withExtensionProcessGuard(extensionId, `protocol ${protocolId}`, () =>
+    Promise.resolve(
+      (handler as (entryInput: unknown, ctx: ExtensionProtocolContext) => unknown | Promise<unknown>)(
+        input,
+        createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext),
+      ),
+    ),
   );
 }
 
@@ -813,9 +841,13 @@ export async function runExtensionSelfTest(
         continue;
       }
       try {
-        const result = await (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-          input,
-          createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
+        const result = await withExtensionProcessGuard(extensionId, `self-test action ${actionId}`, () =>
+          Promise.resolve(
+            (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
+              input,
+              createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
+            ),
+          ),
         );
         checks.push({
           name: `action smoke: ${actionId}`,
@@ -857,6 +889,9 @@ export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ exte
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setExtensionHealthError(summary.id, message);
+        if (error instanceof ExtensionProcessTerminationBlockedError) {
+          setExtensionEnabled(summary.id, false);
+        }
         logError('extension backend health check failed', { extensionId: summary.id, message });
         publishAppEvent({
           type: 'notification',

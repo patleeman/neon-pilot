@@ -1027,6 +1027,8 @@ If a page needs a style that fights these defaults, first ask whether it should 
 The backend runs in the Node.js server process. It exposes actions
 that the frontend can call via `pa.extension.invoke()`. A backend can also declare `onEnableAction` in `extension.json` to run an action immediately after the user enables the extension.
 
+Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions, services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)`, the call is blocked, surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
+
 ```typescript
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 

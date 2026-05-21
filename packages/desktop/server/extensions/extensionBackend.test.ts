@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { invokeExtensionAction } from './extensionBackend.js';
+import { invokeExtensionAction, loadExtensionBackend } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
-import { setExtensionEnabled } from './extensionRegistry.js';
+import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
 
@@ -42,6 +42,51 @@ describe('extension backend action invocation', () => {
       ok: false,
       error: 'Cannot invoke action "doThing": extension "disabled-action-ext" is disabled.',
     });
+  });
+
+  it('blocks process termination from extension actions and disables the extension', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'exit-action-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'exit-action-ext',
+        name: 'Exit Action Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function doThing() { process.exit(42); }\n');
+
+    const result = await invokeExtensionAction('exit-action-ext', 'doThing', {});
+
+    expect(result.ok).toBe(false);
+    expect(result.ok ? '' : result.error).toContain('attempted to terminate the application via process.exit');
+    expect(isExtensionEnabled('exit-action-ext', stateRoot)).toBe(false);
+  });
+
+  it('blocks process termination during extension backend import', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'exit-import-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'exit-import-ext',
+        name: 'Exit Import Ext',
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'noop', handler: 'noop' }] },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'process.exit(42); export function noop() { return true; }\n');
+
+    await expect(loadExtensionBackend('exit-import-ext')).rejects.toThrow('attempted to terminate the application via process.exit');
   });
 });
 

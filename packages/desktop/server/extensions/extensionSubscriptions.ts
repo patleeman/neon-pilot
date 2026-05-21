@@ -2,7 +2,14 @@ import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
-import { findExtensionEntry, isExtensionEnabled, listExtensionInstallSummaries } from './extensionRegistry.js';
+import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import {
+  findExtensionEntry,
+  isExtensionEnabled,
+  listExtensionInstallSummaries,
+  setExtensionEnabled,
+  setExtensionHealthError,
+} from './extensionRegistry.js';
 
 interface InstalledSubscription {
   unsubscribe: () => void;
@@ -59,11 +66,20 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[subscription.handler];
         if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${subscription.handler}".`);
-        await (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-          { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },
-          createBackendContext(extensionId, serverContext),
+        await withExtensionProcessGuard(extensionId, `subscription ${subscription.id}`, () =>
+          Promise.resolve(
+            (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+              { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },
+              createBackendContext(extensionId, serverContext),
+            ),
+          ),
         );
       } catch (error) {
+        if (error instanceof ExtensionProcessTerminationBlockedError) {
+          setExtensionHealthError(extensionId, error.message);
+          setExtensionEnabled(extensionId, false);
+          uninstallExtensionSubscriptions(extensionId);
+        }
         logError('extension subscription handler failed', {
           extensionId,
           subscriptionId: subscription.id,

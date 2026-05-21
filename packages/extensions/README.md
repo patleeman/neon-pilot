@@ -729,6 +729,8 @@ V1 native extensions are trusted local code. They are not sandboxed.
 
 That is acceptable because Neon Pilot already runs local agent tools with broad authority. The goal is not fake security theater; the goal is a clear contract and review surface.
 
+Extension backend code still must not be able to take down the host process. The desktop runtime guards extension backend imports, actions, services, protocol handlers, and agent lifecycle factories against direct process termination APIs. Calls such as `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)` from guarded extension code are blocked, reported as extension health errors, and the extension is disabled when the attempt happens from a runtime action path so it cannot create an app-start boot loop.
+
 Rules:
 
 - Declare permissions in `extension.json`.

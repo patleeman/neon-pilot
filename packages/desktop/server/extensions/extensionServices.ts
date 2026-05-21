@@ -2,6 +2,7 @@ import { publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
+import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionHealthError } from './extensionRegistry.js';
 
 interface RunningExtensionService {
@@ -59,9 +60,13 @@ async function startOneExtensionService(
     if (typeof handler !== 'function') throw new Error(`Missing service handler export "${service.handler}".`);
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
     const result = await Promise.race([
-      (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-        { serviceId: service.id },
-        createBackendContext(extensionId, serverContext),
+      withExtensionProcessGuard(extensionId, `service ${service.id} startup`, () =>
+        Promise.resolve(
+          (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+            { serviceId: service.id },
+            createBackendContext(extensionId, serverContext),
+          ),
+        ),
       ),
       new Promise<never>((_, reject) =>
         setTimeout(
@@ -77,6 +82,10 @@ async function startOneExtensionService(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setExtensionHealthError(extensionId, message);
+    if (error instanceof ExtensionProcessTerminationBlockedError) {
+      const { setExtensionEnabled } = await import('./extensionRegistry.js');
+      setExtensionEnabled(extensionId, false);
+    }
     logError('extension service failed', { extensionId, serviceId: service.id, message });
     publishAppEvent({ type: 'notification', extensionId, message: `Extension service failed: ${message}`, severity: 'error' });
     return { extensionId, serviceId: service.id, ok: false, error: message };
@@ -109,9 +118,13 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (typeof healthCheck !== 'function') throw new Error(`Missing service healthCheck export "${service.healthCheck}".`);
         const HEALTH_CHECK_TIMEOUT_MS = 15_000;
         const result = await Promise.race([
-          (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-            { serviceId: service.id },
-            createBackendContext(summary.id, serverContext),
+          withExtensionProcessGuard(summary.id, `service ${service.id} health check`, () =>
+            Promise.resolve(
+              (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+                { serviceId: service.id },
+                createBackendContext(summary.id, serverContext),
+              ),
+            ),
           ),
           new Promise<never>((_, reject) =>
             setTimeout(
@@ -128,6 +141,12 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         const running = runningServices.get(key);
         if (running) running.lastError = message;
         setExtensionHealthError(summary.id, message);
+        if (error instanceof ExtensionProcessTerminationBlockedError) {
+          const { setExtensionEnabled } = await import('./extensionRegistry.js');
+          setExtensionEnabled(summary.id, false);
+          await stopOneService(summary.id, service.id);
+          continue;
+        }
         if (service.restart === 'always' || service.restart === 'on-failure') {
           await stopOneService(summary.id, service.id);
           await startOneExtensionService(summary.id, service, serverContext);
