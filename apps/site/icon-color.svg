@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Neon Pilot icon">
+  <defs>
+    <linearGradient id="halo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#caff33"></stop>
+      <stop offset="100%" stop-color="#6a9300"></stop>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"></feGaussianBlur>
+      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+  </defs>
+
+  
+  <rect width="512" height="512" rx="96" fill="#0c0c08"></rect>
+
+  
+  <g transform="translate(136 136)" filter="url(#glow)">
+    <g fill="none" stroke="url(#halo)">
+      <circle cx="120" cy="120" r="78" stroke-width="16" stroke-dasharray="380 110" stroke-dashoffset="-58" transform="rotate(-90 120 120)"></circle>
+    </g>
+    <polygon points="120,26 142,58 98,58" fill="#caff33"></polygon>
+  </g>
+</svg>
