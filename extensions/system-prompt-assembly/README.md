@@ -1,19 +1,24 @@
-# Prompt Assembly Extension
+# Agent Runtime Extension
 
-This extension owns the `/prompt-assembly` inspection page for the inputs that shape an agent run: instruction layers, prompt templates, runtime context blocks, skills, tools, and diagnostics.
+This extension owns the `/agent-runtime` settings page for inspecting the capabilities that shape an agent run: enabled extensions, instruction layers, prompt templates, runtime context blocks, skills, tools, MCP servers, and diagnostics.
 
-## Product direction
+`/prompt-assembly` remains as a compatibility route, but the product surface is **Settings → Agent Runtime**.
 
-Prompt Assembly is an inspector, not a settings maze. Keep the top-level navigation shallow and aligned with Extension Manager page patterns:
+## Architecture
 
-- **Assembly** — summary cards, prompt layers, optional templates/context, and diagnostics health.
-- **Capabilities** — skills and tools together, with Extension Manager-style filters and search.
+Agent Runtime is an inspector over the runtime capability registry. It does not let extensions mutate the system prompt directly. Instruction content flows through declared instruction providers, then core performs deterministic assembly.
 
-Avoid one top-level tab per backend inventory type. If a new prompt input is mostly text that enters the prompt, add it under Assembly. If it gives the agent something it can choose/use, add it under Capabilities. Diagnostics should stay inline unless it grows into a dedicated workflow.
+Capability rows expose:
 
-## Agent workflow for this extension
+- kind: extension, instruction, skill, tool, MCP server, prompt template, or context
+- owner/source/scope
+- enabled/status
+- provider metadata and diagnostics
 
-1. Keep UI consistent with Extension Manager list/table/filter patterns.
-2. Keep backend action contracts small: inspect current assembly, update skill enabled state.
-3. Validate frontend type/build checks after UI changes.
-4. Visually inspect `/prompt-assembly` after changing layout or interaction behavior.
+## UX rules
+
+- Keep one top-level settings destination: Agent Runtime.
+- Extensions are a capability kind inside this page, not a separate settings nav item.
+- Prefer filters/search over nested pages.
+- Show concrete runtime state: what the agent can see if a turn starts now.
+- Visually inspect `/agent-runtime` after layout or interaction changes.

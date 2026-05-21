@@ -1,4 +1,6 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { listExtensionInstallSummaries } from '@neon-pilot/extensions/backend/extensions';
+import { buildMergedMcpConfigDocument, readBundledSkillMcpManifests, readMcpConfigDocument } from '@neon-pilot/extensions/backend/mcp';
 
 import { buildInstructionPlan } from '../../../packages/desktop/server/prompt-assembly/instructionInventory.js';
 import { buildPromptAssemblyPlanAsync } from '../../../packages/desktop/server/prompt-assembly/promptAssembly.js';
@@ -6,20 +8,140 @@ import { buildPromptTemplatePlanAsync } from '../../../packages/desktop/server/p
 import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
 import { buildToolInjectionPlanAsync } from '../../../packages/desktop/server/tools/toolInventory.js';
 
-export async function inspectPromptAssembly(input: unknown, ctx: ExtensionBackendContext) {
+type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
+
+type CapabilityStatus = 'enabled' | 'disabled' | 'active' | 'inactive' | 'invalid' | 'warning' | 'error';
+
+interface RuntimeCapability {
+  id: string;
+  kind: CapabilityKind;
+  title: string;
+  description?: string;
+  ownerExtensionId?: string;
+  source?: Record<string, unknown>;
+  scope?: string;
+  enabled: boolean;
+  status: CapabilityStatus;
+  priority?: number;
+  metadata?: Record<string, unknown>;
+  diagnostics?: unknown[];
+}
+
+export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const repoRoot = typeof body.repoRoot === 'string' && body.repoRoot.trim() ? body.repoRoot.trim() : process.cwd();
   const modelRef = typeof body.modelRef === 'string' ? body.modelRef : undefined;
   const runtimeCtx = { profile: ctx.profile, repoRoot, modelRef };
-  const [plan, skills, tools, promptTemplates, instructions] = await Promise.all([
+  const [plan, skills, tools, promptTemplates, instructions, extensions, mcp] = await Promise.all([
     buildPromptAssemblyPlanAsync(runtimeCtx),
     buildSkillInventoryAsync(runtimeCtx),
     buildToolInjectionPlanAsync(runtimeCtx),
     buildPromptTemplatePlanAsync(runtimeCtx),
     buildInstructionPlan(runtimeCtx),
+    listExtensionInstallSummaries(),
+    safeInspectMcpSettings(ctx),
   ]);
-  return { ok: true, plan, skills, tools: tools.tools, promptTemplates: promptTemplates.templates, instructions: instructions.layers };
+  const capabilities: RuntimeCapability[] = [
+    ...extensions.map(extensionToCapability),
+    ...instructions.layers.map((layer) => ({
+      id: layer.id,
+      kind: 'instruction' as const,
+      title: layer.title,
+      ownerExtensionId: layer.source.extensionId,
+      source: layer.source as Record<string, unknown>,
+      scope: layer.scope,
+      enabled: true,
+      status: layer.diagnostics?.some((diagnostic) => (diagnostic as { severity?: string }).severity === 'error') ? 'error' : 'active',
+      priority: layer.priority,
+      metadata: { providerId: layer.providerId, risk: layer.risk, mutable: layer.mutable, contentLength: layer.content.length },
+      diagnostics: layer.diagnostics,
+    })),
+    ...skills.map((skill) => ({
+      id: skill.id,
+      kind: 'skill' as const,
+      title: skill.title,
+      description: skill.description,
+      ownerExtensionId: skill.source.extensionId,
+      source: skill.source as Record<string, unknown>,
+      scope: skill.source.kind,
+      enabled: skill.enabled,
+      status: skill.enabled ? 'active' : 'disabled',
+      priority: skill.priority,
+      metadata: { providerId: skill.providerId, location: skill.location, inline: !skill.location },
+      diagnostics: skill.diagnostics,
+    })),
+    ...tools.tools.map((tool) => ({
+      id: tool.id,
+      kind: 'tool' as const,
+      title: tool.title ?? tool.name,
+      description: tool.description,
+      ownerExtensionId: tool.source.extensionId,
+      source: tool.source as Record<string, unknown>,
+      enabled: tool.enabled,
+      status: tool.active ? 'active' : tool.enabled ? 'inactive' : 'disabled',
+      priority: tool.priority,
+      metadata: { name: tool.name, providerId: tool.providerId, action: tool.action, replaces: tool.replaces, reason: tool.reason },
+      diagnostics: tool.diagnostics,
+    })),
+    ...promptTemplates.templates.map((template) => ({
+      id: template.id,
+      kind: 'prompt-template' as const,
+      title: template.title,
+      enabled: template.enabled,
+      status: template.enabled ? 'active' : 'disabled',
+      source: template.source as Record<string, unknown>,
+      metadata: { location: template.location },
+      diagnostics: template.diagnostics,
+    })),
+    ...(mcp?.servers ?? []).map((server) => ({
+      id: `mcp:${server.name}`,
+      kind: 'mcp-server' as const,
+      title: server.name,
+      ownerExtensionId: 'system-mcp',
+      source: { kind: server.source ?? 'config', label: server.sourcePath ?? server.name, root: server.sourcePath },
+      scope: server.source ?? 'config',
+      enabled: true,
+      status: 'enabled' as const,
+      metadata: {
+        transport: server.transport,
+        command: server.command,
+        url: server.url,
+        hasOAuth: server.hasOAuth,
+        skillName: server.skillName,
+        manifestPath: server.manifestPath,
+      },
+    })),
+    ...((plan.context?.blocks ?? []) as unknown[]).map((block, index) => ({
+      id: `context:${index}`,
+      kind: 'context' as const,
+      title: contextBlockTitle(block, index),
+      enabled: true,
+      status: 'active' as const,
+      metadata: { block },
+    })),
+  ];
+  const counts = capabilities.reduce<Record<string, number>>((acc, capability) => {
+    acc[capability.kind] = (acc[capability.kind] ?? 0) + 1;
+    return acc;
+  }, {});
+  return {
+    ok: true,
+    profile: ctx.profile,
+    repoRoot,
+    capabilities,
+    counts,
+    plan,
+    skills,
+    tools: tools.tools,
+    promptTemplates: promptTemplates.templates,
+    instructions: instructions.layers,
+    extensions,
+    mcp,
+    diagnostics: [...(plan.diagnostics ?? []), ...(mcp?.diagnostics ?? [])],
+  };
 }
+
+export const inspectPromptAssembly = inspectAgentRuntime;
 
 export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendContext) {
   const body = asRecord(input);
@@ -30,6 +152,151 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   return { ok: true, id, enabled };
 }
 
+function extensionToCapability(extension: Record<string, unknown>): RuntimeCapability {
+  const status = typeof extension.status === 'string' ? extension.status : extension.enabled ? 'enabled' : 'disabled';
+  const manifest = asRecord(extension.manifest);
+  const contributes = asRecord(manifest.contributes);
+  return {
+    id: String(extension.id ?? 'unknown-extension'),
+    kind: 'extension',
+    title: String(extension.name ?? extension.id ?? 'Unknown extension'),
+    description: typeof extension.description === 'string' ? extension.description : undefined,
+    ownerExtensionId: typeof extension.id === 'string' ? extension.id : undefined,
+    source: {
+      kind: extension.packageType === 'user' ? 'user-extension' : 'system-extension',
+      label: String(extension.packageRoot ?? extension.id ?? ''),
+    },
+    enabled: extension.enabled !== false && status !== 'invalid',
+    status: status === 'invalid' ? 'invalid' : extension.enabled === false ? 'disabled' : 'enabled',
+    metadata: {
+      packageType: extension.packageType,
+      version: extension.version,
+      permissions: extension.permissions,
+      packageRoot: extension.packageRoot,
+      contributions: Object.keys(contributes),
+      surfaces: extension.surfaces,
+      routes: extension.routes,
+    },
+    diagnostics: [...arrayOf(extension.errors), ...arrayOf(extension.diagnostics), extension.buildError, extension.healthError].filter(
+      Boolean,
+    ),
+  };
+}
+
+interface McpRuntimeSummary {
+  configPath: string;
+  configExists: boolean;
+  searchedPaths: string[];
+  servers: Array<{
+    name: string;
+    transport?: string;
+    command?: string;
+    url?: string;
+    source?: string;
+    sourcePath?: string;
+    skillName?: string;
+    manifestPath?: string;
+    hasOAuth?: boolean;
+  }>;
+  bundledSkills: unknown[];
+  diagnostics?: unknown[];
+}
+
+async function safeInspectMcpSettings(ctx: ExtensionBackendContext): Promise<McpRuntimeSummary | null> {
+  try {
+    const runtime = (
+      ctx as unknown as {
+        runtime?: { getLiveSessionResourceOptions?: () => { additionalSkillPaths?: string[]; cwd?: string }; getRepoRoot?: () => string };
+      }
+    ).runtime;
+    const resourceOptions = runtime?.getLiveSessionResourceOptions?.() ?? {};
+    const skillDirs = resourceOptions.additionalSkillPaths ?? [];
+    const cwd = resourceOptions.cwd ?? runtime?.getRepoRoot?.() ?? process.cwd();
+    const configDiscoveryEnv = { ...process.env };
+    delete configDiscoveryEnv.MCP_CONFIG_PATH;
+    const merged = buildMergedMcpConfigDocument({ cwd, env: configDiscoveryEnv, skillDirs }) as {
+      baseConfigPath: string;
+      baseConfigExists: boolean;
+      searchedPaths: string[];
+      document: { mcpServers: Record<string, unknown> };
+      baseServerNames: string[];
+    };
+    const bundledSkills = readBundledSkillMcpManifests(skillDirs) as Array<{
+      skillName: string;
+      skillDir: string;
+      manifestPath: string;
+      serverNames: string[];
+    }>;
+    const parsed = readMcpConfigDocument({
+      path: merged.baseConfigPath,
+      exists: merged.baseConfigExists || Object.keys(merged.document.mcpServers).length > 0,
+      searchedPaths: merged.searchedPaths,
+      document: merged.document,
+    }) as {
+      path: string;
+      searchedPaths: string[];
+      servers: Array<{
+        name: string;
+        transport?: string;
+        command?: string;
+        url?: string;
+        oauthClientInfo?: unknown;
+        oauthClientMetadata?: unknown;
+        callbackHost?: string;
+        callbackPort?: number;
+        callbackPath?: string;
+      }>;
+    };
+    const explicitServerNames = new Set(merged.baseServerNames);
+    const bundledByServer = new Map<string, (typeof bundledSkills)[number]>();
+    for (const manifest of bundledSkills) {
+      for (const serverName of manifest.serverNames) bundledByServer.set(serverName, manifest);
+    }
+    return {
+      configPath: parsed.path,
+      configExists: merged.baseConfigExists,
+      searchedPaths: parsed.searchedPaths,
+      servers: parsed.servers.map((server) => {
+        const source = explicitServerNames.has(server.name) ? 'config' : 'skill';
+        const bundled = bundledByServer.get(server.name);
+        return {
+          name: server.name,
+          transport: server.transport,
+          command: server.command,
+          url: server.url,
+          source,
+          sourcePath: source === 'skill' ? bundled?.manifestPath : parsed.path,
+          skillName: source === 'skill' ? bundled?.skillName : undefined,
+          manifestPath: source === 'skill' ? bundled?.manifestPath : undefined,
+          hasOAuth: Boolean(
+            server.oauthClientInfo || server.oauthClientMetadata || server.callbackHost || server.callbackPort || server.callbackPath,
+          ),
+        };
+      }),
+      bundledSkills,
+    };
+  } catch (err) {
+    return {
+      configPath: '',
+      configExists: false,
+      searchedPaths: [],
+      explicitConfigJson: '',
+      servers: [],
+      bundledSkills: [],
+      diagnostics: [{ severity: 'warning', code: 'mcp-inspection-failed', message: err instanceof Error ? err.message : String(err) }],
+    };
+  }
+}
+
+function contextBlockTitle(block: unknown, index: number): string {
+  const record = asRecord(block);
+  return typeof record.title === 'string' ? record.title : typeof record.kind === 'string' ? record.kind : `Context block ${index + 1}`;
+}
+
 function asRecord(input: unknown): Record<string, unknown> {
   return input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+}
+
+function arrayOf(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }

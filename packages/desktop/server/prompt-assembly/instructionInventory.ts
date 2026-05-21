@@ -34,11 +34,51 @@ export interface InstructionPlan {
   diagnostics: AssemblyDiagnostic[];
 }
 
+export interface InstructionProvider {
+  id: string;
+  title: string;
+  provide(ctx: AssemblyRuntimeContext): Promise<InstructionLayer[]> | InstructionLayer[];
+}
+
+const instructionProviders: InstructionProvider[] = [
+  {
+    id: 'runtime-files',
+    title: 'Runtime instruction files',
+    provide: listFileInstructionLayers,
+  },
+  {
+    id: 'runtime-template',
+    title: 'Generated runtime instructions',
+    async provide(ctx) {
+      const layer = await generatedRuntimeLayer(ctx);
+      return layer ? [layer] : [];
+    },
+  },
+];
+
+export function registerInstructionProvider(provider: InstructionProvider): () => void {
+  instructionProviders.push(provider);
+  return () => {
+    const index = instructionProviders.indexOf(provider);
+    if (index >= 0) instructionProviders.splice(index, 1);
+  };
+}
+
 export async function buildInstructionPlan(ctx: AssemblyRuntimeContext): Promise<InstructionPlan> {
   const diagnostics: AssemblyDiagnostic[] = [];
-  const layers = [...listFileInstructionLayers(ctx), await generatedRuntimeLayer(ctx)].filter((layer): layer is InstructionLayer =>
-    Boolean(layer),
-  );
+  const layers: InstructionLayer[] = [];
+  for (const provider of instructionProviders) {
+    try {
+      layers.push(...(await provider.provide(ctx)));
+    } catch (err) {
+      diagnostics.push({
+        severity: 'warning',
+        code: 'instruction-provider-failed',
+        message: `${provider.title} failed; prompt assembly continued without it: ${err instanceof Error ? err.message : String(err)}`,
+        sourceId: provider.id,
+      });
+    }
+  }
   const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'instructions');
   await Promise.allSettled(
     providers.map(async (provider) => {

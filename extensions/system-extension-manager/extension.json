@@ -32,15 +32,7 @@
       "description": "Choose additional folders to scan for extension packages.",
       "order": 35
     },
-    "nav": [
-      {
-        "id": "extensions-nav",
-        "label": "Extensions",
-        "route": "/extensions",
-        "icon": "sparkle",
-        "section": "settings"
-      }
-    ],
+    "nav": [],
     "views": [
       {
         "id": "page",
