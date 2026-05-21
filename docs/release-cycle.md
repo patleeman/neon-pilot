@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.8** — current repo version. Published successfully.
+**v0.9.0-rc.9** — current repo version. Published successfully.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.8
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.9
 
 Highlights in this train:
 
-- Stabilizes the IPC-backed desktop runtime after the client rewrite, including live-session snapshots, local API behavior, and extension routing coverage.
-- Hardens automation callbacks so scheduled tasks, deferred resumes, and background-run wakeups write attention events into the correct profile state root.
-- Improves settings, chat, and extension smoke coverage to match current UI copy, streaming controls, and installed extension inventory.
-- Fixes provider credential checks so stale empty credentials no longer count as usable authentication.
-- Updates release smoke checks for the current local API surface and adds runtime smoke coverage for the self-preservation extension.
+- Adds experimental SpeechMike hardware integration with configurable button actions, dictation controls, and hardware command wiring.
+- Fixes composer action placement so extension buttons render in the right slot and command insertion targets the textarea reliably.
+- Keeps extension action failures isolated so one bad action does not trip the broader extension circuit breaker.
+- Improves conversation tree and transcript stability by allowing selected branches to collapse cleanly and keeping fork/rewind markers anchored at the source point.
+- Prevents duplicated live bootstrap transcript blocks when persisted history overlaps with stream state.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

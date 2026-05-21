@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0-rc.9 — 2026-05-21
+
+### Highlights
+
+- Adds experimental SpeechMike hardware integration with configurable button actions, dictation controls, and hardware command wiring.
+- Fixes composer action placement so extension buttons render in the right slot and command insertion targets the textarea reliably.
+- Keeps extension action failures isolated so one bad action does not trip the broader extension circuit breaker.
+- Improves conversation tree and transcript stability by allowing selected branches to collapse cleanly and keeping fork/rewind markers anchored at the source point.
+- Prevents duplicated live bootstrap transcript blocks when persisted history overlaps with stream state.
+
+### Notes
+
+- 15 commits since the previous release.
+
 ## 0.9.0-rc.8 — 2026-05-21
 
 ### Highlights
