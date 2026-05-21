@@ -171,6 +171,7 @@ interface SettingsExtensionSummary {
   errors?: string[];
   diagnostics?: string[];
   buildError?: string;
+  manifest?: { defaultEnabled?: boolean };
 }
 
 function normalizeShortcutForConflict(shortcut: string): string {
@@ -1084,6 +1085,7 @@ function CommandsSettingsSection() {
 function ExtensionsSettingsSection() {
   const [extensions, setExtensions] = useState<SettingsExtensionSummary[]>([]);
   const [query, setQuery] = useState('');
+  const [showExperimental, setShowExperimental] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1091,7 +1093,7 @@ function ExtensionsSettingsSection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setExtensions((await api.extensions()) as unknown as SettingsExtensionSummary[]);
+      setExtensions((await api.extensionInstallations()) as unknown as SettingsExtensionSummary[]);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
@@ -1110,6 +1112,8 @@ function ExtensionsSettingsSection() {
       `${extension.name} ${extension.id} ${extension.description ?? ''}`.toLowerCase().includes(needle),
     );
   }, [extensions, query]);
+  const standardExtensions = useMemo(() => visible.filter((extension) => !isExperimentalSettingsExtension(extension)), [visible]);
+  const experimentalExtensions = useMemo(() => visible.filter(isExperimentalSettingsExtension), [visible]);
 
   async function toggleExtension(extension: SettingsExtensionSummary) {
     setBusyId(extension.id);
@@ -1124,52 +1128,75 @@ function ExtensionsSettingsSection() {
     }
   }
 
+  const renderExtensionRow = (extension: SettingsExtensionSummary) => (
+    <div key={extension.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
+      <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[13px] font-medium text-primary">{extension.name}</span>
+          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-dim">
+            {extension.packageType ?? 'user'}
+          </span>
+        </div>
+        <div className="font-mono text-[11px] text-dim">{extension.id}</div>
+        <div className="text-[12px] text-secondary">{extension.description ?? 'No description provided.'}</div>
+        {extension.status === 'invalid' || extension.errors?.length || extension.buildError ? (
+          <div className="text-[12px] text-danger">{extension.errors?.[0] ?? extension.buildError ?? 'Invalid extension'}</div>
+        ) : null}
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
+          disabled={busyId === extension.id || extension.status === 'invalid'}
+          aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
+          onClick={() => void toggleExtension(extension)}
+        >
+          <span
+            className={cx(
+              'relative h-5 w-9 rounded-full border transition-colors',
+              extension.enabled ? 'border-success/40 bg-success/20' : 'border-border-subtle bg-surface/60',
+            )}
+          >
+            <span
+              className={cx(
+                'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
+                extension.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
+              )}
+            />
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search extensions…" />
       {loading ? <p className="ui-card-meta">Loading extensions…</p> : null}
-      <div className="divide-y divide-border-subtle/70">
-        {visible.map((extension) => (
-          <div key={extension.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
-            <div className="min-w-0 space-y-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-[13px] font-medium text-primary">{extension.name}</span>
-                <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-dim">
-                  {extension.packageType ?? 'user'}
-                </span>
-              </div>
-              <div className="font-mono text-[11px] text-dim">{extension.id}</div>
-              <div className="text-[12px] text-secondary">{extension.description ?? 'No description provided.'}</div>
-              {extension.status === 'invalid' || extension.errors?.length || extension.buildError ? (
-                <div className="text-[12px] text-danger">{extension.errors?.[0] ?? extension.buildError ?? 'Invalid extension'}</div>
-              ) : null}
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
-                disabled={busyId === extension.id || extension.status === 'invalid'}
-                aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
-                onClick={() => void toggleExtension(extension)}
-              >
-                <span
-                  className={cx(
-                    'relative h-5 w-9 rounded-full border transition-colors',
-                    extension.enabled ? 'border-success/40 bg-success/20' : 'border-border-subtle bg-surface/60',
-                  )}
-                >
-                  <span
-                    className={cx(
-                      'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
-                      extension.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
-                    )}
-                  />
-                </span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <div className="divide-y divide-border-subtle/70">{standardExtensions.map(renderExtensionRow)}</div>
+      {experimentalExtensions.length ? (
+        <div className="space-y-3 border-t border-border-subtle/70 pt-4">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 text-left"
+            onClick={() => setShowExperimental((value) => !value)}
+            aria-expanded={showExperimental}
+          >
+            <span>
+              <span className="block text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Experimental</span>
+              <span className="mt-1 block text-[12px] text-secondary">
+                Off by default. Enable only when you want to try unfinished extension surfaces.
+              </span>
+            </span>
+            <span className="text-[12px] text-dim">
+              {experimentalExtensions.length} {showExperimental ? 'Hide' : 'Show'}
+            </span>
+          </button>
+          {showExperimental ? (
+            <div className="divide-y divide-border-subtle/70">{experimentalExtensions.map(renderExtensionRow)}</div>
+          ) : null}
+        </div>
+      ) : null}
       {!loading && visible.length === 0 ? <p className="ui-card-meta">No extensions match that search.</p> : null}
       {error ? <p className="text-[12px] text-danger">{error}</p> : null}
     </div>
@@ -1183,6 +1210,10 @@ function commandDisplayId(command: CommandSettingsEntry): string {
 
 function keybindingSettingId(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'surfaceId'>): string {
   return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function isExperimentalSettingsExtension(extension: SettingsExtensionSummary): boolean {
+  return extension.manifest?.defaultEnabled === false;
 }
 
 function keybindingMatchesCommandSetting(keybinding: CommandKeybindingSettingsEntry, command: CommandSettingsEntry): boolean {
