@@ -891,6 +891,8 @@ export interface ExtensionConversationCreateInput {
   cwd?: string;
   initialPrompt?: string;
   model?: string;
+  /** When set, only these tool names are exposed to the created live session. */
+  allowedToolNames?: string[];
   metadata?: Record<string, unknown>;
   runtimeId?: string;
 }

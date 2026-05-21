@@ -285,6 +285,17 @@ const smokes = {
     const result = await module.ensure({}, ctx);
     assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
   },
+  async 'system-clean-room-spec'() {
+    ctx.commands = { async execute() { return true; } };
+    const result = await module.start({}, ctx);
+    assert(result.conversationId === 'smoke-created-1' && conversations.length === 1, 'clean-room start failed');
+    assert(
+      JSON.stringify(conversations[0].allowedToolNames) === JSON.stringify(['web_search', 'web_fetch', 'agent_browser']),
+      'clean-room start did not enforce expected web-only tool allowlist',
+    );
+    const turnContext = await module.provideTurnContext({ conversationId: 'smoke-created-1' }, ctx);
+    assert(Array.isArray(turnContext.blocks), 'clean-room turn context failed');
+  },
   async 'system-prompt-assembly'() {
     const result = await module.inspectPromptAssembly({}, ctx);
     assert(result.ok === true && result.plan && Array.isArray(result.skills), 'prompt assembly inspect failed');

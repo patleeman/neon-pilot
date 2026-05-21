@@ -49,6 +49,8 @@ export interface ExtensionConversationCreateOptions {
   thinkingLevel?: string | null;
   /** Service tier override. */
   serviceTier?: string | null;
+  /** When set, only these tool names are exposed to the created live session. */
+  allowedToolNames?: string[];
 }
 
 export interface ExtensionConversationBlocksOptions {
@@ -263,6 +265,7 @@ export function createExtensionConversationsCapability(
       if (input?.model) options.initialModel = input.model;
       if (input?.thinkingLevel) options.initialThinkingLevel = input.thinkingLevel;
       if (input?.serviceTier) options.initialServiceTier = input.serviceTier;
+      if (input?.allowedToolNames) options.allowedToolNames = input.allowedToolNames;
 
       const created = await createSession(cwd, options);
 

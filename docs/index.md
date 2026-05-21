@@ -53,6 +53,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Caffeinate](../extensions/system-caffeinate/README.md)
 - [Codex Profile](../extensions/system-codex-profile/README.md)
 - [Composer Attachments](../extensions/system-composer-attachments/README.md)
+- [Clean-room Spec Generator](../extensions/system-clean-room-spec/README.md)
 - [Context Hardening](../extensions/system-context-hardening/README.md)
 - [Context Usage](../extensions/system-context-usage/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
