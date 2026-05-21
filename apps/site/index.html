@@ -3,13 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#04050a" />
+    <meta name="theme-color" content="#03040a" />
     <meta name="description" content="Neon Pilot is a self-extensible desktop agent harness powered by the Pi Coding Agent." />
     <title>Neon Pilot</title>
     <link rel="icon" href="./icon-color.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -17,129 +20,296 @@
 
     <header class="site-header">
       <a class="brand" href="#main" aria-label="Neon Pilot home">
-        <img src="./icon-color.svg" alt="" width="22" height="22" />
+        <img src="./icon-color.svg" alt="" width="20" height="20" />
         <span>Neon Pilot</span>
       </a>
       <nav class="nav" aria-label="Primary">
-        <a href="#what-it-is">What it is</a>
-        <a href="#capabilities">Capabilities</a>
+        <a href="#concept">Concept</a>
+        <a href="#stack">Stack</a>
         <a href="https://github.com/patleeman/neon-pilot" class="pill" rel="noopener">GitHub</a>
       </nav>
     </header>
 
     <main id="main">
+      <!-- hero -->
       <section class="hero" aria-labelledby="hero-title">
-        <h1 id="hero-title">A desktop agent that gets sharper.</h1>
-        <p class="hero-lead">
-          Neon Pilot is a local runtime for agents with real memory, tools, and background work. Useful workflows become reusable
-          capabilities without bloating core.
-        </p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-          <a class="btn btn-secondary" href="https://github.com/patleeman/neon-pilot">View source</a>
-        </div>
-      </section>
-
-      <section id="what-it-is" class="section" aria-labelledby="what-title">
-        <div class="section-head">
-          <p class="label">What it is</p>
-          <h2 id="what-title">A runtime, not a wrapper.</h2>
-        </div>
-        <div class="columns two">
-          <div>
-            <p>
-              Conversations, files, tools, skills, automations, and extension UI all live in one process. The agent holds context across
-              sessions, kicks off durable work in the background, and picks up where it left off.
-            </p>
-            <p>
-              Core stays intentionally small. Every product behavior ships as an extension, so a useful workflow can become a reusable
-              capability instead of a one-off chat.
-            </p>
-          </div>
-          <div class="panel">
-            <p class="panel-meta">patleeman/neon-pilot &mdash; MIT</p>
-            <p>
-              Built on the <a href="https://pi.dev/" rel="noopener">Pi Coding Agent</a>. The same agent that builds this software also uses
-              it to improve its own workspace.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="manifesto" aria-label="Manifesto">
-        <p class="manifesto-text">
-          The goal is an environment that gets sharper as you use it. Teach it a workflow, package it as an extension or skill, and let
-          future sessions pick it up automatically.
-        </p>
-      </section>
-
-      <section id="capabilities" class="section" aria-labelledby="capabilities-title">
-        <div class="section-head">
-          <p class="label">Capabilities</p>
-          <h2 id="capabilities-title">The pieces agents need.</h2>
-        </div>
-        <div class="cap-table">
-          <article>
-            <span class="num">01</span>
-            <h3>Persistent threads</h3>
-            <p>Keep context, branches, run history, and follow-ups across sessions. The agent remembers what it was doing and why.</p>
-          </article>
-          <article>
-            <span class="num">02</span>
-            <h3>Skills &amp; tools</h3>
-            <p>Write repeatable workflows as skills the agent can invoke. Expose safe callable capabilities through the tool system.</p>
-          </article>
-          <article>
-            <span class="num">03</span>
-            <h3>Background runs</h3>
-            <p>Kick off durable work, inspect logs, and resume the conversation when it matters. No more babysitting long tasks.</p>
-          </article>
-          <article>
-            <span class="num">04</span>
-            <h3>Extensions</h3>
-            <p>
-              Add pages, panels, commands, MCP servers, and custom workflows. Everything is a package; core never becomes a junk drawer.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="snippet-title">
-        <div class="section-head">
-          <p class="label">How it looks</p>
-          <h2 id="snippet-title">An agent workspace that learns.</h2>
-        </div>
-        <div class="snippet">
-          <pre><code><span class="k">&gt;</span> build me a browser tool
-
-  <span class="g">✓</span> read extension docs
-  <span class="g">✓</span> add tool manifest
-  <span class="g">✓</span> wire process execution
-  <span class="g">✓</span> validate and checkpoint
-
-  Neon Pilot learned a new capability.</code></pre>
-        </div>
-      </section>
-
-      <section class="section cta" aria-labelledby="cta-title">
-        <div class="cta-inner">
-          <h2 id="cta-title">Get started.</h2>
-          <p>Download the latest release for macOS, or explore the source on GitHub.</p>
+        <div class="container hero-inner">
+          <p class="overline">Desktop agent runtime</p>
+          <h1 id="hero-title">An agent workspace<br />that <em>remembers</em>.</h1>
+          <p class="subtitle">
+            Neon Pilot is a local desktop app for running agents with persistent context, callable tools, background automation, and
+            extensions. Teach it a workflow once and future sessions inherit it.
+          </p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-            <a class="btn btn-secondary" href="https://github.com/patleeman/neon-pilot">GitHub</a>
+            <a class="btn btn-primary" href="https://github.com/patleeman/neon-pilot/releases/latest">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download for macOS
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/patleeman/neon-pilot">Source on GitHub</a>
+          </div>
+          <div class="hero-stats">
+            <dl>
+              <dt>License</dt>
+              <dd>MIT</dd>
+            </dl>
+            <dl>
+              <dt>Runtime</dt>
+              <dd>Electron</dd>
+            </dl>
+            <dl>
+              <dt>Engine</dt>
+              <dd>Pi Agent</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- concept: the loop -->
+      <section id="concept" class="section concept" aria-labelledby="concept-title">
+        <div class="container">
+          <div class="section-head">
+            <p class="label">The idea</p>
+            <h2 id="concept-title">Build it. Package it. It sticks.</h2>
+          </div>
+          <div class="loop">
+            <div class="loop-step">
+              <span class="step-num">1</span>
+              <h3>Build a workflow</h3>
+              <p>
+                Talk to the agent naturally. It inspects files, runs commands, holds context, and works in the background while you focus
+                elsewhere.
+              </p>
+            </div>
+            <div class="loop-step">
+              <span class="step-num">2</span>
+              <h3>Package it</h3>
+              <p>
+                When a pattern proves useful, turn it into a skill, tool, or extension. The extension system is first-class, not bolted on.
+              </p>
+            </div>
+            <div class="loop-step">
+              <span class="step-num">3</span>
+              <h3>It sticks</h3>
+              <p>Future sessions discover capabilities automatically. The agent gets sharper with every workflow you package.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- product snapshot -->
+      <section class="section snapshot" aria-labelledby="snapshot-title">
+        <div class="container">
+          <div class="snapshot-grid">
+            <div class="snapshot-copy">
+              <p class="label">What you see</p>
+              <h2 id="snapshot-title">The agent builds its own tooling.</h2>
+              <p>
+                When you ask Neon Pilot to add a capability, it reads the extension docs, wires up the manifest, validates, and checkpoints.
+                The new tool appears in future sessions without a restart.
+              </p>
+              <a class="link-arrow" href="https://github.com/patleeman/neon-pilot/blob/main/docs/extensions.md"
+                >Read the extension docs
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14" />
+                  <path d="m12 5 7 7-7 7" /></svg
+              ></a>
+            </div>
+            <div class="snippet-wrap">
+              <div class="snippet-header">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="snippet-label">agent</span>
+              </div>
+              <pre><code><span class="prompt">&gt;</span> build me a browser tool
+
+<span class="dim">  reading</span>   system-browser/README.md
+<span class="dim">  writing</span>  extensions/browser/tool.json
+<span class="dim">  running</span>  pnpm run check:extensions:quick
+<span class="dim">  commit</span>   feat: add browser tool
+
+<span class="ok">✓</span> Browser tool installed.
+<span class="ok">✓</span> Reloaded agent context.
+<span class="ok">✓</span> New tool available in this session.</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- stack -->
+      <section id="stack" class="section stack-section" aria-labelledby="stack-title">
+        <div class="container">
+          <div class="section-head">
+            <p class="label">Built on</p>
+            <h2 id="stack-title">Small core. Real foundations.</h2>
+          </div>
+          <div class="stack-list">
+            <article>
+              <span class="stack-icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+              </span>
+              <div>
+                <h3>Pi Coding Agent</h3>
+                <p>The LLM runtime and conversation layer that powers the agent.</p>
+              </div>
+            </article>
+            <article>
+              <span class="stack-icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M12 17v4" />
+                </svg>
+              </span>
+              <div>
+                <h3>Electron</h3>
+                <p>Desktop shell with a React UI, extension surfaces, and local IPC.</p>
+              </div>
+            </article>
+            <article>
+              <span class="stack-icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                </svg>
+              </span>
+              <div>
+                <h3>SQLite</h3>
+                <p>Durable storage for conversations, runs, knowledge base, and indexes.</p>
+              </div>
+            </article>
+            <article>
+              <span class="stack-icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </span>
+              <div>
+                <h3>TypeScript</h3>
+                <p>Core runtime, extension SDK, and UI are all typed end to end.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="section cta" aria-labelledby="cta-title">
+        <div class="container cta-inner">
+          <h2 id="cta-title">Install it. Use it. Teach it.</h2>
+          <p>Grab the latest macOS release or explore the source.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/patleeman/neon-pilot/releases/latest">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download for macOS
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/patleeman/neon-pilot">Source on GitHub</a>
           </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <span>Patrick Lee &middot; MIT License</span>
-      <div class="footer-links">
-        <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
-        <a href="https://github.com/patleeman/neon-pilot/releases">Releases</a>
-        <a href="https://github.com/patleeman/neon-pilot/issues">Issues</a>
+      <div class="container footer-inner">
+        <span class="footer-copy">Patrick Lee &middot; MIT</span>
+        <div class="footer-links">
+          <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
+          <a href="https://github.com/patleeman/neon-pilot/releases">Releases</a>
+          <a href="https://github.com/patleeman/neon-pilot/issues">Issues</a>
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md">Docs</a>
+        </div>
       </div>
     </footer>
+
+    <script>
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          const target = document.querySelector(a.getAttribute('href'));
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+    </script>
   </body>
 </html>
