@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0-rc.7 — 2026-05-21
+
+### Highlights
+
+- Enables the Caffeinate top-bar control by default so long-running local work can keep the Mac awake without opening settings.
+- Hardens RC release safety by disabling RC updater checks until a separate RC feed exists, isolating packaged smoke tests on the test channel, and restoring the documented release-env fallback path.
+- Fixes sidebar branch cleanup so archived subagent/child conversations actually disappear instead of being reinserted under their parent.
+- Improves Pi/Neon Pilot compatibility by discovering common platform skill directories and loading sessions from the Pi agent state mirror.
+- Validates the release candidate with extension/page click-through screenshots, all optional extensions enabled, focused video QA review, and release/package extension checks.
+
+### Notes
+
+- 6 commits since the previous release.
+
 ## 0.9.0-rc.6 — 2026-05-21
 
 ### Highlights
