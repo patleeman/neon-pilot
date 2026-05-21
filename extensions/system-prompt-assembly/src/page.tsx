@@ -5,6 +5,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 type Filter = 'all' | CapabilityKind | 'active' | 'disabled' | 'issues';
 
+interface CommandInspectorEntry {
+  id?: string;
+  surfaceId?: string;
+  extensionId?: string;
+  title?: string;
+  category?: string;
+  action?: string;
+  args?: unknown;
+  argsSchema?: unknown;
+  enablement?: string;
+}
+
 const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'extension', label: 'Extensions' },
@@ -45,6 +57,8 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [commandQuery, setCommandQuery] = useState('');
+  const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -60,6 +74,21 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void pa.commands
+      .list()
+      .then((items) => {
+        if (!cancelled) setCommands(items as CommandInspectorEntry[]);
+      })
+      .catch(() => {
+        if (!cancelled) setCommands([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pa]);
 
   async function toggleCapability(row: RuntimeCapability, enabled: boolean) {
     setBusyId(row.id);
@@ -102,6 +131,16 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     });
   }, [data?.capabilities, filter, query]);
 
+  const visibleCommands = useMemo(() => {
+    const needle = commandQuery.trim().toLowerCase();
+    if (!needle) return commands;
+    return commands.filter((command) =>
+      [command.title, command.id, command.surfaceId, command.extensionId, command.category, command.action, command.enablement]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle)),
+    );
+  }, [commandQuery, commands]);
+
   if (error) return <ErrorState title="Failed to inspect agent runtime" message={error} />;
   if (!data) return <LoadingState label="Inspecting agent runtime…" />;
 
@@ -114,6 +153,28 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       />
 
       <Overview capabilities={data.capabilities} counts={data.counts} diagnostics={data.diagnostics ?? []} repoRoot={data.repoRoot} />
+
+      <section className="space-y-4 border-t border-border-subtle/70 pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] font-semibold tracking-tight text-primary">Commands</h2>
+            <p className="text-[13px] leading-6 text-secondary">
+              {formatCount(visibleCommands.length, 'command')} shown · {formatCount(commands.length, 'command')} registered
+            </p>
+          </div>
+          <input
+            className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+            value={commandQuery}
+            onChange={(event) => setCommandQuery(event.target.value)}
+            placeholder="Search commands…"
+          />
+        </div>
+        {visibleCommands.length ? (
+          <CommandTable rows={visibleCommands} />
+        ) : (
+          <EmptyState title="No commands found" body="Adjust the search query." />
+        )}
+      </section>
 
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -189,6 +250,45 @@ function Overview({
       <p className="text-[12px] text-dim">
         CWD <span className="text-secondary">{repoRoot}</span>
       </p>
+    </section>
+  );
+}
+
+function CommandTable({ rows }: { rows: CommandInspectorEntry[] }) {
+  return (
+    <section className="min-w-0 overflow-auto">
+      <table className="w-full border-collapse text-left text-[13px]">
+        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
+          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
+            <th className="py-2 pr-4 font-semibold">Command</th>
+            <th className="py-2 px-3 font-semibold">Source</th>
+            <th className="py-2 px-3 font-semibold">Category</th>
+            <th className="py-2 pl-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((command) => {
+            const id = command.id ?? command.surfaceId ?? 'unknown';
+            const commandId = command.extensionId ? `${command.extensionId}.${id}` : id;
+            return (
+              <tr
+                key={`${command.extensionId ?? 'host'}:${id}`}
+                className="border-t border-border-subtle/70 align-top transition-colors hover:bg-surface/30"
+              >
+                <td className="min-w-0 py-3 pr-4">
+                  <div className="truncate text-[14px] font-semibold text-primary">{command.title ?? id}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-dim">{commandId}</div>
+                  {command.enablement ? <div className="mt-1 font-mono text-[11px] text-dim">when {command.enablement}</div> : null}
+                  {command.argsSchema ? <div className="mt-1 text-[11px] text-secondary">Args schema available</div> : null}
+                </td>
+                <td className="px-3 py-3 text-[12px] text-secondary">{command.extensionId ?? 'host'}</td>
+                <td className="px-3 py-3 text-[12px] text-secondary">{command.category ?? '—'}</td>
+                <td className="py-3 pl-3 font-mono text-[11px] text-secondary">{command.action ?? 'host'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </section>
   );
 }
