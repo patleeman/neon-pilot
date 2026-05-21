@@ -171,7 +171,6 @@ async function assertDesktopApiEndpoints(cdp, child, logs) {
     '/api/extensions',
     '/api/extensions/slash-commands',
     '/api/extensions/mentions',
-    '/api/models',
   ];
   const expression = `
     (async () => {

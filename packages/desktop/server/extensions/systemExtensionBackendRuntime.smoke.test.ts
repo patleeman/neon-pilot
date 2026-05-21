@@ -304,6 +304,13 @@ const smokes = {
     const result = await module.bash({ command: 'echo smoke' }, ctx);
     assert(result.text.includes('echo smoke'), 'bash smoke did not execute shell stub');
   },
+  async 'system-self-preservation'() {
+    await smokeAgentFactory('createSelfPreservationAgentExtension');
+    const handler = registeredEvents.find((event) => event.eventName === 'tool_call')?.handler;
+    assert(typeof handler === 'function', 'self preservation tool_call hook missing');
+    const result = await handler({ toolName: 'bash', input: { command: 'kill ' + process.pid } });
+    assert(result?.block === true, 'self preservation did not block agent PID kill');
+  },
   async 'system-skills'() {
     const result = await module.listSkills({}, ctx);
     assert(result.ok === true && Array.isArray(result.skills), 'skills list failed');
