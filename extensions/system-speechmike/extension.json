@@ -45,25 +45,7 @@
       "label": "SpeechMike",
       "description": "Connect Philips SpeechMike hardware events directly to Neon Pilot commands.",
       "order": 31
-    },
-    "views": [
-      {
-        "id": "page",
-        "title": "SpeechMike",
-        "location": "main",
-        "route": "/ext/speechmike",
-        "component": "SpeechMikeSettingsPanel"
-      }
-    ],
-    "nav": [
-      {
-        "id": "nav",
-        "label": "SpeechMike",
-        "route": "/ext/speechmike",
-        "icon": "mic",
-        "section": "settings"
-      }
-    ]
+    }
   },
   "permissions": ["shell:execute"]
 }
