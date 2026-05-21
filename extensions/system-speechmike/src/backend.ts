@@ -143,23 +143,32 @@ async function executeEvent(eventName: string, ctx: ExtensionBackendContext): Pr
       await ctx.commands.execute('conversation.next');
       return;
     case 'play.press':
-    case 'eol.press':
       await ctx.commands.execute('composer.submit');
       return;
+    case 'eol.press':
+      await ctx.commands.execute('conversation.pageUp');
+      return;
     case 'insert.press':
-    case 'f2.press':
-      await ctx.commands.execute('composer.focus');
+      return;
+    case 'info.press':
+      await ctx.commands.execute('conversation.pageDown');
       return;
     case 'f1.press':
-    case 'info.press':
-    case 'trigger.secondary.press':
-      await ctx.commands.execute('palette.open', { scope: 'commands' });
+      await ctx.commands.execute('model.cycle');
+      return;
+    case 'f2.press':
+      await ctx.commands.execute('thinking.cycle');
       return;
     case 'f3.press':
-      await ctx.commands.execute('conversation.previous');
+      await ctx.commands.execute('conversation.newAndFocus');
       return;
     case 'f4.press':
-      await ctx.commands.execute('conversation.next');
+      await ctx.commands.execute('composer.focus');
+      await ctx.commands.execute('composer.clear');
+      return;
+    case 'device.pickedUp':
+    case 'trigger.secondary.press':
+      await ctx.commands.execute('composer.focus');
       return;
     default:
       return;

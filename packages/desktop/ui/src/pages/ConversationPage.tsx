@@ -266,6 +266,7 @@ import {
   addHydratingHistoricalBlockId,
   buildHydratingHistoricalBlockIdSet,
   displayBlockToMessageBlock,
+  mergeHistoricalAndStreamBlocks,
   mergeHydratedHistoricalBlocks,
   mergeHydratedStreamBlocks,
   normalizeHistoricalBlockId,
@@ -1009,7 +1010,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const liveMessages = stream.hasSnapshot
         ? visibleStreamBlocks
         : baseMessages.length > 0 || visibleStreamBlocks.length > 0
-          ? [...baseMessages, ...visibleStreamBlocks]
+          ? mergeHistoricalAndStreamBlocks(baseMessages, visibleStreamBlocks)
           : undefined;
       return appendPendingInitialPromptBlock(liveMessages, pendingInitialPrompt);
     }
@@ -5187,6 +5188,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     composerRunState.streamControlsActive,
   );
   useEffect(() => {
+    const handleComposerFocusCommand = () => {
+      composerRef.current?.focus();
+    };
+
     const handleComposerSubmitCommand = () => {
       if (composerShowsQuestionSubmit) {
         void submitComposerQuestionIfReady();
@@ -5195,9 +5200,20 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       void submitComposerActionForModifiers(false);
     };
 
+    const handleComposerClearCommand = () => {
+      composerController.clear();
+      composerRef.current?.focus();
+    };
+
+    window.addEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
     window.addEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
-    return () => window.removeEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
-  }, [composerShowsQuestionSubmit, submitComposerQuestionIfReady, submitComposerActionForModifiers]);
+    window.addEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
+    return () => {
+      window.removeEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
+      window.removeEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
+      window.removeEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
+    };
+  }, [composerController, composerShowsQuestionSubmit, submitComposerQuestionIfReady, submitComposerActionForModifiers]);
   const composerSubmit = resolveConversationComposerSubmitState(
     composerRunState.streamControlsActive,
     composerAltHeld,

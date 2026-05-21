@@ -27,6 +27,11 @@ export interface ExtensionCommandExecutorOptions {
   focusPrevious?(): void;
   activateSelection?(): void;
   submitComposer?(): boolean;
+  clearComposer?(): boolean;
+  pageConversation?(direction: 'up' | 'down'): boolean;
+  cycleModel?(): boolean;
+  cycleThinking?(): boolean;
+  newConversationAndFocus?(): boolean;
   toggleDictation?(): boolean;
   navigateConversation?(direction: 'next' | 'previous'): boolean;
   activeConversationId?: string | null;
@@ -106,6 +111,12 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.previous', title: 'Previous Conversation', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
+    { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
+    { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
+    { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
+    { id: 'conversation.newAndFocus', title: 'New Conversation and Focus Composer', category: 'Conversation' },
+    { id: 'model.cycle', title: 'Cycle Model', category: 'Model' },
+    { id: 'thinking.cycle', title: 'Cycle Thinking Level', category: 'Model' },
     { id: 'dictation.toggle', title: 'Start or Stop Dictation', category: 'Dictation' },
     { id: 'sidebar.focus', title: 'Focus Sidebar', category: 'Focus' },
     { id: 'focus.next', title: 'Focus Next', category: 'Focus' },
@@ -219,6 +230,54 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.submitComposer?.() ?? false;
+      },
+    },
+    {
+      id: 'composer.clear',
+      title: 'Clear Composer',
+      category: 'Conversation',
+      execute() {
+        return options.clearComposer?.() ?? false;
+      },
+    },
+    {
+      id: 'conversation.pageUp',
+      title: 'Page Conversation Up',
+      category: 'Conversation',
+      execute() {
+        return options.pageConversation?.('up') ?? false;
+      },
+    },
+    {
+      id: 'conversation.pageDown',
+      title: 'Page Conversation Down',
+      category: 'Conversation',
+      execute() {
+        return options.pageConversation?.('down') ?? false;
+      },
+    },
+    {
+      id: 'conversation.newAndFocus',
+      title: 'New Conversation and Focus Composer',
+      category: 'Conversation',
+      execute() {
+        return options.newConversationAndFocus?.() ?? false;
+      },
+    },
+    {
+      id: 'model.cycle',
+      title: 'Cycle Model',
+      category: 'Model',
+      execute() {
+        return options.cycleModel?.() ?? false;
+      },
+    },
+    {
+      id: 'thinking.cycle',
+      title: 'Cycle Thinking Level',
+      category: 'Model',
+      execute() {
+        return options.cycleThinking?.() ?? false;
       },
     },
     {

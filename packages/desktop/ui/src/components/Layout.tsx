@@ -262,6 +262,14 @@ function moveDocumentFocus(delta: 1 | -1): void {
   elements[(currentIndex + delta + elements.length) % elements.length]?.focus();
 }
 
+function cycleSelectByLabel(label: string): boolean {
+  const select = document.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`);
+  if (!select || select.disabled || select.options.length === 0) return false;
+  select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
 export function shouldResetEmptyArtifactsRail(input: {
   activeTool: WorkbenchRailMode;
   artifactsLoading: boolean;
@@ -1016,6 +1024,27 @@ export function Layout() {
       },
       submitComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-submit'));
+        return true;
+      },
+      clearComposer() {
+        window.dispatchEvent(new CustomEvent('neon-pilot:composer-clear'));
+        return true;
+      },
+      pageConversation(direction: 'up' | 'down') {
+        const scrollShell = document.querySelector<HTMLElement>('.conversation-scroll-shell');
+        if (!scrollShell) return false;
+        scrollShell.scrollBy({ top: (direction === 'down' ? 1 : -1) * Math.max(240, scrollShell.clientHeight * 0.82), behavior: 'smooth' });
+        return true;
+      },
+      cycleModel() {
+        return cycleSelectByLabel('Conversation model');
+      },
+      cycleThinking() {
+        return cycleSelectByLabel('Conversation thinking level');
+      },
+      newConversationAndFocus() {
+        navigate('/conversations/new');
+        window.setTimeout(() => window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus')), 80);
         return true;
       },
       toggleDictation() {
