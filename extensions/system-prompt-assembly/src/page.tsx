@@ -221,7 +221,7 @@ function CapabilityTable({
             <th className="py-2 pr-4 font-semibold">Name</th>
             <th className="py-2 px-3 font-semibold">Contributes</th>
             <th className="py-2 px-3 font-semibold">Source</th>
-            <th className="py-2 pl-3 text-right font-semibold">Status</th>
+            <th className="py-2 pl-3 text-right font-semibold">Enabled</th>
           </tr>
         </thead>
         <tbody>
@@ -298,7 +298,7 @@ function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: b
           )}
         />
       </span>
-      <span>{locked ? 'Always on' : row.enabled ? 'Enabled' : 'Disabled'}</span>
+      {locked ? <span>Always on</span> : null}
     </button>
   );
 }
