@@ -1310,7 +1310,7 @@ function TelemetryLogsSettingsPanel() {
   return (
     <SettingsPanel
       title="Telemetry logs"
-      description="Review recent local diagnostics, open the log folder, or export a bundle for troubleshooting."
+      description="Local diagnostics and troubleshooting exports."
       actions={
         <>
           <button type="button" className={ACTION_BUTTON_CLASS} onClick={openLogFolder} disabled={!data?.logDir || action !== null}>
