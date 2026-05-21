@@ -1125,11 +1125,24 @@ function ExtensionsSettingsSection() {
             <div className="flex justify-end">
               <button
                 type="button"
-                className={ACTION_BUTTON_CLASS}
+                className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
                 disabled={busyId === extension.id || extension.status === 'invalid'}
+                aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
                 onClick={() => void toggleExtension(extension)}
               >
-                {extension.enabled ? 'Disable' : 'Enable'}
+                <span
+                  className={cx(
+                    'relative h-5 w-9 rounded-full border transition-colors',
+                    extension.enabled ? 'border-success/40 bg-success/20' : 'border-border-subtle bg-surface/60',
+                  )}
+                >
+                  <span
+                    className={cx(
+                      'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
+                      extension.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
+                    )}
+                  />
+                </span>
               </button>
             </div>
           </div>
