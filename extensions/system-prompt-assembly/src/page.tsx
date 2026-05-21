@@ -115,20 +115,13 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
       />
 
-      <Overview
-        capabilities={data.capabilities}
-        counts={data.counts}
-        diagnostics={data.diagnostics ?? []}
-        repoRoot={data.repoRoot}
-        cwd={data.cwd}
-      />
-
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-semibold tracking-tight text-primary">Agent context</h2>
             <p className="text-[13px] leading-6 text-secondary">
               {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
+              <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
             </p>
           </div>
           <input
@@ -160,48 +153,6 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         )}
       </section>
     </AppPageLayout>
-  );
-}
-
-function Overview({
-  capabilities,
-  counts,
-  diagnostics,
-  repoRoot,
-  cwd,
-}: {
-  capabilities: RuntimeCapability[];
-  counts: Record<string, number>;
-  diagnostics: unknown[];
-  repoRoot: string;
-  cwd?: string;
-}) {
-  const extensions = capabilities.filter((capability) => capability.kind === 'extension');
-  const activeExtensions = extensions.filter(
-    (extension) => extension.enabled && extension.status !== 'disabled' && extension.status !== 'invalid',
-  );
-  const stats = [
-    ['Extensions', extensions.length || (counts.extension ?? 0)],
-    ['Active Extensions', activeExtensions.length],
-    ['Instructions', counts.instruction ?? 0],
-    ['Skills', counts.skill ?? 0],
-    ['Tools', counts.tool ?? 0],
-    ['Issues', diagnostics.length],
-  ];
-  return (
-    <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {stats.map(([label, value]) => (
-          <div key={label} className="border-t border-border-subtle pt-3">
-            <div className="text-[22px] font-semibold tracking-tight text-primary">{value}</div>
-            <div className="text-[12px] uppercase tracking-[0.18em] text-dim">{label}</div>
-          </div>
-        ))}
-      </div>
-      <p className="text-[12px] text-dim">
-        CWD <span className="text-secondary">{cwd ?? repoRoot}</span>
-      </p>
-    </section>
   );
 }
 
