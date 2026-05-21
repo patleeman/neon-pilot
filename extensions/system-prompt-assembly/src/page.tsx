@@ -178,17 +178,6 @@ function Overview({
   ];
   return (
     <section className="space-y-4">
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="text-[18px] font-semibold tracking-tight text-primary">Extensions</h2>
-          <span className="text-[12px] text-dim">
-            {activeExtensions.length} active of {extensions.length || (counts.extension ?? 0)} installed
-          </span>
-        </div>
-        <p className="text-[13px] leading-6 text-secondary">
-          {activeExtensions.length ? activeExtensions.map((extension) => extension.title).join(', ') : 'No active extensions.'}
-        </p>
-      </div>
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map(([label, value]) => (
           <div key={label} className="border-t border-border-subtle pt-3">
