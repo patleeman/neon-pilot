@@ -1322,6 +1322,32 @@ export const api = {
       },
     );
   },
+
+  restoreQueuedMessage: async (
+    id: string,
+    input: { behavior: 'steer' | 'followUp'; index: number; previewId?: string },
+    surfaceId?: string,
+  ) => {
+    const desktopBridge = getDesktopBridge();
+    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
+      return desktopBridge.restoreQueuedLiveSessionMessage({
+        conversationId: id,
+        behavior: input.behavior,
+        index: input.index,
+        ...(input.previewId ? { previewId: input.previewId } : {}),
+      });
+    }
+
+    return post<{ ok: true; text: string; images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }> }>(
+      `/live-sessions/${encodeURIComponent(id)}/dequeue`,
+      {
+        behavior: input.behavior,
+        index: input.index,
+        ...(input.previewId ? { previewId: input.previewId } : {}),
+        ...(surfaceId ? { surfaceId } : {}),
+      },
+    );
+  },
   abortSession: async (id: string, surfaceId?: string) => {
     const desktopBridge = getDesktopBridge();
     if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
