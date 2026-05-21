@@ -66,8 +66,8 @@ const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-general', label: 'General', summary: 'Appearance, workspace, and conversation defaults' },
-  { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
+  { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-capabilities', label: 'Capabilities', summary: 'MCP wrappers and agent-adjacent settings' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
@@ -3180,13 +3180,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </div>
             </SettingsSection>
 
-            <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
-              <CommandsSettingsSection />
-            </SettingsSection>
-
             <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
               <ExtensionsSettingsSection />
               <ExtensionSettingsSection />
+            </SettingsSection>
+
+            <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
+              <CommandsSettingsSection />
             </SettingsSection>
 
             <SettingsSection id="settings-capabilities" label="Capabilities" description="MCP wrappers and agent-adjacent settings.">
