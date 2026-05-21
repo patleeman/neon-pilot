@@ -113,7 +113,13 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
       />
 
-      <Overview counts={data.counts} diagnostics={data.diagnostics ?? []} repoRoot={data.repoRoot} profile={data.profile} />
+      <Overview
+        capabilities={data.capabilities}
+        counts={data.counts}
+        diagnostics={data.diagnostics ?? []}
+        repoRoot={data.repoRoot}
+        profile={data.profile}
+      />
 
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -154,26 +160,43 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
 }
 
 function Overview({
+  capabilities,
   counts,
   diagnostics,
   repoRoot,
   profile,
 }: {
+  capabilities: RuntimeCapability[];
   counts: Record<string, number>;
   diagnostics: unknown[];
   repoRoot: string;
   profile: string;
 }) {
+  const extensions = capabilities.filter((capability) => capability.kind === 'extension');
+  const activeExtensions = extensions.filter(
+    (extension) => extension.enabled && extension.status !== 'disabled' && extension.status !== 'invalid',
+  );
   const stats = [
-    ['Extensions', counts.extension ?? 0],
+    ['Extensions', extensions.length || (counts.extension ?? 0)],
+    ['Active Extensions', activeExtensions.length],
     ['Instructions', counts.instruction ?? 0],
     ['Skills', counts.skill ?? 0],
     ['Tools', counts.tool ?? 0],
-    ['MCP', counts['mcp-server'] ?? 0],
     ['Issues', diagnostics.length],
   ];
   return (
     <section className="space-y-4">
+      <div className="space-y-2 border-t border-border-subtle pt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="text-[18px] font-semibold tracking-tight text-primary">Extensions</h2>
+          <span className="text-[12px] text-dim">
+            {activeExtensions.length} active of {extensions.length || (counts.extension ?? 0)} installed
+          </span>
+        </div>
+        <p className="text-[13px] leading-6 text-secondary">
+          {activeExtensions.length ? activeExtensions.map((extension) => extension.title).join(', ') : 'No active extensions.'}
+        </p>
+      </div>
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map(([label, value]) => (
           <div key={label} className="border-t border-border-subtle pt-3">
