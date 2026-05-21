@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0-rc.8 — 2026-05-21
+
+### Highlights
+
+- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+
+### Notes
+
+- 69 commits since the previous release.
+
 ## 0.9.0-rc.7 — 2026-05-21
 
 ### Highlights
