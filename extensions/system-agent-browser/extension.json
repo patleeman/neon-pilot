@@ -5,6 +5,7 @@
   "packageType": "system",
   "description": "Control browsers and Electron apps with the agent-browser CLI. Docs: https://agent-browser.dev",
   "version": "0.1.0",
+  "defaultEnabled": false,
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
