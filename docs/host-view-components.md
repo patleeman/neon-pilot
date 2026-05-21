@@ -168,16 +168,14 @@ If there is no customization, remove `frontend` entirely when no other contribut
 
 The canonical catalog lives in `@neon-pilot/extensions/host-view-components` and is used by runtime validation, UI loading, docs, and extension-manager tooling.
 
-| Host id                      | Title                  | Locations   | Props | Override slots |
-| ---------------------------- | ---------------------- | ----------- | ----- | -------------- |
-| `workbench.artifacts.rail`   | Artifacts rail         | `rightRail` | none  | `wrapper`      |
-| `workbench.artifacts.detail` | Artifact detail        | `workbench` | none  | `wrapper`      |
-| `workbench.files.rail`       | Workspace files rail   | `rightRail` | none  | `wrapper`      |
-| `workbench.files.detail`     | Workspace file detail  | `workbench` | none  | `wrapper`      |
-| `workbench.runs.rail`        | Background work rail   | `rightRail` | none  | `wrapper`      |
-| `workbench.runs.detail`      | Background work detail | `workbench` | none  | `wrapper`      |
-| `workbench.browser.rail`     | Browser rail           | `rightRail` | none  | `wrapper`      |
-| `workbench.browser.detail`   | Browser detail         | `workbench` | none  | `wrapper`      |
+| Host id                      | Title                 | Locations   | Props | Override slots |
+| ---------------------------- | --------------------- | ----------- | ----- | -------------- |
+| `workbench.artifacts.rail`   | Artifacts rail        | `rightRail` | none  | `wrapper`      |
+| `workbench.artifacts.detail` | Artifact detail       | `workbench` | none  | `wrapper`      |
+| `workbench.files.rail`       | Workspace files rail  | `rightRail` | none  | `wrapper`      |
+| `workbench.files.detail`     | Workspace file detail | `workbench` | none  | `wrapper`      |
+| `workbench.browser.rail`     | Browser rail          | `rightRail` | none  | `wrapper`      |
+| `workbench.browser.detail`   | Browser detail        | `workbench` | none  | `wrapper`      |
 
 Agents can inspect the catalog through the Extension Manager UI or `/api/extensions/host-view-components` once the extension registry has been regenerated/reloaded in the running app.
 

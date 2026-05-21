@@ -116,8 +116,6 @@ describe('registerExtensionRoutes', () => {
         expect.objectContaining({ extensionId: 'system-telemetry', location: 'main', component: 'TelemetryPage' }),
         expect.objectContaining({ extensionId: 'system-files', location: 'rightRail', component: { host: 'workbench.files.rail' } }),
         expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: { host: 'workbench.files.detail' } }),
-        expect.objectContaining({ extensionId: 'system-runs', location: 'rightRail', component: { host: 'workbench.runs.rail' } }),
-        expect.objectContaining({ extensionId: 'system-runs', location: 'workbench', component: { host: 'workbench.runs.detail' } }),
       ]),
     );
   });

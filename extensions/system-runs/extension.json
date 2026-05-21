@@ -167,33 +167,6 @@
         }
       }
     ],
-    "views": [
-      {
-        "id": "conversation-runs",
-        "title": "Background work",
-        "location": "rightRail",
-        "scope": "conversation",
-        "component": {
-          "host": "workbench.runs.rail"
-        },
-        "icon": "terminal",
-        "detailView": "conversation-run-detail",
-        "placement": "workbench-tool",
-        "activation": "on-open",
-        "toolSlot": "runs"
-      },
-      {
-        "id": "conversation-run-detail",
-        "title": "Background work detail",
-        "location": "workbench",
-        "component": {
-          "host": "workbench.runs.detail"
-        },
-        "placement": "workbench-tool",
-        "scope": "conversation",
-        "activation": "on-open"
-      }
-    ],
     "composerShelves": [
       {
         "id": "activity-shelf",

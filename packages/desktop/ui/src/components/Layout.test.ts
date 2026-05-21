@@ -4,16 +4,12 @@ import type { SessionMeta } from '../shared/types';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
   isArtifactsRailMode,
-  isRunsRailMode,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
   resolveActiveExtensionWorkbenchSurface,
   resolveActiveWorkspaceCwd,
   resolveWorkbenchRailMode,
   shouldResetEmptyArtifactsRail,
-  shouldResetEmptyRunsRail,
-  shouldResetWorkbenchRunsOnConversationChange,
-  shouldShowConversationRunsTab,
 } from './Layout';
 import { shouldRenderExtensionToolPanelInWorkbenchNav } from './workbenchNav';
 
@@ -54,16 +50,7 @@ describe('Layout workbench rail state', () => {
     expect(readStoredWorkbenchExplorerOpen(localStorage)).toBe(true);
   });
 
-  it('only shows the runs tab when the conversation has runs', () => {
-    expect(shouldShowConversationRunsTab({ runCount: 0 })).toBe(false);
-    expect(shouldShowConversationRunsTab({ runCount: 1 })).toBe(true);
-    expect(shouldShowConversationRunsTab({ runCount: 0, activeRunId: 'run-1', activeRunConnected: false, runsLoaded: false })).toBe(true);
-    expect(shouldShowConversationRunsTab({ runCount: 0, activeRunId: 'run-1', activeRunConnected: false, runsLoaded: true })).toBe(false);
-  });
-
   it('keeps extension-backed empty workbench rails active', () => {
-    expect(shouldResetEmptyRunsRail({ activeTool: 'runs', showRunsTab: false, hasRunsExtensionSurface: true })).toBe(false);
-    expect(shouldResetEmptyRunsRail({ activeTool: 'runs', showRunsTab: false, hasRunsExtensionSurface: false })).toBe(true);
     expect(
       shouldResetEmptyArtifactsRail({
         activeTool: 'artifacts',
@@ -82,44 +69,7 @@ describe('Layout workbench rail state', () => {
     ).toBe(true);
   });
 
-  it('resets runs mode when switching conversations', () => {
-    expect(
-      shouldResetWorkbenchRunsOnConversationChange({
-        previousConversationId: 'conv-a',
-        activeConversationId: 'conv-b',
-        activeTool: 'runs',
-        activeRunId: null,
-      }),
-    ).toBe(true);
-    expect(
-      shouldResetWorkbenchRunsOnConversationChange({
-        previousConversationId: 'conv-a',
-        activeConversationId: 'conv-a',
-        activeTool: 'runs',
-        activeRunId: 'run-1',
-      }),
-    ).toBe(false);
-    expect(
-      shouldResetWorkbenchRunsOnConversationChange({
-        previousConversationId: 'conv-a',
-        activeConversationId: 'conv-b',
-        activeTool: 'knowledge',
-        activeRunId: null,
-      }),
-    ).toBe(false);
-    expect(
-      shouldResetWorkbenchRunsOnConversationChange({
-        previousConversationId: 'conv-a',
-        activeConversationId: 'conv-b',
-        activeTool: 'knowledge',
-        activeRunId: 'run-1',
-      }),
-    ).toBe(true);
-  });
-
   it('normalizes system extension rail actions to stable built-in modes', () => {
-    expect(resolveWorkbenchRailMode('runs', null)).toBe('runs');
-    expect(resolveWorkbenchRailMode('runs', { extensionId: 'system-runs', id: 'runs-tool' } as never)).toBe('runs');
     expect(resolveWorkbenchRailMode('artifacts', { extensionId: 'system-artifacts', id: 'artifacts-tool' } as never)).toBe('artifacts');
   });
 
@@ -152,12 +102,6 @@ describe('Layout workbench rail state', () => {
     expect(isArtifactsRailMode('artifacts')).toBe(true);
     expect(isArtifactsRailMode('extension:system-artifacts:conversation-artifacts')).toBe(true);
     expect(isArtifactsRailMode('extension:system-files:file-explorer')).toBe(false);
-  });
-
-  it('recognizes extension-backed runs as runs rail mode', () => {
-    expect(isRunsRailMode('runs')).toBe(true);
-    expect(isRunsRailMode('extension:system-runs:conversation-runs')).toBe(true);
-    expect(isRunsRailMode('extension:system-files:file-explorer')).toBe(false);
   });
 
   it('clears workbench-only diff and run params when switching to compact mode', () => {

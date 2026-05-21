@@ -138,7 +138,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Background work/runs (`system-runs`)
 
-- Views: Background work right rail, run detail workbench, activity shelf.
+- Views: activity shelf and inline transcript run cards.
 - Agent tools/actions: `bash`, `background_bash`, `subagent`.
 - `bash`: foreground command, background command, timeout, task slug, cwd, deliver result to conversation.
 - `background_bash`: `list`, `get`, `logs`, `start`, `rerun`, `cancel`.
@@ -471,7 +471,6 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 ### system-runs — Background Work
 
 - tools: bash-background/bash, background-bash/background_bash, subagent
-- views: conversation-runs, conversation-run-detail
 - composerShelves: activity-shelf
 - skills: runs
 - backend actions: bash, background_bash, subagent

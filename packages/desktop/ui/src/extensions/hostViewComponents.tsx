@@ -44,14 +44,6 @@ const componentLoaders: Record<string, () => Promise<{ default: ExtensionHostVie
   'workbench.files.detail': async () => ({
     default: (await import('../../../../../extensions/system-files/src/panels')).WorkspaceFileDetailPanel as ExtensionHostViewComponent,
   }),
-  'workbench.runs.rail': async () => ({
-    default: (await import('../../../../../extensions/system-runs/src/panels'))
-      .ConversationBackgroundWorkPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.runs.detail': async () => ({
-    default: (await import('../../../../../extensions/system-runs/src/panels'))
-      .ConversationBackgroundWorkDetailPanel as ExtensionHostViewComponent,
-  }),
   'workbench.browser.rail': async () => ({
     default: (await import('../../../../../experimental-extensions/extensions/system-browser/src/panels'))
       .BrowserTabsPanel as ExtensionHostViewComponent,

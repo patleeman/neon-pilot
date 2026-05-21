@@ -33,9 +33,15 @@ Created -> Queued -> Running -> Completed
 
 ## UI
 
-The conversation rail is titled **Background work** and groups execution records into **Background commands** and **Subagents**. It consumes the conversation-scoped executions API (`/api/conversations/:id/executions`) instead of loading the global durable run list and inferring relationships in the renderer.
+Background work appears inline in the transcript:
 
-Execution detail and actions use the execution API:
+- Background command starts and delivered completion callbacks render inline run cards with expandable status, metadata, and log tail.
+- Subagent starts link to the child conversation when one exists.
+- The composer activity shelf can still surface active background work while a conversation is in progress.
+
+The extension no longer contributes a right-side Background work/Runs workbench panel.
+
+Execution detail and actions use the execution API where a UI needs live execution data:
 
 - `GET /api/executions/:id`
 - `GET /api/executions/:id/log`
@@ -44,4 +50,4 @@ Execution detail and actions use the execution API:
 - `POST /api/executions/:id/rerun`
 - `POST /api/executions/:id/follow-up`
 
-The backend may still store executions as durable run records; that storage detail should not leak into product copy. Any durable-run mutation that affects visible background work must invalidate `executions` so the sidebar, activity tree, and background-work rail refresh from the product projection.
+The backend may still store executions as durable run records; that storage detail should not leak into product copy. Any durable-run mutation that affects visible background work must invalidate `executions` so the sidebar, activity tree, inline run cards, and activity shelf refresh from the product projection.

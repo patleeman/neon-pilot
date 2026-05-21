@@ -35,7 +35,7 @@ A multi-pane layout for working alongside knowledge and tools. Available on conv
 │          │                    │                      │
 │ ┌──────┐│  ┌──────────────┐  │  ┌──────────────────┐│
 │ │Conv 1││  │ User msg     │  │  │ Files/Artifacts/ ││
-│ │Conv 2││  │              │  │  │ Artifacts/Runs/  ││
+│ │Conv 2││  │              │  │  │ Artifacts/       ││
 │ │Conv 3││  │ Assistant    │  │  │ Browser          ││
 │ └──────┘│  └──────────────┘  │  └──────────────────┘│
 │          │  ┌──────────────┐  │                      │
@@ -50,7 +50,6 @@ The right rail nav tabs include:
 | ------------- | ----------------------------------- |
 | File Explorer | Always — project file tree          |
 | Artifacts     | Conversation has rendered artifacts |
-| Runs          | Conversation has linked runs        |
 | Browser       | Opened by user                      |
 | Knowledge     | Primary page with right rail        |
 
@@ -64,7 +63,7 @@ For extension authors, the right rail is for compact contextual tools. If a feat
 - The File Explorer shows the workspace file tree
 - Checkpoint diffs render inline in the transcript checkpoint card
 - Artifacts render inline (HTML, Mermaid, LaTeX)
-- Runs show background commands and subagents
+- Background commands and subagents render as inline transcript run cards
 - Browser loads pages alongside the conversation
 
 ## Layout Shortcuts

@@ -1721,7 +1721,8 @@ function ImportWarningModal({
                 Run ID: <code className="font-mono">{cleanRoomRunId}</code>
               </p>
               <p className="mt-1 text-[12px] text-secondary">
-                Track progress in the Runs panel. The analysis agent will generate a specification withsecurity findings.
+                Track progress from the inline background work cards. The analysis agent will generate a specification with security
+                findings.
               </p>
             </div>
           ) : cleanRoomStatus === 'error' ? (

@@ -39,7 +39,6 @@ Electron main process
     │
     ├── Daemon (in-process runtime)
     │       │
-    │       ├── Runs
     │       ├── Scheduled tasks
     │       ├── Wakeups
     │       └── Follow-up queue
@@ -69,10 +68,9 @@ In Workbench mode, the right rail nav tabs include:
 | ------------- | ----------------------------- |
 | File Explorer | Project file tree browser     |
 | Artifacts     | Rendered HTML, Mermaid, LaTeX |
-| Runs          | Background runs and subagents |
 | Browser       | Embedded webview              |
 
-Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are context-sensitive — Artifacts and Runs only appear when the conversation has relevant data. Checkpoint diffs render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are context-sensitive — Artifacts appear when the conversation has rendered artifacts. Checkpoint diffs and background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
 
 ## Keyboard Shortcuts
 
