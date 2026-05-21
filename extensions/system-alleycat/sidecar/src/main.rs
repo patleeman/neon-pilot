@@ -469,6 +469,7 @@ impl Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::AsyncBufReadExt;
 
     fn token() -> &'static str {
         "kitty-token"
@@ -613,6 +614,139 @@ mod tests {
             .await
             .expect("bridge task joins")
             .expect("bridge succeeds");
+    }
+
+    #[tokio::test]
+    async fn iroh_loopback_matches_alleycat_probe_flow() {
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .expect("fake JSONL bridge binds");
+        let jsonl_port = listener.local_addr().expect("fake JSONL addr").port();
+        let fake_bridge = tokio::spawn(async move {
+            let (socket, _) = listener
+                .accept()
+                .await
+                .expect("JSONL bridge accepts sidecar");
+            let mut socket = BufReader::new(socket);
+            let mut auth = String::new();
+            socket.read_line(&mut auth).await.expect("auth line read");
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(auth.trim()).expect("auth JSON"),
+                serde_json::json!({ "type": "auth", "token": token() })
+            );
+
+            let mut request = String::new();
+            socket
+                .read_line(&mut request)
+                .await
+                .expect("JSON-RPC request read");
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(request.trim()).expect("request JSON")
+                    ["method"],
+                "initialize"
+            );
+            socket
+                .get_mut()
+                .write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"ok\":true}}\n")
+                .await
+                .expect("JSON-RPC response write");
+        });
+
+        let server_secret = SecretKey::try_from([7_u8; 32].as_slice()).expect("server secret");
+        let server_endpoint = bind_endpoint(server_secret.clone())
+            .await
+            .expect("server endpoint binds");
+        let config = Config {
+            token: token().to_string(),
+            secret_key: server_secret,
+            jsonl_host: "127.0.0.1".to_string(),
+            jsonl_port,
+        };
+        let server = tokio::spawn({
+            let endpoint = server_endpoint.clone();
+            async move {
+                let connecting = endpoint.accept().await.expect("incoming connection");
+                let conn = connecting.await.expect("accepted connection");
+                for _ in 0..2 {
+                    let (send, recv) = conn.accept_bi().await.expect("incoming stream");
+                    if let Err(error) = handle_stream(send, recv, config.clone()).await {
+                        assert!(
+                            error
+                                .to_string()
+                                .contains("copying client to PA JSONL bridge")
+                                || error.to_string().contains("connection lost"),
+                            "unexpected stream error: {error:#}"
+                        );
+                    }
+                }
+                endpoint.close().await;
+            }
+        });
+
+        let client_secret = SecretKey::try_from([8_u8; 32].as_slice()).expect("client secret");
+        let client_endpoint = Endpoint::builder(presets::N0)
+            .secret_key(client_secret)
+            .alpns(vec![ALLEYCAT_ALPN.to_vec()])
+            .bind()
+            .await
+            .expect("client endpoint binds");
+        let conn = client_endpoint
+            .connect(server_endpoint.addr(), ALLEYCAT_ALPN)
+            .await
+            .expect("client dials sidecar endpoint");
+
+        let (mut send, mut recv) = conn.open_bi().await.expect("list_agents stream opens");
+        write_json_frame(
+            &mut send,
+            &Request::ListAgents {
+                v: PROTOCOL_VERSION,
+                token: token().to_string(),
+            },
+        )
+        .await
+        .expect("list_agents frame writes");
+        send.finish().ok();
+        let agents: serde_json::Value = read_json_frame(&mut recv)
+            .await
+            .expect("list_agents response");
+        assert_eq!(agents["ok"], true);
+        assert_eq!(agents["agents"].as_array().expect("agents").len(), 1);
+
+        let (mut send, mut recv) = conn.open_bi().await.expect("connect stream opens");
+        write_json_frame(
+            &mut send,
+            &Request::Connect {
+                v: PROTOCOL_VERSION,
+                token: token().to_string(),
+                agent: AGENT_NAME.to_string(),
+                resume: None,
+            },
+        )
+        .await
+        .expect("connect frame writes");
+        let connected: serde_json::Value =
+            read_json_frame(&mut recv).await.expect("connect response");
+        assert_eq!(connected["ok"], true);
+        assert_eq!(connected["session"]["attached"], "fresh");
+
+        send.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}\n")
+            .await
+            .expect("JSON-RPC initialize writes");
+        let mut reader = BufReader::new(recv);
+        let mut response = String::new();
+        reader
+            .read_line(&mut response)
+            .await
+            .expect("JSON-RPC response reads");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(response.trim()).expect("response JSON"),
+            serde_json::json!({ "jsonrpc": "2.0", "id": 1, "result": { "ok": true } })
+        );
+
+        conn.close(iroh::endpoint::VarInt::from_u32(0), b"test complete");
+        client_endpoint.close().await;
+        server.await.expect("server task joins");
+        fake_bridge.await.expect("fake bridge task joins");
     }
 }
 

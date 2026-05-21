@@ -49,6 +49,7 @@ These tests cover the hookable surface Kitty uses without requiring the native m
 - Filesystem picker and shell/process hooks execute through the extension-facing APIs.
 - Unsupported upstream Codex hooks fail explicitly instead of returning fake success shapes that make Kitty spin.
 - The Rust sidecar validates Alleycat request framing, token/protocol rejection, single-agent advertisement, and connect session acknowledgements.
+- A Rust iroh loopback test mirrors upstream `alleycat probe`: it dials the sidecar endpoint, sends `list_agents`, opens `connect`, verifies the JSONL auth line sent to the local bridge, and round-trips a JSON-RPC `initialize` frame over the proxied stream.
 
 Manual phone QA is still required for native app release confidence: scan the QR code, verify only **Neon Pilot** is advertised, start a thread, send a prompt, verify desktop workspace/open-thread state updates, use file picker roots, and interrupt/steer a running turn.
 
