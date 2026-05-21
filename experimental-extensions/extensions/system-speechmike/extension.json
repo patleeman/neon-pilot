@@ -57,5 +57,6 @@
       "order": 31
     }
   },
-  "permissions": ["shell:execute"]
+  "permissions": ["shell:execute"],
+  "defaultEnabled": false
 }

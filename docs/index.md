@@ -82,6 +82,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)
+- [SpeechMike](../experimental-extensions/extensions/system-speechmike/README.md)
 - [Suggested Context](../extensions/system-suggested-context/README.md)
 - [Telegram Gateway](../experimental-extensions/extensions/system-gateways/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
