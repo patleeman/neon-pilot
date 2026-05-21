@@ -1834,6 +1834,14 @@ function ExtensionSecretsSection() {
 
 export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[] } = {}) {
   const { settingsComponents } = useExtensionRegistry();
+  const extensionSettingsComponents = useMemo(
+    () => settingsComponents.filter((settingsComponent) => settingsComponent.sectionId === 'settings-extensions'),
+    [settingsComponents],
+  );
+  const capabilitySettingsComponents = useMemo(
+    () => settingsComponents.filter((settingsComponent) => settingsComponent.sectionId !== 'settings-extensions'),
+    [settingsComponents],
+  );
   const {
     theme,
     themePreference,
@@ -3182,6 +3190,16 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
             <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
               <ExtensionsSettingsSection />
+              {extensionSettingsComponents.map((settingsComponent) => (
+                <SettingsPanel
+                  key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
+                  id={settingsComponent.sectionId}
+                  title={settingsComponent.label}
+                  description={settingsComponent.description}
+                >
+                  <SettingsPanelHost registration={settingsComponent} />
+                </SettingsPanel>
+              ))}
               <ExtensionSettingsSection />
             </SettingsSection>
 
@@ -3269,7 +3287,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 </SettingsPanel>
               </div>
 
-              {settingsComponents.map((settingsComponent) => (
+              {capabilitySettingsComponents.map((settingsComponent) => (
                 <SettingsPanel
                   key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
                   id={settingsComponent.sectionId}
