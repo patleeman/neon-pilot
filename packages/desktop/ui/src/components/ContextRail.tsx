@@ -19,12 +19,7 @@ import {
 import { formatTaskSchedule } from '../automation/taskSchedule';
 import { api } from '../client/api';
 import { completeConversationOpenPhase } from '../client/perfDiagnostics';
-import { setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
-import {
-  collectConversationRunMentions,
-  getConversationRunIdFromSearch,
-  setConversationRunIdInSearch,
-} from '../conversation/conversationRuns';
+import { getConversationRunIdFromSearch, setConversationRunIdInSearch } from '../conversation/conversationRuns';
 import { buildDraftConversationCwdStorageKey, DRAFT_CONVERSATION_ID } from '../conversation/draftConversation';
 import { useApi } from '../hooks/useApi';
 import { useConversations } from '../hooks/useConversations';
@@ -40,15 +35,8 @@ import {
 } from '../navigation/capabilitiesSelection';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
 import { ensureConversationTabOpen } from '../session/sessionTabs';
-import type {
-  AgentToolInfo,
-  ConversationExecutionsResult,
-  DurableRunDetailResult,
-  ExecutionRecord,
-  ScheduledTaskSummary,
-} from '../shared/types';
+import type { AgentToolInfo, DurableRunDetailResult, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
-import { displayBlockToMessageBlock } from '../transcript/messageBlocks';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
 import { cx, ErrorState, IconButton, LoadingState, Pill } from './ui';
@@ -162,100 +150,6 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-type ConversationRelatedWorkGroupKey = 'conversation' | 'background' | 'mentioned' | 'other';
-
-interface ConversationRelatedWorkMention {
-  runId: string;
-  label: string;
-  meta: string;
-  selected: boolean;
-  source: ConversationRelatedWorkGroupKey;
-}
-
-interface ConversationRelatedWorkCard {
-  mention: ConversationRelatedWorkMention;
-  execution?: ExecutionRecord;
-  title: string;
-  summary: string;
-  status: { text: string; cls: string };
-  activityAt?: string;
-}
-
-function groupConversationRailRunCards<T extends { mention: { source: ConversationRelatedWorkGroupKey } }>(
-  cards: T[],
-): Array<{
-  key: ConversationRelatedWorkGroupKey;
-  title: string;
-  items: T[];
-}> {
-  const groups: Array<{
-    key: ConversationRelatedWorkGroupKey;
-    title: string;
-    items: T[];
-  }> = [
-    { key: 'conversation', title: 'This conversation', items: [] },
-    { key: 'background', title: 'Background work', items: [] },
-    { key: 'mentioned', title: 'Mentioned in the thread', items: [] },
-    { key: 'other', title: 'Other related work', items: [] },
-  ];
-
-  for (const card of cards) {
-    const group = groups.find((entry) => entry.key === card.mention.source) ?? groups[groups.length - 1]!;
-    group.items.push(card);
-  }
-
-  return groups.filter((group) => group.items.length > 0);
-}
-
-function formatConversationRailRunSummary(input: {
-  loading: boolean;
-  totalCount: number;
-  activeCount: number;
-  reviewCount: number;
-  hasOnlyUnresolvedCards: boolean;
-}): string {
-  if (input.loading && input.hasOnlyUnresolvedCards) {
-    return 'Refreshing background work…';
-  }
-
-  if (input.totalCount === 0) {
-    return 'No background work';
-  }
-
-  if (input.activeCount === input.totalCount && input.reviewCount === 0) {
-    return `${input.activeCount} active`;
-  }
-
-  const parts = [`${input.totalCount} execution${input.totalCount === 1 ? '' : 's'}`];
-  if (input.activeCount > 0) {
-    parts.push(`${input.activeCount} active`);
-  }
-  if (input.reviewCount > 0) {
-    parts.push(`${input.reviewCount} need review`);
-  }
-  return parts.join(' · ');
-}
-
-function executionStatusText(execution: ExecutionRecord): { text: string; cls: string } {
-  const status = execution.status;
-  if (status === 'running') return { text: 'running', cls: 'text-accent' };
-  if (status === 'queued' || status === 'waiting') return { text: status, cls: 'text-dim' };
-  if (status === 'recovering' || execution.attention?.required) return { text: status ?? 'needs attention', cls: 'text-warning' };
-  if (status === 'failed' || status === 'interrupted') return { text: status, cls: 'text-danger' };
-  if (status === 'completed') return { text: 'completed', cls: 'text-success' };
-  if (status === 'cancelled') return { text: 'cancelled', cls: 'text-dim' };
-  return { text: status ?? 'unknown', cls: 'text-dim' };
-}
-
-function isRefreshingExecution(execution: ExecutionRecord | null | undefined): boolean {
-  return (
-    execution?.status === 'queued' ||
-    execution?.status === 'waiting' ||
-    execution?.status === 'running' ||
-    execution?.status === 'recovering'
-  );
-}
-
 function runStatusText(detail: DurableRunDetailResult['run']): { text: string; cls: string } {
   const status = detail.status?.status;
 
@@ -266,30 +160,6 @@ function runStatusText(detail: DurableRunDetailResult['run']): { text: string; c
   if (status === 'failed' || status === 'interrupted') return { text: status, cls: 'text-danger' };
   if (status === 'queued' || status === 'waiting') return { text: status, cls: 'text-dim' };
   return { text: status ?? 'unknown', cls: 'text-dim' };
-}
-
-function compactRunCardSummary(summary: string | null | undefined, title?: string | null, conversationId?: string): string | null {
-  let trimmed = summary?.trim() ?? '';
-  if (!trimmed) {
-    return null;
-  }
-
-  if (conversationId) {
-    const suffix = ` · ${conversationId}`;
-    if (trimmed.endsWith(suffix)) {
-      trimmed = trimmed.slice(0, -suffix.length).trim();
-    }
-  }
-
-  if (!trimmed || (title && trimmed === title.trim())) {
-    return null;
-  }
-
-  if (/^(Conversation session|Agent task|Shell command|Wakeup|Automation execution|Thread automation|Workflow)( · .+)?$/.test(trimmed)) {
-    return null;
-  }
-
-  return trimmed;
 }
 
 function deriveRunOutcome(run: DurableRunDetailResult['run'], outputLog: string | null | undefined): string | null {
@@ -933,39 +803,8 @@ function DraftConversationContextPanel() {
 }
 
 function LiveSessionContextPanel({ id }: { id: string }) {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { versions } = useAppEvents();
-  const { sessions } = useAppData();
-  const [detectedRunMentions, setDetectedRunMentions] = useState<ReturnType<typeof collectConversationRunMentions>>([]);
   const [sessionDebug, setSessionDebug] = useState<{ modelProfile?: unknown } | null>(null);
-  const [runsExpanded, setRunsExpanded] = useState(false);
-  const [conversationExecutions, setConversationExecutions] = useState<ConversationExecutionsResult | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .conversationExecutions(id)
-      .then((result: ConversationExecutionsResult) => {
-        if (!cancelled) setConversationExecutions(result);
-      })
-      .catch(() => {
-        if (!cancelled) setConversationExecutions(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [id, versions.executions]);
-
-  const executionsById = useMemo(
-    () => new Map((conversationExecutions?.executions ?? []).map((execution) => [execution.id, execution] as const)),
-    [conversationExecutions?.executions],
-  );
-  const runsLoading = conversationExecutions === null;
-  const runsError = null;
-  const isSessionRunning = Boolean(sessions?.find((session) => session.id === id)?.isRunning);
-  const runMentionsLastFetchedAtRef = useRef(0);
-  const autoExpandedConnectedRunsConversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -980,134 +819,19 @@ function LiveSessionContextPanel({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    runMentionsLastFetchedAtRef.current = 0;
-    autoExpandedConnectedRunsConversationIdRef.current = null;
-  }, [id]);
-
-  useEffect(() => {
-    // Session detail can exceed MBs for long conversations; throttle mention scans while live.
-    const minRefreshIntervalMs = isSessionRunning ? 12_000 : 0;
-    const now = Date.now();
-    if (minRefreshIntervalMs > 0 && now - runMentionsLastFetchedAtRef.current < minRefreshIntervalMs) {
-      return;
-    }
-
-    runMentionsLastFetchedAtRef.current = now;
     let cancelled = false;
-
-    fetchSessionDetailCached(id, { tailBlocks: 400 }, versions.sessionFiles)
+    fetchSessionDetailCached(id, { tailBlocks: 1 }, versions.sessionFiles)
       .then((detail) => {
-        if (cancelled) {
-          return;
-        }
-
-        setSessionDebug({ modelProfile: (detail as { modelProfile?: unknown }).modelProfile });
-        setDetectedRunMentions(collectConversationRunMentions(detail.blocks.map(displayBlockToMessageBlock)));
+        if (!cancelled) setSessionDebug({ modelProfile: (detail as { modelProfile?: unknown }).modelProfile });
       })
       .catch(() => {
-        if (!cancelled) {
-          setSessionDebug(null);
-          setDetectedRunMentions([]);
-        }
+        if (!cancelled) setSessionDebug(null);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [id, versions.sessionFiles, isSessionRunning]);
-
-  useEffect(() => {
-    setRunsExpanded(false);
-  }, [id]);
-
-  const selectedRunId = getConversationRunIdFromSearch(location.search);
-  const connectedBackgroundExecutions = conversationExecutions?.primary ?? [];
-  const recentBackgroundExecutions = useMemo(
-    () => connectedBackgroundExecutions.filter((execution) => !isRefreshingExecution(execution)).slice(0, 5),
-    [connectedBackgroundExecutions],
-  );
-  const visibleRunMentions = useMemo(() => {
-    const next: ConversationRelatedWorkMention[] = [];
-    const seen = new Set<string>();
-
-    const push = (runId: string, label: string, meta: string, source: ConversationRelatedWorkGroupKey) => {
-      if (seen.has(runId)) return;
-      seen.add(runId);
-      next.push({ runId, label, meta, selected: selectedRunId === runId, source });
-    };
-
-    for (const execution of connectedBackgroundExecutions) {
-      push(execution.id, 'Background work', 'Started from this conversation.', 'background');
-    }
-
-    for (const execution of recentBackgroundExecutions) {
-      push(execution.id, 'Recent execution', 'Completed recently in this conversation.', 'other');
-    }
-
-    for (const mention of detectedRunMentions) {
-      const mentionMeta =
-        mention.mentionCount > 1
-          ? `Mentioned ${mention.mentionCount} times · last seen ${timeAgo(mention.lastSeenAt)}`
-          : `Mentioned ${timeAgo(mention.lastSeenAt)}`;
-      push(mention.runId, 'Mentioned in the thread', mentionMeta, 'mentioned');
-    }
-
-    return next;
-  }, [connectedBackgroundExecutions, detectedRunMentions, recentBackgroundExecutions, selectedRunId]);
-
-  const visibleRunCards = useMemo<ConversationRelatedWorkCard[]>(() => {
-    return visibleRunMentions.map((mention) => {
-      const execution = executionsById.get(mention.runId);
-      const status = execution ? executionStatusText(execution) : { text: 'unresolved', cls: 'text-dim' };
-      const activityAt = execution?.completedAt ?? execution?.updatedAt ?? execution?.startedAt ?? execution?.createdAt;
-
-      return {
-        mention,
-        execution,
-        title: execution?.title ?? mention.label,
-        summary: execution?.command ?? execution?.prompt ?? mention.meta,
-        status,
-        activityAt,
-      };
-    });
-  }, [executionsById, visibleRunMentions]);
-
-  const groupedRunCards = useMemo(() => groupConversationRailRunCards(visibleRunCards), [visibleRunCards]);
-  const activeRunCount = visibleRunCards.reduce((count, { execution }) => (isRefreshingExecution(execution) ? count + 1 : count), 0);
-  const unresolvedRunCount = visibleRunCards.reduce((count, { execution }) => (!execution ? count + 1 : count), 0);
-  const reviewRunCount = unresolvedRunCount;
-  const runSummary = useMemo(
-    () =>
-      formatConversationRailRunSummary({
-        loading: runsLoading,
-        totalCount: visibleRunCards.length,
-        activeCount: activeRunCount,
-        reviewCount: reviewRunCount,
-        hasOnlyUnresolvedCards: visibleRunCards.every(({ execution }) => !execution),
-      }),
-    [activeRunCount, reviewRunCount, runsLoading, visibleRunCards],
-  );
-
-  useEffect(() => {
-    if (runsExpanded || selectedRunId || autoExpandedConnectedRunsConversationIdRef.current === id) {
-      return;
-    }
-
-    const hasActiveConnectedRun = connectedBackgroundExecutions.some((execution) => isRefreshingExecution(execution));
-    if (!hasActiveConnectedRun) {
-      return;
-    }
-
-    autoExpandedConnectedRunsConversationIdRef.current = id;
-    setRunsExpanded(true);
-  }, [connectedBackgroundExecutions, id, runsExpanded, selectedRunId]);
-
-  function openRun(runId: string) {
-    navigate({
-      pathname: location.pathname,
-      search: setConversationRunIdInSearch(setConversationArtifactIdInSearch(location.search, null), runId),
-    });
-  }
+  }, [id, versions.sessionFiles]);
 
   const modelProfile = sessionDebug?.modelProfile as
     | {
@@ -1132,90 +856,6 @@ function LiveSessionContextPanel({ id }: { id: string }) {
           <RailMetadataRow label="Model" value={modelProfile?.modelRef ?? 'Unknown'} />
           <RailMetadataRow label="Profile" value={modelProfileValue} />
         </div>
-      </Section>
-      <Section title="Background Work">
-        <button
-          type="button"
-          onClick={() => setRunsExpanded((open) => !open)}
-          aria-expanded={runsExpanded}
-          aria-controls={`conversation-runs-${id}`}
-          className="w-full text-left transition-colors hover:text-primary"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-secondary">{runSummary}</span>
-            <span
-              className={
-                runsExpanded ? 'text-[10px] uppercase tracking-[0.14em] text-accent' : 'text-[10px] uppercase tracking-[0.14em] text-dim'
-              }
-            >
-              {runsExpanded ? 'hide' : 'show'}
-            </span>
-          </div>
-        </button>
-
-        {runsExpanded && (
-          <div id={`conversation-runs-${id}`} className="space-y-3 border-t border-border-subtle/70 pt-3">
-            {runsLoading && visibleRunCards.every(({ execution }) => !execution) && (
-              <p className="text-[11px] text-dim animate-pulse">Refreshing background work…</p>
-            )}
-            {runsError && <p className="text-[11px] text-danger/80">{runsError}</p>}
-            {groupedRunCards.length > 0 ? (
-              <div className="space-y-4">
-                {groupedRunCards.map((group) => (
-                  <div key={group.key} className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="ui-section-label">{group.title}</p>
-                      <span className="text-[10px] text-dim">{group.items.length}</span>
-                    </div>
-                    <div className="divide-y divide-border-subtle/70">
-                      {group.items.map(({ mention, execution, title, summary, status, activityAt }) => {
-                        const isSelected = mention.selected;
-                        const displayTitle = execution && (title === execution.id || title.startsWith('run-')) ? mention.label : title;
-                        const compactSummary = compactRunCardSummary(summary, displayTitle, id);
-                        const showSummary = Boolean(compactSummary && compactSummary !== displayTitle);
-                        const timeLabel = activityAt ? timeAgo(activityAt) : null;
-
-                        return (
-                          <button
-                            key={mention.runId}
-                            type="button"
-                            onClick={() => openRun(mention.runId)}
-                            className={cx(
-                              'w-full py-2.5 text-left transition-colors',
-                              isSelected ? 'text-primary' : 'text-secondary hover:text-primary',
-                            )}
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-[12px] font-medium text-primary">{displayTitle}</p>
-                              {showSummary && <p className="mt-0.5 truncate text-[11px] text-secondary">{compactSummary}</p>}
-                              <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]">
-                                <span className={status.cls}>{status.text}</span>
-                                {timeLabel && (
-                                  <>
-                                    <span className="opacity-35">·</span>
-                                    <span className="text-dim">{timeLabel}</span>
-                                  </>
-                                )}
-                                {execution?.attention?.required && (
-                                  <>
-                                    <span className="opacity-35">·</span>
-                                    <span className="text-warning">needs attention</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              !runsLoading && !runsError && <p className="text-[11px] text-dim">No background work right now.</p>
-            )}
-          </div>
-        )}
       </Section>
     </div>
   );

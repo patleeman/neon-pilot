@@ -369,7 +369,7 @@ describe('ContextRail run detail', () => {
     expect(html).not.toContain('Create an automation');
   });
 
-  it('limits the saved-conversation rail to run information', () => {
+  it('limits the saved-conversation rail to runtime information', () => {
     const html = renderToString(
       <MemoryRouter initialEntries={['/conversations/conv-123']}>
         <AppDataContext.Provider
@@ -389,14 +389,15 @@ describe('ContextRail run detail', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain('Background Work');
+    expect(html).toContain('Runtime');
+    expect(html).not.toContain('Background Work');
     expect(html).not.toContain('Details');
     expect(html).not.toContain('Working directory');
     expect(html).not.toContain('Changed files');
     expect(html).not.toContain('Open workspace browser');
   });
 
-  it('keeps the saved-conversation rail focused on runs even when an artifact is selected', () => {
+  it('keeps the saved-conversation rail focused on runtime even when an artifact is selected', () => {
     const html = renderToString(
       <MemoryRouter initialEntries={['/conversations/conv-123?artifact=test-artifact']}>
         <AppDataContext.Provider
@@ -416,7 +417,8 @@ describe('ContextRail run detail', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain('Background Work');
+    expect(html).toContain('Runtime');
+    expect(html).not.toContain('Background Work');
     expect(html).not.toContain('Details');
     expect(html).not.toContain('Loading artifact…');
     expect(html).not.toContain('copy source');
