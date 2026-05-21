@@ -4,7 +4,11 @@
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Stabilizes the IPC-backed desktop runtime after the client rewrite, including live-session snapshots, local API behavior, and extension routing coverage.
+- Hardens automation callbacks so scheduled tasks, deferred resumes, and background-run wakeups write attention events into the correct profile state root.
+- Improves settings, chat, and extension smoke coverage to match current UI copy, streaming controls, and installed extension inventory.
+- Fixes provider credential checks so stale empty credentials no longer count as usable authentication.
+- Updates release smoke checks for the current local API surface and adds runtime smoke coverage for the self-preservation extension.
 
 ### Notes
 
