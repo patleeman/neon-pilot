@@ -8,6 +8,7 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 - If a feature needs a shared boundary — process execution, security policy, persistence, routing, extension APIs — implement the boundary and wire first-class call sites through it.
 - Build product/workflow UX in extensions unless the work is core runtime, security, persistence, extension-host infrastructure, app-shell plumbing, routing, install/update plumbing, or shared UI primitives.
 - If the extension API is missing a capability, add the smallest general-purpose API surface to core instead of hardcoding a one-off feature.
+- Do not introduce environment variables for app/runtime configuration. Pass state explicitly through typed config/context APIs; keep env reads only for unavoidable external-process compatibility with existing legacy variables.
 - For web UI, prefer server-pushed updates over polling when the backend can publish events.
 - Multiple agents may be working here. Do targeted changes and targeted checkpoints; stop if unrelated edits conflict with your work.
 
