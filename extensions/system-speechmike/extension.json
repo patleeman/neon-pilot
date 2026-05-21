@@ -26,6 +26,16 @@
         "id": "stop",
         "handler": "stop",
         "title": "Stop SpeechMike monitor"
+      },
+      {
+        "id": "readSettings",
+        "handler": "readSettings",
+        "title": "Read SpeechMike settings"
+      },
+      {
+        "id": "updateSettings",
+        "handler": "updateSettings",
+        "title": "Update SpeechMike settings"
       }
     ],
     "services": [

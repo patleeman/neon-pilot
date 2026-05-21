@@ -10,32 +10,66 @@ interface SpeechMikeStatus {
   logs: string[];
 }
 
+interface SpeechMikeSettingsState {
+  settings: { bindings: Record<string, string> };
+  events: Array<{ id: string; label: string }>;
+  actions: Array<{ id: string; label: string }>;
+}
+
+const SELECT_CLASS =
+  'h-8 w-full rounded-md border border-border-subtle bg-surface/70 px-2 text-[12px] text-primary outline-none focus:border-accent/50';
+
 export function SpeechMikeSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   const [status, setStatus] = useState<SpeechMikeStatus | null>(null);
+  const [settingsState, setSettingsState] = useState<SpeechMikeSettingsState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [savingEvent, setSavingEvent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const loadStatus = useCallback(async () => {
     const next = (await pa.extension.invoke('status')) as SpeechMikeStatus;
     setStatus(next);
   }, [pa]);
 
+  const loadSettings = useCallback(async () => {
+    const next = (await pa.extension.invoke('readSettings')) as SpeechMikeSettingsState;
+    setSettingsState(next);
+  }, [pa]);
+
   useEffect(() => {
-    void load().catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
-    const interval = window.setInterval(() => void load().catch(() => undefined), 1500);
+    void loadStatus().catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
+    void loadSettings().catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
+    const interval = window.setInterval(() => void loadStatus().catch(() => undefined), 300);
     return () => window.clearInterval(interval);
-  }, [load]);
+  }, [loadSettings, loadStatus]);
 
   async function run(action: 'start' | 'stop') {
     setBusy(true);
     setError(null);
     try {
       await pa.extension.invoke(action);
-      await load();
+      await loadStatus();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function updateBinding(eventId: string, actionId: string) {
+    if (!settingsState) return;
+    setSavingEvent(eventId);
+    setError(null);
+    const nextBindings = { ...settingsState.settings.bindings, [eventId]: actionId };
+    setSettingsState({ ...settingsState, settings: { bindings: nextBindings } });
+    try {
+      const next = (await pa.extension.invoke('updateSettings', { bindings: nextBindings })) as SpeechMikeSettingsState;
+      setSettingsState(next);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      await loadSettings();
+    } finally {
+      setSavingEvent(null);
     }
   }
 
@@ -64,6 +98,33 @@ export function SpeechMikeSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
               Stop
             </button>
           </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[12px] font-medium text-secondary">Button actions</div>
+        <div className="mt-2 divide-y divide-border-subtle/70 rounded-lg border border-border-subtle bg-surface/40">
+          {(settingsState?.events ?? []).map((event) => (
+            <div key={event.id} className="grid gap-2 p-2 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center">
+              <div className="min-w-0">
+                <div className="text-[12px] font-medium text-primary">{event.label}</div>
+                <div className="font-mono text-[11px] text-dim">{event.id}</div>
+              </div>
+              <select
+                className={SELECT_CLASS}
+                value={settingsState?.settings.bindings[event.id] ?? 'none'}
+                disabled={!settingsState || savingEvent === event.id}
+                onChange={(eventChange) => void updateBinding(event.id, eventChange.target.value)}
+                aria-label={`Action for ${event.label}`}
+              >
+                {(settingsState?.actions ?? []).map((action) => (
+                  <option key={action.id} value={action.id}>
+                    {action.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
         </div>
       </div>
 

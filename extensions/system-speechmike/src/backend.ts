@@ -6,11 +6,68 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 const VENDOR_ID = '0x0911';
 const PRODUCT_ID = '0x0c1c';
 const MAX_LOGS = 80;
+const SETTINGS_KEY = 'settings';
+
+const ACTIONS = [
+  { id: 'none', label: 'No action' },
+  { id: 'dictation.toggle', label: 'Toggle dictation' },
+  { id: 'conversation.previous', label: 'Previous conversation' },
+  { id: 'conversation.next', label: 'Next conversation' },
+  { id: 'composer.submit', label: 'Send message' },
+  { id: 'conversation.pageUp', label: 'Page conversation up' },
+  { id: 'conversation.pageDown', label: 'Page conversation down' },
+  { id: 'composer.focus', label: 'Focus composer' },
+  { id: 'model.cycle', label: 'Cycle model' },
+  { id: 'thinking.cycle', label: 'Cycle thinking' },
+  { id: 'conversation.newAndFocus', label: 'New chat + focus' },
+  { id: 'composer.clear', label: 'Clear composer' },
+  { id: 'composer.focusAndClear', label: 'Focus + clear composer' },
+] as const;
+
+const EVENTS = [
+  { id: 'record.press', label: 'Record press' },
+  { id: 'record.release', label: 'Record release' },
+  { id: 'rewind.press', label: 'Rewind' },
+  { id: 'forward.press', label: 'Forward' },
+  { id: 'play.press', label: 'Play' },
+  { id: 'eol.press', label: 'EOL' },
+  { id: 'insert.press', label: 'Insert/Overwrite' },
+  { id: 'info.press', label: 'Info button' },
+  { id: 'f1.press', label: 'F1' },
+  { id: 'f2.press', label: 'F2' },
+  { id: 'f3.press', label: 'F3' },
+  { id: 'f4.press', label: 'F4' },
+  { id: 'device.pickedUp', label: 'Device picked up' },
+  { id: 'device.laidDown', label: 'Device laid down' },
+  { id: 'trigger.secondary.press', label: 'Secondary rear trigger' },
+] as const;
+
+const DEFAULT_BINDINGS: Record<string, string> = {
+  'record.press': 'dictation.toggle',
+  'record.release': 'dictation.toggle',
+  'rewind.press': 'conversation.previous',
+  'forward.press': 'conversation.next',
+  'play.press': 'composer.submit',
+  'eol.press': 'conversation.pageUp',
+  'insert.press': 'none',
+  'info.press': 'conversation.pageDown',
+  'f1.press': 'model.cycle',
+  'f2.press': 'thinking.cycle',
+  'f3.press': 'conversation.newAndFocus',
+  'f4.press': 'composer.focusAndClear',
+  'device.pickedUp': 'composer.focus',
+  'device.laidDown': 'none',
+  'trigger.secondary.press': 'composer.focus',
+};
 
 interface SpeechMikeEvent {
   name: string;
   raw: string;
   at: string;
+}
+
+interface SpeechMikeSettings {
+  bindings: Record<string, string>;
 }
 
 let monitorProcess: { kill: () => void; pid?: number } | null = null;
@@ -20,6 +77,30 @@ let lastEvent: SpeechMikeEvent | null = null;
 let logs: string[] = [];
 let stdoutBuffer = '';
 let activeButton: string | null = null;
+let cachedSettings: SpeechMikeSettings | null = null;
+
+function normalizeSettings(value: unknown): SpeechMikeSettings {
+  const record = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const bindings = record.bindings && typeof record.bindings === 'object' && !Array.isArray(record.bindings) ? record.bindings : {};
+  const validActionIds = new Set(ACTIONS.map((action) => action.id));
+  return {
+    bindings: Object.fromEntries(
+      EVENTS.map((event) => {
+        const action = bindings[event.id];
+        return [
+          event.id,
+          typeof action === 'string' && validActionIds.has(action as never) ? action : (DEFAULT_BINDINGS[event.id] ?? 'none'),
+        ];
+      }),
+    ),
+  };
+}
+
+async function loadSettings(ctx: ExtensionBackendContext): Promise<SpeechMikeSettings> {
+  if (cachedSettings) return cachedSettings;
+  cachedSettings = normalizeSettings(await ctx.storage.get(SETTINGS_KEY).catch(() => null));
+  return cachedSettings;
+}
 
 function remember(message: string): void {
   const line = `${new Date().toISOString()} ${message}`;
@@ -131,48 +212,15 @@ function decodeReport(raw: string, _usagePage?: number, _usage?: number): string
 }
 
 async function executeEvent(eventName: string, ctx: ExtensionBackendContext): Promise<void> {
-  switch (eventName) {
-    case 'record.press':
-    case 'record.release':
-      await ctx.commands.execute('dictation.toggle');
-      return;
-    case 'rewind.press':
-      await ctx.commands.execute('conversation.previous');
-      return;
-    case 'forward.press':
-      await ctx.commands.execute('conversation.next');
-      return;
-    case 'play.press':
-      await ctx.commands.execute('composer.submit');
-      return;
-    case 'eol.press':
-      await ctx.commands.execute('conversation.pageUp');
-      return;
-    case 'insert.press':
-      return;
-    case 'info.press':
-      await ctx.commands.execute('conversation.pageDown');
-      return;
-    case 'f1.press':
-      await ctx.commands.execute('model.cycle');
-      return;
-    case 'f2.press':
-      await ctx.commands.execute('thinking.cycle');
-      return;
-    case 'f3.press':
-      await ctx.commands.execute('conversation.newAndFocus');
-      return;
-    case 'f4.press':
-      await ctx.commands.execute('composer.focus');
-      await ctx.commands.execute('composer.clear');
-      return;
-    case 'device.pickedUp':
-    case 'trigger.secondary.press':
-      await ctx.commands.execute('composer.focus');
-      return;
-    default:
-      return;
+  const settings = await loadSettings(ctx);
+  const action = settings.bindings[eventName] ?? DEFAULT_BINDINGS[eventName] ?? 'none';
+  if (action === 'none') return;
+  if (action === 'composer.focusAndClear') {
+    await ctx.commands.execute('composer.focus');
+    await ctx.commands.execute('composer.clear');
+    return;
   }
+  await ctx.commands.execute(action);
 }
 
 function handleLine(line: string, ctx: ExtensionBackendContext): void {
@@ -259,4 +307,16 @@ export async function status(_input: unknown, _ctx: ExtensionBackendContext) {
     lastEvent,
     logs,
   };
+}
+
+export async function readSettings(_input: unknown, ctx: ExtensionBackendContext) {
+  return { settings: await loadSettings(ctx), events: EVENTS, actions: ACTIONS };
+}
+
+export async function updateSettings(input: unknown, ctx: ExtensionBackendContext) {
+  const next = normalizeSettings(input);
+  cachedSettings = next;
+  await ctx.storage.put(SETTINGS_KEY, next);
+  remember('updated button bindings');
+  return { settings: next, events: EVENTS, actions: ACTIONS };
 }
