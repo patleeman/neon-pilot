@@ -145,7 +145,7 @@ describe('Sidebar nested conversation interactions', () => {
     const container = renderSidebar('/conversations/parent', [
       session({ id: 'grandparent', title: 'Grandparent thread' }),
       session({ id: 'parent', title: 'Parent branch', parentSessionId: 'grandparent', offshootKind: 'fork' }),
-      session({ id: 'grandchild', title: 'Running grandchild', parentSessionId: 'parent', offshootKind: 'subagent', isRunning: true }),
+      session({ id: 'grandchild', title: 'Running grandchild', parentSessionId: 'parent', sourceRunId: 'run-grandchild', isRunning: true }),
     ]);
     await flush();
 

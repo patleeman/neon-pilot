@@ -207,7 +207,7 @@ type SidebarConversationGroup = {
 };
 
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
-  return session.offshootKind !== 'subagent';
+  return session.offshootKind !== 'subagent' && !session.sourceRunId;
 }
 
 type PointerPosition = { x: number; y: number };
