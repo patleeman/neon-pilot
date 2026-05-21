@@ -253,8 +253,9 @@ export function DesktopTopBar({
 
   const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
   const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
-  const environmentBadgeLabel = environment?.launchMode === 'testing' ? environment.launchLabel?.trim() || 'Testing' : 'Local';
-  const environmentBadgeTitle = environment?.launchMode === 'testing' ? 'Launched from the command line' : environment?.activeHostSummary;
+  const environmentBadgeLabel =
+    environment?.launchMode === 'rc' ? 'RC' : environment?.launchMode === 'dev' || environment?.launchMode === 'testing' ? 'Testing' : null;
+  const environmentBadgeTitle = environment?.launchMode === 'rc' ? 'Release candidate build' : 'Testing build';
   const readyUpdateVersion = appPreferences?.update.status === 'ready' ? appPreferences.update.downloadedVersion : undefined;
 
   function openPaletteFromSearch(query = searchQuery) {
@@ -337,9 +338,11 @@ export function DesktopTopBar({
             Neon Pilot
           </span>
         </div>
-        <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
-          {environmentBadgeLabel}
-        </div>
+        {environmentBadgeLabel ? (
+          <div className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
+            {environmentBadgeLabel}
+          </div>
+        ) : null}
       </div>
       <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
         <div

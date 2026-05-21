@@ -118,7 +118,50 @@ describe('DesktopTopBar', () => {
     });
 
     expect(html).toContain('>Testing<');
-    expect(html).toContain('Launched from the command line');
+    expect(html).toContain('Testing build');
+  });
+
+  it('renders a testing badge for dev builds', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'dev',
+      launchLabel: 'Dev',
+    });
+
+    expect(html).toContain('>Testing<');
+  });
+
+  it('renders an RC badge for release candidate builds', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'rc',
+      launchLabel: 'RC',
+    });
+
+    expect(html).toContain('>RC<');
+    expect(html).toContain('Release candidate build');
+  });
+
+  it('hides the environment badge for stable release builds', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'stable',
+    });
+
+    expect(html).not.toContain('ui-desktop-top-bar__mode-badge');
+    expect(html).not.toContain('>Local<');
   });
 
   it('keeps the panel toggles on the outside edges of the top bar controls', () => {
@@ -129,7 +172,7 @@ describe('DesktopTopBar', () => {
         activeHostLabel: 'Local',
         activeHostKind: 'local',
         activeHostSummary: 'Local runtime is healthy.',
-        launchMode: 'normal',
+        launchMode: 'stable',
         launchLabel: null,
       },
       { showRailToggle: true, railOpen: true },
@@ -162,7 +205,7 @@ describe('DesktopTopBar', () => {
         activeHostLabel: 'Local',
         activeHostKind: 'local',
         activeHostSummary: 'Local runtime is healthy.',
-        launchMode: 'normal',
+        launchMode: 'stable',
         launchLabel: null,
       },
       { layoutMode: 'workbench' },
