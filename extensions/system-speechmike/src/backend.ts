@@ -19,6 +19,7 @@ let running = false;
 let lastEvent: SpeechMikeEvent | null = null;
 let logs: string[] = [];
 let stdoutBuffer = '';
+let activeButton: string | null = null;
 
 function remember(message: string): void {
   const line = `${new Date().toISOString()} ${message}`;
@@ -120,17 +121,19 @@ function decodeReport(raw: string, _usagePage?: number, _usage?: number): string
   if (low === 0x04) return 'play.press';
   if (low === 0x20) return 'eol.press';
   if (low === 0x40) return 'insert.press';
+  if (low === 0x80) return 'info.press';
   if (high === 0x02) return 'f1.press';
   if (high === 0x04) return 'f2.press';
   if (high === 0x08) return 'f3.press';
   if (high === 0x10) return 'f4.press';
+  if (high === 0x20) return 'trigger.secondary.press';
   return `unknown.${raw.replace(/\s+/g, '-')}`;
 }
 
 async function executeEvent(eventName: string, ctx: ExtensionBackendContext): Promise<void> {
   switch (eventName) {
     case 'record.press':
-    case 'release':
+    case 'record.release':
       await ctx.commands.execute('dictation.toggle');
       return;
     case 'rewind.press':
@@ -148,6 +151,8 @@ async function executeEvent(eventName: string, ctx: ExtensionBackendContext): Pr
       await ctx.commands.execute('composer.focus');
       return;
     case 'f1.press':
+    case 'info.press':
+    case 'trigger.secondary.press':
       await ctx.commands.execute('palette.open', { scope: 'commands' });
       return;
     case 'f3.press':
@@ -168,9 +173,18 @@ function handleLine(line: string, ctx: ExtensionBackendContext): void {
   const usagePage = Number(match[1]);
   const usage = Number(match[2]);
   const raw = match[3];
-  const name = decodeReport(raw, usagePage, usage);
-  if (!name) return;
-  if (name === lastEvent?.name && raw === lastEvent.raw && Date.now() - Date.parse(lastEvent.at) < 50) return;
+  const decodedName = decodeReport(raw, usagePage, usage);
+  if (!decodedName) return;
+
+  let name = decodedName;
+  if (decodedName === 'release') {
+    name = activeButton ? `${activeButton}.release` : 'release';
+    activeButton = null;
+  } else if (decodedName.endsWith('.press')) {
+    activeButton = decodedName.slice(0, -'.press'.length);
+  }
+
+  if (name === lastEvent?.name && raw === lastEvent.raw && Date.now() - Date.parse(lastEvent.at) < 250) return;
   lastEvent = { name, raw, at: new Date().toISOString() };
   remember(`event ${name} raw=${raw}`);
   void executeEvent(name, ctx).catch((error) =>
