@@ -74,6 +74,7 @@ const {
 
 vi.mock('@neon-pilot/core', () => ({
   getMachineConfigFilePath: getMachineConfigFilePathMock,
+  getStateRoot: vi.fn(() => '/state-root'),
   readKnowledgeBaseState: readKnowledgeBaseStateMock,
   readMachineInstructionFiles: readMachineInstructionFilesMock,
   readMachineSkillDirs: readMachineSkillDirsMock,
@@ -600,59 +601,6 @@ describe('model routes', () => {
     expect(saveRes.json).toHaveBeenCalledWith({
       configFile: '/config/config.json',
       instructionFiles: [instructionA, instructionB],
-    });
-  });
-
-  it('reads conversation plan workspace state through the shared settings helpers', () => {
-    const { files, getHandler } = createDesktopHarness(allocateFiles());
-
-    writeFileSync(
-      files.settingsFile,
-      JSON.stringify(
-        {
-          ui: {
-            conversationAutomation: {
-              defaultEnabled: true,
-              workflowPresets: {
-                presets: [
-                  {
-                    id: 'preset-1',
-                    name: 'Alpha preset',
-                    updatedAt: '2026-04-09T17:00:00.000Z',
-                    items: [
-                      { kind: 'instruction', label: 'Instruction', text: 'Follow the plan.' },
-                      { kind: 'skill', label: 'Skill', skillName: 'backfill-tests', skillArgs: 'target=models' },
-                    ],
-                  },
-                ],
-                defaultPresetIds: ['preset-1'],
-              },
-            },
-          },
-        },
-        null,
-        2,
-      ),
-    );
-
-    const workspaceRes = createResponse();
-    getHandler('/api/conversation-plans/workspace')(createRequest(), workspaceRes);
-    expect(workspaceRes.json).toHaveBeenCalledWith({
-      defaultEnabled: true,
-      presetLibrary: {
-        defaultPresetIds: ['preset-1'],
-        presets: [
-          {
-            id: 'preset-1',
-            name: 'Alpha preset',
-            updatedAt: '2026-04-09T17:00:00.000Z',
-            items: [
-              { id: 'item-1', kind: 'instruction', label: 'Instruction', text: 'Follow the plan.' },
-              { id: 'item-2', kind: 'skill', label: 'Skill', skillName: 'backfill-tests', skillArgs: 'target=models' },
-            ],
-          },
-        ],
-      },
     });
   });
 

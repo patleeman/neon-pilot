@@ -44,7 +44,6 @@ import {
   submitProviderOAuthLoginInput,
   subscribeProviderOAuthLogin,
 } from '../models/providerAuth.js';
-import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
 import type { ServerRouteContext } from './context.js';
 
@@ -313,14 +312,6 @@ export function registerModelRoutes(
       const status =
         message.includes('required') || message.includes('Directory does not exist') || message.includes('Not a directory') ? 400 : 500;
       res.status(status).json({ error: message });
-    }
-  });
-
-  router.get('/api/conversation-plans/workspace', (_req, res) => {
-    try {
-      res.json(readConversationPlansWorkspace(SETTINGS_FILE));
-    } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
