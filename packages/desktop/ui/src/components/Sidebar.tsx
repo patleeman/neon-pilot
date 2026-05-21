@@ -206,6 +206,10 @@ type SidebarConversationGroup = {
   items: SidebarConversationItem[];
 };
 
+function isSidebarVisibleConversation(session: SessionMeta): boolean {
+  return session.offshootKind !== 'subagent';
+}
+
 type PointerPosition = { x: number; y: number };
 
 let lastSidebarPointerPosition: PointerPosition | null = null;
@@ -2153,6 +2157,9 @@ export function Sidebar() {
   const filteredConversationItems = useMemo(
     () =>
       orderedConversationItems.filter((item) => {
+        if (!isSidebarVisibleConversation(item.session)) {
+          return false;
+        }
         const isAutomation = automationConversationIdSet.has(item.session.id);
         if (threadsFilterMode === 'automation') {
           return isAutomation;
@@ -2348,6 +2355,7 @@ export function Sidebar() {
         const child = allSessionsById.get(childId);
         if (!child) continue;
         if (archivedConversationIdSet.has(child.id)) continue;
+        if (!isSidebarVisibleConversation(child)) continue;
         byId.set(child.id, child);
         descendantQueue.push(...(childSessionIdsByParentId.get(child.id) ?? []));
       }

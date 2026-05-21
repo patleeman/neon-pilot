@@ -140,23 +140,17 @@ describe('Sidebar nested conversation interactions', () => {
     expect(row(container, 'child').querySelector('[aria-label="Archive thread"]')).not.toBeNull();
   });
 
-  it('archiving a grandparent does not hide an open running grandchild', async () => {
+  it('hides subagent child conversations from the sidebar even when open and running', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['grandparent', 'parent', 'grandchild']));
-    const container = renderSidebar('/conversations/grandchild', [
+    const container = renderSidebar('/conversations/parent', [
       session({ id: 'grandparent', title: 'Grandparent thread' }),
       session({ id: 'parent', title: 'Parent branch', parentSessionId: 'grandparent', offshootKind: 'fork' }),
       session({ id: 'grandchild', title: 'Running grandchild', parentSessionId: 'parent', offshootKind: 'subagent', isRunning: true }),
     ]);
     await flush();
 
-    clickArchive(container, 'grandparent');
-    await flush();
-
-    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['parent', 'grandchild']);
-    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['grandparent']);
     expect(row(container, 'grandparent').textContent).toContain('Grandparent thread');
     expect(row(container, 'parent').textContent).toContain('fork: Parent branch');
-    expect(row(container, 'grandchild').textContent).toContain('subagent: Running grandchild');
-    expect(row(container, 'grandparent').querySelector('[aria-label="Archive thread"]')).toBeNull();
+    expect(() => row(container, 'grandchild')).toThrow();
   });
 });
