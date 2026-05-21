@@ -8,370 +8,370 @@ importers:
   .:
     dependencies:
       '@agentclientprotocol/sdk':
-        specifier: ^0.21.1
+        specifier: 0.21.1
         version: 0.21.1(zod@4.3.6)
       '@earendil-works/pi-ai':
-        specifier: ^0.75.4
+        specifier: 0.75.4
         version: 0.75.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@earendil-works/pi-coding-agent':
-        specifier: ^0.75.4
+        specifier: 0.75.4
         version: 0.75.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@excalidraw/excalidraw':
-        specifier: ^0.18.1
+        specifier: 0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@neon-pilot/desktop':
-        specifier: workspace:*
+        specifier: workspace:0.9.0-rc.9
         version: link:packages/desktop
       '@pierre/trees':
-        specifier: ^1.0.0-beta.3
+        specifier: 1.0.0-beta.3
         version: 1.0.0-beta.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@sinclair/typebox':
-        specifier: ^0.34.49
+        specifier: 0.34.49
         version: 0.34.49
       '@tiptap/core':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/pm@3.21.0)
       '@tiptap/extension-image':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))
       '@tiptap/extension-link':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       '@tiptap/extension-placeholder':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extensions@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/extension-task-item':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extension-list@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/extension-task-list':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extension-list@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/markdown':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       '@tiptap/react':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@floating-ui/dom@1.7.6)(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tiptap/starter-kit':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0
       '@tiptap/suggestion':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       jsdom:
-        specifier: ^24.0.0
+        specifier: 24.1.3
         version: 24.1.3
       qrcode:
-        specifier: ^1.5.4
+        specifier: 1.5.4
         version: 1.5.4
       react:
-        specifier: ^18.2.0
+        specifier: 18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.2.0
+        specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       react-router-dom:
-        specifier: ^6.22.3
+        specifier: 6.30.3
         version: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       yaml:
-        specifier: ^2.8.3
+        specifier: 2.8.3
         version: 2.8.3
     devDependencies:
       '@electron/asar':
-        specifier: ^3.4.1
+        specifier: 3.4.1
         version: 3.4.1
       '@neon-pilot/core':
-        specifier: workspace:*
+        specifier: workspace:0.9.0-rc.9
         version: link:packages/core
       '@types/jsdom':
-        specifier: ^28.0.1
+        specifier: 28.0.1
         version: 28.0.1
       '@types/node':
-        specifier: ^20.0.0
+        specifier: 20.19.35
         version: 20.19.35
       '@types/ws':
-        specifier: ^8.18.1
+        specifier: 8.18.1
         version: 8.18.1
       '@typescript-eslint/eslint-plugin':
-        specifier: ^7.0.0
+        specifier: 7.18.0
         version: 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
       '@typescript-eslint/parser':
-        specifier: ^7.0.0
+        specifier: 7.18.0
         version: 7.18.0(eslint@8.57.1)(typescript@5.9.3)
       '@vitest/coverage-v8':
-        specifier: ^4.0.18
+        specifier: 4.0.18
         version: 4.0.18(vitest@4.0.18(@types/node@20.19.35)(jiti@2.7.0)(jsdom@24.1.3)(tsx@4.21.1)(yaml@2.8.3))
       electron:
-        specifier: ^38.8.6
+        specifier: 38.8.6
         version: 38.8.6
       electron-builder:
-        specifier: ^26.8.1
+        specifier: 26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
       es-module-lexer:
-        specifier: ^1.7.0
+        specifier: 1.7.0
         version: 1.7.0
       esbuild:
-        specifier: ^0.21.5
+        specifier: 0.21.5
         version: 0.21.5
       eslint:
-        specifier: ^8.57.0
+        specifier: 8.57.1
         version: 8.57.1
       eslint-plugin-simple-import-sort:
-        specifier: ^13.0.0
+        specifier: 13.0.0
         version: 13.0.0(eslint@8.57.1)
       knip:
-        specifier: ^6.12.0
+        specifier: 6.12.0
         version: 6.12.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       prettier:
-        specifier: ^3.8.3
+        specifier: 3.8.3
         version: 3.8.3
       tsx:
-        specifier: ^4.20.6
+        specifier: 4.21.1
         version: 4.21.1
       typescript:
-        specifier: ^5.3.0
+        specifier: 5.9.3
         version: 5.9.3
       undici-types:
-        specifier: ^6.21.0
+        specifier: 6.21.0
         version: 6.21.0
       vitest:
-        specifier: ^4.0.18
+        specifier: 4.0.18
         version: 4.0.18(@types/node@20.19.35)(jiti@2.7.0)(jsdom@24.1.3)(tsx@4.21.1)(yaml@2.8.3)
       ws:
-        specifier: ^8.18.3
+        specifier: 8.20.0
         version: 8.20.0
 
   packages/core:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@4.3.6)
       better-sqlite3:
-        specifier: ^11.10.0
+        specifier: 11.10.0
         version: 11.10.0
       nunjucks:
-        specifier: ^3.2.4
+        specifier: 3.2.4
         version: 3.2.4(chokidar@3.6.0)
       open:
-        specifier: ^10.2.0
+        specifier: 10.2.0
         version: 10.2.0
       yaml:
-        specifier: ^2.8.2
+        specifier: 2.8.3
         version: 2.8.3
     devDependencies:
       '@types/better-sqlite3':
-        specifier: ^7.6.13
+        specifier: 7.6.13
         version: 7.6.13
       '@types/nunjucks':
-        specifier: ^3.2.6
+        specifier: 3.2.6
         version: 3.2.6
 
   packages/desktop:
     dependencies:
       '@earendil-works/pi-agent-core':
-        specifier: ^0.75.4
+        specifier: 0.75.4
         version: 0.75.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@earendil-works/pi-coding-agent':
-        specifier: ^0.75.4
+        specifier: 0.75.4
         version: 0.75.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(ws@8.20.0)(zod@4.3.6)
       '@excalidraw/excalidraw':
         specifier: 0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@fontsource-variable/geist':
-        specifier: ^5.2.9
+        specifier: 5.2.9
         version: 5.2.9
       '@fontsource-variable/geist-mono':
-        specifier: ^5.2.8
+        specifier: 5.2.8
         version: 5.2.8
       '@neon-pilot/core':
-        specifier: workspace:*
+        specifier: workspace:0.9.0-rc.9
         version: link:../core
       '@neon-pilot/extensions':
-        specifier: workspace:*
+        specifier: workspace:0.9.0-rc.9
         version: link:../extensions
       electron-updater:
-        specifier: ^6.8.3
+        specifier: 6.8.3
         version: 6.8.3
       jsdom:
-        specifier: ^24.1.3
+        specifier: 24.1.3
         version: 24.1.3
       whisper-cpp-node:
         specifier: 0.2.12
         version: 0.2.12
     devDependencies:
       '@codemirror/lang-css':
-        specifier: ^6.3.1
+        specifier: 6.3.1
         version: 6.3.1
       '@codemirror/lang-html':
-        specifier: ^6.4.11
+        specifier: 6.4.11
         version: 6.4.11
       '@codemirror/lang-javascript':
-        specifier: ^6.2.5
+        specifier: 6.2.5
         version: 6.2.5
       '@codemirror/lang-json':
-        specifier: ^6.0.2
+        specifier: 6.0.2
         version: 6.0.2
       '@codemirror/lang-markdown':
-        specifier: ^6.5.0
+        specifier: 6.5.0
         version: 6.5.0
       '@codemirror/lang-python':
-        specifier: ^6.2.1
+        specifier: 6.2.1
         version: 6.2.1
       '@codemirror/lang-yaml':
-        specifier: ^6.1.2
+        specifier: 6.1.2
         version: 6.1.2
       '@codemirror/language':
-        specifier: ^6.12.2
+        specifier: 6.12.2
         version: 6.12.2
       '@codemirror/state':
-        specifier: ^6.5.2
+        specifier: 6.6.0
         version: 6.6.0
       '@codemirror/theme-one-dark':
-        specifier: ^6.1.3
+        specifier: 6.1.3
         version: 6.1.3
       '@codemirror/view':
-        specifier: ^6.38.8
+        specifier: 6.40.0
         version: 6.40.0
       '@fontsource-variable/dm-sans':
-        specifier: ^5.2.8
+        specifier: 5.2.8
         version: 5.2.8
       '@fontsource/geist':
-        specifier: ^5.2.9
+        specifier: 5.2.9
         version: 5.2.9
       '@fontsource/geist-mono':
-        specifier: ^5.2.8
+        specifier: 5.2.8
         version: 5.2.8
       '@fontsource/jetbrains-mono':
-        specifier: ^5.2.8
+        specifier: 5.2.8
         version: 5.2.8
       '@lezer/highlight':
-        specifier: ^1.2.3
+        specifier: 1.2.3
         version: 1.2.3
       '@pierre/diffs':
-        specifier: ^1.1.19
+        specifier: 1.1.19
         version: 1.1.19(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@pierre/trees':
-        specifier: ^1.0.0-beta.3
+        specifier: 1.0.0-beta.3
         version: 1.0.0-beta.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@testing-library/react':
-        specifier: ^16.3.0
+        specifier: 16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tiptap/core':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/pm@3.21.0)
       '@tiptap/extension-image':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))
       '@tiptap/extension-link':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       '@tiptap/extension-placeholder':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extensions@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/extension-task-item':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extension-list@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/extension-task-list':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/extension-list@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0))
       '@tiptap/markdown':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       '@tiptap/react':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@floating-ui/dom@1.7.6)(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tiptap/starter-kit':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0
       '@tiptap/suggestion':
-        specifier: ^3.21.0
+        specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)
       '@types/express':
-        specifier: ^4.17.21
+        specifier: 4.17.25
         version: 4.17.25
       '@types/jsdom':
-        specifier: ^21.1.7
+        specifier: 21.1.7
         version: 21.1.7
       '@types/mime-types':
-        specifier: ^3.0.1
+        specifier: 3.0.1
         version: 3.0.1
       '@types/node':
-        specifier: ^20.0.0
+        specifier: 20.19.35
         version: 20.19.35
       '@types/react':
-        specifier: ^18.2.64
+        specifier: 18.3.28
         version: 18.3.28
       '@types/react-dom':
-        specifier: ^18.2.21
+        specifier: 18.3.7
         version: 18.3.7(@types/react@18.3.28)
       '@types/stopword':
-        specifier: ^2.0.3
+        specifier: 2.0.3
         version: 2.0.3
       '@uiw/react-codemirror':
-        specifier: ^4.25.8
+        specifier: 4.25.8
         version: 4.25.8(@babel/runtime@7.28.6)(@codemirror/autocomplete@6.20.1)(@codemirror/language@6.12.2)(@codemirror/lint@6.9.5)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.40.0)(codemirror@6.0.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@vitejs/plugin-react':
-        specifier: ^4.2.1
+        specifier: 4.7.0
         version: 4.7.0(vite@5.4.21(@types/node@20.19.35)(sass@1.51.0))
       '@welldone-software/why-did-you-render':
-        specifier: ^8.0.0
+        specifier: 8.0.3
         version: 8.0.3(react@18.3.1)
       autoprefixer:
-        specifier: ^10.4.17
+        specifier: 10.4.27
         version: 10.4.27(postcss@8.5.6)
       chrono-node:
-        specifier: ^2.9.0
+        specifier: 2.9.0
         version: 2.9.0
       electron:
-        specifier: ^38.8.6
+        specifier: 38.8.6
         version: 38.8.6
       express:
-        specifier: ^4.18.2
+        specifier: 4.22.1
         version: 4.22.1
       mermaid:
-        specifier: ^11.7.0
+        specifier: 11.13.0
         version: 11.13.0
       mime-types:
-        specifier: ^3.0.2
+        specifier: 3.0.2
         version: 3.0.2
       parse5:
-        specifier: ^7.3.0
+        specifier: 7.3.0
         version: 7.3.0
       postcss:
-        specifier: ^8.4.35
+        specifier: 8.5.6
         version: 8.5.6
       qrcode:
-        specifier: ^1.5.4
+        specifier: 1.5.4
         version: 1.5.4
       react:
-        specifier: ^18.2.0
+        specifier: 18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.2.0
+        specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       react-markdown:
-        specifier: ^10.1.0
+        specifier: 10.1.0
         version: 10.1.0(@types/react@18.3.28)(react@18.3.1)
       react-router-dom:
-        specifier: ^6.22.3
+        specifier: 6.30.3
         version: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       remark-breaks:
-        specifier: ^4.0.0
+        specifier: 4.0.0
         version: 4.0.0
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 4.0.1
         version: 4.0.1
       stopword:
-        specifier: ^3.1.5
+        specifier: 3.1.5
         version: 3.1.5
       tailwindcss:
-        specifier: ^3.4.1
+        specifier: 3.4.19
         version: 3.4.19(tsx@4.21.1)(yaml@2.8.3)
       vite:
-        specifier: ^5.1.4
+        specifier: 5.4.21
         version: 5.4.21(@types/node@20.19.35)(sass@1.51.0)
       yaml:
-        specifier: ^2.8.3
+        specifier: 2.8.3
         version: 2.8.3
 
   packages/extensions:
@@ -2133,10 +2133,6 @@ packages:
 
   '@smithy/signature-v4@5.4.3':
     resolution: { integrity: sha512-53+75QuPl6DL+ct6vVEB51FDO5oulXr20TPV46VvJZg76lIlXNWfxi8j+G2V/t0I2qxCBOa3vX/8bmjrpFVo9g== }
-    engines: { node: '>=18.0.0' }
-
-  '@smithy/types@4.14.1':
-    resolution: { integrity: sha512-59b5HtSVrVR/eYNei3BUj3DCPKD/G7EtDDe7OEJE7i7FtQFugYo6MxbotS8mVJkLNVf8gYaAlEBwwtJ9HzhWSg== }
     engines: { node: '>=18.0.0' }
 
   '@smithy/types@4.14.2':
@@ -6523,7 +6519,7 @@ snapshots:
       '@smithy/core': 3.24.3
       '@smithy/fetch-http-handler': 5.4.3
       '@smithy/node-http-handler': 4.7.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/core@3.974.12':
@@ -6533,7 +6529,7 @@ snapshots:
       '@aws/lambda-invoke-store': 0.2.4
       '@smithy/core': 3.24.3
       '@smithy/signature-v4': 5.4.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       bowser: 2.14.1
       tslib: 2.8.1
 
@@ -6542,7 +6538,7 @@ snapshots:
       '@aws-sdk/core': 3.974.12
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-http@3.972.40':
@@ -6552,7 +6548,7 @@ snapshots:
       '@smithy/core': 3.24.3
       '@smithy/fetch-http-handler': 5.4.3
       '@smithy/node-http-handler': 4.7.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-ini@3.972.42':
@@ -6568,7 +6564,7 @@ snapshots:
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
       '@smithy/credential-provider-imds': 4.3.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-login@3.972.42':
@@ -6577,7 +6573,7 @@ snapshots:
       '@aws-sdk/nested-clients': 3.997.10
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-node@3.972.43':
@@ -6591,7 +6587,7 @@ snapshots:
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
       '@smithy/credential-provider-imds': 4.3.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-process@3.972.38':
@@ -6599,7 +6595,7 @@ snapshots:
       '@aws-sdk/core': 3.974.12
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-sso@3.972.42':
@@ -6609,7 +6605,7 @@ snapshots:
       '@aws-sdk/token-providers': 3.1049.0
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-web-identity@3.972.42':
@@ -6618,21 +6614,21 @@ snapshots:
       '@aws-sdk/nested-clients': 3.997.10
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/eventstream-handler-node@3.972.16':
     dependencies:
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/middleware-eventstream@3.972.12':
     dependencies:
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/middleware-websocket@3.972.20':
@@ -6642,7 +6638,7 @@ snapshots:
       '@smithy/core': 3.24.3
       '@smithy/fetch-http-handler': 5.4.3
       '@smithy/signature-v4': 5.4.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/nested-clients@3.997.10':
@@ -6655,7 +6651,7 @@ snapshots:
       '@smithy/core': 3.24.3
       '@smithy/fetch-http-handler': 5.4.3
       '@smithy/node-http-handler': 4.7.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/signature-v4-multi-region@3.996.27':
@@ -6663,7 +6659,7 @@ snapshots:
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
       '@smithy/signature-v4': 5.4.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/token-providers@3.1048.0':
@@ -6672,7 +6668,7 @@ snapshots:
       '@aws-sdk/nested-clients': 3.997.10
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/token-providers@3.1049.0':
@@ -6681,12 +6677,12 @@ snapshots:
       '@aws-sdk/nested-clients': 3.997.10
       '@aws-sdk/types': 3.973.8
       '@smithy/core': 3.24.3
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/types@3.973.8':
     dependencies:
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       tslib: 2.8.1
 
   '@aws-sdk/util-locate-window@3.965.5':
@@ -6696,7 +6692,7 @@ snapshots:
   '@aws-sdk/xml-builder@3.972.24':
     dependencies:
       '@nodable/entities': 2.1.0
-      '@smithy/types': 4.14.1
+      '@smithy/types': 4.14.2
       fast-xml-parser: 5.7.3
       tslib: 2.8.1
 
@@ -8303,10 +8299,6 @@ snapshots:
       '@smithy/types': 4.14.2
       tslib: 2.8.1
 
-  '@smithy/types@4.14.1':
-    dependencies:
-      tslib: 2.8.1
-
   '@smithy/types@4.14.2':
     dependencies:
       tslib: 2.8.1
@@ -8582,7 +8574,7 @@ snapshots:
 
   '@types/better-sqlite3@7.6.13':
     dependencies:
-      '@types/node': 22.19.17
+      '@types/node': 20.19.35
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -8764,13 +8756,13 @@ snapshots:
 
   '@types/jsdom@21.1.7':
     dependencies:
-      '@types/node': 22.19.17
+      '@types/node': 20.19.35
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
 
   '@types/jsdom@28.0.1':
     dependencies:
-      '@types/node': 22.19.17
+      '@types/node': 20.19.35
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
       undici-types: 7.25.0
@@ -8868,7 +8860,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 22.19.17
+      '@types/node': 20.19.35
 
   '@types/yauzl@2.10.3':
     dependencies:

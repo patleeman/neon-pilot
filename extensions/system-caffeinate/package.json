@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@neon-pilot/extensions": "workspace:*",
-    "react": "workspace:*",
-    "react-dom": "workspace:*"
+    "@neon-pilot/extensions": "workspace:0.9.0-rc.9",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }
