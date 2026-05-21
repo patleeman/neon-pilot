@@ -352,7 +352,7 @@ describe('conversation routes', () => {
     updateLiveSessionModelPreferencesMock.mockResolvedValue({ model: 'gpt-4o', thinkingLevel: 'high' });
   });
 
-  it('serves desktop session routes for metadata, detail responses, assets, list snapshots, and search text', async () => {
+  it('serves session image assets and content search routes', async () => {
     const { getHandler, postHandler } = createDesktopHarness();
 
     expect(setConversationServiceContextMock).toHaveBeenCalledWith({
@@ -360,80 +360,6 @@ describe('conversation routes', () => {
       getRepoRoot: expect.any(Function),
       getSavedUiPreferences: expect.any(Function),
     });
-
-    const metaRes = createResponse();
-    getHandler('/api/sessions/:id/meta')(createRequest({ params: { id: 'session-1' } }), metaRes);
-    expect(metaRes.json).toHaveBeenCalledWith({ id: 'session-1', title: 'Session 1' });
-
-    readConversationSessionMetaMock.mockReturnValueOnce(null);
-    const missingMetaRes = createResponse();
-    getHandler('/api/sessions/:id/meta')(createRequest({ params: { id: 'missing' } }), missingMetaRes);
-    expect(missingMetaRes.status).toHaveBeenCalledWith(404);
-    expect(missingMetaRes.json).toHaveBeenCalledWith({ error: 'Session not found' });
-
-    readConversationSessionSignatureMock.mockReturnValueOnce('sig-current');
-    const unchangedRes = createResponse();
-    await getHandler('/api/sessions/:id')(
-      createRequest({
-        params: { id: 'session-1' },
-        query: { knownSessionSignature: ' sig-current ', tailBlocks: '5' },
-      }),
-      unchangedRes,
-    );
-    expect(unchangedRes.json).toHaveBeenCalledWith({
-      unchanged: true,
-      sessionId: 'session-1',
-      signature: 'sig-current',
-    });
-
-    readConversationSessionSignatureMock.mockReturnValueOnce('sig-current');
-    buildAppendOnlySessionDetailResponseMock.mockReturnValueOnce({ appended: true, sessionId: 'session-1' });
-    const appendOnlyRes = createResponse();
-    await getHandler('/api/sessions/:id')(
-      createRequest({
-        params: { id: 'session-1' },
-        query: {
-          knownBlockOffset: String(Number.MAX_SAFE_INTEGER + 1),
-          knownLastBlockId: 'block-3',
-          knownSessionSignature: 'sig-old',
-          knownTotalBlocks: String(Number.MAX_SAFE_INTEGER + 1),
-          tailBlocks: '10',
-        },
-      }),
-      appendOnlyRes,
-    );
-    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({
-      conversationId: 'session-1',
-      profile: 'assistant',
-      tailBlocks: 25,
-    });
-    expect(buildAppendOnlySessionDetailResponseMock).toHaveBeenCalledWith({
-      detail: { id: 'session-1', signature: 'sig-next' },
-      knownBlockOffset: undefined,
-      knownLastBlockId: 'block-3',
-      knownTotalBlocks: undefined,
-    });
-    expect(appendOnlyRes.json).toHaveBeenCalledWith({ appended: true, sessionId: 'session-1' });
-
-    readSessionDetailForRouteMock.mockResolvedValueOnce({
-      remoteMirror: { durationMs: 0, status: 'skipped' },
-      sessionRead: {
-        detail: { id: 'session-1', signature: 'sig-next', blocks: [] },
-        telemetry: { cache: 'hit', durationMs: 8, loader: 'local' },
-      },
-    });
-    const detailRes = createResponse();
-    await getHandler('/api/sessions/:id')(createRequest({ params: { id: 'session-1' }, query: {} }), detailRes);
-    expect(setServerTimingHeadersMock).toHaveBeenCalledWith(
-      detailRes,
-      expect.arrayContaining([expect.objectContaining({ description: 'skipped' }), expect.objectContaining({ description: 'hit/local' })]),
-      expect.objectContaining({ route: 'session-detail' }),
-    );
-    expect(logSlowConversationPerfMock).toHaveBeenCalledWith(
-      'session detail request',
-      expect.objectContaining({ conversationId: 'session-1' }),
-    );
-    expect(detailRes.json).toHaveBeenCalledWith({ id: 'session-1', signature: 'sig-next', blocks: [] });
 
     readSessionImageAssetMock.mockReturnValueOnce(null);
     const missingImageRes = createResponse();
@@ -479,29 +405,6 @@ describe('conversation routes', () => {
     );
     expect(unsafeIndexedImageRes.status).toHaveBeenCalledWith(400);
     expect(unsafeIndexedImageRes.json).toHaveBeenCalledWith({ error: 'imageIndex must be a non-negative integer' });
-
-    readSessionBlockMock.mockReturnValueOnce(null);
-    const missingBlockRes = createResponse();
-    getHandler('/api/sessions/:id/blocks/:blockId')(createRequest({ params: { id: 'session-1', blockId: 'missing' } }), missingBlockRes);
-    expect(missingBlockRes.status).toHaveBeenCalledWith(404);
-    expect(missingBlockRes.json).toHaveBeenCalledWith({ error: 'Session block not found' });
-
-    const blockRes = createResponse();
-    getHandler('/api/sessions/:id/blocks/:blockId')(createRequest({ params: { id: 'session-1', blockId: 'block-1' } }), blockRes);
-    expect(blockRes.json).toHaveBeenCalledWith({ id: 'block-1', text: 'Block text' });
-
-    const listRes = createResponse();
-    getHandler('/api/sessions')(createRequest(), listRes);
-    expect(listRes.json).toHaveBeenCalledWith([{ id: 'session-1', title: 'Session 1' }]);
-
-    const emptySearchRes = createResponse();
-    postHandler('/api/sessions/search-index')(createRequest({ body: { sessionIds: [] } }), emptySearchRes);
-    expect(emptySearchRes.json).toHaveBeenCalledWith({ index: {} });
-
-    const searchRes = createResponse();
-    postHandler('/api/sessions/search-index')(createRequest({ body: { sessionIds: ['session-1', ' ', 42] } }), searchRes);
-    expect(readSessionSearchTextMock).toHaveBeenCalledWith('session-1');
-    expect(searchRes.json).toHaveBeenCalledWith({ index: { 'session-1': 'search text' } });
 
     const contentSearchRes = createResponse();
     postHandler('/api/sessions/search')(createRequest({ body: { query: 'needle', limit: 25 } }), contentSearchRes);

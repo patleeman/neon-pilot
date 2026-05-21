@@ -6,13 +6,6 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
   const workerAvailable = { readonlyLocalApiWorkerAvailable: true };
 
   it('offloads broad readonly desktop api routes on the local host', () => {
-    expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/status', hostId: 'local', ...workerAvailable })).toBe(true);
-    expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/sessions', hostId: 'local', ...workerAvailable })).toBe(
-      true,
-    );
-    expect(
-      shouldDispatchReadonlyLocalApiInWorker({ method: 'POST', path: '/api/sessions/search-index', hostId: 'local', ...workerAvailable }),
-    ).toBe(true);
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'POST', path: '/api/sessions/search', hostId: 'local', ...workerAvailable }),
     ).toBe(true);
@@ -33,14 +26,7 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
         ...workerAvailable,
       }),
     ).toBe(true);
-    expect(
-      shouldDispatchReadonlyLocalApiInWorker({
-        method: 'GET',
-        path: '/api/conversations/session-1/bootstrap',
-        hostId: 'local',
-        ...workerAvailable,
-      }),
-    ).toBe(true);
+    expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/status', hostId: 'local', ...workerAvailable })).toBe(false);
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/workspace/tree?cwd=/repo', hostId: 'local', ...workerAvailable }),
     ).toBe(true);

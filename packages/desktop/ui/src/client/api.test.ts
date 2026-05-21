@@ -33,7 +33,9 @@ describe('api request parsing', () => {
     );
 
     const { api } = await import('./api.js');
-    await expect(api.status()).rejects.toThrow('Expected JSON from /api/status, received text/html: <!doctype html>');
+    await expect(api.extensionSlashCommands()).rejects.toThrow(
+      'Expected JSON from /api/extensions/slash-commands, received text/html: <!doctype html>',
+    );
   });
 
   it('includes non-JSON error body previews', async () => {
@@ -43,7 +45,7 @@ describe('api request parsing', () => {
     );
 
     const { api } = await import('./api.js');
-    await expect(api.status()).rejects.toThrow('404 Not Found from /api/status: <!doctype html>');
+    await expect(api.extensionSlashCommands()).rejects.toThrow('404 Not Found from /api/extensions/slash-commands: <!doctype html>');
   });
 });
 

@@ -316,10 +316,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return localController.readModels();
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: '/api/models',
-      });
+      throw new Error('Local desktop model capability is unavailable.');
     },
 
     async listSshTargets() {

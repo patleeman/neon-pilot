@@ -18,33 +18,8 @@ import {
 } from '@neon-pilot/core';
 import type { Express } from 'express';
 
-import {
-  invalidateAppTopics,
-  logError,
-  persistSettingsWrite,
-  refreshAllLiveSessionModelRegistries,
-  reloadAllLiveSessionAuth,
-} from '../middleware/index.js';
-import { writeSavedModelPreferences } from '../models/modelPreferences.js';
-import {
-  readModelProvidersState,
-  removeModelProvider,
-  removeModelProviderModel,
-  upsertModelProvider,
-  upsertModelProviderModel,
-} from '../models/modelProviders.js';
-import { listModelDefinitions, readModelState } from '../models/modelState.js';
-import {
-  cancelProviderOAuthLogin,
-  getProviderOAuthLoginState,
-  readProviderAuthState,
-  removeProviderCredential,
-  setProviderApiKey,
-  startProviderOAuthLogin,
-  submitProviderOAuthLoginInput,
-  subscribeProviderOAuthLogin,
-} from '../models/providerAuth.js';
-import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
+import { invalidateAppTopics, logError } from '../middleware/index.js';
+import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import type { ServerRouteContext } from './context.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -54,10 +29,6 @@ let getRuntimeScopeFn: () => string = () => {
 let materializeWebRuntimeConfigFn: (profile: string) => void = () => {
   throw new Error('materializeWebRuntimeConfig not initialized for model routes');
 };
-
-let AUTH_FILE: string = '';
-
-let SETTINGS_FILE: string = '';
 
 function readInstructionFilesState() {
   return {
@@ -78,8 +49,8 @@ function initializeModelRoutesContext(
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   materializeWebRuntimeConfigFn = context.materializeWebRuntimeConfig;
-  AUTH_FILE = context.getAuthFile();
-  SETTINGS_FILE = context.getSettingsFile();
+  void context.getAuthFile;
+  void context.getSettingsFile;
 }
 
 /**
@@ -91,68 +62,6 @@ export function registerModelRoutes(
 ): void {
   initializeModelRoutesContext(context);
   // ── Models ────────────────────────────────────────────────────────────────
-
-  router.get('/api/models', async (_req, res) => {
-    try {
-      res.json(await readModelState(SETTINGS_FILE));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.patch('/api/models/current', (req, res) => {
-    const { model, visionModel, thinkingLevel, serviceTier } = req.body as {
-      model?: string;
-      visionModel?: string;
-      thinkingLevel?: string;
-      serviceTier?: string;
-    };
-    if (
-      typeof model !== 'string' &&
-      typeof visionModel !== 'string' &&
-      typeof thinkingLevel !== 'string' &&
-      typeof serviceTier !== 'string'
-    ) {
-      res.status(400).json({ error: 'model, visionModel, thinkingLevel, or serviceTier required' });
-      return;
-    }
-
-    listModelDefinitions()
-      .then((models) => {
-        persistSettingsWrite(
-          (settingsFile) => {
-            writeSavedModelPreferences({ model, visionModel, thinkingLevel, serviceTier }, settingsFile, models);
-          },
-          {
-            runtimeSettingsFile: SETTINGS_FILE,
-          },
-        );
-        res.json({ ok: true });
-      })
-      .catch((err) => {
-        logError('request handler error', {
-          message: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
-        res.status(500).json({ error: String(err) });
-      });
-  });
-
-  router.get('/api/default-cwd', (_req, res) => {
-    try {
-      res.json(readSavedDefaultCwdPreferences(SETTINGS_FILE, process.cwd()));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 
   router.get('/api/knowledge-base', (_req, res) => {
     try {
@@ -292,271 +201,9 @@ export function registerModelRoutes(
     }
   });
 
-  router.patch('/api/default-cwd', (req, res) => {
-    try {
-      const { cwd } = req.body as { cwd?: string | null };
-      if (cwd !== undefined && cwd !== null && typeof cwd !== 'string') {
-        res.status(400).json({ error: 'cwd must be a string or null' });
-        return;
-      }
-
-      const state = persistSettingsWrite(
-        (settingsFile) => writeSavedDefaultCwdPreference({ cwd }, settingsFile, { baseDir: process.cwd(), validate: true }),
-        {
-          runtimeSettingsFile: SETTINGS_FILE,
-        },
-      );
-      res.json(state);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      const status =
-        message.includes('required') || message.includes('Directory does not exist') || message.includes('Not a directory') ? 400 : 500;
-      res.status(status).json({ error: message });
-    }
-  });
-
   // ── Model Providers ────────────────────────────────────────────────────────
 
-  router.get('/api/model-providers', (_req, res) => {
-    try {
-      res.json(readModelProvidersState(getRuntimeScopeFn()));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/model-providers/providers', (req, res) => {
-    try {
-      const { provider, baseUrl, api, apiKey, authHeader, headers, compat, modelOverrides } = req.body as {
-        provider?: string;
-        baseUrl?: string;
-        api?: string;
-        apiKey?: string;
-        authHeader?: boolean;
-        headers?: Record<string, string>;
-        compat?: Record<string, unknown>;
-        modelOverrides?: Record<string, unknown>;
-      };
-
-      if (typeof provider !== 'string' || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      const state = upsertModelProvider(getRuntimeScopeFn(), provider, {
-        baseUrl,
-        api: api as Parameters<typeof upsertModelProvider>[2]['api'],
-        apiKey,
-        authHeader,
-        headers,
-        compat,
-        modelOverrides,
-      });
-      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
-      refreshAllLiveSessionModelRegistries();
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.delete('/api/model-providers/providers/:provider', (req, res) => {
-    try {
-      const { provider } = req.params;
-      if (!provider || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      const result = removeModelProvider(getRuntimeScopeFn(), provider);
-      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
-      refreshAllLiveSessionModelRegistries();
-      res.json(result.state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/model-providers/providers/:provider/models', (req, res) => {
-    try {
-      const { provider } = req.params;
-      const { modelId, name, api, baseUrl, reasoning, input, contextWindow, maxTokens, headers, cost, compat } = req.body as {
-        modelId?: string;
-        name?: string;
-        api?: string;
-        baseUrl?: string;
-        reasoning?: boolean;
-        input?: Array<'text' | 'image'>;
-        contextWindow?: number;
-        maxTokens?: number;
-        headers?: Record<string, string>;
-        cost?: {
-          input?: number;
-          output?: number;
-          cacheRead?: number;
-          cacheWrite?: number;
-        };
-        compat?: Record<string, unknown>;
-      };
-
-      if (!provider || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      if (typeof modelId !== 'string' || modelId.trim().length === 0) {
-        res.status(400).json({ error: 'modelId required' });
-        return;
-      }
-
-      const state = upsertModelProviderModel(getRuntimeScopeFn(), provider, modelId, {
-        name,
-        api: api as Parameters<typeof upsertModelProviderModel>[3]['api'],
-        baseUrl,
-        reasoning,
-        input,
-        contextWindow,
-        maxTokens,
-        headers,
-        cost,
-        compat,
-      });
-      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
-      refreshAllLiveSessionModelRegistries();
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.delete('/api/model-providers/providers/:provider/models/:modelId', (req, res) => {
-    try {
-      const { provider, modelId } = req.params;
-      if (!provider || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      if (!modelId || modelId.trim().length === 0) {
-        res.status(400).json({ error: 'modelId required' });
-        return;
-      }
-
-      const result = removeModelProviderModel(getRuntimeScopeFn(), provider, modelId);
-      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
-      refreshAllLiveSessionModelRegistries();
-      res.json(result.state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
   // ── Provider Auth ─────────────────────────────────────────────────────────
-
-  router.get('/api/provider-auth', (_req, res) => {
-    try {
-      res.json(readProviderAuthState(AUTH_FILE));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.patch('/api/provider-auth/:provider/api-key', (req, res) => {
-    try {
-      const { provider } = req.params;
-      const { apiKey } = req.body as { apiKey?: string };
-
-      if (!provider || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
-        res.status(400).json({ error: 'apiKey required' });
-        return;
-      }
-
-      const state = setProviderApiKey(AUTH_FILE, provider, apiKey);
-      reloadAllLiveSessionAuth();
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.delete('/api/provider-auth/:provider', (req, res) => {
-    try {
-      const { provider } = req.params;
-      if (!provider || provider.trim().length === 0) {
-        res.status(400).json({ error: 'provider required' });
-        return;
-      }
-
-      const state = removeProviderCredential(AUTH_FILE, provider);
-      reloadAllLiveSessionAuth();
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/provider-auth/:provider/oauth/start', (req, res) => {
-    try {
-      const { provider } = req.params;
-      const state = startProviderOAuthLogin(AUTH_FILE, provider);
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.get('/api/provider-auth/oauth/:loginId', (req, res) => {
-    try {
-      res.json(getProviderOAuthLoginState(req.params.loginId));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 
   router.get('/api/provider-auth/oauth/:loginId/events', (req, res) => {
     try {
@@ -588,41 +235,6 @@ export function registerModelRoutes(
       req.on('close', () => {
         unsubscribe();
       });
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/provider-auth/oauth/:loginId/input', (req, res) => {
-    try {
-      const { loginId } = req.params;
-      const { input } = req.body as { input?: string };
-      const state = submitProviderOAuthLoginInput(loginId, input ?? '');
-      res.json(state);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/provider-auth/oauth/:loginId/cancel', (req, res) => {
-    try {
-      const { loginId } = req.params;
-
-      if (!loginId || loginId.trim().length === 0) {
-        res.status(400).json({ error: 'loginId required' });
-        return;
-      }
-
-      const login = cancelProviderOAuthLogin(req.params.loginId);
-      res.json(login);
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),

@@ -1,25 +1,17 @@
 /**
  * Runs routes (app)
  *
- * Handles durable run listing, status, logs, cancel, import, and SSE events.
+ * Handles durable run SSE events and shared run UI assets.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { pingDaemon, startBackgroundRun } from '@neon-pilot/daemon';
 import type { Express, Response } from 'express';
 
-import {
-  cancelDurableRun,
-  getDurableRun,
-  getDurableRunLog,
-  getDurableRunLogCursor,
-  listDurableRuns,
-  readDurableRunLogDelta,
-} from '../automation/durableRuns.js';
-import { invalidateAppTopics, logError } from '../middleware/index.js';
+import { getDurableRunLogCursor, readDurableRunLogDelta } from '../automation/durableRuns.js';
+import { logError } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
 
 // Lazy-load PA component CSS
@@ -112,82 +104,6 @@ export function registerRunAppRoutes(
   // Serve shared component CSS for native extension bundles and generated previews.
   router.get('/pa/components.css', sendPaComponents);
   router.get('/api/pa/components.css', sendPaComponents);
-
-  // POST /api/runs — create a durable agent run from an assembled prompt.
-  router.post('/api/runs', async (req, res) => {
-    try {
-      const { prompt, source, model, allowedTools, taskSlug } = req.body;
-
-      if (!prompt || typeof prompt !== 'string') {
-        res.status(400).json({ error: 'prompt is required' });
-        return;
-      }
-
-      if (!(await pingDaemon())) {
-        res.status(503).json({ error: 'Daemon is not responding. Ensure the desktop app is running.' });
-        return;
-      }
-
-      const appName = typeof source === 'string' && source.startsWith('app:') ? source.slice(4) : 'custom';
-      const result = await startBackgroundRun({
-        taskSlug: taskSlug ?? `app-${appName}`,
-        cwd: process.cwd(),
-        agent: {
-          prompt,
-          noSession: true,
-          ...(model ? { model } : {}),
-          ...(Array.isArray(allowedTools) && allowedTools.length > 0 ? { allowedTools } : {}),
-        },
-        source: {
-          type: 'app',
-          id: appName,
-        },
-      });
-
-      if (!result.accepted) {
-        res.status(503).json({ error: result.reason ?? 'Could not start run.' });
-        return;
-      }
-
-      invalidateAppTopics('runs');
-      res.status(201).json({ runId: result.runId, logPath: result.logPath });
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.get('/api/runs', async (_req, res) => {
-    try {
-      res.json(await listDurableRuns());
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.get('/api/runs/:id', async (req, res) => {
-    try {
-      const result = await getDurableRun(req.params.id);
-      if (!result) {
-        res.status(404).json({ error: 'Run not found' });
-        return;
-      }
-      res.json(result);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 
   router.get('/api/runs/:id/events', async (req, res) => {
     const runId = req.params.id;
@@ -335,42 +251,6 @@ export function registerRunAppRoutes(
       req.on('close', () => {
         stopStream();
       });
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.get('/api/runs/:id/log', async (req, res) => {
-    try {
-      const tail = parseRunLogTail(req.query.tail);
-      const result = await getDurableRunLog(req.params.id, tail);
-      if (!result) {
-        res.status(404).json({ error: 'Run not found' });
-        return;
-      }
-      res.json(result);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.post('/api/runs/:id/cancel', async (req, res) => {
-    try {
-      const result = await cancelDurableRun(req.params.id);
-      if (!result.cancelled) {
-        res.status(409).json({ error: result.reason ?? 'Could not cancel run.' });
-        return;
-      }
-      invalidateAppTopics('runs');
-      res.json(result);
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),

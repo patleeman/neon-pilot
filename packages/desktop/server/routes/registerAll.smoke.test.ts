@@ -102,15 +102,10 @@ describe('registerServerRoutes smoke test', () => {
   });
 
   it('serves core app routes through the shared route registry', async () => {
-    const defaultCwdResponse = await fetch(`${appBaseUrl}/api/default-cwd`);
+    const extensionsResponse = await fetch(`${appBaseUrl}/api/extensions`);
 
-    expect(defaultCwdResponse.status).toBe(200);
-    expect(await defaultCwdResponse.json()).toEqual(
-      expect.objectContaining({
-        currentCwd: expect.any(String),
-        effectiveCwd: expect.any(String),
-      }),
-    );
+    expect(extensionsResponse.status).toBe(200);
+    expect(await extensionsResponse.json()).toEqual(expect.any(Array));
   });
 
   /* ---- Extension API endpoints ---- */

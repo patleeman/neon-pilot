@@ -30,7 +30,7 @@ export interface NativeExtensionClient {
   models(): Promise<unknown>;
   /**
    * Open a native OS folder picker dialog.
-   * Desktop-only; falls back to a HTTP endpoint on web.
+   * Desktop-only; uses the host-provided native bridge.
    *
    * @param input.cwd  Starting directory for the picker.
    * @param input.prompt  Label shown in the dialog title bar.

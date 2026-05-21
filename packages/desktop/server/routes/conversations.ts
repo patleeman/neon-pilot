@@ -11,21 +11,11 @@ import {
   ConversationInspectCapabilityInputError,
   searchConversationInspectSessions,
 } from '../conversations/conversationInspectCapability.js';
-import {
-  parseTailBlocksQuery,
-  publishConversationSessionMetaChanged,
-  readConversationSessionSignature,
-  readSessionDetailForRoute,
-  setConversationServiceContext,
-} from '../conversations/conversationService.js';
-import {
-  readConversationSessionMetaCapability,
-  readConversationSessionsCapability,
-  readConversationSessionSearchIndexCapability,
-} from '../conversations/conversationSessionCapability.js';
+import { publishConversationSessionMetaChanged, setConversationServiceContext } from '../conversations/conversationService.js';
+import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
-import { buildAppendOnlySessionDetailResponse, readSessionBlock, readSessionImageAsset } from '../conversations/sessions.js';
-import { logError, logSlowConversationPerf, setServerTimingHeaders } from '../middleware/index.js';
+import { readSessionImageAsset } from '../conversations/sessions.js';
+import { logError } from '../middleware/index.js';
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
 import type { ServerRouteContext } from './context.js';
 
@@ -44,18 +34,6 @@ function initializeConversationRoutesContext(
   });
 }
 
-function parseNonNegativeIntegerQuery(rawValue: unknown): number | undefined {
-  const candidate = Array.isArray(rawValue) ? rawValue[0] : rawValue;
-  const parsed =
-    typeof candidate === 'number'
-      ? candidate
-      : typeof candidate === 'string' && /^\d+$/.test(candidate.trim())
-        ? Number.parseInt(candidate.trim(), 10)
-        : undefined;
-
-  return Number.isSafeInteger(parsed) && (parsed as number) >= 0 ? (parsed as number) : undefined;
-}
-
 function parseNonNegativeIntegerPath(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) {
@@ -63,16 +41,6 @@ function parseNonNegativeIntegerPath(value: string): number | null {
   }
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
-}
-
-function parseTrimmedQueryString(rawValue: unknown): string | undefined {
-  const candidate = Array.isArray(rawValue) ? rawValue[0] : rawValue;
-  if (typeof candidate !== 'string') {
-    return undefined;
-  }
-
-  const normalized = candidate.trim();
-  return normalized.length > 0 ? normalized : undefined;
 }
 
 function writeConversationAssetCapabilityError(
@@ -94,155 +62,6 @@ function writeConversationAssetCapabilityError(
 }
 
 function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
-  router.get('/api/sessions/:id/meta', (req, res) => {
-    try {
-      const session = readConversationSessionMetaCapability(req.params.id);
-      if (!session) {
-        res.status(404).json({ error: 'Session not found' });
-        return;
-      }
-
-      res.json(session);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.get('/api/sessions/:id', async (req, res) => {
-    const startedAt = process.hrtime.bigint();
-
-    try {
-      const tailBlocks = parseTailBlocksQuery(req.query.tailBlocks);
-      const rawKnownSessionSignature = Array.isArray(req.query.knownSessionSignature)
-        ? req.query.knownSessionSignature[0]
-        : req.query.knownSessionSignature;
-      const knownSessionSignature =
-        typeof rawKnownSessionSignature === 'string' && rawKnownSessionSignature.trim().length > 0
-          ? rawKnownSessionSignature.trim()
-          : undefined;
-      const knownBlockOffset = parseNonNegativeIntegerQuery(req.query.knownBlockOffset);
-      const knownTotalBlocks = parseNonNegativeIntegerQuery(req.query.knownTotalBlocks);
-      const knownLastBlockId = parseTrimmedQueryString(req.query.knownLastBlockId);
-      const currentSessionSignature = readConversationSessionSignature(req.params.id);
-      if (knownSessionSignature && currentSessionSignature && knownSessionSignature === currentSessionSignature) {
-        const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-        setServerTimingHeaders(
-          res,
-          [
-            { name: 'remote_sync', durationMs: 0, description: 'deferred' },
-            { name: 'session_read', durationMs: 0, description: 'reuse/signature' },
-            { name: 'total', durationMs },
-          ],
-          {
-            route: 'session-detail',
-            conversationId: req.params.id,
-            ...(tailBlocks ? { tailBlocks } : {}),
-            remoteMirror: { status: 'deferred', durationMs: 0 },
-            sessionRead: null,
-            durationMs,
-          },
-        );
-
-        res.json({
-          unchanged: true,
-          sessionId: req.params.id,
-          signature: currentSessionSignature,
-        });
-        return;
-      }
-
-      const { sessionRead, remoteMirror } = await readSessionDetailForRoute({
-        conversationId: req.params.id,
-        profile: getRuntimeScopeFn(),
-        tailBlocks,
-      });
-      if (!sessionRead.detail) {
-        res.status(404).json({ error: 'Session not found' });
-        return;
-      }
-
-      const appendOnly =
-        knownSessionSignature && sessionRead.detail.signature && knownSessionSignature !== sessionRead.detail.signature
-          ? buildAppendOnlySessionDetailResponse({
-              detail: sessionRead.detail,
-              knownBlockOffset,
-              knownTotalBlocks,
-              knownLastBlockId,
-            })
-          : null;
-      if (appendOnly) {
-        const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-        setServerTimingHeaders(
-          res,
-          [
-            { name: 'remote_sync', durationMs: remoteMirror.durationMs, description: remoteMirror.status },
-            {
-              name: 'session_read',
-              durationMs: sessionRead.telemetry?.durationMs ?? 0,
-              description: sessionRead.telemetry ? `${sessionRead.telemetry.cache}/${sessionRead.telemetry.loader}` : 'unknown',
-            },
-            { name: 'total', durationMs },
-          ],
-          {
-            route: 'session-detail',
-            conversationId: req.params.id,
-            ...(tailBlocks ? { tailBlocks } : {}),
-            remoteMirror,
-            sessionRead: sessionRead.telemetry,
-            result: 'append-only',
-            durationMs,
-          },
-        );
-
-        res.json(appendOnly);
-        return;
-      }
-
-      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      setServerTimingHeaders(
-        res,
-        [
-          { name: 'remote_sync', durationMs: remoteMirror.durationMs, description: remoteMirror.status },
-          {
-            name: 'session_read',
-            durationMs: sessionRead.telemetry?.durationMs ?? 0,
-            description: sessionRead.telemetry ? `${sessionRead.telemetry.cache}/${sessionRead.telemetry.loader}` : 'unknown',
-          },
-          { name: 'total', durationMs },
-        ],
-        {
-          route: 'session-detail',
-          conversationId: req.params.id,
-          ...(tailBlocks ? { tailBlocks } : {}),
-          remoteMirror,
-          sessionRead: sessionRead.telemetry,
-          durationMs,
-        },
-      );
-      logSlowConversationPerf('session detail request', {
-        conversationId: req.params.id,
-        durationMs,
-        ...(tailBlocks ? { tailBlocks } : {}),
-        remoteMirrorStatus: remoteMirror.status,
-        sessionReadCache: sessionRead.telemetry?.cache,
-        sessionReadLoader: sessionRead.telemetry?.loader,
-        sessionReadDurationMs: sessionRead.telemetry?.durationMs,
-      });
-
-      res.json(sessionRead.detail);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
   router.get('/api/sessions/:id/blocks/:blockId/image', (req, res) => {
     try {
       const asset = readSessionImageAsset(req.params.id, req.params.blockId);
@@ -291,23 +110,6 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
       res.status(500).json({ error: String(err) });
     }
   });
-
-  router.get('/api/sessions/:id/blocks/:blockId', (req, res) => {
-    try {
-      const result = readSessionBlock(req.params.id, req.params.blockId);
-      if (!result) {
-        res.status(404).json({ error: 'Session block not found' });
-        return;
-      }
-      res.json(result);
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 }
 
 export function registerConversationRoutes(
@@ -318,31 +120,8 @@ export function registerConversationRoutes(
   startConversationSummaryBackfillLoop({
     listSessions: readConversationSessionsCapability,
   });
-  router.get('/api/sessions', (_req, res) => {
-    try {
-      res.json(readConversationSessionsCapability());
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 
   registerConversationReadRoutes(router);
-
-  router.post('/api/sessions/search-index', (req, res) => {
-    try {
-      res.json(readConversationSessionSearchIndexCapability(req.body as { sessionIds?: unknown }));
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
 
   router.post('/api/sessions/search', (req, res) => {
     try {

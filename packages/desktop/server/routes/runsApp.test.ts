@@ -73,19 +73,8 @@ describe('registerRunAppRoutes', () => {
     });
 
     return {
-      listHandler: handlers['GET /api/runs']!,
-      detailHandler: handlers['GET /api/runs/:id']!,
       eventsHandler: handlers['GET /api/runs/:id/events']!,
-      logHandler: handlers['GET /api/runs/:id/log']!,
       paComponentsHandler: handlers['GET /api/pa/components.css']!,
-      cancelHandler: handlers['POST /api/runs/:id/cancel']!,
-    };
-  }
-
-  function createJsonResponse() {
-    return {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn(),
     };
   }
 
@@ -117,64 +106,6 @@ describe('registerRunAppRoutes', () => {
 
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/css');
     expect(res.send).toHaveBeenCalledWith(expect.stringContaining('--color-base'));
-  });
-
-  it('lists durable runs and logs list failures', async () => {
-    const { listHandler } = createHarness();
-    const res = createJsonResponse();
-    listDurableRunsMock.mockResolvedValue({ runs: [{ runId: 'run-1' }] });
-
-    await listHandler({}, res);
-
-    expect(res.json).toHaveBeenCalledWith({ runs: [{ runId: 'run-1' }] });
-
-    listDurableRunsMock.mockRejectedValue(new Error('list failed'));
-    const failingRes = createJsonResponse();
-    await listHandler({}, failingRes);
-
-    expect(logErrorMock).toHaveBeenCalledWith(
-      'request handler error',
-      expect.objectContaining({
-        message: 'list failed',
-      }),
-    );
-    expect(failingRes.status).toHaveBeenCalledWith(500);
-    expect(failingRes.json).toHaveBeenCalledWith({ error: 'Error: list failed' });
-  });
-
-  it('returns run details and 404s for missing runs', async () => {
-    const { detailHandler } = createHarness();
-    const res = createJsonResponse();
-    getDurableRunMock.mockResolvedValue({ run: { runId: 'run-1' } });
-
-    await detailHandler({ params: { id: 'run-1' } }, res);
-
-    expect(getDurableRunMock).toHaveBeenCalledWith('run-1');
-    expect(res.json).toHaveBeenCalledWith({ run: { runId: 'run-1' } });
-
-    getDurableRunMock.mockResolvedValue(undefined);
-    const missingRes = createJsonResponse();
-    await detailHandler({ params: { id: 'missing' } }, missingRes);
-
-    expect(missingRes.status).toHaveBeenCalledWith(404);
-    expect(missingRes.json).toHaveBeenCalledWith({ error: 'Run not found' });
-  });
-
-  it('returns 500 when loading run details fails', async () => {
-    const { detailHandler } = createHarness();
-    const res = createJsonResponse();
-    getDurableRunMock.mockRejectedValue(new Error('detail failed'));
-
-    await detailHandler({ params: { id: 'run-1' } }, res);
-
-    expect(logErrorMock).toHaveBeenCalledWith(
-      'request handler error',
-      expect.objectContaining({
-        message: 'detail failed',
-      }),
-    );
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Error: detail failed' });
   });
 
   it('streams run snapshots, log deltas, heartbeats, and stops after close', async () => {
@@ -330,83 +261,5 @@ describe('registerRunAppRoutes', () => {
     expect(getDurableRunSnapshot).toHaveBeenLastCalledWith('run-1', 120);
     expect(res.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ type: 'deleted', runId: 'run-1' })}\n\n`);
     expect(res.end).toHaveBeenCalledTimes(1);
-  });
-
-  it('reads run logs with sane tail defaults and 404s missing logs', async () => {
-    const { logHandler } = createHarness();
-    const res = createJsonResponse();
-    getDurableRunLogMock.mockResolvedValue({ path: '/tmp/run.log', log: 'tail' });
-
-    await logHandler({ params: { id: 'run-1' }, query: { tail: 'bogus' } }, res);
-
-    expect(getDurableRunLogMock).toHaveBeenCalledWith('run-1', 120);
-    expect(res.json).toHaveBeenCalledWith({ path: '/tmp/run.log', log: 'tail' });
-
-    const malformedRes = createJsonResponse();
-    await logHandler({ params: { id: 'run-1' }, query: { tail: '25abc' } }, malformedRes);
-    expect(getDurableRunLogMock).toHaveBeenLastCalledWith('run-1', 120);
-
-    const unsafeRes = createJsonResponse();
-    await logHandler({ params: { id: 'run-1' }, query: { tail: String(Number.MAX_SAFE_INTEGER + 1) } }, unsafeRes);
-    expect(getDurableRunLogMock).toHaveBeenLastCalledWith('run-1', 120);
-
-    getDurableRunLogMock.mockResolvedValue(undefined);
-    const missingRes = createJsonResponse();
-    await logHandler({ params: { id: 'missing' }, query: { tail: '10' } }, missingRes);
-
-    expect(getDurableRunLogMock).toHaveBeenLastCalledWith('missing', 10);
-    expect(missingRes.status).toHaveBeenCalledWith(404);
-    expect(missingRes.json).toHaveBeenCalledWith({ error: 'Run not found' });
-  });
-
-  it('returns 500 when reading run logs fails', async () => {
-    const { logHandler } = createHarness();
-    const res = createJsonResponse();
-    getDurableRunLogMock.mockRejectedValue(new Error('log failed'));
-
-    await logHandler({ params: { id: 'run-1' }, query: {} }, res);
-
-    expect(logErrorMock).toHaveBeenCalledWith(
-      'request handler error',
-      expect.objectContaining({
-        message: 'log failed',
-      }),
-    );
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Error: log failed' });
-  });
-
-  it('cancels durable runs, handling conflicts and errors', async () => {
-    const { cancelHandler } = createHarness();
-    const res = createJsonResponse();
-    cancelDurableRunMock.mockResolvedValue({ cancelled: true, reason: null });
-
-    await cancelHandler({ params: { id: 'run-1' } }, res);
-
-    expect(cancelDurableRunMock).toHaveBeenCalledWith('run-1');
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('runs');
-    expect(res.json).toHaveBeenCalledWith({ cancelled: true, reason: null });
-
-    invalidateAppTopicsMock.mockClear();
-    cancelDurableRunMock.mockResolvedValue({ cancelled: false, reason: 'already finished' });
-    const conflictRes = createJsonResponse();
-    await cancelHandler({ params: { id: 'run-1' } }, conflictRes);
-
-    expect(conflictRes.status).toHaveBeenCalledWith(409);
-    expect(conflictRes.json).toHaveBeenCalledWith({ error: 'already finished' });
-    expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
-
-    cancelDurableRunMock.mockRejectedValue(new Error('cancel failed'));
-    const failingRes = createJsonResponse();
-    await cancelHandler({ params: { id: 'run-1' } }, failingRes);
-
-    expect(logErrorMock).toHaveBeenCalledWith(
-      'request handler error',
-      expect.objectContaining({
-        message: 'cancel failed',
-      }),
-    );
-    expect(failingRes.status).toHaveBeenCalledWith(500);
-    expect(failingRes.json).toHaveBeenCalledWith({ error: 'Error: cancel failed' });
   });
 });

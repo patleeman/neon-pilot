@@ -1794,14 +1794,8 @@ function normalizePathRows(paths: string[]): string[] {
     });
 }
 
-async function pickExtensionFolder(cwd?: string): Promise<string | null> {
-  const response = await fetch('/api/folder-picker', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cwd, prompt: 'Choose a folder containing extension packages' }),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  const result = (await response.json()) as { cancelled?: boolean; path?: string };
+async function pickExtensionFolder(pa: NativeExtensionClient, cwd?: string): Promise<string | null> {
+  const result = await pa.pickFolder({ cwd, prompt: 'Choose a folder containing extension packages' });
   return result.cancelled ? null : (result.path ?? null);
 }
 
@@ -1850,7 +1844,7 @@ export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClien
     setBusy('Choosing folder…');
     setMessage(null);
     try {
-      const selected = await pickExtensionFolder(paths[index] || state?.defaultLocation);
+      const selected = await pickExtensionFolder(pa, paths[index] || state?.defaultLocation);
       if (selected) updatePath(index, selected);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -1863,7 +1857,7 @@ export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClien
     setBusy('Choosing folder…');
     setMessage(null);
     try {
-      const selected = await pickExtensionFolder(state?.defaultLocation);
+      const selected = await pickExtensionFolder(pa, state?.defaultLocation);
       setPaths((current) => [...current, selected ?? '']);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
