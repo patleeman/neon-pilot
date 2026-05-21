@@ -507,21 +507,17 @@ function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): Extens
               ? value.defaultKeys.filter((key): key is string => typeof key === 'string')
               : [];
             const packageType = value.packageType === 'system' ? 'system' : value.packageType === 'user' ? 'user' : undefined;
-            return [
-              [
-                id,
-                {
-                  ...value,
-                  extensionId: value.extensionId,
-                  surfaceId: value.surfaceId,
-                  title: value.title,
-                  command: value.command,
-                  scope,
-                  defaultKeys,
-                  packageType,
-                },
-              ],
-            ];
+            const entry: NonNullable<ExtensionRegistryConfig['commandKeybindings']>[string] = {
+              extensionId: value.extensionId,
+              surfaceId: value.surfaceId,
+              title: value.title,
+              command: value.command,
+              ...(value.args !== undefined ? { args: value.args } : {}),
+              scope,
+              defaultKeys,
+              ...(packageType ? { packageType } : {}),
+            };
+            return [[id, entry]];
           }),
         )
       : {};
