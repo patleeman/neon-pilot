@@ -600,11 +600,13 @@ function resolveKeyboardShortcutFromEvent(event: ReactKeyboardEvent): string | n
 function KeyboardShortcutCaptureInput({
   id,
   value,
+  placeholder,
   disabled,
   onChange,
 }: {
   id: string;
   value: string;
+  placeholder?: string;
   disabled?: boolean;
   onChange: (shortcut: string) => void;
 }) {
@@ -654,10 +656,22 @@ function KeyboardShortcutCaptureInput({
         onChange(shortcut);
       }}
       className={cx(INPUT_CLASS, 'text-left', capturing && 'border-accent/60 bg-surface', invalid && 'border-danger/70')}
-      aria-label={capturing ? 'Press a keyboard shortcut' : `Keyboard shortcut ${formatKeyboardShortcutLabel(value)}`}
+      aria-label={
+        capturing
+          ? 'Press a keyboard shortcut'
+          : value
+            ? `Keyboard shortcut ${formatKeyboardShortcutLabel(value)}`
+            : (placeholder ?? 'No shortcut assigned')
+      }
     >
-      <span className={cx('block truncate', capturing && 'text-accent', invalid && 'text-danger')}>
-        {capturing ? (invalid ? 'Use a modifier, or press an F-key…' : 'Press shortcut…') : formatKeyboardShortcutLabel(value)}
+      <span className={cx('block truncate', !value && !capturing && 'text-dim', capturing && 'text-accent', invalid && 'text-danger')}>
+        {capturing
+          ? invalid
+            ? 'Use a modifier, or press an F-key…'
+            : 'Press shortcut…'
+          : value
+            ? formatKeyboardShortcutLabel(value)
+            : (placeholder ?? 'No shortcut assigned')}
       </span>
       {capturing ? (
         <span className="mt-1 block text-[10px] leading-tight text-warning">
@@ -1032,18 +1046,26 @@ function CommandsSettingsSection() {
                 const value = drafts[id] ?? keybinding.keys.join(', ');
                 const busy = busyId === id;
                 return (
-                  <div key={id} className="flex flex-wrap items-center justify-end gap-2">
+                  <div key={id} className="relative">
                     <KeyboardShortcutCaptureInput
                       id={`settings-command-keybinding-${id}`}
-                      value={keybinding.enabled ? value : 'Disabled'}
-                      disabled={busy || !keybinding.enabled}
+                      value={keybinding.enabled ? value : ''}
+                      placeholder={keybinding.enabled ? 'Click to record shortcut' : 'Shortcut disabled'}
+                      disabled={busy}
                       onChange={(shortcut) => {
                         setDrafts((current) => ({ ...current, [id]: shortcut }));
                         void saveKeybinding(keybinding, shortcut);
                       }}
                     />
-                    <button type="button" className={ACTION_BUTTON_CLASS} disabled={busy} onClick={() => void toggleKeybinding(keybinding)}>
-                      {keybinding.enabled ? 'Disable' : 'Enable'}
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[15px] text-dim transition-colors hover:bg-surface hover:text-primary disabled:opacity-50"
+                      disabled={busy}
+                      aria-label={keybinding.enabled ? `Clear shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`}
+                      title={keybinding.enabled ? 'Clear shortcut' : 'Enable shortcut'}
+                      onClick={() => void toggleKeybinding(keybinding)}
+                    >
+                      {keybinding.enabled ? '×' : '+'}
                     </button>
                   </div>
                 );
