@@ -322,8 +322,11 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                   </>
                 ) : (
                   <>
-                    No OpenRouter API key detected. Configure OpenRouter in Settings → Providers, or set{' '}
-                    <span className="font-mono text-primary">OPENROUTER_API_KEY</span>. The model must support video input.
+                    No OpenRouter API key detected. Configure OpenRouter in{' '}
+                    <a href="/settings/providers" className="text-accent underline underline-offset-2">
+                      Settings → Providers
+                    </a>
+                    , or set <span className="font-mono text-primary">OPENROUTER_API_KEY</span>. The model must support video input.
                   </>
                 )}
               </div>
