@@ -18,7 +18,6 @@ const WORKER_SAFE_LOCAL_API_ROUTES: Array<{
   { methods: new Set(['GET']), pattern: /^\/api\/tools$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/memory$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/conversation-titles\/settings$/ },
-  { methods: new Set(['GET']), pattern: /^\/api\/live-sessions\/[^/]+\/context$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/conversations\/[^/]+\/checkpoints\/[^/]+\/review-context$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/conversations\/[^/]+\/checkpoints\/[^/]+\/structural-diff$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/conversations\/[^/]+\/context-docs$/ },

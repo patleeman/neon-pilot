@@ -18,14 +18,6 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
     expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'PATCH', path: '/api/settings', hostId: 'local', ...workerAvailable })).toBe(
       false,
     );
-    expect(
-      shouldDispatchReadonlyLocalApiInWorker({
-        method: 'GET',
-        path: '/api/live-sessions/session-1/context',
-        hostId: 'local',
-        ...workerAvailable,
-      }),
-    ).toBe(true);
     expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/status', hostId: 'local', ...workerAvailable })).toBe(false);
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/workspace/tree?cwd=/repo', hostId: 'local', ...workerAvailable }),

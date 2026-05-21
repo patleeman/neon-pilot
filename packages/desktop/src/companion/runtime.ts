@@ -347,14 +347,14 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
 
     async readConversationBootstrap(input: CompanionConversationBootstrapInput) {
       const localController = hostManager.getHostController('local');
-      const query = toQuery({
-        tailBlocks: String(normalizeCompanionTranscriptTailBlocks(input.tailBlocks)),
-      });
+      if (!localController.readConversationBootstrap) {
+        throw new Error('Local conversation bootstrap capability is unavailable.');
+      }
 
       const [bootstrap, sessionMeta, attachments, executionTargets] = await Promise.all([
-        invokeDesktopApi(hostManager, {
-          method: 'GET',
-          path: `/api/conversations/${encodeURIComponent(input.conversationId)}/bootstrap${query}`,
+        localController.readConversationBootstrap({
+          conversationId: input.conversationId,
+          tailBlocks: normalizeCompanionTranscriptTailBlocks(input.tailBlocks),
         }),
         localController.readSessionMeta?.(input.conversationId).catch(() => null) ?? Promise.resolve(null),
         localController.readConversationAttachments?.(input.conversationId).catch(() => null) ?? Promise.resolve(null),
@@ -425,18 +425,11 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     },
 
     async promptConversation(input: CompanionConversationPromptInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/prompt`,
-        body: {
-          ...(input.text !== undefined ? { text: input.text } : {}),
-          ...(input.behavior ? { behavior: input.behavior } : {}),
-          ...(input.images ? { images: input.images } : {}),
-          ...(input.attachmentRefs ? { attachmentRefs: input.attachmentRefs } : {}),
-          ...(input.contextMessages ? { contextMessages: input.contextMessages } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.submitLiveSessionPrompt) {
+        throw new Error('Local live-session prompt capability is unavailable.');
+      }
+      return localController.submitLiveSessionPrompt(input);
     },
 
     async restoreConversationQueuePrompt(input: CompanionConversationQueueRestoreInput) {
@@ -445,52 +438,39 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return localController.restoreQueuedLiveSessionMessage(input);
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/dequeue`,
-        body: {
-          ...(input.behavior ? { behavior: input.behavior } : {}),
-          ...(typeof input.index === 'number' ? { index: input.index } : {}),
-          ...(input.previewId ? { previewId: input.previewId } : {}),
-        },
-      });
+      throw new Error('Local live-session queue restore capability is unavailable.');
     },
 
     async abortConversation(input: CompanionConversationAbortInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/abort`,
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.abortLiveSession) {
+        throw new Error('Local live-session abort capability is unavailable.');
+      }
+      return localController.abortLiveSession(input.conversationId);
     },
 
     async takeOverConversation(input: CompanionConversationTakeoverInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/takeover`,
-        body: { surfaceId: input.surfaceId },
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.takeOverLiveSession) {
+        throw new Error('Local live-session takeover capability is unavailable.');
+      }
+      return localController.takeOverLiveSession(input);
     },
 
     async renameConversation(input: CompanionConversationRenameInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'PATCH',
-        path: `/api/conversations/${encodeURIComponent(input.conversationId)}/title`,
-        body: {
-          name: input.name,
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.renameConversation) {
+        throw new Error('Local conversation rename capability is unavailable.');
+      }
+      return localController.renameConversation(input);
     },
 
     async changeConversationCwd(input: CompanionConversationCwdChangeInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/conversations/${encodeURIComponent(input.conversationId)}/cwd`,
-        body: {
-          cwd: input.cwd,
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.changeConversationCwd) {
+        throw new Error('Local conversation cwd capability is unavailable.');
+      }
+      return localController.changeConversationCwd(input);
     },
 
     async readConversationAutoMode(conversationId: string) {
@@ -517,10 +497,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return localController.readConversationModelPreferences({ conversationId });
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: `/api/conversations/${encodeURIComponent(conversationId)}/model-preferences`,
-      });
+      throw new Error('Local conversation model-preferences capability is unavailable.');
     },
 
     async updateConversationModelPreferences(input: CompanionConversationModelPreferencesUpdateInput) {
@@ -529,16 +506,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return localController.updateConversationModelPreferences(input);
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'PATCH',
-        path: `/api/conversations/${encodeURIComponent(input.conversationId)}/model-preferences`,
-        body: {
-          ...(input.model !== undefined ? { model: input.model } : {}),
-          ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
-          ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
-          ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
-        },
-      });
+      throw new Error('Local conversation model-preferences update capability is unavailable.');
     },
 
     async createConversationCheckpoint(input: CompanionConversationCheckpointCreateInput) {
@@ -600,10 +568,11 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     },
 
     async listConversationForkEntries(conversationId: string) {
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: `/api/live-sessions/${encodeURIComponent(conversationId)}/fork-entries`,
-      });
+      const localController = hostManager.getHostController('local');
+      if (!localController.readLiveSessionForkEntries) {
+        throw new Error('Local live-session fork-entry capability is unavailable.');
+      }
+      return localController.readLiveSessionForkEntries(conversationId);
     },
 
     async forkConversation(input: CompanionConversationForkInput) {
@@ -618,15 +587,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/fork`,
-        body: {
-          entryId: input.entryId,
-          beforeEntry: input.beforeEntry,
-          preserveSource: input.preserveSource,
-        },
-      });
+      throw new Error('Local live-session fork capability is unavailable.');
     },
 
     async branchConversation(input: CompanionConversationBranchInput) {
@@ -639,13 +600,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
         return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
       }
 
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: `/api/live-sessions/${encodeURIComponent(input.conversationId)}/branch`,
-        body: {
-          entryId: input.entryId,
-        },
-      });
+      throw new Error('Local live-session branch capability is unavailable.');
     },
 
     async readConversationBlockImage(input: CompanionConversationBlockImageInput): Promise<CompanionBinaryAsset> {
