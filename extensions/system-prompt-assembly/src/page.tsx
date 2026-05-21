@@ -327,22 +327,30 @@ function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: b
 function ContributionSummary({ row }: { row: RuntimeCapability }) {
   const counts = asRecord(row.metadata?.counts);
   const entries = [
-    ['Pages', counts.pages],
-    ['Rails', counts.rails],
-    ['Workbench', counts.workbench],
-    ['Tools', counts.tools],
-    ['Profiles', counts.modelProfiles],
-    ['Keys', counts.keybindings],
-    ['Hooks', counts.agentHooks],
-    ['Backend', counts.backend],
-    ['Skills', counts.skills],
-  ].filter(([, value]) => typeof value === 'number' && value > 0);
+    { label: 'Pages', icon: '▣', value: counts.pages },
+    { label: 'Rails', icon: '▥', value: counts.rails },
+    { label: 'Workbench', icon: '◫', value: counts.workbench },
+    { label: 'Tools', icon: '⚒', value: counts.tools },
+    { label: 'Profiles', icon: '◎', value: counts.modelProfiles },
+    { label: 'Keys', icon: '⌘', value: counts.keybindings },
+    { label: 'Hooks', icon: '↪', value: counts.agentHooks },
+    { label: 'Backend', icon: '◈', value: counts.backend },
+    { label: 'Skills', icon: '✦', value: counts.skills },
+  ].filter((entry) => typeof entry.value === 'number' && entry.value > 0);
   if (entries.length) {
     return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {entries.map(([label, value]) => (
-          <span key={label} title={String(label)} className="text-[12px] text-secondary">
-            {String(label).toLowerCase()} {String(value)}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {entries.map((entry) => (
+          <span
+            key={entry.label}
+            title={`${entry.label}: ${String(entry.value)}`}
+            aria-label={`${entry.label}: ${String(entry.value)}`}
+            className="inline-flex min-w-8 items-center justify-center gap-1 rounded-md bg-surface/70 px-1.5 py-1 text-[11px] text-secondary"
+          >
+            <span aria-hidden="true" className="text-dim">
+              {entry.icon}
+            </span>
+            <span>{String(entry.value)}</span>
           </span>
         ))}
       </div>
