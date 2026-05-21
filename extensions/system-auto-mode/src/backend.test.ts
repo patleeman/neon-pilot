@@ -181,6 +181,25 @@ describe('system-goal-mode extension', () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
+  it('pauses an active goal when the conversation is stopped mid-turn', async () => {
+    const harness = createHarness([activeGoal('ship without losing intent')]);
+    const { turnEnd, appendEntry, sendMessage, ctx } = harness;
+
+    await turnEnd({ toolResults: [{ type: 'tool_result', toolName: 'bash' }] }, { ...ctx, signal: { aborted: true } });
+    await finishAgentRun(harness);
+
+    expect(appendEntry).toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({
+        objective: 'ship without losing intent',
+        status: 'paused',
+        stopReason: 'paused',
+        noProgressTurns: 0,
+      }),
+    );
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it('goal resume reactivates a paused goal and re-arms continuation', async () => {
     const harness = createHarness([pausedGoal('finish after CI')]);
     const { goal, appendEntry, sendMessage, ctx } = harness;
