@@ -1,6 +1,10 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { api } from '@neon-pilot/extensions/data';
 import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+const COMMAND_KEYBINDINGS_CHANGED_EVENT = 'neon-pilot-command-keybindings-changed';
+const CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY = 'neon-pilot.commandKeybindings.v1';
 
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 type Filter = 'all' | CapabilityKind | 'active' | 'disabled' | 'issues';
@@ -15,6 +19,24 @@ interface CommandInspectorEntry {
   args?: unknown;
   argsSchema?: unknown;
   enablement?: string;
+}
+
+interface KeybindingInspectorEntry {
+  extensionId: string;
+  surfaceId: string;
+  title: string;
+  keys: string[];
+  command: string;
+  args?: unknown;
+  when?: string;
+  scope: 'global' | 'surface';
+  enabled: boolean;
+  defaultKeys: string[];
+  packageType?: 'user' | 'system';
+}
+
+interface CommandWithKeybindings extends CommandInspectorEntry {
+  keybindings: KeybindingInspectorEntry[];
 }
 
 const FILTERS: Array<{ id: Filter; label: string }> = [
@@ -57,9 +79,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<AgentRuntimeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
+  const [section, setSection] = useState<'app-control' | 'agent-context'>('app-control');
   const [query, setQuery] = useState('');
   const [commandQuery, setCommandQuery] = useState('');
   const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
+  const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
+  const [keybindingDraft, setKeybindingDraft] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -78,13 +103,18 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
 
   useEffect(() => {
     let cancelled = false;
-    void pa.commands
-      .list()
-      .then((items) => {
-        if (!cancelled) setCommands(items as CommandInspectorEntry[]);
+    void Promise.all([pa.commands.list(), api.extensionKeybindings()])
+      .then(([commandItems, keybindingItems]) => {
+        if (!cancelled) {
+          setCommands(commandItems as CommandInspectorEntry[]);
+          setKeybindings([...(keybindingItems as KeybindingInspectorEntry[]), ...readCustomCommandKeybindings()]);
+        }
       })
       .catch(() => {
-        if (!cancelled) setCommands([]);
+        if (!cancelled) {
+          setCommands([]);
+          setKeybindings([]);
+        }
       });
     return () => {
       cancelled = true;
@@ -132,15 +162,96 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     });
   }, [data?.capabilities, filter, query]);
 
+  const commandRows = useMemo<CommandWithKeybindings[]>(() => {
+    const rows = commands.map((command) => {
+      const matches = keybindings.filter((keybinding) => keybindingMatchesCommand(keybinding, command));
+      return {
+        ...command,
+        keybindings: matches.length ? matches : [customKeybindingForCommand(command)],
+      };
+    });
+    const commandKeys = new Set(commands.map(commandKey));
+    const keybindingOnlyRows = keybindings
+      .filter((keybinding) => !commandKeys.has(keybindingCommandKey(keybinding)))
+      .map((keybinding) => ({
+        id: keybinding.command,
+        surfaceId: keybinding.command,
+        extensionId: keybinding.extensionId,
+        title: keybinding.title,
+        category: keybinding.scope === 'surface' ? 'surface shortcut' : 'shortcut',
+        action: keybinding.command,
+        keybindings: [keybinding],
+      }));
+    return [...rows, ...keybindingOnlyRows];
+  }, [commands, keybindings]);
+
   const visibleCommands = useMemo(() => {
     const needle = commandQuery.trim().toLowerCase();
-    if (!needle) return commands;
-    return commands.filter((command) =>
-      [command.title, command.id, command.surfaceId, command.extensionId, command.category, command.action, command.enablement]
+    if (!needle) return commandRows;
+    return commandRows.filter((command) =>
+      [
+        command.title,
+        command.id,
+        command.surfaceId,
+        command.extensionId,
+        command.category,
+        command.action,
+        command.enablement,
+        ...command.keybindings.flatMap((keybinding) => [keybinding.title, keybinding.command, keybinding.keys.join(' '), keybinding.when]),
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(needle)),
     );
-  }, [commandQuery, commands]);
+  }, [commandQuery, commandRows]);
+
+  const visibleExtensions = useMemo(() => visible.filter((capability) => capability.kind === 'extension'), [visible]);
+  const visibleAgentCapabilities = useMemo(() => visible.filter((capability) => capability.kind !== 'extension'), [visible]);
+
+  async function saveKeybinding(keybinding: KeybindingInspectorEntry, keysText: string) {
+    setError(null);
+    const keys = keysText
+      .split(',')
+      .map((key) => key.trim())
+      .filter(Boolean);
+    if (keys.length === 0) {
+      setError('Keybinding must include at least one shortcut. Use Disable to turn it off.');
+      return;
+    }
+    const id = keybindingId(keybinding);
+    setBusyId(id);
+    try {
+      if (keybinding.extensionId === 'host' || keybinding.surfaceId.startsWith('custom:')) {
+        writeCustomCommandKeybinding({ ...keybinding, keys, enabled: true });
+      } else {
+        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { keys, enabled: true });
+      }
+      setKeybindings((items) => items.map((item) => (keybindingId(item) === id ? { ...item, keys, enabled: true } : item)));
+      setKeybindingDraft((current) => ({ ...current, [id]: keys.join(', ') }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function toggleKeybinding(keybinding: KeybindingInspectorEntry) {
+    setError(null);
+    const id = keybindingId(keybinding);
+    const enabled = !keybinding.enabled;
+    setBusyId(id);
+    try {
+      if (keybinding.extensionId === 'host' || keybinding.surfaceId.startsWith('custom:')) {
+        writeCustomCommandKeybinding({ ...keybinding, enabled });
+      } else {
+        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { enabled });
+      }
+      setKeybindings((items) => items.map((item) => (keybindingId(item) === id ? { ...item, enabled } : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   if (error) return <ErrorState title="Failed to inspect agent runtime" message={error} />;
   if (!data) return <LoadingState label="Inspecting agent runtime…" />;
@@ -161,62 +272,110 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         cwd={data.cwd}
       />
 
-      <section className="space-y-4 border-t border-border-subtle/70 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-semibold tracking-tight text-primary">Commands</h2>
-            <p className="text-[13px] leading-6 text-secondary">
-              {formatCount(visibleCommands.length, 'command')} shown · {formatCount(commands.length, 'command')} registered
-            </p>
-          </div>
-          <input
-            className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-            value={commandQuery}
-            onChange={(event) => setCommandQuery(event.target.value)}
-            placeholder="Search commands…"
-          />
-        </div>
-        {visibleCommands.length ? (
-          <CommandTable rows={visibleCommands} />
-        ) : (
-          <EmptyState title="No commands found" body="Adjust the search query." />
-        )}
-      </section>
+      <div className="flex flex-wrap gap-1 border-b border-border-subtle/70 pb-5">
+        {[
+          { id: 'app-control' as const, label: 'App control' },
+          { id: 'agent-context' as const, label: 'Agent context' },
+        ].map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={cx(
+              'rounded-lg px-3 py-1.5 text-[13px] transition-colors',
+              section === item.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+            )}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-      <section className="space-y-4 border-t border-border-subtle/70 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-semibold tracking-tight text-primary">Capabilities</h2>
-            <p className="text-[13px] leading-6 text-secondary">{formatCount(visible.length, 'capability')} shown</p>
+      {section === 'app-control' ? (
+        <div className="space-y-8">
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[18px] font-semibold tracking-tight text-primary">Commands</h2>
+                <p className="text-[13px] leading-6 text-secondary">
+                  {formatCount(visibleCommands.length, 'command')} shown · {formatCount(commands.length, 'command')} registered ·{' '}
+                  {formatCount(keybindings.length, 'keybinding')}
+                </p>
+              </div>
+              <input
+                className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                placeholder="Search commands…"
+              />
+            </div>
+            {visibleCommands.length ? (
+              <CommandTable
+                rows={visibleCommands}
+                busyId={busyId}
+                drafts={keybindingDraft}
+                onDraftChange={(id, value) => setKeybindingDraft((current) => ({ ...current, [id]: value }))}
+                onSaveKeybinding={saveKeybinding}
+                onToggleKeybinding={toggleKeybinding}
+              />
+            ) : (
+              <EmptyState title="No commands found" body="Adjust the search query." />
+            )}
+          </section>
+
+          <section className="space-y-4 border-t border-border-subtle/70 pt-6">
+            <div>
+              <h2 className="text-[18px] font-semibold tracking-tight text-primary">Extensions</h2>
+              <p className="text-[13px] leading-6 text-secondary">Product modules that control Neon Pilot surfaces and behavior.</p>
+            </div>
+            {visibleExtensions.length ? (
+              <CapabilityTable rows={visibleExtensions} busyId={busyId} onToggle={toggleCapability} />
+            ) : (
+              <EmptyState title="No extensions found" body="Adjust the runtime search query." />
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {section === 'agent-context' ? (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[18px] font-semibold tracking-tight text-primary">Agent context</h2>
+              <p className="text-[13px] leading-6 text-secondary">
+                {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and
+                context.
+              </p>
+            </div>
+            <input
+              className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search runtime…"
+            />
           </div>
-          <input
-            className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search runtime…"
-          />
-        </div>
-        <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={cx(
-                'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
-                filter === item.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
-              )}
-              onClick={() => setFilter(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        {visible.length ? (
-          <CapabilityTable rows={visible} busyId={busyId} onToggle={toggleCapability} />
-        ) : (
-          <EmptyState title="No capabilities found" body="Adjust the filter or search query." />
-        )}
-      </section>
+          <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
+            {FILTERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={cx(
+                  'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
+                  filter === item.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+                )}
+                onClick={() => setFilter(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {visibleAgentCapabilities.length ? (
+            <CapabilityTable rows={visibleAgentCapabilities} busyId={busyId} onToggle={toggleCapability} />
+          ) : (
+            <EmptyState title="No agent context found" body="Adjust the filter or search query." />
+          )}
+        </section>
+      ) : null}
     </AppPageLayout>
   );
 }
@@ -263,7 +422,21 @@ function Overview({
   );
 }
 
-function CommandTable({ rows }: { rows: CommandInspectorEntry[] }) {
+function CommandTable({
+  rows,
+  busyId,
+  drafts,
+  onDraftChange,
+  onSaveKeybinding,
+  onToggleKeybinding,
+}: {
+  rows: CommandWithKeybindings[];
+  busyId: string | null;
+  drafts: Record<string, string>;
+  onDraftChange: (id: string, value: string) => void;
+  onSaveKeybinding: (keybinding: KeybindingInspectorEntry, keysText: string) => Promise<void>;
+  onToggleKeybinding: (keybinding: KeybindingInspectorEntry) => Promise<void>;
+}) {
   return (
     <section className="min-w-0 overflow-auto">
       <table className="w-full border-collapse text-left text-[13px]">
@@ -271,6 +444,7 @@ function CommandTable({ rows }: { rows: CommandInspectorEntry[] }) {
           <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
             <th className="py-2 pr-4 font-semibold">Command</th>
             <th className="py-2 px-3 font-semibold">Source</th>
+            <th className="py-2 px-3 font-semibold">Keybindings</th>
             <th className="py-2 px-3 font-semibold">Category</th>
             <th className="py-2 pl-3 font-semibold">Action</th>
           </tr>
@@ -291,6 +465,46 @@ function CommandTable({ rows }: { rows: CommandInspectorEntry[] }) {
                   {command.argsSchema ? <div className="mt-1 text-[11px] text-secondary">Args schema available</div> : null}
                 </td>
                 <td className="px-3 py-3 text-[12px] text-secondary">{command.extensionId ?? 'host'}</td>
+                <td className="px-3 py-3 text-[12px] text-secondary">
+                  {command.keybindings.length ? (
+                    <div className="space-y-2">
+                      {command.keybindings.map((keybinding) => {
+                        const id = keybindingId(keybinding);
+                        const draft = drafts[id] ?? keybinding.keys.join(', ');
+                        const busy = busyId === id;
+                        return (
+                          <div key={id} className="flex min-w-72 flex-wrap items-center gap-1.5">
+                            <input
+                              value={keybinding.enabled ? draft : 'Disabled'}
+                              disabled={!keybinding.enabled || busy}
+                              onChange={(event) => onDraftChange(id, event.target.value)}
+                              className="min-w-48 flex-1 rounded-lg border border-border-subtle bg-base px-2 py-1 font-mono text-[11px] text-primary outline-none focus:border-accent/50 disabled:text-dim"
+                              title={formatParts(keybinding.title, keybinding.when ? `when ${keybinding.when}` : undefined)}
+                            />
+                            <button
+                              type="button"
+                              className="rounded-lg bg-surface px-2 py-1 text-[11px] text-secondary hover:text-primary disabled:opacity-50"
+                              disabled={busy || !keybinding.enabled}
+                              onClick={() => void onSaveKeybinding(keybinding, draft)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-surface px-2 py-1 text-[11px] text-secondary hover:text-primary disabled:opacity-50"
+                              disabled={busy}
+                              onClick={() => void onToggleKeybinding(keybinding)}
+                            >
+                              {keybinding.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span className="text-dim">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-3 text-[12px] text-secondary">{command.category ?? '—'}</td>
                 <td className="py-3 pl-3 font-mono text-[11px] text-secondary">{command.action ?? 'host'}</td>
               </tr>
@@ -505,6 +719,80 @@ function formatCount(count: number, singular: string): string {
 
 function formatParts(...parts: Array<unknown>): string {
   return parts.filter(Boolean).join(' · ');
+}
+
+function commandKey(command: CommandInspectorEntry): string {
+  return command.extensionId
+    ? `${command.extensionId}:${command.id ?? command.surfaceId ?? ''}`
+    : `host:${command.id ?? command.surfaceId ?? ''}`;
+}
+
+function keybindingCommandKey(keybinding: KeybindingInspectorEntry): string {
+  return `${keybinding.extensionId}:${keybinding.command.replace(`${keybinding.extensionId}.`, '')}`;
+}
+
+function keybindingId(keybinding: KeybindingInspectorEntry): string {
+  return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function customKeybindingId(keybinding: Pick<KeybindingInspectorEntry, 'extensionId' | 'surfaceId'>): string {
+  return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function customKeybindingForCommand(command: CommandInspectorEntry): KeybindingInspectorEntry {
+  const commandId = command.extensionId
+    ? `${command.extensionId}.${command.id ?? command.surfaceId ?? ''}`
+    : (command.id ?? command.surfaceId ?? '');
+  return {
+    extensionId: command.extensionId ?? 'host',
+    surfaceId: `custom:${commandId}`,
+    title: command.title ?? commandId,
+    keys: [],
+    command: commandId,
+    args: command.args,
+    scope: 'global',
+    enabled: true,
+    defaultKeys: [],
+    packageType: command.extensionId ? 'user' : 'system',
+  };
+}
+
+function readCustomCommandKeybindings(): KeybindingInspectorEntry[] {
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(isKeybindingInspectorEntry) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCustomCommandKeybinding(next: KeybindingInspectorEntry): void {
+  const current = readCustomCommandKeybindings().filter((item) => customKeybindingId(item) !== customKeybindingId(next));
+  window.localStorage.setItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY, JSON.stringify([...current, next]));
+  window.dispatchEvent(new CustomEvent(COMMAND_KEYBINDINGS_CHANGED_EVENT));
+}
+
+function isKeybindingInspectorEntry(value: unknown): value is KeybindingInspectorEntry {
+  const record = asRecord(value);
+  return (
+    typeof record.extensionId === 'string' &&
+    typeof record.surfaceId === 'string' &&
+    typeof record.title === 'string' &&
+    Array.isArray(record.keys) &&
+    record.keys.every((key) => typeof key === 'string') &&
+    typeof record.command === 'string' &&
+    (record.scope === 'global' || record.scope === 'surface') &&
+    typeof record.enabled === 'boolean'
+  );
+}
+
+function keybindingMatchesCommand(keybinding: KeybindingInspectorEntry, command: CommandInspectorEntry): boolean {
+  if (!command.extensionId || command.extensionId !== keybinding.extensionId) return false;
+  const id = command.id ?? command.surfaceId ?? '';
+  const action = command.action ?? '';
+  const keybindingCommand = keybinding.command.replace(`${keybinding.extensionId}.`, '');
+  return keybindingCommand === id || keybindingCommand === action || keybinding.command === `${command.extensionId}.${id}`;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

@@ -1,5 +1,21 @@
 import type { ExtensionKeybindingRegistration } from './types';
 
+export const COMMAND_KEYBINDINGS_CHANGED_EVENT = 'neon-pilot-command-keybindings-changed';
+const CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY = 'neon-pilot.commandKeybindings.v1';
+
+export interface CustomCommandKeybindingRegistration {
+  extensionId: 'host' | string;
+  surfaceId: string;
+  title: string;
+  keys: string[];
+  command: string;
+  args?: unknown;
+  scope: 'global' | 'surface';
+  enabled: boolean;
+  defaultKeys: string[];
+  packageType?: 'user' | 'system';
+}
+
 export interface KeybindingEventLike {
   key: string;
   code?: string;
@@ -65,7 +81,44 @@ function matchesExtensionKeybinding(event: KeybindingEventLike, shortcut: string
 
 export function findMatchingExtensionKeybinding(
   event: KeybindingEventLike,
-  keybindings: ExtensionKeybindingRegistration[],
-): ExtensionKeybindingRegistration | null {
+  keybindings: Array<ExtensionKeybindingRegistration | CustomCommandKeybindingRegistration>,
+): ExtensionKeybindingRegistration | CustomCommandKeybindingRegistration | null {
   return keybindings.find((keybinding) => keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut))) ?? null;
+}
+
+export function readCustomCommandKeybindings(): CustomCommandKeybindingRegistration[] {
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isCustomCommandKeybindingRegistration);
+  } catch {
+    return [];
+  }
+}
+
+export function writeCustomCommandKeybinding(next: CustomCommandKeybindingRegistration): void {
+  const current = readCustomCommandKeybindings().filter((item) => customKeybindingId(item) !== customKeybindingId(next));
+  window.localStorage.setItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY, JSON.stringify([...current, next]));
+  window.dispatchEvent(new CustomEvent(COMMAND_KEYBINDINGS_CHANGED_EVENT));
+}
+
+export function customKeybindingId(keybinding: Pick<CustomCommandKeybindingRegistration, 'extensionId' | 'surfaceId'>): string {
+  return `${keybinding.extensionId}:${keybinding.surfaceId}`;
+}
+
+function isCustomCommandKeybindingRegistration(value: unknown): value is CustomCommandKeybindingRegistration {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.extensionId === 'string' &&
+    typeof record.surfaceId === 'string' &&
+    typeof record.title === 'string' &&
+    Array.isArray(record.keys) &&
+    record.keys.every((key) => typeof key === 'string') &&
+    typeof record.command === 'string' &&
+    (record.scope === 'global' || record.scope === 'surface') &&
+    typeof record.enabled === 'boolean' &&
+    Array.isArray(record.defaultKeys)
+  );
 }
