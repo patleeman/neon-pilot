@@ -5,6 +5,7 @@ export interface QueuedPromptPreview {
   text: string;
   imageCount: number;
   restorable?: boolean;
+  author?: 'user' | 'agent';
 }
 
 export interface PromptImageAttachment {
@@ -18,6 +19,7 @@ export interface InternalQueuedAgentMessage {
   role?: string;
   content?: unknown;
   __neonPilotQueuedPromptId?: string;
+  __neonPilotQueuedPromptAuthor?: 'user' | 'agent';
 }
 
 interface InternalQueuedAgentQueueContainer {
@@ -67,13 +69,14 @@ function buildQueuedPromptPreview(
   id: string,
   text: string,
   imageCount: number,
-  options: { restorable?: boolean } = {},
+  options: { restorable?: boolean; author?: 'user' | 'agent' } = {},
 ): QueuedPromptPreview {
   return {
     id,
     text: formatQueuedPromptPreviewText(text, imageCount),
     imageCount,
     ...(typeof options.restorable === 'boolean' ? { restorable: options.restorable } : {}),
+    ...(options.author ? { author: options.author } : {}),
   };
 }
 

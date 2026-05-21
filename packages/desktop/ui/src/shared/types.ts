@@ -957,6 +957,7 @@ export interface QueuedPromptPreview {
   imageCount: number;
   restorable?: boolean;
   pending?: boolean;
+  author?: 'user' | 'agent';
 }
 
 export interface DesktopConversationState {

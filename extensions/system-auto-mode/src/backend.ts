@@ -368,7 +368,7 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
 
       // Pause goal on interrupt (user hit stop mid-stream)
       if (ctx.signal?.aborted) {
-        const stopped = createCompleteGoalState('interrupted');
+        const stopped = createPausedGoalState(state);
         writeGoalState(pi, stopped);
         clearPendingContinuation();
         return;

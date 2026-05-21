@@ -6,6 +6,7 @@ import { parseTailBlocksQuery } from '../conversations/conversationService.js';
 import {
   abortLiveSessionCapability,
   branchLiveSessionCapability,
+  clearQueuedLiveSessionPromptsCapability,
   compactLiveSessionCapability,
   createLiveSessionCapability,
   destroyLiveSessionCapability,
@@ -479,6 +480,26 @@ export function registerLiveSessionRoutes(
           ? 409
           : 500;
       res.status(status).json({ error: message });
+    }
+  });
+
+  router.post('/api/live-sessions/:id/clear-queue', async (req, res) => {
+    try {
+      ensureRequestControlsLocalLiveConversation(req.params.id, req.body);
+      res.json(await clearQueuedLiveSessionPromptsCapability({ conversationId: req.params.id }));
+    } catch (err) {
+      logError('request handler error', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      if (err instanceof LiveSessionCapabilityInputError) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      if (writeLiveConversationControlError(res, err)) {
+        return;
+      }
+      res.status(500).json({ error: String(err) });
     }
   });
 

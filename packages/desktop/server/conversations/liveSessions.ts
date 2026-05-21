@@ -82,7 +82,11 @@ import { createLiveSessionPresenceHost, type LiveSessionPresenceState, type Live
 import { ensureLiveSessionSurfaceCanControl, takeOverLiveSessionControl } from './liveSessionPresenceFacade.js';
 import { runPromptOnLiveEntry as runPromptOnLiveEntryWithCallbacks, submitPromptOnLiveEntry } from './liveSessionPromptOps.js';
 import { normalizeQueuedPromptBehavior, type PromptImageAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
-import { cancelLiveSessionQueuedPrompt, restoreLiveSessionQueuedMessage } from './liveSessionQueueOperations.js';
+import {
+  cancelLiveSessionQueuedPrompt,
+  clearLiveSessionQueuedPrompts,
+  restoreLiveSessionQueuedMessage,
+} from './liveSessionQueueOperations.js';
 import {
   canInjectResumeFallbackPrompt as canInjectResumeFallbackPromptForEntry,
   listQueuedPromptPreviews as listQueuedPromptPreviewsForEntry,
@@ -899,6 +903,14 @@ export async function cancelQueuedPrompt(
   const cancelledPreview = await cancelLiveSessionQueuedPrompt(entry, behavior, previewId);
   broadcastQueueState(entry, true);
   return cancelledPreview;
+}
+
+export function clearQueuedPrompts(sessionId: string): ReturnType<typeof clearLiveSessionQueuedPrompts> {
+  const entry = registry.get(sessionId);
+  if (!entry) throw new Error(`Session ${sessionId} is not live`);
+  const cleared = clearLiveSessionQueuedPrompts(entry);
+  broadcastQueueState(entry, true);
+  return cleared;
 }
 export async function compactSession(sessionId: string, customInstructions?: string) {
   const entry = registry.get(sessionId);

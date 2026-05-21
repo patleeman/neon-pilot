@@ -72,6 +72,7 @@ The `goal` tool manages the goal-mode path. It is hardened so a completed goal c
 - the timer re-reads the latest goal state before it sends;
 - changing, clearing, pausing, or completing the goal cancels any queued continuation;
 - `goal { status: "pause" }` keeps the objective durable but suppresses `agent_end` and `session_start` continuations, which lets an agent schedule a deferred resume and actually wait;
+- stopping the conversation pauses an active goal instead of completing or clearing it;
 - `goal { status: "resume" }` reactivates a paused objective and normal continuation scheduling resumes;
 - repeated `goal { status: "complete" }` calls are idempotent no-ops.
 

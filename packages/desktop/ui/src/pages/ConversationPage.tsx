@@ -4825,23 +4825,46 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }
 
   async function stopStreamAndRestoreQueuedPrompts() {
-    const queuedPromptSnapshot = pendingQueue.filter((item) => item.restorable);
     await streamAbort();
 
-    if (queuedPromptSnapshot.length === 0) {
-      return;
-    }
+    if (!id || pendingQueue.length === 0) return;
 
-    for (const queuedPrompt of queuedPromptSnapshot) {
-      await restoreQueuedPromptToComposer(queuedPrompt.type, queuedPrompt.queueIndex, queuedPrompt.id, { showSuccessNotice: false });
-    }
+    try {
+      const cleared = await api.clearQueuedMessages(id, currentSurfaceId);
+      const restoredText = cleared.items
+        .map((item) => {
+          const text = item.text.trim();
+          if (!text) return '';
+          return item.author === 'agent' ? `[Queued by agent]\n${text}` : text;
+        })
+        .filter(Boolean)
+        .join('\n\n');
+      const restoredFiles = cleared.items.flatMap((item, index) => restoreQueuedImageFiles(item.images, item.behavior, index));
+      const restoredUpdate = resolveRestoredQueuedPromptComposerUpdate({
+        restoredText,
+        currentInput: textareaRef.current?.value ?? input,
+        restoredFileCount: restoredFiles.length,
+      });
 
-    showNotice(
-      'accent',
-      queuedPromptSnapshot.length === 1
-        ? 'Stopped agent and restored queued prompt to the composer.'
-        : `Stopped agent and restored ${queuedPromptSnapshot.length} queued prompts to the composer.`,
-    );
+      if (restoredUpdate.nextInput !== null) {
+        composerController.setText(restoredUpdate.nextInput, { focus: false });
+      }
+      if (restoredFiles.length > 0) {
+        setAttachments((current) => [...restoredFiles, ...current]);
+      }
+      moveComposerCaretToEnd();
+
+      if (restoredUpdate.hasContent) {
+        showNotice(
+          'accent',
+          cleared.items.length === 1
+            ? 'Stopped agent and restored queued prompt to the composer.'
+            : `Stopped agent and restored ${cleared.items.length} queued prompts to the composer.`,
+        );
+      }
+    } catch (error) {
+      showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+    }
   }
 
   async function restoreQueuedPromptToComposer(

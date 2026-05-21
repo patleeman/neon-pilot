@@ -16,6 +16,27 @@ export interface LiveSessionQueueHost {
   session: Pick<AgentSession, 'agent' | 'getSteeringMessages' | 'getFollowUpMessages' | 'clearQueue' | 'steer' | 'followUp'>;
 }
 
+export interface ClearedQueuedPrompt {
+  behavior: 'steer' | 'followUp';
+  text: string;
+  images: PromptImageAttachment[];
+  author: 'user' | 'agent';
+}
+
+function inferQueuedPromptAuthor(message: { role?: string; __neonPilotQueuedPromptAuthor?: 'user' | 'agent' } | undefined, text: string) {
+  if (message?.__neonPilotQueuedPromptAuthor === 'agent') return 'agent' as const;
+  if (message?.__neonPilotQueuedPromptAuthor === 'user') return 'user' as const;
+  const normalized = text.trim();
+  if (
+    normalized.startsWith('Goal continuation.') ||
+    normalized.startsWith('Automated after-turn wakeup') ||
+    normalized.includes('agent self-queued continuation')
+  ) {
+    return 'agent' as const;
+  }
+  return message?.role && message.role !== 'user' ? ('agent' as const) : ('user' as const);
+}
+
 function readVisibleQueue(host: LiveSessionQueueHost, behavior: 'steer' | 'followUp'): string[] {
   return (behavior === 'steer' ? host.session.getSteeringMessages() : host.session.getFollowUpMessages()) as string[];
 }
@@ -92,6 +113,46 @@ export async function restoreLiveSessionQueuedMessage(
   }
 
   return extractQueuedPromptContent(removed.message, fallbackText);
+}
+
+function readClearedQueueItems(
+  behavior: 'steer' | 'followUp',
+  visibleQueue: string[],
+  internalQueue: ReturnType<typeof resolveInternalQueuedMessages>,
+): ClearedQueuedPrompt[] {
+  if (!Array.isArray(internalQueue)) {
+    return visibleQueue.map((text) => ({ behavior, text, images: [], author: inferQueuedPromptAuthor(undefined, text) }));
+  }
+
+  const queueMessages = internalQueue.filter((message) => message?.role === 'user' || message?.role === 'assistant');
+  if (queueMessages.length === 0) {
+    return visibleQueue.map((text) => ({ behavior, text, images: [], author: inferQueuedPromptAuthor(undefined, text) }));
+  }
+
+  const alignedMessages =
+    queueMessages.length > visibleQueue.length ? queueMessages.slice(queueMessages.length - visibleQueue.length) : queueMessages;
+  return visibleQueue.map((fallbackText, index) => {
+    const message = alignedMessages[index];
+    const content = extractQueuedPromptContent(message, fallbackText);
+    return {
+      behavior,
+      text: content.text,
+      images: content.images,
+      author: inferQueuedPromptAuthor(message, content.text),
+    };
+  });
+}
+
+export function clearLiveSessionQueuedPrompts(host: LiveSessionQueueHost): ClearedQueuedPrompt[] {
+  const steering = readVisibleQueue(host, 'steer');
+  const followUp = readVisibleQueue(host, 'followUp');
+  const internalAgent = readInternalAgentQueues(host);
+  const items = [
+    ...readClearedQueueItems('steer', [...steering], resolveInternalQueuedMessages(internalAgent.steeringQueue)),
+    ...readClearedQueueItems('followUp', [...followUp], resolveInternalQueuedMessages(internalAgent.followUpQueue)),
+  ];
+  host.session.clearQueue();
+  return items;
 }
 
 export async function cancelLiveSessionQueuedPrompt(

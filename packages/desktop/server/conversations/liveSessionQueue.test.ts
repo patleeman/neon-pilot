@@ -7,7 +7,7 @@ import {
   readQueueState,
   removeQueuedUserMessage,
 } from './liveSessionQueue.js';
-import { restoreLiveSessionQueuedMessage } from './liveSessionQueueOperations.js';
+import { clearLiveSessionQueuedPrompts, restoreLiveSessionQueuedMessage } from './liveSessionQueueOperations.js';
 
 describe('liveSessionQueue', () => {
   it('normalizes prompt behavior only when a prompt must be queued', () => {
@@ -62,6 +62,37 @@ describe('liveSessionQueue', () => {
       { id: 'followUp-visible-0', text: 'Goal continuation.', imageCount: 0, restorable: true },
       { id: expect.stringMatching(/^followUp-queued-/), text: 'Visible follow-up', imageCount: 0 },
     ]);
+  });
+
+  it('clears queued prompts and marks agent-authored continuations for annotated restore', () => {
+    const steeringMessages = ['User steer'];
+    const followUpMessages = ['Goal continuation.', 'User follow-up'];
+    const clearQueue = () => ({ steering: steeringMessages.splice(0), followUp: followUpMessages.splice(0) });
+
+    const cleared = clearLiveSessionQueuedPrompts({
+      session: {
+        agent: {
+          steeringQueue: [{ role: 'user', content: [{ type: 'text', text: 'User steer' }] }],
+          followUpQueue: [
+            { role: 'user', content: [{ type: 'text', text: 'Goal continuation.' }] },
+            { role: 'user', content: [{ type: 'text', text: 'User follow-up' }] },
+          ],
+        },
+        getSteeringMessages: () => steeringMessages,
+        getFollowUpMessages: () => followUpMessages,
+        clearQueue,
+        steer: async () => undefined,
+        followUp: async () => undefined,
+      },
+    });
+
+    expect(cleared).toEqual([
+      { behavior: 'steer', text: 'User steer', images: [], author: 'user' },
+      { behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' },
+      { behavior: 'followUp', text: 'User follow-up', images: [], author: 'user' },
+    ]);
+    expect(steeringMessages).toEqual([]);
+    expect(followUpMessages).toEqual([]);
   });
 
   it('removes queued user messages by preview id without counting assistant messages', () => {

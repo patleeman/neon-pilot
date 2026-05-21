@@ -30,6 +30,7 @@ import { queueConversationSummaryRefresh } from './conversationSummaries.js';
 import {
   abortSession as abortLocalSession,
   branchSession as branchLiveSession,
+  clearQueuedPrompts as clearLocalQueuedPrompts,
   compactSession as compactLiveSession,
   createSession as createLocalSession,
   destroySession as destroyLiveSession,
@@ -1027,4 +1028,16 @@ export async function abortLiveSessionCapability(input: { conversationId: string
 
   await abortLocalSession(conversationId);
   return { ok: true };
+}
+
+export async function clearQueuedLiveSessionPromptsCapability(input: { conversationId: string }): Promise<{
+  ok: true;
+  items: Array<{ behavior: 'steer' | 'followUp'; text: string; images: PromptImageAttachment[]; author: 'user' | 'agent' }>;
+}> {
+  const conversationId = input.conversationId.trim();
+  if (!conversationId) {
+    throw new LiveSessionCapabilityInputError('conversationId required');
+  }
+
+  return { ok: true, items: clearLocalQueuedPrompts(conversationId) };
 }

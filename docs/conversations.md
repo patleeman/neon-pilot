@@ -102,7 +102,7 @@ While the agent is processing, you can queue additional messages. The composer r
 
 When the run mode has a pending continuation (Nudge/Mission/Loop), normal submits become follow-ups.
 
-Queued steer and follow-up prompts appear in the queue shelf above the composer. Use `restore` to pull a queued prompt back into the composer. Press Escape to abort the active response and restore queued messages to the editor. Press Alt+Up to retrieve queued messages back.
+Queued steer and follow-up prompts appear in the queue shelf above the composer. Use `restore` to pull a queued prompt back into the composer. Press Escape to abort the active response, clear local queued steer/follow-up prompts, and restore their text to the composer; agent-created queued text is annotated with `[Queued by agent]` so it is not mistaken for user-authored draft text. Press Alt+Up to retrieve queued messages back.
 
 Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above the composer. They are tied to the saved conversation and can be fired now, cancelled, or auto-resumed when the thread is reopened.
 
@@ -127,7 +127,7 @@ See [Auto Mode](../extensions/system-auto-mode/README.md) for the full nudge, mi
 
 ### Goal Mode (legacy)
 
-The `goal` tool provides the legacy goal-mode path. Continuations are scheduled only after `agent_end`, and repeated `goal { status: "complete" }` calls are idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
+The `goal` tool provides the legacy goal-mode path. Continuations are scheduled only after `agent_end`, Stop pauses an active goal instead of completing it, and repeated `goal { status: "complete" }` calls are idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
 
 ## Slash Commands
 
