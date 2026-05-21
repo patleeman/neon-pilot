@@ -152,10 +152,31 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   return { ok: true, id, enabled };
 }
 
+export async function updateRuntimeCapability(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const id = typeof body.id === 'string' ? body.id.trim() : '';
+  const kind = typeof body.kind === 'string' ? body.kind : '';
+  const enabled = body.enabled !== false;
+  if (!id) throw new Error('capability id is required.');
+  if (kind === 'skill') {
+    setSkillEnabled(id, enabled);
+  } else if (kind === 'extension') {
+    if (!enabled && id === 'system-extension-manager') {
+      throw new Error('Cannot disable the Extension Manager: this extension is required by the application.');
+    }
+    ctx.extensions.setEnabled(id, enabled);
+    ctx.ui.invalidate(['extensions']);
+  } else {
+    throw new Error(`Capability kind ${kind || 'unknown'} cannot be toggled.`);
+  }
+  return { ok: true, id, kind, enabled };
+}
+
 function extensionToCapability(extension: Record<string, unknown>): RuntimeCapability {
   const status = typeof extension.status === 'string' ? extension.status : extension.enabled ? 'enabled' : 'disabled';
   const manifest = asRecord(extension.manifest);
   const contributes = asRecord(manifest.contributes);
+  const views = arrayOf(contributes.views).filter(isObjectRecord);
   return {
     id: String(extension.id ?? 'unknown-extension'),
     kind: 'extension',
@@ -174,6 +195,17 @@ function extensionToCapability(extension: Record<string, unknown>): RuntimeCapab
       permissions: extension.permissions,
       packageRoot: extension.packageRoot,
       contributions: Object.keys(contributes),
+      counts: {
+        pages: views.filter((view) => view.location === 'main').length,
+        rails: views.filter((view) => view.location === 'rightRail').length,
+        workbench: views.filter((view) => view.location === 'workbench').length,
+        tools: arrayOf(extension.tools).length,
+        modelProfiles: arrayOf(extension.modelProfiles).length,
+        keybindings: arrayOf(asRecord(contributes).keybindings).length,
+        backend: arrayOf(extension.backendActions).length,
+        skills: arrayOf(extension.skills).length,
+        agentHooks: asRecord(manifest.backend).agentExtension ? 1 : 0,
+      },
       surfaces: extension.surfaces,
       routes: extension.routes,
     },
@@ -295,6 +327,10 @@ function contextBlockTitle(block: unknown, index: number): string {
 
 function asRecord(input: unknown): Record<string, unknown> {
   return input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+}
+
+function isObjectRecord(input: unknown): input is Record<string, unknown> {
+  return Boolean(input && typeof input === 'object' && !Array.isArray(input));
 }
 
 function arrayOf(value: unknown): unknown[] {

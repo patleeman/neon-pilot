@@ -45,6 +45,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -60,9 +61,17 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     void load();
   }, [load]);
 
-  async function toggleSkill(id: string, enabled: boolean) {
-    await pa.extension.invoke('updatePromptAssemblySkillEnabled', { id, enabled });
-    await load();
+  async function toggleCapability(row: RuntimeCapability, enabled: boolean) {
+    setBusyId(row.id);
+    setError(null);
+    try {
+      await pa.extension.invoke('updateRuntimeCapability', { id: row.id, kind: row.kind, enabled });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
   }
 
   const visible = useMemo(() => {
@@ -113,19 +122,19 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             <p className="text-[13px] leading-6 text-secondary">{formatCount(visible.length, 'capability')} shown</p>
           </div>
           <input
-            className="min-w-[240px] rounded-lg border border-border-subtle bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+            className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search runtime…"
           />
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
           {FILTERS.map((item) => (
             <button
               key={item.id}
               type="button"
               className={cx(
-                'rounded-lg px-3 py-1.5 text-[13px] transition-colors',
+                'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
                 filter === item.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
               )}
               onClick={() => setFilter(item.id)}
@@ -135,7 +144,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           ))}
         </div>
         {visible.length ? (
-          <CapabilityRows rows={visible} toggleSkill={toggleSkill} />
+          <CapabilityTable rows={visible} busyId={busyId} onToggle={toggleCapability} />
         ) : (
           <EmptyState title="No capabilities found" body="Adjust the filter or search query." />
         )}
@@ -180,60 +189,167 @@ function Overview({
   );
 }
 
-function CapabilityRows({
+function CapabilityTable({
   rows,
-  toggleSkill,
+  busyId,
+  onToggle,
 }: {
   rows: RuntimeCapability[];
-  toggleSkill: (id: string, enabled: boolean) => Promise<void>;
+  busyId: string | null;
+  onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
 }) {
   return (
-    <div className="divide-y divide-border-subtle/70">
-      {rows.map((row) => (
-        <div key={`${row.kind}:${row.id}`} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_170px_120px] lg:items-start">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h3 className="text-[14px] font-medium text-primary">{row.title}</h3>
-              <span className="text-[12px] text-dim">{labelForKind(row.kind)}</span>
-            </div>
-            {row.description ? <p className="text-[13px] leading-6 text-secondary">{row.description}</p> : null}
-            <p className="break-all text-[12px] leading-5 text-dim">
-              {formatParts(row.id, row.ownerExtensionId, row.scope, row.source?.label)}
-            </p>
-            {row.diagnostics?.length ? (
-              <pre className="mt-2 overflow-auto rounded-lg bg-surface p-3 text-[11px] leading-5 text-secondary">
-                {JSON.stringify(row.diagnostics, null, 2)}
-              </pre>
-            ) : null}
-          </div>
-          <div className="text-[12px] leading-5 text-secondary">{formatMetadata(row.metadata)}</div>
-          <div className="flex items-center justify-between gap-3 lg:justify-end">
-            <span
-              className={cx(
-                'text-[12px]',
-                row.status === 'active' || row.status === 'enabled'
-                  ? 'text-success'
-                  : row.status === 'invalid' || row.status === 'error'
-                    ? 'text-danger'
-                    : 'text-dim',
-              )}
-            >
-              {row.status}
-            </span>
-            {row.kind === 'skill' ? (
-              <button
-                className="rounded-lg border border-border-subtle px-2 py-1 text-[12px] text-secondary hover:text-primary"
-                type="button"
-                onClick={() => void toggleSkill(row.id, !row.enabled)}
-              >
-                {row.enabled ? 'Disable' : 'Enable'}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ))}
-    </div>
+    <section className="min-w-0 overflow-auto">
+      <table className="w-full border-collapse text-left text-[13px]">
+        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
+          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
+            <th className="py-2 pr-4 font-semibold">Name</th>
+            <th className="py-2 px-3 font-semibold">Contributes</th>
+            <th className="py-2 px-3 font-semibold">Source</th>
+            <th className="py-2 pl-3 text-right font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.kind}:${row.id}`} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
+              <td className="min-w-0 py-3 pr-4 align-middle">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
+                    <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
+                      {labelForKind(row.kind)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                    {row.description || fallbackDescription(row)}
+                  </div>
+                  {row.diagnostics?.length ? (
+                    <div className="mt-1 text-[12px] text-danger">{formatCount(row.diagnostics.length, 'issue')}</div>
+                  ) : null}
+                </div>
+              </td>
+              <td className="px-3 py-3 align-middle">
+                <ContributionSummary row={row} />
+              </td>
+              <td className="max-w-[18rem] px-3 py-3 align-middle text-[12px] leading-5 text-secondary">
+                <div className="truncate">{formatParts(row.ownerExtensionId, row.scope, row.source?.kind)}</div>
+                <div className="truncate text-dim" title={row.source?.label}>
+                  {row.source?.label ?? row.id}
+                </div>
+              </td>
+              <td className="py-3 pl-3 text-right align-middle">
+                <div className="flex items-center justify-end gap-3">
+                  {busyId === row.id ? <span className="text-[11px] text-dim">Working…</span> : null}
+                  {canToggle(row) ? (
+                    <StatusToggle row={row} busy={busyId === row.id} onToggle={() => void onToggle(row, !row.enabled)} />
+                  ) : (
+                    <span className={statusClass(row)}>{row.status}</span>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
+}
+
+function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: boolean; onToggle: () => void }) {
+  const locked = row.kind === 'extension' && row.id === 'system-extension-manager';
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
+      disabled={busy || locked || row.status === 'invalid'}
+      onClick={onToggle}
+      aria-label={`${row.enabled ? 'Disable' : 'Enable'} ${row.title}`}
+      title={locked ? 'This extension is required by the application.' : undefined}
+    >
+      <span
+        className={cx(
+          'relative h-5 w-9 rounded-full border transition-colors',
+          locked
+            ? 'border-border-subtle bg-surface/40'
+            : row.enabled
+              ? 'border-success/40 bg-success/20'
+              : 'border-border-subtle bg-surface/60',
+        )}
+      >
+        <span
+          className={cx(
+            'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
+            locked ? 'left-[18px] bg-dim' : row.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
+          )}
+        />
+      </span>
+      <span>{locked ? 'Always on' : row.enabled ? 'Enabled' : 'Disabled'}</span>
+    </button>
+  );
+}
+
+function ContributionSummary({ row }: { row: RuntimeCapability }) {
+  const counts = asRecord(row.metadata?.counts);
+  const entries = [
+    ['Pages', counts.pages],
+    ['Rails', counts.rails],
+    ['Workbench', counts.workbench],
+    ['Tools', counts.tools],
+    ['Profiles', counts.modelProfiles],
+    ['Keys', counts.keybindings],
+    ['Hooks', counts.agentHooks],
+    ['Backend', counts.backend],
+    ['Skills', counts.skills],
+  ].filter(([, value]) => typeof value === 'number' && value > 0);
+  if (entries.length) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {entries.map(([label, value]) => (
+          <span key={label} title={String(label)} className="text-[12px] text-secondary">
+            {String(label).toLowerCase()} {String(value)}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  const parts = compactMetadata(row.metadata);
+  return parts.length ? (
+    <div className="max-w-[20rem] truncate text-[12px] text-secondary">{parts.join(' · ')}</div>
+  ) : (
+    <span className="text-dim">—</span>
+  );
+}
+
+function compactMetadata(metadata: Record<string, unknown> | undefined): string[] {
+  if (!metadata) return [];
+  return ['name', 'transport', 'providerId', 'risk', 'reason']
+    .map((key) => {
+      const value = metadata[key];
+      return value === undefined || value === null || value === '' ? null : `${key}: ${String(value)}`;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+function canToggle(row: RuntimeCapability): boolean {
+  return row.kind === 'extension' || row.kind === 'skill';
+}
+
+function statusClass(row: RuntimeCapability): string {
+  return cx(
+    'text-[12px]',
+    row.status === 'active' || row.status === 'enabled'
+      ? 'text-success'
+      : row.status === 'invalid' || row.status === 'error'
+        ? 'text-danger'
+        : 'text-dim',
+  );
+}
+
+function fallbackDescription(row: RuntimeCapability): string {
+  if (row.kind === 'instruction') return formatParts(row.scope, row.metadata?.risk) || 'Instruction layer';
+  if (row.kind === 'mcp-server') return formatParts(row.metadata?.transport, row.metadata?.url ?? row.metadata?.command) || 'MCP server';
+  if (row.kind === 'tool') return String(row.metadata?.name ?? 'Agent tool');
+  return row.id;
 }
 
 function labelForKind(kind: CapabilityKind): string {
@@ -249,13 +365,6 @@ function formatParts(...parts: Array<unknown>): string {
   return parts.filter(Boolean).join(' · ');
 }
 
-function formatMetadata(metadata: Record<string, unknown> | undefined): string {
-  if (!metadata) return '';
-  const entries = Object.entries(metadata).filter(
-    ([, value]) => value !== undefined && value !== null && value !== '' && (!Array.isArray(value) || value.length),
-  );
-  return entries
-    .slice(0, 4)
-    .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`)
-    .join('\n');
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }

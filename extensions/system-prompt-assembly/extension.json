@@ -11,7 +11,8 @@
     "actions": [
       { "id": "inspectAgentRuntime", "handler": "inspectAgentRuntime", "title": "Inspect agent runtime" },
       { "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" },
-      { "id": "updatePromptAssemblySkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
+      { "id": "updatePromptAssemblySkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" },
+      { "id": "updateRuntimeCapability", "handler": "updateRuntimeCapability", "title": "Enable or disable a runtime capability" }
     ]
   },
   "contributes": {
@@ -39,5 +40,5 @@
       }
     ]
   },
-  "permissions": ["extensions:read"]
+  "permissions": ["extensions:read", "extensions:write"]
 }
