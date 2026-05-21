@@ -224,7 +224,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `readSettings`, `updateSettings`, `modelStatus`, `installModel`, `transcribeFile`.
 - Test settings, model installed/missing/installing/error, recording/transcribe file, cancellation, microphone unavailable, inserted text.
 
-### Caffeinate (`system-caffeinate`, default disabled)
+### Caffeinate (`system-caffeinate`)
 
 - Top bar element: `caffeinate-toggle` / Caffeinate toggle.
 - Actions: `caffeinateStatus`, `caffeinateStart`, `caffeinateStop`, `caffeinateToggle`.
@@ -351,7 +351,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - skills: async-attention, scheduled-tasks
 - backend actions: scheduledTask, deferredResume
 
-### system-caffeinate — Caffeinate (default disabled)
+### system-caffeinate — Caffeinate
 
 - topBarElements: caffeinate-toggle
 - backend actions: caffeinateStatus, caffeinateStart, caffeinateStop, caffeinateToggle
