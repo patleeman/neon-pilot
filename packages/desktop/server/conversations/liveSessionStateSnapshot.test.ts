@@ -10,6 +10,7 @@ const readSessionBlocksByFileMock = vi.fn(() => ({
 
 vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
+  statSync: vi.fn(() => ({ isDirectory: () => false })),
 }));
 
 vi.mock('./sessions.js', () => ({

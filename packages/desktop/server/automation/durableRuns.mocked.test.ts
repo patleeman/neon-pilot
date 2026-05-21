@@ -8,6 +8,7 @@ const {
   existsSyncMock,
   followUpDurableRunFromDaemonMock,
   getDurableRunFromDaemonMock,
+  loadDaemonConfigMock,
   listDurableRunsFromDaemonMock,
   openSyncMock,
   pingDaemonMock,
@@ -27,6 +28,7 @@ const {
   existsSyncMock: vi.fn(),
   followUpDurableRunFromDaemonMock: vi.fn(),
   getDurableRunFromDaemonMock: vi.fn(),
+  loadDaemonConfigMock: vi.fn(),
   listDurableRunsFromDaemonMock: vi.fn(),
   openSyncMock: vi.fn(),
   pingDaemonMock: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock('@neon-pilot/daemon', () => ({
   cancelDurableRun: cancelDurableRunFromDaemonMock,
   followUpDurableRun: followUpDurableRunFromDaemonMock,
   getDurableRun: getDurableRunFromDaemonMock,
+  loadDaemonConfig: loadDaemonConfigMock,
   listDurableRuns: listDurableRunsFromDaemonMock,
   pingDaemon: pingDaemonMock,
   resolveDaemonPaths: resolveDaemonPathsMock,
@@ -106,6 +109,7 @@ describe('durableRuns', () => {
     existsSyncMock.mockReset();
     followUpDurableRunFromDaemonMock.mockReset();
     getDurableRunFromDaemonMock.mockReset();
+    loadDaemonConfigMock.mockReset();
     listDurableRunsFromDaemonMock.mockReset();
     openSyncMock.mockReset();
     pingDaemonMock.mockReset();
@@ -119,6 +123,7 @@ describe('durableRuns', () => {
     summarizeScannedDurableRunsMock.mockReset();
     clearDurableRunsListCache();
 
+    loadDaemonConfigMock.mockReturnValue({ ipc: { socketPath: '/daemon.sock' } });
     resolveDaemonPathsMock.mockReturnValue({ root: '/daemon-root' });
     resolveDurableRunsRootMock.mockImplementation((root: string) => `${root}/runs`);
     decorateDurableRunAttentionMock.mockImplementation((run: Record<string, unknown>) => ({

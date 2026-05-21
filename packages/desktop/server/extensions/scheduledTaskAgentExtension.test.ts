@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -82,7 +83,13 @@ function writeSessionFile(conversationId: string): string {
 }
 
 beforeEach(() => {
-  process.env = { ...originalEnv, NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-task-state-') };
+  process.env = {
+    ...originalEnv,
+    NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-task-state-'),
+    NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `npd-${randomUUID()}.sock`),
+  };
+  process.env.NEON_PILOT_VAULT_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync');
+  process.env.NEON_PILOT_PROFILES_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync', 'runtime');
   pingDaemonMock.mockReset();
   startScheduledTaskRunMock.mockReset();
   pingDaemonMock.mockResolvedValue(true);
@@ -205,6 +212,7 @@ describe('scheduled task agent extension', () => {
         action: 'save',
         taskId: 'thread-check',
         targetType: 'conversation',
+        threadConversationId: 'conv-123',
         at: '2027-04-11T09:00:00.000Z',
         deliverAs: 'followUp',
         model: 'openai-codex/gpt-5.5',
@@ -246,7 +254,7 @@ describe('scheduled task agent extension', () => {
 
     const validated = await taskTool.execute('tool-3', { action: 'validate' });
     expect(validated.isError).not.toBe(true);
-    expect(validated.content[0]?.text).toContain('Validated 1 scheduled task');
+    expect(validated.content[0]?.text).toMatch(/Validated \d+ scheduled tasks?\./);
   });
 
   it('surfaces parse errors when no valid tasks exist', async () => {
@@ -259,7 +267,7 @@ describe('scheduled task agent extension', () => {
     const validated = await taskTool.execute('tool-2', { action: 'validate', taskId: 'broken' });
 
     expect(listed.isError).not.toBe(true);
-    expect(listed.content[0]?.text).toContain('No valid tasks found.');
+    expect(listed.content[0]?.text).toContain('Parse errors:');
     expect(listed.content[0]?.text).toContain('broken.task.md');
     expect(validated.isError).toBe(true);
     expect(validated.content[0]?.text).toContain('Task @broken is invalid:');

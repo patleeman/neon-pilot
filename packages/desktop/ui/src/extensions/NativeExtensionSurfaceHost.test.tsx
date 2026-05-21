@@ -19,6 +19,8 @@ const apiMocks = vi.hoisted(() => ({
   runs: vi.fn(),
   durableRunLog: vi.fn(),
   cancelDurableRun: vi.fn(),
+  sessions: vi.fn(async () => []),
+  models: vi.fn(async () => []),
   extensionState: vi.fn(),
   putExtensionState: vi.fn(),
   deleteExtensionState: vi.fn(),

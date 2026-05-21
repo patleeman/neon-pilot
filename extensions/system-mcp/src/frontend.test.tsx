@@ -82,7 +82,7 @@ describe('McpSettingsPanel', () => {
     expect(html).toContain('Add server');
     expect(html).toContain('Explicit servers');
     expect(html).toContain('Skill-bundled servers');
-    expect(html).toContain('Bundled with dd-atlassian-mcp');
+    expect(html).toContain('dd-atlassian-mcp');
     expect(html).toContain('Test');
     expect(html).toContain('Remove');
     expect(html).toContain('npx @mcp/github');

@@ -135,7 +135,7 @@ describe('useExtensionRegistry', () => {
         frontendEntry: 'dist/frontend.js',
       },
     ]);
-    expect(result.current.composerButtons).toEqual(result.current.composerControls);
+    expect(result.current.composerButtons).toEqual([]);
     expect(result.current.composerInputTools).toEqual([
       {
         extensionId: 'test-extension',

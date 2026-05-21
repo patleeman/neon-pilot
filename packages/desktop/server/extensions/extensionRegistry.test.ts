@@ -83,10 +83,14 @@ describe('extension registry', () => {
     setExtensionEnabled('first-profile', true, stateRoot);
     setExtensionEnabled('second-profile', true, stateRoot);
 
-    expect(listExtensionModelProfileRegistrations(stateRoot).map((profile) => profile.id)).toEqual(['gpt-anywhere', 'codex-provider']);
+    expect(listExtensionModelProfileRegistrations(stateRoot).map((profile) => profile.id)).toEqual([
+      'codex-compatible',
+      'gpt-anywhere',
+      'codex-provider',
+    ]);
     expect(resolveExtensionModelProfile({ provider: 'openai-codex', model: 'gpt-5.5' }, stateRoot)).toMatchObject({
       kind: 'resolved',
-      profile: { id: 'codex-provider' },
+      profile: { id: 'codex-compatible' },
     });
   });
 

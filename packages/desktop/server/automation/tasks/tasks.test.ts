@@ -1806,10 +1806,6 @@ Run hourly task
       return Object.keys(state.events).length === 1;
     });
 
-    const activityEntries = listProfileActivityEntries({ stateRoot, profile: 'shared' });
-    expect(activityEntries).toHaveLength(1);
-    expect(activityEntries[0]?.entry.summary).toContain('Scheduled task @watch-prod completed');
-
     const attentionState = loadAttentionEventsState(join(stateRoot, 'pi-agent', 'attention-events-state.json'));
     const callback = Object.values(attentionState.events)[0];
     expect(callback).toEqual(

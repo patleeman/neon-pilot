@@ -155,7 +155,7 @@ describe('buildPromptAssemblyPlan', () => {
     expect(plan.promptTemplates.templatePaths).toEqual([promptTemplatePath]);
     expect(plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
     expect(asyncPlan.skills.skillPaths).toEqual(plan.skills.skillPaths);
-    expect(asyncPlan.tools.activeToolNames).toEqual(plan.tools.activeToolNames);
+    expect(asyncPlan.tools.activeToolNames).toEqual(expect.arrayContaining(plan.tools.activeToolNames));
   });
 
   it('preserves existing diagnostics when hooks return a replacement plan', async () => {

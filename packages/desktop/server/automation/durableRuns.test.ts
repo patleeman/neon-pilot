@@ -104,7 +104,7 @@ describe('durable run reads', () => {
       NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
-    const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths().root);
+    const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths(socketPath).root);
     const runPaths = resolveDurableRunPaths(runsRoot, 'run-terminal-repair');
     saveDurableRunManifest(
       runPaths.manifestPath,
@@ -179,7 +179,7 @@ describe('durable run reads', () => {
       NEON_PILOT_DAEMON_SOCKET_PATH: socketPath,
     };
 
-    const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths().root);
+    const runsRoot = resolveDurableRunsRoot(resolveDaemonPaths(socketPath).root);
     const runPaths = resolveDurableRunPaths(runsRoot, 'run-review');
     saveDurableRunManifest(
       runPaths.manifestPath,

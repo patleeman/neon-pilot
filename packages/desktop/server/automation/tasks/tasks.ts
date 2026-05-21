@@ -2,6 +2,7 @@ import {
   createReadyAttentionEvent,
   getTaskCallbackBinding,
   loadAttentionEventsState,
+  resolveAttentionEventsStateFile,
   saveAttentionEventsState,
   upsertAlert,
 } from '@neon-pilot/core';
@@ -426,7 +427,8 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     ].join('-');
     const notifyLevel = status === 'success' ? binding.notifyOnSuccess : binding.notifyOnFailure;
     const title = status === 'success' ? `Scheduled task @${task.id} completed` : `Scheduled task @${task.id} failed`;
-    const attentionState = loadAttentionEventsState();
+    const attentionStatePath = resolveAttentionEventsStateFile(context.paths.stateRoot);
+    const attentionState = loadAttentionEventsState(attentionStatePath);
     createReadyAttentionEvent(attentionState, {
       id: wakeupId,
       sessionFile: binding.sessionFile,
@@ -448,7 +450,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         requireAck: binding.requireAck,
       },
     });
-    saveAttentionEventsState(attentionState);
+    saveAttentionEventsState(attentionState, attentionStatePath);
 
     return [binding.conversationId];
   };

@@ -4,12 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { loadExtensionAgentFactory, reloadExtensionBackend } from './extensionBackend.js';
-
-type RegisteredTool = {
-  name: string;
-  execute: (...args: unknown[]) => Promise<{ content?: Array<{ text?: string }>; details?: Record<string, unknown> }>;
-};
+import { invokeExtensionAction, reloadExtensionBackend } from './extensionBackend.js';
 
 const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 const previousStateRoot = process.env.NEON_PILOT_STATE_ROOT;
@@ -52,7 +47,7 @@ describe('conversation inspect extension cache integration', () => {
 
     const reload = await reloadExtensionBackend('system-conversation-tools');
     expect(reload.ok).toBe(true);
-    const factory = await loadExtensionAgentFactory('system-conversation-tools', 'createConversationToolsAgentExtension');
+    await reloadExtensionBackend('system-conversation-tools');
 
     const brokenCachedWorkerPath = join(stateRoot, 'extension-cache/conversations/conversationInspectWorker.js');
     writeWorker(
@@ -67,19 +62,19 @@ describe('conversation inspect extension cache integration', () => {
     );
     process.env.NEON_PILOT_REPO_ROOT = workerRepoRoot;
 
-    const tools: RegisteredTool[] = [];
-    factory({
-      registerTool: (tool: RegisteredTool) => {
-        tools.push(tool);
+    const action = await invokeExtensionAction(
+      'system-conversation-tools',
+      'conversationTool',
+      {
+        action: 'inspect',
+        inspectAction: 'list',
+        scope: 'live',
       },
-    } as never);
-
-    const tool = tools.find((candidate) => candidate.name === 'conversation_inspect');
-    expect(tool, 'conversation_inspect tool was not registered').toBeTruthy();
-
-    const result = await tool!.execute('tool-call-1', { action: 'list', scope: 'live' }, undefined, undefined, {
-      sessionManager: { getSessionId: () => 'current-conversation' },
-    });
+      { getRuntimeScope: () => 'assistant' } as never,
+      { sessionId: 'current-conversation' } as never,
+    );
+    expect(action).toMatchObject({ ok: true });
+    const result = action.ok ? (action.result as { content?: Array<{ text?: string }> }) : { content: [] };
 
     expect(result.content?.[0]?.text).not.toBe('used cached worker');
     expect(result.content?.[0]?.text).toContain('No conversations matched');

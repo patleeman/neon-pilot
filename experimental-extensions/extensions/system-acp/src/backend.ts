@@ -25,6 +25,7 @@ type ActivePrompt = {
   abortController: AbortController;
   currentAgentMessageId: string;
   currentThinkingMessageId: string;
+  cancelled?: boolean;
 };
 
 type AcpProtocolInput = {
@@ -362,6 +363,12 @@ class NeonPilotAcpAgent implements acp.Agent {
 
       // If the timeout fired after sendMessage also resolved, the abort already cleaned up.
       if (active.abortController.signal.aborted) {
+        if (active.cancelled) {
+          return {
+            stopReason: 'cancelled',
+            ...(params.messageId ? { userMessageId: params.messageId } : {}),
+          };
+        }
         throw new Error(`ACP prompt timed out after ${timeoutMs}ms.`);
       }
 
@@ -409,6 +416,9 @@ class NeonPilotAcpAgent implements acp.Agent {
 
   async cancel(params: acp.CancelNotification): Promise<void> {
     const active = this.activePrompts.get(params.sessionId);
+    if (active) {
+      active.cancelled = true;
+    }
     active?.abortController.abort();
     const record = await readSessionRecord(this.ctx, params.sessionId);
     if (record) {

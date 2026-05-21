@@ -593,7 +593,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    const button = queryButton(container, 'Prune/vacuum DB');
+    const button = queryButton(container, 'Clean up telemetry index');
     await act(async () => {
       button.click();
     });

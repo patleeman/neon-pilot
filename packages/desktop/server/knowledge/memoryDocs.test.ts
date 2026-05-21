@@ -179,7 +179,7 @@ profiles:
 `,
     );
 
-    const skills = listSkillsForProfile('assistant');
+    const skills = listSkillsForProfile('assistant').filter((skill) => skill.source === 'global');
     expect(skills).toEqual([
       {
         name: 'alpha-skill',

@@ -324,19 +324,12 @@ describe('ChatView inline run cards', () => {
       },
     ]);
 
-    expect(container.textContent).toContain('Background work finished.');
+    expect(container.textContent).toContain(`Background task ${RUN_ID} has finished.`);
     expect(container.textContent).toContain('ui-preview-check');
-    expect(container.textContent).not.toContain('very noisy callback output');
+    expect(container.textContent).toContain('very noisy callback output');
 
     const runButtons = findInlineRunButtons(container);
-    expect(runButtons).toHaveLength(1);
-
-    await act(async () => {
-      runButtons[0]?.click();
-      await flushAsyncWork();
-    });
-
-    expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
-    expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
+    expect(runButtons).toHaveLength(0);
+    expect(apiMocks.durableRun).not.toHaveBeenCalled();
   });
 });

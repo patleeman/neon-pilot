@@ -102,7 +102,7 @@ describe('WorkbenchBrowserTab', () => {
       return Promise.resolve(null);
     });
     const navigateWorkbenchBrowser = vi.fn(async () => null);
-    window.personalAgentDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.personalAgentDesktop;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
 
     Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
       configurable: true,

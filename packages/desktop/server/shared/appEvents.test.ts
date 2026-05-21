@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -47,6 +48,7 @@ beforeEach(() => {
   process.env = {
     ...originalEnv,
     NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-app-events-state-'),
+    NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `np-${randomUUID()}.sock`),
   };
 });
 

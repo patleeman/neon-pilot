@@ -38,7 +38,7 @@ describe('resolveLocalProfileSettingsFilePath', () => {
     const file = join(localDir, 'local-file');
     writeFileSync(file, '{}\n');
 
-    expect(() => resolveLocalProfileSettingsFilePath(file)).toThrow(`Local profile path is not a directory: ${file}`);
+    expect(() => resolveLocalProfileSettingsFilePath(file)).toThrow(`Local runtime config path is not a directory: ${file}`);
   });
 });
 

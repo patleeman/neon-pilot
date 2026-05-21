@@ -185,7 +185,10 @@ function deriveAuthType(
 
 function hasUsableStoredCredential(authStorage: AuthStorage, provider: string): boolean {
   const credential = authStorage.get(provider);
-  return credential?.type === 'oauth' || credential?.type === 'api_key' || authStorage.hasAuth(provider);
+  if (credential !== undefined) {
+    return credential.type === 'oauth' || credential.type === 'api_key';
+  }
+  return authStorage.hasAuth(provider);
 }
 
 function makeAuthStorage(authFile: string): AuthStorage {

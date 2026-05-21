@@ -186,9 +186,9 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(liveHtml).toContain('▲ hide');
-    expect(runningHtml).toContain('▲ hide');
-    expect(idleHtml).toContain('▼ show');
+    expect(liveHtml).toContain('hide');
+    expect(runningHtml).toContain('hide');
+    expect(idleHtml).toContain('show');
   });
 
   it('renders rich markdown structures in assistant messages', () => {

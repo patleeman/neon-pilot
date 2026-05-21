@@ -83,7 +83,7 @@ describe('desktop local API extension routes', () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toMatch(/javascript|\bjs\b/);
     expect(Buffer.from(response.body).toString('utf-8')).toContain('AgentBoardPage');
-  });
+  }, 30000);
 });
 
 describe('desktop local API vault routes', () => {

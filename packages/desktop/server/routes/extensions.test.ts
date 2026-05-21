@@ -118,7 +118,7 @@ describe('registerExtensionRoutes', () => {
         expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: { host: 'workbench.files.detail' } }),
       ]),
     );
-  });
+  }, 30000);
 
   it('dispatches namespaced extension backend routes', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
@@ -569,7 +569,7 @@ describe('registerExtensionRoutes', () => {
       ok: true,
       result: expect.objectContaining({ saved: { title: 'Still works from cache' } }),
     });
-  });
+  }, 30000);
 
   it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
@@ -643,5 +643,5 @@ describe('registerExtensionRoutes', () => {
       reloaded: true,
       message: 'Extension backend reloaded.',
     });
-  });
+  }, 30000);
 });

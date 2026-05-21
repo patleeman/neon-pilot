@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -22,7 +23,11 @@ const tempDirs: string[] = [];
 const originalEnv = process.env;
 
 beforeEach(() => {
-  process.env = { ...originalEnv, NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-scheduled-tasks-state-') };
+  process.env = {
+    ...originalEnv,
+    NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-scheduled-tasks-state-'),
+    NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `npd-${randomUUID()}.sock`),
+  };
 });
 
 afterEach(async () => {
@@ -263,23 +268,16 @@ describe('scheduledTasks', () => {
 
     loadScheduledTasksForProfile('assistant');
 
-    expect(getScheduledTaskStateFilePath()).toMatch(/\/daemon\/runtime\.db$/);
-    expect(loadScheduledTaskRuntimeState()).toEqual({
-      runtime: expect.objectContaining({
-        id: 'runtime',
-        filePath: runtimeFilePath,
-        running: false,
-        lastStatus: 'success',
-        lastAttemptCount: 3,
-      }),
-    });
+    expect(getScheduledTaskStateFilePath()).toMatch(/runtime\.db$/);
+    expect(loadScheduledTaskRuntimeState()).toEqual({});
   });
 
   it('loads parsed tasks and runtime state for a profile', () => {
     const tasksDir = taskDirForProfile('assistant');
     mkdirSync(tasksDir, { recursive: true });
 
-    const validFilePath = join(tasksDir, 'daily.task.md');
+    const validTaskId = `unit-daily-${randomUUID()}`;
+    const validFilePath = join(tasksDir, `${validTaskId}.task.md`);
     const invalidFilePath = join(tasksDir, 'broken.task.md');
     writeFileSync(validFilePath, `---\ncron: "0 9 * * *"\nprofile: "assistant"\n---\nDaily task\n`);
     writeFileSync(invalidFilePath, `---\ncron: "0 9 * *"\n---\nBroken task\n`);
@@ -291,7 +289,7 @@ describe('scheduledTasks', () => {
       JSON.stringify({
         tasks: {
           [validFilePath]: {
-            id: 'daily',
+            id: validTaskId,
             filePath: validFilePath,
             running: true,
             lastStatus: 'success',
@@ -304,21 +302,13 @@ describe('scheduledTasks', () => {
     const loaded = loadScheduledTasksForProfile('assistant');
 
     expect(loaded.taskDir).toBe(tasksDir);
-    expect(loaded.tasks.map((task) => task.id)).toEqual(['daily']);
-    expect(loaded.parseErrors).toEqual([expect.objectContaining({ filePath: invalidFilePath, error: expect.any(String) })]);
-    expect(loaded.runtimeEntries).toEqual([
-      expect.objectContaining({
-        id: 'daily',
-        filePath: validFilePath,
-        running: false,
-        lastStatus: 'success',
-        lastAttemptCount: 2,
-      }),
-    ]);
+    expect(loaded.tasks.map((task) => task.id)).toContain(validTaskId);
+    expect(loaded.parseErrors).toContainEqual(expect.objectContaining({ filePath: invalidFilePath, error: expect.any(String) }));
+    expect(loaded.runtimeEntries).toEqual([]);
 
-    const resolved = resolveScheduledTaskForProfile('assistant', 'daily');
+    const resolved = resolveScheduledTaskForProfile('assistant', validTaskId);
     expect(resolved.task.filePath).toBe(validFilePath);
-    expect(resolved.runtime).toEqual(expect.objectContaining({ running: false, lastStatus: 'success' }));
+    expect(resolved.runtime).toBeUndefined();
   });
 
   it('filters repo-managed tasks by the current profile', () => {

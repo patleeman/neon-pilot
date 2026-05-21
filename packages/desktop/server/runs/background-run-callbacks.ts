@@ -2,6 +2,7 @@ import {
   createReadyAttentionEvent,
   type DeferredResumeAlertLevel,
   loadAttentionEventsState,
+  resolveAttentionEventsStateFile,
   saveAttentionEventsState,
 } from '@neon-pilot/core';
 
@@ -234,7 +235,8 @@ export async function deliverBackgroundRunCallbackWakeup(input: {
   const createdAt = run.manifest?.createdAt ?? readyAt;
   const prompt = buildWakeupPrompt(run);
   const title = buildWakeupTitle(run);
-  const attentionState = loadAttentionEventsState();
+  const attentionStatePath = resolveAttentionEventsStateFile(input.stateRoot);
+  const attentionState = loadAttentionEventsState(attentionStatePath);
   createReadyAttentionEvent(attentionState, {
     id: wakeupId,
     sessionFile: binding.sessionFile,
@@ -256,7 +258,7 @@ export async function deliverBackgroundRunCallbackWakeup(input: {
       requireAck: binding.requireAck,
     },
   });
-  saveAttentionEventsState(attentionState);
+  saveAttentionEventsState(attentionState, attentionStatePath);
 
   markBackgroundRunCallbackDelivered({
     runsRoot: input.runsRoot,

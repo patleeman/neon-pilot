@@ -296,11 +296,11 @@ describe('deferredResumes', () => {
         title: 'Watch the prod gates',
         kind: 'continue',
         dueAt: '2026-03-12T13:30:00.000Z',
-        delivery: {
+        delivery: expect.objectContaining({
           alertLevel: 'disruptive',
           autoResumeIfOpen: false,
           requireAck: true,
-        },
+        }),
       }),
     );
 

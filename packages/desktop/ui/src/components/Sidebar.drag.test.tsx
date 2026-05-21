@@ -228,7 +228,7 @@ describe('Sidebar group drag reordering', () => {
     expect(localStorage.getItem(THREADS_SORT_BY_STORAGE_KEY)).toBe('manual');
     expect(JSON.parse(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]')).toEqual([betaPath, alphaPath]);
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-beta', 'conv-alpha']);
-    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], []);
+    expect(apiMocks.setOpenConversationTabs).toHaveBeenCalledWith(['conv-beta', 'conv-alpha'], [], [], undefined, null);
     expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith([betaPath, alphaPath]);
   });
 
@@ -279,7 +279,7 @@ describe('Sidebar group drag reordering', () => {
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String));
     expect(apiMocks.sessions).toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-alpha-moved', 'conv-beta']);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-beta']);
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
   });
 

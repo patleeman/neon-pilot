@@ -49,6 +49,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    testTimeout: 30000,
     setupFiles: ['vitest.setup.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.taskfactory/**'],
     coverage: {

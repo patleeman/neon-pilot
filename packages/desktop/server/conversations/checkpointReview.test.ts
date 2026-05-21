@@ -91,11 +91,11 @@ describe('checkpointReview', () => {
     expect(parseGitHubRemoteUrl('git@github.com:user/neon-pilot.git')).toEqual({
       owner: 'user',
       repo: 'neon-pilot',
-      repoUrl: 'https://github.com/patleeman/neon-pilot',
+      repoUrl: 'https://github.com/user/neon-pilot',
     });
 
     expect(parseGitHubRemoteUrl('https://github.com/patleeman/neon-pilot')).toEqual({
-      owner: 'user',
+      owner: 'patleeman',
       repo: 'neon-pilot',
       repoUrl: 'https://github.com/patleeman/neon-pilot',
     });

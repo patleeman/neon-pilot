@@ -28,7 +28,7 @@ describe('daemon paths', () => {
   });
 
   it('uses the default daemon directory under the state root', () => {
-    const stateRoot = createTempDir('pa-daemon-paths-state-');
+    const stateRoot = createTempDir('pa-dp-');
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     expect(resolveDaemonPaths()).toMatchObject({
@@ -41,7 +41,7 @@ describe('daemon paths', () => {
   });
 
   it('isolates daemon runtime files under a namespace', () => {
-    const stateRoot = createTempDir('pa-daemon-paths-state-');
+    const stateRoot = createTempDir('pa-dp-');
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 
     expect(resolveDaemonPaths(undefined, 'dev run/1')).toMatchObject({

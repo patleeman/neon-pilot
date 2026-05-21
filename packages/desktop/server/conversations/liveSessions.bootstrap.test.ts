@@ -343,7 +343,7 @@ describe('liveSessions bootstrap helpers', () => {
     syncWebLiveConversationRunMock.mockResolvedValue(undefined);
   });
 
-  it('reads available runtime models and normalizes summaries', () => {
+  it('reads available runtime models and normalizes summaries', async () => {
     const availableModels = [
       { id: 'gpt-5', name: 'GPT-5', contextWindow: 256_000, provider: 'openai' },
       { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 272_000, provider: 'openai-codex' },
@@ -353,8 +353,8 @@ describe('liveSessions bootstrap helpers', () => {
       getAvailable: vi.fn(() => availableModels),
     });
 
-    expect(getAvailableModelObjects()).toEqual(availableModels);
-    expect(getAvailableModels()).toEqual([
+    expect(await getAvailableModelObjects()).toEqual(availableModels);
+    expect(await getAvailableModels()).toEqual([
       { id: 'gpt-5', name: 'GPT-5', context: 256_000, contextWindow: 256_000, provider: 'openai', api: undefined },
       { id: 'gpt-5.5', name: 'GPT-5.5', context: 400_000, contextWindow: 400_000, provider: 'openai-codex', api: undefined },
       { id: 'local-model', name: 'local-model', context: 128_000, contextWindow: 128_000, provider: '', api: undefined },
