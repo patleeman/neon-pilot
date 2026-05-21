@@ -12,21 +12,58 @@
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
-      { "id": "status", "handler": "status", "title": "SpeechMike status" },
-      { "id": "start", "handler": "start", "title": "Start SpeechMike monitor" },
-      { "id": "stop", "handler": "stop", "title": "Stop SpeechMike monitor" }
+      {
+        "id": "status",
+        "handler": "status",
+        "title": "SpeechMike status"
+      },
+      {
+        "id": "start",
+        "handler": "start",
+        "title": "Start SpeechMike monitor"
+      },
+      {
+        "id": "stop",
+        "handler": "stop",
+        "title": "Stop SpeechMike monitor"
+      }
     ],
-    "services": [{ "id": "monitor", "handler": "startService", "healthCheck": "status", "restart": "on-failure" }]
+    "services": [
+      {
+        "id": "monitor",
+        "handler": "startService",
+        "healthCheck": "status",
+        "restart": "on-failure"
+      }
+    ]
   },
   "contributes": {
     "settingsComponent": {
       "id": "speechmike",
       "component": "SpeechMikeSettingsPanel",
-      "sectionId": "settings-speechmike",
+      "sectionId": "settings-extensions",
       "label": "SpeechMike",
       "description": "Connect Philips SpeechMike hardware events directly to Neon Pilot commands.",
       "order": 31
-    }
+    },
+    "views": [
+      {
+        "id": "page",
+        "title": "SpeechMike",
+        "location": "main",
+        "route": "/ext/speechmike",
+        "component": "SpeechMikeSettingsPanel"
+      }
+    ],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "SpeechMike",
+        "route": "/ext/speechmike",
+        "icon": "mic",
+        "section": "settings"
+      }
+    ]
   },
   "permissions": ["shell:execute"]
 }
