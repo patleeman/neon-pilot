@@ -83,6 +83,67 @@ describe('api desktop transport', () => {
     expect(tools.cwd).toBe('/repo');
   });
 
+  it('restores queued messages through the local desktop bridge', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const getEnvironment = vi.fn().mockResolvedValue({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local backend is healthy.',
+    });
+    const restoreQueuedLiveSessionMessage = vi.fn().mockResolvedValue({ ok: true, text: 'queued hello', images: [] });
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment,
+        restoreQueuedLiveSessionMessage,
+      },
+    });
+
+    const { api } = await import('./api');
+    const restored = await api.restoreQueuedMessage('live-1', { behavior: 'followUp', index: 0, previewId: 'queue-1' }, 'surface-1');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(restoreQueuedLiveSessionMessage).toHaveBeenCalledWith({
+      conversationId: 'live-1',
+      behavior: 'followUp',
+      index: 0,
+      previewId: 'queue-1',
+    });
+    expect(restored).toEqual({ ok: true, text: 'queued hello', images: [] });
+  });
+
+  it('restores queued messages through HTTP for non-local desktop hosts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const getEnvironment = vi.fn().mockResolvedValue({
+      isElectron: true,
+      activeHostId: 'remote',
+      activeHostLabel: 'Remote',
+      activeHostKind: 'ssh',
+      activeHostSummary: 'Remote backend is healthy.',
+    });
+    const restoreQueuedLiveSessionMessage = vi.fn();
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment,
+        restoreQueuedLiveSessionMessage,
+      },
+    });
+
+    const { api } = await import('./api');
+    const restored = await api.restoreQueuedMessage('live-1', { behavior: 'steer', index: 2, previewId: 'queue-2' }, 'surface-1');
+
+    expect(restoreQueuedLiveSessionMessage).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-sessions/live-1/dequeue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ behavior: 'steer', index: 2, previewId: 'queue-2', surfaceId: 'surface-1' }),
+    });
+    expect(restored).toEqual({ ok: true, text: 'queued hello', images: [] });
+  });
+
   it('uses dedicated desktop capability bridges on the local Electron host', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(createJsonResponse({})));
     vi.stubGlobal('fetch', fetchMock);
