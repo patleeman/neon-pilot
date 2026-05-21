@@ -49,14 +49,6 @@ function readToolInputString(input: Record<string, unknown>, key: string): strin
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function readCheckpointId(block: Extract<MessageBlock, { type: 'tool_use' }>): string | undefined {
-  return (
-    readToolInputString(block.input, 'checkpointId') ??
-    readToolDetailString(block.details, 'checkpointId') ??
-    (/\b[0-9a-f]{7,40}\b/i.exec(block.output ?? '')?.[0]?.trim() || undefined)
-  );
-}
-
 function readArtifactId(block: Extract<MessageBlock, { type: 'tool_use' }>): string | undefined {
   return (
     readToolInputString(block.input, 'artifactId') ??
@@ -154,7 +146,6 @@ export function ToolBlock({
   const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
   const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
   const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
-  const checkpointId = block.tool === 'checkpoint' ? readCheckpointId(block) : undefined;
   const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
   const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
   const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
@@ -255,17 +246,6 @@ export function ToolBlock({
           </Link>
         ) : null}
         {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
-        {pinnedCheckpoint && checkpointId && onOpenCheckpoint ? (
-          <DiffActionButton
-            className="shrink-0 text-[10px]"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenCheckpoint(checkpointId);
-            }}
-          >
-            View diff
-          </DiffActionButton>
-        ) : null}
         {pinnedArtifact && artifactId && onOpenArtifact ? (
           <button
             type="button"
