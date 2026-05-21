@@ -648,6 +648,16 @@ export function registerDesktopIpc(options: {
     return controller.changeConversationCwd(input);
   });
 
+  ipcMain.handle(`${CHANNEL_PREFIX}:update-conversation-goal`, async (event, input) => {
+    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
+    const controller = options.hostManager.getHostController(hostId);
+    if (!controller.updateConversationGoal) {
+      throw new Error('Dedicated desktop conversation goal updates are only available for the local host.');
+    }
+
+    return controller.updateConversationGoal(input);
+  });
+
   ipcMain.handle(`${CHANNEL_PREFIX}:read-conversation-deferred-resumes`, async (event, conversationId: string) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);

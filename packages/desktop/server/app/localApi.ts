@@ -1637,6 +1637,51 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
   return { id: result.id, sessionFile: result.sessionFile, cwd: nextCwd, changed: true };
 }
 
+export async function updateDesktopConversationGoal(input: { conversationId: string; objective?: string }) {
+  const conversationId = input.conversationId.trim();
+  if (!conversationId) throw new Error('conversationId required');
+  if (Object.prototype.hasOwnProperty.call(input, 'objective') && typeof input.objective !== 'string') {
+    throw new Error('objective must be a string');
+  }
+
+  const trimmedObjective = typeof input.objective === 'string' ? input.objective.trim() : '';
+  const shouldSetGoal = Object.prototype.hasOwnProperty.call(input, 'objective') && trimmedObjective.length > 0;
+  const writeGoal = (sessionManager: SessionManager) => {
+    const goalState = shouldSetGoal
+      ? {
+          objective: trimmedObjective,
+          status: 'active' as const,
+          tasks: [] as Array<{ id: string; description: string; status: string }>,
+          stopReason: null,
+          updatedAt: new Date().toISOString(),
+          noProgressTurns: 0,
+        }
+      : {
+          objective: '',
+          status: 'complete' as const,
+          tasks: [] as Array<{ id: string; description: string; status: string }>,
+          stopReason: 'cleared',
+          updatedAt: new Date().toISOString(),
+          noProgressTurns: 0,
+        };
+    sessionManager.appendCustomEntry('conversation-goal', goalState);
+    return goalState;
+  };
+
+  const liveEntry = liveRegistry.get(conversationId);
+  if (liveEntry) {
+    const result = writeGoal(liveEntry.session.sessionManager);
+    publishAppEvent({ type: 'session_file_changed', sessionId: conversationId });
+    return result;
+  }
+
+  const sessionFile = resolveConversationSessionFile(conversationId);
+  if (!sessionFile || !existsSync(sessionFile)) throw new Error('Conversation not found');
+  const result = writeGoal(SessionManager.open(sessionFile));
+  publishAppEvent({ type: 'session_file_changed', sessionId: conversationId });
+  return result;
+}
+
 export async function createDesktopConversationCheckpoint(input: { conversationId: string; message: string; paths: string[] }) {
   const context = await getLocalServerRouteContext();
   const conversationId = input.conversationId.trim();

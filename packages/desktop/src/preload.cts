@@ -199,6 +199,8 @@ const desktopBridge = {
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:rename-conversation`, input),
   changeConversationCwd: (input: { conversationId: string; cwd: string; surfaceId?: string }) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:change-conversation-cwd`, input),
+  updateConversationGoal: (input: { conversationId: string; objective?: string }) =>
+    ipcRenderer.invoke(`${CHANNEL_PREFIX}:update-conversation-goal`, input),
   readConversationDeferredResumes: (conversationId: string) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-conversation-deferred-resumes`, conversationId),
   scheduleConversationDeferredResume: (input: {

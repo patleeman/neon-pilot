@@ -143,6 +143,7 @@ export interface LocalApiModule {
   }): Promise<unknown>;
   renameDesktopConversation(input: { conversationId: string; name: string; surfaceId?: string }): Promise<{ ok: true; title: string }>;
   changeDesktopConversationCwd(input: { conversationId: string; cwd: string; surfaceId?: string }): Promise<unknown>;
+  updateDesktopConversationGoal(input: { conversationId: string; objective?: string }): Promise<unknown>;
   readDesktopConversationDeferredResumes(conversationId: string): Promise<unknown>;
   scheduleDesktopConversationDeferredResume(input: {
     conversationId: string;

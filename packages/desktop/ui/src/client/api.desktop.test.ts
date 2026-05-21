@@ -1869,8 +1869,12 @@ describe('api desktop transport', () => {
       knownSessionSignature: 'sig-2',
       tailBlocks: 5,
     });
-    const renamed = await api.renameConversation('remote-conversation', 'Remote rename', 'surface-1');
-    const recovered = await api.recoverConversation('remote-conversation');
+    await expect(api.renameConversation('remote-conversation', 'Remote rename', 'surface-1')).rejects.toThrow(
+      'Renaming conversations requires the local desktop host.',
+    );
+    await expect(api.recoverConversation('remote-conversation')).rejects.toThrow(
+      'Recovering conversations requires the local desktop host.',
+    );
     await expect(api.forkEntries('remote-live')).rejects.toThrow('Reading live session fork entries requires the local desktop host.');
 
     expect(invokeLocalApi).not.toHaveBeenCalled();
@@ -1879,25 +1883,7 @@ describe('api desktop transport', () => {
       '/api/conversations/remote-conversation/bootstrap?tailBlocks=5&knownSessionSignature=sig-2',
       { method: 'GET', cache: 'no-store' },
     );
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/conversations/remote-conversation/title', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Remote rename', surfaceId: 'surface-1' }),
-    });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/conversations/remote-conversation/recover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: undefined,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.conversationId).toBe('remote-conversation');
-    expect(renamed).toEqual({ ok: true, title: 'Remote rename' });
-    expect(recovered).toEqual({
-      conversationId: 'remote-conversation',
-      live: true,
-      recovered: true,
-      replayedPendingOperation: false,
-      usedFallbackPrompt: false,
-    });
   });
 });

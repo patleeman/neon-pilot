@@ -33,8 +33,6 @@ import type {
   ConversationCommitCheckpointSummary,
   ConversationContentSearchResult,
   ConversationContextDocRef,
-  ConversationCwdChangeResult,
-  ConversationRecoveryResult,
   ConversationSummaryRecord,
   DaemonState,
   DefaultCwdState,
@@ -1186,16 +1184,8 @@ export const api = {
     );
   },
   changeConversationCwd: async (id: string, cwd: string, surfaceId?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.changeConversationCwd({
-        conversationId: id,
-        cwd,
-        ...(surfaceId ? { surfaceId } : {}),
-      });
-    }
-
-    return requestJson<ConversationCwdChangeResult>('POST', `/conversations/${encodeURIComponent(id)}/cwd`, {
+    return (await requireLocalDesktopConversationBridge(id, 'Changing conversation working directories')).changeConversationCwd({
+      conversationId: id,
       cwd,
       ...(surfaceId ? { surfaceId } : {}),
     });
@@ -1204,58 +1194,36 @@ export const api = {
     return requestJson<{ newSessionId: string; sessionFile: string }>('POST', `/conversations/${encodeURIComponent(id)}/duplicate`);
   },
   renameConversation: async (id: string, name: string, surfaceId?: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.renameConversation({
-        conversationId: id,
-        name,
-        ...(surfaceId ? { surfaceId } : {}),
-      });
-    }
-
-    return patch<{ ok: boolean; title: string }>(`/conversations/${encodeURIComponent(id)}/title`, {
+    return (await requireLocalDesktopBridge('Renaming conversations')).renameConversation({
+      conversationId: id,
       name,
       ...(surfaceId ? { surfaceId } : {}),
     });
   },
   updateGoal: async (id: string, input: { objective?: string }) => {
-    return patch<{ objective?: string; status?: string; cleared?: boolean }>(`/conversations/${encodeURIComponent(id)}/goal`, input);
+    return (await requireLocalDesktopConversationBridge(id, 'Updating conversation goals')).updateConversationGoal({
+      conversationId: id,
+      ...input,
+    });
   },
   conversationModelPreferences: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationModelPreferences({ conversationId: id });
-    }
-    return get<{ currentModel: string; currentThinkingLevel: string; currentServiceTier: string; hasExplicitServiceTier: boolean }>(
-      `/conversations/${encodeURIComponent(id)}/model-preferences`,
-    );
+    return (await requireLocalDesktopBridge('Reading conversation model preferences')).readConversationModelPreferences({
+      conversationId: id,
+    });
   },
   updateConversationModelPreferences: async (
     id: string,
     input: { model?: string | null; thinkingLevel?: string | null; serviceTier?: string | null },
     surfaceId?: string,
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.updateConversationModelPreferences({
-        conversationId: id,
-        ...input,
-        ...(surfaceId ? { surfaceId } : {}),
-      });
-    }
-
-    return patch<{ currentModel: string; currentThinkingLevel: string; currentServiceTier: string; hasExplicitServiceTier: boolean }>(
-      `/conversations/${encodeURIComponent(id)}/model-preferences`,
-      { ...input, ...(surfaceId ? { surfaceId } : {}) },
-    );
+    return (await requireLocalDesktopConversationBridge(id, 'Updating conversation model preferences')).updateConversationModelPreferences({
+      conversationId: id,
+      ...input,
+      ...(surfaceId ? { surfaceId } : {}),
+    });
   },
   recoverConversation: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
-      return desktopBridge.recoverConversation(id);
-    }
-
-    return post<ConversationRecoveryResult>(`/conversations/${encodeURIComponent(id)}/recover`);
+    return (await requireLocalDesktopConversationBridge(id, 'Recovering conversations')).recoverConversation(id);
   },
   createLiveSession: async (
     cwd?: string,

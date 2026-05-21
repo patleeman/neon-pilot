@@ -246,6 +246,10 @@ export interface NeonPilotDesktopBridge {
   }): Promise<ConversationBootstrapState>;
   renameConversation(input: { conversationId: string; name: string; surfaceId?: string }): Promise<{ ok: true; title: string }>;
   changeConversationCwd(input: { conversationId: string; cwd: string; surfaceId?: string }): Promise<ConversationCwdChangeResult>;
+  updateConversationGoal(input: {
+    conversationId: string;
+    objective?: string;
+  }): Promise<{ objective?: string; status?: string; cleared?: boolean }>;
   readConversationDeferredResumes(conversationId: string): Promise<{ conversationId: string; resumes: DeferredResumeSummary[] }>;
   scheduleConversationDeferredResume(input: {
     conversationId: string;

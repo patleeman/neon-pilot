@@ -442,6 +442,11 @@ export class LocalHostController implements HostController {
     return module.changeDesktopConversationCwd(input);
   }
 
+  async updateConversationGoal(input: { conversationId: string; objective?: string }): Promise<unknown> {
+    const module = await this.loadLocalApi();
+    return module.updateDesktopConversationGoal(input);
+  }
+
   async readConversationDeferredResumes(conversationId: string): Promise<unknown> {
     const module = await this.loadLocalApi();
     return module.readDesktopConversationDeferredResumes(conversationId);

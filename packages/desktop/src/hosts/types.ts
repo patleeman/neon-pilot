@@ -369,6 +369,7 @@ export interface HostController {
   readConversationBootstrap?(input: DesktopConversationBootstrapRequest): Promise<unknown>;
   renameConversation?(input: DesktopConversationRenameRequest): Promise<{ ok: true; title: string }>;
   changeConversationCwd?(input: DesktopConversationCwdChangeRequest): Promise<unknown>;
+  updateConversationGoal?(input: { conversationId: string; objective?: string }): Promise<unknown>;
   readConversationDeferredResumes?(conversationId: string): Promise<unknown>;
   scheduleConversationDeferredResume?(input: DesktopConversationDeferredResumeScheduleRequest): Promise<unknown>;
   cancelConversationDeferredResume?(input: DesktopConversationDeferredResumeMutationRequest): Promise<unknown>;
