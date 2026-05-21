@@ -4,6 +4,7 @@ import { type ExtensionFactory, SessionManager } from '@earendil-works/pi-coding
 import type { Express } from 'express';
 
 import { readConversationAutoModeStateFromSessionManager, writeConversationAutoModeState } from '../conversations/conversationAutoMode.js';
+import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
 import { publishConversationSessionMetaChanged, resolveConversationSessionFile } from '../conversations/conversationService.js';
 import {
   createSessionFromExisting,
