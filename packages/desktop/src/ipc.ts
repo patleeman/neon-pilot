@@ -898,6 +898,16 @@ export function registerDesktopIpc(options: {
     return controller.restoreQueuedLiveSessionMessage(input);
   });
 
+  ipcMain.handle(`${CHANNEL_PREFIX}:clear-queued-live-session-messages`, async (event, input) => {
+    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
+    const controller = options.hostManager.getHostController(hostId);
+    if (!controller.clearQueuedLiveSessionMessages) {
+      throw new Error('Dedicated desktop queued prompt clearing is only available for the local host.');
+    }
+
+    return controller.clearQueuedLiveSessionMessages(input);
+  });
+
   ipcMain.handle(`${CHANNEL_PREFIX}:compact-live-session`, async (event, input) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);

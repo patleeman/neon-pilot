@@ -96,6 +96,7 @@ import { createAttentionEventFlusher } from '../conversations/liveDeferredResume
 import {
   abortLiveSessionCapability,
   branchLiveSessionCapability,
+  clearQueuedLiveSessionPromptsCapability,
   compactLiveSessionCapability,
   createLiveSessionCapability,
   destroyLiveSessionCapability,
@@ -2146,6 +2147,10 @@ export async function restoreDesktopQueuedLiveSessionMessage(input: {
   previewId?: string;
 }) {
   return restoreQueuedLiveSessionMessageCapability(input);
+}
+
+export async function clearDesktopQueuedLiveSessionMessages(input: { conversationId: string }) {
+  return clearQueuedLiveSessionPromptsCapability(input);
 }
 
 export async function compactDesktopLiveSession(input: { conversationId: string; customInstructions?: string }) {

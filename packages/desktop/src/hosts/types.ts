@@ -245,6 +245,20 @@ export interface DesktopLiveSessionQueueRestoreResult {
   images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
 }
 
+export interface DesktopLiveSessionQueueClearRequest {
+  conversationId: string;
+}
+
+export interface DesktopLiveSessionQueueClearResult {
+  ok: true;
+  items: Array<{
+    behavior: 'steer' | 'followUp';
+    text: string;
+    images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
+    author: 'user' | 'agent';
+  }>;
+}
+
 export interface DesktopLiveSessionCompactRequest {
   conversationId: string;
   customInstructions?: string;
@@ -408,6 +422,7 @@ export interface HostController {
   resumeLiveSession?(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }>;
   takeOverLiveSession?(input: DesktopLiveSessionTakeoverRequest): Promise<unknown>;
   restoreQueuedLiveSessionMessage?(input: DesktopLiveSessionQueueRestoreRequest): Promise<DesktopLiveSessionQueueRestoreResult>;
+  clearQueuedLiveSessionMessages?(input: DesktopLiveSessionQueueClearRequest): Promise<DesktopLiveSessionQueueClearResult>;
   compactLiveSession?(input: DesktopLiveSessionCompactRequest): Promise<{ ok: true; result: unknown }>;
   exportLiveSession?(input: DesktopLiveSessionExportRequest): Promise<{ ok: true; path: string }>;
   reloadLiveSession?(conversationId: string): Promise<{ ok: true }>;

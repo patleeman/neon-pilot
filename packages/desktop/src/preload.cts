@@ -288,6 +288,8 @@ const desktopBridge = {
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:take-over-live-session`, input),
   restoreQueuedLiveSessionMessage: (input: { conversationId: string; behavior: 'steer' | 'followUp'; index: number; previewId?: string }) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:restore-queued-live-session-message`, input),
+  clearQueuedLiveSessionMessages: (input: { conversationId: string }) =>
+    ipcRenderer.invoke(`${CHANNEL_PREFIX}:clear-queued-live-session-messages`, input),
   compactLiveSession: (input: { conversationId: string; customInstructions?: string }) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:compact-live-session`, input),
   exportLiveSession: (input: { conversationId: string; outputPath?: string }) =>

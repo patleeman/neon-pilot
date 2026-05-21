@@ -1348,8 +1348,13 @@ export const api = {
       },
     );
   },
-  clearQueuedMessages: async (id: string, surfaceId?: string) =>
-    post<{
+  clearQueuedMessages: async (id: string, surfaceId?: string) => {
+    const desktopBridge = getDesktopBridge();
+    if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {
+      return desktopBridge.clearQueuedLiveSessionMessages({ conversationId: id });
+    }
+
+    return post<{
       ok: true;
       items: Array<{
         behavior: 'steer' | 'followUp';
@@ -1357,7 +1362,8 @@ export const api = {
         images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
         author: 'user' | 'agent';
       }>;
-    }>(`/live-sessions/${encodeURIComponent(id)}/clear-queue`, surfaceId ? { surfaceId } : {}),
+    }>(`/live-sessions/${encodeURIComponent(id)}/clear-queue`, surfaceId ? { surfaceId } : {});
+  },
   abortSession: async (id: string, surfaceId?: string) => {
     const desktopBridge = getDesktopBridge();
     if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(id))) {

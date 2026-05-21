@@ -114,6 +114,38 @@ describe('api desktop transport', () => {
     expect(restored).toEqual({ ok: true, text: 'queued hello', images: [] });
   });
 
+  it('clears queued messages through the local desktop bridge', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const getEnvironment = vi.fn().mockResolvedValue({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local backend is healthy.',
+    });
+    const clearQueuedLiveSessionMessages = vi.fn().mockResolvedValue({
+      ok: true,
+      items: [{ behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' }],
+    });
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment,
+        clearQueuedLiveSessionMessages,
+      },
+    });
+
+    const { api } = await import('./api');
+    const cleared = await api.clearQueuedMessages('live-1', 'surface-1');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(clearQueuedLiveSessionMessages).toHaveBeenCalledWith({ conversationId: 'live-1' });
+    expect(cleared).toEqual({
+      ok: true,
+      items: [{ behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' }],
+    });
+  });
+
   it('restores queued messages through HTTP for non-local desktop hosts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
     vi.stubGlobal('fetch', fetchMock);

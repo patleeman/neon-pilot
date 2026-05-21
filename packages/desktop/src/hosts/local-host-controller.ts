@@ -23,6 +23,8 @@ import type {
   DesktopLiveSessionForkRequest,
   DesktopLiveSessionPromptRequest,
   DesktopLiveSessionPromptResult,
+  DesktopLiveSessionQueueClearRequest,
+  DesktopLiveSessionQueueClearResult,
   DesktopLiveSessionQueueRestoreRequest,
   DesktopLiveSessionQueueRestoreResult,
   DesktopLiveSessionTakeoverRequest,
@@ -595,6 +597,11 @@ export class LocalHostController implements HostController {
   async restoreQueuedLiveSessionMessage(input: DesktopLiveSessionQueueRestoreRequest): Promise<DesktopLiveSessionQueueRestoreResult> {
     const module = await this.loadLocalApi();
     return module.restoreDesktopQueuedLiveSessionMessage(input);
+  }
+
+  async clearQueuedLiveSessionMessages(input: DesktopLiveSessionQueueClearRequest): Promise<DesktopLiveSessionQueueClearResult> {
+    const module = await this.loadLocalApi();
+    return module.clearDesktopQueuedLiveSessionMessages(input);
   }
 
   async compactLiveSession(input: DesktopLiveSessionCompactRequest): Promise<{ ok: true; result: unknown }> {

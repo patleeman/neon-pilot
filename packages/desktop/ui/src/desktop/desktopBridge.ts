@@ -352,6 +352,15 @@ export interface NeonPilotDesktopBridge {
     index: number;
     previewId?: string;
   }): Promise<{ ok: true; text: string; images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }> }>;
+  clearQueuedLiveSessionMessages(input: { conversationId: string }): Promise<{
+    ok: true;
+    items: Array<{
+      behavior: 'steer' | 'followUp';
+      text: string;
+      images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
+      author: 'user' | 'agent';
+    }>;
+  }>;
   compactLiveSession(input: { conversationId: string; customInstructions?: string }): Promise<{ ok: true; result: unknown }>;
   exportLiveSession(input: { conversationId: string; outputPath?: string }): Promise<LiveSessionExportResult>;
   reloadLiveSession(conversationId: string): Promise<{ ok: true }>;
