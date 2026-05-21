@@ -2312,6 +2312,7 @@ export function Sidebar() {
       return liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
     });
     const allSessionsById = new Map(allConversationSessions.map((session) => [session.id, session] as const));
+    const archivedConversationIdSet = new Set(archivedConversationIds);
     const childSessionIdsByParentId = new Map<string, string[]>();
     for (const session of allConversationSessions) {
       if (!session.parentSessionId) continue;
@@ -2342,6 +2343,7 @@ export function Sidebar() {
         seenDescendants.add(childId);
         const child = allSessionsById.get(childId);
         if (!child) continue;
+        if (archivedConversationIdSet.has(child.id)) continue;
         byId.set(child.id, child);
         descendantQueue.push(...(childSessionIdsByParentId.get(child.id) ?? []));
       }
@@ -2352,7 +2354,7 @@ export function Sidebar() {
     }
 
     return [...byId.values()];
-  }, [liveTitles, renderedConversationItems, sessions]);
+  }, [archivedConversationIds, liveTitles, renderedConversationItems, sessions]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({

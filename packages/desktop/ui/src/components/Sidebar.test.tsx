@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import {
+  ARCHIVED_SESSION_IDS_STORAGE_KEY,
   buildSidebarNavSectionStorageKey,
   OPEN_SESSION_IDS_STORAGE_KEY,
   PINNED_SESSION_IDS_STORAGE_KEY,
@@ -732,6 +733,27 @@ describe('Sidebar', () => {
     expect(html.indexOf('Parent conversation')).toBeLessThan(html.indexOf('Child subagent conversation'));
     expect(html).toContain('aria-label="Collapse Parent conversation"');
     expect(html).toContain('style="padding-left:1rem"');
+  });
+
+  it('hides archived child conversations even when their parent remains visible', () => {
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
+    storage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child-1']));
+
+    const html = renderSidebar('/conversations/conv-123', {
+      sessions: [
+        createSession({ id: 'conv-123', title: 'Parent conversation' }),
+        createSession({
+          id: 'child-1',
+          file: '/tmp/child-1.jsonl',
+          title: 'Closed subagent conversation',
+          parentSessionId: 'conv-123',
+          offshootKind: 'subagent',
+        }),
+      ],
+    });
+
+    expect(html).toContain('Parent conversation');
+    expect(html).not.toContain('Closed subagent conversation');
   });
 
   it('keeps the sidebar focused on chat and system surfaces', () => {
