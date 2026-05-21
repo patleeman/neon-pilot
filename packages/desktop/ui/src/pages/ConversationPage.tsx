@@ -5189,7 +5189,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   useEffect(() => {
     const handleComposerFocusCommand = () => {
-      composerRef.current?.focus();
+      textareaRef.current?.focus();
     };
 
     const handleComposerSubmitCommand = () => {
@@ -5202,7 +5202,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
     const handleComposerClearCommand = () => {
       composerController.clear();
-      composerRef.current?.focus();
+      textareaRef.current?.focus();
     };
 
     window.addEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
