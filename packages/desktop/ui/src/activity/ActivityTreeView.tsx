@@ -114,6 +114,7 @@ export function ActivityTreeView({
   }, [items]);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+  const [collapsedBranchIds, setCollapsedBranchIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<ActivityTreeContextMenuState | null>(null);
   const contextMenuRootRef = useRef<HTMLDivElement | null>(null);
   const draggedItemIdRef = useRef<string | null>(null);
@@ -158,17 +159,33 @@ export function ActivityTreeView({
     },
     [collapsedGroupItemIds, onToggleGroupItem],
   );
-  const toggleExpanded = useCallback((itemId: string) => {
-    setExpandedIds((current) => {
-      const next = new Set(current);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
-        next.add(itemId);
-      }
-      return next;
-    });
-  }, []);
+  const toggleExpanded = useCallback(
+    (itemId: string) => {
+      const itemPath = pathModel.pathById.get(itemId);
+      const isSelectedAncestor = Boolean(itemPath && selectedPath?.startsWith(itemPath));
+      const isExpanded = !collapsedBranchIds.has(itemId) && (expandedIds.has(itemId) || isSelectedAncestor);
+
+      setCollapsedBranchIds((current) => {
+        const next = new Set(current);
+        if (isExpanded) {
+          next.add(itemId);
+        } else {
+          next.delete(itemId);
+        }
+        return next;
+      });
+      setExpandedIds((current) => {
+        const next = new Set(current);
+        if (isExpanded) {
+          next.delete(itemId);
+        } else {
+          next.add(itemId);
+        }
+        return next;
+      });
+    },
+    [collapsedBranchIds, expandedIds, pathModel.pathById, selectedPath],
+  );
 
   const ancestorIdsById = useMemo(() => {
     const ancestors = new Map<string, string[]>();
@@ -215,6 +232,9 @@ export function ActivityTreeView({
             continue;
           }
           const ancestorPath = pathModel.pathById.get(ancestor.id);
+          if (collapsedBranchIds.has(ancestor.id)) {
+            return false;
+          }
           if (expandedIds.has(ancestor.id) || path === selectedPath || Boolean(ancestorPath && selectedPath?.startsWith(ancestorPath))) {
             continue;
           }
@@ -222,7 +242,17 @@ export function ActivityTreeView({
         }
         return true;
       }),
-    [ancestorIdsById, collapsedGroupIds, collapsedGroupItemIds, expandedIds, itemById, pathModel.entries, pathModel.pathById, selectedPath],
+    [
+      ancestorIdsById,
+      collapsedBranchIds,
+      collapsedGroupIds,
+      collapsedGroupItemIds,
+      expandedIds,
+      itemById,
+      pathModel.entries,
+      pathModel.pathById,
+      selectedPath,
+    ],
   );
 
   function getDropPosition(event: DragEvent<HTMLElement>): ActivityTreeDropPosition {
@@ -253,7 +283,7 @@ export function ActivityTreeView({
           const expanded =
             item.kind === 'group'
               ? !(collapsedGroupItemIds ?? collapsedGroupIds).has(item.id)
-              : expandedIds.has(item.id) || Boolean(selectedPath?.startsWith(path));
+              : !collapsedBranchIds.has(item.id) && (expandedIds.has(item.id) || Boolean(selectedPath?.startsWith(path)));
           const canDrag = Boolean(canDragItem?.(item));
           const rowDropPosition = dropTarget?.itemId === item.id ? dropTarget.position : null;
           const canArchive = item.kind === 'conversation' && onArchiveItem && item.metadata?.canArchive !== false;

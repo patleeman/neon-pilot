@@ -166,6 +166,38 @@ describe('ActivityTreeView', () => {
     }
   });
 
+  it('lets an expanded parent branch collapse even when the selected item is a descendant', () => {
+    const nestedItems: ActivityTreeItem[] = [
+      { id: 'conversation:parent', kind: 'conversation', title: 'Parent thread', status: 'idle', metadata: { conversationId: 'parent' } },
+      {
+        id: 'conversation:child',
+        kind: 'conversation',
+        parentId: 'conversation:parent',
+        title: 'Rewound child branch',
+        status: 'idle',
+        metadata: { conversationId: 'child' },
+      },
+    ];
+    const { container, unmount } = renderTree(nestedItems, 'conversation:child');
+
+    try {
+      expect(container.textContent).toContain('Parent thread');
+      expect(container.textContent).toContain('Rewound child branch');
+
+      const expander = container.querySelector<HTMLElement>('[aria-label="Collapse Parent thread"]');
+      expect(expander).not.toBeNull();
+
+      act(() => {
+        expander?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      expect(container.textContent).toContain('Parent thread');
+      expect(container.textContent).not.toContain('Rewound child branch');
+    } finally {
+      unmount();
+    }
+  });
+
   it('does not show archive affordances for non-closable lineage rows', () => {
     const nestedItems: ActivityTreeItem[] = [
       {
