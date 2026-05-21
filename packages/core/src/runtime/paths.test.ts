@@ -109,8 +109,8 @@ describe('runtime config path helpers', () => {
     delete process.env.NEON_PILOT_STATE_ROOT;
     delete process.env.NEON_PILOT_CONFIG_ROOT;
     delete process.env.NEON_PILOT_CONFIG_FILE;
-    delete process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT;
-    delete process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR;
+    delete process.env.NEON_PILOT_PROFILES_ROOT;
+    delete process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
     delete process.env.NEON_PILOT_VAULT_ROOT;
   });
 
@@ -146,8 +146,8 @@ describe('runtime config path helpers', () => {
 
   it('honors explicit overrides', () => {
     process.env.NEON_PILOT_CONFIG_ROOT = '/custom/config';
-    process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT = '/custom/runtime';
-    process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR = '/custom/local';
+    process.env.NEON_PILOT_PROFILES_ROOT = '/custom/runtime';
+    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = '/custom/local';
     process.env.NEON_PILOT_VAULT_ROOT = '/custom/vault';
 
     expect(getConfigRoot()).toBe('/custom/config');

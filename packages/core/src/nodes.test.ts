@@ -30,7 +30,7 @@ function createTempStateRoot(): string {
   tempDirs.push(dir);
   process.env.NEON_PILOT_STATE_ROOT = dir;
   process.env.NEON_PILOT_VAULT_ROOT = join(dir, 'sync');
-  process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT = join(dir, 'config', 'runtime');
+  process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'config', 'runtime');
   return dir;
 }
 

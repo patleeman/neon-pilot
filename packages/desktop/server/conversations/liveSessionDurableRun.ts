@@ -14,9 +14,7 @@ export interface LiveSessionDurableRunHost {
 }
 
 export function resolveLiveSessionProfile(): string | undefined {
-  const runtimeScope = process.env.NEON_PILOT_RUNTIME_SCOPE;
-  const normalized = runtimeScope?.trim();
-  return normalized && normalized.length > 0 ? normalized : undefined;
+  return 'shared';
 }
 
 export function resolveDurableRunTitle(entry: LiveSessionDurableRunHost): string {

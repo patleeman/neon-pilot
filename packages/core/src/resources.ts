@@ -388,7 +388,7 @@ function resolveVaultRoot(options: ResolveResourceOptions = {}): string {
 }
 
 function resolveRuntimeConfigRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT ?? process.env.NEON_PILOT_PROFILES_ROOT;
+  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_PROFILES_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }

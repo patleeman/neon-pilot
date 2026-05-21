@@ -4,7 +4,7 @@ import { createServerRouteContext } from './routeContext.js';
 
 describe('createServerRouteContext', () => {
   beforeEach(() => {
-    process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT = '/tmp/test-runtime-config';
+    process.env.NEON_PILOT_PROFILES_ROOT = '/tmp/test-runtime-config';
   });
 
   it('maps the provided route context callbacks and values', async () => {

@@ -6,12 +6,12 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 
 ## Path roots
 
-| Root                | Default                                                     | Override                              | Purpose                                                                         |
-| ------------------- | ----------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
-| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`               | Runtime state, daemon DBs, extension installs, active agent files               |
-| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`              | Machine-local durable config                                                    |
-| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`              | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
-| Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR` | Local settings mirror for active runtime settings                               |
+| Root                | Default                                                     | Override                       | Purpose                                                                         |
+| ------------------- | ----------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
+| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`        | Runtime state, daemon DBs, extension installs, active agent files               |
+| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`       | Machine-local durable config                                                    |
+| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`       | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
+| Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_PROFILE_DIR` | Local settings mirror for active runtime settings                               |
 
 ## Machine config
 

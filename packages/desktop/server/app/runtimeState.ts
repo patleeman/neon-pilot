@@ -44,7 +44,6 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
-    process.env.NEON_PILOT_RUNTIME_SCOPE = runtimeScope;
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
     delete process.env.NEON_PILOT_PROFILE;
     if (existsSync(resolve(repoRoot, 'packages'))) {

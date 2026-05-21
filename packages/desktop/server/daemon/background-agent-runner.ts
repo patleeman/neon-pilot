@@ -152,7 +152,7 @@ export async function main(): Promise<void> {
   });
   const extensionFactories = [
     ...createManifestToolAgentExtensions({
-      getRuntimeScope: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
+      getRuntimeScope: () => 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => args.model ?? readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {

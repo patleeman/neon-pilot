@@ -56,7 +56,7 @@ beforeEach(() => {
     ...originalEnv,
     NEON_PILOT_STATE_ROOT: stateRoot,
     NEON_PILOT_VAULT_ROOT: join(stateRoot, 'sync'),
-    NEON_PILOT_RUNTIME_CONFIG_ROOT: join(stateRoot, 'sync', 'runtime'),
+    NEON_PILOT_PROFILES_ROOT: join(stateRoot, 'sync', 'runtime'),
   };
   clearMemoryBrowserCaches();
 });

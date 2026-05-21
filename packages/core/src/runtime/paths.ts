@@ -165,8 +165,6 @@ export function getDefaultRuntimeConfigRoot(): string {
  * Get the configured mutable runtime config root directory.
  */
 export function getRuntimeConfigRoot(): string {
-  const explicit = process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT;
-  if (explicit && explicit.trim().length > 0) return expandHomePath(explicit.trim());
   const legacyExplicit = process.env.NEON_PILOT_PROFILES_ROOT;
   return legacyExplicit && legacyExplicit.trim().length > 0 ? expandHomePath(legacyExplicit.trim()) : getDefaultRuntimeConfigRoot();
 }
@@ -296,8 +294,6 @@ export const getDefaultLocalProfileDir = getDefaultLocalRuntimeConfigDir;
  * Get the configured local overlay directory.
  */
 export function getLocalRuntimeConfigDir(): string {
-  const explicit = process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR;
-  if (explicit && explicit.trim().length > 0) return expandHomePath(explicit.trim());
   const legacyExplicit = process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
   return legacyExplicit && legacyExplicit.trim().length > 0 ? expandHomePath(legacyExplicit.trim()) : getDefaultLocalRuntimeConfigDir();
 }

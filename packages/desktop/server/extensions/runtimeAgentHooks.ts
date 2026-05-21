@@ -20,7 +20,7 @@ export function setRuntimeAgentHookBuilders(builders: {
 }
 
 function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
-  const runtimeScope = process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared';
+  const runtimeScope = 'shared';
   const resolved = resolveRuntimeResources(runtimeScope, {
     ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
   });
@@ -48,7 +48,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
 
   return [
     ...createManifestToolAgentExtensions({
-      getRuntimeScope: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
+      getRuntimeScope: () => 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {

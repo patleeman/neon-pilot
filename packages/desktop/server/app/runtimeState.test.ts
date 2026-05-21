@@ -122,7 +122,6 @@ describe('createRuntimeState', () => {
     authStorageMock.create.mockClear();
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
     delete process.env.NEON_PILOT_PROFILE;
-    delete process.env.NEON_PILOT_RUNTIME_SCOPE;
     delete process.env.NEON_PILOT_REPO_ROOT;
     delete process.env.NEON_PILOT_RESOURCES_ROOT;
   });
@@ -146,7 +145,6 @@ describe('createRuntimeState', () => {
     expect(state.getRuntimeScope()).toBe('shared');
     expect(process.env.NEON_PILOT_ACTIVE_PROFILE).toBeUndefined();
     expect(process.env.NEON_PILOT_PROFILE).toBeUndefined();
-    expect(process.env.NEON_PILOT_RUNTIME_SCOPE).toBe('shared');
     expect(process.env.NEON_PILOT_REPO_ROOT).toBeUndefined();
     expect(process.env.NEON_PILOT_RESOURCES_ROOT).toBe('/repo-root');
 

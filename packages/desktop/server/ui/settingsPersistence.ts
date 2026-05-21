@@ -8,7 +8,7 @@ const DEFAULT_LOCAL_RUNTIME_CONFIG_DIR = join(getConfigRoot(), 'local');
 export const DEFAULT_RUNTIME_SETTINGS_FILE = join(getPiAgentRuntimeDir(), 'settings.json');
 
 function readLocalProfileDir(explicitLocalProfileDir?: string): string {
-  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
 
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();
