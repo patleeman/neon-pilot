@@ -52,19 +52,21 @@ export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendC
   ]);
   const capabilities: RuntimeCapability[] = [
     ...extensions.map(extensionToCapability),
-    ...instructions.layers.map((layer) => ({
-      id: layer.id,
-      kind: 'instruction' as const,
-      title: layer.title,
-      ownerExtensionId: layer.source.extensionId,
-      source: layer.source as Record<string, unknown>,
-      scope: layer.scope,
-      enabled: true,
-      status: layer.diagnostics?.some((diagnostic) => (diagnostic as { severity?: string }).severity === 'error') ? 'error' : 'active',
-      priority: layer.priority,
-      metadata: { providerId: layer.providerId, risk: layer.risk, mutable: layer.mutable, contentLength: layer.content.length },
-      diagnostics: layer.diagnostics,
-    })),
+    ...instructions.layers
+      .filter((layer) => layer.providerId !== 'runtime-template')
+      .map((layer) => ({
+        id: layer.id,
+        kind: 'instruction' as const,
+        title: layer.title,
+        ownerExtensionId: layer.source.extensionId,
+        source: layer.source as Record<string, unknown>,
+        scope: layer.scope,
+        enabled: true,
+        status: layer.diagnostics?.some((diagnostic) => (diagnostic as { severity?: string }).severity === 'error') ? 'error' : 'active',
+        priority: layer.priority,
+        metadata: { providerId: layer.providerId, risk: layer.risk, mutable: layer.mutable, contentLength: layer.content.length },
+        diagnostics: layer.diagnostics,
+      })),
     ...skills.map((skill) => ({
       id: skill.id,
       kind: 'skill' as const,
