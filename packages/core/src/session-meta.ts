@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, sep } from 'path';
 
-import { getDurableSessionsDir, getPiAgentRuntimeDir } from './runtime/paths.js';
+import { getDurableSessionsDir, getPiAgentRuntimeDir, getPiAgentStateDir } from './runtime/paths.js';
 
 export interface StoredSessionMeta {
   id: string;
@@ -62,8 +62,9 @@ interface ConversationWorkspaceMetadata {
   workspaceCwd?: string | null;
 }
 
-function resolveDefaultSessionsDir(): string {
-  return getDurableSessionsDir();
+function resolveDefaultSessionsDirs(): string[] {
+  const dirs = [getDurableSessionsDir(), join(getPiAgentStateDir(), 'sessions')];
+  return [...new Set(dirs)];
 }
 
 function parseJsonLine(rawLine: string): RawLine | null {
@@ -295,8 +296,9 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): StoredSessi
 }
 
 export function listStoredSessions(options: { sessionsDir?: string } = {}): StoredSessionMeta[] {
-  const sessionsDir = options.sessionsDir ?? resolveDefaultSessionsDir();
-  const metas = listSessionFiles(sessionsDir)
+  const sessionsDirs = options.sessionsDir ? [options.sessionsDir] : resolveDefaultSessionsDirs();
+  const metas = sessionsDirs
+    .flatMap((sessionsDir) => listSessionFiles(sessionsDir))
     .map(({ filePath, cwdSlug }) => readSessionMetaFromFile(filePath, cwdSlug))
     .filter((meta): meta is StoredSessionMeta => meta !== null);
 

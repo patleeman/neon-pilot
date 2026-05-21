@@ -53,7 +53,7 @@ Instruction files are markdown files that define standing behavior and policy fo
 
 Docs are reusable reference material stored as markdown files anywhere under `<vault-root>`.
 
-Skills are reusable workflows stored under `<vault-root>/skills/<skill-name>/SKILL.md`, optionally with adjacent `mcp.json`, examples, or assets. Runtime skill discovery loads valid skill folders from the configured skill roots; skill metadata is reference material, not a visibility toggle. Any active skill can bundle MCP servers by placing `mcp.json` next to `SKILL.md`; discovery keys off that file, not a `*-mcp` naming scheme.
+Skills are reusable workflows stored under `<vault-root>/skills/<skill-name>/SKILL.md`, optionally with adjacent `mcp.json`, examples, or assets. Runtime skill discovery loads valid skill folders from the vault, configured skill roots, local overlays, and common platform locations such as `~/.claude/skills`, `~/.codex/skills`, `~/.config/codex/skills`, Pi/Neon Pilot knowledge-base mirrors, and `~/.config/agent-skills`. Skill metadata is reference material, not a visibility toggle. Any active skill can bundle MCP servers by placing `mcp.json` next to `SKILL.md`; discovery keys off that file, not a `*-mcp` naming scheme.
 
 Projects are structured work packages with milestones, tasks, and durable status. See [Projects](../../docs/projects.md).
 

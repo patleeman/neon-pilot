@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getDurableSessionsDir } from './runtime/paths.js';
+import { getDurableSessionsDir, getPiAgentStateDir } from './runtime/paths.js';
 import { listStoredSessions } from './session-meta.js';
 
 const tempDirs: string[] = [];
@@ -120,16 +120,17 @@ describe('listStoredSessions', () => {
     );
   });
 
-  it('defaults to the synced durable sessions directory for the active state root', () => {
+  it('defaults to both synced durable sessions and Pi agent sessions for the active state root', () => {
     const stateRoot = createTempDir('neon-pilot-session-meta-state-');
     process.env = {
       ...originalEnv,
       NEON_PILOT_STATE_ROOT: stateRoot,
     };
 
-    const sessionsDir = getDurableSessionsDir(stateRoot);
+    const durableSessionsDir = getDurableSessionsDir(stateRoot);
+    const piSessionsDir = join(getPiAgentStateDir(stateRoot), 'sessions');
     writeFile(
-      join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-09-00-000Z_synced.jsonl'),
+      join(durableSessionsDir, '--Users-patrick-project', '2026-03-12T12-09-00-000Z_synced.jsonl'),
       [
         JSON.stringify({ type: 'session', id: 'conv-synced', timestamp: '2026-03-12T12:09:00.000Z', cwd: '/Users/patrick/project' }),
         JSON.stringify({
@@ -139,14 +140,26 @@ describe('listStoredSessions', () => {
         }),
       ].join('\n') + '\n',
     );
-
-    expect(listStoredSessions()[0]).toEqual(
-      expect.objectContaining({
-        id: 'conv-synced',
-        file: join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-09-00-000Z_synced.jsonl'),
-        title: 'Loaded from synced root',
-      }),
+    writeFile(
+      join(piSessionsDir, '--Users-patrick-pi-project', '2026-03-12T12-10-00-000Z_pi.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 'conv-pi', timestamp: '2026-03-12T12:10:00.000Z', cwd: '/Users/patrick/pi-project' }),
+        JSON.stringify({
+          type: 'message',
+          timestamp: '2026-03-12T12:10:01.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Loaded from Pi sessions' }] },
+        }),
+      ].join('\n') + '\n',
     );
+
+    expect(listStoredSessions().map((session) => [session.id, session.file, session.title])).toEqual([
+      ['conv-pi', join(piSessionsDir, '--Users-patrick-pi-project', '2026-03-12T12-10-00-000Z_pi.jsonl'), 'Loaded from Pi sessions'],
+      [
+        'conv-synced',
+        join(durableSessionsDir, '--Users-patrick-project', '2026-03-12T12-09-00-000Z_synced.jsonl'),
+        'Loaded from synced root',
+      ],
+    ]);
   });
 
   it('falls back to slug-derived cwd, file mtimes, and string user content', () => {

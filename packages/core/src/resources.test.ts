@@ -89,7 +89,9 @@ describe('runtime resource loader', () => {
       join(local, 'agent', 'AGENTS.md'),
     ]);
     expect(resolved.settingsFiles).toEqual([join(runtimeConfigRoot, 'shared', 'settings.json'), join(local, 'agent', 'settings.json')]);
-    expect(resolved.skillDirs).toEqual([join(syncRoot, 'skills', 'datadog-skill'), join(syncRoot, 'skills', 'shared-skill')]);
+    expect(resolved.skillDirs).toEqual(
+      expect.arrayContaining([join(syncRoot, 'skills', 'datadog-skill'), join(syncRoot, 'skills', 'shared-skill')]),
+    );
     expect(resolved.extensionEntries).toEqual([]);
   });
 
@@ -155,7 +157,9 @@ describe('runtime resource loader', () => {
       localProfileDir: join(repo, '.local-profile'),
     });
 
-    expect(resolved.skillDirs).toEqual([join(syncRoot, 'skills', 'vault-skill'), join(externalSkillsDir, 'machine-skill')]);
+    expect(resolved.skillDirs).toEqual(
+      expect.arrayContaining([join(syncRoot, 'skills', 'vault-skill'), join(externalSkillsDir, 'machine-skill')]),
+    );
   });
 
   it('includes skill dirs regardless of profile metadata', () => {
@@ -182,7 +186,7 @@ metadata:
       localProfileDir: join(repo, '.local-profile'),
     });
 
-    expect(resolved.skillDirs).toEqual([join(syncRoot, 'skills', 'datadog-helper')]);
+    expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, 'skills', 'datadog-helper')]));
   });
 
   it('merges json files in layer order', () => {
@@ -330,6 +334,6 @@ description: Commit your work.
 
     expect(resolved.agentsFiles).toEqual([join(repo, 'defaults/agent/AGENTS.md')]);
     expect(resolved.settingsFiles).toContain(join(runtimeConfigRoot, 'shared', 'settings.json'));
-    expect(resolved.skillDirs).toEqual([join(syncRoot, '_skills', 'checkpoint')]);
+    expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, '_skills', 'checkpoint')]));
   });
 });

@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { homedir } from 'os';
 import { basename, dirname, join, resolve } from 'path';
 
 import { writeAppTelemetryEvent } from './app-telemetry-db.js';
@@ -6,6 +7,19 @@ import { getConfigRoot } from './runtime/paths.js';
 
 export const DEFAULT_RESUME_FALLBACK_PROMPT = 'Continue from where you left off.';
 export const DEFAULT_MACHINE_KNOWLEDGE_BASE_BRANCH = 'main';
+
+export function getDefaultMachineSkillDirs(): string[] {
+  const home = homedir();
+  return [
+    join(home, '.claude', 'skills'),
+    join(home, '.codex', 'skills'),
+    join(home, '.config', 'codex', 'skills'),
+    join(home, '.local', 'state', 'pi', 'knowledge-base', 'repo', 'skills'),
+    join(home, '.local', 'state', 'neon-pilot', 'knowledge-base', 'repo', 'skills'),
+    join(home, '.local', 'state', 'neon-pilot-rc', 'knowledge-base', 'repo', 'skills'),
+    join(home, '.config', 'agent-skills'),
+  ];
+}
 
 export type MachineConfigSectionKey = 'daemon' | 'ui';
 
@@ -333,7 +347,7 @@ export function writeMachineInstructionFiles(instructionFiles: string[], options
 }
 
 export function readMachineSkillDirs(options: MachineConfigOptions = {}): string[] {
-  return [...(readMachineConfig(options).skillDirs ?? [])];
+  return [...new Set([...getDefaultMachineSkillDirs(), ...(readMachineConfig(options).skillDirs ?? [])])];
 }
 
 export function writeMachineSkillDirs(skillDirs: string[], options: MachineConfigOptions = {}): MachineConfigDocument {
