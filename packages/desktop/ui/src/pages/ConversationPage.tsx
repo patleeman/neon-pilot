@@ -554,7 +554,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const selectedArtifactId = getConversationArtifactIdFromSearch(location.search);
   const selectedCheckpointId = getConversationCheckpointIdFromSearch(location.search);
   const selectedRunId = getConversationRunIdFromSearch(location.search);
-  const previousSelectedCheckpointIdRef = useRef<string | null | undefined>(undefined);
   const previousSelectedRunIdRef = useRef<string | null | undefined>(undefined);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
@@ -594,24 +593,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [location.pathname, location.search, navigate, selectedArtifactId],
   );
 
-  const openCheckpoint = useCallback(
-    (checkpointId: string) => {
-      setAppLayoutMode('workbench');
-      writeAppLayoutMode('workbench');
-
-      if (selectedCheckpointId === checkpointId) {
-        return;
-      }
-
-      const nextSearch = setConversationArtifactIdInSearch(setConversationCheckpointIdInSearch(location.search, checkpointId), null);
-
-      navigate({
-        pathname: location.pathname,
-        search: nextSearch,
-      });
-    },
-    [location.pathname, location.search, navigate, selectedCheckpointId],
-  );
+  const openCheckpoint = useCallback(() => undefined, []);
 
   const openRun = useCallback(
     (runId: string) => {
@@ -671,18 +653,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       window.removeEventListener('storage', handleAppLayoutModeChanged);
     };
   }, []);
-
-  useEffect(() => {
-    const previousSelectedCheckpointId = previousSelectedCheckpointIdRef.current;
-    previousSelectedCheckpointIdRef.current = selectedCheckpointId;
-
-    if (!selectedCheckpointId || selectedCheckpointId === previousSelectedCheckpointId || appLayoutMode === 'workbench') {
-      return;
-    }
-
-    setAppLayoutMode('workbench');
-    writeAppLayoutMode('workbench');
-  }, [appLayoutMode, selectedCheckpointId]);
 
   useEffect(() => {
     const previousSelectedRunId = previousSelectedRunIdRef.current;

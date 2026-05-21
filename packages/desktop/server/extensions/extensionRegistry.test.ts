@@ -123,13 +123,6 @@ describe('extension registry', () => {
         }),
         expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: { host: 'workbench.files.detail' } }),
         expect.objectContaining({
-          extensionId: 'system-diffs',
-          location: 'rightRail',
-          component: { host: 'workbench.diffs.rail' },
-          detailView: 'conversation-diff-detail',
-        }),
-        expect.objectContaining({ extensionId: 'system-diffs', location: 'workbench', component: { host: 'workbench.diffs.detail' } }),
-        expect.objectContaining({
           extensionId: 'system-runs',
           location: 'rightRail',
           component: { host: 'workbench.runs.rail' },

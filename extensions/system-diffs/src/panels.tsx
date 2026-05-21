@@ -1,15 +1,6 @@
-import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
-import {
-  ConversationCheckpointWorkbenchPane,
-  ConversationDiffRailContent,
-  getConversationCheckpointIdFromSearch,
-  readCheckpointPresentation,
-  setConversationCheckpointIdInSearch,
-  useConversationCheckpointSummaries,
-} from '@neon-pilot/extensions/workbench-diffs';
-import React, { useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
+import React from 'react';
 
 import { CheckpointToolBlock } from './CheckpointToolBlock.js';
 
@@ -96,47 +87,6 @@ export function CheckpointTranscriptRenderer({
       checkpoint={checkpoint}
       onOpenCheckpoint={context.onOpenCheckpoint}
       activeCheckpointId={context.activeCheckpointId}
-    />
-  );
-}
-
-export function ConversationDiffsPanel({ context }: ExtensionSurfaceProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { checkpoints, loading, error } = useConversationCheckpointSummaries(context.conversationId ?? null);
-  const activeCheckpointId = getConversationCheckpointIdFromSearch(searchParams.toString());
-  const handleOpenCheckpoint = useCallback(
-    (checkpointId: string) => {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.delete('file');
-        next.delete('artifact');
-        next.delete('run');
-        return new URLSearchParams(setConversationCheckpointIdInSearch(next.toString(), checkpointId));
-      });
-    },
-    [setSearchParams],
-  );
-
-  return (
-    <ConversationDiffRailContent
-      checkpoints={checkpoints}
-      activeCheckpointId={activeCheckpointId}
-      loading={loading}
-      error={error}
-      onOpenCheckpoint={handleOpenCheckpoint}
-      workspaceCwd={context.cwd ?? null}
-    />
-  );
-}
-
-export function ConversationDiffDetailPanel({ context }: ExtensionSurfaceProps) {
-  const checkpointId = getConversationCheckpointIdFromSearch(context.search);
-  return (
-    <ConversationCheckpointWorkbenchPane
-      conversationId={context.conversationId ?? null}
-      checkpointId={checkpointId}
-      onMissingCheckpoint={() => undefined}
-      workspaceCwd={context.cwd ?? null}
     />
   );
 }

@@ -5,7 +5,6 @@ import { useAppData, useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
-import { getConversationCheckpointIdFromSearch, setConversationCheckpointIdInSearch } from '../conversation/conversationCheckpoints';
 import { getConversationRunIdFromSearch, setConversationRunIdInSearch } from '../conversation/conversationRuns';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
@@ -36,7 +35,6 @@ import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
-import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { useConversationExecutionList } from './conversationRunHooks';
 import { DesktopTopBar } from './DesktopTopBar';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -66,12 +64,6 @@ const ConversationArtifactRailContent = lazyRouteWithRecovery('layout-artifact-r
 const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact-workbench', () =>
   import('./ConversationArtifactWorkbench').then((module) => ({ default: module.ConversationArtifactWorkbenchPane })),
 );
-const ConversationDiffRailContent = lazyRouteWithRecovery('layout-diff-rail', () =>
-  import('./ConversationCheckpointWorkbench').then((module) => ({ default: module.ConversationDiffRailContent })),
-);
-const ConversationCheckpointWorkbenchPane = lazyRouteWithRecovery('layout-checkpoint-workbench', () =>
-  import('./ConversationCheckpointWorkbench').then((module) => ({ default: module.ConversationCheckpointWorkbenchPane })),
-);
 const ConversationBackgroundWorkRailContent = lazyRouteWithRecovery('layout-background-work-rail', () =>
   import('./ConversationBackgroundWorkWorkbench').then((module) => ({ default: module.ConversationBackgroundWorkRailContent })),
 );
@@ -90,7 +82,7 @@ type DesktopLayoutShortcutAction =
   | 'show-conversation-mode'
   | 'show-workbench-mode';
 
-type BuiltInWorkbenchRailMode = 'files' | 'diffs' | 'artifacts' | 'browser' | 'runs';
+type BuiltInWorkbenchRailMode = 'files' | 'artifacts' | 'browser' | 'runs';
 type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
 type WorkbenchRailMode = BuiltInWorkbenchRailMode | ExtensionWorkbenchRailMode;
 
@@ -106,7 +98,6 @@ function inferSurfaceToolSlot(
   const explicitSlot = getSurfaceToolSlot(surface);
   if (explicitSlot) return explicitSlot;
   if (surface.extensionId === 'system-files') return 'files';
-  if (surface.extensionId === 'system-diffs') return 'diffs';
   if (surface.extensionId === 'system-artifacts') return 'artifacts';
   if (surface.extensionId === 'system-browser') return 'browser';
   if (surface.extensionId === 'system-runs') return 'runs';
@@ -125,18 +116,6 @@ export function resolveWorkbenchRailMode(
   surface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null | undefined,
 ): WorkbenchRailMode {
   return surface ? extensionToolPanelMode(surface) : builtInMode;
-}
-
-export function resolveDefaultDiffCheckpointId({
-  activeCheckpointId,
-  firstCheckpointId,
-  hasUncommittedDiff,
-}: {
-  activeCheckpointId: string | null;
-  firstCheckpointId: string | null;
-  hasUncommittedDiff: boolean;
-}): string | null {
-  return hasUncommittedDiff ? UNCOMMITTED_SENTINEL : (activeCheckpointId ?? firstCheckpointId);
 }
 
 function parseExtensionToolPanelMode(mode: WorkbenchRailMode): { extensionId: string; surfaceId: string } | null {
@@ -171,10 +150,6 @@ export function resolveActiveExtensionWorkbenchSurface({
       (surface) => surface.extensionId === activeRailSurface.extensionId && surface.id === activeRailSurface.detailView,
     ) ?? null
   );
-}
-
-export function isDiffsRailMode(mode: WorkbenchRailMode): boolean {
-  return mode === 'diffs' || mode.startsWith('extension:system-diffs:');
 }
 
 export function isArtifactsRailMode(mode: WorkbenchRailMode): boolean {
@@ -558,21 +533,15 @@ function getActiveConversationId(pathname: string): string | null {
 function WorkbenchDocumentPane({
   conversationId,
   artifactId,
-  checkpointId,
   runId,
   activeTool,
-  onMissingCheckpoint,
-  scrollToCheckpointFile,
   workspaceCwd,
   extensionWorkbenchSurface,
 }: {
   conversationId: string | null;
   artifactId: string | null;
-  checkpointId: string | null;
   runId: string | null;
   activeTool: WorkbenchRailMode;
-  onMissingCheckpoint: () => void;
-  scrollToCheckpointFile?: string | null;
   workspaceCwd?: string | null;
   extensionWorkbenchSurface: NativeExtensionViewSummary | null;
 }) {
@@ -583,20 +552,6 @@ function WorkbenchDocumentPane({
     return (
       <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading artifact…</div>}>
         <ConversationArtifactWorkbenchPane conversationId={conversationId} artifactId={artifactId} />
-      </Suspense>
-    );
-  }
-
-  if (activeTool === 'diffs' && conversationId) {
-    return (
-      <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading diff…</div>}>
-        <ConversationCheckpointWorkbenchPane
-          conversationId={conversationId}
-          checkpointId={checkpointId}
-          onMissingCheckpoint={onMissingCheckpoint}
-          scrollToFile={scrollToCheckpointFile}
-          workspaceCwd={workspaceCwd}
-        />
       </Suspense>
     );
   }
@@ -641,46 +596,35 @@ function WorkbenchKnowledgeRail({
   conversationId,
   workspaceCwd,
   activeArtifactId,
-  activeCheckpointId,
   activeRunId,
   activeTool,
   onActiveToolChange,
   onCheckpointSelect,
   onRunSelect,
   onWorkspaceFileClear,
-  onScrollToCheckpointFile,
   extensionToolPanels,
 }: {
   conversationId: string | null;
   workspaceCwd: string | null;
   activeArtifactId: string | null;
-  activeCheckpointId: string | null;
   activeRunId: string | null;
   activeTool: WorkbenchRailMode;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onRunSelect: (runId: string | null) => void;
   onWorkspaceFileClear: () => void;
-  onScrollToCheckpointFile?: (filePath: string) => void;
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
 }) {
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
   const { sessions, tasks, executions } = useAppData();
   const artifactsEnabled = isArtifactsRailMode(activeTool) || activeArtifactId !== null;
-  const diffsEnabled = isDiffsRailMode(activeTool) || activeCheckpointId !== null;
   const runsEnabled = isRunsRailMode(activeTool) || activeRunId !== null;
   const {
     artifacts,
     loading: artifactsLoading,
     error: artifactsError,
   } = useConversationArtifactSummaries(artifactsEnabled ? conversationId : null);
-  const {
-    checkpoints,
-    loading: checkpointsLoading,
-    error: checkpointsError,
-  } = useConversationCheckpointSummaries(diffsEnabled ? conversationId : null);
-  const { result: uncommittedResult } = useUncommittedDiff(diffsEnabled ? workspaceCwd : null);
   const runLookups = useMemo(() => ({ sessions, tasks }), [sessions, tasks]);
   const connectedExecutions = useConversationExecutionList(runsEnabled ? conversationId : null, executions);
   const activeRunConnected = activeRunId !== null && connectedExecutions.some((execution) => execution.id === activeRunId);
@@ -700,7 +644,6 @@ function WorkbenchKnowledgeRail({
   }, [activeTool, availableExtensionToolPanels]);
   const systemArtifactsExtensionSurface = findExtensionToolPanelBySlot(availableExtensionToolPanels, 'artifacts');
   const systemFilesExtensionSurface = findExtensionToolPanelBySlot(availableExtensionToolPanels, 'files');
-  const systemDiffsExtensionSurface = findExtensionToolPanelBySlot(availableExtensionToolPanels, 'diffs');
   const systemRunsExtensionSurface = findExtensionToolPanelBySlot(availableExtensionToolPanels, 'runs');
   const handleFileExplorerModeSelect = useCallback(() => {
     onActiveToolChange(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
@@ -715,37 +658,6 @@ function WorkbenchKnowledgeRail({
       return next;
     });
   }, [onActiveToolChange, onCheckpointSelect, onWorkspaceFileClear, setSearchParams, systemFilesExtensionSurface]);
-  const handleDiffsModeSelect = useCallback(() => {
-    const nextCheckpointId = resolveDefaultDiffCheckpointId({
-      activeCheckpointId,
-      firstCheckpointId: checkpoints[0]?.id ?? null,
-      hasUncommittedDiff: Boolean(uncommittedResult),
-    });
-    onActiveToolChange(systemDiffsExtensionSurface ? extensionToolPanelMode(systemDiffsExtensionSurface) : 'diffs');
-    onWorkspaceFileClear();
-    onCheckpointSelect(nextCheckpointId);
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete('file');
-      next.delete('artifact');
-      next.delete('run');
-      if (nextCheckpointId) {
-        next.set('checkpoint', nextCheckpointId);
-      } else {
-        next.delete('checkpoint');
-      }
-      return next;
-    });
-  }, [
-    activeCheckpointId,
-    checkpoints,
-    uncommittedResult,
-    onActiveToolChange,
-    onCheckpointSelect,
-    onWorkspaceFileClear,
-    setSearchParams,
-    systemDiffsExtensionSurface,
-  ]);
   const handleArtifactsModeSelect = useCallback(() => {
     const firstArtifactId = activeArtifactId ?? artifacts[0]?.id ?? null;
     onActiveToolChange(systemArtifactsExtensionSurface ? extensionToolPanelMode(systemArtifactsExtensionSurface) : 'artifacts');
@@ -783,21 +695,6 @@ function WorkbenchKnowledgeRail({
       return new URLSearchParams(setConversationRunIdInSearch(next.toString(), nextRunId));
     });
   }, [activeRunId, onActiveToolChange, onCheckpointSelect, onWorkspaceFileClear, setSearchParams, systemRunsExtensionSurface]);
-  const handleCheckpointSelect = useCallback(
-    (checkpointId: string) => {
-      onActiveToolChange('diffs');
-      onWorkspaceFileClear();
-      onCheckpointSelect(checkpointId);
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.delete('file');
-        next.delete('artifact');
-        next.delete('run');
-        return new URLSearchParams(setConversationCheckpointIdInSearch(next.toString(), checkpointId));
-      });
-    },
-    [onActiveToolChange, onCheckpointSelect, onWorkspaceFileClear, setSearchParams],
-  );
   const handleArtifactSelect = useCallback(
     (artifactId: string) => {
       onActiveToolChange('artifacts');
@@ -854,13 +751,6 @@ function WorkbenchKnowledgeRail({
   }, [activeArtifactId, artifacts.length, onActiveToolChange, onWorkspaceFileClear, systemArtifactsExtensionSurface]);
 
   useEffect(() => {
-    if (activeCheckpointId && checkpoints.some((checkpoint) => checkpoint.id === activeCheckpointId)) {
-      onActiveToolChange(systemDiffsExtensionSurface ? extensionToolPanelMode(systemDiffsExtensionSurface) : 'diffs');
-      onWorkspaceFileClear();
-    }
-  }, [activeCheckpointId, checkpoints, onActiveToolChange, onWorkspaceFileClear, systemDiffsExtensionSurface]);
-
-  useEffect(() => {
     if (activeRunId) {
       onActiveToolChange(resolveWorkbenchRailMode('runs', systemRunsExtensionSurface));
       onWorkspaceFileClear();
@@ -911,23 +801,6 @@ function WorkbenchKnowledgeRail({
     }
   }, [activeTool, artifacts.length, artifactsLoading, onActiveToolChange, setSearchParams, systemArtifactsExtensionSurface]);
 
-  useEffect(() => {
-    if (isDiffsRailMode(activeTool) && !activeCheckpointId && uncommittedResult) {
-      onCheckpointSelect(UNCOMMITTED_SENTINEL);
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          next.delete('file');
-          next.delete('artifact');
-          next.delete('run');
-          next.set('checkpoint', UNCOMMITTED_SENTINEL);
-          return next;
-        },
-        { replace: true },
-      );
-    }
-  }, [activeCheckpointId, activeTool, onCheckpointSelect, setSearchParams, uncommittedResult]);
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
       <div className="flex shrink-0 flex-col gap-1 px-1.5 py-1.5">
@@ -958,35 +831,6 @@ function WorkbenchKnowledgeRail({
           </svg>
           <span className="flex-1 text-left">File Explorer</span>
         </button>
-        {!systemDiffsExtensionSurface && (checkpoints.length > 0 || activeCheckpointId || uncommittedResult) ? (
-          <button
-            type="button"
-            className={cx('ui-sidebar-nav-item w-full text-left', activeTool === 'diffs' && 'ui-sidebar-nav-item-active')}
-            title="Diffs"
-            onClick={handleDiffsModeSelect}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="shrink-0 opacity-70"
-              aria-hidden="true"
-            >
-              <path d="M7.5 4.5v15" />
-              <path d="M16.5 4.5v15" />
-              <path d="M4.5 8.25h6" />
-              <path d="M13.5 15.75h6" />
-              <path d="M6 6.75 4.5 8.25 6 9.75" />
-              <path d="M18 14.25l1.5 1.5-1.5 1.5" />
-            </svg>
-            <span className="flex-1 text-left">Diffs</span>
-          </button>
-        ) : null}
         {!systemArtifactsExtensionSurface && artifacts.length > 0 ? (
           <button
             type="button"
@@ -1050,19 +894,16 @@ function WorkbenchKnowledgeRail({
                 'ui-sidebar-nav-item w-full text-left',
                 (activeTool === extensionToolPanelMode(surface) ||
                   (inferSurfaceToolSlot(surface) === 'runs' && isRunsRailMode(activeTool)) ||
-                  (inferSurfaceToolSlot(surface) === 'diffs' && isDiffsRailMode(activeTool)) ||
                   (inferSurfaceToolSlot(surface) === 'artifacts' && isArtifactsRailMode(activeTool))) &&
                   'ui-sidebar-nav-item-active',
               )}
               title={labelForExtensionToolPanel(surface)}
               onClick={() =>
-                inferSurfaceToolSlot(surface) === 'diffs'
-                  ? handleDiffsModeSelect()
-                  : inferSurfaceToolSlot(surface) === 'artifacts'
-                    ? handleArtifactsModeSelect()
-                    : inferSurfaceToolSlot(surface) === 'runs'
-                      ? handleRunsModeSelect()
-                      : handleExtensionToolPanelSelect(surface)
+                inferSurfaceToolSlot(surface) === 'artifacts'
+                  ? handleArtifactsModeSelect()
+                  : inferSurfaceToolSlot(surface) === 'runs'
+                    ? handleRunsModeSelect()
+                    : handleExtensionToolPanelSelect(surface)
               }
             >
               <span className="w-[15px] shrink-0 text-center text-[12px] opacity-70" aria-hidden="true">
@@ -1098,20 +939,6 @@ function WorkbenchKnowledgeRail({
               loading={artifactsLoading}
               error={artifactsError}
               onOpenArtifact={handleArtifactSelect}
-            />
-          </Suspense>
-        </div>
-      ) : activeTool === 'diffs' && !systemDiffsExtensionSurface ? (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <Suspense fallback={<div className="px-3 py-2 text-[12px] text-dim">Loading diffs…</div>}>
-            <ConversationDiffRailContent
-              checkpoints={checkpoints}
-              activeCheckpointId={activeCheckpointId}
-              loading={checkpointsLoading}
-              error={checkpointsError}
-              onOpenCheckpoint={handleCheckpointSelect}
-              onScrollToFile={onScrollToCheckpointFile}
-              workspaceCwd={workspaceCwd}
             />
           </Suspense>
         </div>
@@ -1166,7 +993,6 @@ export function Layout() {
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const [activeWorkbenchTool, setActiveWorkbenchTool] = useState<WorkbenchRailMode>('files');
-  const [selectedCheckpointByConversation, setSelectedCheckpointByConversation] = useState<Record<string, string | null>>({});
   const [selectedToolByConversation, setSelectedToolByConversation] = useState<Record<string, WorkbenchRailMode>>({});
   const [selectedFileByConversation, setSelectedFileByConversation] = useState<Record<string, string | null>>({});
   const [selectedWorkspaceFileByConversation, setSelectedWorkspaceFileByConversation] = useState<Record<string, string | null>>({});
@@ -1216,10 +1042,6 @@ export function Layout() {
   });
   const [railOpen, setRailOpen] = useState(true);
   const [workbenchExplorerOpen, setWorkbenchExplorerOpen] = useState(() => readStoredWorkbenchExplorerOpen());
-  const [scrollToCheckpointFile, setScrollToCheckpointFile] = useState<string | null>(null);
-  const handleCheckpointFileScroll = useCallback((filePath: string) => {
-    setScrollToCheckpointFile(filePath);
-  }, []);
   const pageSearchRootRef = useRef<HTMLDivElement | null>(null);
   const [registeredRightRailControl, setRegisteredRightRailControl] = useState<DesktopRightRailControl | null>(null);
   const railWidth = rail.width;
@@ -1277,16 +1099,11 @@ export function Layout() {
     showWorkbench && activeConversationId
       ? (getConversationArtifactIdFromSearch(location.search) ?? selectedArtifactByConversation[activeConversationId] ?? null)
       : null;
-  const activeWorkbenchCheckpointFromSearch =
-    showWorkbench && activeConversationId ? getConversationCheckpointIdFromSearch(location.search) : null;
   const activeWorkbenchRunFromSearchParam = showWorkbench && activeConversationId ? getConversationRunIdFromSearch(location.search) : null;
   const activeWorkbenchRunFromSearch =
     showWorkbench && activeConversationId
       ? (activeWorkbenchRunFromSearchParam ?? selectedRunByConversation[activeConversationId] ?? null)
       : null;
-  const activeWorkbenchCheckpointId = activeConversationId
-    ? (activeWorkbenchCheckpointFromSearch ?? selectedCheckpointByConversation[activeConversationId] ?? null)
-    : null;
   const activeWorkbenchRunId = activeConversationId ? activeWorkbenchRunFromSearch : null;
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const activeWorkspaceCwd = resolveActiveWorkspaceCwd(sessions, activeConversationId);
@@ -1304,10 +1121,6 @@ export function Layout() {
   );
   const systemBrowserExtensionSurface = useMemo(
     () => findExtensionToolPanelBySlot(extensionRightToolPanels, 'browser'),
-    [extensionRightToolPanels],
-  );
-  const systemDiffsExtensionSurface = useMemo(
-    () => findExtensionToolPanelBySlot(extensionRightToolPanels, 'diffs'),
     [extensionRightToolPanels],
   );
   const systemRunsExtensionSurface = useMemo(
@@ -1501,32 +1314,6 @@ export function Layout() {
     lastWorkbenchRouteRef.current = { pathname: location.pathname, search: location.search };
   }, [extensionRegistry.surfaces, location.pathname, location.search]);
 
-  const setActiveConversationCheckpoint = useCallback(
-    (checkpointId: string | null) => {
-      if (!activeConversationId) {
-        return;
-      }
-
-      setSelectedCheckpointByConversation((current) => ({
-        ...current,
-        [activeConversationId]: checkpointId,
-      }));
-    },
-    [activeConversationId],
-  );
-
-  const clearActiveConversationCheckpoint = useCallback(() => {
-    setActiveConversationCheckpoint(null);
-    setSearchParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        next.delete('checkpoint');
-        return next;
-      },
-      { replace: true },
-    );
-  }, [setActiveConversationCheckpoint, setSearchParams]);
-
   const setActiveConversationRun = useCallback((_runId: string | null) => {
     // Run selection is URL-backed.
   }, []);
@@ -1658,18 +1445,6 @@ export function Layout() {
   }, [activeConversationId, location.search, setActiveConversationTool]);
 
   useEffect(() => {
-    if (!activeConversationId || !activeWorkbenchCheckpointFromSearch) {
-      return;
-    }
-
-    setSelectedCheckpointByConversation((current) => ({
-      ...current,
-      [activeConversationId]: activeWorkbenchCheckpointFromSearch,
-    }));
-    setActiveConversationTool(systemDiffsExtensionSurface ? extensionToolPanelMode(systemDiffsExtensionSurface) : 'diffs');
-  }, [activeConversationId, activeWorkbenchCheckpointFromSearch, systemDiffsExtensionSurface]);
-
-  useEffect(() => {
     if (!activeConversationId || !activeWorkbenchRunFromSearchParam) {
       return;
     }
@@ -1717,11 +1492,6 @@ export function Layout() {
         return;
       }
 
-      if (activeWorkbenchCheckpointId) {
-        clearActiveConversationCheckpoint();
-        return;
-      }
-
       if (activeWorkbenchRunId) {
         setSearchParams(
           (current) => {
@@ -1737,15 +1507,7 @@ export function Layout() {
 
     window.addEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
     return () => window.removeEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
-  }, [
-    activeWorkbenchArtifactId,
-    activeWorkbenchCheckpointId,
-    activeWorkbenchKnowledgeFileId,
-    activeWorkbenchRunId,
-    activeWorkbenchWorkspaceFileId,
-    clearActiveConversationCheckpoint,
-    setSearchParams,
-  ]);
+  }, [activeWorkbenchArtifactId, activeWorkbenchKnowledgeFileId, activeWorkbenchRunId, activeWorkbenchWorkspaceFileId, setSearchParams]);
 
   useEffect(() => {
     if (commandPaletteMounted) {
@@ -1984,7 +1746,6 @@ export function Layout() {
                         activeWorkbenchKnowledgeFileId ||
                         activeWorkbenchWorkspaceFileId ||
                         activeWorkbenchArtifactId ||
-                        activeWorkbenchCheckpointId ||
                         activeWorkbenchRunId ||
                         activeWorkbenchTool === 'browser' ||
                         activeExtensionWorkbenchSurface
@@ -1995,11 +1756,8 @@ export function Layout() {
                       <WorkbenchDocumentPane
                         conversationId={activeConversationId}
                         artifactId={activeWorkbenchArtifactId}
-                        checkpointId={activeWorkbenchCheckpointId}
                         runId={activeWorkbenchRunId}
                         activeTool={activeWorkbenchTool}
-                        onMissingCheckpoint={clearActiveConversationCheckpoint}
-                        scrollToCheckpointFile={scrollToCheckpointFile}
                         workspaceCwd={activeWorkspaceCwd}
                         extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
                       />
@@ -2016,14 +1774,12 @@ export function Layout() {
                             conversationId={activeConversationId}
                             workspaceCwd={activeWorkspaceCwd}
                             activeArtifactId={activeWorkbenchArtifactId}
-                            activeCheckpointId={activeWorkbenchCheckpointId}
                             activeRunId={activeWorkbenchRunId}
                             activeTool={activeWorkbenchTool}
                             onActiveToolChange={setActiveConversationTool}
-                            onCheckpointSelect={setActiveConversationCheckpoint}
+                            onCheckpointSelect={() => undefined}
                             onRunSelect={setActiveConversationRun}
                             onWorkspaceFileClear={clearActiveWorkspaceFile}
-                            onScrollToCheckpointFile={handleCheckpointFileScroll}
                             extensionToolPanels={extensionRightToolPanels}
                           />
                         </aside>

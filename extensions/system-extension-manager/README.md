@@ -70,7 +70,7 @@ Native system extensions include:
 - `system-gateways` owns `/gateways` while the core app keeps gateway state and APIs. It lives under `experimental-extensions/extensions/` and is default-disabled until enabled.
 - `system-telemetry` owns `/telemetry` while telemetry collection remains core infrastructure.
 - `system-files` owns the workspace File Explorer rail and paired workbench file detail view while workspace filesystem APIs remain core infrastructure.
-- `system-diffs` owns the conversation Diffs rail and paired workbench detail view while checkpoint persistence remains core infrastructure.
+- `system-diffs` owns the checkpoint tool and inline transcript diff rendering while checkpoint persistence remains core infrastructure.
 - `system-runs` owns the conversation Runs rail and paired workbench detail view while durable run execution remains core infrastructure.
 - `system-settings` owns deep links for first-party settings subpanels while settings persistence remains core infrastructure.
 
@@ -79,7 +79,7 @@ Native system extensions include:
 Native extension views declare host intent with `placement`, `scope`, and `activation`.
 
 - `placement: "primary"` — stable left-sidebar destination plus main page route. Use for global app pages like Automations, Gateways, Telemetry, Settings, Extensions, and standalone Knowledge.
-- `placement: "workbench-tool"` — right rail tool, usually with a paired workbench detail pane. Use for side-by-side surfaces like Knowledge tree/editor, Browser tabs, File Explorer, Diffs, Runs, and Artifacts.
+- `placement: "workbench-tool"` — right rail tool, usually with a paired workbench detail pane. Use for side-by-side surfaces like Knowledge tree/editor, Browser tabs, File Explorer, Runs, and Artifacts.
 
 `scope` binds the view data: `global`, `workspace`, or `conversation`. `activation` controls lifecycle: `on-route` for routed pages, `on-open` for rail surfaces, `always` only for tiny host services, and `on-demand` for backend/tool-only work.
 

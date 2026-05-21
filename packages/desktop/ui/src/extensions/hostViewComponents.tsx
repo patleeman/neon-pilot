@@ -38,12 +38,6 @@ const componentLoaders: Record<string, () => Promise<{ default: ExtensionHostVie
   'workbench.artifacts.detail': async () => ({
     default: (await import('../../../../../extensions/system-artifacts/src/panels')).ArtifactDetailPanel as ExtensionHostViewComponent,
   }),
-  'workbench.diffs.rail': async () => ({
-    default: (await import('../../../../../extensions/system-diffs/src/panels')).ConversationDiffsPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.diffs.detail': async () => ({
-    default: (await import('../../../../../extensions/system-diffs/src/panels')).ConversationDiffDetailPanel as ExtensionHostViewComponent,
-  }),
   'workbench.files.rail': async () => ({
     default: (await import('../../../../../extensions/system-files/src/panels')).WorkspaceFilesPanel as ExtensionHostViewComponent,
   }),

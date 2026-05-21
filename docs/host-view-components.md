@@ -172,8 +172,6 @@ The canonical catalog lives in `@neon-pilot/extensions/host-view-components` and
 | ---------------------------- | ---------------------- | ----------- | ----- | -------------- |
 | `workbench.artifacts.rail`   | Artifacts rail         | `rightRail` | none  | `wrapper`      |
 | `workbench.artifacts.detail` | Artifact detail        | `workbench` | none  | `wrapper`      |
-| `workbench.diffs.rail`       | Diffs rail             | `rightRail` | none  | `wrapper`      |
-| `workbench.diffs.detail`     | Diff detail            | `workbench` | none  | `wrapper`      |
 | `workbench.files.rail`       | Workspace files rail   | `rightRail` | none  | `wrapper`      |
 | `workbench.files.detail`     | Workspace file detail  | `workbench` | none  | `wrapper`      |
 | `workbench.runs.rail`        | Background work rail   | `rightRail` | none  | `wrapper`      |

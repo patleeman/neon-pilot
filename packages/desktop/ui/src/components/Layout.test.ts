@@ -4,13 +4,11 @@ import type { SessionMeta } from '../shared/types';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
   isArtifactsRailMode,
-  isDiffsRailMode,
   isRunsRailMode,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
   resolveActiveExtensionWorkbenchSurface,
   resolveActiveWorkspaceCwd,
-  resolveDefaultDiffCheckpointId,
   resolveWorkbenchRailMode,
   shouldResetEmptyArtifactsRail,
   shouldResetEmptyRunsRail,
@@ -150,12 +148,6 @@ describe('Layout workbench rail state', () => {
     ).toEqual({ extensionId: 'system-browser', id: 'browser-workbench' });
   });
 
-  it('recognizes extension-backed diffs as diffs rail mode', () => {
-    expect(isDiffsRailMode('diffs')).toBe(true);
-    expect(isDiffsRailMode('extension:system-diffs:conversation-diffs')).toBe(true);
-    expect(isDiffsRailMode('extension:system-files:file-explorer')).toBe(false);
-  });
-
   it('recognizes extension-backed artifacts as artifacts rail mode', () => {
     expect(isArtifactsRailMode('artifacts')).toBe(true);
     expect(isArtifactsRailMode('extension:system-artifacts:conversation-artifacts')).toBe(true);
@@ -166,19 +158,6 @@ describe('Layout workbench rail state', () => {
     expect(isRunsRailMode('runs')).toBe(true);
     expect(isRunsRailMode('extension:system-runs:conversation-runs')).toBe(true);
     expect(isRunsRailMode('extension:system-files:file-explorer')).toBe(false);
-  });
-
-  it('defaults the diffs rail to uncommitted changes when present', () => {
-    expect(
-      resolveDefaultDiffCheckpointId({
-        activeCheckpointId: 'saved-checkpoint',
-        firstCheckpointId: 'newest-checkpoint',
-        hasUncommittedDiff: true,
-      }),
-    ).toBe('__uncommitted__');
-    expect(
-      resolveDefaultDiffCheckpointId({ activeCheckpointId: null, firstCheckpointId: 'newest-checkpoint', hasUncommittedDiff: false }),
-    ).toBe('newest-checkpoint');
   });
 
   it('clears workbench-only diff and run params when switching to compact mode', () => {

@@ -65,15 +65,14 @@ Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the right rail with `
 
 In Workbench mode, the right rail nav tabs include:
 
-| Tab           | Description                       |
-| ------------- | --------------------------------- |
-| File Explorer | Project file tree browser         |
-| Diffs         | Checkpoint diffs and file changes |
-| Artifacts     | Rendered HTML, Mermaid, LaTeX     |
-| Runs          | Background runs and subagents     |
-| Browser       | Embedded webview                  |
+| Tab           | Description                   |
+| ------------- | ----------------------------- |
+| File Explorer | Project file tree browser     |
+| Artifacts     | Rendered HTML, Mermaid, LaTeX |
+| Runs          | Background runs and subagents |
+| Browser       | Embedded webview              |
 
-Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are context-sensitive — Diffs, Artifacts, and Runs only appear when the conversation has relevant data. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are context-sensitive — Artifacts and Runs only appear when the conversation has relevant data. Checkpoint diffs render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
 
 ## Keyboard Shortcuts
 

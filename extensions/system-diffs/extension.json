@@ -61,33 +61,6 @@
         "tool": "checkpoint",
         "component": "CheckpointTranscriptRenderer"
       }
-    ],
-    "views": [
-      {
-        "id": "conversation-diffs",
-        "title": "Diffs",
-        "location": "rightRail",
-        "scope": "conversation",
-        "component": {
-          "host": "workbench.diffs.rail"
-        },
-        "icon": "diff",
-        "detailView": "conversation-diff-detail",
-        "placement": "workbench-tool",
-        "activation": "on-open",
-        "toolSlot": "diffs"
-      },
-      {
-        "id": "conversation-diff-detail",
-        "title": "Diff detail",
-        "location": "workbench",
-        "component": {
-          "host": "workbench.diffs.detail"
-        },
-        "placement": "workbench-tool",
-        "scope": "conversation",
-        "activation": "on-open"
-      }
     ]
   },
   "permissions": ["conversations:read", "storage:read"]

@@ -130,9 +130,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Transcript renderer: artifact tool block.
 - Test create/update/open/delete, list ordering, malformed artifact content, sandboxing, render errors.
 
-### Diffs/checkpoints (`system-diffs`)
+### Checkpoints (`system-diffs`)
 
-- Views: Diffs right rail, Diff detail workbench.
 - Agent tool/action: `checkpoint` with `save`, `get`, `list`; targeted `paths`, `message`, `checkpointId`.
 - Transcript renderer: checkpoint pinned/tool block.
 - Test targeted commits only, no unrelated files, get/list, diff rendering, large diff, binary file, error from dirty/conflicting state.
@@ -379,10 +378,9 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
 - backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
 
-### system-diffs — Diffs
+### system-diffs — Checkpoints
 
 - tools: checkpoint
-- views: conversation-diffs, conversation-diff-detail
 - transcriptRenderers: checkpoint-tool-block for checkpoint
 - backend actions: checkpoint
 
