@@ -6,12 +6,12 @@ Analyze video files using a video-capable model. The agent calls `probe_video` w
 
 ### OpenRouter (default)
 
-Calls the OpenRouter API with any video-capable model. Requires an API key.
+Calls the OpenRouter API with any video-capable model. Requires an OpenRouter key configured in Settings → Providers or `OPENROUTER_API_KEY`.
 
 **Setup:**
 
-1. Settings → Video Probe → Backend: OpenRouter
-2. Settings → Video Probe → OpenRouter API Key (or set `OPENROUTER_API_KEY` env var)
+1. Configure OpenRouter in Settings → Providers (or set `OPENROUTER_API_KEY`)
+2. Settings → Video Probe → Backend: OpenRouter
 3. Optionally change the model (default: `google/gemini-2.5-flash`)
 
 Good video-capable models on OpenRouter:

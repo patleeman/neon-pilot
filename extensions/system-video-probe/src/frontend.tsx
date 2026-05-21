@@ -15,6 +15,7 @@ type Status = {
   server: ServerHealth & { listening?: boolean };
   process: ProcessState;
   settings: Settings;
+  openrouterAuth?: { configured: boolean; source: 'stored' | 'environment' | 'none' };
   log: string;
 };
 
@@ -142,6 +143,7 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   const runtimeInstalled = status?.runtimeInstalled ?? false;
   const currentBackend = status?.settings.backend ?? 'openrouter';
   const serverEnabled = serverReachable || serverRunning;
+  const openrouterAuth = status?.openrouterAuth;
 
   const statusLabel =
     busy ??
@@ -310,9 +312,20 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                 </div>
               </Field>
               <div className="rounded-md border border-border-subtle bg-elevated p-3 text-xs text-secondary">
-                Uses your existing OpenRouter API key from Pi's provider settings — no separate key needed. The model must support video
-                input (e.g. <span className="font-mono text-primary">google/gemini-2.5-flash</span>,{' '}
-                <span className="font-mono text-primary">qwen/qwen3.5-35b-a3b</span>).
+                {!openrouterAuth ? (
+                  <>Checking OpenRouter API key status…</>
+                ) : openrouterAuth.configured ? (
+                  <>
+                    OpenRouter key detected from {openrouterAuth.source === 'environment' ? 'OPENROUTER_API_KEY' : 'provider settings'}. The
+                    model must support video input (e.g. <span className="font-mono text-primary">google/gemini-2.5-flash</span>,{' '}
+                    <span className="font-mono text-primary">qwen/qwen3.5-35b-a3b</span>).
+                  </>
+                ) : (
+                  <>
+                    No OpenRouter API key detected. Configure OpenRouter in Settings → Providers, or set{' '}
+                    <span className="font-mono text-primary">OPENROUTER_API_KEY</span>. The model must support video input.
+                  </>
+                )}
               </div>
             </div>
           ) : null}

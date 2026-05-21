@@ -50,6 +50,11 @@ interface VideoProbeSettings {
   hfToken: string;
 }
 
+interface OpenRouterAuthStatus {
+  configured: boolean;
+  source: 'stored' | 'environment' | 'none';
+}
+
 const DEFAULT_SETTINGS: VideoProbeSettings = {
   backend: 'openrouter',
   cloudModel: 'google/gemini-2.5-flash',
@@ -75,6 +80,27 @@ function loadSettings(): VideoProbeSettings {
 function saveSettings(settings: VideoProbeSettings): void {
   mkdirSync(CACHE_DIR, { recursive: true });
   writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+}
+
+function readOpenRouterAuthStatus(runtimeDir: string): OpenRouterAuthStatus {
+  if (process.env.OPENROUTER_API_KEY?.trim()) {
+    return { configured: true, source: 'environment' };
+  }
+
+  try {
+    const authFile = join(runtimeDir, 'auth.json');
+    if (!existsSync(authFile)) return { configured: false, source: 'none' };
+    const raw = JSON.parse(readFileSync(authFile, 'utf8')) as Record<string, unknown>;
+    const credential = raw.openrouter as { type?: unknown; key?: unknown; access?: unknown; accessToken?: unknown } | undefined;
+    const hasApiKey = credential?.type === 'api_key' && typeof credential.key === 'string' && credential.key.trim().length > 0;
+    const hasOAuthToken =
+      credential?.type === 'oauth' &&
+      ((typeof credential.access === 'string' && credential.access.trim().length > 0) ||
+        (typeof credential.accessToken === 'string' && credential.accessToken.trim().length > 0));
+    return hasApiKey || hasOAuthToken ? { configured: true, source: 'stored' } : { configured: false, source: 'none' };
+  } catch {
+    return { configured: false, source: 'none' };
+  }
 }
 
 export async function readSettings(_input: unknown, _ctx: ExtensionBackendContext) {
@@ -186,6 +212,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     server: health,
     process: { serverPid, serverRunning: serverRunning || health.reachable, setupPid, setupRunning },
     settings,
+    openrouterAuth: readOpenRouterAuthStatus(ctx.runtimeDir),
     log: readLog(),
   };
 }
