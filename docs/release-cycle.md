@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.6** — current repo version. Published successfully.
+**v0.9.0-rc.8** — current repo version. Published successfully.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.6
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.8
 
 Highlights in this train:
 
-- Adds the agent-browser extension with a built-in browser tool for automated web interaction, default-disabled until configured.
-- Hardens Alleycat mobile bridge with streaming command events, better process lifecycle, mobile file search improvements, and auth edge coverage.
-- Improves startup performance: defers non-critical font loading (97KB reduction in critical CSS) and adds an inline loading indicator for immediate visual feedback.
-- Fixes forked conversation sidebar tree stability, solid context menu backgrounds, build channel badge visibility, and video probe provider settings linking.
-- Moves extension templates to docs/ and excludes them from runtime discovery.
+- Stabilizes the IPC-backed desktop runtime after the client rewrite, including live-session snapshots, local API behavior, and extension routing coverage.
+- Hardens automation callbacks so scheduled tasks, deferred resumes, and background-run wakeups write attention events into the correct profile state root.
+- Improves settings, chat, and extension smoke coverage to match current UI copy, streaming controls, and installed extension inventory.
+- Fixes provider credential checks so stale empty credentials no longer count as usable authentication.
+- Updates release smoke checks for the current local API surface and adds runtime smoke coverage for the self-preservation extension.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
