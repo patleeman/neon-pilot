@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0-rc.6 — 2026-05-21
+
+### Highlights
+
+- Adds the agent-browser extension with a built-in browser tool for automated web interaction, default-disabled until configured.
+- Hardens Alleycat mobile bridge with streaming command events, better process lifecycle, mobile file search improvements, and auth edge coverage.
+- Improves startup performance: defers non-critical font loading (97KB reduction in critical CSS) and adds an inline loading indicator for immediate visual feedback.
+- Fixes forked conversation sidebar tree stability, solid context menu backgrounds, build channel badge visibility, and video probe provider settings linking.
+- Moves extension templates to docs/ and excludes them from runtime discovery.
+
+### Notes
+
+- 20 commits since the previous release.
+
 ## 0.9.0-rc.5 — 2026-05-20
 
 ### Highlights
