@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "id": "system-self-preservation",
+  "name": "Self Preservation",
+  "packageType": "system",
+  "description": "Blocks the agent from killing its own process.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "agentExtension": "createSelfPreservationAgentExtension"
+  },
+  "permissions": []
+}
