@@ -1310,17 +1310,17 @@ function TelemetryLogsSettingsPanel() {
   return (
     <SettingsPanel
       title="Telemetry logs"
-      description="Raw app telemetry is stored as JSONL files first; SQLite is only the query index."
+      description="Review recent local diagnostics, open the log folder, or export a bundle for troubleshooting."
       actions={
         <>
           <button type="button" className={ACTION_BUTTON_CLASS} onClick={openLogFolder} disabled={!data?.logDir || action !== null}>
             {action === 'open' ? 'Opening…' : 'Open log folder'}
           </button>
           <button type="button" className={ACTION_BUTTON_CLASS} onClick={exportLogs} disabled={action !== null}>
-            {action === 'export' ? 'Exporting…' : 'Export JSONL bundle'}
+            {action === 'export' ? 'Exporting…' : 'Export diagnostics bundle'}
           </button>
           <button type="button" className={ACTION_BUTTON_CLASS} onClick={maintainTelemetryDb} disabled={action !== null}>
-            {action === 'maintain' ? 'Pruning…' : 'Prune/vacuum DB'}
+            {action === 'maintain' ? 'Cleaning…' : 'Clean up telemetry index'}
           </button>
         </>
       }
