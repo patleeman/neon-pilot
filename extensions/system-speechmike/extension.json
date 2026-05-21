@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "id": "system-speechmike",
+  "name": "SpeechMike",
+  "packageType": "system",
+  "description": "Direct Philips SpeechMike HID event integration for hands-free dictation controls.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      { "id": "status", "handler": "status", "title": "SpeechMike status" },
+      { "id": "start", "handler": "start", "title": "Start SpeechMike monitor" },
+      { "id": "stop", "handler": "stop", "title": "Stop SpeechMike monitor" }
+    ],
+    "services": [{ "id": "monitor", "handler": "startService", "healthCheck": "status", "restart": "on-failure" }]
+  },
+  "contributes": {
+    "settingsComponent": {
+      "id": "speechmike",
+      "component": "SpeechMikeSettingsPanel",
+      "sectionId": "settings-speechmike",
+      "label": "SpeechMike",
+      "description": "Connect Philips SpeechMike hardware events directly to Neon Pilot commands.",
+      "order": 31
+    }
+  },
+  "permissions": ["shell:execute"]
+}
