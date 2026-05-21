@@ -3,116 +3,129 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#050508" />
+    <meta name="theme-color" content="#06060b" />
     <meta name="description" content="A self-extensible desktop agent harness, powered by the Pi Coding Agent." />
     <title>Neon Pilot</title>
     <link rel="icon" href="./icon-color.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
 
     <header>
+      <a class="brand" href="#main" aria-label="Neon Pilot home">
+        <img src="./icon-color.svg" alt="" width="18" height="18" />
+        Neon Pilot
+      </a>
       <nav aria-label="Primary">
-        <a class="brand" href="#main" aria-label="Neon Pilot home">
-          <img src="./icon-color.svg" alt="" width="18" height="18" />
-          Neon Pilot
-        </a>
-        <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub &nearr;</a>
       </nav>
     </header>
 
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
-        <h1 id="hero-title">Neon Pilot</h1>
-        <p class="tagline">A desktop agent harness that gets sharper every time you use it.</p>
-        <p class="desc">
-          It wraps the <a href="https://pi.dev/">Pi Coding Agent</a> with persistent conversations, local tools, background automations, and
-          a first-class extension system. Teach it a workflow, package it, and future sessions pick it up automatically.
+        <div class="hero-glow" aria-hidden="true">
+          <img src="./icon-color.svg" alt="" width="320" height="320" />
+        </div>
+        <h1 id="hero-title">
+          Your agent<br />
+          should <em>remember</em>.
+        </h1>
+        <p class="hero-sub">
+          Neon Pilot is a desktop runtime for AI agents with persistent conversations, callable tools, background automations, and
+          extensions. Teach it a workflow once&nbsp;&mdash; it sticks.
         </p>
-        <div class="actions">
+        <div class="cta-row">
           <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-          <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub</a>
+          <a class="btn" href="https://github.com/patleeman/neon-pilot">View source</a>
         </div>
       </section>
 
-      <section class="about" aria-labelledby="about-title">
-        <h2 id="about-title">What it is</h2>
-        <div class="about-grid">
-          <div class="about-copy">
-            <p>
-              Neon Pilot is a local Electron app. Conversations persist. Tools are callable. Extensions are first-class packages that add
-              pages, panels, commands, MCP servers, and custom workflows. Core stays small &mdash; everything else lives in extensions.
-            </p>
-            <p>The same agent that builds Neon Pilot also uses it. Skills, tools, and automations accumulate in the workspace over time.</p>
+      <section id="how-it-works" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <p class="section-intro">
+          Most agent UIs forget everything between sessions. Neon Pilot wraps the
+          <a href="https://pi.dev/">Pi Coding Agent</a> in a local runtime where context, tools, and workflows are durable.
+        </p>
+        <div class="steps">
+          <div class="step">
+            <span class="step-marker" aria-hidden="true">1</span>
+            <div>
+              <h3>Build a workflow</h3>
+              <p>Talk to the agent. It reads files, runs commands, holds context, and works in the background.</p>
+            </div>
           </div>
-          <div class="about-meta">
-            <dl>
-              <div>
-                <dt>License</dt>
-                <dd>MIT</dd>
-              </div>
-              <div>
-                <dt>Runtime</dt>
-                <dd>Electron + SQLite</dd>
-              </div>
-              <div>
-                <dt>Stack</dt>
-                <dd>TypeScript, React</dd>
-              </div>
-              <div>
-                <dt>Engine</dt>
-                <dd>Pi Coding Agent</dd>
-              </div>
-            </dl>
+          <div class="step">
+            <span class="step-marker" aria-hidden="true">2</span>
+            <div>
+              <h3>Package it</h3>
+              <p>Turn useful patterns into skills, tools, or extensions. The extension system is first-class.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-marker" aria-hidden="true">3</span>
+            <div>
+              <h3>It sticks</h3>
+              <p>Future sessions discover the capability automatically. The agent gets sharper every time you use it.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="features" aria-labelledby="features-title">
-        <h2 id="features-title">The pieces agents actually need</h2>
-        <ol>
-          <li>
-            <h3>Persistent threads</h3>
-            <p>Context, branches, run history, and follow-ups survive across sessions. The agent remembers what it was doing and why.</p>
-          </li>
-          <li>
-            <h3>Skills &amp; tools</h3>
-            <p>Write repeatable workflows as skills the agent can invoke. Expose safe callable capabilities through the tool system.</p>
-          </li>
-          <li>
-            <h3>Background runs</h3>
-            <p>Kick off durable work, inspect logs, and resume the conversation when it matters. No babysitting required.</p>
-          </li>
-          <li>
-            <h3>Extensions</h3>
-            <p>
-              Add pages, panels, commands, MCP servers, and workflows. Everything is a package &mdash; core never becomes a junk drawer.
-            </p>
-          </li>
-        </ol>
-      </section>
-
-      <section class="demo" aria-labelledby="demo-title">
-        <h2 id="demo-title">What it looks like</h2>
+      <section class="demo-section" aria-labelledby="demo-title">
+        <h2 id="demo-title" class="sr-only">Product demo</h2>
         <div class="terminal">
-          <div class="terminal-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="term-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span class="term-title">Neon Pilot</span>
+          </div>
           <pre><code><span class="p">&gt;</span> build me a browser tool
 
-<span class="d">  reading</span>  system-browser/README.md
-<span class="d">  writing</span>  extensions/system-browser/tool.json
-<span class="d">  running</span>  pnpm run check:extensions:quick
-<span class="d">  commit</span>   feat: add browser tool
+<span class="d">  reading</span>   system-browser/README.md
+<span class="d">  writing</span>   extensions/system-browser/tool.json
+<span class="d">  running</span>   pnpm run check:extensions:quick
+<span class="d">  commit</span>    feat: add browser tool
 
 <span class="ok">&check;</span> Browser tool installed.
 <span class="ok">&check;</span> Reloaded agent context.
 <span class="ok">&check;</span> New tool available in this session.</code></pre>
         </div>
+        <p class="demo-caption">
+          The agent reads extension docs, wires the manifest, validates, and checkpoints. The new tool appears without a restart.
+        </p>
+      </section>
+
+      <section class="features-section" aria-labelledby="features-title">
+        <h2 id="features-title">The pieces agents need</h2>
+        <ul class="feature-list">
+          <li><strong>Persistent threads</strong> &mdash; Context, branches, run history, and follow-ups survive across sessions.</li>
+          <li>
+            <strong>Skills &amp; tools</strong> &mdash; Write repeatable workflows as skills. Expose safe callable capabilities through the
+            tool system.
+          </li>
+          <li><strong>Background runs</strong> &mdash; Kick off durable work, inspect logs, and resume when it matters.</li>
+          <li>
+            <strong>Extensions</strong> &mdash; Add pages, panels, commands, MCP servers, and workflows as packages. Core stays small.
+          </li>
+          <li><strong>Knowledge base</strong> &mdash; Durable docs, skills, and instruction files synced to a git-backed vault.</li>
+        </ul>
+      </section>
+
+      <section class="bottom-cta" aria-labelledby="bottom-cta-title">
+        <h2 id="bottom-cta-title">Install it. Use it. Teach it.</h2>
+        <div class="cta-row">
+          <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+          <a class="btn" href="https://github.com/patleeman/neon-pilot">View source</a>
+        </div>
       </section>
     </main>
 
     <footer>
-      <span>Patrick Lee &middot; MIT License</span>
+      <span>Patrick Lee &middot; MIT</span>
       <div>
         <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
         <a href="https://github.com/patleeman/neon-pilot/releases">Releases</a>
