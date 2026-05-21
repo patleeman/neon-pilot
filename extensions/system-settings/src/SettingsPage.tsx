@@ -1013,56 +1013,49 @@ function CommandsSettingsSection() {
   }
 
   return (
-    <SettingsPanel title="Commands" description="Search actions and assign keyboard shortcuts. Any command can have a user keybinding.">
-      <div className="space-y-4">
-        <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
-        {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
-        <div className="divide-y divide-border-subtle/70">
-          {visibleRows.map((command) => (
-            <div key={commandDisplayId(command)} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_22rem] sm:items-start">
-              <div className="min-w-0 space-y-1">
-                <div className="text-[13px] font-medium text-primary">{command.title ?? commandDisplayId(command)}</div>
-                <div className="font-mono text-[11px] text-dim">{commandDisplayId(command)}</div>
-                <div className="text-[12px] text-secondary">
-                  {command.category ?? 'Command'} · {command.extensionId ?? 'host'}
-                </div>
-              </div>
-              <div className="space-y-2">
-                {command.keybindings.map((keybinding) => {
-                  const id = keybindingSettingId(keybinding);
-                  const value = drafts[id] ?? keybinding.keys.join(', ');
-                  const busy = busyId === id;
-                  return (
-                    <div key={id} className="flex flex-wrap items-center justify-end gap-2">
-                      <KeyboardShortcutCaptureInput
-                        id={`settings-command-keybinding-${id}`}
-                        value={keybinding.enabled ? value : 'Disabled'}
-                        disabled={busy || !keybinding.enabled}
-                        onChange={(shortcut) => {
-                          setDrafts((current) => ({ ...current, [id]: shortcut }));
-                          void saveKeybinding(keybinding, shortcut);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={ACTION_BUTTON_CLASS}
-                        disabled={busy}
-                        onClick={() => void toggleKeybinding(keybinding)}
-                      >
-                        {keybinding.enabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </div>
-                  );
-                })}
+    <div className="space-y-4">
+      <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
+      {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
+      <div className="divide-y divide-border-subtle/70">
+        {visibleRows.map((command) => (
+          <div key={commandDisplayId(command)} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_22rem] sm:items-start">
+            <div className="min-w-0 space-y-1">
+              <div className="text-[13px] font-medium text-primary">{command.title ?? commandDisplayId(command)}</div>
+              <div className="font-mono text-[11px] text-dim">{commandDisplayId(command)}</div>
+              <div className="text-[12px] text-secondary">
+                {command.category ?? 'Command'} · {command.extensionId ?? 'host'}
               </div>
             </div>
-          ))}
-        </div>
-        {!loading && visibleRows.length === 0 ? <p className="ui-card-meta">No commands match that search.</p> : null}
-        {error ? <p className="text-[12px] text-danger">{error}</p> : null}
-        {notice ? <p className="text-[12px] text-success">{notice}</p> : null}
+            <div className="space-y-2">
+              {command.keybindings.map((keybinding) => {
+                const id = keybindingSettingId(keybinding);
+                const value = drafts[id] ?? keybinding.keys.join(', ');
+                const busy = busyId === id;
+                return (
+                  <div key={id} className="flex flex-wrap items-center justify-end gap-2">
+                    <KeyboardShortcutCaptureInput
+                      id={`settings-command-keybinding-${id}`}
+                      value={keybinding.enabled ? value : 'Disabled'}
+                      disabled={busy || !keybinding.enabled}
+                      onChange={(shortcut) => {
+                        setDrafts((current) => ({ ...current, [id]: shortcut }));
+                        void saveKeybinding(keybinding, shortcut);
+                      }}
+                    />
+                    <button type="button" className={ACTION_BUTTON_CLASS} disabled={busy} onClick={() => void toggleKeybinding(keybinding)}>
+                      {keybinding.enabled ? 'Disable' : 'Enable'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
-    </SettingsPanel>
+      {!loading && visibleRows.length === 0 ? <p className="ui-card-meta">No commands match that search.</p> : null}
+      {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+      {notice ? <p className="text-[12px] text-success">{notice}</p> : null}
+    </div>
   );
 }
 
@@ -1110,43 +1103,41 @@ function ExtensionsSettingsSection() {
   }
 
   return (
-    <SettingsPanel title="Extensions" description="Enable, disable, and inspect installed product modules.">
-      <div className="space-y-4">
-        <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search extensions…" />
-        {loading ? <p className="ui-card-meta">Loading extensions…</p> : null}
-        <div className="divide-y divide-border-subtle/70">
-          {visible.map((extension) => (
-            <div key={extension.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
-              <div className="min-w-0 space-y-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-[13px] font-medium text-primary">{extension.name}</span>
-                  <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-dim">
-                    {extension.packageType ?? 'user'}
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] text-dim">{extension.id}</div>
-                <div className="text-[12px] text-secondary">{extension.description ?? 'No description provided.'}</div>
-                {extension.status === 'invalid' || extension.errors?.length || extension.buildError ? (
-                  <div className="text-[12px] text-danger">{extension.errors?.[0] ?? extension.buildError ?? 'Invalid extension'}</div>
-                ) : null}
+    <div className="space-y-4">
+      <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search extensions…" />
+      {loading ? <p className="ui-card-meta">Loading extensions…</p> : null}
+      <div className="divide-y divide-border-subtle/70">
+        {visible.map((extension) => (
+          <div key={extension.id} className="grid gap-3 py-3 first:pt-0 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
+            <div className="min-w-0 space-y-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-[13px] font-medium text-primary">{extension.name}</span>
+                <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-dim">
+                  {extension.packageType ?? 'user'}
+                </span>
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className={ACTION_BUTTON_CLASS}
-                  disabled={busyId === extension.id || extension.status === 'invalid'}
-                  onClick={() => void toggleExtension(extension)}
-                >
-                  {extension.enabled ? 'Disable' : 'Enable'}
-                </button>
-              </div>
+              <div className="font-mono text-[11px] text-dim">{extension.id}</div>
+              <div className="text-[12px] text-secondary">{extension.description ?? 'No description provided.'}</div>
+              {extension.status === 'invalid' || extension.errors?.length || extension.buildError ? (
+                <div className="text-[12px] text-danger">{extension.errors?.[0] ?? extension.buildError ?? 'Invalid extension'}</div>
+              ) : null}
             </div>
-          ))}
-        </div>
-        {!loading && visible.length === 0 ? <p className="ui-card-meta">No extensions match that search.</p> : null}
-        {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className={ACTION_BUTTON_CLASS}
+                disabled={busyId === extension.id || extension.status === 'invalid'}
+                onClick={() => void toggleExtension(extension)}
+              >
+                {extension.enabled ? 'Disable' : 'Enable'}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
-    </SettingsPanel>
+      {!loading && visible.length === 0 ? <p className="ui-card-meta">No extensions match that search.</p> : null}
+      {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+    </div>
   );
 }
 
