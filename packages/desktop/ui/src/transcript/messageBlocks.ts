@@ -80,3 +80,17 @@ export function mergeHydratedStreamBlocks(blocks: MessageBlock[], hydratedBlocks
     return normalizedId ? (hydratedBlocks[normalizedId] ?? block) : block;
   });
 }
+
+export function mergeHistoricalAndStreamBlocks(historicalBlocks: MessageBlock[], streamBlocks: MessageBlock[]): MessageBlock[] {
+  if (historicalBlocks.length === 0) return streamBlocks;
+  if (streamBlocks.length === 0) return historicalBlocks;
+
+  const historicalIds = new Set(
+    historicalBlocks.map((block) => block.id?.trim()).filter((id): id is string => typeof id === 'string' && id.length > 0),
+  );
+  if (historicalIds.size === 0) {
+    return [...historicalBlocks, ...streamBlocks];
+  }
+
+  return [...historicalBlocks, ...streamBlocks.filter((block) => !block.id?.trim() || !historicalIds.has(block.id.trim()))];
+}

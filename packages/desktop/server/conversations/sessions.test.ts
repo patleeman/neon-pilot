@@ -2086,7 +2086,7 @@ describe('sessions', () => {
       }),
     );
 
-    // For forks, the backlink is at the end (the fork point), not the beginning.
+    // Synthetic child files without copied parent entry ids still fall back to the end.
     const childBlocks = readSessionBlocks('fork-child-session')?.blocks ?? [];
     expect(childBlocks[childBlocks.length - 1]).toEqual(
       expect.objectContaining({
@@ -2095,6 +2095,57 @@ describe('sessions', () => {
         text: expect.stringContaining('Fork conversation from parent: Fork parent session'),
       }),
     );
+  });
+
+  it('keeps child backlink anchored at the rewind point after later messages', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'rewind-parent-session',
+      title: 'Rewind parent session',
+      assistantTexts: ['Parent reply'],
+    });
+    const sourceManager = SessionManager.open(parentSessionFile);
+    const parentMessageId = sourceManager.getLeafId();
+    expect(parentMessageId).toBeTruthy();
+    const childSessionFile = sourceManager.createBranchedSession(parentMessageId!);
+    expect(childSessionFile).toBeTruthy();
+    appendFileSync(
+      childSessionFile!,
+      `${JSON.stringify({
+        type: 'message',
+        id: 'rewind-child-later-user',
+        parentId: parentMessageId,
+        timestamp: '2026-03-11T12:00:10.000Z',
+        message: { role: 'user', content: 'Later child prompt' },
+      })}\n${JSON.stringify({
+        type: 'message',
+        id: 'rewind-child-later-assistant',
+        parentId: 'rewind-child-later-user',
+        timestamp: '2026-03-11T12:00:11.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'Later child reply' }] },
+      })}\n`,
+    );
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile!,
+      kind: 'rewind',
+      parentSessionFile,
+      parentSessionId: 'rewind-parent-session',
+      parentMessageId: parentMessageId!,
+    });
+
+    const childId = SessionManager.open(childSessionFile!).getSessionId();
+    expect(childId).toBeTruthy();
+    const childBlocks = readSessionBlocks(childId!)?.blocks ?? [];
+    const anchorIndex = childBlocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+    const laterReplyIndex = childBlocks.findIndex((block) => block.type === 'text' && block.text === 'Later child reply');
+    const backlinkIndex = childBlocks.findIndex((block) => block.type === 'context' && block.customType === 'parent_conversation_backlink');
+
+    expect(backlinkIndex).toBe(anchorIndex + 1);
+    expect(backlinkIndex).toBeLessThan(laterReplyIndex);
   });
 
   it('anchors tombstone when parentMessageId is the bare entry id (assistant block suffix stripped)', () => {

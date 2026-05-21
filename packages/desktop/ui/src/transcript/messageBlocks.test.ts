@@ -4,6 +4,7 @@ import type { DisplayBlock, MessageBlock } from '../shared/types';
 import {
   addHydratingHistoricalBlockId,
   buildHydratingHistoricalBlockIdSet,
+  mergeHistoricalAndStreamBlocks,
   mergeHydratedHistoricalBlocks,
   mergeHydratedStreamBlocks,
   normalizeHistoricalBlockId,
@@ -54,5 +55,22 @@ describe('message block hydration helpers', () => {
     };
 
     expect(mergeHydratedStreamBlocks([streamBlock], { 'block-1': hydrated })).toEqual([hydrated]);
+  });
+
+  it('does not duplicate historical blocks when live stream bootstrap overlaps', () => {
+    const historicalBlocks: MessageBlock[] = [
+      { type: 'text', id: 'assistant-1-x0', ts: '2026-04-01T00:00:00.000Z', text: 'already rendered' },
+      { type: 'context', id: 'topology-parent-child', ts: '2026-04-01T00:00:01.000Z', text: '← Rewound from parent' },
+    ];
+    const streamBlocks: MessageBlock[] = [
+      { type: 'text', id: ' assistant-1-x0 ', ts: '2026-04-01T00:00:00.000Z', text: 'already rendered' },
+      { type: 'user', id: 'user-2', ts: '2026-04-01T00:00:02.000Z', text: 'new prompt' },
+    ];
+
+    expect(mergeHistoricalAndStreamBlocks(historicalBlocks, streamBlocks)).toEqual([
+      historicalBlocks[0],
+      historicalBlocks[1],
+      streamBlocks[1],
+    ]);
   });
 });

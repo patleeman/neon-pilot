@@ -1502,9 +1502,17 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
     customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
     text: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
   };
-  // For forks and rewinds, place the backlink at the end (the fork point) rather than
-  // the top. The user scrolls to the bottom to see where the conversation diverged.
+  // For forks and rewinds, place the backlink immediately after the source entry
+  // when the child still contains that copied history. Appending it to the end makes
+  // the marker drift downward as the child conversation grows or reloads.
   if (kind === 'fork' || kind === 'rewind' || kind === 'duplicate') {
+    const parentMessageId = meta.parentMessageId?.trim();
+    if (parentMessageId) {
+      const anchorIndex = blocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+      if (anchorIndex >= 0) {
+        return [...blocks.slice(0, anchorIndex + 1), backlink, ...blocks.slice(anchorIndex + 1)];
+      }
+    }
     return [...blocks, backlink];
   }
   return [backlink, ...blocks];
