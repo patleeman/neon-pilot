@@ -1256,7 +1256,7 @@ export function Layout() {
 
     window.addEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
     return () => window.removeEventListener(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT, handleWorkbenchCloseActiveFile);
-  }, [activeWorkbenchArtifactId, activeWorkbenchKnowledgeFileId, activeWorkbenchRunId, activeWorkbenchWorkspaceFileId, setSearchParams]);
+  }, [activeWorkbenchArtifactId, activeWorkbenchKnowledgeFileId, activeWorkbenchWorkspaceFileId, setSearchParams]);
 
   useEffect(() => {
     if (commandPaletteMounted) {
