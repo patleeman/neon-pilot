@@ -10,12 +10,7 @@ import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/d
 import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
 import { ExtensionModalHost } from '../extensions/ExtensionModalHost';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
-import {
-  COMMAND_KEYBINDINGS_CHANGED_EVENT,
-  type CustomCommandKeybindingRegistration,
-  findMatchingExtensionKeybinding,
-  readCustomCommandKeybindings,
-} from '../extensions/keybindings';
+import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import {
   type ExtensionCommandRegistration,
@@ -867,9 +862,7 @@ export function Layout() {
   const [registeredRightRailControl, setRegisteredRightRailControl] = useState<DesktopRightRailControl | null>(null);
   const railWidth = rail.width;
   const extensionRegistry = useExtensionRegistry();
-  const [extensionKeybindings, setExtensionKeybindings] = useState<
-    Array<ExtensionKeybindingRegistration | CustomCommandKeybindingRegistration>
-  >([]);
+  const [extensionKeybindings, setExtensionKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
   const canShowContextRail = !routeSupportsContextRail(location.pathname, extensionRegistry.surfaces);
 
@@ -1071,7 +1064,7 @@ export function Layout() {
       Promise.all([api.extensionKeybindings(), api.extensionCommands()])
         .then(([keybindings, commands]) => {
           if (!cancelled) {
-            setExtensionKeybindings([...keybindings, ...readCustomCommandKeybindings()]);
+            setExtensionKeybindings(keybindings);
             setExtensionCommands(commands);
           }
         })
@@ -1084,11 +1077,9 @@ export function Layout() {
     };
     load();
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
-    window.addEventListener(COMMAND_KEYBINDINGS_CHANGED_EVENT, load);
     return () => {
       cancelled = true;
       window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
-      window.removeEventListener(COMMAND_KEYBINDINGS_CHANGED_EVENT, load);
     };
   }, [versions.extensions]);
 

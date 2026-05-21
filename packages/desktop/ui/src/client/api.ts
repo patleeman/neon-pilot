@@ -1345,7 +1345,8 @@ export const api = {
   },
 
   executeLiveSessionBash: async (id: string, command: string, options?: { excludeFromContext?: boolean }) =>
-    post<{ ok: boolean; result: unknown }>(`/live-sessions/${encodeURIComponent(id)}/bash`, {
+    (await requireLocalDesktopConversationBridge(id, 'Running live-session bash commands')).executeLiveSessionBash({
+      conversationId: id,
       command,
       excludeFromContext: options?.excludeFromContext,
     }),

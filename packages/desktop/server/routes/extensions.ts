@@ -445,6 +445,11 @@ export function registerExtensionRoutes(
       setExtensionKeybinding({
         extensionId: req.params.extensionId,
         keybindingId: req.params.keybindingId,
+        ...(typeof req.body?.title === 'string' ? { title: req.body.title } : {}),
+        ...(typeof req.body?.command === 'string' ? { command: req.body.command } : {}),
+        ...(req.body?.args !== undefined ? { args: req.body.args } : {}),
+        ...(req.body?.scope === 'global' || req.body?.scope === 'surface' ? { scope: req.body.scope } : {}),
+        ...(req.body?.packageType === 'system' || req.body?.packageType === 'user' ? { packageType: req.body.packageType } : {}),
         ...(Array.isArray(req.body?.keys) ? { keys: req.body.keys } : {}),
         ...(typeof req.body?.enabled === 'boolean' ? { enabled: req.body.enabled } : {}),
         ...(typeof req.body?.reset === 'boolean' ? { reset: req.body.reset } : {}),

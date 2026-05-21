@@ -3,9 +3,6 @@ import { api } from '@neon-pilot/extensions/data';
 import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const COMMAND_KEYBINDINGS_CHANGED_EVENT = 'neon-pilot-command-keybindings-changed';
-const CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY = 'neon-pilot.commandKeybindings.v1';
-
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 type Filter = 'all' | CapabilityKind | 'active' | 'disabled' | 'issues';
 
@@ -107,7 +104,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       .then(([commandItems, keybindingItems]) => {
         if (!cancelled) {
           setCommands(commandItems as CommandInspectorEntry[]);
-          setKeybindings([...(keybindingItems as KeybindingInspectorEntry[]), ...readCustomCommandKeybindings()]);
+          setKeybindings(keybindingItems as KeybindingInspectorEntry[]);
         }
       })
       .catch(() => {
@@ -220,11 +217,15 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     const id = keybindingId(keybinding);
     setBusyId(id);
     try {
-      if (keybinding.extensionId === 'host' || keybinding.surfaceId.startsWith('custom:')) {
-        writeCustomCommandKeybinding({ ...keybinding, keys, enabled: true });
-      } else {
-        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { keys, enabled: true });
-      }
+      await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
+        title: keybinding.title,
+        command: keybinding.command,
+        args: keybinding.args,
+        scope: keybinding.scope,
+        packageType: keybinding.packageType,
+        keys,
+        enabled: true,
+      });
       setKeybindings((items) => items.map((item) => (keybindingId(item) === id ? { ...item, keys, enabled: true } : item)));
       setKeybindingDraft((current) => ({ ...current, [id]: keys.join(', ') }));
     } catch (err) {
@@ -240,11 +241,14 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     const enabled = !keybinding.enabled;
     setBusyId(id);
     try {
-      if (keybinding.extensionId === 'host' || keybinding.surfaceId.startsWith('custom:')) {
-        writeCustomCommandKeybinding({ ...keybinding, enabled });
-      } else {
-        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { enabled });
-      }
+      await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, {
+        title: keybinding.title,
+        command: keybinding.command,
+        args: keybinding.args,
+        scope: keybinding.scope,
+        packageType: keybinding.packageType,
+        enabled,
+      });
       setKeybindings((items) => items.map((item) => (keybindingId(item) === id ? { ...item, enabled } : item)));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -735,17 +739,13 @@ function keybindingId(keybinding: KeybindingInspectorEntry): string {
   return `${keybinding.extensionId}:${keybinding.surfaceId}`;
 }
 
-function customKeybindingId(keybinding: Pick<KeybindingInspectorEntry, 'extensionId' | 'surfaceId'>): string {
-  return `${keybinding.extensionId}:${keybinding.surfaceId}`;
-}
-
 function customKeybindingForCommand(command: CommandInspectorEntry): KeybindingInspectorEntry {
   const commandId = command.extensionId
     ? `${command.extensionId}.${command.id ?? command.surfaceId ?? ''}`
     : (command.id ?? command.surfaceId ?? '');
   return {
     extensionId: command.extensionId ?? 'host',
-    surfaceId: `custom:${commandId}`,
+    surfaceId: `command:${commandId}`,
     title: command.title ?? commandId,
     keys: [],
     command: commandId,
@@ -755,36 +755,6 @@ function customKeybindingForCommand(command: CommandInspectorEntry): KeybindingI
     defaultKeys: [],
     packageType: command.extensionId ? 'user' : 'system',
   };
-}
-
-function readCustomCommandKeybindings(): KeybindingInspectorEntry[] {
-  try {
-    const raw = window.localStorage.getItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter(isKeybindingInspectorEntry) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCustomCommandKeybinding(next: KeybindingInspectorEntry): void {
-  const current = readCustomCommandKeybindings().filter((item) => customKeybindingId(item) !== customKeybindingId(next));
-  window.localStorage.setItem(CUSTOM_COMMAND_KEYBINDINGS_STORAGE_KEY, JSON.stringify([...current, next]));
-  window.dispatchEvent(new CustomEvent(COMMAND_KEYBINDINGS_CHANGED_EVENT));
-}
-
-function isKeybindingInspectorEntry(value: unknown): value is KeybindingInspectorEntry {
-  const record = asRecord(value);
-  return (
-    typeof record.extensionId === 'string' &&
-    typeof record.surfaceId === 'string' &&
-    typeof record.title === 'string' &&
-    Array.isArray(record.keys) &&
-    record.keys.every((key) => typeof key === 'string') &&
-    typeof record.command === 'string' &&
-    (record.scope === 'global' || record.scope === 'surface') &&
-    typeof record.enabled === 'boolean'
-  );
 }
 
 function keybindingMatchesCommand(keybinding: KeybindingInspectorEntry, command: CommandInspectorEntry): boolean {

@@ -11,6 +11,7 @@ import {
   listExtensionAssemblyProviderRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
+  listExtensionKeybindingRegistrations,
   listExtensionModelProfileRegistrations,
   listExtensionPromptAssemblyHookRegistrations,
   listExtensionSkillRegistrations,
@@ -22,9 +23,38 @@ import {
   recordExtensionFailure,
   resolveExtensionModelProfile,
   setExtensionEnabled,
+  setExtensionKeybinding,
 } from './extensionRegistry.js';
 
 describe('extension registry', () => {
+  it('persists custom keybindings for arbitrary commands', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+
+    setExtensionKeybinding({
+      extensionId: 'host',
+      keybindingId: 'command:palette.open',
+      title: 'Open Command Palette',
+      command: 'palette.open',
+      packageType: 'system',
+      scope: 'global',
+      keys: ['CommandOrControl+P'],
+      enabled: true,
+      stateRoot,
+    });
+
+    expect(listExtensionKeybindingRegistrations(stateRoot)).toContainEqual(
+      expect.objectContaining({
+        extensionId: 'host',
+        surfaceId: 'command:palette.open',
+        title: 'Open Command Palette',
+        command: 'palette.open',
+        keys: ['CommandOrControl+P'],
+        enabled: true,
+        packageType: 'system',
+      }),
+    );
+  });
+
   it('resolves enabled model profiles by provider/model glob and priority', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const registryRoot = join(stateRoot, 'extensions');
