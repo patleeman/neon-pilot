@@ -14,35 +14,20 @@ import type {
   ExtensionSurfaceSummary,
 } from '../extensions/types';
 import type {
-  AppStatus,
   AppTelemetryEventRow,
   AppTelemetryLogBundleExport,
   AppTelemetryLogDiagnostics,
   CacheEfficiencyAggregate,
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
-  ConversationArtifactRecord,
-  ConversationArtifactSummary,
   ConversationAttachmentAssetData,
-  ConversationAttachmentRecord,
-  ConversationAttachmentSummary,
-  ConversationAutomationWorkspaceState,
-  ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
-  ConversationCommitCheckpointSummary,
   ConversationContentSearchResult,
   ConversationContextDocRef,
   ConversationSummaryRecord,
-  DaemonState,
-  DefaultCwdState,
-  DeferredResumeSummary,
   DesktopEnvironmentState,
-  DisplayBlock,
-  DurableRunDetailResult,
-  DurableRunListResult,
   FilePickerResult,
-  FolderPickerResult,
   GatewayProviderId,
   GatewayState,
   GatewayStatus,
@@ -50,18 +35,9 @@ import type {
   InstructionFilesState,
   LiveSessionMeta,
   MemoryData,
-  ModelProviderState,
-  ModelState,
   PromptAttachmentRefInput,
   PromptImageInput,
-  ProviderAuthState,
-  ProviderOAuthLoginState,
-  ScheduledTaskDetail,
-  ScheduledTaskSchedulerHealth,
-  ScheduledTaskSummary,
   SecretsState,
-  SessionDetailResult,
-  SessionMeta,
   SkillFoldersState,
   SystemPromptAggregate,
   SystemPromptPoint,
@@ -195,19 +171,6 @@ async function readApiError(res: Response, path?: string): Promise<string> {
   return `${res.status} ${res.statusText}${path ? ` from ${path}` : ''}${preview ? `: ${preview}` : ''}`;
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let index = 0; index < bytes.length; index += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-  }
-  return btoa(binary);
-}
-
-async function blobToDataUrl(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  return `data:${blob.type || 'application/octet-stream'};base64,${bytesToBase64(bytes)}`;
-}
-
 const pendingMemoryRequests = new Map<string, Promise<MemoryData>>();
 let desktopEnvironmentPromise: Promise<DesktopEnvironmentState | null> | null = null;
 
@@ -272,12 +235,6 @@ async function shouldUseDesktopLocalConversationCapabilities(_conversationId: st
   return Boolean(getDesktopBridge()) && (await shouldUseDesktopLocalCapabilities());
 }
 
-const MAX_TRANSCRIPT_TAIL_BLOCKS = 10000;
-
-function normalizeTailBlocksParam(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(MAX_TRANSCRIPT_TAIL_BLOCKS, value) : undefined;
-}
-
 export function normalizeDurableRunLogTailParam(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(1000, value) : undefined;
 }
@@ -293,18 +250,10 @@ export function normalizeVaultSearchLimit(value: unknown): number {
 export const api = {
   // ── Core ──────────────────────────────────────────────────────────────────
   status: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readAppStatus();
-    }
-    return get<AppStatus>('/status');
+    return (await requireLocalDesktopBridge('Reading app status')).readAppStatus();
   },
   daemon: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readDaemonState();
-    }
-    return get<DaemonState>('/daemon');
+    return (await requireLocalDesktopBridge('Reading daemon state')).readDaemonState();
   },
   extensions: async () => get<ExtensionManifest[]>('/extensions'),
   extensionInstallations: async () => get<ExtensionInstallSummary[]>('/extensions/installed'),
@@ -408,18 +357,10 @@ export const api = {
   exportExtension: async (extensionId: string) =>
     post<{ ok: true; extensionId: string; exportPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/export`),
   sessions: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readSessions();
-    }
-    return get<SessionMeta[]>('/sessions');
+    return (await requireLocalDesktopBridge('Reading sessions')).readSessions();
   },
   sessionMeta: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readSessionMeta(id);
-    }
-    return get<SessionMeta>(`/sessions/${encodeURIComponent(id)}/meta`);
+    return (await requireLocalDesktopBridge('Reading session metadata')).readSessionMeta(id);
   },
   sessionDetail: async (
     id: string,
@@ -431,45 +372,13 @@ export const api = {
       knownLastBlockId?: string;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readSessionDetail({ sessionId: id, ...options });
-    }
-
-    const params = new URLSearchParams();
-    const tailBlocks = normalizeTailBlocksParam(options?.tailBlocks);
-    if (tailBlocks !== undefined) {
-      params.set('tailBlocks', String(tailBlocks));
-    }
-    if (typeof options?.knownSessionSignature === 'string' && options.knownSessionSignature.trim().length > 0) {
-      params.set('knownSessionSignature', options.knownSessionSignature.trim());
-    }
-    if (typeof options?.knownBlockOffset === 'number' && Number.isSafeInteger(options.knownBlockOffset) && options.knownBlockOffset >= 0) {
-      params.set('knownBlockOffset', String(options.knownBlockOffset));
-    }
-    if (typeof options?.knownTotalBlocks === 'number' && Number.isSafeInteger(options.knownTotalBlocks) && options.knownTotalBlocks >= 0) {
-      params.set('knownTotalBlocks', String(options.knownTotalBlocks));
-    }
-    if (typeof options?.knownLastBlockId === 'string' && options.knownLastBlockId.trim().length > 0) {
-      params.set('knownLastBlockId', options.knownLastBlockId.trim());
-    }
-
-    const query = params.toString();
-    return get<SessionDetailResult>(`/sessions/${encodeURIComponent(id)}${query ? `?${query}` : ''}`);
+    return (await requireLocalDesktopBridge('Reading session details')).readSessionDetail({ sessionId: id, ...options });
   },
   sessionBlock: async (id: string, blockId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readSessionBlock({ sessionId: id, blockId });
-    }
-    return get<DisplayBlock>(`/sessions/${encodeURIComponent(id)}/blocks/${encodeURIComponent(blockId)}`);
+    return (await requireLocalDesktopBridge('Reading session blocks')).readSessionBlock({ sessionId: id, blockId });
   },
   sessionSearchIndex: async (sessionIds: string[]) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readSessionSearchIndex(sessionIds);
-    }
-    return post<{ index: Record<string, string> }>('/sessions/search-index', { sessionIds });
+    return (await requireLocalDesktopBridge('Reading session search indexes')).readSessionSearchIndex(sessionIds);
   },
   conversationContentSearch: async (query: string, limit = 80) =>
     post<ConversationContentSearchResult>('/sessions/search', { query, limit: normalizeConversationContentSearchLimit(limit) }),
@@ -483,26 +392,10 @@ export const api = {
 
   // ── Models ────────────────────────────────────────────────────────────────
   models: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      try {
-        const result = await desktopBridge.readModels();
-        if (result && result.models && result.models.length > 0) {
-          return result;
-        }
-      } catch {
-        // Bridge read failed; fall through to HTTP
-      }
-    }
-
-    return get<ModelState>('/models');
+    return (await requireLocalDesktopBridge('Reading models')).readModels();
   },
   modelProviders: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readModelProviders();
-    }
-    return get<ModelProviderState>('/model-providers');
+    return (await requireLocalDesktopBridge('Reading model providers')).readModelProviders();
   },
   saveModelProvider: async (
     provider: string,
@@ -516,20 +409,10 @@ export const api = {
       modelOverrides?: Record<string, unknown>;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.saveModelProvider({ provider, ...input });
-    }
-
-    return post<ModelProviderState>('/model-providers/providers', { provider, ...input });
+    return (await requireLocalDesktopBridge('Saving model providers')).saveModelProvider({ provider, ...input });
   },
   deleteModelProvider: async (provider: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.deleteModelProvider(provider);
-    }
-
-    return del<ModelProviderState>(`/model-providers/providers/${encodeURIComponent(provider)}`);
+    return (await requireLocalDesktopBridge('Deleting model providers')).deleteModelProvider(provider);
   },
   saveModelProviderModel: async (
     provider: string,
@@ -552,122 +435,47 @@ export const api = {
       compat?: Record<string, unknown>;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.saveModelProviderModel({ provider, ...input });
-    }
-
-    return post<ModelProviderState>(`/model-providers/providers/${encodeURIComponent(provider)}/models`, input);
+    return (await requireLocalDesktopBridge('Saving model provider models')).saveModelProviderModel({ provider, ...input });
   },
   deleteModelProviderModel: async (provider: string, modelId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.deleteModelProviderModel({ provider, modelId });
-    }
-
-    return del<ModelProviderState>(`/model-providers/providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}`);
+    return (await requireLocalDesktopBridge('Deleting model provider models')).deleteModelProviderModel({ provider, modelId });
   },
   defaultCwd: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readDefaultCwd();
-    }
-
-    return get<DefaultCwdState>('/default-cwd');
+    return (await requireLocalDesktopBridge('Reading default cwd')).readDefaultCwd();
   },
   tools: async () => get<ToolsState>('/tools'),
   setModel: async (model: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateModelPreferences({ model });
-    }
-
-    return patch<{ ok: boolean }>('/models/current', { model });
+    return (await requireLocalDesktopBridge('Updating model preferences')).updateModelPreferences({ model });
   },
   updateModelPreferences: async (input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string }) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateModelPreferences(input);
-    }
-
-    return patch<{ ok: boolean }>('/models/current', input);
+    return (await requireLocalDesktopBridge('Updating model preferences')).updateModelPreferences(input);
   },
   updateDefaultCwd: async (cwd: string | null) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateDefaultCwd(cwd);
-    }
-
-    return patch<DefaultCwdState>('/default-cwd', { cwd });
+    return (await requireLocalDesktopBridge('Updating default cwd')).updateDefaultCwd(cwd);
   },
   providerAuth: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readProviderAuth();
-    }
-    return get<ProviderAuthState>('/provider-auth');
+    return (await requireLocalDesktopBridge('Reading provider auth')).readProviderAuth();
   },
   setProviderApiKey: async (provider: string, apiKey: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.setProviderApiKey({ provider, apiKey });
-    }
-
-    return patch<ProviderAuthState>(`/provider-auth/${encodeURIComponent(provider)}/api-key`, { apiKey });
+    return (await requireLocalDesktopBridge('Setting provider API keys')).setProviderApiKey({ provider, apiKey });
   },
   removeProviderCredential: async (provider: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.removeProviderCredential(provider);
-    }
-
-    return del<ProviderAuthState>(`/provider-auth/${encodeURIComponent(provider)}`);
+    return (await requireLocalDesktopBridge('Removing provider credentials')).removeProviderCredential(provider);
   },
   startProviderOAuthLogin: async (provider: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.startProviderOAuthLogin(provider);
-    }
-
-    return post<ProviderOAuthLoginState>(`/provider-auth/${encodeURIComponent(provider)}/oauth/start`);
+    return (await requireLocalDesktopBridge('Starting provider OAuth login')).startProviderOAuthLogin(provider);
   },
   providerOAuthLogin: async (loginId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readProviderOAuthLogin(loginId);
-    }
-    return get<ProviderOAuthLoginState | null>(`/provider-auth/oauth/${encodeURIComponent(loginId)}`);
+    return (await requireLocalDesktopBridge('Reading provider OAuth login')).readProviderOAuthLogin(loginId);
   },
   submitProviderOAuthLoginInput: async (loginId: string, value: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.submitProviderOAuthLoginInput({ loginId, value });
-    }
-
-    return post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/input`, { input: value });
+    return (await requireLocalDesktopBridge('Submitting provider OAuth input')).submitProviderOAuthLoginInput({ loginId, value });
   },
   cancelProviderOAuthLogin: async (loginId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.cancelProviderOAuthLogin(loginId);
-    }
-
-    return post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/cancel`);
+    return (await requireLocalDesktopBridge('Cancelling provider OAuth login')).cancelProviderOAuthLogin(loginId);
   },
   openConversationTabs: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readOpenConversationTabs();
-    }
-
-    return get<{
-      sessionIds: string[];
-      pinnedSessionIds: string[];
-      archivedSessionIds: string[];
-      activeConversationId: string | null;
-      workspacePaths: string[];
-      remoteControlledConversationIds?: string[];
-    }>('/ui/open-conversations');
+    return (await requireLocalDesktopBridge('Reading open conversation tabs')).readOpenConversationTabs();
   },
   setOpenConversationTabs: async (
     sessionIds?: string[] | null,
@@ -683,20 +491,7 @@ export const api = {
       ...(workspacePaths !== undefined ? { workspacePaths } : {}),
       ...(activeConversationId !== undefined ? { activeConversationId } : {}),
     };
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateOpenConversationTabs(request);
-    }
-
-    return patch<{
-      ok: boolean;
-      sessionIds: string[];
-      pinnedSessionIds: string[];
-      archivedSessionIds: string[];
-      activeConversationId: string | null;
-      workspacePaths: string[];
-      remoteControlledConversationIds?: string[];
-    }>('/ui/open-conversations', request);
+    return (await requireLocalDesktopBridge('Updating open conversation tabs')).updateOpenConversationTabs(request);
   },
   savedWorkspacePaths: async () => {
     const { workspacePaths } = await api.openConversationTabs();
@@ -709,25 +504,17 @@ export const api = {
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
   tasks: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readScheduledTasks();
-    }
-    return get<ScheduledTaskSummary[]>('/tasks');
+    return (await requireLocalDesktopBridge('Reading scheduled tasks')).readScheduledTasks();
   },
   taskDetail: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readScheduledTaskDetail(id);
-    }
-    return get<ScheduledTaskDetail>(`/tasks/${encodeURIComponent(id)}`);
+    return (await requireLocalDesktopBridge('Reading scheduled task details')).readScheduledTaskDetail(id);
   },
   taskSchedulerHealth: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge?.readScheduledTaskSchedulerHealth && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readScheduledTaskSchedulerHealth();
+    const bridge = await requireLocalDesktopBridge('Reading scheduled task scheduler health');
+    if (!bridge.readScheduledTaskSchedulerHealth) {
+      throw new Error('Reading scheduled task scheduler health requires the local desktop host.');
     }
-    return get<ScheduledTaskSchedulerHealth>('/tasks/scheduler-health');
+    return bridge.readScheduledTaskSchedulerHealth();
   },
   createTask: async (input: {
     title: string;
@@ -744,20 +531,10 @@ export const api = {
     threadMode?: 'dedicated' | 'existing' | 'none' | null;
     threadConversationId?: string | null;
   }) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.createScheduledTask(input);
-    }
-
-    return post<{ ok: boolean; task: ScheduledTaskDetail }>('/tasks', input);
+    return (await requireLocalDesktopBridge('Creating scheduled tasks')).createScheduledTask(input);
   },
   setTaskEnabled: async (id: string, enabled: boolean) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateScheduledTask({ taskId: id, enabled });
-    }
-
-    return patch<{ ok: boolean; task: ScheduledTaskDetail }>(`/tasks/${encodeURIComponent(id)}`, { enabled });
+    return (await requireLocalDesktopBridge('Updating scheduled tasks')).updateScheduledTask({ taskId: id, enabled });
   },
   saveTask: async (
     id: string,
@@ -777,35 +554,16 @@ export const api = {
       threadConversationId?: string | null;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateScheduledTask({ taskId: id, ...input });
-    }
-
-    return patch<{ ok: boolean; task: ScheduledTaskDetail }>(`/tasks/${encodeURIComponent(id)}`, input);
+    return (await requireLocalDesktopBridge('Updating scheduled tasks')).updateScheduledTask({ taskId: id, ...input });
   },
   taskLog: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readScheduledTaskLog(id);
-    }
-    return get<{ log: string; path: string }>(`/tasks/${encodeURIComponent(id)}/log`);
+    return (await requireLocalDesktopBridge('Reading scheduled task logs')).readScheduledTaskLog(id);
   },
   deleteTask: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.deleteScheduledTask(id);
-    }
-
-    return del<{ ok: true; deleted: boolean }>(`/tasks/${encodeURIComponent(id)}`);
+    return (await requireLocalDesktopBridge('Deleting scheduled tasks')).deleteScheduledTask(id);
   },
   runTaskNow: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.runScheduledTask(id);
-    }
-
-    return post<{ ok: boolean; accepted: boolean; runId: string }>(`/tasks/${encodeURIComponent(id)}/run`);
+    return (await requireLocalDesktopBridge('Running scheduled tasks')).runScheduledTask(id);
   },
   automations: {
     list: () => api.tasks(),
@@ -818,45 +576,19 @@ export const api = {
     readSchedulerHealth: () => api.taskSchedulerHealth(),
   },
   runs: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readDurableRuns();
-    }
-    return get<DurableRunListResult>('/runs');
+    return (await requireLocalDesktopBridge('Reading durable runs')).readDurableRuns();
   },
   durableRun: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readDurableRun(id);
-    }
-    return get<DurableRunDetailResult>(`/runs/${encodeURIComponent(id)}`);
+    return (await requireLocalDesktopBridge('Reading durable runs')).readDurableRun(id);
   },
   durableRunLog: async (id: string, tail?: number) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readDurableRunLog({ runId: id, tail });
-    }
-
-    const normalizedTail = normalizeDurableRunLogTailParam(tail);
-    return get<{ log: string; path: string }>(
-      `/runs/${encodeURIComponent(id)}/log${normalizedTail ? `?tail=${encodeURIComponent(String(normalizedTail))}` : ''}`,
-    );
+    return (await requireLocalDesktopBridge('Reading durable run logs')).readDurableRunLog({ runId: id, tail });
   },
   markDurableRunAttentionRead: async (id: string, read = true) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.markDurableRunAttention({ runId: id, read });
-    }
-
-    return patch<{ ok: boolean }>(`/runs/${encodeURIComponent(id)}/attention`, { read });
+    return (await requireLocalDesktopBridge('Updating durable run attention')).markDurableRunAttention({ runId: id, read });
   },
   cancelDurableRun: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.cancelDurableRun(id);
-    }
-
-    return post<{ cancelled: boolean; runId: string }>(`/runs/${encodeURIComponent(id)}/cancel`);
+    return (await requireLocalDesktopBridge('Cancelling durable runs')).cancelDurableRun(id);
   },
   executions: async () => get<import('../shared/types').ExecutionListResult>('/executions'),
   conversationExecutions: async (conversationId: string) =>
@@ -886,12 +618,7 @@ export const api = {
             ...(input?.cwd !== undefined ? { cwd: input.cwd } : {}),
             ...(typeof input?.prompt === 'string' && input.prompt.trim().length > 0 ? { prompt: input.prompt.trim() } : {}),
           };
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.pickFolder(request);
-    }
-
-    return post<FolderPickerResult>('/folder-picker', request);
+    return (await requireLocalDesktopBridge('Picking folders')).pickFolder(request);
   },
   pickFiles: async (cwd?: string) => post<FilePickerResult>('/file-picker', cwd !== undefined ? { cwd } : {}),
 
@@ -899,12 +626,7 @@ export const api = {
   memory: () => getMemoryData(),
 
   markConversationAttentionRead: async (id: string, read = true) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.markConversationAttention({ conversationId: id, read });
-    }
-
-    return patch<{ ok: boolean }>(`/conversations/${encodeURIComponent(id)}/attention`, { read });
+    return (await requireLocalDesktopBridge('Updating conversation attention')).markConversationAttention({ conversationId: id, read });
   },
 
   // ── Live sessions ─────────────────────────────────────────────────────────
@@ -954,66 +676,29 @@ export const api = {
       knownLastBlockId?: string;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationBootstrap({ conversationId: id, ...options });
-    }
-
-    const params = new URLSearchParams();
-    const tailBlocks = normalizeTailBlocksParam(options?.tailBlocks);
-    if (tailBlocks !== undefined) {
-      params.set('tailBlocks', String(tailBlocks));
-    }
-    if (typeof options?.knownSessionSignature === 'string' && options.knownSessionSignature.trim().length > 0) {
-      params.set('knownSessionSignature', options.knownSessionSignature.trim());
-    }
-    if (typeof options?.knownBlockOffset === 'number' && Number.isSafeInteger(options.knownBlockOffset) && options.knownBlockOffset >= 0) {
-      params.set('knownBlockOffset', String(options.knownBlockOffset));
-    }
-    if (typeof options?.knownTotalBlocks === 'number' && Number.isSafeInteger(options.knownTotalBlocks) && options.knownTotalBlocks >= 0) {
-      params.set('knownTotalBlocks', String(options.knownTotalBlocks));
-    }
-    if (typeof options?.knownLastBlockId === 'string' && options.knownLastBlockId.trim().length > 0) {
-      params.set('knownLastBlockId', options.knownLastBlockId.trim());
-    }
-
-    const query = params.toString();
-    return get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
+    return (await requireLocalDesktopBridge('Reading conversation bootstrap')).readConversationBootstrap({
+      conversationId: id,
+      ...options,
+    });
   },
   conversationPlansWorkspace: async () => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationPlansWorkspace();
-    }
-
-    return get<ConversationAutomationWorkspaceState>('/conversation-plans/workspace');
+    return (await requireLocalDesktopBridge('Reading conversation plans workspace')).readConversationPlansWorkspace();
   },
   conversationArtifacts: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationArtifacts(id);
-    }
-
-    return get<{ conversationId: string; artifacts: ConversationArtifactSummary[] }>(`/conversations/${encodeURIComponent(id)}/artifacts`);
+    return (await requireLocalDesktopBridge('Reading conversation artifacts')).readConversationArtifacts(id);
   },
   conversationArtifact: async (id: string, artifactId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationArtifact({ conversationId: id, artifactId });
-    }
-
-    return get<{ conversationId: string; artifact: ConversationArtifactRecord }>(
-      `/conversations/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(artifactId)}`,
-    );
+    return (await requireLocalDesktopBridge('Reading conversation artifacts')).readConversationArtifact({ conversationId: id, artifactId });
   },
-  conversationCheckpoints: async (id: string) =>
-    get<{ conversationId: string; checkpoints: ConversationCommitCheckpointSummary[] }>(
-      `/conversations/${encodeURIComponent(id)}/checkpoints`,
-    ),
-  conversationCheckpoint: async (id: string, checkpointId: string) =>
-    get<{ conversationId: string; checkpoint: ConversationCommitCheckpointRecord }>(
-      `/conversations/${encodeURIComponent(id)}/checkpoints/${encodeURIComponent(checkpointId)}`,
-    ),
+  conversationCheckpoints: async (id: string) => {
+    return (await requireLocalDesktopBridge('Reading conversation checkpoints')).readConversationCheckpoints(id);
+  },
+  conversationCheckpoint: async (id: string, checkpointId: string) => {
+    return (await requireLocalDesktopBridge('Reading conversation checkpoints')).readConversationCheckpoint({
+      conversationId: id,
+      checkpointId,
+    });
+  },
   conversationCheckpointReviewContext: async (id: string, checkpointId: string) => {
     return get<ConversationCheckpointReviewContext>(
       `/conversations/${encodeURIComponent(id)}/checkpoints/${encodeURIComponent(checkpointId)}/review-context`,
@@ -1037,24 +722,13 @@ export const api = {
     );
   },
   conversationAttachments: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationAttachments(id);
-    }
-
-    return get<{ conversationId: string; attachments: ConversationAttachmentSummary[] }>(
-      `/conversations/${encodeURIComponent(id)}/attachments`,
-    );
+    return (await requireLocalDesktopBridge('Reading conversation attachments')).readConversationAttachments(id);
   },
   conversationAttachment: async (id: string, attachmentId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationAttachment({ conversationId: id, attachmentId });
-    }
-
-    return get<{ conversationId: string; attachment: ConversationAttachmentRecord }>(
-      `/conversations/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`,
-    );
+    return (await requireLocalDesktopBridge('Reading conversation attachments')).readConversationAttachment({
+      conversationId: id,
+      attachmentId,
+    });
   },
   conversationAttachmentAsset: async (
     id: string,
@@ -1062,34 +736,12 @@ export const api = {
     asset: 'source' | 'preview',
     revision?: number,
   ): Promise<ConversationAttachmentAssetData> => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationAttachmentAsset({ conversationId: id, attachmentId, asset, revision });
-    }
-
-    const params = new URLSearchParams();
-    if (typeof revision === 'number' && Number.isSafeInteger(revision) && revision > 0) {
-      params.set('revision', String(revision));
-    }
-    const requestPath = buildApiPath(
-      `/conversations/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}/download/${asset}${
-        params.toString() ? `?${params.toString()}` : ''
-      }`,
-    );
-    const response = await fetchWithRetry(requestPath, { method: 'GET', cache: 'no-store' });
-    recordApiTiming(requestPath, response);
-    if (!response.ok) {
-      throw new Error(await readApiError(response, requestPath));
-    }
-
-    const blob = await response.blob();
-    const contentDisposition = response.headers.get('Content-Disposition') ?? '';
-    const fileName = contentDisposition.match(/filename="([^"]+)"/)?.[1] ?? `${asset}`;
-    return {
-      dataUrl: await blobToDataUrl(blob),
-      mimeType: blob.type || 'application/octet-stream',
-      fileName,
-    };
+    return (await requireLocalDesktopBridge('Reading conversation attachment assets')).readConversationAttachmentAsset({
+      conversationId: id,
+      attachmentId,
+      asset,
+      revision,
+    });
   },
   createConversationAttachment: async (
     id: string,
@@ -1105,16 +757,10 @@ export const api = {
       note?: string;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.createConversationAttachment({ conversationId: id, ...input });
-    }
-
-    return post<{
-      conversationId: string;
-      attachment: ConversationAttachmentRecord;
-      attachments: ConversationAttachmentSummary[];
-    }>(`/conversations/${encodeURIComponent(id)}/attachments`, input);
+    return (await requireLocalDesktopBridge('Creating conversation attachments')).createConversationAttachment({
+      conversationId: id,
+      ...input,
+    });
   },
   updateConversationAttachment: async (
     id: string,
@@ -1130,58 +776,29 @@ export const api = {
       note?: string;
     },
   ) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.updateConversationAttachment({ conversationId: id, attachmentId, ...input });
-    }
-
-    return patch<{
-      conversationId: string;
-      attachment: ConversationAttachmentRecord;
-      attachments: ConversationAttachmentSummary[];
-    }>(`/conversations/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, input);
+    return (await requireLocalDesktopBridge('Updating conversation attachments')).updateConversationAttachment({
+      conversationId: id,
+      attachmentId,
+      ...input,
+    });
   },
   deferredResumes: async (id: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.readConversationDeferredResumes(id);
-    }
-
-    return get<{ conversationId: string; resumes: DeferredResumeSummary[] }>(`/conversations/${encodeURIComponent(id)}/deferred-resumes`);
+    return (await requireLocalDesktopBridge('Reading deferred resumes')).readConversationDeferredResumes(id);
   },
   scheduleDeferredResume: async (id: string, input: { delay: string; prompt?: string; behavior?: 'steer' | 'followUp' }) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.scheduleConversationDeferredResume({ conversationId: id, ...input });
-    }
-
-    return requestJson<{ conversationId: string; resume: DeferredResumeSummary; resumes: DeferredResumeSummary[] }>(
-      'POST',
-      `/conversations/${encodeURIComponent(id)}/deferred-resumes`,
-      input,
-    );
+    return (await requireLocalDesktopBridge('Scheduling deferred resumes')).scheduleConversationDeferredResume({
+      conversationId: id,
+      ...input,
+    });
   },
   fireDeferredResumeNow: async (id: string, resumeId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.fireConversationDeferredResume({ conversationId: id, resumeId });
-    }
-
-    return requestJson<{ conversationId: string; resume: DeferredResumeSummary; resumes: DeferredResumeSummary[] }>(
-      'POST',
-      `/conversations/${encodeURIComponent(id)}/deferred-resumes/${encodeURIComponent(resumeId)}/fire`,
-    );
+    return (await requireLocalDesktopBridge('Firing deferred resumes')).fireConversationDeferredResume({ conversationId: id, resumeId });
   },
   cancelDeferredResume: async (id: string, resumeId: string) => {
-    const desktopBridge = getDesktopBridge();
-    if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-      return desktopBridge.cancelConversationDeferredResume({ conversationId: id, resumeId });
-    }
-
-    return requestJson<{ conversationId: string; cancelledId: string; resumes: DeferredResumeSummary[] }>(
-      'DELETE',
-      `/conversations/${encodeURIComponent(id)}/deferred-resumes/${encodeURIComponent(resumeId)}`,
-    );
+    return (await requireLocalDesktopBridge('Cancelling deferred resumes')).cancelConversationDeferredResume({
+      conversationId: id,
+      resumeId,
+    });
   },
   changeConversationCwd: async (id: string, cwd: string, surfaceId?: string) => {
     return (await requireLocalDesktopConversationBridge(id, 'Changing conversation working directories')).changeConversationCwd({
@@ -1284,6 +901,29 @@ export const api = {
     return (await requireLocalDesktopConversationBridge(id, 'Clearing queued conversation prompts')).clearQueuedLiveSessionMessages({
       conversationId: id,
     });
+  },
+  takeoverLiveSession: async (id: string, surfaceId: string) => {
+    return (await requireLocalDesktopConversationBridge(id, 'Taking over live sessions')).takeOverLiveSession({
+      conversationId: id,
+      surfaceId,
+    });
+  },
+  compactSession: async (id: string, customInstructions?: string, surfaceId?: string) => {
+    void surfaceId;
+    return (await requireLocalDesktopConversationBridge(id, 'Compacting live sessions')).compactLiveSession({
+      conversationId: id,
+      customInstructions,
+    });
+  },
+  exportSession: async (id: string, outputPath?: string) => {
+    return (await requireLocalDesktopConversationBridge(id, 'Exporting live sessions')).exportLiveSession({
+      conversationId: id,
+      outputPath,
+    });
+  },
+  reloadSession: async (id: string, surfaceId?: string) => {
+    void surfaceId;
+    return (await requireLocalDesktopConversationBridge(id, 'Reloading live sessions')).reloadLiveSession(id);
   },
   abortSession: async (id: string, surfaceId?: string) => {
     void surfaceId;
