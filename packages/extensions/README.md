@@ -701,7 +701,8 @@ Built-in host commands include:
 - `conversation.new`
 - `conversation.open` with `{ "conversationId": "..." }`
 - `conversation.next` / `conversation.previous`
-- `composer.focus`
+- `composer.focus` / `composer.submit`
+- `dictation.toggle`
 - `sidebar.focus`
 - `focus.next` / `focus.previous`
 - `selection.activate`

@@ -1014,6 +1014,14 @@ export function Layout() {
         const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
         textarea?.focus();
       },
+      submitComposer() {
+        window.dispatchEvent(new CustomEvent('neon-pilot:composer-submit'));
+        return true;
+      },
+      toggleDictation() {
+        window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
+        return true;
+      },
       focusSidebar() {
         document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button')?.focus();
       },

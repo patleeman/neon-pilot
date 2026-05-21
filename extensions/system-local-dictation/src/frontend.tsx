@@ -179,6 +179,16 @@ export function DictationButton({
     await pendingStart;
   }, [buttonContext.composerDisabled, enabled, pa, state]);
 
+  useEffect(() => {
+    const handleDictationToggleCommand = () => {
+      if (captureRef.current || pendingStartRef.current) void stop();
+      else void start();
+    };
+
+    window.addEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
+    return () => window.removeEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
+  }, [start, stop]);
+
   if (!settingsLoaded || !enabled) return null;
 
   return (

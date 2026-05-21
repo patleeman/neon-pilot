@@ -26,6 +26,8 @@ export interface ExtensionCommandExecutorOptions {
   focusNext?(): void;
   focusPrevious?(): void;
   activateSelection?(): void;
+  submitComposer?(): boolean;
+  toggleDictation?(): boolean;
   navigateConversation?(direction: 'next' | 'previous'): boolean;
   activeConversationId?: string | null;
   extensionCommands?: ExtensionCommandRegistration[];
@@ -103,6 +105,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.next', title: 'Next Conversation', category: 'Conversation' },
     { id: 'conversation.previous', title: 'Previous Conversation', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
+    { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
+    { id: 'dictation.toggle', title: 'Start or Stop Dictation', category: 'Dictation' },
     { id: 'sidebar.focus', title: 'Focus Sidebar', category: 'Focus' },
     { id: 'focus.next', title: 'Focus Next', category: 'Focus' },
     { id: 'focus.previous', title: 'Focus Previous', category: 'Focus' },
@@ -207,6 +211,22 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         options.focusComposer?.();
         return true;
+      },
+    },
+    {
+      id: 'composer.submit',
+      title: 'Send Message',
+      category: 'Conversation',
+      execute() {
+        return options.submitComposer?.() ?? false;
+      },
+    },
+    {
+      id: 'dictation.toggle',
+      title: 'Start or Stop Dictation',
+      category: 'Dictation',
+      execute() {
+        return options.toggleDictation?.() ?? false;
       },
     },
     {

@@ -5186,6 +5186,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     composerHasContent,
     composerRunState.streamControlsActive,
   );
+  useEffect(() => {
+    const handleComposerSubmitCommand = () => {
+      if (composerShowsQuestionSubmit) {
+        void submitComposerQuestionIfReady();
+        return;
+      }
+      void submitComposerActionForModifiers(false);
+    };
+
+    window.addEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
+    return () => window.removeEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
+  }, [composerShowsQuestionSubmit, submitComposerQuestionIfReady, submitComposerActionForModifiers]);
   const composerSubmit = resolveConversationComposerSubmitState(
     composerRunState.streamControlsActive,
     composerAltHeld,
