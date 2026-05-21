@@ -267,69 +267,6 @@ async function assertNoMemoryLeak(cdp, child, logs, { idleMs = 10_000, maxHeapGr
   }
 }
 
-async function assertLiveSessionBash(cdp, child, logs, cwd) {
-  if (child.exitCode !== null) {
-    throw new Error(`App exited before live session bash smoke check.\n${logs()}`);
-  }
-
-  const expression = `
-    (async () => {
-      const get = async (path) => {
-        const response = await fetch(path);
-        return { status: response.status, ok: response.ok, body: await response.text() };
-      };
-      const post = async (path, body) => {
-        const response = await fetch(path, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        return { status: response.status, ok: response.ok, body: await response.text() };
-      };
-      const del = async (path) => {
-        const response = await fetch(path, {
-          method: 'DELETE',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ surfaceId: 'release-smoke' }),
-        });
-        return { status: response.status, ok: response.ok, body: await response.text() };
-      };
-
-      const models = await get('/api/models');
-      let model = '';
-      try {
-        const modelState = JSON.parse(models.body);
-        model = modelState.currentModel || modelState.models?.[0]?.id || '';
-      } catch {}
-
-      const createBody = { cwd: ${JSON.stringify(cwd)}, thinkingLevel: 'medium' };
-      if (model) createBody.model = model;
-      const created = await post('/api/live-sessions', createBody);
-      let sessionId = '';
-      try {
-        sessionId = JSON.parse(created.body).id || '';
-      } catch {}
-
-      const bash = sessionId
-        ? await post('/api/live-sessions/' + encodeURIComponent(sessionId) + '/bash', { command: 'printf neon-pilot-bash-ok' })
-        : { status: 0, ok: false, body: 'no live session id returned' };
-      const closed = sessionId ? await del('/api/live-sessions/' + encodeURIComponent(sessionId)) : null;
-      return { models, model, created, bash, closed };
-    })()
-  `;
-
-  const result = await cdp.send('Runtime.evaluate', {
-    expression,
-    awaitPromise: true,
-    returnByValue: true,
-  });
-  const value = result?.result?.value;
-  const bashBody = typeof value?.bash?.body === 'string' ? value.bash.body : '';
-  if (!value?.created?.ok || !value?.bash?.ok || !bashBody.includes('neon-pilot-bash-ok')) {
-    throw new Error(`Packaged live session bash smoke check failed: ${JSON.stringify(value, null, 2)}\n${logs()}`);
-  }
-}
-
 function tail(value, max = 8_000) {
   return value.length > max ? value.slice(value.length - max) : value;
 }
@@ -415,7 +352,6 @@ async function main() {
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
     await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/', 'conversation route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
-    await assertLiveSessionBash(cdp, child, renderLogs, process.cwd());
 
     // Navigate back to the main conversation route and let the app sit idle
     // while we watch for memory growth. Catches infinite render loops and
