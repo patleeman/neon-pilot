@@ -3,87 +3,87 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#06080d" />
     <meta name="description" content="Neon Pilot is a self-extensible desktop agent harness powered by Pi Coding Agent." />
-    <title>Neon Pilot — self-extensible desktop agents</title>
+    <title>Neon Pilot</title>
     <link rel="icon" href="./icon-color.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#main" aria-label="Neon Pilot home">
+        <img src="./icon-color.svg" alt="" width="32" height="32" />
+        <span>Neon Pilot</span>
+      </a>
       <nav class="nav" aria-label="Primary">
-        <a class="brand" href="#top" aria-label="Neon Pilot home">
-          <img src="./icon-color.svg" alt="" />
-          <span>Neon Pilot</span>
-        </a>
-        <div class="nav-links">
-          <a href="#features">Features</a>
-          <a href="#extensions">Extensions</a>
-          <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
-        </div>
+        <a href="#what-it-is">What It Is</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
       </nav>
+    </header>
 
-      <section id="top" class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow">Durable AI agent runtime</p>
-          <h1 id="hero-title">A desktop agent that gets sharper every time you use it.</h1>
-          <p class="lede">
-            Neon Pilot wraps an LLM with persistent state, tools, skills, automations, and local extensions so one-off workflows can become
-            reusable capabilities.
-          </p>
-          <div class="actions">
-            <a class="button primary" href="https://github.com/patleeman/neon-pilot/releases/latest"> Download for macOS </a>
-            <a class="button secondary" href="https://github.com/patleeman/neon-pilot"> View source </a>
-          </div>
-        </div>
-        <div class="terminal-card" aria-label="Neon Pilot capability preview">
-          <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
-          <pre><code>&gt; build me a reusable browser tool
-
-✓ read extension docs
-✓ add tool manifest
-✓ wire secure process execution
-✓ validate and checkpoint
-
-Neon Pilot learned a new capability.</code></pre>
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="kicker">Desktop agent runtime</p>
+        <h1 id="hero-title">An AI workspace you can teach.</h1>
+        <p class="intro">
+          Neon Pilot is a local desktop app for running agents with memory, tools, background work, and extensions. When a workflow becomes
+          useful, turn it into something the agent can reuse.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+          <a class="button secondary" href="https://github.com/patleeman/neon-pilot">Source on GitHub</a>
         </div>
       </section>
 
-      <section id="features" class="section" aria-labelledby="features-title">
-        <div class="section-heading">
-          <p class="eyebrow">Why it exists</p>
-          <h2 id="features-title">Built for agents that improve their own workspace.</h2>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <h3>Persistent conversations</h3>
-            <p>Threads, context, runs, and background work survive beyond a single chat turn.</p>
-          </article>
-          <article>
-            <h3>Skills and tools</h3>
-            <p>Capture repeatable workflows as reusable agent instructions and callable capabilities.</p>
-          </article>
-          <article>
-            <h3>Async automation</h3>
-            <p>Schedule follow-ups, run durable tasks, and let agents continue when attention is needed.</p>
-          </article>
-          <article>
-            <h3>Local-first extensions</h3>
-            <p>Add pages, panels, commands, tools, MCP servers, and workflows without bloating core.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="extensions" class="callout" aria-labelledby="extensions-title">
+      <section id="what-it-is" class="split-section" aria-labelledby="what-title">
         <div>
-          <p class="eyebrow">Self-extensible by design</p>
-          <h2 id="extensions-title">Teach it once. Package it. Reuse it forever.</h2>
+          <p class="kicker">What It Is</p>
+          <h2 id="what-title">A small runtime, not another chat wrapper.</h2>
+        </div>
+        <div class="copy-block">
           <p>
-            Neon Pilot is a small runtime with first-class extension boundaries. When a workflow graduates from a chat, it can become a
-            skill, tool, automation, or UI surface future sessions can discover automatically.
+            Conversations, files, skills, tools, automations, and extension UI all live in one app. The agent can inspect the workspace, run
+            jobs, save durable context, and come back later when work is ready.
+          </p>
+          <p>
+            Core stays small. Product behavior ships as extensions, so useful workflows can grow without turning the app into a junk drawer.
           </p>
         </div>
-        <a class="button primary" href="https://github.com/patleeman/neon-pilot#readme">Read the README</a>
+      </section>
+
+      <section id="how-it-works" class="capabilities" aria-labelledby="how-title">
+        <p class="kicker">How It Works</p>
+        <h2 id="how-title">The pieces agents actually need.</h2>
+        <div class="list">
+          <article>
+            <span>01</span>
+            <h3>Persistent threads</h3>
+            <p>Keep context, branches, run history, and follow-ups across sessions.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Skills & tools</h3>
+            <p>Write down repeatable workflows and expose safe capabilities the agent can call.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Background runs</h3>
+            <p>Kick off durable work, inspect logs, and resume the conversation when it matters.</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Extensions</h3>
+            <p>Add pages, panels, commands, MCP servers, and custom workflow surfaces.</p>
+          </article>
+        </div>
       </section>
     </main>
+
+    <footer>
+      <span>Built on Pi Coding Agent.</span>
+      <a href="https://github.com/patleeman/neon-pilot#readme">Read the README</a>
+    </footer>
   </body>
 </html>
