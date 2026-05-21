@@ -2,18 +2,13 @@
 // eslint-disable-next-line simple-import-sort/imports
 import './wdyr.ts';
 
+// ── Font loading strategy ────────────────────────────────────────────────────
+// Keep only the primary body and monospace fonts in the critical CSS path.
+// Additional weights and families are loaded asynchronously after first paint
+// via loadDeferredFonts(), reducing the main CSS chunk by ~130KB.
+
 import '@fontsource/geist/400.css';
-import '@fontsource/geist/500.css';
-import '@fontsource/geist/600.css';
-import '@fontsource/geist/700.css';
 import '@fontsource/geist-mono/400.css';
-import '@fontsource/geist-mono/500.css';
-import '@fontsource/geist-mono/600.css';
-import '@fontsource-variable/dm-sans';
-import '@fontsource-variable/geist';
-import '@fontsource-variable/geist-mono';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
 import './index.css';
 
 import { StrictMode } from 'react';
@@ -22,6 +17,7 @@ import { createRoot } from 'react-dom/client';
 import { addNotification } from '../components/notifications/notificationStore';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { App } from './App';
+import { loadDeferredFonts } from './loadDeferredFonts';
 
 // ── Renderer-side crash logging ───────────────────────────────────────────────
 // These fire for uncaught JS errors and unhandled promise rejections in the
@@ -86,3 +82,8 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+
+// Defer non-critical font loading until after first paint. This avoids adding
+// ~130KB of @font-face declarations to the critical CSS and lets the browser
+// paint the initial view without waiting for dozens of font file downloads.
+loadDeferredFonts();
