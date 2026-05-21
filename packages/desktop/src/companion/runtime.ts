@@ -98,7 +98,7 @@ async function subscribeDesktopApiStream(
   return hostManager.getHostController('local').subscribeApiStream(path, onEvent);
 }
 
-const DEFAULT_COMPANION_TAIL_BLOCKS = 120;
+const COMPANION_TRANSCRIPT_TAIL_BLOCKS = 10000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -165,6 +165,14 @@ function normalizeConversationBlocksForCompanion(conversationId: string, blocks:
   }
 
   return blocks.map((block) => normalizeConversationBlockForCompanion(conversationId, block));
+}
+
+function normalizeCompanionTranscriptTailBlocks(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    return COMPANION_TRANSCRIPT_TAIL_BLOCKS;
+  }
+
+  return Math.max(value, COMPANION_TRANSCRIPT_TAIL_BLOCKS);
 }
 
 function normalizeConversationBootstrapForCompanion(conversationId: string, envelope: unknown): unknown {
@@ -343,11 +351,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async readConversationBootstrap(input: CompanionConversationBootstrapInput) {
       const localController = hostManager.getHostController('local');
       const query = toQuery({
-        ...(typeof input.tailBlocks === 'number' ? { tailBlocks: String(input.tailBlocks) } : {}),
-        ...(input.knownSessionSignature ? { knownSessionSignature: input.knownSessionSignature } : {}),
-        ...(typeof input.knownBlockOffset === 'number' ? { knownBlockOffset: String(input.knownBlockOffset) } : {}),
-        ...(typeof input.knownTotalBlocks === 'number' ? { knownTotalBlocks: String(input.knownTotalBlocks) } : {}),
-        ...(input.knownLastBlockId ? { knownLastBlockId: input.knownLastBlockId } : {}),
+        tailBlocks: String(normalizeCompanionTranscriptTailBlocks(input.tailBlocks)),
       });
 
       const [bootstrap, sessionMeta, attachments, executionTargets] = await Promise.all([
@@ -400,7 +404,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
 
       await restoreConversationToSharedLayout(localController, conversationId);
 
-      return this.readConversationBootstrap({ conversationId, tailBlocks: DEFAULT_COMPANION_TAIL_BLOCKS });
+      return this.readConversationBootstrap({ conversationId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
     },
 
     async resumeConversation(input: CompanionConversationResumeInput) {
@@ -420,7 +424,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
 
       await restoreConversationToSharedLayout(localController, resumed.id);
 
-      return this.readConversationBootstrap({ conversationId: resumed.id, tailBlocks: DEFAULT_COMPANION_TAIL_BLOCKS });
+      return this.readConversationBootstrap({ conversationId: resumed.id, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
     },
 
     async promptConversation(input: CompanionConversationPromptInput) {
@@ -595,7 +599,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
       if (input.cwd !== undefined && input.cwd !== null) {
         await this.changeConversationCwd({ conversationId: input.conversationId, cwd: input.cwd });
       }
-      return this.readConversationBootstrap({ conversationId: input.conversationId, tailBlocks: DEFAULT_COMPANION_TAIL_BLOCKS });
+      return this.readConversationBootstrap({ conversationId: input.conversationId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
     },
 
     async listConversationForkEntries(conversationId: string) {
@@ -614,7 +618,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
           beforeEntry: input.beforeEntry,
           preserveSource: input.preserveSource,
         });
-        return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: DEFAULT_COMPANION_TAIL_BLOCKS });
+        return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
       }
 
       return invokeDesktopApi(hostManager, {
@@ -635,7 +639,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
           conversationId: input.conversationId,
           entryId: input.entryId,
         });
-        return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: DEFAULT_COMPANION_TAIL_BLOCKS });
+        return this.readConversationBootstrap({ conversationId: result.newSessionId, tailBlocks: COMPANION_TRANSCRIPT_TAIL_BLOCKS });
       }
 
       return invokeDesktopApi(hostManager, {
@@ -933,7 +937,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
       const query = toQuery({
         ...(input.surfaceId ? { surfaceId: input.surfaceId } : {}),
         ...(toInternalSurfaceType(input.surfaceType) ? { surfaceType: toInternalSurfaceType(input.surfaceType) } : {}),
-        ...(typeof input.tailBlocks === 'number' ? { tailBlocks: String(input.tailBlocks) } : {}),
+        tailBlocks: String(normalizeCompanionTranscriptTailBlocks(input.tailBlocks)),
       });
 
       return subscribeDesktopApiStream(
