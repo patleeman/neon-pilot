@@ -53,8 +53,8 @@
     "settingsComponent": {
       "id": "mcp-tools",
       "component": "McpSettingsPanel",
-      "sectionId": "settings-tools",
-      "label": "Tools",
+      "sectionId": "settings-capabilities",
+      "label": "MCP servers",
       "description": "MCP wrapper config for explicit tool servers, active skill-local mcp.json detection, and runtime tool orchestration.",
       "order": 40
     }

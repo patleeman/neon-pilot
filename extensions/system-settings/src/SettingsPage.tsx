@@ -68,7 +68,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-general', label: 'General', summary: 'Appearance, workspace, and conversation defaults' },
   { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
-  { id: 'settings-capabilities', label: 'Capabilities', summary: 'MCP wrappers and agent-adjacent settings' },
+  { id: 'settings-capabilities', label: 'Agent Runtime', summary: 'MCP wrappers and agent-adjacent settings' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
@@ -3207,7 +3207,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <CommandsSettingsSection />
             </SettingsSection>
 
-            <SettingsSection id="settings-capabilities" label="Capabilities" description="MCP wrappers and agent-adjacent settings.">
+            <SettingsSection id="settings-capabilities" label="Agent Runtime" description="MCP wrappers and agent-adjacent settings.">
               <div className="space-y-0">
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (

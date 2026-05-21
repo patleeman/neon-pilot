@@ -82,6 +82,20 @@ function draftFromServer(server: McpServerConfig): ServerDraft {
   };
 }
 
+function draftFromRawServer(name: string, raw: Record<string, unknown>): ServerDraft {
+  const transport = raw.type === 'remote' || (typeof raw.url === 'string' && typeof raw.command !== 'string') ? 'remote' : 'stdio';
+  const args = Array.isArray(raw.args) ? raw.args.filter((arg): arg is string => typeof arg === 'string').join('\n') : '';
+  return {
+    originalName: name,
+    name,
+    transport,
+    command: typeof raw.command === 'string' ? raw.command : '',
+    args,
+    cwd: typeof raw.cwd === 'string' ? raw.cwd : '',
+    url: typeof raw.url === 'string' ? raw.url : '',
+  };
+}
+
 function configFromDraft(draft: ServerDraft, existing?: Record<string, unknown>): Record<string, unknown> {
   // When editing an existing server, preserve fields the form doesn't
   // expose (env, headers, oauth, etc.) so editing name/command doesn't
@@ -211,6 +225,15 @@ export function McpSettingsPanel() {
     await persist({ mcpServers: nextServers }, `${name} removed.`);
   }
 
+  async function toggleServer(name: string) {
+    const current = explicitConfig.mcpServers[name];
+    if (!current) return;
+    const disabled = current.disabled === true || current.enabled === false;
+    const nextServers = { ...explicitConfig.mcpServers, [name]: { ...current, disabled: !disabled } };
+    delete nextServers[name].enabled;
+    await persist({ mcpServers: nextServers }, `${name} ${disabled ? 'enabled' : 'disabled'}.`);
+  }
+
   async function handleServerAction(action: 'testServer' | 'authServer' | 'logoutServer', server: string) {
     setOperation((current) => ({ ...current, [server]: { busy: true } }));
     const result = await runServerAction(action, server).catch((error: unknown) => ({
@@ -322,26 +345,36 @@ export function McpSettingsPanel() {
               {explicitServers.length > 0 ? (
                 explicitServers.map((name) => {
                   const server = mcpState.servers.find((entry) => entry.name === name);
+                  const rawServer = visibleExplicitConfig.mcpServers[name] ?? {};
+                  const disabled = rawServer.disabled === true || rawServer.enabled === false;
                   const status = operation[name];
                   return (
                     <div key={name} className="space-y-2 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-[12px] text-primary">{name}</span>
                         <Pill tone={server?.transport === 'remote' ? 'teal' : 'muted'}>{server?.transport ?? 'config'}</Pill>
+                        {disabled ? <Pill tone="muted">disabled</Pill> : null}
                         {server?.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
-                        <span className="ui-card-meta break-all">{server ? formatMcpServerCommand(server) : 'Unparsed server config'}</span>
+                        <span className="ui-card-meta break-all">
+                          {server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config'}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {server ? (
-                          <button type="button" className={buttonClass} onClick={() => setDraft(draftFromServer(server))}>
-                            Edit
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          className={buttonClass}
+                          onClick={() => setDraft(server ? draftFromServer(server) : draftFromRawServer(name, rawServer))}
+                        >
+                          Edit
+                        </button>
+                        <button type="button" className={buttonClass} onClick={() => void toggleServer(name)} disabled={saveState.busy}>
+                          {disabled ? 'Enable' : 'Disable'}
+                        </button>
                         <button
                           type="button"
                           className={buttonClass}
                           onClick={() => void handleServerAction('testServer', name)}
-                          disabled={status?.busy}
+                          disabled={status?.busy || disabled}
                         >
                           Test
                         </button>

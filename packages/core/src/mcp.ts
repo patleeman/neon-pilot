@@ -28,6 +28,7 @@ export interface McpServerConfig {
   oauthClientMetadata?: OAuthClientMetadata;
   oauthClientInfo?: OAuthClientInformationFull;
   raw: Record<string, unknown>;
+  disabled?: boolean;
 }
 
 export interface McpConfigState {
@@ -392,6 +393,10 @@ function parseRemoteServerConfig(name: string, value: Record<string, unknown>, b
 
 function parseServerConfig(name: string, value: unknown, baseDir: string): McpServerConfig | null {
   if (!isRecord(value)) {
+    return null;
+  }
+
+  if (value.disabled === true || value.enabled === false) {
     return null;
   }
 

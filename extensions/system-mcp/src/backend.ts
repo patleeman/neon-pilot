@@ -35,6 +35,7 @@ type McpServerSettingsState = {
   callbackUrl?: string;
   authorizeResource?: string;
   raw: Record<string, unknown>;
+  disabled?: boolean;
 };
 
 type McpSettingsState = {
@@ -230,7 +231,7 @@ export function inspectMcpSettings(_input: unknown, ctx: McpRuntimeContext): Mcp
     configPath: parsedMcpConfig.path,
     configExists: mergedMcpConfig.baseConfigExists,
     searchedPaths: parsedMcpConfig.searchedPaths,
-    explicitConfigJson: `${JSON.stringify({ mcpServers: Object.fromEntries(parsedMcpConfig.servers.filter((server) => explicitServerNames.has(server.name)).map((server) => [server.name, server.raw])) }, null, 2)}\n`,
+    explicitConfigJson: `${JSON.stringify({ mcpServers: Object.fromEntries(Object.entries(mergedMcpConfig.document.mcpServers).filter(([name]) => explicitServerNames.has(name))) }, null, 2)}\n`,
     servers: parsedMcpConfig.servers.map((server) => {
       const bundledManifest = bundledManifestByServerName.get(server.name);
       const source = explicitServerNames.has(server.name) ? 'config' : 'skill';
