@@ -46,6 +46,7 @@ interface RuntimeCapability {
 
 interface AgentRuntimeResult {
   repoRoot: string;
+  cwd?: string;
   runtimeScope?: string;
   capabilities: RuntimeCapability[];
   counts: Record<string, number>;
@@ -64,7 +65,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const result = await pa.extension.invoke('inspectAgentRuntime', { repoRoot: context.cwd ?? undefined });
+      const result = await pa.extension.invoke('inspectAgentRuntime', { cwd: context.cwd ?? undefined });
       setData(result as AgentRuntimeResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -152,7 +153,13 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
       />
 
-      <Overview capabilities={data.capabilities} counts={data.counts} diagnostics={data.diagnostics ?? []} repoRoot={data.repoRoot} />
+      <Overview
+        capabilities={data.capabilities}
+        counts={data.counts}
+        diagnostics={data.diagnostics ?? []}
+        repoRoot={data.repoRoot}
+        cwd={data.cwd}
+      />
 
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -219,11 +226,13 @@ function Overview({
   counts,
   diagnostics,
   repoRoot,
+  cwd,
 }: {
   capabilities: RuntimeCapability[];
   counts: Record<string, number>;
   diagnostics: unknown[];
   repoRoot: string;
+  cwd?: string;
 }) {
   const extensions = capabilities.filter((capability) => capability.kind === 'extension');
   const activeExtensions = extensions.filter(
@@ -248,7 +257,7 @@ function Overview({
         ))}
       </div>
       <p className="text-[12px] text-dim">
-        CWD <span className="text-secondary">{repoRoot}</span>
+        CWD <span className="text-secondary">{cwd ?? repoRoot}</span>
       </p>
     </section>
   );

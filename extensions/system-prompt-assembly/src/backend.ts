@@ -29,10 +29,18 @@ interface RuntimeCapability {
 
 export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
-  const repoRoot = typeof body.repoRoot === 'string' && body.repoRoot.trim() ? body.repoRoot.trim() : process.cwd();
+  const runtime = (
+    ctx as unknown as {
+      runtime?: { getLiveSessionResourceOptions?: () => { cwd?: string }; getRepoRoot?: () => string };
+    }
+  ).runtime;
+  const resourceOptions = runtime?.getLiveSessionResourceOptions?.() ?? {};
+  const repoRoot =
+    typeof body.repoRoot === 'string' && body.repoRoot.trim() ? body.repoRoot.trim() : (runtime?.getRepoRoot?.() ?? process.cwd());
+  const cwd = typeof body.cwd === 'string' && body.cwd.trim() ? body.cwd.trim() : (resourceOptions.cwd ?? repoRoot);
   const modelRef = typeof body.modelRef === 'string' ? body.modelRef : undefined;
   const runtimeScope = ctx.runtimeScope ?? ctx.profile;
-  const runtimeCtx = { runtimeScope, repoRoot, modelRef };
+  const runtimeCtx = { runtimeScope, repoRoot, cwd, modelRef };
   const [plan, skills, tools, promptTemplates, instructions, extensions, mcp] = await Promise.all([
     buildPromptAssemblyPlanAsync(runtimeCtx),
     buildSkillInventoryAsync(runtimeCtx),
@@ -129,6 +137,7 @@ export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendC
     ok: true,
     runtimeScope,
     repoRoot,
+    cwd,
     capabilities,
     counts,
     plan,
