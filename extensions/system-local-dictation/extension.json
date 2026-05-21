@@ -25,7 +25,7 @@
         "id": "dictation",
         "component": "DictationButton",
         "title": "Dictation",
-        "placement": "afterModelPicker",
+        "placement": "actions",
         "priority": 100
       }
     ],

@@ -739,6 +739,10 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
           const registryExtensions = normalizeRegistryExtensions(extensions);
           const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
           const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
+          const composerControls = [
+            ...normalizeComposerControls(enabledRegistryExtensions),
+            ...normalizeComposerButtons(enabledRegistryExtensions),
+          ].sort(compareComposerControls);
           setState({
             extensions: registryExtensions,
             routes,
@@ -749,7 +753,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
             newConversationPanels: normalizeNewConversationPanels(enabledRegistryExtensions),
             settingsComponents,
             settingsComponent: settingsComponents[0] ?? null,
-            composerControls: normalizeComposerControls(enabledRegistryExtensions),
+            composerControls,
             composerButtons: normalizeComposerButtons(enabledRegistryExtensions),
             composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
             toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
