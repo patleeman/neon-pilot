@@ -2,7 +2,6 @@ import {
   api,
   AppPageIntro,
   AppPageLayout,
-  AppPageSection,
   AppPageToc,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
@@ -390,9 +389,13 @@ function SettingsSection({
   }
 
   return (
-    <AppPageSection id={id} title={label} description={description} className={className}>
+    <section id={id} className={cx('scroll-mt-24 space-y-8 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0', className)}>
+      <div className="max-w-2xl space-y-2">
+        <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{label}</h2>
+        {description ? <p className="text-[14px] leading-6 text-secondary">{description}</p> : null}
+      </div>
       {children}
-    </AppPageSection>
+    </section>
   );
 }
 
@@ -412,17 +415,11 @@ function SettingsPanel({
   className?: string;
 }) {
   return (
-    <section
-      id={id}
-      className={cx(
-        'scroll-mt-24 grid gap-5 border-t border-border-subtle py-7 first:border-t-0 first:pt-0 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8',
-        className,
-      )}
-    >
+    <section id={id} className={cx('scroll-mt-24 space-y-4 border-t border-border-subtle py-7 first:border-t-0 first:pt-0', className)}>
       <div className="min-w-0 space-y-2">
         <div className="space-y-1.5">
-          <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
-          {description ? <p className="max-w-sm text-[12px] leading-5 text-secondary">{description}</p> : null}
+          <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
+          {description ? <p className="max-w-2xl text-[12px] leading-5 text-secondary">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{actions}</div> : null}
       </div>
