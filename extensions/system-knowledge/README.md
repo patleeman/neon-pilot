@@ -43,7 +43,9 @@ The vault is the root directory for durable knowledge. It resolves in this order
 
 ## Vault contents
 
-Instruction files are markdown files that define standing behavior and policy for the agent. They are selected in Settings or listed in config:
+Instruction files define standing behavior and policy for the agent. They are selected in Settings, listed in config, and auto-discovered from the active project by walking from the repository root to the working directory. Project discovery recognizes `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, and root `.github/copilot-instructions.md`.
+
+They can also be selected explicitly:
 
 ```json
 {

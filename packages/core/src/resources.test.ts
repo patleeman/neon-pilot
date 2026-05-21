@@ -126,6 +126,41 @@ describe('runtime resource loader', () => {
     ]);
   });
 
+  it('discovers project instruction files from repo root to cwd', () => {
+    const repo = createTempRepo();
+    const runtimeConfigRoot = createTempRuntimeConfigRoot();
+    const cwd = join(repo, 'packages', 'app');
+
+    writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
+    writeFile(join(repo, 'AGENTS.md'), '# Repo agents\n');
+    writeFile(join(repo, 'CLAUDE.md'), '# Repo claude\n');
+    writeFile(join(repo, 'GEMINI.md'), '# Repo gemini\n');
+    writeFile(join(repo, '.cursorrules'), 'Cursor rules\n');
+    writeFile(join(repo, '.windsurfrules'), 'Windsurf rules\n');
+    writeFile(join(repo, '.github', 'copilot-instructions.md'), '# Copilot\n');
+    writeFile(join(repo, 'packages', 'AGENTS.md'), '# Packages agents\n');
+    writeFile(join(cwd, 'CLAUDE.md'), '# App claude\n');
+
+    const resolved = resolveRuntimeResources('shared', {
+      repoRoot: repo,
+      runtimeConfigRoot,
+      localProfileDir: join(repo, '.local-profile'),
+      cwd,
+    });
+
+    expect(resolved.agentsFiles).toEqual([
+      join(repo, 'defaults/agent/AGENTS.md'),
+      join(repo, '.github', 'copilot-instructions.md'),
+      join(repo, 'AGENTS.md'),
+      join(repo, 'CLAUDE.md'),
+      join(repo, 'GEMINI.md'),
+      join(repo, '.cursorrules'),
+      join(repo, '.windsurfrules'),
+      join(repo, 'packages', 'AGENTS.md'),
+      join(cwd, 'CLAUDE.md'),
+    ]);
+  });
+
   it('includes configured machine skill directories alongside durable skills', () => {
     const repo = createTempRepo();
     const runtimeConfigRoot = createTempRuntimeConfigRoot();

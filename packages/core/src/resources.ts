@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
-import { dirname, isAbsolute, join, resolve } from 'path';
+import { dirname, isAbsolute, join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 import { readMachineInstructionFiles, readMachineSkillDirs } from './machine-config.js';
@@ -56,6 +56,8 @@ export interface ResolveResourceOptions {
   extensionDirs?: string[];
   /** Optional pre-resolved extension entry paths. When provided, core will use these instead of auto-discovering entries. */
   extensionEntries?: string[];
+  /** Working directory used for project instruction discovery. Defaults to process.cwd(). */
+  cwd?: string;
 }
 
 export type PackageInstallTarget = 'local';
@@ -428,6 +430,43 @@ function resolveConfiguredInstructionFiles(): string[] {
   );
 }
 
+const PROJECT_INSTRUCTION_FILE_NAMES = ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.cursorrules', '.windsurfrules'] as const;
+const PROJECT_ROOT_INSTRUCTION_FILE_PATHS = ['.github/copilot-instructions.md'] as const;
+
+function isPathInsideOrEqual(parent: string, child: string): boolean {
+  const childRelativePath = relative(resolve(parent), resolve(child));
+  return childRelativePath.length === 0 || (!childRelativePath.startsWith('..') && !isAbsolute(childRelativePath));
+}
+
+function collectProjectInstructionFiles(repoRoot: string, cwd: string): string[] {
+  const root = resolve(repoRoot);
+  const current = resolve(cwd);
+  if (!isPathInsideOrEqual(root, current)) return [];
+
+  const dirs: string[] = [];
+  let dir = current;
+  while (isPathInsideOrEqual(root, dir)) {
+    dirs.unshift(dir);
+    if (dir === root) break;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return dedupe([
+    ...PROJECT_ROOT_INSTRUCTION_FILE_PATHS.flatMap((relativePath) => {
+      const file = existingFile(join(root, relativePath));
+      return file ? [file] : [];
+    }),
+    ...dirs.flatMap((directory) =>
+      PROJECT_INSTRUCTION_FILE_NAMES.flatMap((fileName) => {
+        const file = existingFile(join(directory, fileName));
+        return file ? [file] : [];
+      }),
+    ),
+  ]);
+}
+
 function collectConfiguredSkillDirs(rootDir: string): string[] {
   const directSkillFiles = [existingFile(join(rootDir, 'SKILL.md')), existingFile(join(rootDir, 'INDEX.md'))].filter(
     (value): value is string => value !== undefined,
@@ -583,6 +622,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
 
   const durableAgentFiles = resolveDurableAgentFiles(runtimeScope, options);
   const configuredInstructionFiles = resolveConfiguredInstructionFiles();
+  const projectInstructionFiles = collectProjectInstructionFiles(repoRoot, options.cwd ?? process.cwd());
   const configuredSkillDirs = resolveConfiguredSkillDirs();
   const durableSettingsFiles = resolveDurableSettingsFiles(runtimeScope, options);
   const durableModelsFiles = resolveDurableModelsFiles(runtimeScope, options);
@@ -650,6 +690,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
       ...collectLayerFiles(repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: repoDefaultsAgentDir }] : [], 'AGENTS.md'),
       ...durableAgentFiles,
       ...configuredInstructionFiles,
+      ...projectInstructionFiles,
       ...collectLayerFiles(localLayers, 'AGENTS.md'),
     ]),
     appendSystemFiles: collectLayerFiles(
