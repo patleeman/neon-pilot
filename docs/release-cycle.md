@@ -4,21 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.5** — current repo version. Publish status: prepare and verify locally before cutting artifacts.
+**v0.9.0-rc.6** — current repo version. Published successfully.
 
-Release page after publish: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.5
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.6
 
 Highlights in this train:
 
-- Completed the Neon Pilot rebrand across app copy, metadata, packaging, docs, and runtime naming.
-- Refreshed desktop shell styling with new logo assets, cobalt accent defaults, accent-aware surfaces, and tighter command palette/workbench behavior.
-- Improved workspace, prompt assembly, knowledge onboarding, extension, and settings layouts.
-- Hardened agent tooling, extension runtime activation, browser routing, and release test inventory coverage.
-- Fixed rc.1 release smoke blockers around host-backed extension imports and isolated daemon socket paths.
-- Added rc.2 local model server controls, live-session bash/API fixes, model-optional release smoke, memory diagnostics, and leaner package output.
-- Added rc.3 video probe, fork/rewind topology fixes, extension templates, canonical web search tooling, and release supply-chain audit coverage.
-- Retagged the same release train as rc.4 after confirming `master` was already up to date with rc.3.
-- Retagged the same release train as rc.5 after confirming `master` was already up to date with rc.4.
+- Adds the agent-browser extension with a built-in browser tool for automated web interaction, default-disabled until configured.
+- Hardens Alleycat mobile bridge with streaming command events, better process lifecycle, mobile file search improvements, and auth edge coverage.
+- Improves startup performance: defers non-critical font loading (97KB reduction in critical CSS) and adds an inline loading indicator for immediate visual feedback.
+- Fixes forked conversation sidebar tree stability, solid context menu backgrounds, build channel badge visibility, and video probe provider settings linking.
+- Moves extension templates to docs/ and excludes them from runtime discovery.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
