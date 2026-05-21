@@ -34,7 +34,7 @@ interface RuntimeCapability {
 
 interface AgentRuntimeResult {
   repoRoot: string;
-  profile: string;
+  runtimeScope?: string;
   capabilities: RuntimeCapability[];
   counts: Record<string, number>;
   diagnostics?: unknown[];
@@ -113,13 +113,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
       />
 
-      <Overview
-        capabilities={data.capabilities}
-        counts={data.counts}
-        diagnostics={data.diagnostics ?? []}
-        repoRoot={data.repoRoot}
-        profile={data.profile}
-      />
+      <Overview capabilities={data.capabilities} counts={data.counts} diagnostics={data.diagnostics ?? []} repoRoot={data.repoRoot} />
 
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -164,13 +158,11 @@ function Overview({
   counts,
   diagnostics,
   repoRoot,
-  profile,
 }: {
   capabilities: RuntimeCapability[];
   counts: Record<string, number>;
   diagnostics: unknown[];
   repoRoot: string;
-  profile: string;
 }) {
   const extensions = capabilities.filter((capability) => capability.kind === 'extension');
   const activeExtensions = extensions.filter(
@@ -206,7 +198,7 @@ function Overview({
         ))}
       </div>
       <p className="text-[12px] text-dim">
-        Profile <span className="text-secondary">{profile}</span> · CWD <span className="text-secondary">{repoRoot}</span>
+        CWD <span className="text-secondary">{repoRoot}</span>
       </p>
     </section>
   );

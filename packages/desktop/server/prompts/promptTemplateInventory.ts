@@ -5,6 +5,7 @@ import { resolveRuntimeResources } from '@neon-pilot/core';
 
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
+import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
 
 export interface PromptTemplateDefinition {
@@ -48,7 +49,7 @@ export function registerPromptTemplateRuntimeHook(hook: PromptTemplateRuntimeHoo
 }
 
 export function listPromptTemplateDefinitions(ctx: AssemblyRuntimeContext): PromptTemplateDefinition[] {
-  const resolved = resolveRuntimeResources(ctx.profile, { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
   let templates = resolved.promptEntries.map((path, index): PromptTemplateDefinition => {
     const title = basename(path).replace(/\.[^.]+$/, '');
     return {

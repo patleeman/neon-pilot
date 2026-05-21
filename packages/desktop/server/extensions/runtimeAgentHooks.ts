@@ -20,13 +20,13 @@ export function setRuntimeAgentHookBuilders(builders: {
 }
 
 function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
-  const resolved = resolveRuntimeResources(process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared', {
+  const runtimeScope = process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared';
+  const resolved = resolveRuntimeResources(runtimeScope, {
     ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
   });
 
-  const profile = process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared';
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT || process.cwd();
-  const assembly = buildPromptAssemblyPlan({ profile, repoRoot, modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE) });
+  const assembly = buildPromptAssemblyPlan({ runtimeScope, repoRoot, modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE) });
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
@@ -48,7 +48,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
 
   return [
     ...createManifestToolAgentExtensions({
-      getCurrentProfile: () => process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared',
+      getCurrentProfile: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {

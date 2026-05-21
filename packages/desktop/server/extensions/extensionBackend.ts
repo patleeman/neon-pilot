@@ -380,9 +380,11 @@ export function createBackendContext(
 ): ExtensionBackendContext {
   registerFileSystemAuthorityHostEvents();
   const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
+  const runtimeScope = serverContext?.getCurrentProfile() ?? 'shared';
   return {
     extensionId,
-    profile: serverContext?.getCurrentProfile() ?? 'shared',
+    runtimeScope,
+    profile: runtimeScope,
     runtimeDir: resolvedPiAgentRuntimeDir,
     profileSettingsFilePath: resolveLocalProfileSettingsFilePath(),
     ...(toolContext ? { toolContext } : {}),

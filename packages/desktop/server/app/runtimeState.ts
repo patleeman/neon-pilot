@@ -44,8 +44,9 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
-    process.env.NEON_PILOT_ACTIVE_PROFILE = runtimeScope;
-    process.env.NEON_PILOT_PROFILE = runtimeScope;
+    process.env.NEON_PILOT_RUNTIME_SCOPE = runtimeScope;
+    delete process.env.NEON_PILOT_ACTIVE_PROFILE;
+    delete process.env.NEON_PILOT_PROFILE;
     if (existsSync(resolve(repoRoot, 'packages'))) {
       process.env.NEON_PILOT_REPO_ROOT = repoRoot;
       delete process.env.NEON_PILOT_RESOURCES_ROOT;
@@ -125,7 +126,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
     const assembly = buildPromptAssemblyPlan({
-      profile: runtimeScope,
+      runtimeScope,
       repoRoot,
       modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
     });
@@ -299,7 +300,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     });
 
     const assembly = buildPromptAssemblyPlan({
-      profile: runtimeScope,
+      runtimeScope,
       repoRoot,
       modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
     });
@@ -318,7 +319,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       extensionEntries: resolveRuntimeExtensionEntries(),
     });
     const assembly = await buildPromptAssemblyPlanAsync({
-      profile: runtimeScope,
+      runtimeScope,
       repoRoot,
       modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
     });

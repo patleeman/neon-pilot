@@ -20,7 +20,7 @@ interface EnsureResult {
   shouldOpen?: boolean;
 }
 
-const ensureInFlightByProfile = new Map<string, Promise<EnsureResult>>();
+const ensureInFlightByRuntimeScope = new Map<string, Promise<EnsureResult>>();
 
 const onboardingMessage = `Welcome to Neon Pilot. This first conversation is here to get you unstuck before the app becomes a very expensive blank text box.
 
@@ -28,7 +28,7 @@ Start here:
 
 1. Open **Settings** and configure your model provider first. Neon Pilot needs a provider before normal agent conversations can run.
 2. Neon Pilot is extension-based. Most product features live as extensions, including tools, panels, automations, browser features, artifacts, and workflow helpers.
-3. Open **Settings → Extensions** to enable, disable, inspect, or manage extensions. System extensions ship with the app; user extensions are where your own workflows belong.
+3. Open **Settings → Agent Runtime** to enable, disable, inspect, or manage extensions and other runtime capabilities. System extensions ship with the app; user extensions are where your own workflows belong.
 4. After your provider is configured, start a new conversation and ask Neon Pilot to help with a real task. The app works best when you give it a concrete objective and let it use tools.
 
 Recommended first move: configure your provider, then come back and ask “what can you do in this repo?”`;
@@ -86,17 +86,18 @@ async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendC
 }
 
 export async function ensure(input: unknown, ctx: ExtensionBackendContext): Promise<EnsureResult> {
-  const existingTask = ensureInFlightByProfile.get(ctx.profile);
+  const runtimeScope = ctx.runtimeScope ?? ctx.profile;
+  const existingTask = ensureInFlightByRuntimeScope.get(runtimeScope);
   if (existingTask) {
     return existingTask;
   }
 
   const normalizedInput = input && typeof input === 'object' ? (input as EnsureInput) : undefined;
   const task = ensureOnce(normalizedInput, ctx).finally(() => {
-    if (ensureInFlightByProfile.get(ctx.profile) === task) {
-      ensureInFlightByProfile.delete(ctx.profile);
+    if (ensureInFlightByRuntimeScope.get(runtimeScope) === task) {
+      ensureInFlightByRuntimeScope.delete(runtimeScope);
     }
   });
-  ensureInFlightByProfile.set(ctx.profile, task);
+  ensureInFlightByRuntimeScope.set(runtimeScope, task);
   return task;
 }

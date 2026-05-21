@@ -5,6 +5,7 @@ import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neo
 
 import { listExtensionAssemblyProviderRegistrations, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
+import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
 
 const REGISTRY_FILE = 'skills-registry.json';
 
@@ -47,7 +48,9 @@ export interface RuntimeSkillInjectionPlan {
 }
 
 export interface SkillRuntimeContext {
-  profile: string;
+  runtimeScope?: string;
+  /** @deprecated Runtime resources are no longer user-profile scoped. Use runtimeScope. */
+  profile?: string;
   repoRoot: string;
 }
 
@@ -113,7 +116,7 @@ async function listSkillDefinitionsWithDiagnosticsAsync(
     providers.map(async (provider) => {
       const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<SkillDefinition>({
         provider,
-        payload: { profile: ctx.profile, repoRoot: ctx.repoRoot },
+        payload: { runtimeScope: getAssemblyRuntimeScope(ctx), repoRoot: ctx.repoRoot },
         resultKey: 'skills',
         validateItem: isSkillDefinitionLike,
       });
@@ -225,7 +228,7 @@ export function buildFilteredSkillPaths(skillDirs: string[], extensionSkillDirs:
 }
 
 function listConfiguredSkillDefinitions(ctx: SkillRuntimeContext): SkillDefinition[] {
-  const resolved = resolveRuntimeResources(ctx.profile, { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
   const durableSkillsDir = getDurableSkillsDir();
   return dedupeSkills([
     ...listSkillDefinitionsFromParents(resolved.skillDirs, 'configured-folder'),

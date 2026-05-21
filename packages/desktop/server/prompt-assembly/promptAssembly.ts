@@ -5,15 +5,17 @@ import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills
 import { buildToolInjectionPlan, buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
 import { buildInstructionPlan } from './instructionInventory.js';
 import { buildPromptContextPlan } from './promptContextInventory.js';
+import { getAssemblyRuntimeScope } from './runtimeScope.js';
 import type { AssemblyRuntimeContext, PromptAssemblyPlan } from './types.js';
 
 export function buildPromptAssemblyPlan(ctx: AssemblyRuntimeContext): PromptAssemblyPlan {
+  const runtimeScope = getAssemblyRuntimeScope(ctx);
   const skills = buildSkillInjectionPlan(ctx);
   const tools = buildToolInjectionPlan(ctx);
   const promptTemplates = buildPromptTemplatePlan(ctx);
   const instructions = { layers: [], diagnostics: [] };
   return {
-    profile: ctx.profile,
+    runtimeScope,
     repoRoot: ctx.repoRoot,
     skills: {
       skillPaths: skills.skillPaths,
@@ -42,6 +44,7 @@ export async function buildPromptAssemblyPlanAsync(
     contextMessages?: Array<{ customType: string; content: string }>;
   },
 ): Promise<PromptAssemblyPlan> {
+  const runtimeScope = getAssemblyRuntimeScope(ctx);
   const [skills, tools, promptTemplates, instructions] = await Promise.all([
     buildSkillInjectionPlanAsync(ctx),
     buildToolInjectionPlanAsync(ctx),
@@ -49,7 +52,7 @@ export async function buildPromptAssemblyPlanAsync(
     buildInstructionPlan(ctx),
   ]);
   const plan: PromptAssemblyPlan = {
-    profile: ctx.profile,
+    runtimeScope,
     repoRoot: ctx.repoRoot,
     skills: { skillPaths: skills.skillPaths, inlineSkills: skills.inlineSkills, diagnostics: skills.diagnostics },
     tools: { activeToolNames: tools.activeToolNames, diagnostics: tools.diagnostics },

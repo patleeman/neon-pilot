@@ -13,6 +13,7 @@ import {
 import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from '../../../core/src/system-prompt-template.js';
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
+import { getAssemblyRuntimeScope } from './runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from './types.js';
 
 export interface InstructionLayer {
@@ -21,7 +22,7 @@ export interface InstructionLayer {
   title: string;
   content: string;
   source: AssemblySource;
-  scope: 'global' | 'profile' | 'workspace' | 'conversation' | 'runtime';
+  scope: 'global' | 'workspace' | 'conversation' | 'runtime';
   priority: number;
   mutable: boolean;
   risk: 'normal' | 'sensitive' | 'break-glass';
@@ -110,7 +111,7 @@ export async function buildInstructionPlan(ctx: AssemblyRuntimeContext): Promise
 }
 
 function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLayer[] {
-  const resolved = resolveRuntimeResources(ctx.profile, { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
   const layers: InstructionLayer[] = [];
   for (const [index, path] of resolved.agentsFiles.entries()) {
     const content = readText(path);
@@ -121,7 +122,7 @@ function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLaye
       title: basename(path),
       content,
       source: { kind: 'configured-folder', label: path, root: path },
-      scope: 'profile',
+      scope: 'global',
       priority: 100 + index,
       mutable: false,
       risk: 'normal',
@@ -162,7 +163,7 @@ function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLaye
 }
 
 async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<InstructionLayer | null> {
-  const resolved = resolveRuntimeResources(ctx.profile, { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
   const variables: SystemPromptTemplateVariables = {
     repo_root: resolved.repoRoot,
     vault_root: resolved.vaultRoot,

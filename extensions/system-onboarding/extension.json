@@ -3,7 +3,7 @@
   "id": "system-onboarding",
   "name": "Onboarding",
   "packageType": "system",
-  "description": "Creates a one-time onboarding conversation for new Neon Pilot profiles.",
+  "description": "Creates a one-time onboarding conversation for new Neon Pilot installs.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",

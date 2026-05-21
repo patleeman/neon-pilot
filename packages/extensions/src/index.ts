@@ -1069,10 +1069,17 @@ export interface RuntimeHealth {
 
 export interface ExtensionBackendContext {
   extensionId: string;
+  /**
+   * Current runtime scope. Neon Pilot no longer has user-selectable profiles;
+   * this is the single shared runtime scope kept for storage migration and
+   * legacy path compatibility.
+   */
+  runtimeScope: string;
+  /** @deprecated Use runtimeScope. Profiles are legacy storage plumbing. */
   profile: string;
   /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
-  /** Absolute path to the current profile's settings file. */
+  /** Absolute path to the runtime settings file. */
   profileSettingsFilePath: string;
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
