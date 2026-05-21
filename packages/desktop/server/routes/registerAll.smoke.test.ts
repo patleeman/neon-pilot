@@ -39,23 +39,23 @@ describe('registerServerRoutes smoke test', () => {
   const workspaceDir = join(tempRoot, 'workspace');
   const settingsFile = join(tempRoot, 'settings.json');
   const authFile = join(tempRoot, 'auth.json');
-  const profilesRoot = join(tempRoot, 'profiles');
+  const runtimeConfigRoot = join(tempRoot, 'profiles');
 
   let appBaseUrl = '';
   let closeAppServer: (() => Promise<void>) | null = null;
 
   beforeAll(async () => {
     mkdirSync(workspaceDir, { recursive: true });
-    mkdirSync(profilesRoot, { recursive: true });
+    mkdirSync(runtimeConfigRoot, { recursive: true });
     writeFileSync(join(workspaceDir, 'README.md'), '# smoke\n');
     writeFileSync(settingsFile, JSON.stringify({}, null, 2));
     writeFileSync(authFile, JSON.stringify({}, null, 2));
 
     const context: ServerRouteContext = {
-      getCurrentProfile: () => 'shared',
+      getRuntimeScope: () => 'shared',
       getRepoRoot: () => tempRoot,
-      getProfilesRoot: () => profilesRoot,
-      materializeWebProfile: () => {},
+      getRuntimeConfigRoot: () => runtimeConfigRoot,
+      materializeWebRuntimeConfig: () => {},
       getSettingsFile: () => settingsFile,
       getAuthFile: () => authFile,
       getStateRoot: () => tempRoot,
@@ -79,11 +79,11 @@ describe('registerServerRoutes smoke test', () => {
         archivedConversationIds: [],
         nodeBrowserViews: [],
       }),
-      listTasksForCurrentProfile: () => [],
+      listTasksForRuntimeScope: () => [],
       listMemoryDocs: () => [],
-      listSkillsForCurrentProfile: () => [],
+      listSkillsForRuntimeScope: () => [],
       listProfileAgentItems: () => [],
-      withTemporaryProfileAgentDir: async (_profile, run) => run(tempRoot),
+      withTemporaryRuntimeAgentDir: async (_profile, run) => run(tempRoot),
       getDurableRunSnapshot: async () => null,
     };
 

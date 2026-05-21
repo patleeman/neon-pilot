@@ -27,7 +27,7 @@ function buildServerContext(): ExtensionBackendServerContext {
   });
 
   return {
-    getCurrentProfile: runtimeState.getRuntimeScope,
+    getRuntimeScope: runtimeState.getRuntimeScope,
     buildLiveSessionResourceOptions: () => runtimeState.buildLiveSessionResourceOptions(),
     getRepoRoot: () => repoRoot,
   };

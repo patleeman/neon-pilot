@@ -1,9 +1,9 @@
 export type {
-  CurrentProfileTaskSummary,
   LiveSessionResourceOptions,
   MemoryDocSummary,
   ProfileAgentItemSummary,
   RegisterServerRoutesInput,
+  RuntimeScopeTaskSummary,
   ServerRouteContext,
   SkillSummary,
 } from './context.js';

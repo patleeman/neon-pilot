@@ -14,7 +14,7 @@ function publishHostEvent(source: string, payload: unknown): void {
 
 export function registerSettingsRoutes(
   router: Pick<Express, 'get' | 'patch'>,
-  _context?: Pick<ServerRouteContext, 'getCurrentProfile'>,
+  _context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): void {
   // GET /api/settings — returns all current values (merged with defaults)
   router.get('/api/settings', (_req, res) => {

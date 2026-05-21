@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getDurableModelsDir, getDurableProfilesDir } from '@neon-pilot/core';
+import { getConfigRoot, getDurableModelsDir, getDurableRuntimeConfigRoot } from '@neon-pilot/core';
 
 export type ModelProviderApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages' | 'google-generative-ai';
 export type ModelProviderInputType = 'text' | 'image';
@@ -68,6 +68,8 @@ export interface EditableModelProviderModelConfig {
 }
 
 export interface ModelProviderFileOptions {
+  runtimeConfigRoot?: string;
+  /** @deprecated Use runtimeConfigRoot. */
   profilesDir?: string;
   modelsDir?: string;
 }
@@ -99,6 +101,11 @@ function normalizeModelId(modelId: string): string {
 }
 
 function resolveProfilesDir(options: ModelProviderFileOptions = {}): string {
+  const explicitRuntimeConfigRoot = options.runtimeConfigRoot?.trim();
+  if (explicitRuntimeConfigRoot) {
+    return explicitRuntimeConfigRoot;
+  }
+
   const explicitProfilesDir = options.profilesDir?.trim();
   if (explicitProfilesDir) {
     return explicitProfilesDir;
@@ -109,7 +116,7 @@ function resolveProfilesDir(options: ModelProviderFileOptions = {}): string {
     return explicitLegacyModelsDir;
   }
 
-  return getDurableProfilesDir();
+  return getDurableRuntimeConfigRoot();
 }
 
 function resolveLegacyModelsDir(options: ModelProviderFileOptions = {}): string {
@@ -124,6 +131,10 @@ function resolveLegacyModelProvidersFilePath(profile: string, options: ModelProv
   const normalizedProfile = normalizeProfile(profile);
   const fileName = normalizedProfile === 'shared' ? 'global.json' : `${normalizedProfile}.json`;
   return join(resolveLegacyModelsDir(options), fileName);
+}
+
+function resolveLegacyProfileModelProvidersFilePath(profile: string): string {
+  return join(getConfigRoot(), 'profiles', normalizeProfile(profile), 'models.json');
 }
 
 export function resolveModelProvidersFilePath(profile: string, options: ModelProviderFileOptions = {}): string {
@@ -158,6 +169,11 @@ function readWritableRawConfig(profile: string, options: ModelProviderFileOption
     return readRawConfig(legacyPath);
   }
 
+  const legacyProfilePath = resolveLegacyProfileModelProvidersFilePath(profile);
+  if (existsSync(legacyProfilePath)) {
+    return readRawConfig(legacyProfilePath);
+  }
+
   return {};
 }
 
@@ -170,6 +186,10 @@ function finalizeCanonicalWrite(profile: string, filePath: string, options: Mode
   const legacyPath = resolveLegacyModelProvidersFilePath(profile, options);
   if (legacyPath !== filePath && existsSync(legacyPath)) {
     rmSync(legacyPath, { force: true });
+  }
+  const legacyProfilePath = resolveLegacyProfileModelProvidersFilePath(profile);
+  if (legacyProfilePath !== filePath && existsSync(legacyProfilePath)) {
+    rmSync(legacyProfilePath, { force: true });
   }
 }
 

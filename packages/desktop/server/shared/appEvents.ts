@@ -50,7 +50,7 @@ export interface AppEventMonitorOptions {
   sessionsDir: string;
   taskStateFile: string;
   profileConfigFile: string;
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   intervalMs?: number;
 }
 
@@ -536,7 +536,7 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
 
   let watcherStops: WatchStop[] = [];
   let profileWatcherStop: WatchStop | undefined;
-  let currentProfile = options.getCurrentProfile();
+  let runtimeScope = options.getRuntimeScope();
   let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
   let rebuildTimer: ReturnType<typeof setTimeout> | undefined;
   const pendingTopics = new Set<AppEventTopic>();
@@ -599,15 +599,15 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
     for (const stop of watcherStops) {
       stop();
     }
-    watcherStops = buildWatchTargets(options, currentProfile).map((target) =>
+    watcherStops = buildWatchTargets(options, runtimeScope).map((target) =>
       startWatchTarget(target, queueInvalidation, queueConversationSessionFileChange, scheduleRebuild),
     );
   };
 
   const refreshProfile = () => {
-    const nextProfile = options.getCurrentProfile();
-    const profileChanged = nextProfile !== currentProfile;
-    currentProfile = nextProfile;
+    const nextProfile = options.getRuntimeScope();
+    const profileChanged = nextProfile !== runtimeScope;
+    runtimeScope = nextProfile;
     rebuildWatchers();
 
     if (profileChanged) {

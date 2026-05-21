@@ -444,7 +444,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
   });
 
   const flushAttentionEvents = createAttentionEventFlusher({
-    getCurrentProfile: runtimeState.getRuntimeScope,
+    getRuntimeScope: runtimeState.getRuntimeScope,
     getRepoRoot: () => repoRoot,
     getStateRoot,
     resolveDaemonRoot,
@@ -462,8 +462,8 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     repoRoot,
     settingsFile,
     authFile,
-    getCurrentProfile: runtimeState.getRuntimeScope,
-    materializeWebProfile: () => runtimeState.materializeRuntimeResources(),
+    getRuntimeScope: runtimeState.getRuntimeScope,
+    materializeWebRuntimeConfig: () => runtimeState.materializeRuntimeResources(),
     getStateRoot,
     serverPort: 0,
     getDefaultWebCwd: () => process.cwd(),
@@ -473,7 +473,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     buildLiveSessionExtensionFactories: runtimeState.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: flushAttentionEvents,
     getSavedUiPreferences: () => readSavedUiPreferences(settingsFile),
-    listTasksForCurrentProfile: () => {
+    listTasksForRuntimeScope: () => {
       const loaded = loadScheduledTasksForProfile(runtimeState.getRuntimeScope());
       const runtimeById = new Map(loaded.runtimeEntries.flatMap((task) => (task.id ? [[task.id, task] as const] : [])));
 
@@ -512,7 +512,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
         path: doc.path,
         updated: doc.updated,
       })),
-    listSkillsForCurrentProfile: () =>
+    listSkillsForRuntimeScope: () =>
       listSkillsForProfile(runtimeState.getRuntimeScope()).map((skill) => ({
         name: skill.name,
         source: skill.source,
@@ -520,26 +520,26 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
         path: skill.path,
       })),
     listProfileAgentItems: () => [],
-    withTemporaryProfileAgentDir: (_profile, run) => runtimeState.withTemporaryRuntimeAgentDir(run),
+    withTemporaryRuntimeAgentDir: (_profile, run) => runtimeState.withTemporaryRuntimeAgentDir(run),
     getDurableRunSnapshot: async (runId: string, tail: number) => (await getDurableRunSnapshot(runId, tail)) ?? null,
   });
 
   localServerRouteContext = context;
 
   localLiveSessionCapabilityContext = {
-    getCurrentProfile: context.getCurrentProfile,
+    getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
-    listTasksForCurrentProfile: context.listTasksForCurrentProfile,
+    listTasksForRuntimeScope: context.listTasksForRuntimeScope,
     listMemoryDocs: context.listMemoryDocs,
   };
 
   localProviderDesktopCapabilityContext = {
-    getCurrentProfile: context.getCurrentProfile,
-    materializeWebProfile: context.materializeWebProfile,
+    getRuntimeScope: context.getRuntimeScope,
+    materializeWebRuntimeConfig: context.materializeWebRuntimeConfig,
     getAuthFile: context.getAuthFile,
   };
 
@@ -861,7 +861,7 @@ export async function subscribeDesktopConversationState(
   let appUnsubscribe: (() => void) | null = null;
   let currentState = await readDesktopConversationState({
     conversationId,
-    profile: capabilityContext.getCurrentProfile(),
+    profile: capabilityContext.getRuntimeScope(),
     tailBlocks,
   });
   let lastSerializedState = '';
@@ -872,7 +872,7 @@ export async function subscribeDesktopConversationState(
     }
 
     await recoverConversationCapability(conversationId, {
-      getCurrentProfile: capabilityContext.getCurrentProfile,
+      getRuntimeScope: capabilityContext.getRuntimeScope,
       buildLiveSessionResourceOptions: capabilityContext.buildLiveSessionResourceOptions,
       buildLiveSessionExtensionFactories: capabilityContext.buildLiveSessionExtensionFactories,
       flushLiveDeferredResumes: capabilityContext.flushLiveDeferredResumes,
@@ -880,7 +880,7 @@ export async function subscribeDesktopConversationState(
 
     currentState = await readDesktopConversationState({
       conversationId,
-      profile: capabilityContext.getCurrentProfile(),
+      profile: capabilityContext.getRuntimeScope(),
       tailBlocks,
     });
   };
@@ -951,7 +951,7 @@ export async function subscribeDesktopConversationState(
   const refreshState = async () => {
     currentState = await readDesktopConversationState({
       conversationId,
-      profile: capabilityContext.getCurrentProfile(),
+      profile: capabilityContext.getRuntimeScope(),
       tailBlocks,
     });
     await ensureCurrentStateIsLive();
@@ -1168,7 +1168,7 @@ export async function readDesktopKnowledgeBase() {
 export async function updateDesktopKnowledgeBase(input: { repoUrl?: string | null; branch?: string | null }) {
   const state = updateKnowledgeBase(input);
   const context = await getLocalServerRouteContext();
-  context.materializeWebProfile(context.getCurrentProfile());
+  context.materializeWebRuntimeConfig(context.getRuntimeScope());
   invalidateAppTopics('knowledgeBase');
   return state;
 }
@@ -1398,22 +1398,22 @@ export async function subscribeDesktopProviderOAuthLogin(loginId: string, onStat
 
 export async function readDesktopScheduledTasks() {
   await getLocalRoutes();
-  return listScheduledTasksCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant');
+  return listScheduledTasksCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant');
 }
 
 export async function readDesktopScheduledTaskDetail(taskId: string) {
   await getLocalRoutes();
-  return readScheduledTaskCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', taskId);
+  return readScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
 }
 
 export async function readDesktopScheduledTaskSchedulerHealth() {
   await getLocalRoutes();
-  return readScheduledTaskSchedulerHealth(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant');
+  return readScheduledTaskSchedulerHealth(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant');
 }
 
 export async function readDesktopScheduledTaskLog(taskId: string) {
   await getLocalRoutes();
-  return readScheduledTaskLogCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', taskId);
+  return readScheduledTaskLogCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
 }
 
 export async function createDesktopScheduledTask(input: {
@@ -1440,7 +1440,7 @@ export async function createDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return createScheduledTaskCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', {
+  return createScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', {
     ...input,
     title: input.title ?? '',
     prompt: input.prompt ?? '',
@@ -1472,23 +1472,23 @@ export async function updateDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return updateScheduledTaskCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', input);
+  return updateScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', input);
 }
 
 export async function runDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return runScheduledTaskCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', taskId);
+  return runScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
 }
 
 export async function deleteDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return deleteScheduledTaskCapability(localLiveSessionCapabilityContext?.getCurrentProfile() ?? 'assistant', taskId);
+  return deleteScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
 }
 
 export async function markDesktopConversationAttention(input: { conversationId: string; read?: boolean }) {
   const context = await getLocalServerRouteContext();
   const updated = toggleConversationAttention({
-    profile: context.getCurrentProfile(),
+    profile: context.getRuntimeScope(),
     conversationId: input.conversationId,
     read: input.read !== false,
   });
@@ -1531,7 +1531,7 @@ export async function readDesktopConversationBootstrap(input: {
   const context = await getLocalLiveSessionCapabilityContext();
   const bootstrap = await readConversationBootstrapState({
     ...input,
-    profile: context.getCurrentProfile(),
+    profile: context.getRuntimeScope(),
   });
   if (isMissingConversationBootstrapState(bootstrap.state)) {
     throw new Error('Conversation not found');
@@ -1607,7 +1607,7 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
 
   const context = await getLocalLiveSessionCapabilityContext();
   const result = await createSessionFromExisting(sourceSessionFile, nextCwd, {
-    ...context.buildLiveSessionResourceOptions(context.getCurrentProfile()),
+    ...context.buildLiveSessionResourceOptions(context.getRuntimeScope()),
     extensionFactories: context.buildLiveSessionExtensionFactories(),
   });
 
@@ -1643,7 +1643,7 @@ export async function createDesktopConversationCheckpoint(input: { conversationI
   const paths = normalizeCheckpointPaths(cwd, input.paths);
   const created = createConversationCheckpointCommit({ cwd, message, paths });
   const record = saveConversationCommitCheckpoint({
-    profile: context.getCurrentProfile(),
+    profile: context.getRuntimeScope(),
     conversationId,
     checkpointId: created.metadata.commitSha,
     title: created.metadata.subject,
@@ -1665,32 +1665,32 @@ export async function createDesktopConversationCheckpoint(input: { conversationI
 
 export async function readDesktopConversationArtifacts(conversationId: string) {
   const context = await getLocalServerRouteContext();
-  return readConversationArtifactsCapability(context.getCurrentProfile(), conversationId);
+  return readConversationArtifactsCapability(context.getRuntimeScope(), conversationId);
 }
 
 export async function readDesktopConversationArtifact(input: { conversationId: string; artifactId: string }) {
   const context = await getLocalServerRouteContext();
-  return readConversationArtifactCapability(context.getCurrentProfile(), input);
+  return readConversationArtifactCapability(context.getRuntimeScope(), input);
 }
 
 export async function readDesktopConversationCheckpoints(conversationId: string) {
   const context = await getLocalServerRouteContext();
-  return readConversationCommitCheckpointsCapability(context.getCurrentProfile(), conversationId);
+  return readConversationCommitCheckpointsCapability(context.getRuntimeScope(), conversationId);
 }
 
 export async function readDesktopConversationCheckpoint(input: { conversationId: string; checkpointId: string }) {
   const context = await getLocalServerRouteContext();
-  return readConversationCommitCheckpointCapability(context.getCurrentProfile(), input);
+  return readConversationCommitCheckpointCapability(context.getRuntimeScope(), input);
 }
 
 export async function readDesktopConversationAttachments(conversationId: string) {
   const context = await getLocalServerRouteContext();
-  return readConversationAttachmentsCapability(context.getCurrentProfile(), conversationId);
+  return readConversationAttachmentsCapability(context.getRuntimeScope(), conversationId);
 }
 
 export async function readDesktopConversationAttachment(input: { conversationId: string; attachmentId: string }) {
   const context = await getLocalServerRouteContext();
-  return readConversationAttachmentCapability(context.getCurrentProfile(), input);
+  return readConversationAttachmentCapability(context.getRuntimeScope(), input);
 }
 
 export async function createDesktopConversationAttachment(input: {
@@ -1706,7 +1706,7 @@ export async function createDesktopConversationAttachment(input: {
   note?: string;
 }) {
   const context = await getLocalServerRouteContext();
-  return createConversationAttachmentCapability(context.getCurrentProfile(), input);
+  return createConversationAttachmentCapability(context.getRuntimeScope(), input);
 }
 
 export async function updateDesktopConversationAttachment(input: {
@@ -1722,7 +1722,7 @@ export async function updateDesktopConversationAttachment(input: {
   note?: string;
 }) {
   const context = await getLocalServerRouteContext();
-  return updateConversationAttachmentCapability(context.getCurrentProfile(), input);
+  return updateConversationAttachmentCapability(context.getRuntimeScope(), input);
 }
 
 export async function readDesktopConversationAttachmentAsset(input: {
@@ -1732,7 +1732,7 @@ export async function readDesktopConversationAttachmentAsset(input: {
   revision?: number;
 }) {
   const context = await getLocalServerRouteContext();
-  const download = readConversationAttachmentDownloadCapability(context.getCurrentProfile(), input);
+  const download = readConversationAttachmentDownloadCapability(context.getRuntimeScope(), input);
   const data = readFileSync(download.filePath).toString('base64');
 
   return {
@@ -1773,7 +1773,7 @@ export async function fireDesktopConversationDeferredResume(input: { conversatio
 export async function recoverDesktopConversation(conversationId: string) {
   const context = await getLocalLiveSessionCapabilityContext();
   return recoverConversationCapability(conversationId, {
-    getCurrentProfile: context.getCurrentProfile,
+    getRuntimeScope: context.getRuntimeScope,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
@@ -1937,7 +1937,7 @@ export async function readDesktopSessionDetail(input: {
 
   const { sessionRead } = await readSessionDetailForRoute({
     conversationId: sessionId,
-    profile: context.getCurrentProfile(),
+    profile: context.getRuntimeScope(),
     tailBlocks: input.tailBlocks,
   });
   if (!sessionRead.detail) {

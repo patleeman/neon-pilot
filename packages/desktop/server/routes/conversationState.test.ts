@@ -203,7 +203,7 @@ function createResponse() {
 }
 
 function createHarness(options?: {
-  getCurrentProfile?: () => string;
+  getRuntimeScope?: () => string;
   buildLiveSessionResourceOptions?: () => Record<string, unknown>;
   buildLiveSessionExtensionFactories?: () => unknown[];
   flushLiveDeferredResumes?: () => Promise<void>;
@@ -224,7 +224,7 @@ function createHarness(options?: {
   };
 
   registerConversationStateRoutes(router as never, {
-    getCurrentProfile: options?.getCurrentProfile ?? (() => 'assistant'),
+    getRuntimeScope: options?.getRuntimeScope ?? (() => 'assistant'),
     buildLiveSessionResourceOptions: options?.buildLiveSessionResourceOptions ?? (() => ({ additionalExtensionPaths: [] })),
     buildLiveSessionExtensionFactories: options?.buildLiveSessionExtensionFactories ?? (() => []),
     flushLiveDeferredResumes: options?.flushLiveDeferredResumes ?? (async () => {}),
@@ -336,7 +336,7 @@ describe('registerConversationStateRoutes', () => {
   });
 
   it('reuses a known bootstrap signature for live conversations and records timing', async () => {
-    const { getHandler } = createHarness({ getCurrentProfile: () => 'datadog' });
+    const { getHandler } = createHarness({ getRuntimeScope: () => 'datadog' });
     const handler = getHandler('/api/conversations/:id/bootstrap');
     const res = createResponse();
 
@@ -546,7 +546,7 @@ describe('registerConversationStateRoutes', () => {
     expect(recoverConversationCapabilityMock).toHaveBeenCalledWith(
       'conversation-1',
       expect.objectContaining({
-        getCurrentProfile: expect.any(Function),
+        getRuntimeScope: expect.any(Function),
         buildLiveSessionResourceOptions: expect.any(Function),
         buildLiveSessionExtensionFactories: expect.any(Function),
         flushLiveDeferredResumes: expect.any(Function),
@@ -807,7 +807,7 @@ describe('registerConversationStateRoutes', () => {
   it('delegates recovery requests to the recovery capability', async () => {
     const flushLiveDeferredResumesMock = vi.fn().mockResolvedValue(undefined);
     const { postHandler } = createHarness({
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       buildLiveSessionResourceOptions: () => ({ additionalExtensionPaths: ['extensions'] }),
       buildLiveSessionExtensionFactories: () => ['factory'],
       flushLiveDeferredResumes: flushLiveDeferredResumesMock,
@@ -828,7 +828,7 @@ describe('registerConversationStateRoutes', () => {
     expect(recoverConversationCapabilityMock).toHaveBeenCalledWith(
       'conversation-1',
       expect.objectContaining({
-        getCurrentProfile: expect.any(Function),
+        getRuntimeScope: expect.any(Function),
         buildLiveSessionResourceOptions: expect.any(Function),
         buildLiveSessionExtensionFactories: expect.any(Function),
         flushLiveDeferredResumes: flushLiveDeferredResumesMock,

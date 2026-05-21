@@ -14,7 +14,7 @@ function createTempRepo(): string {
   const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-cwd-'));
   tempDirs.push(dir);
   process.env.NEON_PILOT_STATE_ROOT = dir;
-  process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'sync', 'profiles');
+  process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT = join(dir, 'sync', 'runtime');
   return dir;
 }
 

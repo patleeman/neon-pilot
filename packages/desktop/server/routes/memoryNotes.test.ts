@@ -4,7 +4,7 @@ const {
   buildRecentReadUsageMock,
   existsSyncMock,
   getDurableAgentFilePathMock,
-  getProfilesRootMock,
+  getRuntimeConfigRootMock,
   getVaultRootMock,
   listMemoryDocsMock,
   listRuntimeScopesMock,
@@ -18,7 +18,7 @@ const {
   buildRecentReadUsageMock: vi.fn(),
   existsSyncMock: vi.fn(),
   getDurableAgentFilePathMock: vi.fn(() => '/vault/AGENTS.md'),
-  getProfilesRootMock: vi.fn(() => '/profiles'),
+  getRuntimeConfigRootMock: vi.fn(() => '/profiles'),
   getVaultRootMock: vi.fn(() => '/vault'),
   listMemoryDocsMock: vi.fn(),
   listRuntimeScopesMock: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('@neon-pilot/core', () => ({
   getDurableAgentFilePath: getDurableAgentFilePathMock,
-  getProfilesRoot: getProfilesRootMock,
+  getRuntimeConfigRoot: getRuntimeConfigRootMock,
   getVaultRoot: getVaultRootMock,
   listRuntimeScopes: listRuntimeScopesMock,
   resolveRuntimeResources: resolveRuntimeResourcesMock,
@@ -85,7 +85,7 @@ function createHarness(options?: { profile?: string; repoRoot?: string }) {
   };
 
   registerMemoryNotesRoutes(router as never, {
-    getCurrentProfile: () => options?.profile ?? 'assistant',
+    getRuntimeScope: () => options?.profile ?? 'assistant',
     getRepoRoot: () => options?.repoRoot ?? '/repo',
   });
 
@@ -99,7 +99,7 @@ describe('registerMemoryNotesRoutes', () => {
     buildRecentReadUsageMock.mockReset();
     existsSyncMock.mockReset();
     getDurableAgentFilePathMock.mockClear();
-    getProfilesRootMock.mockClear();
+    getRuntimeConfigRootMock.mockClear();
     getVaultRootMock.mockClear();
     listMemoryDocsMock.mockReset();
     listRuntimeScopesMock.mockReset();

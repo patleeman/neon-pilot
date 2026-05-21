@@ -265,7 +265,7 @@ function createResponse() {
 function createDesktopHarness(options?: {
   flushLiveDeferredResumes?: () => Promise<void>;
   listMemoryDocs?: () => Array<Record<string, unknown>>;
-  listTasksForCurrentProfile?: () => Array<Record<string, unknown>>;
+  listTasksForRuntimeScope?: () => Array<Record<string, unknown>>;
 }) {
   const deleteHandlers = new Map<string, Handler>();
   const getHandlers = new Map<string, Handler>();
@@ -290,11 +290,11 @@ function createDesktopHarness(options?: {
     buildLiveSessionExtensionFactories: () => ['factory'],
     buildLiveSessionResourceOptions: () => ({ additionalExtensionPaths: ['extensions'] }),
     flushLiveDeferredResumes: options?.flushLiveDeferredResumes ?? (async () => {}),
-    getCurrentProfile: () => 'assistant',
+    getRuntimeScope: () => 'assistant',
     getDefaultWebCwd: () => '/default-cwd',
     getRepoRoot: () => '/repo',
     listMemoryDocs: options?.listMemoryDocs ?? (() => []),
-    listTasksForCurrentProfile: options?.listTasksForCurrentProfile ?? (() => []),
+    listTasksForRuntimeScope: options?.listTasksForRuntimeScope ?? (() => []),
   });
 
   return {
@@ -414,8 +414,8 @@ describe('live session routes', () => {
 
   it('skips reference catalog lookups for plain prompts without mentions', async () => {
     const listMemoryDocs = vi.fn(() => [{ id: 'note-1', title: 'Memory', path: '/notes/memory.md', summary: 'Summary' }]);
-    const listTasksForCurrentProfile = vi.fn(() => [{ id: 'task-1', prompt: 'Run the tests', enabled: true, running: false }]);
-    createDesktopHarness({ listMemoryDocs, listTasksForCurrentProfile });
+    const listTasksForRuntimeScope = vi.fn(() => [{ id: 'task-1', prompt: 'Run the tests', enabled: true, running: false }]);
+    createDesktopHarness({ listMemoryDocs, listTasksForRuntimeScope });
 
     isLiveMock.mockReturnValue(true);
     submitLocalPromptSessionMock.mockResolvedValue({ acceptedAs: 'started', completion: Promise.resolve() });
@@ -430,7 +430,7 @@ describe('live session routes', () => {
     );
     await Promise.resolve();
 
-    expect(listTasksForCurrentProfile).not.toHaveBeenCalled();
+    expect(listTasksForRuntimeScope).not.toHaveBeenCalled();
     expect(listMemoryDocs).not.toHaveBeenCalled();
     expect(resolvePromptReferencesMock).not.toHaveBeenCalled();
     expect(expandPromptReferencesWithNodeGraphMock).not.toHaveBeenCalled();
@@ -484,7 +484,7 @@ describe('live session routes', () => {
     createDesktopHarness({
       flushLiveDeferredResumes,
       listMemoryDocs: () => [{ id: 'note-1', title: 'Memory', path: '/notes/memory.md', summary: 'Summary' }],
-      listTasksForCurrentProfile: () => [{ id: 'task-1', prompt: 'Run the tests', enabled: true, running: false }],
+      listTasksForRuntimeScope: () => [{ id: 'task-1', prompt: 'Run the tests', enabled: true, running: false }],
     });
 
     const emptyRes = createResponse();

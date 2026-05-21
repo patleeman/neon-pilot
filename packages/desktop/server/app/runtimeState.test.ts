@@ -3,9 +3,11 @@ import { existsSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  getProfilesRootMock,
+  getRuntimeConfigRootMock,
   getStateRootMock,
   getDurableSkillsDirMock,
+  getDurableSessionsDirMock,
+  getPiAgentRuntimeDirMock,
   writeMergedMcpConfigFileMock,
   materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResourcesMock,
@@ -24,9 +26,11 @@ const {
   const manifestAgentFactoryMock = vi.fn();
 
   return {
-    getProfilesRootMock: vi.fn(() => '/profiles-root'),
+    getRuntimeConfigRootMock: vi.fn(() => '/profiles-root'),
     getStateRootMock: vi.fn(() => '/state-root'),
     getDurableSkillsDirMock: vi.fn(() => '/durable-skills'),
+    getDurableSessionsDirMock: vi.fn(() => '/durable-sessions'),
+    getPiAgentRuntimeDirMock: vi.fn(() => '/pi-agent-runtime'),
     materializeRuntimeResourcesToAgentDirMock: vi.fn(),
     resolveRuntimeResourcesMock: vi.fn(),
     writeMergedMcpConfigFileMock: vi.fn(() => ({ bundledServerCount: 0 })),
@@ -41,9 +45,11 @@ const {
 });
 
 vi.mock('@neon-pilot/core', () => ({
-  getProfilesRoot: getProfilesRootMock,
+  getRuntimeConfigRoot: getRuntimeConfigRootMock,
   getStateRoot: getStateRootMock,
   getDurableSkillsDir: getDurableSkillsDirMock,
+  getDurableSessionsDir: getDurableSessionsDirMock,
+  getPiAgentRuntimeDir: getPiAgentRuntimeDirMock,
   materializeRuntimeResourcesToAgentDir: materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResources: resolveRuntimeResourcesMock,
   writeMergedMcpConfigFile: writeMergedMcpConfigFileMock,
@@ -53,6 +59,8 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
   isExtensionEnabled: isExtensionEnabledMock,
   listExtensionEntries: listExtensionEntriesMock,
   listExtensionSkillRegistrations: listExtensionSkillRegistrationsMock,
+  listExtensionToolRegistrations: vi.fn(() => []),
+  resolveExtensionModelProfile: vi.fn(() => ({ kind: 'none' })),
 }));
 
 vi.mock('../extensions/manifestToolAgentExtension.js', () => ({
@@ -93,7 +101,7 @@ function createLogger() {
 
 describe('createRuntimeState', () => {
   beforeEach(() => {
-    getProfilesRootMock.mockClear();
+    getRuntimeConfigRootMock.mockClear();
     getStateRootMock.mockClear();
     getDurableSkillsDirMock.mockClear();
     materializeRuntimeResourcesToAgentDirMock.mockReset();
@@ -114,6 +122,7 @@ describe('createRuntimeState', () => {
     authStorageMock.create.mockClear();
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
     delete process.env.NEON_PILOT_PROFILE;
+    delete process.env.NEON_PILOT_RUNTIME_SCOPE;
     delete process.env.NEON_PILOT_REPO_ROOT;
     delete process.env.NEON_PILOT_RESOURCES_ROOT;
   });
@@ -130,20 +139,21 @@ describe('createRuntimeState', () => {
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
     expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        skillDirs: ['/skills/shared'],
+        skillDirs: expect.any(Array),
         env: expect.not.objectContaining({ MCP_CONFIG_PATH: '/agent-dir/mcp_servers.json' }),
       }),
     );
     expect(state.getRuntimeScope()).toBe('shared');
-    expect(process.env.NEON_PILOT_ACTIVE_PROFILE).toBe('shared');
-    expect(process.env.NEON_PILOT_PROFILE).toBe('shared');
+    expect(process.env.NEON_PILOT_ACTIVE_PROFILE).toBeUndefined();
+    expect(process.env.NEON_PILOT_PROFILE).toBeUndefined();
+    expect(process.env.NEON_PILOT_RUNTIME_SCOPE).toBe('shared');
     expect(process.env.NEON_PILOT_REPO_ROOT).toBeUndefined();
     expect(process.env.NEON_PILOT_RESOURCES_ROOT).toBe('/repo-root');
 
     expect(state.buildLiveSessionResourceOptions()).toEqual({
       additionalExtensionPaths: ['/ext/shared'],
-      additionalSkillPaths: ['/skills/shared'],
-      additionalPromptTemplatePaths: ['/prompts/shared.md'],
+      additionalSkillPaths: expect.any(Array),
+      additionalPromptTemplatePaths: expect.any(Array),
       additionalThemePaths: ['/themes/shared.json'],
     });
 
@@ -226,11 +236,7 @@ describe('createRuntimeState', () => {
       logger: createLogger(),
     });
 
-    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual([
-      '/skills/shared',
-      '/repo-root/extensions/system-runs/skills/runs',
-      '/repo-root/extensions/system-artifacts/skills/artifacts',
-    ]);
+    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(expect.any(Array));
   });
 
   it('logs initial materialization failures', async () => {

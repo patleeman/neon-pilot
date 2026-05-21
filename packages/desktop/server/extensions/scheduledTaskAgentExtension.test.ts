@@ -43,7 +43,7 @@ function registerScheduledTaskTool() {
     | undefined;
 
   createScheduledTaskAgentExtension({
-    getCurrentProfile: () => 'assistant',
+    getRuntimeScope: () => 'assistant',
   })({
     registerTool: (tool: unknown) => {
       if ((tool as { name?: string }).name !== 'scheduled_task') return;

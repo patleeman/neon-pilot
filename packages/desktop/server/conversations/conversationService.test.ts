@@ -120,7 +120,7 @@ vi.mock('../models/modelPreferences.js', () => ({
 }));
 
 import {
-  getCurrentProfile,
+  getRuntimeScope,
   listAllLiveSessions,
   listConversationSessionsSnapshot,
   parseTailBlocksQuery,
@@ -210,7 +210,7 @@ describe('conversationService', () => {
     );
 
     setConversationServiceContext({
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       getRepoRoot: () => '/repo',
       getSavedUiPreferences: () => defaultPreferences,
     });
@@ -249,12 +249,12 @@ describe('conversationService', () => {
 
   it('tracks context and parses bounded integer query values', () => {
     setConversationServiceContext({
-      getCurrentProfile: () => 'reviewer',
+      getRuntimeScope: () => 'reviewer',
       getRepoRoot: () => '/alt-repo',
       getSavedUiPreferences: () => defaultPreferences,
     });
 
-    expect(getCurrentProfile()).toBe('reviewer');
+    expect(getRuntimeScope()).toBe('reviewer');
     expect(parseTailBlocksQuery('8')).toBe(8);
     expect(parseTailBlocksQuery(['3'])).toBe(3);
     expect(parseTailBlocksQuery('0')).toBeUndefined();
@@ -342,7 +342,7 @@ describe('conversationService', () => {
 
   it('builds conversation snapshots from saved workspace state', () => {
     setConversationServiceContext({
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       getRepoRoot: () => '/repo',
       getSavedUiPreferences: () => ({
         openConversationIds: ['workspace-1'],

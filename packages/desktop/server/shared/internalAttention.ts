@@ -27,7 +27,7 @@ export interface WriteInternalAttentionEntryInput {
 export interface ServiceAttentionMonitorOptions {
   repoRoot: string;
   stateRoot?: string;
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   readDaemonState: () => Promise<DaemonStateSnapshot>;
   writeEntry?: (input: WriteInternalAttentionEntryInput) => void;
   logger?: {
@@ -239,7 +239,7 @@ export function createServiceAttentionMonitor(options: ServiceAttentionMonitorOp
   };
 
   const tick = async (): Promise<void> => {
-    const profile = options.getCurrentProfile();
+    const profile = options.getRuntimeScope();
 
     try {
       const daemonState = await options.readDaemonState();

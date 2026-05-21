@@ -95,7 +95,7 @@ describe('app event monitor', () => {
       sessionsDir,
       taskStateFile,
       profileConfigFile,
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
     });
 
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -134,7 +134,7 @@ describe('app event monitor', () => {
       sessionsDir,
       taskStateFile,
       profileConfigFile,
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
     });
 
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -161,7 +161,7 @@ describe('app event monitor', () => {
     writeFileSync(taskStateFile, '{}\n', 'utf-8');
     writeFileSync(profileConfigFile, '{"defaultProfile":"assistant"}\n', 'utf-8');
 
-    let currentProfile = 'assistant';
+    let runtimeScope = 'assistant';
     const events: AppEvent[] = [];
     const unsubscribe = subscribeAppEvents((event) => {
       events.push(event);
@@ -172,13 +172,13 @@ describe('app event monitor', () => {
       sessionsDir,
       taskStateFile,
       profileConfigFile,
-      getCurrentProfile: () => currentProfile,
+      getRuntimeScope: () => runtimeScope,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     events.length = 0;
 
-    currentProfile = 'other';
+    runtimeScope = 'other';
     writeFileSync(profileConfigFile, '{"defaultProfile":"other"}\n', 'utf-8');
 
     await waitFor(() => events.some((event) => event.type === 'invalidate' && ALL_TOPICS.every((topic) => event.topics.includes(topic))));

@@ -10,7 +10,7 @@ export interface LiveSessionResourceOptions extends Record<string, unknown> {
   additionalThemePaths: string[];
 }
 
-export interface CurrentProfileTaskSummary {
+export interface RuntimeScopeTaskSummary {
   id: string;
   title: string;
   filePath?: string;
@@ -49,10 +49,10 @@ export interface ProfileAgentItemSummary {
 }
 
 export interface ServerRouteContext {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getRepoRoot: () => string;
-  getProfilesRoot: () => string;
-  materializeWebProfile: (profile: string) => void;
+  getRuntimeConfigRoot: () => string;
+  materializeWebRuntimeConfig: (profile: string) => void;
   getSettingsFile: () => string;
   getAuthFile: () => string;
   getStateRoot: () => string;
@@ -64,11 +64,11 @@ export interface ServerRouteContext {
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
   getSavedUiPreferences: () => SavedUiPreferences;
-  listTasksForCurrentProfile: () => CurrentProfileTaskSummary[];
+  listTasksForRuntimeScope: () => RuntimeScopeTaskSummary[];
   listMemoryDocs: () => MemoryDocSummary[];
-  listSkillsForCurrentProfile: () => SkillSummary[];
+  listSkillsForRuntimeScope: () => SkillSummary[];
   listProfileAgentItems: () => ProfileAgentItemSummary[];
-  withTemporaryProfileAgentDir: <T>(profile: string, run: (agentDir: string) => Promise<T>) => Promise<T>;
+  withTemporaryRuntimeAgentDir: <T>(profile: string, run: (agentDir: string) => Promise<T>) => Promise<T>;
   getDurableRunSnapshot: (runId: string, tail: number) => Promise<unknown | null>;
 }
 

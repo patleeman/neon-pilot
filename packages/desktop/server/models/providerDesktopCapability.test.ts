@@ -45,8 +45,8 @@ import {
 
 function createContext(overrides?: Partial<ProviderDesktopCapabilityContext>): ProviderDesktopCapabilityContext {
   return {
-    getCurrentProfile: () => 'test-profile',
-    materializeWebProfile: vi.fn(),
+    getRuntimeScope: () => 'test-profile',
+    materializeWebRuntimeConfig: vi.fn(),
     getAuthFile: () => '/tmp/test-auth.json',
     ...overrides,
   };
@@ -69,7 +69,7 @@ describe('saveModelProviderCapability', () => {
     const result = saveModelProviderCapability(context, { provider: ' openai ' });
     expect(modelProviders.upsertModelProvider).toHaveBeenCalledWith('test-profile', 'openai', expect.any(Object));
     expect(middleware.refreshAllLiveSessionModelRegistries).toHaveBeenCalled();
-    expect(context.materializeWebProfile as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('test-profile');
+    expect(context.materializeWebRuntimeConfig as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('test-profile');
     expect(result).toEqual({ providers: { openai: {} } });
   });
 

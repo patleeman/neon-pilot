@@ -71,14 +71,14 @@ function buildTaskDetailResponse(
   };
 }
 
-function getProfile(context?: Pick<ServerRouteContext, 'getCurrentProfile'>): string {
+function getProfile(context?: Pick<ServerRouteContext, 'getRuntimeScope'>): string {
   if (!context) {
     throw new Error('Extension automations capability requires server route context.');
   }
-  return context.getCurrentProfile();
+  return context.getRuntimeScope();
 }
 
-export function createExtensionAutomationsCapability(context?: Pick<ServerRouteContext, 'getCurrentProfile'>) {
+export function createExtensionAutomationsCapability(context?: Pick<ServerRouteContext, 'getRuntimeScope'>) {
   return {
     async list() {
       const profile = getProfile(context);

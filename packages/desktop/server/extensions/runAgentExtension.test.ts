@@ -75,9 +75,9 @@ function registerTool(toolName: 'background_bash' | 'subagent') {
     | undefined;
 
   createRunAgentExtension({
-    getCurrentProfile: () => 'assistant',
+    getRuntimeScope: () => 'assistant',
     repoRoot: '/repo',
-    profilesRoot: '/profiles',
+    runtimeConfigRoot: '/profiles',
   })({
     registerTool: (tool: unknown) => {
       if ((tool as { name?: string }).name !== toolName) return;

@@ -155,22 +155,27 @@ export function getVaultRoot(): string {
 }
 
 /**
- * Default mutable profiles root directory.
- *
- * Profiles are machine-local config now. They no longer live under the shared
- * vault by default.
+ * Default mutable runtime config root directory.
  */
-export function getDefaultProfilesRoot(): string {
-  return getDurableProfilesDir();
+export function getDefaultRuntimeConfigRoot(): string {
+  return getDurableRuntimeConfigRoot();
 }
 
 /**
- * Get the configured mutable profiles root directory.
+ * Get the configured mutable runtime config root directory.
  */
-export function getProfilesRoot(): string {
-  const explicit = process.env.NEON_PILOT_PROFILES_ROOT;
-  return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultProfilesRoot();
+export function getRuntimeConfigRoot(): string {
+  const explicit = process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT;
+  if (explicit && explicit.trim().length > 0) return expandHomePath(explicit.trim());
+  const legacyExplicit = process.env.NEON_PILOT_PROFILES_ROOT;
+  return legacyExplicit && legacyExplicit.trim().length > 0 ? expandHomePath(legacyExplicit.trim()) : getDefaultRuntimeConfigRoot();
 }
+
+/** @deprecated Use getDefaultRuntimeConfigRoot. */
+export const getDefaultProfilesRoot = getDefaultRuntimeConfigRoot;
+
+/** @deprecated Use getRuntimeConfigRoot. */
+export const getProfilesRoot = getRuntimeConfigRoot;
 
 /**
  * Root directory for git-backed synced durable state.
@@ -207,25 +212,43 @@ function resolveDurableDir(syncRoot: string, canonicalName: string, legacyName?:
   return canonicalPath;
 }
 
-export function getDurableProfilesDir(configRoot: string = getConfigRoot()): string {
-  return join(configRoot, 'profiles');
+export function getDurableRuntimeConfigRoot(configRoot: string = getConfigRoot()): string {
+  return join(configRoot, 'runtime');
 }
+
+/** @deprecated Use getDurableRuntimeConfigRoot. */
+export const getDurableProfilesDir = getDurableRuntimeConfigRoot;
 
 export function getDurableAgentFilePath(vaultRoot: string = getVaultRoot()): string {
   return join(vaultRoot, 'AGENTS.md');
 }
 
-export function getDurableProfileDir(profile: string, profilesRoot: string = getDurableProfilesDir()): string {
-  return join(profilesRoot, profile);
+export function getDurableRuntimeScopeDir(runtimeScope: string, runtimeConfigRoot: string = getDurableRuntimeConfigRoot()): string {
+  return join(runtimeConfigRoot, runtimeScope);
 }
 
-export function getDurableProfileSettingsFilePath(profile: string, profilesRoot: string = getDurableProfilesDir()): string {
-  return join(getDurableProfileDir(profile, profilesRoot), 'settings.json');
+/** @deprecated Use getDurableRuntimeScopeDir. */
+export const getDurableProfileDir = getDurableRuntimeScopeDir;
+
+export function getDurableRuntimeScopeSettingsFilePath(
+  runtimeScope: string,
+  runtimeConfigRoot: string = getDurableRuntimeConfigRoot(),
+): string {
+  return join(getDurableRuntimeScopeDir(runtimeScope, runtimeConfigRoot), 'settings.json');
 }
 
-export function getDurableProfileModelsFilePath(profile: string, profilesRoot: string = getDurableProfilesDir()): string {
-  return join(getDurableProfileDir(profile, profilesRoot), 'models.json');
+/** @deprecated Use getDurableRuntimeScopeSettingsFilePath. */
+export const getDurableProfileSettingsFilePath = getDurableRuntimeScopeSettingsFilePath;
+
+export function getDurableRuntimeScopeModelsFilePath(
+  runtimeScope: string,
+  runtimeConfigRoot: string = getDurableRuntimeConfigRoot(),
+): string {
+  return join(getDurableRuntimeScopeDir(runtimeScope, runtimeConfigRoot), 'models.json');
 }
+
+/** @deprecated Use getDurableRuntimeScopeModelsFilePath. */
+export const getDurableProfileModelsFilePath = getDurableRuntimeScopeModelsFilePath;
 
 export function getDurableSettingsDir(vaultRoot: string = getVaultRoot()): string {
   return join(vaultRoot, 'settings');
@@ -262,17 +285,25 @@ export function getDurableProjectsDir(vaultRoot: string = getVaultRoot()): strin
 /**
  * Default local overlay directory.
  */
-export function getDefaultLocalProfileDir(): string {
+export function getDefaultLocalRuntimeConfigDir(): string {
   return join(getConfigRoot(), 'local');
 }
+
+/** @deprecated Use getDefaultLocalRuntimeConfigDir. */
+export const getDefaultLocalProfileDir = getDefaultLocalRuntimeConfigDir;
 
 /**
  * Get the configured local overlay directory.
  */
-export function getLocalProfileDir(): string {
-  const explicit = process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
-  return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultLocalProfileDir();
+export function getLocalRuntimeConfigDir(): string {
+  const explicit = process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR;
+  if (explicit && explicit.trim().length > 0) return expandHomePath(explicit.trim());
+  const legacyExplicit = process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+  return legacyExplicit && legacyExplicit.trim().length > 0 ? expandHomePath(legacyExplicit.trim()) : getDefaultLocalRuntimeConfigDir();
 }
+
+/** @deprecated Use getLocalRuntimeConfigDir. */
+export const getLocalProfileDir = getLocalRuntimeConfigDir;
 
 /**
  * Runtime state paths configuration

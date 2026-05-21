@@ -46,11 +46,11 @@ export async function updateSettings(input: { enabled?: unknown; model?: unknown
     if (!model) throw new Error('model must be a non-empty string');
     update.model = model;
   }
-  // Write profile first (persistent storage), then runtime.
-  // If the process crashes between writes, the profile has the latest
+  // Write runtime settings first (persistent storage), then runtime.
+  // If the process crashes between writes, runtime settings have the latest
   // values so the next startup loads them correctly. If runtime write
-  // fails but profile succeeds, the change is durable across restarts.
-  writeDictationSettings(ctx.profileSettingsFilePath, update);
+  // fails but runtime settings succeeds, the change is durable across restarts.
+  writeDictationSettings(ctx.runtimeSettingsFilePath, update);
   writeDictationSettings(settingsFile(ctx.runtimeDir), update);
   return buildDictationSettingsState(settingsFile(ctx.runtimeDir));
 }

@@ -11,16 +11,16 @@ let getRepoRootFn: () => string = () => {
   throw new Error('getRepoRoot not initialized for system routes');
 };
 
-let listTasksForCurrentProfileFn: () => unknown[] = () => {
-  throw new Error('listTasksForCurrentProfile not initialized for system routes');
+let listTasksForRuntimeScopeFn: () => unknown[] = () => {
+  throw new Error('listTasksForRuntimeScope not initialized for system routes');
 };
 
 function initializeSystemRoutesContext(
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot' | 'listTasksForCurrentProfile'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'listTasksForRuntimeScope'>,
 ): void {
-  void context.getCurrentProfile;
+  void context.getRuntimeScope;
   getRepoRootFn = context.getRepoRoot;
-  listTasksForCurrentProfileFn = context.listTasksForCurrentProfile;
+  listTasksForRuntimeScopeFn = context.listTasksForRuntimeScope;
 }
 
 export async function buildSnapshotEventsForTopic(topic: AppEventTopic): Promise<unknown[]> {
@@ -28,7 +28,7 @@ export async function buildSnapshotEventsForTopic(topic: AppEventTopic): Promise
     case 'sessions':
       return [{ type: 'sessions_snapshot' as const, sessions: listConversationSessionsSnapshot() }];
     case 'tasks':
-      return [{ type: 'tasks_snapshot' as const, tasks: listTasksForCurrentProfileFn() }];
+      return [{ type: 'tasks_snapshot' as const, tasks: listTasksForRuntimeScopeFn() }];
     case 'runs':
       return [{ type: 'runs_snapshot' as const, result: await listDurableRuns() }];
     case 'daemon':
@@ -57,7 +57,7 @@ function handleStatus(_req: Request, res: Response): void {
 
 export function registerSystemRoutes(
   router: Pick<Express, 'get' | 'post'>,
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot' | 'listTasksForCurrentProfile'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'listTasksForRuntimeScope'>,
 ): void {
   initializeSystemRoutesContext(context);
   router.get('/api/status', handleStatus);

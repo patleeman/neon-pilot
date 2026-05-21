@@ -256,7 +256,7 @@ export function ActivityTreeView({
               : expandedIds.has(item.id) || Boolean(selectedPath?.startsWith(path));
           const canDrag = Boolean(canDragItem?.(item));
           const rowDropPosition = dropTarget?.itemId === item.id ? dropTarget.position : null;
-          const canArchive = item.kind === 'conversation' && onArchiveItem;
+          const canArchive = item.kind === 'conversation' && onArchiveItem && item.metadata?.canArchive !== false;
           const canCreateChild = item.kind === 'group' && onCreateChildItem;
           const conversationIsRunning = item.kind === 'conversation' && item.metadata?.isRunning === true;
           const conversationNeedsAttention = item.kind === 'conversation' && item.metadata?.needsAttention === true;

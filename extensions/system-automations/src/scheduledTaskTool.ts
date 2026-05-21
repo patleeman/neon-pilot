@@ -297,7 +297,7 @@ function formatTaskDetail(
   return lines.join('\n');
 }
 
-export function createScheduledTaskAgentExtension(options: { getCurrentProfile: () => string }): (pi: ExtensionAPI) => void {
+export function createScheduledTaskAgentExtension(options: { getRuntimeScope: () => string }): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     pi.registerTool({
       name: 'scheduled_task',
@@ -309,7 +309,7 @@ export function createScheduledTaskAgentExtension(options: { getCurrentProfile: 
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         try {
           void readOptionalString(params.profile);
-          void options.getCurrentProfile();
+          void options.getRuntimeScope();
           const profile = 'shared';
 
           switch (params.action as ScheduledTaskAction) {

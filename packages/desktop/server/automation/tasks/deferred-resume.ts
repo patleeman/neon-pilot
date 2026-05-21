@@ -59,11 +59,7 @@ function inferRepoRootFromTaskDir(taskDir: string, profile: string): string | un
 }
 
 function resolveProfileContext(taskDir: string): { profile: string; repoRoot?: string } {
-  const profile =
-    inferProfileFromTaskDir(taskDir) ??
-    sanitizeProfileName(process.env.NEON_PILOT_ACTIVE_PROFILE) ??
-    sanitizeProfileName(process.env.NEON_PILOT_PROFILE) ??
-    'shared';
+  const profile = inferProfileFromTaskDir(taskDir) ?? sanitizeProfileName(process.env.NEON_PILOT_RUNTIME_SCOPE) ?? 'shared';
 
   return {
     profile,

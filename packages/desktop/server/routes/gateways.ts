@@ -26,8 +26,8 @@ import { logError } from '../middleware/index.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import type { ServerRouteContext } from './context.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for gateway routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for gateway routes');
 };
 let getStateRootFn: () => string = () => {
   throw new Error('getStateRoot not initialized for gateway routes');
@@ -50,7 +50,7 @@ function publishTelegramGatewayHostApi(): void {
 }
 
 function initializeGatewayRoutesContext(context: ServerRouteContext): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   getStateRootFn = context.getStateRoot;
   getAuthFileFn = context.getAuthFile;
   routeContext = context;
@@ -73,18 +73,18 @@ export function registerTelegramGatewayLifecycleDelivery(): void {
 }
 
 function currentGatewayContext(): { stateRoot: string; profile: string } {
-  return { stateRoot: getStateRootFn(), profile: getCurrentProfileFn() };
+  return { stateRoot: getStateRootFn(), profile: getRuntimeScopeFn() };
 }
 
 function liveSessionContext(context: ServerRouteContext) {
   return {
-    getCurrentProfile: context.getCurrentProfile,
+    getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
-    listTasksForCurrentProfile: context.listTasksForCurrentProfile,
+    listTasksForRuntimeScope: context.listTasksForRuntimeScope,
     listMemoryDocs: context.listMemoryDocs,
   };
 }
@@ -99,7 +99,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
   const context = routeContext;
   telegramRuntime = new TelegramGatewayRuntime({
     stateRoot: context.getStateRoot(),
-    profile: context.getCurrentProfile(),
+    profile: context.getRuntimeScope(),
     authFile: context.getAuthFile(),
     readBotToken: () => readTelegramBotToken(context.getAuthFile(), context.getStateRoot()),
     createConversation: async (input) => {
@@ -123,7 +123,7 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
     archiveConversation: async (conversationId) => {
       detachGatewayConversation({
         stateRoot: context.getStateRoot(),
-        profile: context.getCurrentProfile(),
+        profile: context.getRuntimeScope(),
         provider: 'telegram',
         conversationId,
       });

@@ -1,9 +1,9 @@
-import { getProfilesRoot } from '@neon-pilot/core';
+import { getRuntimeConfigRoot } from '@neon-pilot/core';
 
 import type {
-  CurrentProfileTaskSummary,
   MemoryDocSummary,
   ProfileAgentItemSummary,
+  RuntimeScopeTaskSummary,
   ServerRouteContext,
   SkillSummary,
 } from '../routes/context.js';
@@ -12,8 +12,8 @@ interface CreateServerRouteContextOptions {
   repoRoot: string;
   settingsFile: string;
   authFile: string;
-  getCurrentProfile: () => string;
-  materializeWebProfile: (profile: string) => void;
+  getRuntimeScope: () => string;
+  materializeWebRuntimeConfig: (profile: string) => void;
   getStateRoot: () => string;
   serverPort: number;
   getDefaultWebCwd: () => string;
@@ -23,20 +23,20 @@ interface CreateServerRouteContextOptions {
   buildLiveSessionExtensionFactories: ServerRouteContext['buildLiveSessionExtensionFactories'];
   flushLiveDeferredResumes: () => Promise<void>;
   getSavedUiPreferences: ServerRouteContext['getSavedUiPreferences'];
-  listTasksForCurrentProfile: () => CurrentProfileTaskSummary[];
+  listTasksForRuntimeScope: () => RuntimeScopeTaskSummary[];
   listMemoryDocs: () => MemoryDocSummary[];
-  listSkillsForCurrentProfile: () => SkillSummary[];
+  listSkillsForRuntimeScope: () => SkillSummary[];
   listProfileAgentItems: () => ProfileAgentItemSummary[];
-  withTemporaryProfileAgentDir: ServerRouteContext['withTemporaryProfileAgentDir'];
+  withTemporaryRuntimeAgentDir: ServerRouteContext['withTemporaryRuntimeAgentDir'];
   getDurableRunSnapshot: ServerRouteContext['getDurableRunSnapshot'];
 }
 
 export function createServerRouteContext(options: CreateServerRouteContextOptions): ServerRouteContext {
   return {
-    getCurrentProfile: options.getCurrentProfile,
+    getRuntimeScope: options.getRuntimeScope,
     getRepoRoot: () => options.repoRoot,
-    getProfilesRoot,
-    materializeWebProfile: options.materializeWebProfile,
+    getRuntimeConfigRoot,
+    materializeWebRuntimeConfig: options.materializeWebRuntimeConfig,
     getSettingsFile: () => options.settingsFile,
     getAuthFile: () => options.authFile,
     getStateRoot: options.getStateRoot,
@@ -50,11 +50,11 @@ export function createServerRouteContext(options: CreateServerRouteContextOption
     buildLiveSessionExtensionFactories: options.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: options.flushLiveDeferredResumes,
     getSavedUiPreferences: options.getSavedUiPreferences,
-    listTasksForCurrentProfile: options.listTasksForCurrentProfile,
+    listTasksForRuntimeScope: options.listTasksForRuntimeScope,
     listMemoryDocs: options.listMemoryDocs,
-    listSkillsForCurrentProfile: options.listSkillsForCurrentProfile,
+    listSkillsForRuntimeScope: options.listSkillsForRuntimeScope,
     listProfileAgentItems: options.listProfileAgentItems,
-    withTemporaryProfileAgentDir: options.withTemporaryProfileAgentDir,
+    withTemporaryRuntimeAgentDir: options.withTemporaryRuntimeAgentDir,
     getDurableRunSnapshot: options.getDurableRunSnapshot,
   };
 }

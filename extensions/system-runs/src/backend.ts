@@ -89,9 +89,9 @@ async function runForegroundBash(
 async function loadRunAgentExtensionFactory(): Promise<RunAgentExtensionFactory> {
   const module = await import('./runTool.js');
   return module.createRunAgentExtension({
-    getCurrentProfile: () => 'shared',
+    getRuntimeScope: () => 'shared',
     repoRoot: process.cwd(),
-    profilesRoot: process.cwd(),
+    runtimeConfigRoot: process.cwd(),
   }) as RunAgentExtensionFactory;
 }
 

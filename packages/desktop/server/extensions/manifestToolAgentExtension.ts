@@ -7,14 +7,14 @@ import { invokeExtensionAction } from './extensionBackend.js';
 import { listExtensionToolRegistrations } from './extensionRegistry.js';
 
 export interface ManifestToolFactoryOptions {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getPreferredVisionModel?: () => string;
   getCurrentModelRef?: () => string;
   hasOpenAiImageProvider?: () => boolean;
   repoRoot: string;
-  profilesRoot: string;
+  runtimeConfigRoot: string;
   stateRoot: string;
-  serverContext?: Pick<ServerRouteContext, 'getCurrentProfile'>;
+  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'>;
 }
 
 /**
@@ -92,7 +92,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
   const currentModelRef = options.getCurrentModelRef?.() ?? '';
   const activeToolIds = new Set(
     buildToolInjectionPlan({
-      profile: options.getCurrentProfile(),
+      profile: options.getRuntimeScope(),
       repoRoot: options.repoRoot,
       modelRef: currentModelRef,
     }).registrations.map((tool) => `${tool.extensionId}/${tool.id}`),

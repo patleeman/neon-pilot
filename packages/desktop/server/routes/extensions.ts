@@ -103,7 +103,7 @@ function normalizeRouteQuery(query: Request['query']): Record<string, string | s
 async function dispatchExtensionBackendRoute(
   req: Request,
   res: Response,
-  context?: Pick<ServerRouteContext, 'getCurrentProfile'>,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): Promise<void> {
   try {
     const extensionId = req.params.id;
@@ -193,7 +193,7 @@ function readExtensionFile(req: Request, res: Response): void {
 
 export function registerExtensionRoutes(
   router: Pick<Express, 'delete' | 'get' | 'patch' | 'post' | 'put'>,
-  context?: Pick<ServerRouteContext, 'getCurrentProfile'>,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): void {
   router.get('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));

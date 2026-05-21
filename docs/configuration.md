@@ -6,12 +6,12 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 
 ## Path roots
 
-| Root                | Default                                                     | Override                       | Purpose                                                                         |
-| ------------------- | ----------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
-| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`        | Runtime state, daemon DBs, extension installs, active agent files               |
-| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`       | Machine-local durable config                                                    |
-| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`       | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
-| Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_PROFILE_DIR` | Legacy local settings mirror for active runtime settings                        |
+| Root                | Default                                                     | Override                              | Purpose                                                                         |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`               | Runtime state, daemon DBs, extension installs, active agent files               |
+| `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`              | Machine-local durable config                                                    |
+| Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`              | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
+| Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR` | Local settings mirror for active runtime settings                               |
 
 ## Machine config
 
@@ -82,13 +82,13 @@ The Settings page has an **Extension Settings** section for scalar manifest sett
 
 Model/provider configuration is split on purpose:
 
-| Store                         | Default path                                                  | Purpose                                                                                                                           |
-| ----------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Provider/model definitions    | `<config-root>/profiles/shared/models.json`                   | Custom providers, model overrides, context windows, costs, compatibility flags. Legacy path; there is no user-selectable profile. |
-| Active runtime model registry | `<state-root>/neon-pilot-runtime/models.json`                 | Materialized model definitions read by the runtime                                                                                |
-| Legacy provider credentials   | `<state-root>/neon-pilot-runtime/auth.json`                   | Existing API keys and OAuth tokens managed through Settings                                                                       |
-| Extension secrets             | macOS Keychain, `<state-root>/secrets.json`, or env-only      | Extension-declared secrets such as integration API keys                                                                           |
-| Environment credentials       | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, etc. | Runtime-only credential source; not persisted                                                                                     |
+| Store                         | Default path                                                  | Purpose                                                                        |
+| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Provider/model definitions    | `<config-root>/runtime/shared/models.json`                    | Custom providers, model overrides, context windows, costs, compatibility flags |
+| Active runtime model registry | `<state-root>/neon-pilot-runtime/models.json`                 | Materialized model definitions read by the runtime                             |
+| Legacy provider credentials   | `<state-root>/neon-pilot-runtime/auth.json`                   | Existing API keys and OAuth tokens managed through Settings                    |
+| Extension secrets             | macOS Keychain, `<state-root>/secrets.json`, or env-only      | Extension-declared secrets such as integration API keys                        |
+| Environment credentials       | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, etc. | Runtime-only credential source; not persisted                                  |
 
 Provider credentials should be managed through Settings. Manual edits to `auth.json` are possible but discouraged. New extension secrets should use `contributes.secrets`; the active backend is configured by `secrets.provider` (`keychain`, `file`, or `env-only`). Environment variables declared by the extension take precedence over stored values.
 
@@ -111,19 +111,19 @@ Knowledge UI and sync behavior live in the Knowledge system extension. Machine c
 
 Not every Settings-page control writes to the same JSON file:
 
-| Area                                                    | Source of truth                                                        |
-| ------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Appearance theme picker                                 | Browser/Electron `localStorage` plus contributed extension themes      |
-| Conversation defaults                                   | `<state-root>/neon-pilot-runtime/settings.json`                        |
-| Workspace default cwd                                   | `<state-root>/neon-pilot-runtime/settings.json`                        |
-| Skills and extra instruction files                      | `<config-root>/config.json`                                            |
-| Provider/model definitions                              | `<config-root>/profiles/shared/models.json` legacy shared runtime path |
-| Provider credentials                                    | `<state-root>/neon-pilot-runtime/auth.json` and environment variables  |
-| Extension secrets                                       | macOS Keychain, `<state-root>/secrets.json`, or environment only       |
-| Desktop update/startup/keyboard preferences             | `<state-root>/desktop/config.json`                                     |
-| Extension enablement and extension keybinding overrides | `<state-root>/extensions/registry.json`                                |
-| Extension scalar settings                               | `<state-root>/settings.json`                                           |
-| Automations, reminders, durable runs                    | Daemon runtime database                                                |
+| Area                                                    | Source of truth                                                       |
+| ------------------------------------------------------- | --------------------------------------------------------------------- |
+| Appearance theme picker                                 | Browser/Electron `localStorage` plus contributed extension themes     |
+| Conversation defaults                                   | `<state-root>/neon-pilot-runtime/settings.json`                       |
+| Workspace default cwd                                   | `<state-root>/neon-pilot-runtime/settings.json`                       |
+| Skills and extra instruction files                      | `<config-root>/config.json`                                           |
+| Provider/model definitions                              | `<config-root>/runtime/shared/models.json`                            |
+| Provider credentials                                    | `<state-root>/neon-pilot-runtime/auth.json` and environment variables |
+| Extension secrets                                       | macOS Keychain, `<state-root>/secrets.json`, or environment only      |
+| Desktop update/startup/keyboard preferences             | `<state-root>/desktop/config.json`                                    |
+| Extension enablement and extension keybinding overrides | `<state-root>/extensions/registry.json`                               |
+| Extension scalar settings                               | `<state-root>/settings.json`                                          |
+| Automations, reminders, durable runs                    | Daemon runtime database                                               |
 
 ## Rule of thumb
 

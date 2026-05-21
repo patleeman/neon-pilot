@@ -7,13 +7,13 @@ import { readMachineInstructionFiles, readMachineSkillDirs } from './machine-con
 import { listUnifiedSkillNodeDirs } from './nodes.js';
 import {
   getDurableAgentFilePath,
-  getDurableProfileDir as getDurableRuntimeConfigDir,
-  getDurableProfileModelsFilePath as getDurableRuntimeModelsFilePath,
-  getDurableProfilesDir as getCanonicalRuntimeConfigRoot,
-  getDurableProfileSettingsFilePath as getDurableRuntimeSettingsFilePath,
+  getDurableRuntimeConfigRoot as getCanonicalRuntimeConfigRoot,
+  getDurableRuntimeScopeDir as getDurableRuntimeConfigDir,
+  getDurableRuntimeScopeModelsFilePath as getDurableRuntimeModelsFilePath,
+  getDurableRuntimeScopeSettingsFilePath as getDurableRuntimeSettingsFilePath,
   getDurableSkillsDir,
   getDurableTasksDir,
-  getLocalProfileDir as getCanonicalLocalProfileDir,
+  getLocalRuntimeConfigDir as getCanonicalLocalProfileDir,
   getStateRoot,
   getSyncRoot,
   getVaultRoot,
@@ -388,7 +388,7 @@ function resolveVaultRoot(options: ResolveResourceOptions = {}): string {
 }
 
 function resolveRuntimeConfigRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_PROFILES_ROOT;
+  const explicit = options.runtimeConfigRoot ?? process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT ?? process.env.NEON_PILOT_PROFILES_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }

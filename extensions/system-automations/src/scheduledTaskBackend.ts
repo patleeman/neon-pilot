@@ -20,7 +20,7 @@ interface ToolExecutionResult {
 
 async function executeRegisteredTool(input: unknown, ctx: NativeBackendContext) {
   let registeredTool: RegisteredTool | undefined;
-  createScheduledTaskAgentExtension({ getCurrentProfile: () => 'shared' })({
+  createScheduledTaskAgentExtension({ getRuntimeScope: () => 'shared' })({
     registerTool(tool: RegisteredTool) {
       registeredTool = tool;
     },

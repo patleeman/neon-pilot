@@ -120,7 +120,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: vi.fn(async () => snapshots.shift() ?? createDaemonSnapshot({ running: true })),
       writeEntry,
       now: () => new Date(nowMs),
@@ -146,7 +146,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: vi.fn(
         async () =>
           snapshots.shift() ??
@@ -175,7 +175,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: vi.fn(
         async () =>
           snapshots.shift() ??
@@ -216,7 +216,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: vi.fn(async () => snapshots.shift() ?? createDaemonSnapshot({ running: true })),
       writeEntry,
       now: () => new Date(nowMs),
@@ -259,7 +259,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: vi.fn(async () => snapshots.shift() ?? createDaemonSnapshot({ running: true })),
       writeEntry,
       now: () => new Date(nowMs),
@@ -297,7 +297,7 @@ describe('internalAttention', () => {
     const monitor = createServiceAttentionMonitor({
       repoRoot: '/repo',
       stateRoot: '/state',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState,
       logger,
     });

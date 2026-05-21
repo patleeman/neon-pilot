@@ -6,8 +6,8 @@ import { inspectAvailableTools } from '../conversations/liveSessions.js';
 import { logError } from '../middleware/index.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for tools routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for tools routes');
 };
 
 let getRepoRootFn: () => string = () => {
@@ -22,25 +22,25 @@ let buildLiveSessionExtensionFactoriesFn: () => ExtensionFactory[] = () => {
   throw new Error('buildLiveSessionExtensionFactories not initialized for tools routes');
 };
 
-let withTemporaryProfileAgentDirFn: <T>(profile: string, run: (agentDir: string) => Promise<T>) => Promise<T> = async () => {
-  throw new Error('withTemporaryProfileAgentDir not initialized for tools routes');
+let withTemporaryRuntimeAgentDirFn: <T>(profile: string, run: (agentDir: string) => Promise<T>) => Promise<T> = async () => {
+  throw new Error('withTemporaryRuntimeAgentDir not initialized for tools routes');
 };
 
 function initializeToolsRoutesContext(
   context: Pick<
     ServerRouteContext,
-    | 'getCurrentProfile'
+    | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
-    | 'withTemporaryProfileAgentDir'
+    | 'withTemporaryRuntimeAgentDir'
   >,
 ): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   getRepoRootFn = context.getRepoRoot;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
-  withTemporaryProfileAgentDirFn = context.withTemporaryProfileAgentDir;
+  withTemporaryRuntimeAgentDirFn = context.withTemporaryRuntimeAgentDir;
 }
 
 function buildPackageInstallState() {
@@ -51,9 +51,9 @@ function buildPackageInstallState() {
 
 async function handleToolsRequest(_req: unknown, res: Response): Promise<void> {
   try {
-    const runtimeName = getCurrentProfileFn();
+    const runtimeName = getRuntimeScopeFn();
     const resourceOptions = buildLiveSessionResourceOptionsFn(runtimeName);
-    const details = await withTemporaryProfileAgentDirFn(runtimeName, (agentDir) =>
+    const details = await withTemporaryRuntimeAgentDirFn(runtimeName, (agentDir) =>
       inspectAvailableTools(getRepoRootFn(), {
         ...resourceOptions,
         agentDir,
@@ -91,11 +91,11 @@ export function registerToolsRoutes(
   app: Pick<Express, 'get'>,
   context: Pick<
     ServerRouteContext,
-    | 'getCurrentProfile'
+    | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
-    | 'withTemporaryProfileAgentDir'
+    | 'withTemporaryRuntimeAgentDir'
   >,
 ): void {
   initializeToolsRoutesContext(context);

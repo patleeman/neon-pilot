@@ -60,10 +60,14 @@ export interface ExtensionBackendEventPublishInput {
 
 export interface ExtensionBackendContext {
   extensionId: string;
+  runtimeScope: string;
+  /** @deprecated Use runtimeScope. Profiles are legacy storage plumbing. */
   profile: string;
   /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
-  /** Absolute path to the current profile's settings file. */
+  /** Absolute path to the runtime settings file. */
+  runtimeSettingsFilePath: string;
+  /** @deprecated Use runtimeSettingsFilePath. Profiles are legacy storage plumbing. */
   profileSettingsFilePath: string;
   toolContext?: {
     conversationId?: string;
@@ -369,7 +373,7 @@ function createStorage(extensionId: string): ExtensionBackendContext['storage'] 
   };
 }
 
-export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getCurrentProfile'> &
+export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getRuntimeScope'> &
   Partial<Pick<ServerRouteContext, 'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile'>>;
 
 export function createBackendContext(
@@ -380,19 +384,21 @@ export function createBackendContext(
 ): ExtensionBackendContext {
   registerFileSystemAuthorityHostEvents();
   const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
-  const runtimeScope = serverContext?.getCurrentProfile() ?? 'shared';
+  const runtimeScope = serverContext?.getRuntimeScope() ?? 'shared';
+  const runtimeSettingsFilePath = resolveLocalProfileSettingsFilePath();
   return {
     extensionId,
     runtimeScope,
     profile: runtimeScope,
     runtimeDir: resolvedPiAgentRuntimeDir,
-    profileSettingsFilePath: resolveLocalProfileSettingsFilePath(),
+    runtimeSettingsFilePath,
+    profileSettingsFilePath: runtimeSettingsFilePath,
     ...(toolContext ? { toolContext } : {}),
     ...(agentToolContext ? { agentToolContext } : {}),
     runtime: {
       getLiveSessionResourceOptions: () => {
         if (serverContext?.buildLiveSessionResourceOptions) {
-          return serverContext.buildLiveSessionResourceOptions(serverContext.getCurrentProfile());
+          return serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope());
         }
         return buildLiveSessionResourceOptionsForRuntime();
       },

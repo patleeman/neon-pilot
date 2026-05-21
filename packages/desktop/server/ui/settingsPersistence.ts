@@ -3,18 +3,18 @@ import { join } from 'node:path';
 
 import { getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-const DEFAULT_LOCAL_PROFILE_DIR = join(getConfigRoot(), 'local');
+const DEFAULT_LOCAL_RUNTIME_CONFIG_DIR = join(getConfigRoot(), 'local');
 
 export const DEFAULT_RUNTIME_SETTINGS_FILE = join(getPiAgentRuntimeDir(), 'settings.json');
 
 function readLocalProfileDir(explicitLocalProfileDir?: string): string {
-  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+  const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
 
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();
   }
 
-  return DEFAULT_LOCAL_PROFILE_DIR;
+  return DEFAULT_LOCAL_RUNTIME_CONFIG_DIR;
 }
 
 export function resolveLocalProfileSettingsFilePath(explicitLocalProfileDir?: string): string {
@@ -26,7 +26,7 @@ export function resolveLocalProfileSettingsFilePath(explicitLocalProfileDir?: st
   }
 
   if (existsSync(localProfileDir) && !statSync(localProfileDir).isDirectory()) {
-    throw new Error(`Local profile path is not a directory: ${localProfileDir}`);
+    throw new Error(`Local runtime config path is not a directory: ${localProfileDir}`);
   }
 
   return join(localProfileDir, 'settings.json');

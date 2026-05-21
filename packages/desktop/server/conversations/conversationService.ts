@@ -25,22 +25,22 @@ import { ensureSessionFileExists, registry as liveSessionRegistry } from './live
 import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
 import { listSessions, readSessionBlocksWithTelemetry, readSessionMeta } from './sessions.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for conversation service');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for conversation service');
 };
 
 let getRepoRootFn: () => string = () => process.cwd();
 
-export function getCurrentProfile(): string {
-  return getCurrentProfileFn();
+export function getRuntimeScope(): string {
+  return getRuntimeScopeFn();
 }
 
 export function setConversationServiceContext(input: {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getRepoRoot: () => string;
   getSavedUiPreferences: () => SavedUiPreferences;
 }): void {
-  getCurrentProfileFn = input.getCurrentProfile;
+  getRuntimeScopeFn = input.getRuntimeScope;
   getRepoRootFn = input.getRepoRoot;
 }
 
@@ -56,7 +56,7 @@ function listActivityStateRoots(): Array<string | undefined> {
   }
 }
 
-function loadReadState(stateRoot: string | undefined, profile = getCurrentProfileFn()): Set<string> {
+function loadReadState(stateRoot: string | undefined, profile = getRuntimeScopeFn()): Set<string> {
   return loadProfileActivityReadState({
     repoRoot: getRepoRootFn(),
     stateRoot,
@@ -95,7 +95,7 @@ function attachActivityConversationLinks(
   };
 }
 
-function listActivityRecordsForProfile(profile = getCurrentProfileFn()): ActivityRecord[] {
+function listActivityRecordsForProfile(profile = getRuntimeScopeFn()): ActivityRecord[] {
   const records: ActivityRecord[] = [];
 
   for (const stateRoot of listActivityStateRoots()) {
@@ -139,7 +139,7 @@ function listActivityRecordsForProfile(profile = getCurrentProfileFn()): Activit
   return deduped;
 }
 
-function listUnreadConversationActivityEntries(profile = getCurrentProfileFn()) {
+function listUnreadConversationActivityEntries(profile = getRuntimeScopeFn()) {
   return listActivityRecordsForProfile(profile)
     .filter((record) => !record.read && record.entry.relatedConversationIds && record.entry.relatedConversationIds.length > 0)
     .map((record) => ({
@@ -358,7 +358,7 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
 }
 
 export function listConversationSessionsSnapshot() {
-  const profile = getCurrentProfileFn();
+  const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const jsonl = decorateSessionsWithAttention(profile, listSessions(), deferredResumesBySessionFile);
   const live = listAllLiveSessions();
@@ -437,7 +437,7 @@ export function readConversationSessionSignature(conversationId: string): string
 }
 
 export function readConversationSessionMeta(conversationId: string) {
-  const profile = getCurrentProfileFn();
+  const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const storedSession = readSessionMeta(conversationId);
   const decoratedSession = storedSession

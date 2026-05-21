@@ -1,5 +1,5 @@
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
@@ -48,7 +48,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
 
   return [
     ...createManifestToolAgentExtensions({
-      getCurrentProfile: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
+      getRuntimeScope: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
@@ -60,7 +60,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
         }
       },
       repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
-      profilesRoot: getProfilesRoot(),
+      runtimeConfigRoot: getRuntimeConfigRoot(),
       stateRoot: getStateRoot(),
     }),
     ...agentExtensions.factories,

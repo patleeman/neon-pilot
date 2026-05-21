@@ -2305,6 +2305,10 @@ export function Sidebar() {
     () => (threadsOrganizeMode === 'project' ? groupedConversationRows.flatMap((group) => group.items) : filteredConversationItems),
     [filteredConversationItems, groupedConversationRows, threadsOrganizeMode],
   );
+  const conversationItemBySessionId = useMemo(
+    () => new Map(renderedConversationItems.map((item) => [item.session.id, item] as const)),
+    [renderedConversationItems],
+  );
   const activityTreeSessions = useMemo(() => {
     const byId = new Map<string, SessionMeta>();
     const allConversationSessions = (sessions ?? []).map((session) => {
@@ -2365,6 +2369,7 @@ export function Sidebar() {
 
       const metadata = {
         ...item.metadata,
+        ...(conversationItemBySessionId.has(conversationId) ? {} : { canArchive: false }),
         ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
         ...(runningAutomationConversationIdSet.has(conversationId) ? { isRunning: true, hasPendingRuns: false } : {}),
         ...(pendingExecutionConversationIdSet.has(conversationId) && !runningAutomationConversationIdSet.has(conversationId)
@@ -2425,10 +2430,6 @@ export function Sidebar() {
   const collapsedActivityTreeGroupItemIds = useMemo(
     () => new Set(collapsedConversationGroupKeys.map((key) => buildActivityTreeGroupId(key))),
     [collapsedConversationGroupKeys],
-  );
-  const conversationItemBySessionId = useMemo(
-    () => new Map(renderedConversationItems.map((item) => [item.session.id, item] as const)),
-    [renderedConversationItems],
   );
   const conversationGroupByKey = useMemo(
     () => new Map(groupedConversationRows.map((group) => [group.key, group] as const)),

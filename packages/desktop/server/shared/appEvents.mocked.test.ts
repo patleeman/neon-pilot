@@ -271,7 +271,7 @@ describe('appEvents mocked behavior', () => {
       sessionsDir: '/sessions',
       taskStateFile: '/state/daemon/task-state.json',
       profileConfigFile: '/config/profile.json',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
     });
 
     const nestedWatcher = getLatestWatch('/sessions/nested');
@@ -291,7 +291,7 @@ describe('appEvents mocked behavior', () => {
       sessionsDir: '/sessions',
       taskStateFile: '/state/daemon/task-state.json',
       profileConfigFile: '/config/profile.json',
-      getCurrentProfile: () => {
+      getRuntimeScope: () => {
         if (throwOnRefresh) {
           throw new Error('profile lookup failed');
         }
@@ -320,7 +320,7 @@ describe('appEvents mocked behavior', () => {
       sessionsDir: '/sessions',
       taskStateFile: '/state/daemon/task-state.json',
       profileConfigFile: '/config/profile.json',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
     });
 
     getLatestWatch('/sessions', (registration) => registration.options.recursive === true).callback('change', 'conv-1.jsonl');

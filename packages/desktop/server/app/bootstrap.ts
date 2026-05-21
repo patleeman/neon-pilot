@@ -36,7 +36,7 @@ export function startBootstrapMonitors(options: {
   sessionsDir: string;
   taskStateFile: string;
   profileConfigFile: string;
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   daemonRoot?: string;
   readDaemonState: ServiceAttentionMonitorOptions['readDaemonState'];
 }): void {
@@ -57,7 +57,7 @@ export function startBootstrapMonitors(options: {
     sessionsDir: options.sessionsDir,
     taskStateFile: options.taskStateFile,
     profileConfigFile: options.profileConfigFile,
-    getCurrentProfile: options.getCurrentProfile,
+    getRuntimeScope: options.getRuntimeScope,
   });
 
   subscribeProviderOAuthLogins((login) => {
@@ -69,7 +69,7 @@ export function startBootstrapMonitors(options: {
   createServiceAttentionMonitor({
     repoRoot: options.repoRoot,
     stateRoot: options.daemonRoot,
-    getCurrentProfile: options.getCurrentProfile,
+    getRuntimeScope: options.getRuntimeScope,
     readDaemonState: options.readDaemonState,
     logger: {
       warn: (message, fields) => logWarn(message, fields),
@@ -141,7 +141,7 @@ export function startServerListeners(options: {
   app: Express;
   port: number;
   loopbackHost: string;
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getDefaultWebCwd: () => string;
   repoRoot: string;
   distDir: string;
@@ -155,7 +155,7 @@ export function startServerListeners(options: {
       metadata: {
         port: options.port,
         loopbackHost: options.loopbackHost,
-        profile: options.getCurrentProfile(),
+        profile: options.getRuntimeScope(),
         repoRoot: options.repoRoot,
         cwd: options.getDefaultWebCwd(),
         dist: options.distDir,
@@ -163,7 +163,7 @@ export function startServerListeners(options: {
     });
     logInfo('desktop renderer server started', {
       url: `http://${options.loopbackHost}:${options.port}`,
-      profile: options.getCurrentProfile(),
+      profile: options.getRuntimeScope(),
       repoRoot: options.repoRoot,
       cwd: options.getDefaultWebCwd(),
       dist: options.distDir,

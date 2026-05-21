@@ -35,7 +35,7 @@ import { publishAppEvent } from '../shared/appEvents.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import type { ServerRouteContext } from './context.js';
 
-let getCurrentProfileFn: () => string = () => {
+let getRuntimeScopeFn: () => string = () => {
   throw new Error('live session routes not initialized');
 };
 
@@ -58,7 +58,7 @@ let buildLiveSessionExtensionFactoriesFn: () => ExtensionFactory[] = () => [];
 
 let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 
-let listTasksForCurrentProfileFn: () => {
+let listTasksForRuntimeScopeFn: () => {
   id: string;
   title?: string;
   filePath?: string;
@@ -87,30 +87,30 @@ let listMemoryDocsFn: () => {
 function initializeLiveSessionRoutesContext(
   context: Pick<
     ServerRouteContext,
-    | 'getCurrentProfile'
+    | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'getDefaultWebCwd'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
     | 'flushLiveDeferredResumes'
-    | 'listTasksForCurrentProfile'
+    | 'listTasksForRuntimeScope'
     | 'listMemoryDocs'
   >,
 ): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   getRepoRootFn = context.getRepoRoot;
   getDefaultWebCwdFn = context.getDefaultWebCwd;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
-  listTasksForCurrentProfileFn = context.listTasksForCurrentProfile;
+  listTasksForRuntimeScopeFn = context.listTasksForRuntimeScope;
   listMemoryDocsFn = context.listMemoryDocs;
   queueDefaultLiveSessionLoaderPrewarm();
 }
 
 function buildLiveSessionResourceOptions(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    ...buildLiveSessionResourceOptionsFn(getCurrentProfileFn()),
+    ...buildLiveSessionResourceOptionsFn(getRuntimeScopeFn()),
     extensionFactories: buildLiveSessionExtensionFactoriesFn(),
     ...overrides,
   };
@@ -118,7 +118,7 @@ function buildLiveSessionResourceOptions(overrides: Record<string, unknown> = {}
 
 function queueDefaultLiveSessionLoaderPrewarm(): void {
   try {
-    const profile = getCurrentProfileFn();
+    const profile = getRuntimeScopeFn();
     const cwd = resolveConversationCwd({
       repoRoot: getRepoRootFn(),
       profile,
@@ -143,13 +143,13 @@ function queueDefaultLiveSessionLoaderPrewarm(): void {
 
 function getLiveSessionCapabilityContext(): LiveSessionCapabilityContext {
   return {
-    getCurrentProfile: getCurrentProfileFn,
+    getRuntimeScope: getRuntimeScopeFn,
     getRepoRoot: getRepoRootFn,
     getDefaultWebCwd: getDefaultWebCwdFn,
     buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
     buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
     flushLiveDeferredResumes: flushLiveDeferredResumesFn,
-    listTasksForCurrentProfile: listTasksForCurrentProfileFn,
+    listTasksForRuntimeScope: listTasksForRuntimeScopeFn,
     listMemoryDocs: listMemoryDocsFn,
   };
 }
@@ -244,13 +244,13 @@ export function registerLiveSessionRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
   context: Pick<
     ServerRouteContext,
-    | 'getCurrentProfile'
+    | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'getDefaultWebCwd'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
     | 'flushLiveDeferredResumes'
-    | 'listTasksForCurrentProfile'
+    | 'listTasksForRuntimeScope'
     | 'listMemoryDocs'
   >,
 ): void {

@@ -50,14 +50,14 @@ import { readSessionBlocks, readSessionMeta } from './sessions.js';
 import { appendConversationWorkspaceMetadata } from './sessions.js';
 
 export interface LiveSessionCapabilityContext {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getRepoRoot: () => string;
   getDefaultWebCwd: () => string;
   buildLiveSessionResourceOptions: (profile?: string) => Record<string, unknown>;
   buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<Record<string, unknown>>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
-  listTasksForCurrentProfile: () => Array<{
+  listTasksForRuntimeScope: () => Array<{
     id: string;
     title?: string;
     filePath?: string;
@@ -203,8 +203,8 @@ async function buildLiveSessionOptionsAsync(
 ): Promise<Record<string, unknown>> {
   return {
     ...(context.buildLiveSessionResourceOptionsAsync
-      ? await context.buildLiveSessionResourceOptionsAsync(context.getCurrentProfile())
-      : context.buildLiveSessionResourceOptions(context.getCurrentProfile())),
+      ? await context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope())
+      : context.buildLiveSessionResourceOptions(context.getRuntimeScope())),
     extensionFactories: context.buildLiveSessionExtensionFactories(),
     ...overrides,
   };
@@ -462,7 +462,7 @@ export async function createLiveSessionCapability(
   input: CreateLiveSessionCapabilityInput,
   context: LiveSessionCapabilityContext,
 ): Promise<CreateLiveSessionCapabilityResult> {
-  const profile = context.getCurrentProfile();
+  const profile = context.getRuntimeScope();
   const hasExplicitCwd = typeof input.cwd === 'string' && input.cwd.trim().length > 0;
   const cwd = hasExplicitCwd
     ? resolveConversationCwd({
@@ -517,7 +517,7 @@ interface PreparedLiveSessionPrompt {
   conversationId: string;
   text: string;
   surfaceId?: string;
-  currentProfile: string;
+  runtimeScope: string;
   promptReferences: {
     projectIds: string[];
     taskIds: string[];
@@ -588,10 +588,10 @@ async function prepareLiveSessionPrompt(
 
   const surfaceId = typeof input.surfaceId === 'string' && input.surfaceId.trim().length > 0 ? input.surfaceId.trim() : undefined;
 
-  const currentProfile = context.getCurrentProfile();
+  const runtimeScope = context.getRuntimeScope();
   const mentionIds = extractMentionIds(text);
   const hasPromptMentions = mentionIds.length > 0;
-  const tasks = hasPromptMentions ? context.listTasksForCurrentProfile() : [];
+  const tasks = hasPromptMentions ? context.listTasksForRuntimeScope() : [];
   const memoryDocs = hasPromptMentions
     ? context.listMemoryDocs().map((doc) => ({
         ...doc,
@@ -639,7 +639,7 @@ async function prepareLiveSessionPrompt(
   if (normalizedAttachmentRefs.length > 0) {
     try {
       referencedAttachments = resolveConversationAttachmentPromptFiles({
-        profile: currentProfile,
+        profile: runtimeScope,
         conversationId,
         refs: normalizedAttachmentRefs,
       });
@@ -691,7 +691,7 @@ async function prepareLiveSessionPrompt(
     conversationId,
     text,
     surfaceId,
-    currentProfile,
+    runtimeScope,
     promptReferences,
     referencedVaultFiles: referencedVaultFiles.map((file) => ({ id: file.id, path: file.path })),
     referencedAttachments,
@@ -761,7 +761,7 @@ export async function submitLiveSessionPromptCapability(
       sessionFile: recoveredLiveEntry.session.sessionFile,
       cwd: recoveredLiveEntry.cwd,
       title: recoveredLiveEntry.title,
-      profile: prepared.currentProfile,
+      profile: prepared.runtimeScope,
       state: 'running',
       pendingOperation: {
         type: 'prompt',
@@ -818,7 +818,7 @@ export async function submitLiveSessionPromptCapability(
           sessionFile: recoveredLiveEntry.session.sessionFile,
           cwd: recoveredLiveEntry.cwd,
           title: recoveredLiveEntry.title,
-          profile: prepared.currentProfile,
+          profile: prepared.runtimeScope,
           state: 'failed',
           lastError: error instanceof Error ? error.message : String(error),
         });

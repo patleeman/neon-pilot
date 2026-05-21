@@ -75,7 +75,7 @@ import { recoverConversationCapability, type RecoverConversationCapabilityContex
 
 function createContext(): RecoverConversationCapabilityContext {
   return {
-    getCurrentProfile: () => 'assistant',
+    getRuntimeScope: () => 'assistant',
     buildLiveSessionResourceOptions: () => ({ additionalExtensionPaths: ['extensions'] }),
     buildLiveSessionExtensionFactories: () => ['factory'] as never,
     flushLiveDeferredResumes: vi.fn().mockResolvedValue(undefined),

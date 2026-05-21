@@ -48,12 +48,12 @@ import { readConversationPlansWorkspace } from '../ui/conversationPlanPreference
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
 import type { ServerRouteContext } from './context.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for model routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for model routes');
 };
 
-let materializeWebProfileFn: (profile: string) => void = () => {
-  throw new Error('materializeWebProfile not initialized for model routes');
+let materializeWebRuntimeConfigFn: (profile: string) => void = () => {
+  throw new Error('materializeWebRuntimeConfig not initialized for model routes');
 };
 
 let AUTH_FILE: string = '';
@@ -75,10 +75,10 @@ function readSkillFoldersState() {
 }
 
 function initializeModelRoutesContext(
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'materializeWebProfile' | 'getAuthFile' | 'getSettingsFile'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'materializeWebRuntimeConfig' | 'getAuthFile' | 'getSettingsFile'>,
 ): void {
-  getCurrentProfileFn = context.getCurrentProfile;
-  materializeWebProfileFn = context.materializeWebProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
+  materializeWebRuntimeConfigFn = context.materializeWebRuntimeConfig;
   AUTH_FILE = context.getAuthFile();
   SETTINGS_FILE = context.getSettingsFile();
 }
@@ -88,7 +88,7 @@ function initializeModelRoutesContext(
  */
 export function registerModelRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'materializeWebProfile' | 'getAuthFile' | 'getSettingsFile'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'materializeWebRuntimeConfig' | 'getAuthFile' | 'getSettingsFile'>,
 ): void {
   initializeModelRoutesContext(context);
   // ── Models ────────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ export function registerModelRoutes(
         ...(repoUrl !== undefined ? { repoUrl: repoUrl as string | null } : {}),
         ...(branch !== undefined ? { branch: branch as string | null } : {}),
       });
-      materializeWebProfileFn(getCurrentProfileFn());
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       invalidateAppTopics('knowledgeBase');
       res.json(nextState);
     } catch (err) {
@@ -239,7 +239,7 @@ export function registerModelRoutes(
       }
 
       writeMachineSkillDirs(skillDirs);
-      materializeWebProfileFn(getCurrentProfileFn());
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       res.json(readSkillFoldersState());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -284,7 +284,7 @@ export function registerModelRoutes(
       }
 
       writeMachineInstructionFiles(instructionFiles);
-      materializeWebProfileFn(getCurrentProfileFn());
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       res.json(readInstructionFilesState());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -328,7 +328,7 @@ export function registerModelRoutes(
 
   router.get('/api/model-providers', (_req, res) => {
     try {
-      res.json(readModelProvidersState(getCurrentProfileFn()));
+      res.json(readModelProvidersState(getRuntimeScopeFn()));
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
@@ -356,7 +356,7 @@ export function registerModelRoutes(
         return;
       }
 
-      const state = upsertModelProvider(getCurrentProfileFn(), provider, {
+      const state = upsertModelProvider(getRuntimeScopeFn(), provider, {
         baseUrl,
         api: api as Parameters<typeof upsertModelProvider>[2]['api'],
         apiKey,
@@ -365,7 +365,7 @@ export function registerModelRoutes(
         compat,
         modelOverrides,
       });
-      materializeWebProfileFn(getCurrentProfileFn());
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       refreshAllLiveSessionModelRegistries();
       res.json(state);
     } catch (err) {
@@ -385,8 +385,8 @@ export function registerModelRoutes(
         return;
       }
 
-      const result = removeModelProvider(getCurrentProfileFn(), provider);
-      materializeWebProfileFn(getCurrentProfileFn());
+      const result = removeModelProvider(getRuntimeScopeFn(), provider);
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       refreshAllLiveSessionModelRegistries();
       res.json(result.state);
     } catch (err) {
@@ -430,7 +430,7 @@ export function registerModelRoutes(
         return;
       }
 
-      const state = upsertModelProviderModel(getCurrentProfileFn(), provider, modelId, {
+      const state = upsertModelProviderModel(getRuntimeScopeFn(), provider, modelId, {
         name,
         api: api as Parameters<typeof upsertModelProviderModel>[3]['api'],
         baseUrl,
@@ -442,7 +442,7 @@ export function registerModelRoutes(
         cost,
         compat,
       });
-      materializeWebProfileFn(getCurrentProfileFn());
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       refreshAllLiveSessionModelRegistries();
       res.json(state);
     } catch (err) {
@@ -467,8 +467,8 @@ export function registerModelRoutes(
         return;
       }
 
-      const result = removeModelProviderModel(getCurrentProfileFn(), provider, modelId);
-      materializeWebProfileFn(getCurrentProfileFn());
+      const result = removeModelProviderModel(getRuntimeScopeFn(), provider, modelId);
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
       refreshAllLiveSessionModelRegistries();
       res.json(result.state);
     } catch (err) {

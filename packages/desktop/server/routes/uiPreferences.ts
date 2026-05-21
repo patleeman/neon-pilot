@@ -10,14 +10,14 @@ import type { ServerRouteContext } from './context.js';
 let getUiSettingsFileFn: () => string = () => {
   throw new Error('getUiSettingsFile not initialized for UI preference routes');
 };
-let getCurrentProfileFn: () => string = () => 'default';
+let getRuntimeScopeFn: () => string = () => 'default';
 let getStateRootFn: () => string = () => '';
 
 function initializeUiPreferenceRoutesContext(
-  context: Pick<ServerRouteContext, 'getSettingsFile' | 'getCurrentProfile' | 'getStateRoot'>,
+  context: Pick<ServerRouteContext, 'getSettingsFile' | 'getRuntimeScope' | 'getStateRoot'>,
 ): void {
   getUiSettingsFileFn = context.getSettingsFile;
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   getStateRootFn = context.getStateRoot;
 }
 
@@ -114,7 +114,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
     if (Array.isArray(archivedIds)) {
       detachArchivedGatewayConversations({
         stateRoot: getStateRootFn(),
-        profile: getCurrentProfileFn(),
+        profile: getRuntimeScopeFn(),
         conversationIds: archivedIds.filter((id): id is string => typeof id === 'string'),
       });
     }
@@ -152,7 +152,7 @@ async function handleOpenConversationLayoutWriteRequest(req: Request, res: Respo
 
 export function registerUiPreferenceRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch'>,
-  context: Pick<ServerRouteContext, 'getSettingsFile' | 'getCurrentProfile' | 'getStateRoot'>,
+  context: Pick<ServerRouteContext, 'getSettingsFile' | 'getRuntimeScope' | 'getStateRoot'>,
 ): void {
   initializeUiPreferenceRoutesContext(context);
   router.get('/api/ui/open-conversations', handleOpenConversationLayoutReadRequest);

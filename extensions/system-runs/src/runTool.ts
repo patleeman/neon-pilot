@@ -207,9 +207,9 @@ function formatRunDetail(result: NonNullable<Awaited<ReturnType<typeof getDurabl
 }
 
 export function createRunAgentExtension(options: {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   repoRoot: string;
-  profilesRoot: string;
+  runtimeConfigRoot: string;
 }): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     const backgroundWorkTool = {
@@ -394,7 +394,7 @@ export function createRunAgentExtension(options: {
                   : undefined;
               const model = readOptionalString(params.model);
               void readOptionalString(params.profile);
-              void options.getCurrentProfile();
+              void options.getRuntimeScope();
               const profile = 'shared';
               const defer = readOptionalString(params.defer);
               const cron = readOptionalString(params.cron);

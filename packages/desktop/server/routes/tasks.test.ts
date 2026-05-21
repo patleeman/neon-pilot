@@ -231,7 +231,7 @@ describe('registerTaskRoutes', () => {
       }),
     };
 
-    registerTaskRoutes(router as never, { getCurrentProfile: () => 'assistant' });
+    registerTaskRoutes(router as never, { getRuntimeScope: () => 'assistant' });
 
     return {
       listHandler: handlers['GET /api/tasks']!,

@@ -202,7 +202,7 @@ function createDesktopHarness(files = createRouteFiles()) {
   const getHandlers = new Map<string, Handler>();
   const patchHandlers = new Map<string, Handler>();
   const postHandlers = new Map<string, Handler>();
-  const materializeWebProfile = vi.fn();
+  const materializeWebRuntimeConfig = vi.fn();
 
   const router = {
     delete: vi.fn((path: string, handler: Handler) => {
@@ -221,14 +221,14 @@ function createDesktopHarness(files = createRouteFiles()) {
 
   registerModelRoutes(router as never, {
     getAuthFile: () => files.authFile,
-    getCurrentProfile: () => 'shared',
+    getRuntimeScope: () => 'shared',
     getSettingsFile: () => files.settingsFile,
-    materializeWebProfile,
+    materializeWebRuntimeConfig,
   });
 
   return {
     files,
-    materializeWebProfile,
+    materializeWebRuntimeConfig,
     deleteHandler: (path: string) => deleteHandlers.get(path)!,
     getHandler: (path: string) => getHandlers.get(path)!,
     patchHandler: (path: string) => patchHandlers.get(path)!,
@@ -471,7 +471,7 @@ describe('model routes', () => {
   });
 
   it('reads, updates, and syncs the managed knowledge base repo state', () => {
-    const { patchHandler, getHandler, postHandler, materializeWebProfile } = createDesktopHarness(allocateFiles());
+    const { patchHandler, getHandler, postHandler, materializeWebRuntimeConfig } = createDesktopHarness(allocateFiles());
 
     const readRes = createResponse();
     getHandler('/api/knowledge-base')(createRequest(), readRes);
@@ -500,7 +500,7 @@ describe('model routes', () => {
     const saveRes = createResponse();
     patchHandler('/api/knowledge-base')(createRequest({ body: { repoUrl: 'https://github.com/user/kb.git', branch: 'trunk' } }), saveRes);
     expect(updateKnowledgeBaseMock).toHaveBeenCalledWith({ repoUrl: 'https://github.com/user/kb.git', branch: 'trunk' });
-    expect(materializeWebProfile).toHaveBeenCalledWith('shared');
+    expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('knowledgeBase');
     expect(saveRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -523,7 +523,7 @@ describe('model routes', () => {
   });
 
   it('reads and writes skill folder state with filesystem validation', () => {
-    const { patchHandler, getHandler, materializeWebProfile } = createDesktopHarness(allocateFiles());
+    const { patchHandler, getHandler, materializeWebRuntimeConfig } = createDesktopHarness(allocateFiles());
     const validDir = mkdtempSync(join(tmpdir(), 'pa-skill-folders-'));
     const skillDirA = join(validDir, 'skills-a');
     const skillDirB = join(validDir, 'skills-b');
@@ -559,7 +559,7 @@ describe('model routes', () => {
     const saveRes = createResponse();
     patchHandler('/api/skill-folders')(createRequest({ body: { skillDirs: [skillDirA, skillDirB] } }), saveRes);
     expect(writeMachineSkillDirsMock).toHaveBeenCalledWith([skillDirA, skillDirB]);
-    expect(materializeWebProfile).toHaveBeenCalledWith('shared');
+    expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
     expect(saveRes.json).toHaveBeenCalledWith({
       configFile: '/config/config.json',
       skillDirs: [skillDirA, skillDirB],
@@ -567,7 +567,7 @@ describe('model routes', () => {
   });
 
   it('reads and writes instruction file state with filesystem validation', () => {
-    const { patchHandler, getHandler, materializeWebProfile } = createDesktopHarness(allocateFiles());
+    const { patchHandler, getHandler, materializeWebRuntimeConfig } = createDesktopHarness(allocateFiles());
     const validDir = mkdtempSync(join(tmpdir(), 'pa-instruction-files-'));
     const instructionA = join(validDir, 'AGENTS.md');
     const instructionB = join(validDir, 'custom.md');
@@ -596,7 +596,7 @@ describe('model routes', () => {
     const saveRes = createResponse();
     patchHandler('/api/instructions')(createRequest({ body: { instructionFiles: [instructionA, instructionB] } }), saveRes);
     expect(writeMachineInstructionFilesMock).toHaveBeenCalledWith([instructionA, instructionB]);
-    expect(materializeWebProfile).toHaveBeenCalledWith('shared');
+    expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
     expect(saveRes.json).toHaveBeenCalledWith({
       configFile: '/config/config.json',
       instructionFiles: [instructionA, instructionB],
@@ -657,7 +657,7 @@ describe('model routes', () => {
   });
 
   it('handles provider CRUD routes and refreshes live registries', () => {
-    const { deleteHandler, getHandler, postHandler, materializeWebProfile } = createDesktopHarness(allocateFiles());
+    const { deleteHandler, getHandler, postHandler, materializeWebRuntimeConfig } = createDesktopHarness(allocateFiles());
 
     const providersRes = createResponse();
     getHandler('/api/model-providers')(createRequest(), providersRes);
@@ -688,7 +688,7 @@ describe('model routes', () => {
         baseUrl: 'https://openrouter.ai',
       }),
     );
-    expect(materializeWebProfile).toHaveBeenCalledWith('shared');
+    expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
     expect(refreshAllLiveSessionModelRegistriesMock).toHaveBeenCalled();
     expect(createRes.json).toHaveBeenCalledWith({ providers: [{ id: 'openrouter' }] });
 

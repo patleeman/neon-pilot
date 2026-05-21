@@ -13,13 +13,13 @@ import { logError } from '../middleware/index.js';
 import { readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import type { ServerRouteContext } from './context.js';
 
-let _getCurrentProfile: () => string = () => {
+let _getRuntimeScope: () => string = () => {
   throw new Error('not initialized');
 };
 let _repoRoot = process.cwd();
 
-function initializeMemoryRoutesContext(context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot'>): void {
-  _getCurrentProfile = context.getCurrentProfile;
+function initializeMemoryRoutesContext(context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot'>): void {
+  _getRuntimeScope = context.getRuntimeScope;
   _repoRoot = context.getRepoRoot();
 }
 
@@ -32,14 +32,14 @@ function inferAgentSource(filePath: string): string {
 
 export function registerMemoryNotesRoutes(
   router: Pick<Express, 'get'>,
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot'>,
 ): void {
   initializeMemoryRoutesContext(context);
 
   router.get('/api/memory', (req, res) => {
     try {
       void req;
-      const resolvedResources = resolveRuntimeResources(_getCurrentProfile(), {
+      const resolvedResources = resolveRuntimeResources(_getRuntimeScope(), {
         repoRoot: _repoRoot,
       });
       const agentsMd = resolvedResources.agentsFiles.map((filePath) => ({
@@ -48,7 +48,7 @@ export function registerMemoryNotesRoutes(
         exists: existsSync(filePath),
         content: existsSync(filePath) ? readFileSync(filePath, 'utf-8') : undefined,
       }));
-      const skills = listSkillsForProfile(_getCurrentProfile());
+      const skills = listSkillsForProfile(_getRuntimeScope());
       const memoryDocs = listMemoryDocs();
       const usageByPath = buildRecentReadUsage([...skills.map((item) => item.path), ...memoryDocs.map((item) => item.path)]);
 

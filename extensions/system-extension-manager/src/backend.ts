@@ -77,7 +77,7 @@ export async function updateSearchPaths(input: unknown, ctx: ExtensionBackendCon
         .map((path) => resolve(path))
     : [];
   const pathsJoined = paths.join('\n');
-  writeSettingsValue(ctx.profileSettingsFilePath, pathsJoined);
+  writeSettingsValue(ctx.runtimeSettingsFilePath, pathsJoined);
   writeSettingsValue(join(ctx.runtimeDir, 'settings.json'), pathsJoined);
   // Also write to the canonical state-root settings file that the extension
   // loader reads from (readConfiguredExtensionPaths). Without this, saved
@@ -124,7 +124,7 @@ function writeSettingsValue(path: string, value: string): void {
 }
 
 function readConfiguredSearchPaths(ctx: ExtensionBackendContext): string[] {
-  const localProfilePaths = splitConfiguredValue(readSettingsFile(ctx.profileSettingsFilePath)[ADDITIONAL_EXTENSION_PATHS_SETTING]);
+  const localProfilePaths = splitConfiguredValue(readSettingsFile(ctx.runtimeSettingsFilePath)[ADDITIONAL_EXTENSION_PATHS_SETTING]);
   if (localProfilePaths.length > 0) return localProfilePaths;
   return splitConfiguredValue(readSettingsFile(join(ctx.runtimeDir, 'settings.json'))[ADDITIONAL_EXTENSION_PATHS_SETTING]);
 }

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getProfilesRoot, getStateRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
+import { getRuntimeConfigRoot, getStateRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
 import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
@@ -279,14 +279,14 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
     return [
       ...createManifestToolAgentExtensions({
-        getCurrentProfile: getRuntimeScope,
+        getRuntimeScope: getRuntimeScope,
         getPreferredVisionModel,
         getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
         hasOpenAiImageProvider,
         repoRoot,
-        profilesRoot: getProfilesRoot(),
+        runtimeConfigRoot: getRuntimeConfigRoot(),
         stateRoot: getStateRoot(),
-        serverContext: { getCurrentProfile: getRuntimeScope },
+        serverContext: { getRuntimeScope: getRuntimeScope },
       }),
 
       ...agentExtensions.factories,

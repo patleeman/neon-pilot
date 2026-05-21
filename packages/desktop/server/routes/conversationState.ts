@@ -39,8 +39,8 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE as SETTINGS_FILE } from '../ui/settingsPe
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
 import { ensureRequestControlsLocalLiveConversation, writeLiveConversationControlError } from './liveSessions.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for conversation state routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for conversation state routes');
 };
 
 let buildLiveSessionResourceOptionsFn: (profile?: string) => LiveSessionResourceOptions = () => ({
@@ -57,10 +57,10 @@ let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 function initializeConversationStateRoutesContext(
   context: Pick<
     ServerRouteContext,
-    'getCurrentProfile' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
   >,
 ): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
@@ -110,7 +110,7 @@ export function registerConversationStateRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch'>,
   context: Pick<
     ServerRouteContext,
-    'getCurrentProfile' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
   >,
 ): void {
   initializeConversationStateRoutesContext(context);
@@ -131,7 +131,7 @@ export function registerConversationStateRoutes(
       const knownLastBlockId = parseTrimmedQueryString(req.query.knownLastBlockId);
       const bootstrap = await readConversationBootstrapState({
         conversationId: req.params.id,
-        profile: getCurrentProfileFn(),
+        profile: getRuntimeScopeFn(),
         tailBlocks,
         knownSessionSignature,
         knownBlockOffset,
@@ -238,7 +238,7 @@ export function registerConversationStateRoutes(
       const recovered =
         body.enabled === true
           ? await recoverConversationCapability(req.params.id, {
-              getCurrentProfile: getCurrentProfileFn,
+              getRuntimeScope: getRuntimeScopeFn,
               buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
               buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
               flushLiveDeferredResumes: flushLiveDeferredResumesFn,
@@ -416,7 +416,7 @@ export function registerConversationStateRoutes(
       const recovered = await recoverConversationCapability(
         conversationId,
         {
-          getCurrentProfile: getCurrentProfileFn,
+          getRuntimeScope: getRuntimeScopeFn,
           buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
           buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
           flushLiveDeferredResumes: flushLiveDeferredResumesFn,

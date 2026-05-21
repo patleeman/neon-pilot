@@ -19,23 +19,23 @@ import {
 } from './providerAuth.js';
 
 export interface ProviderDesktopCapabilityContext {
-  getCurrentProfile: () => string;
-  materializeWebProfile: (profile: string) => void;
+  getRuntimeScope: () => string;
+  materializeWebRuntimeConfig: (profile: string) => void;
   getAuthFile: () => string;
 }
 
 class ProviderDesktopCapabilityInputError extends Error {}
 
-function currentProfile(context: ProviderDesktopCapabilityContext): string {
-  return context.getCurrentProfile();
+function runtimeScope(context: ProviderDesktopCapabilityContext): string {
+  return context.getRuntimeScope();
 }
 
 function materialize(context: ProviderDesktopCapabilityContext): void {
-  context.materializeWebProfile(currentProfile(context));
+  context.materializeWebRuntimeConfig(runtimeScope(context));
 }
 
 export function readModelProvidersCapability(context: ProviderDesktopCapabilityContext): ModelProviderState {
-  return readModelProvidersState(currentProfile(context));
+  return readModelProvidersState(runtimeScope(context));
 }
 
 export function saveModelProviderCapability(
@@ -56,7 +56,7 @@ export function saveModelProviderCapability(
     throw new ProviderDesktopCapabilityInputError('provider required');
   }
 
-  const state = upsertModelProvider(currentProfile(context), provider, {
+  const state = upsertModelProvider(runtimeScope(context), provider, {
     baseUrl: input.baseUrl,
     api: input.api as Parameters<typeof upsertModelProvider>[2]['api'],
     apiKey: input.apiKey,
@@ -76,7 +76,7 @@ export function deleteModelProviderCapability(context: ProviderDesktopCapability
     throw new ProviderDesktopCapabilityInputError('provider required');
   }
 
-  const result = removeModelProvider(currentProfile(context), provider);
+  const result = removeModelProvider(runtimeScope(context), provider);
   materialize(context);
   refreshAllLiveSessionModelRegistries();
   return result.state;
@@ -114,7 +114,7 @@ export function saveModelProviderModelCapability(
     throw new ProviderDesktopCapabilityInputError('modelId required');
   }
 
-  const state = upsertModelProviderModel(currentProfile(context), provider, modelId, {
+  const state = upsertModelProviderModel(runtimeScope(context), provider, modelId, {
     name: input.name,
     api: input.api as Parameters<typeof upsertModelProviderModel>[3]['api'],
     baseUrl: input.baseUrl,
@@ -146,7 +146,7 @@ export function deleteModelProviderModelCapability(
     throw new ProviderDesktopCapabilityInputError('modelId required');
   }
 
-  const result = removeModelProviderModel(currentProfile(context), provider, modelId);
+  const result = removeModelProviderModel(runtimeScope(context), provider, modelId);
   materialize(context);
   refreshAllLiveSessionModelRegistries();
   return result.state;

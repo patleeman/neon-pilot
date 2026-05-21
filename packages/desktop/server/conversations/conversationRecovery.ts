@@ -28,7 +28,7 @@ interface RecoveryLoaderOptions {
 }
 
 export interface RecoverConversationCapabilityContext {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   buildLiveSessionResourceOptions: (profile?: string) => Omit<RecoveryLoaderOptions, 'extensionFactories'>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
@@ -128,7 +128,7 @@ export async function recoverConversationCapability(
       sessionFile: liveEntry?.session.sessionFile,
       cwd: liveEntry?.cwd ?? liveSessionDetail?.meta.cwd ?? '',
       title: liveEntry?.title ?? liveSessionDetail?.meta.title,
-      profile: context.getCurrentProfile(),
+      profile: context.getRuntimeScope(),
       recoveryOperation: null,
     });
 
@@ -153,12 +153,12 @@ export async function recoverConversationCapability(
     throw new Error('Conversation not found.');
   }
 
-  const currentProfile = context.getCurrentProfile();
+  const runtimeScope = context.getRuntimeScope();
   const manifestSpec = runDetail?.run.manifest?.spec;
   const manifestCwd = typeof manifestSpec?.cwd === 'string' && manifestSpec.cwd.trim().length > 0 ? manifestSpec.cwd.trim() : undefined;
   const requestedCwd = sessionDetail?.meta.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
   const resumed = await resumeSession(sessionFile, {
-    ...buildRecoveryLoaderOptions(context, currentProfile),
+    ...buildRecoveryLoaderOptions(context, runtimeScope),
     ...(requestedCwd ? { cwdOverride: requestedCwd } : {}),
   });
   await context.flushLiveDeferredResumes();
@@ -166,7 +166,7 @@ export async function recoverConversationCapability(
   const resumedEntry = liveRegistry.get(resumed.id);
   const effectiveCwd = resumedEntry?.cwd ?? requestedCwd;
   const effectiveTitle = sessionDetail?.meta.title ?? readCheckpointString(checkpointPayload, 'title');
-  const effectiveProfile = readCheckpointString(checkpointPayload, 'profile') ?? currentProfile;
+  const effectiveProfile = readCheckpointString(checkpointPayload, 'profile') ?? runtimeScope;
 
   if (!effectiveCwd) {
     throw new Error('Could not determine the conversation working directory.');

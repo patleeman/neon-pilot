@@ -71,7 +71,7 @@ export interface ExtensionConversationSubscriptionOptions {
  * Read-only meta operations work against persisted session data.
  */
 export function createExtensionConversationsCapability(
-  serverContext?: Pick<ServerRouteContext, 'getCurrentProfile'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>,
+  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>,
   extensionId = 'extension',
 ) {
   const findLiveEntry = (conversationId: string) => {
@@ -123,7 +123,7 @@ export function createExtensionConversationsCapability(
      * Works for both live and persisted sessions.
      */
     async getBlocks(conversationId: string, options?: ExtensionConversationBlocksOptions): Promise<unknown> {
-      const profile = serverContext?.getCurrentProfile?.() ?? 'shared';
+      const profile = serverContext?.getRuntimeScope?.() ?? 'shared';
       const { readSessionDetailForRoute } = await import('../conversations/conversationService.js');
       const { sessionRead } = await readSessionDetailForRoute({
         conversationId,
@@ -144,7 +144,7 @@ export function createExtensionConversationsCapability(
           conversationId: input.conversationId,
           namespace: input.namespace,
           extensionId,
-          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
       async set(input: { conversationId: string; namespace?: string; values: Record<string, unknown> }): Promise<Record<string, unknown>> {
@@ -153,7 +153,7 @@ export function createExtensionConversationsCapability(
           namespace: input.namespace,
           values: input.values,
           extensionId,
-          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
       async query(input: {
@@ -165,7 +165,7 @@ export function createExtensionConversationsCapability(
           namespace: input.namespace?.trim() || extensionId,
           where: input.where,
           limit: input.limit,
-          profile: serverContext?.getCurrentProfile?.() ?? 'shared',
+          profile: serverContext?.getRuntimeScope?.() ?? 'shared',
         });
       },
     },

@@ -29,14 +29,14 @@ describe('buildSnapshotEventsForTopic', () => {
     expect(events[0]).toMatchObject({ type: 'sessions_snapshot', sessions: [{ id: 'c1' }] });
   });
 
-  it('builds tasks snapshot using listTasksForCurrentProfileFn from initialized context', async () => {
+  it('builds tasks snapshot using listTasksForRuntimeScopeFn from initialized context', async () => {
     // Need to call registerSystemRoutes first to set the context
     const { registerSystemRoutes } = await import('./system.js');
     const router = { get: vi.fn(), post: vi.fn() };
     registerSystemRoutes(router as never, {
-      getCurrentProfile: () => 'test',
+      getRuntimeScope: () => 'test',
       getRepoRoot: () => '/repo',
-      listTasksForCurrentProfile: () => [{ id: 'task1' }],
+      listTasksForRuntimeScope: () => [{ id: 'task1' }],
     });
 
     const events = await buildSnapshotEventsForTopic('tasks');

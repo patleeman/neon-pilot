@@ -228,7 +228,7 @@ function groupReadyEntries(entries: DeferredResumeLike[]): DeferredResumeLike[][
 }
 
 export interface CreateAttentionEventFlusherOptions {
-  getCurrentProfile: () => string;
+  getRuntimeScope: () => string;
   getRepoRoot?: () => string | undefined;
   getStateRoot: () => string;
   resolveDaemonRoot: () => string;
@@ -278,7 +278,7 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
             surfaceReadyDeferredResume({
               entry,
               repoRoot: options.getRepoRoot?.(),
-              profile: options.getCurrentProfile(),
+              profile: options.getRuntimeScope(),
               stateRoot: options.getStateRoot(),
               conversationId: session.id,
             });
@@ -315,7 +315,7 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
                 sessionFile: liveEntry.session.sessionFile,
                 cwd: liveEntry.cwd,
                 title: liveEntry.title,
-                profile: options.getCurrentProfile(),
+                profile: options.getRuntimeScope(),
                 state: 'running',
                 pendingOperation: {
                   type: 'prompt',
@@ -366,7 +366,7 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
                 sessionFile: liveEntry.session.sessionFile,
                 cwd: liveEntry.cwd,
                 title: liveEntry.title,
-                profile: options.getCurrentProfile(),
+                profile: options.getRuntimeScope(),
                 state: 'failed',
                 lastError: message,
               });
@@ -444,7 +444,7 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
                 sessionFile: liveEntry.session.sessionFile,
                 cwd: liveEntry.cwd,
                 title: liveEntry.title,
-                profile: options.getCurrentProfile(),
+                profile: options.getRuntimeScope(),
                 state: 'running',
                 pendingOperation: {
                   type: 'prompt',
@@ -479,7 +479,7 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
                 sessionFile: liveEntry.session.sessionFile,
                 cwd: liveEntry.cwd,
                 title: liveEntry.title,
-                profile: options.getCurrentProfile(),
+                profile: options.getRuntimeScope(),
                 state: 'failed',
                 lastError: message,
               });

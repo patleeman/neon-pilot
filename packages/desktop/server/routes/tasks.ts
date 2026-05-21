@@ -34,12 +34,12 @@ import type { ServerRouteContext } from './context.js';
 /**
  * Gets the current profile getter for use in route handlers.
  */
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for task routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for task routes');
 };
 
-function initializeTaskRoutesContext(context: Pick<ServerRouteContext, 'getCurrentProfile'>): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+function initializeTaskRoutesContext(context: Pick<ServerRouteContext, 'getRuntimeScope'>): void {
+  getRuntimeScopeFn = context.getRuntimeScope;
 }
 
 function buildTaskDetailResponse(task: StoredAutomation, runtime?: TaskRuntimeEntry, activity: AutomationActivityEntry[] = []) {
@@ -75,12 +75,12 @@ function buildTaskDetailResponse(task: StoredAutomation, runtime?: TaskRuntimeEn
  */
 export function registerTaskRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
-  context: Pick<ServerRouteContext, 'getCurrentProfile'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): void {
   initializeTaskRoutesContext(context);
   router.get('/api/tasks', (_req, res) => {
     try {
-      const loaded = loadScheduledTasksForProfile(getCurrentProfileFn());
+      const loaded = loadScheduledTasksForProfile(getRuntimeScopeFn());
       const runtimeById = new Map(loaded.runtimeEntries.flatMap((task) => (task.id ? [[task.id, task] as const] : [])));
 
       const tasks = loaded.tasks.map((task) => {
@@ -123,7 +123,7 @@ export function registerTaskRoutes(
 
   router.get('/api/tasks/scheduler-health', (_req, res) => {
     try {
-      res.json(readScheduledTaskSchedulerHealth(getCurrentProfileFn()));
+      res.json(readScheduledTaskSchedulerHealth(getRuntimeScopeFn()));
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
@@ -150,7 +150,7 @@ export function registerTaskRoutes(
         threadMode?: string | null;
         threadConversationId?: string | null;
       };
-      const profile = getCurrentProfileFn();
+      const profile = getRuntimeScopeFn();
       const targetType = normalizeAutomationTargetTypeForSelection(body.targetType);
       const threadSelection = resolveScheduledTaskThreadBinding({
         threadMode: targetType === 'conversation' && body.threadMode === 'none' ? 'dedicated' : body.threadMode,
@@ -214,7 +214,7 @@ export function registerTaskRoutes(
         threadMode?: string | null;
         threadConversationId?: string | null;
       };
-      const resolvedTask = findTaskForProfile(getCurrentProfileFn(), req.params.id);
+      const resolvedTask = findTaskForProfile(getRuntimeScopeFn(), req.params.id);
       if (!resolvedTask) {
         res.status(404).json({ error: 'Task not found' });
         return;
@@ -254,7 +254,7 @@ export function registerTaskRoutes(
 
       invalidateAppTopics('tasks');
 
-      const refreshedTask = findTaskForProfile(getCurrentProfileFn(), task.id);
+      const refreshedTask = findTaskForProfile(getRuntimeScopeFn(), task.id);
       res.json({
         ok: true,
         task: buildTaskDetailResponse(refreshedTask?.task ?? task, refreshedTask?.runtime, listAutomationActivityEntries(task.id)),
@@ -270,7 +270,7 @@ export function registerTaskRoutes(
 
   router.get('/api/tasks/:id/log', (req, res) => {
     try {
-      const resolvedTask = findTaskForProfile(getCurrentProfileFn(), req.params.id);
+      const resolvedTask = findTaskForProfile(getRuntimeScopeFn(), req.params.id);
       if (!resolvedTask?.runtime?.lastLogPath) {
         res.status(404).json({ error: 'No log available' });
         return;
@@ -292,7 +292,7 @@ export function registerTaskRoutes(
 
   router.get('/api/tasks/:id', (req, res) => {
     try {
-      const resolvedTask = findTaskForProfile(getCurrentProfileFn(), req.params.id);
+      const resolvedTask = findTaskForProfile(getRuntimeScopeFn(), req.params.id);
       if (!resolvedTask) {
         res.status(404).json({ error: 'Task not found' });
         return;
@@ -314,7 +314,7 @@ export function registerTaskRoutes(
 
   router.delete('/api/tasks/:id', (req, res) => {
     try {
-      const profile = getCurrentProfileFn();
+      const profile = getRuntimeScopeFn();
       const resolvedTask = findTaskForProfile(profile, req.params.id);
       if (!resolvedTask) {
         res.status(404).json({ error: 'Task not found' });
@@ -341,7 +341,7 @@ export function registerTaskRoutes(
 
   router.post('/api/tasks/:id/run', async (req, res) => {
     try {
-      const resolvedTask = findTaskForProfile(getCurrentProfileFn(), req.params.id);
+      const resolvedTask = findTaskForProfile(getRuntimeScopeFn(), req.params.id);
       if (!resolvedTask) {
         res.status(404).json({ error: 'Task not found' });
         return;

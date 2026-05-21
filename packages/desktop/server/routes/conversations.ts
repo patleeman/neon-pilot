@@ -46,20 +46,20 @@ import { invalidateAppTopics, logError, logSlowConversationPerf, setServerTiming
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
 import type { ServerRouteContext } from './context.js';
 
-let getCurrentProfileFn: () => string = () => {
-  throw new Error('getCurrentProfile not initialized for conversation routes');
+let getRuntimeScopeFn: () => string = () => {
+  throw new Error('getRuntimeScope not initialized for conversation routes');
 };
 
 let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 
 function initializeConversationRoutesContext(
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot' | 'getSavedUiPreferences' | 'flushLiveDeferredResumes'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences' | 'flushLiveDeferredResumes'>,
 ): void {
-  getCurrentProfileFn = context.getCurrentProfile;
+  getRuntimeScopeFn = context.getRuntimeScope;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
 
   setConversationServiceContext({
-    getCurrentProfile: context.getCurrentProfile,
+    getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getSavedUiPreferences: context.getSavedUiPreferences,
   });
@@ -206,7 +206,7 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
 
       const { sessionRead, remoteMirror } = await readSessionDetailForRoute({
         conversationId: req.params.id,
-        profile: getCurrentProfileFn(),
+        profile: getRuntimeScopeFn(),
         tailBlocks,
       });
       if (!sessionRead.detail) {
@@ -361,7 +361,7 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
 
 export function registerConversationRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
-  context: Pick<ServerRouteContext, 'getCurrentProfile' | 'getRepoRoot' | 'getSavedUiPreferences' | 'flushLiveDeferredResumes'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences' | 'flushLiveDeferredResumes'>,
 ): void {
   initializeConversationRoutesContext(context);
   startConversationSummaryBackfillLoop({
@@ -501,7 +501,7 @@ export function registerConversationRoutes(
 
   router.get('/api/conversations/:id/artifacts', (req, res) => {
     try {
-      res.json(readConversationArtifactsCapability(getCurrentProfileFn(), req.params.id));
+      res.json(readConversationArtifactsCapability(getRuntimeScopeFn(), req.params.id));
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
@@ -517,7 +517,7 @@ export function registerConversationRoutes(
   router.get('/api/conversations/:id/artifacts/:artifactId', (req, res) => {
     try {
       res.json(
-        readConversationArtifactCapability(getCurrentProfileFn(), {
+        readConversationArtifactCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           artifactId: req.params.artifactId,
         }),
@@ -536,7 +536,7 @@ export function registerConversationRoutes(
 
   router.get('/api/conversations/:id/checkpoints', (req, res) => {
     try {
-      res.json(readConversationCommitCheckpointsCapability(getCurrentProfileFn(), req.params.id));
+      res.json(readConversationCommitCheckpointsCapability(getRuntimeScopeFn(), req.params.id));
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
@@ -552,7 +552,7 @@ export function registerConversationRoutes(
   router.get('/api/conversations/:id/checkpoints/:checkpointId', (req, res) => {
     try {
       res.json(
-        readConversationCommitCheckpointCapability(getCurrentProfileFn(), {
+        readConversationCommitCheckpointCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           checkpointId: req.params.checkpointId,
         }),
@@ -572,7 +572,7 @@ export function registerConversationRoutes(
   router.get('/api/conversations/:id/checkpoints/:checkpointId/review-context', async (req, res) => {
     try {
       res.json(
-        await readConversationCheckpointReviewContextCapability(getCurrentProfileFn(), {
+        await readConversationCheckpointReviewContextCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           checkpointId: req.params.checkpointId,
         }),
@@ -592,7 +592,7 @@ export function registerConversationRoutes(
   router.post('/api/conversations/:id/checkpoints/:checkpointId/comments', (req, res) => {
     try {
       res.json(
-        createConversationCommitCheckpointCommentCapability(getCurrentProfileFn(), {
+        createConversationCommitCheckpointCommentCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           checkpointId: req.params.checkpointId,
           body: req.body?.body,
@@ -613,7 +613,7 @@ export function registerConversationRoutes(
 
   router.get('/api/conversations/:id/attachments', (req, res) => {
     try {
-      res.json(readConversationAttachmentsCapability(getCurrentProfileFn(), req.params.id));
+      res.json(readConversationAttachmentsCapability(getRuntimeScopeFn(), req.params.id));
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
@@ -629,7 +629,7 @@ export function registerConversationRoutes(
   router.get('/api/conversations/:id/attachments/:attachmentId', (req, res) => {
     try {
       res.json(
-        readConversationAttachmentCapability(getCurrentProfileFn(), {
+        readConversationAttachmentCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           attachmentId: req.params.attachmentId,
         }),
@@ -661,7 +661,7 @@ export function registerConversationRoutes(
       };
 
       res.json(
-        createConversationAttachmentCapability(getCurrentProfileFn(), {
+        createConversationAttachmentCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           ...body,
         }),
@@ -692,7 +692,7 @@ export function registerConversationRoutes(
       };
 
       res.json(
-        updateConversationAttachmentCapability(getCurrentProfileFn(), {
+        updateConversationAttachmentCapability(getRuntimeScopeFn(), {
           conversationId: req.params.id,
           attachmentId: req.params.attachmentId,
           ...body,
@@ -715,7 +715,7 @@ export function registerConversationRoutes(
       const revisionQuery = parsePositiveIntegerQuery(req.query.revision);
       const asset = req.params.asset === 'source' || req.params.asset === 'preview' ? req.params.asset : 'invalid';
 
-      const download = readConversationAttachmentDownloadCapability(getCurrentProfileFn(), {
+      const download = readConversationAttachmentDownloadCapability(getRuntimeScopeFn(), {
         conversationId: req.params.id,
         attachmentId: req.params.attachmentId,
         asset,
@@ -778,7 +778,7 @@ export function registerConversationRoutes(
     try {
       const { read } = req.body as { read?: boolean };
       const updated = toggleConversationAttention({
-        profile: getCurrentProfileFn(),
+        profile: getRuntimeScopeFn(),
         conversationId: req.params.id,
         read,
       });

@@ -179,7 +179,7 @@ describe('createAttentionEventFlusher', () => {
     const publishConversationSessionMetaChanged = vi.fn();
     const warn = vi.fn();
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'datadog',
+      getRuntimeScope: () => 'datadog',
       getRepoRoot: () => '/repo-root',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
@@ -254,7 +254,7 @@ describe('createAttentionEventFlusher', () => {
     completeDeferredResumeForSessionFileMock.mockReturnValue(ready);
 
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'datadog',
+      getRuntimeScope: () => 'datadog',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
       publishConversationSessionMetaChanged: vi.fn(),
@@ -310,7 +310,7 @@ describe('createAttentionEventFlusher', () => {
     completeDeferredResumeForSessionFileMock.mockReturnValue(ready);
 
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'shared',
+      getRuntimeScope: () => 'shared',
       getRepoRoot: () => '/repo-root',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
@@ -390,7 +390,7 @@ describe('createAttentionEventFlusher', () => {
     completeDeferredResumeForSessionFileMock.mockImplementation(({ id }: { id: string }) => (id === 'resume-1' ? first : second));
 
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'shared',
+      getRuntimeScope: () => 'shared',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
       publishConversationSessionMetaChanged: vi.fn(),
@@ -453,7 +453,7 @@ describe('createAttentionEventFlusher', () => {
     completeDeferredResumeForSessionFileMock.mockImplementation(({ id }: { id: string }) => (id === 'run-resume-1' ? first : second));
 
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'shared',
+      getRuntimeScope: () => 'shared',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
       publishConversationSessionMetaChanged: vi.fn(),
@@ -514,7 +514,7 @@ describe('createAttentionEventFlusher', () => {
     getReadySessionAttentionEventsMock.mockReturnValue([attentionEvent]);
 
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'shared',
+      getRuntimeScope: () => 'shared',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
       publishConversationSessionMetaChanged: vi.fn(),
@@ -563,7 +563,7 @@ describe('createAttentionEventFlusher', () => {
     const publishConversationSessionMetaChanged = vi.fn();
     const warn = vi.fn();
     const flush = createAttentionEventFlusher({
-      getCurrentProfile: () => 'datadog',
+      getRuntimeScope: () => 'datadog',
       getStateRoot: () => '/state',
       resolveDaemonRoot: () => '/daemon',
       publishConversationSessionMetaChanged,

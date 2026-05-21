@@ -1080,6 +1080,8 @@ export interface ExtensionBackendContext {
   /** Absolute path to the neon-pilot-runtime directory. */
   runtimeDir: string;
   /** Absolute path to the runtime settings file. */
+  runtimeSettingsFilePath: string;
+  /** @deprecated Use runtimeSettingsFilePath. Profiles are legacy storage plumbing. */
   profileSettingsFilePath: string;
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;

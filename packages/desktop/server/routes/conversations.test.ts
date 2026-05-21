@@ -239,7 +239,7 @@ function createDesktopHarness(options?: { flushLiveDeferredResumes?: () => Promi
 
   registerConversationRoutes(router as never, {
     flushLiveDeferredResumes: options?.flushLiveDeferredResumes ?? (async () => {}),
-    getCurrentProfile: () => 'assistant',
+    getRuntimeScope: () => 'assistant',
     getRepoRoot: () => '/repo',
     getSavedUiPreferences: () => ({ compactConversations: false }),
   });
@@ -356,7 +356,7 @@ describe('conversation routes', () => {
     const { getHandler, postHandler } = createDesktopHarness();
 
     expect(setConversationServiceContextMock).toHaveBeenCalledWith({
-      getCurrentProfile: expect.any(Function),
+      getRuntimeScope: expect.any(Function),
       getRepoRoot: expect.any(Function),
       getSavedUiPreferences: expect.any(Function),
     });

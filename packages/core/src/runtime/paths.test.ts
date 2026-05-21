@@ -18,17 +18,17 @@ import {
   getDurableNodesDir,
   getDurableNotesDir,
   getDurablePiAgentDir,
-  getDurableProfileDir,
-  getDurableProfilesDir,
   getDurableProjectsDir,
+  getDurableRuntimeConfigRoot,
+  getDurableRuntimeScopeDir,
   getDurableSessionsDir,
   getDurableSettingsDir,
   getDurableSkillsDir,
   getDurableTasksDir,
   getKnowledgeBaseStateDir,
-  getLocalProfileDir,
+  getLocalRuntimeConfigDir,
   getManagedKnowledgeBaseRoot,
-  getProfilesRoot,
+  getRuntimeConfigRoot,
   getStateRoot,
   getSyncRoot,
   getVaultRoot,
@@ -88,7 +88,7 @@ describe('getStateRoot', () => {
 });
 
 describe('resolveNeutralChatCwd', () => {
-  it('returns and creates the profile-scoped neutral Chat workspace', () => {
+  it('returns and creates the runtime-scope-scoped neutral Chat workspace', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-neutral-chat-cwd-'));
     try {
       const cwd = resolveNeutralChatCwd('shared/profile', stateRoot);
@@ -101,7 +101,7 @@ describe('resolveNeutralChatCwd', () => {
   });
 });
 
-describe('profile and config path helpers', () => {
+describe('runtime config path helpers', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -109,8 +109,8 @@ describe('profile and config path helpers', () => {
     delete process.env.NEON_PILOT_STATE_ROOT;
     delete process.env.NEON_PILOT_CONFIG_ROOT;
     delete process.env.NEON_PILOT_CONFIG_FILE;
-    delete process.env.NEON_PILOT_PROFILES_ROOT;
-    delete process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
+    delete process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT;
+    delete process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR;
     delete process.env.NEON_PILOT_VAULT_ROOT;
   });
 
@@ -126,12 +126,12 @@ describe('profile and config path helpers', () => {
     expect(getKnowledgeBaseStateDir()).toBe('/runtime/state/knowledge-base');
     expect(getManagedKnowledgeBaseRoot()).toBe('/runtime/state/knowledge-base/repo');
     expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
-    expect(getProfilesRoot()).toBe('/runtime/state/config/profiles');
+    expect(getRuntimeConfigRoot()).toBe('/runtime/state/config/runtime');
     expect(getSyncRoot()).toBe('/runtime/state/sync');
     expect(getDurablePiAgentDir()).toBe('/runtime/state/sync/pi-agent');
     expect(getDurableSessionsDir()).toBe('/runtime/state/sync/pi-agent/sessions');
     expect(getDurableConversationAttentionDir()).toBe('/runtime/state/sync/pi-agent/state/conversation-attention');
-    expect(getDurableProfilesDir()).toBe('/runtime/state/config/profiles');
+    expect(getDurableRuntimeConfigRoot()).toBe('/runtime/state/config/runtime');
     expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'AGENTS.md'));
     expect(getDurableSettingsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'settings'));
     expect(getDurableModelsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'models'));
@@ -141,24 +141,24 @@ describe('profile and config path helpers', () => {
     expect(getDurableMemoryDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'notes'));
     expect(getDurableTasksDir()).toBe('/runtime/state/sync/tasks');
     expect(getDurableProjectsDir()).toBe(join(homedir(), 'Documents', 'neon-pilot', 'projects'));
-    expect(getLocalProfileDir()).toBe('/runtime/state/config/local');
+    expect(getLocalRuntimeConfigDir()).toBe('/runtime/state/config/local');
   });
 
   it('honors explicit overrides', () => {
     process.env.NEON_PILOT_CONFIG_ROOT = '/custom/config';
-    process.env.NEON_PILOT_PROFILES_ROOT = '/custom/profiles';
-    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = '/custom/local';
+    process.env.NEON_PILOT_RUNTIME_CONFIG_ROOT = '/custom/runtime';
+    process.env.NEON_PILOT_LOCAL_RUNTIME_CONFIG_DIR = '/custom/local';
     process.env.NEON_PILOT_VAULT_ROOT = '/custom/vault';
 
     expect(getConfigRoot()).toBe('/custom/config');
     expect(getVaultRoot()).toBe('/custom/vault');
-    expect(getProfilesRoot()).toBe('/custom/profiles');
-    expect(getDurableProfilesDir()).toBe('/custom/config/profiles');
+    expect(getRuntimeConfigRoot()).toBe('/custom/runtime');
+    expect(getDurableRuntimeConfigRoot()).toBe('/custom/config/runtime');
     expect(getDurableAgentFilePath()).toBe('/custom/vault/AGENTS.md');
     expect(getDurableSkillsDir()).toBe('/custom/vault/skills');
     expect(getDurableNotesDir()).toBe('/custom/vault/notes');
     expect(getDurableProjectsDir()).toBe('/custom/vault/projects');
-    expect(getLocalProfileDir()).toBe('/custom/local');
+    expect(getLocalRuntimeConfigDir()).toBe('/custom/local');
   });
 
   it('prefers the managed knowledge base root when a knowledge base repo is configured', () => {
@@ -182,14 +182,14 @@ describe('profile and config path helpers', () => {
     process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
 
     expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'custom-agent-vault'));
-    expect(getDurableProfilesDir()).toBe(join(stateRoot, 'config', 'profiles'));
+    expect(getDurableRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
     expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'custom-agent-vault', 'AGENTS.md'));
 
     rmSync(configDir, { recursive: true, force: true });
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
-  it('keeps vault directory fallbacks for skills and tasks while profiles stay machine-local', () => {
+  it('keeps vault directory fallbacks for skills and tasks while runtime config stays machine-local', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
     mkdirSync(join(stateRoot, 'sync', 'skills'), { recursive: true });
     mkdirSync(join(stateRoot, 'sync', 'tasks'), { recursive: true });
@@ -197,9 +197,9 @@ describe('profile and config path helpers', () => {
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     process.env.NEON_PILOT_VAULT_ROOT = join(stateRoot, 'sync');
 
-    expect(getProfilesRoot()).toBe(join(stateRoot, 'config', 'profiles'));
-    expect(getDurableProfilesDir()).toBe(join(stateRoot, 'config', 'profiles'));
-    expect(getDurableProfileDir('default')).toBe(join(stateRoot, 'config', 'profiles', 'default'));
+    expect(getRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
+    expect(getDurableRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
+    expect(getDurableRuntimeScopeDir('default')).toBe(join(stateRoot, 'config', 'runtime', 'default'));
     expect(getDurableAgentFilePath()).toBe(join(stateRoot, 'sync', 'AGENTS.md'));
     expect(getDurableSkillsDir()).toBe(join(stateRoot, 'sync', 'skills'));
     expect(getDurableTasksDir()).toBe(join(stateRoot, 'sync', 'tasks'));

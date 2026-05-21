@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getProfilesRoot, getStateRoot } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-pilot/core';
 
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
@@ -152,7 +152,7 @@ export async function main(): Promise<void> {
   });
   const extensionFactories = [
     ...createManifestToolAgentExtensions({
-      getCurrentProfile: () => process.env.NEON_PILOT_ACTIVE_PROFILE || process.env.NEON_PILOT_PROFILE || 'shared',
+      getRuntimeScope: () => process.env.NEON_PILOT_RUNTIME_SCOPE || 'shared',
       getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
       getCurrentModelRef: () => args.model ?? readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
       hasOpenAiImageProvider: () => {
@@ -164,7 +164,7 @@ export async function main(): Promise<void> {
         }
       },
       repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
-      profilesRoot: getProfilesRoot(),
+      runtimeConfigRoot: getRuntimeConfigRoot(),
       stateRoot: getStateRoot(),
     }),
     ...agentExtensions.factories,

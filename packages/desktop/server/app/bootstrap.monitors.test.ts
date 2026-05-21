@@ -65,7 +65,7 @@ describe('bootstrap monitor helpers', () => {
       taskStateFile: '/repo/tasks.json',
       profileConfigFile: '/repo/profile.json',
       daemonRoot: '/daemon',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       readDaemonState: () => ({ status: 'ok' }),
     });
 
@@ -74,12 +74,12 @@ describe('bootstrap monitor helpers', () => {
       sessionsDir: '/repo/sessions',
       taskStateFile: '/repo/tasks.json',
       profileConfigFile: '/repo/profile.json',
-      getCurrentProfile: expect.any(Function),
+      getRuntimeScope: expect.any(Function),
     });
     expect(createServiceAttentionMonitorMock).toHaveBeenCalledWith({
       repoRoot: '/repo',
       stateRoot: '/daemon',
-      getCurrentProfile: expect.any(Function),
+      getRuntimeScope: expect.any(Function),
       readDaemonState: expect.any(Function),
       logger: { warn: expect.any(Function) },
     });
@@ -130,7 +130,7 @@ describe('startServerListeners', () => {
       app: { listen: appListen } as never,
       port: 3000,
       loopbackHost: '127.0.0.1',
-      getCurrentProfile: () => 'assistant',
+      getRuntimeScope: () => 'assistant',
       getDefaultWebCwd: () => '/repo/packages/desktop/ui',
       repoRoot: '/repo',
       distDir: '/repo/packages/desktop/ui/dist',

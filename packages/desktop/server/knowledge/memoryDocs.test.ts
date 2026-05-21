@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize } from 'node:path';
 
-import { getDurableAgentFilePath, getDurableSkillsDir, getProfilesRoot } from '@neon-pilot/core';
+import { getDurableAgentFilePath, getDurableSkillsDir, getRuntimeConfigRoot } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -47,7 +47,7 @@ function notePath(stateRoot: string, noteId: string): string {
 }
 
 function skillPath(skillId: string, fileName = 'SKILL.md'): string {
-  return join(getDurableSkillsDir(dirname(getProfilesRoot())), skillId, fileName);
+  return join(getDurableSkillsDir(dirname(getRuntimeConfigRoot())), skillId, fileName);
 }
 
 beforeEach(() => {
@@ -56,7 +56,7 @@ beforeEach(() => {
     ...originalEnv,
     NEON_PILOT_STATE_ROOT: stateRoot,
     NEON_PILOT_VAULT_ROOT: join(stateRoot, 'sync'),
-    NEON_PILOT_PROFILES_ROOT: join(stateRoot, 'sync', 'profiles'),
+    NEON_PILOT_RUNTIME_CONFIG_ROOT: join(stateRoot, 'sync', 'runtime'),
   };
   clearMemoryBrowserCaches();
 });
@@ -117,16 +117,16 @@ Top-level note hub.
 
   it('normalizes helper inputs and allows durable memory roots', () => {
     const stateRoot = process.env.NEON_PILOT_STATE_ROOT as string;
-    const profilesRoot = getProfilesRoot();
+    const runtimeConfigRoot = getRuntimeConfigRoot();
 
-    mkdirSync(join(profilesRoot, 'assistant'), { recursive: true });
+    mkdirSync(join(runtimeConfigRoot, 'assistant'), { recursive: true });
 
     expect(normalizeMemoryPath('  /tmp/demo/../note.md  ')).toBe(normalize('/tmp/demo/../note.md'));
     expect(normalizeMemoryPath(null)).toBe('');
     expect(ensureMemoryDocsDir()).toBe(join(stateRoot, 'sync', 'notes'));
     expect(isEditableMemoryFilePath(notePath(stateRoot, 'memory-index'), 'assistant')).toBe(true);
-    expect(isEditableMemoryFilePath(join(profilesRoot, 'assistant', 'profile.md'), 'assistant')).toBe(false);
-    expect(isEditableMemoryFilePath(join(profilesRoot, 'assistant', 'agent', 'AGENTS.md'), 'assistant')).toBe(false);
+    expect(isEditableMemoryFilePath(join(runtimeConfigRoot, 'assistant', 'profile.md'), 'assistant')).toBe(false);
+    expect(isEditableMemoryFilePath(join(runtimeConfigRoot, 'assistant', 'agent', 'AGENTS.md'), 'assistant')).toBe(false);
     expect(isEditableMemoryFilePath(getDurableAgentFilePath(join(stateRoot, 'sync')), 'assistant')).toBe(true);
     expect(isEditableMemoryFilePath(skillPath('browser-helper'), 'assistant')).toBe(true);
     expect(isEditableMemoryFilePath(join(stateRoot, 'outside.md'), 'assistant')).toBe(false);
@@ -138,7 +138,7 @@ Top-level note hub.
   it('lists skills for a profile and creates new durable skill docs', () => {
     const repoRoot = createTempDir('neon-pilot-web-memory-docs-repo-');
     process.chdir(repoRoot);
-    mkdirSync(join(getProfilesRoot(), 'assistant'), { recursive: true });
+    mkdirSync(join(getRuntimeConfigRoot(), 'assistant'), { recursive: true });
 
     writeFile(
       skillPath('alpha-skill'),

@@ -3,8 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
-const originalProfile = process.env.NEON_PILOT_PROFILE;
-const originalActiveProfile = process.env.NEON_PILOT_ACTIVE_PROFILE;
+const originalRuntimeScope = process.env.NEON_PILOT_RUNTIME_SCOPE;
 
 afterEach(() => {
   if (originalRepoRoot === undefined) {
@@ -13,24 +12,17 @@ afterEach(() => {
     process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
   }
 
-  if (originalProfile === undefined) {
-    delete process.env.NEON_PILOT_PROFILE;
+  if (originalRuntimeScope === undefined) {
+    delete process.env.NEON_PILOT_RUNTIME_SCOPE;
   } else {
-    process.env.NEON_PILOT_PROFILE = originalProfile;
-  }
-
-  if (originalActiveProfile === undefined) {
-    delete process.env.NEON_PILOT_ACTIVE_PROFILE;
-  } else {
-    process.env.NEON_PILOT_ACTIVE_PROFILE = originalActiveProfile;
+    process.env.NEON_PILOT_RUNTIME_SCOPE = originalRuntimeScope;
   }
 });
 
 describe('runtime agent hooks', () => {
   it('builds live-session resources and extension factories before the app runtime registers builders', () => {
     process.env.NEON_PILOT_REPO_ROOT = process.cwd();
-    process.env.NEON_PILOT_PROFILE = 'shared';
-    delete process.env.NEON_PILOT_ACTIVE_PROFILE;
+    process.env.NEON_PILOT_RUNTIME_SCOPE = 'shared';
 
     const options = buildLiveSessionResourceOptionsForRuntime();
     const factories = buildLiveSessionExtensionFactoriesForRuntime();

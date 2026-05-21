@@ -34,7 +34,7 @@ function createResponse() {
   };
 }
 
-function createHarness(options?: { repoRoot?: string; profilesRoot?: string }) {
+function createHarness(options?: { repoRoot?: string; runtimeConfigRoot?: string }) {
   const getHandlers = new Map<string, Handler>();
   const app = {
     get: vi.fn((path: string, handler: Handler) => {
@@ -43,15 +43,15 @@ function createHarness(options?: { repoRoot?: string; profilesRoot?: string }) {
   };
 
   registerToolsRoutes(app as never, {
-    getCurrentProfile: () => 'shared',
+    getRuntimeScope: () => 'shared',
     getRepoRoot: () => options?.repoRoot ?? '/repo',
-    getProfilesRoot: () => options?.profilesRoot ?? '/profiles',
+    getRuntimeConfigRoot: () => options?.runtimeConfigRoot ?? '/profiles',
     buildLiveSessionResourceOptions: () =>
       ({
         additionalSkillPaths: ['/skills/runtime/jira-helper'],
       }) as never,
     buildLiveSessionExtensionFactories: () => ['extension-factory'] as never,
-    withTemporaryProfileAgentDir: async <T>(_profile: string, run: (agentDir: string) => Promise<T>) => run('/tmp/runtime-agent-dir'),
+    withTemporaryRuntimeAgentDir: async <T>(_profile: string, run: (agentDir: string) => Promise<T>) => run('/tmp/runtime-agent-dir'),
   });
 
   return {
@@ -78,7 +78,7 @@ describe('registerToolsRoutes', () => {
   });
 
   it('returns tool inspection details and package install state', async () => {
-    const { getHandler } = createHarness({ repoRoot: '/repo', profilesRoot: '/profiles' });
+    const { getHandler } = createHarness({ repoRoot: '/repo', runtimeConfigRoot: '/profiles' });
     const handler = getHandler('/api/tools');
     const res = createResponse();
 
