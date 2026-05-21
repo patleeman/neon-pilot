@@ -3,7 +3,7 @@
   "id": "system-agent-browser",
   "name": "Agent Browser",
   "packageType": "system",
-  "description": "Control browsers and Electron apps with the agent-browser CLI.",
+  "description": "Control browsers and Electron apps with the agent-browser CLI. Docs: https://agent-browser.dev",
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
@@ -21,7 +21,7 @@
         "id": "agent-browser",
         "name": "agent_browser",
         "title": "Agent Browser",
-        "description": "Run an agent-browser CLI command to automate browsers, web apps, iOS Safari, or CDP-connected Electron apps.",
+        "description": "Run an agent-browser CLI command to automate browsers, web apps, iOS Safari, or CDP-connected Electron apps. Docs: https://agent-browser.dev",
         "action": "run",
         "promptGuidelines": ["Snapshot before interacting and re-snapshot after navigation or DOM-changing actions because @refs expire."],
         "inputSchema": {

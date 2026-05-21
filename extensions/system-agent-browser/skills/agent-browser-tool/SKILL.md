@@ -10,7 +10,7 @@ metadata:
 
 # Agent Browser Tool
 
-Use the `agent_browser` tool instead of shelling out to `agent-browser` directly.
+Use the `agent_browser` tool instead of shelling out to `agent-browser` directly. Reference docs: https://agent-browser.dev
 
 Core workflow:
 
