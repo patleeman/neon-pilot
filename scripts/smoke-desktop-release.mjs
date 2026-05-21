@@ -391,6 +391,7 @@ async function main() {
   const child = spawn(executablePath, [`--remote-debugging-port=${debugPort}`, '--no-quit-confirmation'], {
     env: {
       ...process.env,
+      NEON_PILOT_RUNTIME_CHANNEL: 'test',
       NEON_PILOT_STATE_ROOT: stateRoot,
       NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
       NEON_PILOT_DAEMON_SOCKET_PATH: daemonSocketPath,

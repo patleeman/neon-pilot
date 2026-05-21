@@ -65,6 +65,7 @@ async function flushAsyncWork(): Promise<void> {
 describe('DesktopUpdateManager', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'stable';
     mocks.lastUpdater = null;
     mocks.showMessageBox.mockReset();
     mocks.getVersion.mockReset();
@@ -74,6 +75,7 @@ describe('DesktopUpdateManager', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    delete process.env.NEON_PILOT_RUNTIME_CHANNEL;
   });
 
   it('auto-installs downloaded updates immediately when auto-install is enabled', async () => {

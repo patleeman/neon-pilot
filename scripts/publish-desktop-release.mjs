@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const repoRoot = process.cwd();
 const packageJsonPath = resolve(repoRoot, 'package.json');
 const repoEnvPath = resolve(repoRoot, '.env');
-const defaultEnvPath = undefined;
+const defaultEnvPath = join(homedir(), '.config', 'neon-pilot', 'release-env');
 const defaultReleaseRepo = 'patleeman/neon-pilot';
 
 function fail(message) {

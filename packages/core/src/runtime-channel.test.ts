@@ -16,7 +16,11 @@ describe('runtime channel resolution', () => {
 
   it('uses RC for packaged prerelease versions', () => {
     expect(resolveNeonPilotRuntimeChannel({}, { version: '0.8.0-rc.12', packaged: true })).toBe('rc');
-    expect(resolveNeonPilotRuntimeChannelConfig({}, { version: '0.8.0-rc.12', packaged: true }).companionPort).toBe(3843);
+    expect(resolveNeonPilotRuntimeChannelConfig({}, { version: '0.8.0-rc.12', packaged: true })).toMatchObject({
+      channel: 'rc',
+      companionPort: 3843,
+      updatesEnabled: false,
+    });
   });
 
   it('keeps unpackaged prerelease versions stable unless explicitly overridden', () => {
