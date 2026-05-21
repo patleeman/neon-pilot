@@ -502,6 +502,14 @@ Use `ctx.conversations.metadata` for small extension-owned facts attached to con
 
 Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
+Use `ctx.conversations.create({ allowedToolNames })` when an extension-created conversation needs a runtime-enforced tool allowlist instead of the normal default tool surface:
+
+```ts
+await ctx.conversations.create({ title: 'Web-only research', allowedToolNames: ['web_search', 'web_fetch'] });
+```
+
+This is the right boundary for restricted agent modes; prompt instructions alone are not a tool policy.
+
 Use `ctx.conversations.runTurn(conversationId, text, { onEvent })` when an extension needs to drive a visible conversation and stream the resulting turn. `runTurn` atomically resumes the conversation, subscribes to live events, sends the prompt, and resolves only after `turn_end` or `error`; prefer it over separately calling `ensureLive` + `subscribe` + `sendMessage` when the caller needs reliable remote/client streaming.
 
 Use `backend.services` for long-lived backend work. The host starts enabled services at startup, calls returned stop functions on shutdown/disable/reload, runs declared health checks, and applies `restart: "always" | "on-failure"` when health fails. Extension Manager reports live service state alongside manifest declarations.
@@ -730,6 +738,8 @@ V1 native extensions are trusted local code. They are not sandboxed.
 That is acceptable because Neon Pilot already runs local agent tools with broad authority. The goal is not fake security theater; the goal is a clear contract and review surface.
 
 Extension backend code still must not be able to take down the host process. The desktop runtime guards extension backend imports, actions, services, protocol handlers, and agent lifecycle factories against direct process termination APIs. Calls such as `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)` from guarded extension code are blocked, reported as extension health errors, and the extension is disabled when the attempt happens from a runtime action path so it cannot create an app-start boot loop.
+
+Repeated backend failures trip a per-extension circuit breaker. Three failures in a rolling ten-minute window disables the extension and shows a diagnostic in Extension Manager. On clean startup, the runtime clears its extension startup marker after backend health checks, startup actions, services, and subscriptions are installed; if the previous launch left that marker behind, extension safe mode disables enabled runtime/user extensions before loading them again.
 
 Rules:
 

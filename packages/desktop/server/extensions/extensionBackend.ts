@@ -29,6 +29,7 @@ import {
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
   listExtensionRuntimeProviderRegistrations,
+  recordExtensionFailure,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -746,6 +747,16 @@ export async function invokeExtensionAction(
         message: `${error.message} The extension was disabled to prevent a startup loop.`,
         severity: 'error',
       });
+    } else if (!(error instanceof ExtensionLoadError && error.code === 'extension_disabled')) {
+      const circuit = recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
+      if (circuit.quarantined) {
+        publishAppEvent({
+          type: 'notification',
+          extensionId,
+          message: `Extension disabled by circuit breaker after ${circuit.failures} failures: ${message}`,
+          severity: 'error',
+        });
+      }
     }
     recordActionTelemetry({
       extensionId,
@@ -891,6 +902,8 @@ export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ exte
         setExtensionHealthError(summary.id, message);
         if (error instanceof ExtensionProcessTerminationBlockedError) {
           setExtensionEnabled(summary.id, false);
+        } else {
+          recordExtensionFailure({ extensionId: summary.id, operation: 'backend health check', error: message });
         }
         logError('extension backend health check failed', { extensionId: summary.id, message });
         publishAppEvent({

@@ -2,7 +2,12 @@ import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 
 import { loadExtensionAgentFactory } from './extensionBackend.js';
 import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
-import { listExtensionAgentRegistrations, setExtensionEnabled, setExtensionHealthError } from './extensionRegistry.js';
+import {
+  listExtensionAgentRegistrations,
+  recordExtensionFailure,
+  setExtensionEnabled,
+  setExtensionHealthError,
+} from './extensionRegistry.js';
 
 function quarantineExtensionFatalError(extensionId: string, error: unknown): void {
   if (!(error instanceof ExtensionProcessTerminationBlockedError)) return;
@@ -51,6 +56,9 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             quarantineExtensionFatalError(reg.extensionId, error);
+            if (!(error instanceof ExtensionProcessTerminationBlockedError)) {
+              recordExtensionFailure({ extensionId: reg.extensionId, operation: 'agent extension factory', error: message });
+            }
             errors.push({ extensionId: reg.extensionId, message });
             options.onError?.('failed to run extension agent factory', {
               extensionId: reg.extensionId,
@@ -66,6 +74,9 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             quarantineExtensionFatalError(reg.extensionId, error);
+            if (!(error instanceof ExtensionProcessTerminationBlockedError)) {
+              recordExtensionFailure({ extensionId: reg.extensionId, operation: 'agent extension factory', error: message });
+            }
             errors.push({ extensionId: reg.extensionId, message });
             options.onError?.('failed to load extension agent factory', {
               extensionId: reg.extensionId,

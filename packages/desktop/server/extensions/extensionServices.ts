@@ -3,7 +3,7 @@ import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
 import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
-import { findExtensionEntry, listExtensionInstallSummaries, setExtensionHealthError } from './extensionRegistry.js';
+import { findExtensionEntry, listExtensionInstallSummaries, recordExtensionFailure, setExtensionHealthError } from './extensionRegistry.js';
 
 interface RunningExtensionService {
   extensionId: string;
@@ -85,6 +85,8 @@ async function startOneExtensionService(
     if (error instanceof ExtensionProcessTerminationBlockedError) {
       const { setExtensionEnabled } = await import('./extensionRegistry.js');
       setExtensionEnabled(extensionId, false);
+    } else {
+      recordExtensionFailure({ extensionId, operation: `service ${service.id} startup`, error: message });
     }
     logError('extension service failed', { extensionId, serviceId: service.id, message });
     publishAppEvent({ type: 'notification', extensionId, message: `Extension service failed: ${message}`, severity: 'error' });
@@ -147,6 +149,7 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
           await stopOneService(summary.id, service.id);
           continue;
         }
+        recordExtensionFailure({ extensionId: summary.id, operation: `service ${service.id} health check`, error: message });
         if (service.restart === 'always' || service.restart === 'on-failure') {
           await stopOneService(summary.id, service.id);
           await startOneExtensionService(summary.id, service, serverContext);

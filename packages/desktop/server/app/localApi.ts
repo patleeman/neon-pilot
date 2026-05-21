@@ -132,6 +132,7 @@ import {
   renameStoredSession,
 } from '../conversations/sessions.js';
 import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import { beginExtensionStartupGuard, completeExtensionStartupGuard } from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import { readSavedModelPreferences, writeSavedModelPreferences } from '../models/modelPreferences.js';
@@ -551,30 +552,33 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
   });
 
   if (isMainThread) {
+    const startupGuard = beginExtensionStartupGuard();
+    if (startupGuard.safeMode) {
+      publishAppEvent({
+        type: 'notification',
+        extensionId: 'core',
+        message:
+          startupGuard.disabledIds.length > 0
+            ? `Extension safe mode disabled ${startupGuard.disabledIds.length} runtime extension(s) after an unclean startup.`
+            : 'Extension safe mode detected an unclean startup; no runtime extensions were enabled.',
+        severity: 'warning',
+      });
+    }
+
     // Check enabled extension backends before startup actions so failures are
     // visible in Extension Manager instead of disappearing into spooky action at a distance.
-    checkEnabledExtensionBackendHealth().catch((error) => {
-      logError('extension backend health check dispatch failed', { message: (error as Error).message });
-      publishAppEvent({
-        type: 'notification',
-        extensionId: 'core',
-        message: `Extension health check failed: ${(error as Error).message}`,
-        severity: 'error',
+    void checkEnabledExtensionBackendHealth()
+      .then(() => startExtensionStartupActions(context))
+      .then(() => completeExtensionStartupGuard())
+      .catch((error) => {
+        logError('extension startup dispatch failed', { message: (error as Error).message });
+        publishAppEvent({
+          type: 'notification',
+          extensionId: 'core',
+          message: `Extension startup failed: ${(error as Error).message}`,
+          severity: 'error',
+        });
       });
-    });
-
-    // Fire startup actions for extensions that declare one (e.g. companion
-    // servers, background services). Errors are logged per-extension but
-    // don't block routes from being returned.
-    startExtensionStartupActions(context).catch((error) => {
-      logError('extension startup action dispatch failed', { message: (error as Error).message });
-      publishAppEvent({
-        type: 'notification',
-        extensionId: 'core',
-        message: `Startup action dispatch failed: ${(error as Error).message}`,
-        severity: 'error',
-      });
-    });
   }
 
   return routes;

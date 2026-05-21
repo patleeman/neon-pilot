@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  beginExtensionStartupGuard,
+  completeExtensionStartupGuard,
   isExtensionEnabled,
   listExtensionAssemblyProviderRegistrations,
   listExtensionComposerInputToolRegistrations,
@@ -17,6 +19,7 @@ import {
   readExtensionRegistrySnapshot,
   readExtensionSchema,
   readRuntimeExtensionEntries,
+  recordExtensionFailure,
   resolveExtensionModelProfile,
   setExtensionEnabled,
 } from './extensionRegistry.js';
@@ -291,6 +294,42 @@ describe('extension registry', () => {
     setExtensionEnabled('agent-board', false, stateRoot);
     expect(isExtensionEnabled('agent-board', stateRoot)).toBe(false);
     expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'agent-board')?.enabled).toBe(false);
+  });
+
+  it('quarantines an extension after repeated failures', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'flaky-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'flaky-board', name: 'Flaky Board' }));
+
+    expect(recordExtensionFailure({ extensionId: 'flaky-board', operation: 'action run', error: 'boom 1', stateRoot })).toMatchObject({
+      quarantined: false,
+      failures: 1,
+    });
+    recordExtensionFailure({ extensionId: 'flaky-board', operation: 'action run', error: 'boom 2', stateRoot });
+    expect(recordExtensionFailure({ extensionId: 'flaky-board', operation: 'action run', error: 'boom 3', stateRoot })).toMatchObject({
+      quarantined: true,
+      failures: 3,
+    });
+
+    expect(isExtensionEnabled('flaky-board', stateRoot)).toBe(false);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'flaky-board')).toMatchObject({
+      enabled: false,
+      diagnostics: [expect.stringContaining('Extension disabled by circuit breaker')],
+    });
+  });
+
+  it('safe-mode startup disables enabled runtime extensions after an unclean startup marker', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'runtime-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'runtime-board', name: 'Runtime Board' }));
+
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: true, disabledIds: ['runtime-board'] });
+    expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(false);
+    completeExtensionStartupGuard(stateRoot);
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
   });
 
   it('keeps default-disabled extensions off until explicitly enabled', () => {

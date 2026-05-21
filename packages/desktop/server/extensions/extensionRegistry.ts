@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
@@ -428,7 +428,17 @@ interface ExtensionRegistryConfig {
   enabledIds?: string[];
   disabledKeybindings?: string[];
   keybindingOverrides?: Record<string, string[]>;
+  quarantined?: Record<string, { reason: string; at: string; failures: number }>;
 }
+
+interface ExtensionFailureRecord {
+  at: string;
+  operation: string;
+  error: string;
+}
+
+const EXTENSION_FAILURE_WINDOW_MS = 10 * 60 * 1000;
+const EXTENSION_FAILURE_THRESHOLD = 3;
 
 export function getRuntimeExtensionsRoot(stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'extensions');
@@ -436,6 +446,14 @@ export function getRuntimeExtensionsRoot(stateRoot: string = getStateRoot()): st
 
 function getExtensionRegistryConfigPath(stateRoot: string = getStateRoot()): string {
   return join(getRuntimeExtensionsRoot(stateRoot), 'registry.json');
+}
+
+function getExtensionFailurePath(stateRoot: string = getStateRoot()): string {
+  return join(getRuntimeExtensionsRoot(stateRoot), 'failures.json');
+}
+
+function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): string {
+  return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -465,10 +483,52 @@ function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): Extens
           ),
         )
       : {};
-    return { disabledIds, enabledIds, disabledKeybindings, keybindingOverrides };
+    const quarantined = isRecord(parsed.quarantined)
+      ? Object.fromEntries(
+          Object.entries(parsed.quarantined).flatMap(([id, value]) => {
+            if (!isRecord(value) || typeof value.reason !== 'string' || typeof value.at !== 'string') return [];
+            return [[id, { reason: value.reason, at: value.at, failures: typeof value.failures === 'number' ? value.failures : 0 }]];
+          }),
+        )
+      : {};
+    return { disabledIds, enabledIds, disabledKeybindings, keybindingOverrides, quarantined };
   } catch {
     return {};
   }
+}
+
+function readExtensionFailureRecords(stateRoot: string = getStateRoot()): Record<string, ExtensionFailureRecord[]> {
+  const path = getExtensionFailurePath(stateRoot);
+  if (!existsSync(path)) return {};
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf-8')) as unknown;
+    if (!isRecord(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([id, records]) => {
+        if (!Array.isArray(records)) return [];
+        return [
+          [
+            id,
+            records.filter(
+              (record): record is ExtensionFailureRecord =>
+                isRecord(record) &&
+                typeof record.at === 'string' &&
+                typeof record.operation === 'string' &&
+                typeof record.error === 'string',
+            ),
+          ],
+        ];
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRecord[]>, stateRoot: string = getStateRoot()): void {
+  const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
+  mkdirSync(extensionsRoot, { recursive: true });
+  writeFileSync(getExtensionFailurePath(stateRoot), `${JSON.stringify(records, null, 2)}\n`);
 }
 
 function assertInside(root: string, candidate: string): void {
@@ -750,6 +810,7 @@ function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot
         enabledIds: config.enabledIds ?? [],
         disabledKeybindings: config.disabledKeybindings ?? [],
         keybindingOverrides: config.keybindingOverrides ?? {},
+        quarantined: config.quarantined ?? {},
       },
       null,
       2,
@@ -776,9 +837,11 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
   const config = readExtensionRegistryConfig(stateRoot);
   const disabledIds = new Set(config.disabledIds ?? []);
   const enabledIds = new Set(config.enabledIds ?? []);
+  const quarantined = { ...(config.quarantined ?? {}) };
   if (enabled) {
     disabledIds.delete(extensionId);
     enabledIds.add(extensionId);
+    delete quarantined[extensionId];
   } else {
     disabledIds.add(extensionId);
     enabledIds.delete(extensionId);
@@ -788,9 +851,96 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
       ...config,
       disabledIds: [...disabledIds].sort((left, right) => left.localeCompare(right)),
       enabledIds: [...enabledIds].sort((left, right) => left.localeCompare(right)),
+      quarantined,
     },
     stateRoot,
   );
+}
+
+export function recordExtensionFailure(input: { extensionId: string; operation: string; error: string; stateRoot?: string }): {
+  quarantined: boolean;
+  failures: number;
+} {
+  const stateRoot = input.stateRoot ?? getStateRoot();
+  const now = Date.now();
+  const cutoff = now - EXTENSION_FAILURE_WINDOW_MS;
+  const records = readExtensionFailureRecords(stateRoot);
+  const existing = records[input.extensionId] ?? [];
+  const next = [
+    ...existing.filter((record) => {
+      const at = Date.parse(record.at);
+      return Number.isFinite(at) && at >= cutoff;
+    }),
+    { at: new Date(now).toISOString(), operation: input.operation, error: input.error },
+  ];
+  records[input.extensionId] = next;
+  writeExtensionFailureRecords(records, stateRoot);
+
+  if (next.length < EXTENSION_FAILURE_THRESHOLD) return { quarantined: false, failures: next.length };
+
+  const config = readExtensionRegistryConfig(stateRoot);
+  const disabledIds = new Set(config.disabledIds ?? []);
+  const enabledIds = new Set(config.enabledIds ?? []);
+  disabledIds.add(input.extensionId);
+  enabledIds.delete(input.extensionId);
+  writeExtensionRegistryConfig(
+    {
+      ...config,
+      disabledIds: [...disabledIds].sort((left, right) => left.localeCompare(right)),
+      enabledIds: [...enabledIds].sort((left, right) => left.localeCompare(right)),
+      quarantined: {
+        ...(config.quarantined ?? {}),
+        [input.extensionId]: { reason: input.error, at: new Date(now).toISOString(), failures: next.length },
+      },
+    },
+    stateRoot,
+  );
+  return { quarantined: true, failures: next.length };
+}
+
+export function clearExtensionFailureRecords(extensionId: string, stateRoot: string = getStateRoot()): void {
+  const records = readExtensionFailureRecords(stateRoot);
+  if (!(extensionId in records)) return;
+  delete records[extensionId];
+  writeExtensionFailureRecords(records, stateRoot);
+}
+
+export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): { safeMode: boolean; disabledIds: string[] } {
+  const markerPath = getExtensionStartupMarkerPath(stateRoot);
+  const safeMode = existsSync(markerPath);
+  const disabledIds: string[] = [];
+  if (safeMode) {
+    const config = readExtensionRegistryConfig(stateRoot);
+    const disabled = new Set(config.disabledIds ?? []);
+    const enabled = new Set(config.enabledIds ?? []);
+    const quarantined = { ...(config.quarantined ?? {}) };
+    const at = new Date().toISOString();
+    for (const entry of listExtensionEntries(stateRoot)) {
+      if (entry.source !== 'runtime') continue;
+      const id = entry.manifest.id;
+      if (!isExtensionEnabled(id, stateRoot)) continue;
+      disabled.add(id);
+      enabled.delete(id);
+      quarantined[id] = { reason: 'Disabled by extension safe mode after an unclean startup.', at, failures: 0 };
+      disabledIds.push(id);
+    }
+    writeExtensionRegistryConfig(
+      {
+        ...config,
+        disabledIds: [...disabled].sort((left, right) => left.localeCompare(right)),
+        enabledIds: [...enabled].sort((left, right) => left.localeCompare(right)),
+        quarantined,
+      },
+      stateRoot,
+    );
+  }
+  mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
+  writeFileSync(markerPath, `${JSON.stringify({ startedAt: new Date().toISOString() }, null, 2)}\n`);
+  return { safeMode, disabledIds };
+}
+
+export function completeExtensionStartupGuard(stateRoot: string = getStateRoot()): void {
+  rmSync(getExtensionStartupMarkerPath(stateRoot), { force: true });
 }
 
 export function setExtensionKeybinding(input: {
@@ -1720,6 +1870,11 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const diagnostics = listExtensionContributionDiagnostics(entry);
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
+    const quarantine = readExtensionRegistryConfig(stateRoot).quarantined?.[manifest.id];
+    const quarantineDiagnostic = quarantine
+      ? `Extension disabled by circuit breaker: ${quarantine.reason} (${quarantine.failures} failures at ${quarantine.at})`
+      : null;
+    const allDiagnostics = [...diagnostics, ...(quarantineDiagnostic ? [quarantineDiagnostic] : [])];
     return {
       id: manifest.id,
       name: manifest.name,
@@ -1728,9 +1883,9 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       status: enabled ? ('enabled' as const) : ('disabled' as const),
       ...(buildError ? { buildError } : {}),
       ...(healthError
-        ? { healthError, diagnostics: [...diagnostics, `Backend health check failed: ${healthError}`] }
-        : diagnostics.length > 0
-          ? { diagnostics }
+        ? { healthError, diagnostics: [...allDiagnostics, `Backend health check failed: ${healthError}`] }
+        : allDiagnostics.length > 0
+          ? { diagnostics: allDiagnostics }
           : {}),
       ...(manifest.description ? { description: manifest.description } : {}),
       ...(manifest.version ? { version: manifest.version } : {}),

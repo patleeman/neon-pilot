@@ -7,6 +7,7 @@ import {
   findExtensionEntry,
   isExtensionEnabled,
   listExtensionInstallSummaries,
+  recordExtensionFailure,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -79,6 +80,12 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
           setExtensionHealthError(extensionId, error.message);
           setExtensionEnabled(extensionId, false);
           uninstallExtensionSubscriptions(extensionId);
+        } else {
+          recordExtensionFailure({
+            extensionId,
+            operation: `subscription ${subscription.id}`,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
         logError('extension subscription handler failed', {
           extensionId,
