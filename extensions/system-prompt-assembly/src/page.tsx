@@ -238,9 +238,7 @@ function CapabilityTable({
                   <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
                     {row.description || fallbackDescription(row)}
                   </div>
-                  {row.diagnostics?.length ? (
-                    <div className="mt-1 text-[12px] text-danger">{formatCount(row.diagnostics.length, 'issue')}</div>
-                  ) : null}
+                  {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
                 </div>
               </td>
               <td className="px-3 py-3 align-middle">
@@ -268,6 +266,29 @@ function CapabilityTable({
       </table>
     </section>
   );
+}
+
+function DiagnosticsSummary({ diagnostics }: { diagnostics: unknown[] }) {
+  const messages = diagnostics.map(formatDiagnostic).filter(Boolean);
+  return (
+    <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-danger">
+      <div>{formatCount(diagnostics.length, 'issue')}</div>
+      {messages.slice(0, 3).map((message, index) => (
+        <div key={`${index}:${message}`} className="max-w-[44rem] whitespace-normal break-words text-danger/90">
+          {message}
+        </div>
+      ))}
+      {messages.length > 3 ? <div className="text-danger/70">+{messages.length - 3} more</div> : null}
+    </div>
+  );
+}
+
+function formatDiagnostic(diagnostic: unknown): string {
+  if (typeof diagnostic === 'string') return diagnostic;
+  const record = asRecord(diagnostic);
+  if (typeof record.message === 'string') return record.message;
+  if (typeof record.code === 'string') return record.code;
+  return '';
 }
 
 function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: boolean; onToggle: () => void }) {
