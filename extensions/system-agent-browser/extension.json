@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "id": "system-agent-browser",
+  "name": "Agent Browser",
+  "packageType": "system",
+  "description": "Control browsers and Electron apps with the agent-browser CLI.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "run",
+        "handler": "runAgentBrowser",
+        "title": "Run agent-browser"
+      }
+    ]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "agent-browser",
+        "name": "agent_browser",
+        "title": "Agent Browser",
+        "description": "Run an agent-browser CLI command to automate browsers, web apps, iOS Safari, or CDP-connected Electron apps.",
+        "action": "run",
+        "promptGuidelines": ["Snapshot before interacting and re-snapshot after navigation or DOM-changing actions because @refs expire."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "agent-browser command, for example open, snapshot, click, fill, wait, screenshot, get, connect, close, or session."
+            },
+            "args": {
+              "type": "array",
+              "description": "Command arguments, excluding the agent-browser binary and global flags.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "session": {
+              "type": "string",
+              "description": "Optional agent-browser session name."
+            },
+            "native": {
+              "type": "boolean",
+              "description": "Start/use native daemon mode for this command. Defaults to true for open/connect/device/session commands."
+            },
+            "headed": {
+              "type": "boolean",
+              "description": "Run with visible browser window."
+            },
+            "platform": {
+              "type": "string",
+              "enum": ["chromium", "chrome", "firefox", "webkit", "ios"],
+              "description": "Optional browser platform/provider passed with -p."
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "description": "Execution timeout in seconds. Default 30, max 300."
+            }
+          },
+          "required": ["command"],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "agent-browser-tool",
+        "title": "Agent Browser Tool",
+        "description": "Use when automating browsers, web apps, iOS Safari, or CDP-connected Electron apps with the agent_browser tool.",
+        "path": "skills/agent-browser-tool/SKILL.md"
+      }
+    ]
+  },
+  "permissions": ["shell:exec", "network:read"]
+}
