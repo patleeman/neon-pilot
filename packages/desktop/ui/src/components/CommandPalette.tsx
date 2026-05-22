@@ -644,6 +644,16 @@ export function CommandPalette() {
       setActionError(null);
       setBusyItemId(item.id);
 
+      const executeDeclaredPaletteCommand = async (command: string, args: unknown) => {
+        const declared = commandItems.some(
+          (candidate) => candidate.action.kind === 'command' && candidate.action.command === command && !candidate.disabled,
+        );
+        if (!declared) {
+          throw new Error(`Command is not available in the palette: ${command}`);
+        }
+        await api.executeExtensionCommand(command, args ?? {});
+      };
+
       try {
         switch (item.action.kind) {
           case 'navigate':
@@ -679,10 +689,10 @@ export function CommandPalette() {
               if (typedAction.kind === 'navigate' && typeof typedAction.to === 'string') {
                 navigate(typedAction.to);
               } else if (typedAction.kind === 'command' && typeof typedAction.command === 'string') {
-                await api.executeExtensionCommand(typedAction.command, typedAction.args ?? {});
+                await executeDeclaredPaletteCommand(typedAction.command, typedAction.args ?? {});
               }
             } else if (searchAction && typeof searchAction === 'object' && 'command' in searchAction) {
-              await api.executeExtensionCommand(
+              await executeDeclaredPaletteCommand(
                 String((searchAction as { command: unknown }).command),
                 (searchAction as { args?: unknown }).args ?? {},
               );
@@ -699,7 +709,7 @@ export function CommandPalette() {
         setBusyItemId(null);
       }
     },
-    [closePalette, location.hash, location.pathname, location.search, navigate, openSession],
+    [closePalette, commandItems, location.hash, location.pathname, location.search, navigate, openSession],
   );
 
   useEffect(() => {
