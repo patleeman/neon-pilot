@@ -362,10 +362,48 @@ small,
 
 .app-shot img {
   width: 100%;
-  height: 260px;
+  height: 300px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: #070a0f;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.surface-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.surface-strip figure,
+.screen-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #070a0f;
+}
+
+.surface-strip img {
+  width: 100%;
+  height: 156px;
+  object-fit: cover;
+  object-position: top center;
+  opacity: 0.92;
+}
+
+.surface-strip figcaption {
+  padding: 11px 14px 12px;
+  border-top: 1px solid var(--line-soft);
+  color: #c7c4bc;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.screen-card img {
+  width: 100%;
+  height: 318px;
   object-fit: cover;
   object-position: top center;
 }
@@ -642,6 +680,15 @@ footer a {
   }
 
   .app-shot img {
+    height: auto;
+  }
+
+  .surface-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .surface-strip img,
+  .screen-card img {
     height: auto;
   }
 }
