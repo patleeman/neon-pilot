@@ -629,7 +629,7 @@ Pick the smallest surface that matches the product shape. Do not use the right r
 
 ### Composer host boundary
 
-Composer APIs are intent APIs. Extensions may request host actions such as `insertText(text)`, `addFiles(files)`, or `openFilePicker()`, but the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
+Composer APIs are intent APIs. Extensions may request host actions such as `insertText(text)`, `appendText(text)`, `addFiles(files)`, or `openFilePicker()`, but the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
 
 Rules:
 

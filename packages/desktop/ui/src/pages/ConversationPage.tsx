@@ -2854,6 +2854,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     rememberSelection: rememberComposerSelection,
     moveCaretToEnd: moveComposerCaretToEnd,
     insertText: insertTextIntoComposer,
+    appendText: appendTextToComposer,
   } = composerController;
 
   useWorkspaceComposerEvents({
@@ -6100,6 +6101,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   void toggleGoalMode();
                 }}
                 onInsertComposerText={insertTextIntoComposer}
+                onAppendComposerText={appendTextToComposer}
                 onSubmitComposerQuestion={() => {
                   void submitComposerQuestionIfReady();
                 }}

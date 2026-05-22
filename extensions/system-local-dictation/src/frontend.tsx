@@ -96,7 +96,12 @@ export function DictationButton({
   buttonContext,
 }: {
   pa: NativeExtensionClient;
-  buttonContext: { composerDisabled: boolean; insertText: (text: string) => void; renderMode?: 'inline' | 'menu' };
+  buttonContext: {
+    composerDisabled: boolean;
+    insertText: (text: string) => void;
+    appendText?: (text: string) => void;
+    renderMode?: 'inline' | 'menu';
+  };
 }) {
   const [state, setState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
   const [enabled, setEnabled] = useState(false);
@@ -147,7 +152,7 @@ export function DictationButton({
         pa.ui.toast('Dictation did not detect any speech.');
         return;
       }
-      buttonContext.insertText(text);
+      (buttonContext.appendText ?? buttonContext.insertText)(text);
       pa.ui.toast('Dictation inserted.');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

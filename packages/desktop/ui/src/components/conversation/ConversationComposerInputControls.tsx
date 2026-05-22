@@ -52,6 +52,7 @@ export function ConversationComposerInputControls({
   onSelectThinkingLevel,
   onToggleGoal,
   onInsertComposerText,
+  onAppendComposerText,
   onSubmitComposerQuestion,
   onSubmitComposerActionForModifiers,
   onAbortStream,
@@ -89,6 +90,7 @@ export function ConversationComposerInputControls({
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   onToggleGoal: () => void;
   onInsertComposerText: (text: string) => void;
+  onAppendComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
   onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
@@ -134,6 +136,7 @@ export function ConversationComposerInputControls({
     openFilePicker: onOpenFilePicker,
     addFiles: onFilesSelected,
     insertText: onInsertComposerText,
+    appendText: onAppendComposerText,
     models,
     currentModel,
     currentThinkingLevel,
@@ -241,6 +244,7 @@ export function ConversationComposerInputControls({
             composerSubmitLabel={composerSubmitLabel}
             composerAltHeld={composerAltHeld}
             onInsertComposerText={onInsertComposerText}
+            onAppendComposerText={onAppendComposerText}
             onSubmitComposerQuestion={onSubmitComposerQuestion}
             onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
             onAbortStream={onAbortStream}

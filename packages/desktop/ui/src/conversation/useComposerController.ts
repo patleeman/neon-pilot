@@ -27,6 +27,7 @@ export interface ComposerController {
   setText: (text: string, options?: ComposerTextUpdateOptions) => void;
   clear: () => void;
   insertText: (text: string) => void;
+  appendText: (text: string) => void;
 }
 
 export function useComposerController({
@@ -124,8 +125,26 @@ export function useComposerController({
     [inputRef, selectionRef, setText, textareaRef],
   );
 
+  const appendText = useCallback(
+    (text: string) => {
+      const currentInput = inputRef.current;
+      const end = currentInput.length;
+      const insertion = insertTextAtComposerSelection({
+        currentInput,
+        selection: { start: end, end },
+        text,
+      });
+      if (!insertion) {
+        return;
+      }
+
+      setText(insertion.nextInput, { selection: { start: insertion.nextCaret, end: insertion.nextCaret } });
+    },
+    [inputRef, setText],
+  );
+
   return useMemo(
-    () => ({ rememberSelection, moveCaretToEnd, setText, clear, insertText }),
-    [clear, insertText, moveCaretToEnd, rememberSelection, setText],
+    () => ({ rememberSelection, moveCaretToEnd, setText, clear, insertText, appendText }),
+    [appendText, clear, insertText, moveCaretToEnd, rememberSelection, setText],
   );
 }

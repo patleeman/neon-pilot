@@ -112,6 +112,7 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
       onSelectThinkingLevel={vi.fn()}
       onToggleGoal={vi.fn()}
       onInsertComposerText={vi.fn()}
+      onAppendComposerText={vi.fn()}
       onSubmitComposerQuestion={vi.fn()}
       onSubmitComposerActionForModifiers={vi.fn()}
       onAbortStream={vi.fn()}

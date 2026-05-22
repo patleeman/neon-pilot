@@ -543,7 +543,7 @@ Add component-backed controls in the composer bottom row. Core owns the row layo
 }
 ```
 
-Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa`, `controlContext`, and the legacy alias `buttonContext`. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
+Slots are `leading`, `preferences`, and `actions`. Controls sort by `priority` ascending, then extension id, then contribution id. The component receives `pa`, `controlContext`, and the legacy alias `buttonContext`. `controlContext.renderMode` is `inline` or `menu`; `insertText(text)` inserts at the current composer selection; `appendText(text)` inserts at the end when available; `openFilePicker()` opens the core-owned attachment input; and model/goal fields expose the current composer preference state.
 
 ### Composer Buttons (`composerButtons`)
 
@@ -795,7 +795,7 @@ Items without an `action` are static labels. Items with an `action` are clickabl
 
 ### Composer host boundary
 
-Composer contribution contexts expose intent methods such as `insertText(text)`, `addFiles(files)`, and `openFilePicker()`. Extensions request these actions; the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
+Composer contribution contexts expose intent methods such as `insertText(text)`, `appendText(text)`, `addFiles(files)`, and `openFilePicker()`. Extensions request these actions; the host owns composer state, attachment ingestion, selection, focus, and caret restoration.
 
 Rules:
 

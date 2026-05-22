@@ -21,6 +21,7 @@ export function ConversationComposerActions({
   composerSubmitLabel,
   composerAltHeld,
   onInsertComposerText,
+  onAppendComposerText,
   onSubmitComposerQuestion,
   onSubmitComposerActionForModifiers,
   onAbortStream,
@@ -36,6 +37,7 @@ export function ConversationComposerActions({
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
   onInsertComposerText: (text: string) => void;
+  onAppendComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
   onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
@@ -122,6 +124,7 @@ export function ConversationComposerActions({
             openFilePicker: () => {},
             addFiles: () => {},
             insertText: onInsertComposerText,
+            appendText: onAppendComposerText,
             models: [],
             currentModel: '',
             currentThinkingLevel: '',

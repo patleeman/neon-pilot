@@ -75,4 +75,24 @@ describe('useComposerController', () => {
 
     expect(setInput).toHaveBeenCalledWith('typed while dictating transcript');
   });
+
+  it('appends text at the end for dictation-style insertion', () => {
+    const inputRef = { current: 'typed while dictating' };
+    const textareaRef = createRef<HTMLTextAreaElement>();
+    const selectionRef = { current: { start: 0, end: 5 } };
+    const setInput = vi.fn((next: string) => {
+      inputRef.current = next;
+    });
+    const textarea = document.createElement('textarea');
+    textarea.value = 'stale visible value';
+    textarea.setSelectionRange(0, 5);
+    textareaRef.current = textarea;
+
+    const { result } = renderHook(() => useComposerController({ inputRef, textareaRef, selectionRef, setInput, scheduleResize: vi.fn() }));
+
+    act(() => result.current.appendText('transcript'));
+
+    expect(setInput).toHaveBeenCalledWith('typed while dictating transcript');
+    expect(selectionRef.current).toEqual({ start: 32, end: 32 });
+  });
 });

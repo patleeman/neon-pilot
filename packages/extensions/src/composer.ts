@@ -22,6 +22,8 @@ export interface ComposerControlContext {
   addFiles: (files: File[]) => void;
   /** Request host-owned text insertion. The host owns composer state, selection, and caret restore. */
   insertText: (text: string) => void;
+  /** Request host-owned text insertion at the end of the composer, ignoring the current selection. */
+  appendText?: (text: string) => void;
   models: ComposerModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
