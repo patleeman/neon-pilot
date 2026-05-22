@@ -53,7 +53,7 @@ import {
   shouldShowQuestionSubmitAsPrimaryComposerAction,
 } from '../conversation/conversationComposerSubmit';
 import { truncateConversationCwdFromFront } from '../conversation/conversationCwdHistory';
-import { buildBackgroundExecutionIndicatorText, selectConversationActiveExecutions } from '../conversation/conversationExecutionActivity';
+import { buildBackgroundExecutionIndicatorText } from '../conversation/conversationExecutionActivity';
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
@@ -184,6 +184,7 @@ import {
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
 import { useComposerController } from '../conversation/useComposerController';
+import { useConversationActiveExecutions } from '../conversation/useConversationActiveExecutions';
 import { useComposerModifierKeys, useVisualViewportKeyboardInset } from '../conversation/useConversationKeyboardState';
 import { useConversationModels } from '../conversation/useConversationModels';
 import { useDesktopConversationShortcuts } from '../conversation/useDesktopConversationShortcuts';
@@ -540,7 +541,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
   const { versions } = useAppEvents();
-  const { tasks, sessions, runs, executions, setRuns, setSessions, setExecutions } = useAppData();
+  const { tasks, sessions, runs, setRuns, setSessions } = useAppData();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
   useEffect(() => {
@@ -1801,6 +1802,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [wholeLineBashRunning, setWholeLineBashRunning] = useState(false);
   const wholeLineBashRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
+  const { executions: activeConversationBackgroundExecutions, refresh: refreshActiveConversationBackgroundExecutions } =
+    useConversationActiveExecutions(draft ? null : id);
   const composerDisabled = conversationNeedsTakeover || preparingRelatedThreadContext || wholeLineBashRunning;
 
   useEffect(() => {
@@ -1860,10 +1863,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       setCancellingBackgroundRunIds((current) => new Set(current).add(normalizedRunId));
       void api
         .cancelExecution(normalizedRunId)
-        .then(() => api.executions())
-        .then((result) => {
-          setExecutions(result);
-        })
+        .then(() => refreshActiveConversationBackgroundExecutions())
         .catch(() => {})
         .finally(() => {
           setCancellingBackgroundRunIds((current) => {
@@ -1873,7 +1873,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           });
         });
     },
-    [setExecutions],
+    [refreshActiveConversationBackgroundExecutions],
   );
 
   useEffect(() => {
@@ -2469,44 +2469,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [deferredResumeNowMs, deferredResumes, isLiveSession, savedConversationSessionFile],
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
-  const activeConversationBackgroundExecutions = useMemo(
-    () =>
-      selectConversationActiveExecutions({
-        conversationId: draft ? null : id,
-        executions,
-        tasks,
-        excludeExecutionId: conversationRunId,
-        visibility: 'primary',
-      }),
-    [conversationRunId, draft, executions, id, tasks],
+  const visibleActiveConversationBackgroundExecutions = useMemo(
+    () => activeConversationBackgroundExecutions.filter((execution) => execution.id !== conversationRunId),
+    [activeConversationBackgroundExecutions, conversationRunId],
   );
-  const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(activeConversationBackgroundExecutions);
+  const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
-
-  useEffect(() => {
-    if (activeConversationBackgroundExecutions.length === 0) return;
-
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-
-    async function refreshExecutions() {
-      try {
-        const result = await api.executions();
-        if (!cancelled) setExecutions(result);
-      } catch {
-        // Keep the shelf based on the last known app state; the global app stream
-        // will recover independently.
-      }
-      if (!cancelled) timeout = setTimeout(refreshExecutions, 5000);
-    }
-
-    void refreshExecutions();
-
-    return () => {
-      cancelled = true;
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [activeConversationBackgroundExecutions.length, setExecutions]);
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -5308,7 +5276,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     attachedContextDocs.length > 0 ||
     draftMentionItems.length > 0 ||
     pendingQueue.length > 0 ||
-    activeConversationBackgroundExecutions.length > 0 ||
+    visibleActiveConversationBackgroundExecutions.length > 0 ||
     (!draft && orderedDeferredResumes.length > 0) ||
     pendingBrowserComments.length > 0 ||
     Boolean(pendingAskUserQuestion && composerActiveQuestion);
@@ -6004,7 +5972,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
                   {!draft && (
                     <ConversationActivityShelf
-                      backgroundExecutions={activeConversationBackgroundExecutions}
+                      backgroundExecutions={visibleActiveConversationBackgroundExecutions}
                       backgroundExecutionIndicatorText={backgroundExecutionIndicatorText}
                       showBackgroundRunDetails={showActiveBackgroundRunDetails}
                       cancellingBackgroundRunIds={cancellingBackgroundRunIds}

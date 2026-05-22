@@ -871,7 +871,7 @@ describe('ConversationPage', () => {
     expect(html).not.toContain('Hide right sidebar');
   });
 
-  it('shows active background runs above the composer even without other shelf content', () => {
+  it('does not trust the global execution cache for active background shelf rows', () => {
     const runId = 'run-ui-preview-check-2026-04-26T00-00-01-000Z-feedface';
     const html = renderToString(
       <AppDataContext.Provider
@@ -909,8 +909,8 @@ describe('ConversationPage', () => {
       </AppDataContext.Provider>,
     );
 
-    expect(html).toContain('Background Work');
-    expect(html).toContain('running · ui-preview-check');
+    expect(html).not.toContain('Background Work');
+    expect(html).not.toContain('running · ui-preview-check');
     expect(html).toContain('Message Neon Pilot');
   });
 

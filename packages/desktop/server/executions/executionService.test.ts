@@ -1,7 +1,7 @@
 import type { ScannedDurableRun } from '@neon-pilot/daemon';
 import { describe, expect, it } from 'vitest';
 
-import { projectExecution } from './executionService.js';
+import { isExecutionActive, projectExecution } from './executionService.js';
 
 function run(overrides: Partial<ScannedDurableRun>): ScannedDurableRun {
   return {
@@ -77,5 +77,13 @@ describe('Execution projection', () => {
       prompt: 'Review the current diff',
       model: 'gpt-5.5',
     });
+  });
+
+  it('treats only non-terminal execution statuses as active', () => {
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'running' } })))).toBe(true);
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'recovering' } })))).toBe(true);
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'completed' } })))).toBe(false);
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'cancelled' } })))).toBe(false);
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'unknown' } })))).toBe(false);
   });
 });

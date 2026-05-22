@@ -20,6 +20,22 @@ function parseLogTail(queryTail: unknown): number | undefined {
   return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(1000, parsed) : undefined;
 }
 
+function parseBooleanQuery(value: unknown): boolean | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return undefined;
+}
+
+function parseExecutionVisibilityQuery(value: unknown): 'primary' | 'system' | 'hidden' | 'visible' | 'all' | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return normalized === 'primary' || normalized === 'system' || normalized === 'hidden' || normalized === 'visible' || normalized === 'all'
+    ? normalized
+    : undefined;
+}
+
 const ACTIVE_EXECUTION_POLL_INTERVAL_MS = 1_000;
 const IDLE_EXECUTION_POLL_INTERVAL_MS = 5_000;
 const ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS = 500;
@@ -48,7 +64,12 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
 
   router.get('/api/conversations/:id/executions', async (req, res) => {
     try {
-      res.json(await listConversationExecutions(req.params.id));
+      res.json(
+        await listConversationExecutions(req.params.id, {
+          active: parseBooleanQuery(req.query.active),
+          visibility: parseExecutionVisibilityQuery(req.query.visibility),
+        }),
+      );
     } catch (err) {
       handleError(res, err);
     }

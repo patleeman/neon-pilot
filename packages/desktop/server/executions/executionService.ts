@@ -56,6 +56,11 @@ export interface ConversationExecutionsResult {
   executions: ExecutionRecord[];
 }
 
+export interface ConversationExecutionsOptions {
+  active?: boolean;
+  visibility?: ExecutionVisibility | 'visible' | 'all';
+}
+
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
@@ -66,6 +71,12 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
 
 function terminalStatus(status: string | undefined): boolean {
   return status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'interrupted';
+}
+
+export function isExecutionActive(execution: ExecutionRecord): boolean {
+  return (
+    execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'
+  );
 }
 
 function inferExecutionKind(run: ScannedDurableRun): ExecutionKind {
@@ -177,9 +188,20 @@ export async function listExecutions(): Promise<{ executions: ExecutionRecord[] 
   return { executions: result.runs.map(projectExecution).sort(sortExecutions) };
 }
 
-export async function listConversationExecutions(conversationId: string): Promise<ConversationExecutionsResult> {
+export async function listConversationExecutions(
+  conversationId: string,
+  options: ConversationExecutionsOptions = {},
+): Promise<ConversationExecutionsResult> {
   const normalized = conversationId.trim();
-  const executions = (await listExecutions()).executions.filter((execution) => execution.conversationId === normalized);
+  const executions = (await listExecutions()).executions
+    .filter((execution) => execution.conversationId === normalized)
+    .filter((execution) => (options.active ? isExecutionActive(execution) : true))
+    .filter((execution) => {
+      const visibility = options.visibility ?? 'all';
+      if (visibility === 'all') return true;
+      if (visibility === 'visible') return execution.visibility !== 'hidden';
+      return execution.visibility === visibility;
+    });
   return {
     conversationId: normalized,
     primary: executions.filter((execution) => execution.visibility === 'primary'),

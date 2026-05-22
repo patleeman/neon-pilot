@@ -95,8 +95,8 @@ describe('registerExecutionRoutes', () => {
     expect(listRes.json).toHaveBeenCalledWith(all);
 
     const scopedRes = createJsonResponse();
-    await conversationHandler({ params: { id: 'conv-1' } }, scopedRes);
-    expect(listConversationExecutionsMock).toHaveBeenCalledWith('conv-1');
+    await conversationHandler({ params: { id: 'conv-1' }, query: { active: 'true', visibility: 'primary' } }, scopedRes);
+    expect(listConversationExecutionsMock).toHaveBeenCalledWith('conv-1', { active: true, visibility: 'primary' });
     expect(scopedRes.json).toHaveBeenCalledWith(scoped);
   });
 

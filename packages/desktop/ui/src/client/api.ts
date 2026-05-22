@@ -591,8 +591,18 @@ export const api = {
     return (await requireLocalDesktopBridge('Cancelling durable runs')).cancelDurableRun(id);
   },
   executions: async () => get<import('../shared/types').ExecutionListResult>('/executions'),
-  conversationExecutions: async (conversationId: string) =>
-    get<import('../shared/types').ConversationExecutionsResult>(`/conversations/${encodeURIComponent(conversationId)}/executions`),
+  conversationExecutions: async (
+    conversationId: string,
+    options: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.active !== undefined) params.set('active', String(options.active));
+    if (options.visibility) params.set('visibility', options.visibility);
+    const query = params.toString();
+    return get<import('../shared/types').ConversationExecutionsResult>(
+      `/conversations/${encodeURIComponent(conversationId)}/executions${query ? `?${query}` : ''}`,
+    );
+  },
   execution: async (id: string) => get<import('../shared/types').ExecutionDetailResult>(`/executions/${encodeURIComponent(id)}`),
   executionLog: async (id: string, tail?: number) => {
     const normalizedTail = normalizeDurableRunLogTailParam(tail);
