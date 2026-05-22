@@ -53,6 +53,7 @@ import {
   shouldShowQuestionSubmitAsPrimaryComposerAction,
 } from '../conversation/conversationComposerSubmit';
 import { truncateConversationCwdFromFront } from '../conversation/conversationCwdHistory';
+import { buildBackgroundExecutionIndicatorText, selectConversationActiveExecutions } from '../conversation/conversationExecutionActivity';
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
@@ -238,10 +239,8 @@ import { closeConversationTab, ensureConversationTabOpen, setActiveConversationT
 import type {
   ConversationAttachmentSummary,
   ConversationContextDocRef,
-  ConversationExecutionsResult,
   DeferredResumeSummary,
   DurableRunRecord,
-  ExecutionRecord,
   LiveSessionContext,
   MemoryData,
   MessageBlock,
@@ -529,24 +528,6 @@ export async function applyGoalModeToggleAction(
   }
 }
 
-function isActiveExecution(execution: ExecutionRecord): boolean {
-  return (
-    execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'
-  );
-}
-
-function executionSortTimestamp(execution: ExecutionRecord): string {
-  return execution.updatedAt ?? execution.startedAt ?? execution.createdAt ?? '';
-}
-
-function buildBackgroundExecutionIndicatorText(executions: ExecutionRecord[]): string {
-  if (executions.length === 0) return 'No background work';
-  const latest = executions[0];
-  if (!latest) return 'No background work';
-  if (executions.length === 1) return `${latest.status} · ${latest.title}`;
-  return `${executions.length} active · latest ${latest.title}`;
-}
-
 export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const { id: routeId } = useParams<{ id?: string }>();
   const id = draft ? undefined : routeId;
@@ -559,8 +540,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
   const { versions } = useAppEvents();
-  const { tasks, sessions, runs, setRuns, setSessions } = useAppData();
-  const [conversationExecutions, setConversationExecutions] = useState<ConversationExecutionsResult | null>(null);
+  const { tasks, sessions, runs, executions, setRuns, setSessions, setExecutions } = useAppData();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
   useEffect(() => {
@@ -1880,9 +1860,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       setCancellingBackgroundRunIds((current) => new Set(current).add(normalizedRunId));
       void api
         .cancelExecution(normalizedRunId)
-        .then(() => (id ? api.conversationExecutions(id) : Promise.resolve(null)))
+        .then(() => api.executions())
         .then((result) => {
-          if (result) setConversationExecutions(result);
+          setExecutions(result);
         })
         .catch(() => {})
         .finally(() => {
@@ -1893,7 +1873,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           });
         });
     },
-    [id],
+    [setExecutions],
   );
 
   useEffect(() => {
@@ -2489,33 +2469,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [deferredResumeNowMs, deferredResumes, isLiveSession, savedConversationSessionFile],
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
-  useEffect(() => {
-    if (!id || draft) {
-      setConversationExecutions(null);
-      return;
-    }
-
-    let cancelled = false;
-    api
-      .conversationExecutions(id)
-      .then((result) => {
-        if (!cancelled) setConversationExecutions(result);
-      })
-      .catch(() => {
-        if (!cancelled) setConversationExecutions(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [draft, id, versions.executions]);
-
   const activeConversationBackgroundExecutions = useMemo(
     () =>
-      [...(conversationExecutions?.primary ?? [])]
-        .filter((execution) => execution.id !== conversationRunId)
-        .filter(isActiveExecution)
-        .sort((left, right) => executionSortTimestamp(right).localeCompare(executionSortTimestamp(left))),
-    [conversationExecutions?.primary, conversationRunId],
+      selectConversationActiveExecutions({
+        conversationId: draft ? null : id,
+        executions,
+        tasks,
+        excludeExecutionId: conversationRunId,
+        visibility: 'primary',
+      }),
+    [conversationRunId, draft, executions, id, tasks],
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(activeConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;

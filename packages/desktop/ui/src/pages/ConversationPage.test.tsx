@@ -879,42 +879,18 @@ describe('ConversationPage', () => {
           projects: null,
           sessions: null,
           tasks: null,
-          runs: {
-            scannedAt: '2026-04-26T00:00:02.000Z',
-            runsRoot: '/tmp/runs',
-            summary: { total: 1, recoveryActions: {}, statuses: { running: 1 } },
-            runs: [
+          runs: null,
+          executions: {
+            executions: [
               {
-                runId,
-                paths: {
-                  root: `/tmp/runs/${runId}`,
-                  manifestPath: `/tmp/runs/${runId}/manifest.json`,
-                  statusPath: `/tmp/runs/${runId}/status.json`,
-                  checkpointPath: `/tmp/runs/${runId}/checkpoint.json`,
-                  eventsPath: `/tmp/runs/${runId}/events.jsonl`,
-                  outputLogPath: `/tmp/runs/${runId}/output.log`,
-                  resultPath: `/tmp/runs/${runId}/result.json`,
-                },
-                manifest: {
-                  version: 1,
-                  id: runId,
-                  kind: 'background-run',
-                  resumePolicy: 'continue',
-                  createdAt: '2026-04-26T00:00:01.000Z',
-                  spec: { metadata: { taskSlug: 'ui-preview-check' } },
-                  source: { type: 'tool', id: 'test-session' },
-                },
-                status: {
-                  version: 1,
-                  runId,
-                  status: 'running',
-                  createdAt: '2026-04-26T00:00:01.000Z',
-                  updatedAt: '2026-04-26T00:00:02.000Z',
-                  activeAttempt: 1,
-                  startedAt: '2026-04-26T00:00:01.000Z',
-                },
-                problems: [],
-                recoveryAction: 'none',
+                id: runId,
+                kind: 'subagent',
+                visibility: 'primary',
+                conversationId: 'test-session',
+                title: 'ui-preview-check',
+                status: 'running',
+                updatedAt: '2026-04-26T00:00:02.000Z',
+                capabilities: { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
               },
             ],
           },
@@ -922,6 +898,7 @@ describe('ConversationPage', () => {
           setSessions: () => {},
           setTasks: () => {},
           setRuns: () => {},
+          setExecutions: () => {},
         }}
       >
         <MemoryRouter initialEntries={['/conversations/test-session']}>
@@ -932,7 +909,8 @@ describe('ConversationPage', () => {
       </AppDataContext.Provider>,
     );
 
-    expect(html).toContain('Loading messages');
+    expect(html).toContain('Background Work');
+    expect(html).toContain('running · ui-preview-check');
     expect(html).toContain('Message Neon Pilot');
   });
 

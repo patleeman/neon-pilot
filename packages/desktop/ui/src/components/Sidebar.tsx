@@ -22,6 +22,7 @@ import {
   groupConversationItemsByCwd,
   normalizeConversationGroupCwd,
 } from '../conversation/conversationCwdGroups';
+import { selectConversationActiveExecutions } from '../conversation/conversationExecutionActivity';
 import {
   buildConversationDeeplink,
   buildConversationSurfacePath,
@@ -2120,40 +2121,18 @@ export function Sidebar() {
     () => new Set((tasks ?? []).flatMap((task) => (task.running && task.threadConversationId ? [task.threadConversationId] : []))),
     [tasks],
   );
-  const automationTaskRunningById = useMemo(() => new Map((tasks ?? []).map((task) => [task.id, Boolean(task.running)] as const)), [tasks]);
-  const automationTaskRunningByConversationId = useMemo(
-    () =>
-      new Map(
-        (tasks ?? []).flatMap((task) => (task.threadConversationId ? [[task.threadConversationId, Boolean(task.running)] as const] : [])),
+  const pendingExecutionConversationIdSet = useMemo(() => {
+    const conversationIds = new Set(
+      (executions?.executions ?? [])
+        .map((execution) => execution.conversationId?.trim())
+        .filter((conversationId): conversationId is string => Boolean(conversationId)),
+    );
+    return new Set(
+      [...conversationIds].filter(
+        (conversationId) => selectConversationActiveExecutions({ conversationId, executions, tasks, visibility: 'visible' }).length > 0,
       ),
-    [tasks],
-  );
-  const pendingExecutionConversationIdSet = useMemo(
-    () =>
-      new Set(
-        (executions?.executions ?? []).flatMap((execution) => {
-          if (
-            !execution.conversationId ||
-            execution.visibility === 'hidden' ||
-            !['queued', 'waiting', 'running', 'recovering'].includes(execution.status)
-          ) {
-            return [];
-          }
-
-          if (execution.kind === 'scheduled-task' && tasks) {
-            const taskRunning = execution.taskId
-              ? automationTaskRunningById.get(execution.taskId)
-              : automationTaskRunningByConversationId.get(execution.conversationId);
-            if (taskRunning === false) {
-              return [];
-            }
-          }
-
-          return [execution.conversationId];
-        }),
-      ),
-    [automationTaskRunningByConversationId, automationTaskRunningById, executions, tasks],
-  );
+    );
+  }, [executions, tasks]);
   const filteredConversationItems = useMemo(
     () =>
       orderedConversationItems.filter((item) => {

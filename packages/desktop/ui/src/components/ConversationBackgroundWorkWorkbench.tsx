@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAppEvents } from '../app/contexts';
+import { useAppData } from '../app/contexts';
 import type { RunPresentationLookups } from '../automation/runPresentation';
 import { api } from '../client/api';
+import { selectConversationExecutions } from '../conversation/conversationExecutionActivity';
 import { useExecutionStream } from '../hooks/useExecutionStream';
-import type { ConversationExecutionsResult, ExecutionRecord } from '../shared/types';
+import type { ExecutionRecord } from '../shared/types';
 import { cx, ErrorState, LoadingState } from './ui';
 
 function timeAgo(iso: string | undefined): string {
@@ -50,29 +51,11 @@ export function ConversationBackgroundWorkRailContent({
   lookups: RunPresentationLookups;
   onOpenRun: (runId: string) => void;
 }) {
-  const { versions } = useAppEvents();
-  const [conversationExecutions, setConversationExecutions] = useState<ConversationExecutionsResult | null>(null);
-
-  useEffect(() => {
-    if (!conversationId) {
-      setConversationExecutions(null);
-      return;
-    }
-    let cancelled = false;
-    api
-      .conversationExecutions(conversationId)
-      .then((result: ConversationExecutionsResult) => {
-        if (!cancelled) setConversationExecutions(result);
-      })
-      .catch(() => {
-        if (!cancelled) setConversationExecutions(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId, versions.executions]);
-
-  const connectedExecutions = conversationExecutions?.primary ?? [];
+  const { executions, tasks } = useAppData();
+  const connectedExecutions = useMemo(
+    () => selectConversationExecutions({ conversationId, executions, tasks, visibility: 'primary' }),
+    [conversationId, executions, tasks],
+  );
   const grouped = useMemo(() => {
     const groups: Record<RunGroup, ExecutionRecord[]> = { command: [], subagent: [] };
     for (const execution of connectedExecutions) {
@@ -147,24 +130,18 @@ export function ConversationBackgroundWorkWorkbenchPane({
   runId: string | null;
   lookups: RunPresentationLookups;
 }) {
-  const { versions } = useAppEvents();
+  const { executions, tasks } = useAppData();
   const [fallbackRunId, setFallbackRunId] = useState<string | null>(null);
   const resolvedRunId = runId ?? fallbackRunId;
+  const connectedExecutions = useMemo(
+    () => selectConversationExecutions({ conversationId, executions, tasks, visibility: 'primary' }),
+    [conversationId, executions, tasks],
+  );
 
   useEffect(() => {
     if (runId || fallbackRunId || !conversationId) return;
-    let cancelled = false;
-    api
-      .conversationExecutions(conversationId)
-      .then((result: ConversationExecutionsResult) => {
-        if (cancelled) return;
-        setFallbackRunId(result.primary[0]?.id ?? null);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId, fallbackRunId, runId, versions.executions]);
+    setFallbackRunId(connectedExecutions[0]?.id ?? null);
+  }, [connectedExecutions, conversationId, fallbackRunId, runId]);
 
   if (!resolvedRunId) {
     return (
