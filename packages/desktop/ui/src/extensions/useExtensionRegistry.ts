@@ -784,10 +784,12 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
         });
     };
 
-    // Let the shell and initial conversation page hydrate before the registry
+    // Let conversation routes hydrate and accept first input before the registry
     // fans out across extension manifests and frontend entries. Extension pages
-    // still load on demand below because ExtensionPage needs the registry.
-    loadTimer = window.setTimeout(load, 250);
+    // still load quickly when the current route is extension-owned.
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const delayMs = pathname === '/conversations/new' || pathname.startsWith('/conversations/') ? 15_000 : 250;
+    loadTimer = window.setTimeout(load, delayMs);
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
 
     return () => {
