@@ -27,6 +27,7 @@ const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '15000')) || 15000;
+const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
 const stateRoot = join(root, 'state');
@@ -227,6 +228,7 @@ async function main() {
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
       await waitAppHydrated(cdp, child);
       await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea'))`);
+      if (draftSubmitWaitMs > 0) await sleep(draftSubmitWaitMs);
       const clickStart = performance.now();
       await evalJs(
         cdp,
@@ -318,6 +320,7 @@ async function main() {
       sessions,
       blocks,
       seconds,
+      draftSubmitWaitMs,
     };
     console.log(JSON.stringify(report, null, 2));
     const failures = [];
