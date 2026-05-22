@@ -19,6 +19,7 @@ import type {
   DesktopLiveSessionBranchRequest,
   DesktopLiveSessionCompactRequest,
   DesktopLiveSessionCreateRequest,
+  DesktopLiveSessionCreateResult,
   DesktopLiveSessionExportRequest,
   DesktopLiveSessionForkRequest,
   DesktopLiveSessionPromptRequest,
@@ -584,7 +585,7 @@ export class LocalHostController implements HostController {
     return module.readDesktopSessionBlock(input);
   }
 
-  async createLiveSession(input: DesktopLiveSessionCreateRequest): Promise<{ id: string; sessionFile: string; bootstrap?: unknown }> {
+  async createLiveSession(input: DesktopLiveSessionCreateRequest): Promise<DesktopLiveSessionCreateResult> {
     const module = await this.loadLocalApi();
     return module.createDesktopLiveSession(input);
   }

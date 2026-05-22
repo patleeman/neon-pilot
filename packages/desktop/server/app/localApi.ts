@@ -2188,9 +2188,12 @@ export async function createDesktopLiveSession(input: {
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
-}): Promise<{ id: string; sessionFile: string; bootstrap?: unknown }> {
+}): Promise<{ id: string; sessionFile: string; bootstrap?: unknown; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const context = await getLocalLiveSessionCapabilityContext();
+  const contextReadyAtMs = performance.now();
   const created = await createLiveSessionCapability(input, context);
+  const createdAtMs = performance.now();
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
   if (prompt.trim().length > 0 || (input.images?.length ?? 0) > 0) {
     const dispatchTimer = setTimeout(() => {
@@ -2215,7 +2218,14 @@ export async function createDesktopLiveSession(input: {
     }, 0);
     dispatchTimer.unref?.();
   }
-  return created;
+  return {
+    ...created,
+    perf: {
+      contextMs: Math.round(contextReadyAtMs - startedAtMs),
+      createCapabilityMs: Math.round(createdAtMs - contextReadyAtMs),
+      totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+    },
+  };
 }
 
 export async function resumeDesktopLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }> {

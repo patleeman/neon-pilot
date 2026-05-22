@@ -886,7 +886,7 @@ export const api = {
     recordClientPerfTiming({
       name: 'desktop.createLiveSession',
       startedAtMs,
-      meta: { hasPrompt: Boolean(text?.trim()), hasCwd: Boolean(cwd?.trim()) },
+      meta: { hasPrompt: Boolean(text?.trim()), hasCwd: Boolean(cwd?.trim()), serverPerf: result.perf ?? null },
     });
     return result;
   },

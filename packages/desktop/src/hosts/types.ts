@@ -212,6 +212,13 @@ export interface DesktopLiveSessionCreateRequest {
   relatedConversationIds?: unknown;
 }
 
+export interface DesktopLiveSessionCreateResult {
+  id: string;
+  sessionFile: string;
+  bootstrap?: unknown;
+  perf?: Record<string, number>;
+}
+
 export interface DesktopLiveSessionTakeoverRequest {
   conversationId: string;
   surfaceId: string;

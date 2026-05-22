@@ -865,6 +865,7 @@ export interface LiveSessionCreateResult {
   id: string;
   sessionFile: string;
   bootstrap?: ConversationBootstrapState;
+  perf?: Record<string, number>;
 }
 
 export interface LiveSessionForkEntry {

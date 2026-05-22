@@ -247,6 +247,10 @@ async function main() {
       cdp,
       `globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.filter(s=>s.name==='desktop.createLiveSession').at(-1)?.durationMs ?? null`,
     );
+    const createLiveSessionServerPerf = await evalJs(
+      cdp,
+      `globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.filter(s=>s.name==='desktop.createLiveSession').at(-1)?.meta?.serverPerf ?? null`,
+    );
     const routeSettingsMs = (
       await measure('settings', async () => {
         await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
@@ -301,6 +305,7 @@ async function main() {
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
       createLiveSessionClientMs,
+      createLiveSessionServerPerf,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
