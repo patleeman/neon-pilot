@@ -145,6 +145,35 @@ function normalizeContextChipLabel(label: string): string {
   }
 }
 
+function LazyDetails({
+  className,
+  dataAttrs = {},
+  summary,
+  children,
+}: {
+  className: string;
+  dataAttrs?: Record<string, string | undefined>;
+  summary: ReactNode;
+  children: ReactNode;
+}) {
+  const [openedOnce, setOpenedOnce] = useState(false);
+
+  return (
+    <details
+      className={className}
+      {...dataAttrs}
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          setOpenedOnce(true);
+        }
+      }}
+    >
+      {summary}
+      {openedOnce ? children : null}
+    </details>
+  );
+}
+
 export const ContextShelf = memo(function ContextShelf({
   blocks,
   messageIndexOffset,
@@ -229,18 +258,20 @@ export const ContextShelf = memo(function ContextShelf({
         </summary>
         <div className="mt-2 ml-1 space-y-1.5 border-l border-border-subtle pl-4">
           {hasSystemPrompt ? (
-            <details
+            <LazyDetails
               className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-              data-context-type="system_prompt"
+              dataAttrs={{ 'data-context-type': 'system_prompt' }}
+              summary={
+                <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
+                  <span className="min-w-0 flex-1 truncate text-dim/90">
+                    {toolDefinitions.length > 0
+                      ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
+                      : 'Runtime instructions available for inspection.'}
+                  </span>
+                </summary>
+              }
             >
-              <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
-                <span className="min-w-0 flex-1 truncate text-dim/90">
-                  {toolDefinitions.length > 0
-                    ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
-                    : 'Runtime instructions available for inspection.'}
-                </span>
-              </summary>
               <div className="space-y-4 pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
                 {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
                 {toolDefinitions.length > 0 ? (
@@ -250,7 +281,7 @@ export const ContextShelf = memo(function ContextShelf({
                   </div>
                 ) : null}
               </div>
-            </details>
+            </LazyDetails>
           ) : null}
           {remoteControlled ? (
             <details
@@ -283,17 +314,21 @@ export const ContextShelf = memo(function ContextShelf({
             }
 
             return (
-              <details
+              <LazyDetails
                 key={block.id ?? index}
                 className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-                data-context-type={block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`}
-                data-summary-kind={block.type === 'summary' ? block.kind : undefined}
+                dataAttrs={{
+                  'data-context-type': block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`,
+                  'data-summary-kind': block.type === 'summary' ? block.kind : undefined,
+                }}
+                summary={
+                  <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                    <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
+                    <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                    {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+                  </summary>
+                }
               >
-                <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                  <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
-                  <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
-                  {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
-                </summary>
                 <div {...replySelectionScopeProps} className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
                   {block.type === 'summary' && block.kind === 'compaction' ? (
                     <p className="mb-2 text-[12px] leading-relaxed text-secondary">
@@ -302,7 +337,7 @@ export const ContextShelf = memo(function ContextShelf({
                   ) : null}
                   {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
                 </div>
-              </details>
+              </LazyDetails>
             );
           })}
         </div>

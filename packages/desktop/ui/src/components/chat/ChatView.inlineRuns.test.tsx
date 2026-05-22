@@ -326,7 +326,7 @@ describe('ChatView inline run cards', () => {
 
     expect(container.textContent).toContain(`Background task ${RUN_ID} has finished.`);
     expect(container.textContent).toContain('ui-preview-check');
-    expect(container.textContent).toContain('very noisy callback output');
+    expect(container.textContent).not.toContain('very noisy callback output');
 
     const runButtons = findInlineRunButtons(container);
     expect(runButtons).toHaveLength(0);

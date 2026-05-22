@@ -1007,7 +1007,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('data-context-type="system_prompt"');
     expect(html).toContain('System prompt');
     expect(html).toContain('Runtime instructions available for inspection.');
-    expect(html).toContain('You are Patrick');
+    expect(html).not.toContain('You are Patrick');
     expect(html).not.toContain('~15 tokens');
     expect(html).toContain('border-transparent');
     expect(html).not.toContain('Dec 31');
@@ -1030,10 +1030,9 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('Runtime instructions and 1 tool definitions available for inspection.');
-    expect(html).toContain('Available tool definitions');
-    expect(html).toContain('bash');
-    expect(html).toContain('Execute a bash command.');
-    expect(html).toContain('&quot;command&quot;');
+    expect(html).not.toContain('Available tool definitions');
+    expect(html).not.toContain('Execute a bash command.');
+    expect(html).not.toContain('&quot;command&quot;');
   });
 
   it('groups startup context disclosures tightly before the first user message', () => {
@@ -1086,6 +1085,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Context added');
     expect(html).toContain('data-context-type="referenced_context"');
     expect(html).toContain('Conversation automation context');
+    expect(html).not.toContain('Review the agent reminders before stopping.');
     expect(html).not.toContain('border-warning');
     expect(html).not.toContain('ui-chat-avatar-mark">pa<');
     expect(html).not.toContain('ui-message-card-assistant');
@@ -1209,13 +1209,9 @@ describe('chat view streaming disclosure', () => {
     );
 
     const scopeMatches = html.match(/data-selection-reply-scope="assistant-message"/g) ?? [];
-    expect(scopeMatches).toHaveLength(3);
+    expect(scopeMatches).toHaveLength(1);
     expect(html).toContain('data-message-index="0"');
-    expect(html).toContain('data-message-index="1"');
-    expect(html).toContain('data-message-index="2"');
     expect(html).toContain('data-block-id="assistant-1"');
-    expect(html).toContain('data-block-id="context-1"');
-    expect(html).toContain('data-block-id="summary-1"');
     expect(html).toContain('data-summary-kind="branch"');
     expect(html).toContain('<details');
     expect(html).not.toContain('border-teal');
@@ -1279,9 +1275,9 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('data-summary-kind="compaction"');
     expect(html).toContain('<details');
     expect(html).not.toContain('Show summary');
-    expect(html).toContain('Goal');
-    expect(html).toContain('First item.');
-    expect(html).toContain('Fifth item.');
+    expect(html).not.toContain('Goal');
+    expect(html).not.toContain('First item.');
+    expect(html).not.toContain('Fifth item.');
   });
 
   it('renders reused thread summaries as collapsed transcript events', () => {
@@ -1306,10 +1302,10 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('2 selected conversations were summarized and injected before this prompt');
     expect(html).toContain('<details');
     expect(html).not.toContain('Show summary');
-    expect(html).toContain('Conversation 1 — Release signing');
-    expect(html).toContain('Workspace:');
-    expect(html).toContain('/repo/a');
-    expect(html).toContain('Conversation 2 — Auto mode wakeups');
+    expect(html).not.toContain('Conversation 1 — Release signing');
+    expect(html).not.toContain('Workspace:');
+    expect(html).not.toContain('/repo/a');
+    expect(html).not.toContain('Conversation 2 — Auto mode wakeups');
   });
 
   it('renders terminal bash blocks without extension registration', () => {
