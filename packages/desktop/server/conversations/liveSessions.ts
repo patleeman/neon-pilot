@@ -446,7 +446,10 @@ export function getSessionContextUsage(sessionId: string): LiveContextUsage | nu
 }
 
 /** Create a brand-new Pi session. */
-export async function createSession(cwd: string, options: LiveSessionLoaderOptions = {}): Promise<{ id: string; sessionFile: string }> {
+export async function createSession(
+  cwd: string,
+  options: LiveSessionLoaderOptions = {},
+): Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }> {
   return createLiveSessionWithCallbacks({
     cwd,
     agentDir: AGENT_DIR,

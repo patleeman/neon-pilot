@@ -2224,6 +2224,7 @@ export async function createDesktopLiveSession(input: {
       contextMs: Math.round(contextReadyAtMs - startedAtMs),
       createCapabilityMs: Math.round(createdAtMs - contextReadyAtMs),
       totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+      ...(created.perf ? Object.fromEntries(Object.entries(created.perf).map(([key, value]) => [`capability.${key}`, value])) : {}),
     },
   };
 }

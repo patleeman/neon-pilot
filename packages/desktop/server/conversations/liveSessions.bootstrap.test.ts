@@ -449,8 +449,8 @@ describe('liveSessions bootstrap helpers', () => {
       additionalExtensionPaths: ['/tmp/extensions'],
     });
 
-    expect(DefaultResourceLoaderMock).toHaveBeenCalledTimes(2);
-    expect(defaultResourceLoaderReloadMock).toHaveBeenCalledTimes(2);
+    expect(DefaultResourceLoaderMock).toHaveBeenCalledTimes(1);
+    expect(defaultResourceLoaderReloadMock).toHaveBeenCalledTimes(1);
   });
 
   it('creates a new live session, repairs provider mismatches, and applies initial model preferences', async () => {
@@ -481,6 +481,7 @@ describe('liveSessions bootstrap helpers', () => {
     ).resolves.toEqual({
       id: 'session-created',
       sessionFile: '/tmp/durable-sessions/--tmp-workspace--/session-created.jsonl',
+      perf: expect.objectContaining({ totalMs: expect.any(Number) }),
     });
 
     expect(sessionManagerCreateMock).toHaveBeenCalledWith('/tmp/workspace', '/tmp/durable-sessions/--tmp-workspace--');

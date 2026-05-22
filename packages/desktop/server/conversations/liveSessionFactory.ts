@@ -103,13 +103,18 @@ export async function createPreparedLiveAgentSession(input: {
   options?: LiveSessionLoaderOptions;
   applyInitialPreferences?: boolean;
   ensureSessionFile?: boolean;
-}): Promise<{ session: AgentSession; modelRegistry: ModelRegistry }> {
+}): Promise<{ session: AgentSession; modelRegistry: ModelRegistry; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const options = input.options ?? {};
   const agentDir = options.agentDir ?? input.agentDir;
   const auth = makeAuth(agentDir);
+  const authAtMs = performance.now();
   const modelRegistry = makeRegistry(auth, options.extensionFactories);
+  const registryAtMs = performance.now();
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
+  const settingsAtMs = performance.now();
   const resourceLoader = await makeLoader(input.cwd, options);
+  const loaderAtMs = performance.now();
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -120,15 +125,18 @@ export async function createPreparedLiveAgentSession(input: {
     settingsManager,
     ...(options.allowedToolNames ? { tools: options.allowedToolNames } : {}),
   });
+  const agentSessionAtMs = performance.now();
 
   patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session));
   patchSessionManagerPersistence(session.sessionManager);
   if (input.ensureSessionFile !== false) {
     ensureSessionFileExists(session.sessionManager);
   }
+  const persistenceAtMs = performance.now();
 
   const availableModels = modelRegistry.getAvailable();
   await repairSessionModelProvider(session, availableModels);
+  const modelRepairAtMs = performance.now();
 
   if (
     input.applyInitialPreferences &&
@@ -156,6 +164,21 @@ export async function createPreparedLiveAgentSession(input: {
   );
 
   applyExtensionToolSelection(session, input.settingsFile);
+  const doneAtMs = performance.now();
 
-  return { session, modelRegistry };
+  return {
+    session,
+    modelRegistry,
+    perf: {
+      authMs: Math.round(authAtMs - startedAtMs),
+      registryMs: Math.round(registryAtMs - authAtMs),
+      settingsMs: Math.round(settingsAtMs - registryAtMs),
+      loaderMs: Math.round(loaderAtMs - settingsAtMs),
+      createAgentSessionMs: Math.round(agentSessionAtMs - loaderAtMs),
+      persistenceMs: Math.round(persistenceAtMs - agentSessionAtMs),
+      modelRepairMs: Math.round(modelRepairAtMs - persistenceAtMs),
+      preferencesAndToolsMs: Math.round(doneAtMs - modelRepairAtMs),
+      totalMs: Math.round(doneAtMs - startedAtMs),
+    },
+  };
 }

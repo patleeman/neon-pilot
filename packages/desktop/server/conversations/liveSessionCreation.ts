@@ -12,10 +12,12 @@ export async function createLiveSession(input: {
   persistentSessionDir: string;
   options?: LiveSessionLoaderOptions;
   wireSession: (id: string, session: AgentSession, cwd: string) => unknown;
-}): Promise<{ id: string; sessionFile: string }> {
+}): Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const options = input.options ?? {};
   const sessionManager = SessionManager.create(input.cwd, input.persistentSessionDir);
-  const { session } = await createPreparedLiveAgentSession({
+  const sessionManagerAtMs = performance.now();
+  const { session, perf: preparedPerf } = await createPreparedLiveAgentSession({
     cwd: input.cwd,
     agentDir: options.agentDir ?? input.agentDir,
     sessionManager,
@@ -26,8 +28,22 @@ export async function createLiveSession(input: {
 
   const id = session.sessionId;
   input.wireSession(id, session, input.cwd);
-  queuePrewarmLiveSessionLoader(input.cwd, options);
-  return { id, sessionFile: resolveLiveSessionFile(session) ?? '' };
+  const wiredAtMs = performance.now();
+  const prewarmTimer = setTimeout(() => {
+    queuePrewarmLiveSessionLoader(input.cwd, options);
+  }, 0);
+  prewarmTimer.unref?.();
+  return {
+    id,
+    sessionFile: resolveLiveSessionFile(session) ?? '',
+    perf: {
+      sessionManagerMs: Math.round(sessionManagerAtMs - startedAtMs),
+      preparedMs: Math.round(wiredAtMs - sessionManagerAtMs),
+      wireMs: Math.round(wiredAtMs - sessionManagerAtMs - (preparedPerf?.totalMs ?? 0)),
+      totalMs: Math.round(performance.now() - startedAtMs),
+      ...(preparedPerf ? Object.fromEntries(Object.entries(preparedPerf).map(([key, value]) => [`prepared.${key}`, value])) : {}),
+    },
+  };
 }
 
 export async function createLiveSessionFromExisting(input: {

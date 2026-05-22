@@ -88,6 +88,7 @@ export interface CreateLiveSessionCapabilityInput {
 export interface CreateLiveSessionCapabilityResult {
   id: string;
   sessionFile: string;
+  perf?: Record<string, number>;
   bootstrap?: {
     conversationId: string;
     sessionDetail: {
@@ -487,6 +488,7 @@ export async function createLiveSessionCapability(
       })
     : resolveNeutralChatCwd(profile);
 
+  const createStartedAtMs = performance.now();
   const created = await createLocalSession(
     cwd,
     buildLiveSessionLoaderOptions(context, {
@@ -495,15 +497,24 @@ export async function createLiveSessionCapability(
       ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
     }),
   );
+  const createdAtMs = performance.now();
   appendConversationWorkspaceMetadata({
     sessionFile: created.sessionFile,
     cwd,
     workspaceCwd: input.workspaceCwd !== undefined ? input.workspaceCwd : hasExplicitCwd ? cwd : null,
   });
+  const workspaceMetadataAtMs = performance.now();
   const bootstrap = buildCreatedLiveSessionBootstrap(created.id, created.sessionFile);
+  const bootstrapAtMs = performance.now();
 
   return {
     ...created,
+    perf: {
+      ...(created.perf ?? {}),
+      capabilityCreateLocalSessionMs: Math.round(createdAtMs - createStartedAtMs),
+      capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - createdAtMs),
+      capabilityBootstrapMs: Math.round(bootstrapAtMs - workspaceMetadataAtMs),
+    },
     ...(bootstrap ? { bootstrap } : {}),
   };
 }
