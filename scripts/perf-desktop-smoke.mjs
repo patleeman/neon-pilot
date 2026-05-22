@@ -189,11 +189,13 @@ async function main() {
   let cdp;
   try {
     const page = await waitForPage(port, child);
+    const cdpReadyMs = Math.round(performance.now() - start);
     cdp = connectCdp(page.webSocketDebuggerUrl);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
     await waitBody(cdp, child);
     const startupReadyMs = Math.round(performance.now() - start);
+    const firstBodyMs = startupReadyMs - cdpReadyMs;
     const routeSettingsMs = await measure('settings', async () => {
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
       await waitBody(cdp, child);
@@ -231,6 +233,8 @@ async function main() {
     const cpuAvg = cpuSamples.reduce((s, v) => s + v.total, 0) / cpuSamples.length;
     const report = {
       startupReadyMs,
+      cdpReadyMs,
+      firstBodyMs,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,

@@ -7,7 +7,7 @@ import {
   resolveConversationSessionFile,
 } from './conversationService.js';
 import { readConversationSummary } from './conversationSummaries.js';
-import { type DisplayBlock, readSessionBlocksByFile, readSessionSearchText } from './sessions.js';
+import { type DisplayBlock, readSessionBlocksByFile, readSessionSearchTextForMeta } from './sessions.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
 export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;
@@ -934,7 +934,7 @@ export function searchConversationInspectSessions(
     }
 
     if (!includeAroundMatches) {
-      const searchText = readSessionSearchText(session.id);
+      const searchText = readSessionSearchTextForMeta(session);
       if (searchText) {
         if (!matchesSearchText(searchText, query, mode)) {
           continue;

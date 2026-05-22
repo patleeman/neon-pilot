@@ -2536,12 +2536,7 @@ function readSessionSearchTextByFile(filePath: string, maxCharacters: number): s
   return null;
 }
 
-export function readSessionSearchText(sessionId: string, maxCharacters = 12_000): string | null {
-  const meta = resolveSessionMeta(sessionId);
-  if (!meta) {
-    return null;
-  }
-
+export function readSessionSearchTextForMeta(meta: Pick<SessionMeta, 'file'>, maxCharacters = 12_000): string | null {
   const indexedText = readSessionSearchTextByFile(meta.file, maxCharacters);
   if (indexedText !== null) {
     return indexedText;
@@ -2553,6 +2548,14 @@ export function readSessionSearchText(sessionId: string, maxCharacters = 12_000)
   } catch {
     return null;
   }
+}
+
+export function readSessionSearchText(sessionId: string, maxCharacters = 12_000): string | null {
+  const meta = resolveSessionMeta(sessionId);
+  if (!meta) {
+    return null;
+  }
+  return readSessionSearchTextForMeta(meta, maxCharacters);
 }
 
 export function readSessionMetaByFile(filePath: string): SessionMeta | null {

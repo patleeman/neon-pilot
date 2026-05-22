@@ -6,14 +6,14 @@ const {
   readConversationSessionSignatureMock,
   resolveConversationSessionFileMock,
   readSessionBlocksByFileMock,
-  readSessionSearchTextMock,
+  readSessionSearchTextForMetaMock,
 } = vi.hoisted(() => ({
   listConversationSessionsSnapshotMock: vi.fn(),
   readConversationSessionMetaMock: vi.fn(),
   readConversationSessionSignatureMock: vi.fn(),
   resolveConversationSessionFileMock: vi.fn(),
   readSessionBlocksByFileMock: vi.fn(),
-  readSessionSearchTextMock: vi.fn(),
+  readSessionSearchTextForMetaMock: vi.fn(),
 }));
 
 vi.mock('./conversationService.js', () => ({
@@ -25,7 +25,7 @@ vi.mock('./conversationService.js', () => ({
 
 vi.mock('./sessions.js', () => ({
   readSessionBlocksByFile: readSessionBlocksByFileMock,
-  readSessionSearchText: readSessionSearchTextMock,
+  readSessionSearchTextForMeta: readSessionSearchTextForMetaMock,
 }));
 
 import {
@@ -45,8 +45,8 @@ beforeEach(() => {
   readConversationSessionSignatureMock.mockReset();
   resolveConversationSessionFileMock.mockReset();
   readSessionBlocksByFileMock.mockReset();
-  readSessionSearchTextMock.mockReset();
-  readSessionSearchTextMock.mockReturnValue(null);
+  readSessionSearchTextForMetaMock.mockReset();
+  readSessionSearchTextForMetaMock.mockReturnValue(null);
 });
 
 describe('conversationInspectCapability', () => {
@@ -338,7 +338,7 @@ describe('conversationInspectCapability', () => {
         messageCount: 10,
       },
     ]);
-    readSessionSearchTextMock.mockReturnValue('indexed needle transcript text');
+    readSessionSearchTextForMetaMock.mockReturnValue('indexed needle transcript text');
 
     const result = searchConversationInspectSessions({ query: 'needle', limit: 1 });
 
