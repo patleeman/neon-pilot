@@ -205,9 +205,9 @@ async function waitForDetachedLaunch(child) {
 }
 
 async function launchMacDevApp() {
-  const { appBundlePath } = ensureMacDevAppBundle();
+  const { executablePath } = ensureMacDevAppBundle();
   const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
-  const child = spawn('open', ['-n', appBundlePath, '--args', ...electronSwitches, desktopMainFile, ...appArgs], {
+  const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...appArgs], {
     stdio: 'ignore',
     cwd: packageDir,
     env: {
