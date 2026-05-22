@@ -1,4 +1,5 @@
-import { createWriteStream, existsSync, type WriteStream } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
+import { dirname } from 'node:path';
 
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
@@ -179,7 +180,13 @@ export class LocalBackendProcesses {
   private async startInternal(): Promise<void> {
     const runtime = resolveDesktopRuntimePaths();
     const logPath = `${runtime.desktopLogsDir}/daemon.log`;
+    mkdirSync(dirname(logPath), { recursive: true, mode: 0o700 });
     const logStream = createWriteStream(logPath, { flags: 'a', encoding: 'utf-8' });
+    logStream.on('error', () => {
+      // Logging is diagnostic only. If a temporary runtime root disappears while
+      // Electron is shutting down, do not crash the main process from an
+      // unhandled stream error.
+    });
     const daemon = new NeonPilotDaemon({
       stopRequestBehavior: 'reject',
       logSink: (line) => {
