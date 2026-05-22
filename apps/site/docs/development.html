@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Development · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="active" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="development-workflow">Development Workflow</h1>
+        <p>Use this page for day-to-day repo development, validation, UI QA, and targeted checkpoints.</p>
+        <h2 id="local-development">Local development</h2>
+        <pre><code>pnpm install
+pnpm run setup:hooks   # optional: enable tracked git hooks
+pnpm run build
+pnpm run desktop:start</code></pre>
+        <p>
+          The repo intentionally avoids a root <code>postinstall</code>. Third-party build scripts are allowlisted in
+          <code>pnpm-workspace.yaml</code>; new blocked scripts appear in <code>pnpm ignored-builds</code>.
+        </p>
+        <p>For the desktop dev app:</p>
+        <pre><code>cd packages/desktop &amp;&amp; pnpm run dev
+# or from repo root:
+pnpm run desktop:dev</code></pre>
+        <h2 id="validation">Validation</h2>
+        <p>
+          Pick checks based on the change. Do not run the whole world for a docs-only edit; do run product-specific tests when behavior
+          changes.
+        </p>
+        <pre><code>pnpm run fix      # prettier --write + eslint --fix
+pnpm run check    # types, lint, format, extension quick check, knip advisory</code></pre>
+        <p>Focused checks:</p>
+        <p>
+          | Command | Use when | | --------------------------------- | ------------------------------------------------------------------ |
+          | <code>pnpm run check:types</code> | TypeScript/import/unused-symbol risk | | <code>pnpm run lint</code> | Lint/import-order risk
+          | | <code>pnpm run fmt</code> | Formatting-only verification | | <code>pnpm run check:extensions:quick</code> | Before desktop dev
+          or after extension manifest/backend API changes | | <code>pnpm run check:extensions</code> | Before release or deep extension
+          runtime verification | | <code>pnpm test</code> | Broad regression pass | | <code>pnpm run check:coverage</code> | Periodic
+          coverage review; advisory, not blocking |
+        </p>
+        <p>
+          If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
+        </p>
+        <h2 id="web-ui-and-desktop-qa">Web UI and desktop QA</h2>
+        <p>
+          If you modify web UI, inspect it visually before signing off. Avoid raw <code>agent-browser</code>; use the repo wrapper so
+          sessions close cleanly:
+        </p>
+        <pre><code>pnpm run ab:run -- --session &lt;name&gt; --command &quot;ab ...&quot;
+pnpm run ab:cleanup -- --session &lt;name&gt;</code></pre>
+        <p>When launching the test desktop app for QA, pass a non-interactive quit flag:</p>
+        <pre><code>pnpm run desktop:dev -- --remote-debugging-port=9222 --no-quit-confirmation</code></pre>
+        <p>
+          Desktop runtime channels are intentionally isolated. Stable uses <code>neon-pilot</code>; RC uses <code>neon-pilot-rc</code>; dev
+          uses <code>neon-pilot-dev</code>; test launches use <code>neon-pilot-testing</code>. Dev/test ports default to random/unset
+          (<code>0</code>) and each dev/test app process gets a unique <code>NEON_PILOT_DAEMON_NAMESPACE</code> unless one is explicitly
+          provided, so multiple dev/test app invocations do not share daemon sockets, pid locks, runtime DBs, or companion ports. Override
+          only for dev/test with <code>NEON_PILOT_RUNTIME_CHANNEL</code>, <code>NEON_PILOT_DAEMON_NAMESPACE</code>, or
+          <code>NEON_PILOT_DAEMON_SOCKET_PATH</code>.
+        </p>
+        <p>
+          Before launching or closing <code>Neon Pilot Testing.app</code>, check whether another instance already exists. Do not quit, kill,
+          or recycle a process you did not start; connect to it when appropriate or use a separate debug port/session. After QA, close only
+          the app process and browser session you started.
+        </p>
+        <h2 id="checkpoints">Checkpoints</h2>
+        <p>
+          Before final summary, use the checkpoint skill/tool. In this repo, checkpoint commits go directly to <code>main</code>; no branch
+          is needed.
+        </p>
+        <p>Rules:</p>
+        <ul>
+          <li>Stage only files for the current task.</li>
+          <li>If unrelated work is mixed into a file and cannot be safely separated, stop and tell Patrick.</li>
+          <li>Do not manually <code>git add</code>, <code>git commit</code>, or <code>git push</code>; use the checkpoint tool.</li>
+        </ul>
+        <h2 id="secret-scanning">Secret scanning</h2>
+        <p>
+          The tracked pre-commit hook lives at <code>.githooks/pre-commit</code> and runs gitleaks, typecheck, prettier, and eslint on
+          staged files. Enable it with:
+        </p>
+        <pre><code>pnpm run setup:hooks
+# or:
+git config core.hooksPath .githooks</code></pre>
+        <p>
+          Install gitleaks locally with <code>brew install gitleaks</code> if needed. If gitleaks flags staged content, fix it unless it is
+          a clear false positive; bypass only deliberately with <code>git commit --no-verify</code>.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/development.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#local-development">Local development</a><a href="#validation">Validation</a
+        ><a href="#web-ui-and-desktop-qa">Web UI and desktop QA</a><a href="#checkpoints">Checkpoints</a
+        ><a href="#secret-scanning">Secret scanning</a>
+      </aside>
+    </main>
+  </body>
+</html>

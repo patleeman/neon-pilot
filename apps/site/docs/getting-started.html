@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Getting Started · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="active" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="getting-started">Getting Started</h1>
+        <p>Install Neon Pilot from source and verify the setup.</p>
+        <h2 id="install-from-source">Install from source</h2>
+        <pre><code>git clone &lt;repo-url&gt;
+cd neon-pilot
+pnpm install
+pnpm run setup:hooks   # optional: enable the tracked pre-commit hook
+pnpm run build</code></pre>
+        <p>
+          The repo intentionally has no first-party <code>postinstall</code>. Third-party build scripts are pinned in
+          <code>pnpm-workspace.yaml</code>; review anything newly blocked with <code>pnpm ignored-builds</code>.
+        </p>
+        <h2 id="start-the-desktop-app">Start the desktop app</h2>
+        <pre><code>pnpm run desktop:start</code></pre>
+        <p>The desktop app manages the local daemon automatically.</p>
+        <h2 id="important-paths">Important paths</h2>
+        <ul>
+          <li>
+            <code>&lt;state-root&gt;</code> — machine-local runtime state. Default: <code>$XDG_STATE_HOME/neon-pilot</code> when
+            <code>XDG_STATE_HOME</code> is set, otherwise <code>~/.local/state/neon-pilot</code>
+          </li>
+          <li>
+            <code>&lt;config-root&gt;</code> — machine-local config. Default: <code>$XDG_CONFIG_HOME/neon-pilot</code> when set, otherwise
+            <code>&lt;state-root&gt;/config</code>
+          </li>
+          <li>
+            <code>&lt;vault-root&gt;</code> — durable knowledge root. See <a href="./configuration.html">Configuration</a> for override
+            order and channel-specific state roots.
+          </li>
+        </ul>
+        <h2 id="verify-the-install">Verify the install</h2>
+        <p>
+          The desktop app starts and loads the conversation view. Create a new conversation and send a message to verify the agent responds.
+        </p>
+        <h2 id="next-steps">Next steps</h2>
+        <ul>
+          <li><a href="./views.html">Views</a> — understand Conversation and Workbench layout modes</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/conversations.md">Conversations</a> — how to work with agent
+            conversations
+          </li>
+          <li><a href="./desktop-app.html">Desktop App</a> — Electron shell and shortcuts</li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-knowledge/README.md">Knowledge</a> — vault,
+            skills, instruction files, and sync
+          </li>
+          <li><a href="./configuration.html">Configuration</a> — config files and environment variables</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/getting-started.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#install-from-source">Install from source</a><a href="#start-the-desktop-app">Start the desktop app</a
+        ><a href="#important-paths">Important paths</a><a href="#verify-the-install">Verify the install</a
+        ><a href="#next-steps">Next steps</a>
+      </aside>
+    </main>
+  </body>
+</html>

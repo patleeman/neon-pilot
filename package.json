@@ -14,6 +14,7 @@
   "scripts": {
     "build": "pnpm run build:ts && pnpm run build:web && pnpm run build:extensions && node scripts/verify-build-artifacts.mjs",
     "build:ts": "tsc --build --force",
+    "build:site": "node apps/site/build-docs.mjs",
     "build:web": "pnpm --dir packages/desktop run build:ui && pnpm --dir packages/desktop run build:server",
     "build:extensions": "node scripts/build-system-extensions.mjs && node scripts/check-packaged-extensions.mjs",
     "desktop:build": "pnpm --dir packages/desktop run build",

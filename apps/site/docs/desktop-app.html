@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Desktop App · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="active" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="desktop-app">Desktop App</h1>
+        <p>
+          The Electron desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, manages the local daemon lifecycle,
+          and provides the full feature surface.
+        </p>
+        <h2 id="starting">Starting</h2>
+        <pre><code># Stable production build
+pnpm run desktop:start
+
+# Development mode with hot reload
+pnpm run desktop:dev
+
+# Demo mode with seeded data
+pnpm run desktop:demo</code></pre>
+        <p>
+          Both <code>desktop:start</code> and <code>desktop:dev</code> build the Electron shell and launch it through
+          <code>packages/desktop/scripts/launch-dev-app.mjs</code>.
+        </p>
+        <p>
+          For packaged builds, launch <code>Neon Pilot.app</code> from the output directory. RC builds launch as
+          <code>Neon Pilot RC.app</code> so they can coexist with the stable app.
+        </p>
+        <h2 id="runtime-model">Runtime Model</h2>
+        <pre><code>Electron main process
+    │
+    ├── Renderer (React) ── neon-pilot://app/
+    │       │
+    │       ├── Conversation routes
+    │       ├── Knowledge
+    │       ├── Automations
+    │       └── Settings
+    │
+    ├── Local API worker threads
+    │       │
+    │       ├── Session parsing and search
+    │       ├── Git/checkpoint operations
+    │       └── Vault and knowledge-base reads/writes
+    │
+    ├── Daemon (in-process runtime)
+    │       │
+    │       ├── Scheduled tasks
+    │       ├── Wakeups
+    │       └── Follow-up queue</code></pre>
+        <ul>
+          <li>Electron owns the UI surface through the <code>neon-pilot://app/</code> protocol</li>
+          <li>
+            Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule
+            deferred work
+          </li>
+          <li>
+            Freeze-prone local API work runs behind worker-thread RPC; do not import or execute heavy desktop server capabilities directly
+            on the Electron main thread
+          </li>
+          <li>Avoid <code>spawnSync</code>/<code>execSync</code> in desktop main-process flows</li>
+          <li>
+            The daemon owns durable background behavior and starts after the renderer has had a chance to paint; user actions that need it
+            can force-start it immediately
+          </li>
+          <li>
+            The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions,
+            automations, and daemon status after startup settles
+          </li>
+        </ul>
+        <h2 id="layout-modes">Layout Modes</h2>
+        <p>
+          | Mode | Shortcut | Description | | ------------ | -------- | ------------------------------------ | | Conversation |
+          <code>F1</code> | Single-pane layout with left sidebar | | Workbench | <code>F2</code> | Multi-pane layout with side rails |
+        </p>
+        <p>
+          Toggle the left sidebar with <code>Cmd+/</code> (or <code>Ctrl+/</code>). Toggle the right rail with <code>Cmd+\</code> (or
+          <code>Ctrl+\</code>).
+        </p>
+        <h2 id="workbench-rails">Workbench Rails</h2>
+        <p>In Workbench mode, the right rail nav tabs include:</p>
+        <p>
+          | Tab | Description | | ------------- | ----------------------------- | | File Explorer | Project file tree browser | | Artifacts
+          | Rendered HTML, Mermaid, LaTeX | | Browser | Embedded webview |
+        </p>
+        <p>
+          Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are
+          context-sensitive — Artifacts appear when the conversation has rendered artifacts. Checkpoint diffs and background work render
+          inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+        </p>
+        <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+        <p>All desktop shortcuts are configurable in Settings → Keyboard. Defaults:</p>
+        <p>
+          | Action | Default | | ----------------- | --------------------- | | New conversation | <code>Cmd+N</code> | | Conversation mode |
+          <code>F1</code> | | Workbench mode | <code>F2</code> | | Toggle sidebar | <code>Cmd+/</code> (or <code>Ctrl+/</code>) | | Toggle
+          right rail | <code>Cmd+\</code> (or <code>Ctrl+\</code>) | | Settings | <code>Cmd+,</code> |
+        </p>
+        <h2 id="routes">Routes</h2>
+        <p>
+          | Route | Page | | -------------------- | --------------------- | | <code>/conversations</code> | Conversation list | |
+          <code>/conversations/new</code> | New conversation | | <code>/conversations/:id</code> | Existing conversation | |
+          <code>/knowledge</code> | Knowledge browser | | <code>/automations</code> | Automation list | | <code>/automations/:id</code> |
+          Automation detail | | <code>/settings</code> | Settings panel | | <code>/extensions</code> | Extension Manager | |
+          <code>/telemetry</code> | Telemetry traces page | | <code>/gateways</code> | Gateway connections |
+        </p>
+        <h2 id="demo-mode">Demo Mode</h2>
+        <p>
+          <code>pnpm run desktop:demo</code> creates an isolated temporary state root with seeded conversations, automations, executions,
+          and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent
+          demos, and pathological fixtures.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/desktop-app.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#starting">Starting</a><a href="#runtime-model">Runtime Model</a><a href="#layout-modes">Layout Modes</a
+        ><a href="#workbench-rails">Workbench Rails</a><a href="#keyboard-shortcuts">Keyboard Shortcuts</a><a href="#routes">Routes</a
+        ><a href="#demo-mode">Demo Mode</a>
+      </aside>
+    </main>
+  </body>
+</html>

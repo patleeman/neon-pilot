@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Views · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="active" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="views">Views</h1>
+        <p>Neon Pilot has two view modes. Switch between them with <code>F1</code>/<code>F2</code> or the dropdown in the top bar.</p>
+        <h2 id="conversation-view-f1">Conversation View (F1)</h2>
+        <p>The default layout. A single conversation pane with the left sidebar for conversation navigation.</p>
+        <pre><code>┌────────────────────────────────────┐
+│ Sidebar │                          │
+│          │   Transcript            │
+│ ┌──────┐ │   ┌──────────────────┐  │
+│ │Conv 1│ │   │ User message     │  │
+│ │Conv 2│ │   │                  │  │
+│ │Conv 3│ │   │ Assistant resp.  │  │
+│ └──────┘ │   └──────────────────┘  │
+│          │   ┌──────────────────┐  │
+│          │   │ Composer         │  │
+│          │   └──────────────────┘  │
+└────────────────────────────────────┘</code></pre>
+        <ul>
+          <li><strong>Left sidebar</strong> — conversation list, toggle with <code>Cmd+/</code> (or <code>Ctrl+/</code>)</li>
+          <li><strong>Center</strong> — transcript and composer</li>
+          <li>Use this for focused single-thread work</li>
+        </ul>
+        <h2 id="workbench-view-f2">Workbench View (F2)</h2>
+        <p>A multi-pane layout for working alongside knowledge and tools. Available on conversation routes.</p>
+        <pre><code>┌──────────────────────────────────────────────────────┐
+│ Sidebar │  Transcript         │  Workbench nav     │
+│          │                    │                      │
+│ ┌──────┐│  ┌──────────────┐  │  ┌──────────────────┐│
+│ │Conv 1││  │ User msg     │  │  │ Files/Artifacts/ ││
+│ │Conv 2││  │              │  │  │ Artifacts/       ││
+│ │Conv 3││  │ Assistant    │  │  │ Browser          ││
+│ └──────┘│  └──────────────┘  │  └──────────────────┘│
+│          │  ┌──────────────┐  │                      │
+│          │  │ Composer     │  │                      │
+│          │  └──────────────┘  │                      │
+└──────────────────────────────────────────────────────┘</code></pre>
+        <p>The right rail nav tabs include:</p>
+        <p>
+          | Tab | Shows when | | ------------- | ------------------------------------ | | File Explorer | Always — working directory file
+          tree | | Artifacts | Conversation has rendered artifacts | | Browser | Opened by user | | Knowledge | Primary page with right rail
+          |
+        </p>
+        <p>
+          Knowledge appears as a left-sidebar route (not a workbench tab). Extension-contributed tool panels also appear in the nav. Toggle
+          the right rail (in compact mode) with <code>Cmd+\</code> or toggle the workbench explorer (in workbench mode) with
+          <code>Cmd+\</code>.
+        </p>
+        <p>
+          For extension authors, the right rail is for compact contextual tools. If a feature needs the rail to select something and the
+          center pane to render the large detail view, pair the rail view with a <code>location: &quot;workbench&quot;</code> detail view.
+          See
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-extension-manager/README.md#surface-selection"
+            >Extensions</a
+          >
+          for the surface decision guide.
+        </p>
+        <h3 id="rail-pane-behavior">Rail pane behavior</h3>
+        <ul>
+          <li>Panes are resizable by dragging the divider</li>
+          <li>The File Explorer shows the workspace file tree</li>
+          <li>Checkpoint diffs render inline in the transcript checkpoint card</li>
+          <li>Artifacts render inline (HTML, Mermaid, LaTeX)</li>
+          <li>Background commands and subagents render as inline transcript execution cards</li>
+          <li>Browser loads pages alongside the conversation</li>
+        </ul>
+        <h2 id="layout-shortcuts">Layout Shortcuts</h2>
+        <p>
+          | Action | Shortcut | | --------------------------- | --------------------- | | Conversation mode (compact) | <code>F1</code> | |
+          Workbench mode | <code>F2</code> | | Toggle left sidebar | <code>Cmd+/</code> (or <code>Ctrl+/</code>) | | Toggle right rail |
+          <code>Cmd+\</code> (or <code>Ctrl+\</code>) |
+        </p>
+        <p>Default shortcuts are configurable in Settings → Keyboard.</p>
+        <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/views.md">Edit this page on GitHub →</a></p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#conversation-view-f1">Conversation View (F1)</a><a href="#workbench-view-f2">Workbench View (F2)</a
+        ><a href="#layout-shortcuts">Layout Shortcuts</a>
+      </aside>
+    </main>
+  </body>
+</html>

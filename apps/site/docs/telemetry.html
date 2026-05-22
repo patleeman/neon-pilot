@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Telemetry · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="active" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="telemetry">Telemetry</h1>
+        <p>
+          Telemetry explains where Neon Pilot stores local observability data, which path is authoritative, and how the Settings and
+          Telemetry pages read it.
+        </p>
+        <h2 id="storage-locations">Storage locations</h2>
+        <p>
+          Telemetry is local to the active state root. The default state root is <code>~/.local/state/neon-pilot</code>, or
+          <code>$NEON_PILOT_STATE_ROOT</code> when set.
+        </p>
+        <p>
+          | Data | Location | Role | | ----------------------------- |
+          ----------------------------------------------------------------------------------------- |
+          ---------------------------------------------------------- | | Raw app telemetry |
+          <code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code> | Source of truth for generic app events.
+          Append-only JSONL. | | Telemetry export bundles |
+          <code>&lt;state-root&gt;/exports/telemetry/app-telemetry-&lt;timestamp&gt;.jsonl</code> | Bug-report bundles generated from
+          Settings. | | Query index and trace metrics | <code>&lt;state-root&gt;/observability/observability.db</code> | SQLite index for UI
+          queries plus structured trace tables. | | Legacy trace DBs | <code>&lt;state-root&gt;/pi-agent/state/trace/*.db</code> or
+          <code>&lt;state-root&gt;/sync/pi-agent/state/trace/*.db</code> | Imported once when present, then deleted after success. |
+        </p>
+        <p>
+          The important bit: <strong>raw app telemetry lives in JSONL first</strong>. SQLite is a derived index for convenient filtering and
+          charts. If SQLite is locked, migrating, or corrupt, telemetry writes should still preserve the raw event in the log file.
+        </p>
+        <h2 id="what-gets-recorded">What gets recorded</h2>
+        <p>There are two related telemetry streams:</p>
+        <p>
+          1. <strong>Trace metrics</strong> — structured records for model usage, token/cost stats, context pressure, compactions, tool
+          calls, tool latency, and agent-loop health. These are written to <code>observability/observability.db</code> because the Telemetry
+          page mostly reads aggregates. 2. <strong>Application telemetry</strong> — generic runtime events that are useful before they have
+          first-class charts. These are written to JSONL first, then indexed into SQLite best-effort.
+        </p>
+        <p>
+          Current app telemetry producers include server API request timing, <code>Server-Timing</code> headers, server warnings/errors,
+          server app events, renderer route views/leaves, visibility changes, renderer crashes/rejections, conversation stream lifecycle
+          events, prompt submissions, tool execution detail, extension action telemetry, queue drops, and agent-loop
+          lifecycle/latency/outcome events.
+        </p>
+        <h2 id="app-telemetry-event-shape">App telemetry event shape</h2>
+        <p>
+          Each JSONL line is one JSON object. The current schema is intentionally loose so new producers can add metadata without a DB
+          migration.
+        </p>
+        <pre><code>{
+  &quot;schemaVersion&quot;: 1,
+  &quot;id&quot;: &quot;uuid&quot;,
+  &quot;ts&quot;: &quot;2026-05-14T12:00:00.000Z&quot;,
+  &quot;source&quot;: &quot;server&quot;,
+  &quot;category&quot;: &quot;extension_action&quot;,
+  &quot;name&quot;: &quot;scheduledTask&quot;,
+  &quot;sessionId&quot;: null,
+  &quot;runId&quot;: null,
+  &quot;route&quot;: null,
+  &quot;status&quot;: null,
+  &quot;durationMs&quot;: 42,
+  &quot;count&quot;: null,
+  &quot;value&quot;: null,
+  &quot;metadata&quot;: { &quot;extensionId&quot;: &quot;system-automations&quot;, &quot;ok&quot;: true }
+}</code></pre>
+        <p>
+          Keep <code>category</code> low-cardinality and use <code>metadata</code> for details. Metadata is bounded before storage;
+          telemetry must never store secrets.
+        </p>
+        <h2 id="write-path">Write path</h2>
+        <p>The main app telemetry seam is <code>writeAppTelemetryEvent</code> in <code>packages/core/src/app-telemetry-db.ts</code>.</p>
+        <p>Write flow:</p>
+        <p>
+          1. Normalize and bound the event fields. 2. Append the event to
+          <code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code>. 3. Try to insert the same event into
+          <code>observability/observability.db</code> as a derived index. 4. Log telemetry storage failures to stderr/server logs, but do
+          not break app behavior.
+        </p>
+        <p>
+          The desktop server adds an in-process queue in <code>packages/desktop/server/traces/appTelemetry.ts</code> so hot paths can
+          fire-and-forget. If that queue overflows, the app records a <code>system/telemetry/queue_drop</code> event before shedding
+          buffered events.
+        </p>
+        <p>
+          Renderer events go through <code>POST /api/telemetry/event</code>. Backend extensions can use
+          <code>ctx.telemetry.record(...)</code>, which adds the extension id to metadata, or the SDK seam:
+        </p>
+        <pre><code>import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
+
+recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_completed', durationMs: 42 });</code></pre>
+        <h2 id="read-path">Read path</h2>
+        <p>
+          The Telemetry page reads <code>/api/traces/*</code> endpoints. Those endpoints combine trace tables and app telemetry queries
+          depending on the panel.
+        </p>
+        <p>Generic app telemetry reads use <code>queryAppTelemetryEvents</code>:</p>
+        <p>
+          1. Read matching JSONL log events first. 2. Fall back to SQLite when no JSONL events exist, which keeps old indexed data visible.
+        </p>
+        <p>
+          Extension action telemetry uses the same app telemetry data. <code>/api/extensions/telemetry</code> reads
+          <code>extension_action</code> events from the telemetry stream, with the old in-memory ring buffer only as an empty-log fallback.
+        </p>
+        <h2 id="settings-diagnostics">Settings diagnostics</h2>
+        <p>Settings → Desktop includes a <strong>Telemetry logs</strong> panel. It shows:</p>
+        <ul>
+          <li>raw log folder path</li>
+          <li>file count and total size</li>
+          <li>recent JSONL files</li>
+          <li><strong>Open log folder</strong> for local inspection</li>
+          <li><strong>Export JSONL bundle</strong> for bug reports</li>
+          <li><strong>Prune/vacuum DB</strong> to run the app telemetry and trace SQLite cleanup immediately</li>
+        </ul>
+        <p>
+          The export endpoint writes a combined JSONL bundle under <code>&lt;state-root&gt;/exports/telemetry/</code> and returns the path
+          so the desktop bridge can open it in Finder. The maintenance endpoint prunes capped app telemetry rows, prunes/caps trace tables,
+          and runs <code>VACUUM</code> on the shared observability database.
+        </p>
+        <h2 id="retention-and-caps">Retention and caps</h2>
+        <p>App telemetry has independent log and SQLite limits:</p>
+        <ul>
+          <li>
+            <code>NEON_PILOT_APP_TELEMETRY_LOG_RETENTION_DAYS</code> controls best-effort JSONL file retention. Default:
+            <code>30</code> days.
+          </li>
+          <li>
+            <code>NEON_PILOT_APP_TELEMETRY_LOG_MAX_BYTES</code> controls size-based rollover within a day. Default:
+            <code>10485760</code> bytes. When the daily file would exceed this, writes continue in
+            <code>app-telemetry-YYYY-MM-DD.1.jsonl</code>, <code>.2.jsonl</code>, and so on.
+          </li>
+          <li>
+            <code>NEON_PILOT_APP_TELEMETRY_MAX_EVENTS</code> controls the derived SQLite app telemetry row cap. Default:
+            <code>50000</code> rows. Values below <code>1000</code> are ignored.
+          </li>
+          <li>
+            <code>NEON_PILOT_TRACE_TABLE_MAX_ROWS</code> controls the per-table trace cap. Default: <code>50000</code> rows. Trace tables
+            also prune rows older than 90 days on open/maintenance.
+          </li>
+        </ul>
+        <p>
+          Retention is best-effort and runs during writes. Manual Settings maintenance runs pruning and SQLite vacuuming on demand. Neither
+          path should crash the app; failures are emitted to the server logs.
+        </p>
+        <h2 id="development-rules">Development rules</h2>
+        <ul>
+          <li>Treat JSONL as the raw truth for app telemetry.</li>
+          <li>Treat SQLite as a query/index/cache layer unless the data is inherently aggregate trace data.</li>
+          <li>
+            Do not add mandatory migrations for new app telemetry metadata. Add fields inside <code>metadata</code> unless the UI needs a
+            real indexed column.
+          </li>
+          <li>Do not put secrets, prompts, API keys, or raw credential-bearing payloads into telemetry.</li>
+          <li>
+            Keep telemetry writes fire-and-forget. User-visible behavior should not depend on telemetry succeeding, but storage/indexing
+            failures should still emit errors to logs.
+          </li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/telemetry.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#storage-locations">Storage locations</a><a href="#what-gets-recorded">What gets recorded</a
+        ><a href="#app-telemetry-event-shape">App telemetry event shape</a><a href="#write-path">Write path</a
+        ><a href="#read-path">Read path</a><a href="#settings-diagnostics">Settings diagnostics</a
+        ><a href="#retention-and-caps">Retention and caps</a><a href="#development-rules">Development rules</a>
+      </aside>
+    </main>
+  </body>
+</html>

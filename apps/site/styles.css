@@ -676,6 +676,135 @@ footer a {
   color: #aaa69e;
 }
 
+/* docs */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 190px;
+  gap: 38px;
+  align-items: start;
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+
+.docs-sidebar,
+.docs-toc {
+  position: sticky;
+  top: 72px;
+}
+
+.docs-sidebar h1 {
+  margin-bottom: 24px;
+  font-size: 1.55rem;
+  letter-spacing: -0.04em;
+}
+
+.docs-sidebar section {
+  margin-bottom: 24px;
+}
+
+.docs-sidebar h2,
+.docs-toc h2 {
+  margin-bottom: 9px;
+  color: #6f746f;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.docs-sidebar a,
+.docs-toc a,
+.docs-toc span {
+  display: block;
+  padding: 5px 0;
+  color: #aaa69e;
+  font-size: 0.86rem;
+}
+
+.docs-sidebar a.active {
+  color: #f4f1ea;
+  font-weight: 700;
+}
+
+.docs-content {
+  max-width: 760px;
+  padding-bottom: 40px;
+}
+
+.docs-content h1 {
+  margin-bottom: 16px;
+  font-size: 3rem;
+  line-height: 1.02;
+  letter-spacing: -0.06em;
+}
+
+.docs-content h2 {
+  margin-top: 42px;
+  margin-bottom: 12px;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.docs-content h3 {
+  margin-top: 28px;
+  margin-bottom: 8px;
+}
+
+.docs-content p,
+.docs-content li {
+  color: #c3c0b8;
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.docs-content p,
+.docs-content ul,
+.docs-content pre {
+  margin-bottom: 18px;
+}
+
+.docs-content ul {
+  padding-left: 22px;
+}
+
+.docs-content a,
+.edit-link a {
+  color: #9bb4ff;
+}
+
+.docs-content code {
+  padding: 0.12em 0.36em;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: #0d121c;
+  color: #e7e4db;
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+.docs-content pre {
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #090c12;
+}
+
+.docs-content pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.edit-link {
+  margin-top: 44px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
 @media (max-width: 920px) {
   header {
     grid-template-columns: 1fr auto;
@@ -711,6 +840,19 @@ footer a {
 
   .app-shot img {
     height: auto;
+  }
+
+  .docs-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-sidebar,
+  .docs-toc {
+    position: static;
+  }
+
+  .docs-toc {
+    display: none;
   }
 
   .surface-strip {

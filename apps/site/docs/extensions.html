@@ -1,0 +1,1683 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Extension Authoring · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a
+          ><a class="active" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="extension-authoring-reference">Extension Authoring Reference</h1>
+        <p>
+          The normal way to create a Neon Pilot extension is to ask your agent to build it for you. Start with
+          <a href="./build-an-extension.html">Build an extension with your agent</a> for the user-facing workflow and copy-paste prompt.
+        </p>
+        <p>
+          This reference covers the extension package contract: manifests, frontend/backend entries, tools, skills, agent hooks, event bus,
+          permissions, build behavior, and integration testing. Use it when implementing or debugging an extension, not as the first stop
+          for a user who just wants a new feature.
+        </p>
+        <h2 id="contents">Contents</h2>
+        <ul>
+          <li><a href="#agent-first-workflow">Agent-first workflow</a></li>
+          <li><a href="#core-vs-extensions">Core vs extensions</a></li>
+          <li><a href="#extension-structure">Extension Structure</a></li>
+          <li><a href="#manifest-extensionjson">Manifest (<code>extension.json</code>)</a></li>
+          <li><a href="#frontend-ui">Frontend (UI)</a></li>
+          <li><a href="#main-page-layout">Main page layout</a></li>
+          <li><a href="#styling-guidance">Styling guidance</a></li>
+          <li><a href="#backend-server-side">Backend (Server-side)</a></li>
+          <li><a href="#agent-lifecycle-hooks">Agent Lifecycle Hooks</a></li>
+          <li><a href="#conversation-write-api">Conversation Write API</a></li>
+          <li><a href="#inter-extension-communication">Inter-extension Communication</a></li>
+          <li><a href="#notifications-and-badge">Notifications and Badge</a></li>
+          <li><a href="#permissions">Permissions</a></li>
+          <li><a href="#development-workflow">Development Workflow</a></li>
+          <li><a href="#examples">Examples</a></li>
+        </ul>
+        <h2 id="agent-first-workflow">Agent-first workflow</h2>
+        <p>Users should usually describe the feature they want and let their agent create the extension:</p>
+        <pre><code>Build a Neon Pilot extension that [does what].
+
+Use the extension manager/template if helpful. Pick the right surface:
+- main page for a full app/workflow
+- right rail for a compact conversation-specific tool panel
+- workbench detail for split-pane workflows
+
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.</code></pre>
+        <p>
+          The agent should create editable <code>src/</code> files, declare contributions in <code>extension.json</code>, build, validate,
+          reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
+        </p>
+        <h2 id="core-vs-extensions">Core vs extensions</h2>
+        <p>
+          Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event
+          stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security
+          boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
+        </p>
+        <p>
+          Everything user-facing, domain-specific, or workflow-specific should be an extension: pages, panels, tool renderers, slash/command
+          surfaces, integrations, context providers, automations, import/export flows, diagnostics views, settings sections, and opinionated
+          UX built on top of the platform.
+        </p>
+        <p>
+          When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than
+          hardcoding a one-off app feature. Core should make features possible; extensions should be where features live.
+        </p>
+        <h2 id="extension-structure">Extension Structure</h2>
+        <p>A minimal extension looks like:</p>
+        <pre><code>my-extension/
+├── extension.json      # Manifest
+├── package.json        # Dependencies (optional)
+├── src/
+│   ├── frontend.tsx    # UI components (optional)
+│   └── backend.ts      # Backend handlers / protocol entrypoints (optional)
+└── dist/               # Built output</code></pre>
+        <p>Create a new extension by asking your agent to build it. Under the hood, the agent can use Extension Manager or the API:</p>
+        <pre><code>POST /api/extensions
+{
+  &quot;id&quot;: &quot;my-ext&quot;,
+  &quot;name&quot;: &quot;My Extension&quot;,
+  &quot;template&quot;: &quot;main-page&quot;   # &quot;main-page&quot;, &quot;right-rail&quot;, or &quot;workbench-detail&quot;
+}</code></pre>
+        <h2 id="manifest-extension-json">Manifest (<code>extension.json</code>)</h2>
+        <p>The manifest declares what your extension contributes:</p>
+        <pre><code>{
+  &quot;schemaVersion&quot;: 2,
+  &quot;id&quot;: &quot;my-extension&quot;,
+  &quot;name&quot;: &quot;My Extension&quot;,
+  &quot;description&quot;: &quot;What it does&quot;,
+  &quot;version&quot;: &quot;0.1.0&quot;,
+  &quot;permissions&quot;: [&quot;storage:readwrite&quot;],
+  &quot;frontend&quot;: {
+    &quot;entry&quot;: &quot;dist/frontend.js&quot;,
+    &quot;styles&quot;: []
+  },
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;src/backend.ts&quot;,
+    &quot;actions&quot;: [
+      {
+        &quot;id&quot;: &quot;ping&quot;,
+        &quot;handler&quot;: &quot;ping&quot;,
+        &quot;title&quot;: &quot;Ping&quot;
+      }
+    ],
+    &quot;protocolEntrypoints&quot;: [
+      {
+        &quot;id&quot;: &quot;acp&quot;,
+        &quot;handler&quot;: &quot;runAcpProtocol&quot;,
+        &quot;title&quot;: &quot;Agent Client Protocol&quot;
+      }
+    ]
+  },
+  &quot;contributes&quot;: {
+    &quot;views&quot;: [],
+    &quot;nav&quot;: [],
+    &quot;commands&quot;: [],
+    &quot;tools&quot;: [],
+    &quot;skills&quot;: [],
+    &quot;themes&quot;: []
+  }
+}</code></pre>
+        <p>
+          <strong><code>packageType</code></strong
+          >: derived by the loader from install location: repo/app-bundled extensions are <code>&quot;system&quot;</code>; runtime-installed
+          extensions are <code>&quot;user&quot;</code>. The manifest field is accepted for compatibility but is not authoritative.
+        </p>
+        <p>
+          <strong><code>defaultEnabled</code></strong
+          >: set to <code>false</code> for experimental extensions that should ship installed but disabled until the user explicitly enables
+          them.
+        </p>
+        <p>
+          <strong><code>permissions</code></strong
+          >: See <a href="#permissions">Permissions</a>.
+        </p>
+        <h3 id="contribution-types">Contribution Types</h3>
+        <p>
+          | Field | Purpose | Docs | | ----------------------------- | ------------------------------------------------------------------ |
+          ----------------------------------------------------------------------------------------- | | <code>views</code> | UI surfaces
+          (pages, panels) | See <code>docs/views.md</code> | | <code>nav</code> | Left sidebar navigation items | | |
+          <code>commands</code> | Extension actions invokable by command IDs | See
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+            >Commands and keybindings</a
+          >
+          | | <code>keybindings</code> | Keyboard shortcuts that execute commands | See
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+            >Commands and keybindings</a
+          >
+          | | <code>slashCommands</code> | <code>/command</code> in composer | | | <code>tools</code> | Agent-callable tools | | |
+          <code>skillProviders</code> | Dynamic Prompt Assembly skill providers | <a href="#prompt-assembly">See below</a> | |
+          <code>toolProviders</code> | Dynamic Prompt Assembly tool providers | <a href="#prompt-assembly">See below</a> | |
+          <code>promptTemplateProviders</code> | Dynamic Prompt Assembly template providers | <a href="#prompt-assembly">See below</a> | |
+          <code>instructionProviders</code> | Dynamic Prompt Assembly instruction layers | <a href="#prompt-assembly">See below</a> | |
+          <code>promptAssemblyHooks</code> | Privileged Prompt Assembly hooks | <a href="#prompt-assembly">See below</a> | |
+          <code>modelProfiles</code> | Enabled extension runtime profiles matched by provider/model globs | | | <code>mentions</code> |
+          @-mention providers | | | <code>skills</code> | Agent Skills (markdown) | | | <code>themes</code> | Color themes | | |
+          <code>backend.protocolEntrypoints</code> | Extension-owned stdio protocols launched by the host CLI |
+          <a href="#protocol-entrypoints-backendprotocolentrypoints">See below</a> | | <code>transcriptRenderers</code> | Custom tool result
+          rendering | | | <code>promptReferences</code> | @-mention resolvers | | | <code>turnContextProviders</code> | Ordered per-turn
+          context injection | <a href="#turn-context-providers-turncontextproviders">See below</a> | | <code>promptContextProviders</code> |
+          Prompt Assembly context diagnostics/providers | <a href="#prompt-context-providers-promptcontextproviders">See below</a> | |
+          <code>selectionActions</code> | Actions available for selected transcript/composer text |
+          <a href="#selection-actions-selectionactions">See below</a> | | <code>transcriptBlocks</code> | Extension-owned transcript block
+          renderers | <a href="#transcript-blocks-transcriptblocks">See below</a> | | <code>subscriptions</code> | Backend event
+          subscriptions | <a href="#backend-event-subscriptions-subscriptions">See below</a> | | <code>secrets</code> | Secret declarations
+          surfaced in Settings | <a href="#settings">See below</a> | | <code>activityTreeItemElements</code> | Custom content in
+          thread/activity tree rows | <a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a> | |
+          <code>activityTreeItemStyles</code> | Custom row styling for thread/activity tree items |
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a> | | <code>quickOpen</code> |
+          Command palette surfaces/tabs backed by extension providers | <a href="#quick-open-surfaces-quickopen">See below</a> | |
+          <code>searchProviders</code> | Backend-powered global search providers |
+          <a href="#global-search-providers-searchproviders">See below</a> | | <code>runtimeProviders</code> | Extension-advertised
+          local/remote runtime targets | <a href="#runtime-providers-runtimeproviders">See below</a> | | <code>settings</code> | Settings
+          schema contributions | <a href="#settings">See below</a> | | <code>settingsComponent</code> | Component panel in Settings |
+          <a href="#settings-component-settingscomponent">See below</a> | | <code>topBarElements</code> | Top bar indicator icons |
+          <a href="#top-bar-elements-topbarelements">See below</a> | | <code>conversationHeaderElements</code> | Badges in conversation
+          header | <a href="#conversation-header-elements-conversationheaderelements">See below</a> | | <code>messageActions</code> | Hover
+          buttons on messages | <a href="#message-actions-messageactions">See below</a> | | <code>composerShelves</code> | Sections above
+          the composer | <a href="#composer-shelves-composershelves">See below</a> | | <code>newConversationPanels</code> | Panels on the
+          new conversation page | <a href="#new-conversation-panels-newconversationpanels">See below</a> | | <code>composerControls</code> |
+          Component controls in the composer bottom row | <a href="#composer-controls-composercontrols">See below</a> | |
+          <code>composerButtons</code> | Legacy composer controls | <a href="#composer-buttons-composerbuttons">See below</a> | |
+          <code>composerInputTools</code> | Component tools beside composer controls |
+          <a href="#composer-input-tools-composerinputtools">See below</a> | | <code>toolbarActions</code> | Icon buttons in composer
+          toolbar | <a href="#toolbar-actions-toolbaractions">See below</a> | | <code>conversationDecorators</code> | Badges on conversation
+          list items | <a href="#conversation-decorators-conversationdecorators">See below</a> | | <code>contextMenus</code> | Right-click
+          menu items | <a href="#context-menus-contextmenus">See below</a> | | <code>threadHeaderActions</code> | Component buttons in the
+          Threads header | <a href="#thread-header-actions-threadheaderactions">See below</a> | | <code>statusBarItems</code> | Labels in
+          the composer status bar | <a href="#status-bar-items-statusbaritems">See below</a> | | <code>conversationLifecycle</code> |
+          Conversation-state banners/inline UI | <a href="#conversation-lifecycle-conversationlifecycle">See below</a> | |
+          <code>composerAttachmentProviders</code> | Buttons that add/derive composer attachment context |
+          <a href="#composer-attachments">See below</a> | | <code>composerAttachmentRenderers</code> | Renderers for extension-owned
+          composer attachment chips | <a href="#composer-attachments">See below</a> | | <code>composerAttachmentResolvers</code> | Backend
+          resolvers for extension-owned attachment refs | <a href="#composer-attachments">See below</a> | |
+          <code>activityTreeItemActions</code> | Inline action buttons on thread/activity tree rows |
+          <a href="#activity-tree-item-actions-activitytreeitemactions">See below</a> |
+        </p>
+        <h3 id="standard-file-change-metadata">Standard file change metadata</h3>
+        <p>
+          File-mutating tools should return standard <code>details.fileChanges</code> metadata when they can identify the exact mutation
+          they performed. The desktop transcript renders this shape as an inline Pierre diff for any tool block, without requiring a
+          tool-specific renderer.
+        </p>
+        <pre><code>type FileChange = {
+  path: string;
+  previousPath?: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'typechange' | 'unmerged' | 'changed';
+  additions: number;
+  deletions: number;
+  patch?: string; // unified diff for this exact tool call
+  truncated?: boolean;
+};
+
+return { text: 'Updated file.', details: { fileChanges: [change] } };</code></pre>
+        <p>Omit <code>patch</code> and set <code>truncated: true</code> when the inline diff would bloat transcript state.</p>
+        <h3 id="model-profiles">Model Profiles</h3>
+        <p>
+          Model profiles let an enabled extension declare that it provides model-specific runtime behavior. They are intentionally small:
+          the profile only says which provider/model refs it matches. The extension implements behavior through normal extension mechanisms
+          such as agent hooks, tools, tool replacements, context providers, or backend actions.
+        </p>
+        <p>
+          Models do <strong>not</strong> declare profiles. Disabled extensions do <strong>not</strong> secretly activate for matching
+          models. If no enabled profile matches, the session uses normal default behavior.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;src/backend.ts&quot;,
+    &quot;agentExtension&quot;: &quot;default&quot;
+  },
+  &quot;contributes&quot;: {
+    &quot;modelProfiles&quot;: [
+      {
+        &quot;id&quot;: &quot;codex-compatible&quot;,
+        &quot;title&quot;: &quot;Codex Compatible&quot;,
+        &quot;description&quot;: &quot;Codex-shaped runtime behavior for GPT coding models.&quot;,
+        &quot;match&quot;: [&quot;openai-codex/*&quot;, &quot;*/gpt-5.5&quot;],
+        &quot;priority&quot;: 100
+      }
+    ],
+    &quot;tools&quot;: [
+      {
+        &quot;id&quot;: &quot;apply-patch&quot;,
+        &quot;name&quot;: &quot;apply_patch&quot;,
+        &quot;description&quot;: &quot;Apply a Codex-style patch.&quot;,
+        &quot;action&quot;: &quot;applyPatch&quot;
+      }
+    ]
+  }
+}</code></pre>
+        <p><code>match</code> patterns are simple <code>*</code> globs over the canonical ref:</p>
+        <pre><code>&lt;provider&gt;/&lt;model&gt;</code></pre>
+        <p>Examples:</p>
+        <ul>
+          <li><code>openai-codex/*</code> matches every model from the <code>openai-codex</code> provider.</li>
+          <li><code>*/gpt-5.5</code> matches <code>gpt-5.5</code> from any provider.</li>
+          <li><code>opencode-go/qwen*-coder*</code> matches Qwen Coder-like models from <code>opencode-go</code>.</li>
+        </ul>
+        <p>Profile resolution is deliberately boring:</p>
+        <p>
+          1. Only enabled extensions contribute model profiles. 2. Matching profiles are sorted by <code>priority</code> descending; missing
+          priority is <code>0</code>. 3. Exactly one highest-priority profile wins. 4. If multiple profiles tie at the highest priority, the
+          match is ambiguous and no profile behavior should be assumed.
+        </p>
+        <p>
+          The profile contribution itself does not define tools or instructions. For example, the Codex Compatibility extension contributes
+          a <code>modelProfiles</code> match for <code>openai-codex/*</code>, contributes the <code>apply_patch</code> tool, and uses its
+          <code>backend.agentExtension</code> hooks to switch active tools to <code>bash</code> and <code>apply_patch</code> when a matching
+          model is active. Explicit per-run tool allowlists still take precedence over extension profile behavior.
+        </p>
+        <p>For <code>session_start</code> and <code>model_select</code> handlers, the desktop host augments the lifecycle context with:</p>
+        <pre><code>type ModelProfileContext =
+  | { kind: 'none'; modelRef: string | null }
+  | { kind: 'resolved'; modelRef: string; profile: { id: string; extensionId: string; title?: string; match: string[]; priority: number } }
+  | { kind: 'ambiguous'; modelRef: string; profiles: Array&lt;{ id: string; extensionId: string; match: string[]; priority: number }&gt; };
+
+ctx.modelProfile: ModelProfileContext;
+ctx.setActiveTools(toolNames: string[]): void;</code></pre>
+        <p>
+          <code>ctx.setActiveTools</code> is only available on these lifecycle contexts. Global <code>pi.setActiveTools</code> is blocked by
+          the desktop runtime.
+        </p>
+        <h3 id="views">Views</h3>
+        <p>Views are the primary way to add UI. Three locations:</p>
+        <ul>
+          <li>
+            <strong><code>main</code></strong
+            >: Full-page view at a custom route (<code>/ext/your-id</code>).
+          </li>
+          <li>
+            <strong><code>rightRail</code></strong
+            >: Collapsible panel beside the conversation.
+          </li>
+          <li>
+            <strong><code>workbench</code></strong
+            >: Center detail pane, paired with a right rail view.
+          </li>
+        </ul>
+        <pre><code>{
+  &quot;id&quot;: &quot;my-panel&quot;,
+  &quot;title&quot;: &quot;My Panel&quot;,
+  &quot;location&quot;: &quot;rightRail&quot;,
+  &quot;component&quot;: &quot;MyComponent&quot;,
+  &quot;scope&quot;: &quot;conversation&quot;,
+  &quot;icon&quot;: &quot;app&quot;,
+  &quot;activation&quot;: &quot;on-open&quot;
+}</code></pre>
+        <p>
+          <strong><code>activation</code></strong> controls when the component loads:
+        </p>
+        <ul>
+          <li><code>&quot;on-route&quot;</code> — loads when the route is active (for main pages).</li>
+          <li><code>&quot;on-open&quot;</code> — loads when the user opens the panel.</li>
+          <li><code>&quot;on-demand&quot;</code> — loads lazily when needed.</li>
+          <li><code>&quot;always&quot;</code> — always mounted.</li>
+        </ul>
+        <p>
+          <strong><code>scope</code></strong> for rightRail views:
+        </p>
+        <ul>
+          <li><code>&quot;conversation&quot;</code> — one instance per conversation.</li>
+          <li><code>&quot;workspace&quot;</code> — one per workspace/cwd.</li>
+          <li><code>&quot;global&quot;</code> — single instance.</li>
+        </ul>
+        <h3 id="message-actions-messageactions">Message Actions (<code>messageActions</code>)</h3>
+        <p>Add hover-reveal text buttons on messages, inline with copy/fork/rewind. Action-based — no frontend entry needed.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;summarize-message&quot;,
+  &quot;title&quot;: &quot;Summarize&quot;,
+  &quot;action&quot;: &quot;summarizeHandler&quot;,
+  &quot;when&quot;: &quot;role:assistant &amp;&amp; hasText&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          <strong><code>when</code></strong> predicates:
+        </p>
+        <ul>
+          <li><code>role:assistant</code> — only on assistant messages</li>
+          <li><code>role:user</code> — only on user messages</li>
+          <li><code>hasText</code> — message has text content</li>
+        </ul>
+        <p>Backend handler receives:</p>
+        <pre><code>{
+  messageText: string;
+  messageRole: 'user' | 'assistant';
+  blockId: string;
+  conversationId: string;
+}</code></pre>
+        <h3 id="global-search-providers-searchproviders">Global Search Providers (<code>searchProviders</code>)</h3>
+        <p>
+          Use <code>searchProviders</code> for app-level search backed by extension backend actions. The provider appears as a command
+          palette scope; when the user searches that scope, the backend action receives <code>{ query, limit, providerId }</code>.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;actions&quot;: [{ &quot;id&quot;: &quot;searchTickets&quot;, &quot;handler&quot;: &quot;searchTickets&quot; }]
+  },
+  &quot;contributes&quot;: {
+    &quot;searchProviders&quot;: [
+      {
+        &quot;id&quot;: &quot;tickets&quot;,
+        &quot;title&quot;: &quot;Tickets&quot;,
+        &quot;action&quot;: &quot;searchTickets&quot;,
+        &quot;kinds&quot;: [&quot;ticket&quot;],
+        &quot;priority&quot;: 10
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Return either an array of items or <code>{ &quot;items&quot;: [...] }</code>. Items support <code>title</code>,
+          <code>subtitle</code>, <code>snippet</code>/<code>meta</code>, <code>keywords</code>, <code>order</code>, and optional
+          <code>action</code>. Supported actions today are
+          <code>{ &quot;kind&quot;: &quot;navigate&quot;, &quot;to&quot;: &quot;/path&quot; }</code> and
+          <code>{ &quot;kind&quot;: &quot;command&quot;, &quot;command&quot;: &quot;extension.command&quot;, &quot;args&quot;: {} }</code>.
+        </p>
+        <h3 id="conversation-lifecycle-conversationlifecycle">Conversation Lifecycle (<code>conversationLifecycle</code>)</h3>
+        <p>
+          Add React UI for conversation state transitions such as waiting for user input, blocked/takeover state, model or tool errors,
+          active goal mode, compaction, or an active run.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;conversationLifecycle&quot;: [
+      {
+        &quot;id&quot;: &quot;approval-banner&quot;,
+        &quot;component&quot;: &quot;ApprovalBanner&quot;,
+        &quot;events&quot;: [&quot;waiting-for-user&quot;, &quot;blocked&quot;],
+        &quot;slot&quot;: &quot;banner&quot;,
+        &quot;priority&quot;: 10
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Components receive <code>{ pa, lifecycleContext }</code>, where <code>lifecycleContext</code> includes
+          <code>conversationId</code>, <code>cwd</code>, <code>event</code>, <code>isStreaming</code>, <code>hasGoal</code>,
+          <code>isCompacting</code>, and optional <code>error</code>.
+        </p>
+        <p>
+          For backend automation, subscribe to <code>source: &quot;conversation&quot;</code> and patterns like <code>tool.started</code>,
+          <code>tool.ended</code>, <code>tool.failed</code>, <code>run.started</code>, <code>run.ended</code>, <code>model.error</code>,
+          <code>compaction.started</code>, or <code>compaction.ended</code>. Handlers receive
+          <code>{ subscriptionId, event, payload, sourceExtensionId }</code>; <code>payload.type</code> is the lifecycle event name.
+        </p>
+        <h3 id="prompt-context-providers-promptcontextproviders">Prompt Context Providers (<code>promptContextProviders</code>)</h3>
+        <p>
+          Use <code>promptContextProviders</code> when an extension needs to expose prompt-assembly diagnostics or suggested hidden context
+          that can be inspected from the Prompt Assembly page. New provider implementations should document what context they add and
+          whether the user can disable it.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;promptContextProviders&quot;: [{ &quot;id&quot;: &quot;suggested-context&quot;, &quot;handler&quot;: &quot;provide-prompt-context&quot;, &quot;title&quot;: &quot;Suggested context&quot; }]
+  }
+}</code></pre>
+        <h3 id="turn-context-providers-turncontextproviders">Turn Context Providers (<code>turnContextProviders</code>)</h3>
+        <p>
+          Use <code>turnContextProviders</code> when an extension needs to add scoped hidden context before each submitted turn without
+          mutating the system prompt. Providers are ordered by <code>priority</code> and invoked during prompt preparation.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;turnContextProviders&quot;: [{ &quot;id&quot;: &quot;reminders&quot;, &quot;handler&quot;: &quot;provideTurnReminders&quot;, &quot;title&quot;: &quot;Turn reminders&quot;, &quot;priority&quot;: 50 }]
+  }
+}</code></pre>
+        <p>
+          Handlers receive <code>{ prompt, conversationId, currentCwd, relatedConversationIds }</code> and may return legacy
+          <code>{ contextMessages }</code> or <code>{ blocks }</code>. Blocks are converted into extension turn-context messages.
+        </p>
+        <h3 id="runtime-providers-runtimeproviders">Runtime Providers (<code>runtimeProviders</code>)</h3>
+        <p>
+          Runtime providers advertise conversation execution targets such as SSH remotes. This is the registry/health boundary only; routing
+          a conversation to a non-local runtime still requires host runtime support.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;runtimeProviders&quot;: [{ &quot;id&quot;: &quot;ssh&quot;, &quot;title&quot;: &quot;SSH Remote Runtime&quot;, &quot;handler&quot;: &quot;listSshRuntimes&quot; }]
+  }
+}</code></pre>
+        <p>
+          Handlers return <code>{ runtimes: [...] }</code>, where each runtime includes <code>id</code>, <code>title</code>,
+          <code>kind</code>, <code>status</code>, optional <code>version</code>, <code>workspaceRoots</code>, <code>capabilities</code>, and
+          <code>metadata</code>. Backend actions can inspect providers through <code>ctx.runtimes.list()</code>,
+          <code>ctx.runtimes.get(id)</code>, and <code>ctx.runtimes.healthCheck(id)</code>.
+        </p>
+        <h3 id="composer-attachments">Composer Attachments</h3>
+        <p>
+          Use <code>composerAttachmentProviders</code> for buttons above the composer attachment shelf. The provider action receives
+          <code>{ conversationId, cwd, composerText }</code>; returning a string or
+          <code>{ &quot;text&quot;: &quot;...&quot; }</code> appends text to the composer. <code>composerAttachmentRenderers</code> and
+          <code>composerAttachmentResolvers</code> reserve the manifest/API seam for extension-owned attachment refs.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;composerAttachmentProviders&quot;: [{ &quot;id&quot;: &quot;attach-ticket&quot;, &quot;title&quot;: &quot;Attach Ticket&quot;, &quot;action&quot;: &quot;attachTicket&quot;, &quot;icon&quot;: &quot;🎫&quot; }],
+    &quot;composerAttachmentRenderers&quot;: [{ &quot;id&quot;: &quot;ticket-chip&quot;, &quot;type&quot;: &quot;jira-ticket&quot;, &quot;component&quot;: &quot;TicketAttachment&quot; }],
+    &quot;composerAttachmentResolvers&quot;: [{ &quot;id&quot;: &quot;ticket-resolver&quot;, &quot;type&quot;: &quot;jira-ticket&quot;, &quot;action&quot;: &quot;resolveTicket&quot; }]
+  }
+}</code></pre>
+        <h3 id="activity-tree-item-actions-activitytreeitemactions">Activity Tree Item Actions (<code>activityTreeItemActions</code>)</h3>
+        <p>
+          Add compact inline buttons to thread/activity tree rows. The action receives
+          <code>{ itemId, kind, title, conversationId, cwd }</code>.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;activityTreeItemActions&quot;: [{ &quot;id&quot;: &quot;summarize-thread&quot;, &quot;title&quot;: &quot;Summarize&quot;, &quot;action&quot;: &quot;summarizeThread&quot;, &quot;icon&quot;: &quot;Σ&quot; }]
+  }
+}</code></pre>
+        <h3 id="slash-commands-slashcommands">Slash Commands (<code>slashCommands</code>)</h3>
+        <p>
+          Add <code>/command</code> entries to the conversation composer. Slash commands are listed in the composer slash menu and execute
+          an extension backend action before the prompt is sent.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;dist/backend.mjs&quot;,
+    &quot;actions&quot;: [{ &quot;id&quot;: &quot;createTask&quot;, &quot;handler&quot;: &quot;createTask&quot; }]
+  },
+  &quot;contributes&quot;: {
+    &quot;slashCommands&quot;: [
+      {
+        &quot;name&quot;: &quot;task&quot;,
+        &quot;description&quot;: &quot;Create a task from composer input.&quot;,
+        &quot;action&quot;: &quot;createTask&quot;
+      }
+    ]
+  }
+}</code></pre>
+        <p>The backend action receives:</p>
+        <pre><code>{
+  commandName: string;
+  argument: string;
+  text: string;
+  conversationId: string | null;
+  cwd: string;
+  draft: boolean;
+}</code></pre>
+        <p>
+          The action can return a string, <code>{ prompt }</code>, or <code>{ text }</code> to send a generated prompt;
+          <code>{ replaceComposerText }</code> or <code>{ appendComposerText }</code> to update the composer without sending;
+          <code>{ notice: { text, tone } }</code> to show feedback; or any other object/empty result to mark the command handled.
+        </p>
+        <p>
+          Use <code>slashCommands</code> for composer-triggered extension code. Use <code>pi.registerCommand(...)</code> inside
+          <code>backend.agentExtension</code> only when the command must run inside the live agent session runtime; that does not
+          automatically make the command appear in the composer slash menu.
+        </p>
+        <h3 id="quick-open-surfaces-quickopen">Quick-open surfaces (<code>quickOpen</code>)</h3>
+        <p>
+          Add a top-level tab to the command palette. Each quick-open contribution registers one extension-owned surface. The palette uses
+          <code>section</code> as the stable tab/surface id, <code>title</code> as the visible tab label, and <code>provider</code> as the
+          frontend export that returns items.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;quickOpen&quot;: [
+      {
+        &quot;id&quot;: &quot;knowledge-files&quot;,
+        &quot;provider&quot;: &quot;knowledgeQuickOpenProvider&quot;,
+        &quot;title&quot;: &quot;Knowledge&quot;,
+        &quot;section&quot;: &quot;knowledge&quot;,
+        &quot;order&quot;: 10
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Provider items can omit <code>section</code>; omitted values are assigned to the contribution's <code>section</code> (or
+          <code>id</code> if no section is set). Items with a different section are ignored by that tab. Providers may expose
+          <code>list()</code> for default results and <code>search(query, limit)</code> for content-backed search. <code>order</code> is
+          optional and controls tab ordering after the built-in Threads tab.
+        </p>
+        <p>
+          Keybindings can open a quick-open surface directly with legacy <code>commandPalette:&lt;section&gt;</code> or the first-class
+          command form <code>command: &quot;palette.open&quot;, args: { &quot;scope&quot;: &quot;knowledge&quot; }</code>.
+        </p>
+        <h3 id="settings-component-settingscomponent">Settings Component (<code>settingsComponent</code>)</h3>
+        <p>Add one component-backed section to the main Settings page.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;dictation&quot;,
+  &quot;component&quot;: &quot;DictationSettingsPanel&quot;,
+  &quot;sectionId&quot;: &quot;settings-dictation&quot;,
+  &quot;label&quot;: &quot;Dictation&quot;,
+  &quot;description&quot;: &quot;Enable local dictation via Whisper.cpp for the composer mic button.&quot;,
+  &quot;order&quot;: 30
+}</code></pre>
+        <p>
+          The component receives <code>pa</code> and <code>settingsContext</code>. Use this for rich settings UIs; use
+          <code>settings</code> for simple scalar settings managed by the built-in extension settings form.
+        </p>
+        <h3 id="composer-controls-composercontrols">Composer Controls (<code>composerControls</code>)</h3>
+        <p>
+          Add component-backed controls in the composer bottom row. Core owns the row layout and passes composer state/actions through
+          <code>controlContext</code>; extensions own visible controls such as attachments, model preferences, dictation, and goal mode.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;dictation&quot;,
+  &quot;component&quot;: &quot;DictationButton&quot;,
+  &quot;title&quot;: &quot;Dictation&quot;,
+  &quot;slot&quot;: &quot;preferences&quot;,
+  &quot;when&quot;: &quot;!streamIsStreaming&quot;,
+  &quot;priority&quot;: 100
+}</code></pre>
+        <p>
+          Slots are <code>leading</code>, <code>preferences</code>, and <code>actions</code>. Controls sort by
+          <code>priority</code> ascending, then extension id, then contribution id. The component receives <code>pa</code>,
+          <code>controlContext</code>, and the legacy alias <code>buttonContext</code>. <code>controlContext.renderMode</code> is
+          <code>inline</code> or <code>menu</code>; <code>insertText(text)</code> inserts at the current composer selection;
+          <code>openFilePicker()</code> opens the core-owned attachment input; and model/goal fields expose the current composer preference
+          state.
+        </p>
+        <h3 id="composer-buttons-composerbuttons">Composer Buttons (<code>composerButtons</code>)</h3>
+        <p>
+          Legacy alias for composer controls. Existing <code>placement: &quot;afterModelPicker&quot;</code> maps to
+          <code>slot: &quot;preferences&quot;</code>; <code>placement: &quot;actions&quot;</code> maps to
+          <code>slot: &quot;actions&quot;</code>. New extensions should use <code>composerControls</code>.
+        </p>
+        <h3 id="composer-input-tools-composerinputtools">Composer Input Tools (<code>composerInputTools</code>)</h3>
+        <p>
+          Add component-backed tools beside the attachment button in the composer input row. Use this for input-producing tools such as
+          drawing editors or file-producing widgets, not submit-adjacent actions.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;draw&quot;,
+  &quot;component&quot;: &quot;DrawButton&quot;,
+  &quot;title&quot;: &quot;Create drawing&quot;,
+  &quot;when&quot;: &quot;!streamIsStreaming&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          The component receives <code>pa</code> and <code>toolContext</code>. <code>toolContext.addFiles(files)</code> routes files through
+          the normal composer attachment pipeline. <code>toolContext.upsertDrawingAttachment(payload)</code> adds an Excalidraw-compatible
+          drawing payload to the composer. Excalidraw tools should import shared serialization helpers from
+          <code>@neon-pilot/extensions/excalidraw</code> instead of duplicating preview/source generation.
+        </p>
+        <h3 id="prompt-assembly">Prompt Assembly</h3>
+        <p>
+          Prompt Assembly is the single runtime surface for deciding what the agent sees before a turn starts. It inventories and explains
+          skills, tools, prompt templates, prompt context provider blocks, and diagnostics from providers, hooks, validation, and runtime
+          policy. The built-in Prompt Assembly page at <code>/prompt-assembly</code> is the inspection and management surface.
+        </p>
+        <p>Use static manifest contributions first:</p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;skills&quot;: [{ &quot;id&quot;: &quot;agent-board&quot;, &quot;path&quot;: &quot;skills/agent-board/SKILL.md&quot; }],
+    &quot;tools&quot;: [{ &quot;id&quot;: &quot;create-task&quot;, &quot;description&quot;: &quot;Create a task.&quot;, &quot;action&quot;: &quot;createTask&quot; }]
+  }
+}</code></pre>
+        <p>Use dynamic providers only when a contribution is generated, external, or conditional at runtime:</p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;skillProviders&quot;: [{ &quot;id&quot;: &quot;generated-skills&quot;, &quot;handler&quot;: &quot;listGeneratedSkills&quot;, &quot;title&quot;: &quot;Generated Skills&quot; }],
+    &quot;toolProviders&quot;: [{ &quot;id&quot;: &quot;generated-tools&quot;, &quot;handler&quot;: &quot;listGeneratedTools&quot; }],
+    &quot;promptTemplateProviders&quot;: [{ &quot;id&quot;: &quot;generated-prompts&quot;, &quot;handler&quot;: &quot;listGeneratedPrompts&quot; }],
+    &quot;instructionProviders&quot;: [{ &quot;id&quot;: &quot;runtime-instructions&quot;, &quot;handler&quot;: &quot;listRuntimeInstructions&quot; }]
+  }
+}</code></pre>
+        <p>
+          Provider handlers may return either an array or an object keyed by the contribution kind, for example
+          <code>{ &quot;skills&quot;: [...] }</code>, <code>{ &quot;tools&quot;: [...] }</code>,
+          <code>{ &quot;templates&quot;: [...] }</code>, or <code>{ &quot;layers&quot;: [...] }</code>. Providers are isolated: failures,
+          timeouts, and malformed items become diagnostics and do not block the rest of assembly.
+        </p>
+        <p><code>promptAssemblyHooks</code> are the break-glass escape hatch for filtering or mutating the assembled plan:</p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;promptAssemblyHooks&quot;: [{ &quot;id&quot;: &quot;filter-runtime-context&quot;, &quot;handler&quot;: &quot;filterRuntimeContext&quot;, &quot;phase&quot;: &quot;before-injection&quot; }]
+  }
+}</code></pre>
+        <p>
+          Hooks are powerful. Prefer providers. Do not silently rewrite system instructions through hooks; use instruction/context providers
+          once available, and expose clear diagnostics for any mutation.
+        </p>
+        <h3 id="toolbar-actions-toolbaractions">Toolbar Actions (<code>toolbarActions</code>)</h3>
+        <p>Add simple action-backed icon buttons in the composer toolbar row. Action-based — no frontend entry needed.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;open-browser&quot;,
+  &quot;title&quot;: &quot;Open browser&quot;,
+  &quot;icon&quot;: &quot;browser&quot;,
+  &quot;action&quot;: &quot;openBrowserBackend&quot;,
+  &quot;when&quot;: &quot;!streamIsStreaming&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          <strong><code>when</code></strong> predicates:
+        </p>
+        <ul>
+          <li><code>composerHasContent</code> — input has text</li>
+          <li><code>streamIsStreaming</code> — agent is streaming</li>
+          <li><code>!streamIsStreaming</code> — agent is idle</li>
+        </ul>
+        <h3 id="composer-shelves-composershelves">Composer Shelves (<code>composerShelves</code>)</h3>
+        <p>
+          Add sections in the scrollable area above the composer input. Component-based — requires a frontend entry with a named component
+          export.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;status-shelf&quot;,
+  &quot;component&quot;: &quot;StatusShelf&quot;,
+  &quot;title&quot;: &quot;Status&quot;,
+  &quot;placement&quot;: &quot;bottom&quot;
+}</code></pre>
+        <p>
+          <strong><code>placement</code></strong
+          >: <code>&quot;top&quot;</code> (before built-in shelves) or <code>&quot;bottom&quot;</code> (after).
+        </p>
+        <p>The component receives:</p>
+        <pre><code>{
+  pa: NeonPilotClient;
+  shelfContext: {
+    conversationId: string;
+    isStreaming: boolean;
+    isLive: boolean;
+  }
+}</code></pre>
+        <h3 id="new-conversation-panels-newconversationpanels">New Conversation Panels (<code>newConversationPanels</code>)</h3>
+        <p>
+          Add panels to the new conversation empty state, below the workspace selector and above the composer. Use this for draft-only
+          guidance or prompt preparation UI that should not live inside the composer chrome.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;suggested-context&quot;,
+  &quot;component&quot;: &quot;SuggestedContextPanel&quot;,
+  &quot;title&quot;: &quot;Suggested Context&quot;,
+  &quot;priority&quot;: 100
+}</code></pre>
+        <p>The component receives:</p>
+        <pre><code>{
+  pa: NeonPilotClient;
+  panelContext: {
+    conversationId: string;
+  }
+}</code></pre>
+        <h3 id="conversation-decorators-conversationdecorators">Conversation Decorators (<code>conversationDecorators</code>)</h3>
+        <p>Add badges, icons, or indicators on conversation tab items in the sidebar. Component-based — requires a frontend entry.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;gateway-badge&quot;,
+  &quot;component&quot;: &quot;GatewayBadge&quot;,
+  &quot;position&quot;: &quot;after-title&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          <strong><code>position</code></strong
+          >: <code>&quot;before-title&quot;</code>, <code>&quot;after-title&quot;</code>, or <code>&quot;subtitle&quot;</code> (below
+          title).
+        </p>
+        <p>The component receives:</p>
+        <pre><code>{
+  pa: NeonPilotClient;
+  session: SessionMeta; // conversation metadata
+}</code></pre>
+        <h3 id="activity-tree-item-elements-activitytreeitemelements">
+          Activity Tree Item Elements (<code>activityTreeItemElements</code>)
+        </h3>
+        <p>
+          Add small component-backed elements to the shared activity tree rows used for conversations, executions, and future work items.
+          Core owns row layout, routing, selection, and keyboard behavior; extensions only fill safe slots.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;thread-color-dot&quot;,
+  &quot;component&quot;: &quot;ThreadColorDot&quot;,
+  &quot;slot&quot;: &quot;leading&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          <strong><code>slot</code></strong
+          >: <code>&quot;leading&quot;</code>, <code>&quot;before-title&quot;</code>, <code>&quot;after-title&quot;</code>,
+          <code>&quot;subtitle&quot;</code>, or <code>&quot;trailing&quot;</code>.
+        </p>
+        <h3 id="activity-tree-item-styles-activitytreeitemstyles">Activity Tree Item Styles (<code>activityTreeItemStyles</code>)</h3>
+        <p>
+          Register backend providers for data-only row styling metadata such as accent colors, backgrounds, or tooltip text. Providers are
+          sorted by <code>priority</code>; higher priority runs first.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;thread-color-style&quot;,
+  &quot;provider&quot;: &quot;getThreadColorStyle&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          The host will pass activity item metadata to the provider once the activity tree UI integration is enabled. Providers should
+          return sanitized data, not arbitrary DOM or CSS ownership.
+        </p>
+        <h3 id="context-menus-contextmenus">Context Menus (<code>contextMenus</code>)</h3>
+        <p>Add right-click menu items. Action-based — no frontend entry needed.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;copy-deeplink&quot;,
+  &quot;title&quot;: &quot;Copy Deeplink&quot;,
+  &quot;action&quot;: &quot;copyDeeplinkHandler&quot;,
+  &quot;surface&quot;: &quot;conversationList&quot;
+}</code></pre>
+        <p>
+          <strong><code>surface</code></strong
+          >: <code>&quot;message&quot;</code> (on message blocks) or <code>&quot;conversationList&quot;</code> (on sidebar items).
+        </p>
+        <p>Conversation list backend handler receives:</p>
+        <pre><code>{
+  conversationId: string;
+  sessionTitle: string;
+  cwd: string;
+}</code></pre>
+        <h3 id="thread-header-actions-threadheaderactions">Thread Header Actions (<code>threadHeaderActions</code>)</h3>
+        <p>
+          Add compact component buttons beside the left sidebar conversation header. Use this for conversation-list actions such as
+          importing a session.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;import-session&quot;,
+  &quot;component&quot;: &quot;ImportSessionButton&quot;,
+  &quot;title&quot;: &quot;Import Session&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          The component receives <code>{ pa, actionContext }</code>; <code>actionContext</code> includes
+          <code>activeConversationId</code> and <code>cwd</code> when available.
+        </p>
+        <h3 id="status-bar-items-statusbaritems">Status Bar Items (<code>statusBarItems</code>)</h3>
+        <p>Add labels in the status bar below the composer. Action-based — no frontend entry needed.</p>
+        <pre><code>{
+  &quot;id&quot;: &quot;gateway-status&quot;,
+  &quot;label&quot;: &quot;Gateway&quot;,
+  &quot;action&quot;: &quot;openGatewayPanel&quot;,
+  &quot;alignment&quot;: &quot;right&quot;,
+  &quot;priority&quot;: 10
+}</code></pre>
+        <p>
+          <strong><code>alignment</code></strong
+          >: <code>&quot;left&quot;</code> or <code>&quot;right&quot;</code>. <strong><code>priority</code></strong
+          >: sort order (higher = closer to edge). Items without an <code>action</code> are static labels. Items with an
+          <code>action</code> are clickable.
+        </p>
+        <h3 id="composer-host-boundary">Composer host boundary</h3>
+        <p>
+          Composer contribution contexts expose intent methods such as <code>insertText(text)</code>, <code>addFiles(files)</code>, and
+          <code>openFilePicker()</code>. Extensions request these actions; the host owns composer state, attachment ingestion, selection,
+          focus, and caret restoration.
+        </p>
+        <p>Rules:</p>
+        <ul>
+          <li>Extensions must not query or mutate host DOM to affect the composer.</li>
+          <li>Host code must not directly mutate controlled composer input values; text changes flow through React state/helpers.</li>
+          <li>
+            Imperative DOM is acceptable only for browser-owned UI state: focus, caret/selection, scroll, measurement, and the hidden file
+            input reset that lets users pick the same file twice.
+          </li>
+          <li>
+            If a new composer action needs state changes, add a host-owned intent method instead of passing refs or DOM handles across the
+            extension boundary.
+          </li>
+        </ul>
+        <h3 id="protocol-entrypoints-backend-protocolentrypoints">Protocol entrypoints (<code>backend.protocolEntrypoints</code>)</h3>
+        <p>
+          Extensions can expose host-launched stdio protocols such as ACP. The host resolves these by protocol id and wires
+          stdin/stdout/stderr into the backend handler.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;dist/backend.mjs&quot;,
+    &quot;protocolEntrypoints&quot;: [
+      {
+        &quot;id&quot;: &quot;acp&quot;,
+        &quot;handler&quot;: &quot;runAcpProtocol&quot;,
+        &quot;title&quot;: &quot;Agent Client Protocol&quot;
+      }
+    ]
+  }
+}</code></pre>
+        <p>The handler receives <code>ExtensionProtocolContext</code>, which extends the normal backend context with:</p>
+        <ul>
+          <li><code>protocolId</code></li>
+          <li><code>stdio.stdin</code></li>
+          <li><code>stdio.stdout</code></li>
+          <li><code>stdio.stderr</code></li>
+          <li><code>signal</code></li>
+        </ul>
+        <p>These entrypoints are intended for long-lived protocol sessions, not one-shot actions.</p>
+        <h3 id="tools">Tools</h3>
+        <p>
+          Extensions can register agent-callable tools. The agent sees them as <code>extension_{extensionId}_{toolId}</code> unless a custom
+          <code>name</code> is given.
+        </p>
+        <p>
+          Tool registration is intentionally stable for the life of an agent session. Register tools once and return a clear validation
+          error from the handler when the current app state does not support a call. Global <code>pi.setActiveTools</code> is blocked by the
+          desktop runtime; model profile extensions may use <code>ctx.setActiveTools(...)</code> from <code>session_start</code> or
+          <code>model_select</code> handlers to choose a session-scoped active tool surface over already-registered tools.
+        </p>
+        <p>
+          The tool definition already gives the model the <code>description</code> and JSON-schema <code>inputSchema</code>, including
+          parameter descriptions. Keep <code>promptGuidelines</code> high-signal: use them only for behavior the schema cannot express, such
+          as when not to use the tool, safety boundaries, or required follow-up behavior. One short sentence is the default. If a workflow
+          needs more than that, contribute an extension skill instead of stuffing a mini manual into every prompt.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;summarize&quot;,
+  &quot;name&quot;: &quot;summarize_text&quot;,
+  &quot;description&quot;: &quot;Summarize a block of text&quot;,
+  &quot;action&quot;: &quot;summarizeHandler&quot;,
+  &quot;inputSchema&quot;: {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;properties&quot;: {
+      &quot;text&quot;: { &quot;type&quot;: &quot;string&quot; }
+    },
+    &quot;required&quot;: [&quot;text&quot;]
+  }
+}</code></pre>
+        <p>#### Overriding built-in tools</p>
+        <p>
+          Extension tools can replace built-in tools using the <code>replaces</code> field. When set, the tool registers under the built-in
+          tool's name, overriding it.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;my-bash&quot;,
+  &quot;description&quot;: &quot;Safer bash execution with logging&quot;,
+  &quot;action&quot;: &quot;bashHandler&quot;,
+  &quot;replaces&quot;: &quot;bash&quot;,
+  &quot;inputSchema&quot;: {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;properties&quot;: {
+      &quot;command&quot;: { &quot;type&quot;: &quot;string&quot; }
+    },
+    &quot;required&quot;: [&quot;command&quot;]
+  }
+}</code></pre>
+        <p>
+          Supported overridable tools: <code>bash</code>, <code>read</code>, <code>write</code>, <code>edit</code>, <code>grep</code>,
+          <code>find</code>, <code>ls</code>, <code>notify</code>, <code>web_fetch</code>, <code>web_search</code>.
+        </p>
+        <p>
+          Use <code>when</code> to only register a tool for specific providers or models. This is the right shape for model-specific tool
+          replacements, because unsupported models never see the replacement tool.
+        </p>
+        <pre><code>{
+  &quot;id&quot;: &quot;apply-patch-edit&quot;,
+  &quot;description&quot;: &quot;Patch-based edit implementation for OpenAI models&quot;,
+  &quot;action&quot;: &quot;applyPatchEdit&quot;,
+  &quot;replaces&quot;: &quot;edit&quot;,
+  &quot;when&quot;: { &quot;providers&quot;: [&quot;openai&quot;, &quot;openai-codex&quot;], &quot;models&quot;: [&quot;gpt-5.2&quot;] },
+  &quot;inputSchema&quot;: { &quot;type&quot;: &quot;object&quot;, &quot;properties&quot;: { &quot;patch&quot;: { &quot;type&quot;: &quot;string&quot; } }, &quot;required&quot;: [&quot;patch&quot;] }
+}</code></pre>
+        <p>
+          <code>when.providers</code> matches provider/model refs such as <code>openai/gpt-5.2</code>; <code>when.models</code> matches
+          either <code>gpt-5.2</code> or <code>openai/gpt-5.2</code>.
+        </p>
+        <p>The replacement tool must accept the same input schema as the original and return compatible output.</p>
+        <p>#### Streaming progress in tool handlers</p>
+        <p>
+          Backend action handlers called from manifest-declared tools can stream progress updates during execution using
+          <code>ctx.toolContext?.onUpdate()</code>.
+        </p>
+        <pre><code>export async function longRunningHandler(input: unknown, ctx: ExtensionBackendContext) {
+  // Send progress updates back to the agent
+  ctx.toolContext?.onUpdate?.({
+    content: [{ type: 'text', text: 'Step 1 of 3 complete...' }],
+  });
+
+  const result = await doWork();
+
+  // Final result
+  return { content: [{ type: 'text', text: 'Done!' }] };
+}</code></pre>
+        <p>
+          This is useful for tools that take multiple seconds to complete — the agent sees intermediate progress instead of waiting
+          silently.```
+        </p>
+        <h2 id="frontend-ui">Frontend (UI)</h2>
+        <p>
+          Your <code>src/frontend.tsx</code> exports React components referenced in the manifest. The desktop app loads the extension
+          registry once at the app shell and shares it through context; do not add per-message or per-tool registry fetches in frontend
+          hosts.
+        </p>
+        <pre><code>import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+
+export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
+  return (
+    &lt;div&gt;
+      &lt;button onClick={() =&gt; pa.ui.toast('Hello!')}&gt;Test Toast&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+        <p>The <code>pa</code> client provides:</p>
+        <ul>
+          <li><code>pa.extension.invoke(actionId, input)</code> — call backend actions</li>
+          <li><code>pa.ui.toast(message, type)</code> — show toast notification</li>
+          <li><code>pa.ui.confirm(options)</code> — show confirmation dialog (<code>{ title?, message }</code>)</li>
+          <li>
+            <code>pa.ui.openModal(options)</code> — open a custom modal dialog (<code>{ title?, component, props? }</code>). The
+            <code>component</code> must be a named export from your extension's frontend entry. It receives
+            <code>{ pa, props, close }</code>. Returns a promise that resolves when the modal is closed.
+          </li>
+          <li><code>pa.storage.*</code> — read/write extension state</li>
+          <li><code>pa.workspace.*</code> — workspace file operations</li>
+          <li><code>pa.browser.*</code> — browser control</li>
+          <li><code>pa.runs.*</code> — background run operations</li>
+          <li><code>pa.automations.*</code> — scheduled task management</li>
+          <li><code>pa.events.publish(event, payload)</code> — publish inter-extension events</li>
+          <li><code>pa.extensions.callAction(id, action, input)</code> — call another extension's action</li>
+          <li><code>pa.extensions.listActions()</code> — list available extension actions</li>
+        </ul>
+        <p>See <code>packages/extensions/src/index.ts</code> for the full API.</p>
+        <p>
+          Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as
+          <code>@neon-pilot/extensions/backend/artifacts</code>, <code>/automations</code>, <code>/browser</code>, <code>/compaction</code>,
+          <code>/conversations</code>, <code>/images</code>, <code>/knowledge</code>, <code>/knowledgeVault</code>, <code>/mcp</code>,
+          <code>/runs</code>, <code>/runtime</code>, <code>/telemetry</code>, and <code>/webContent</code>. Prefer a focused subpath over
+          the broad backend barrel when bundling a system extension that only needs one backend service. For daemon-backed shell work in a
+          packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the
+          action actually starts or inspects background work.
+        </p>
+        <p>
+          The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
+          implementations under <code>packages/desktop/server/extensions/backendApi/*.ts</code>. Extension source imports only
+          <code>@neon-pilot/extensions/backend/{name}</code>. It must not import desktop server files, <code>@neon-pilot/core</code>,
+          <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension source may use type-only Pi imports for
+          extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be
+          thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in
+          half the app. <code>pnpm run check:extensions:quick</code> enforces this with
+          <code>scripts/check-extension-backend-api.mjs</code> and packaged source/bundle checks before packaged bundle checks run.
+        </p>
+        <p>
+          Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions
+          (<code>agent:run</code>, <code>agent:conversations</code>, etc.). Narrow host helpers such as <code>/compaction</code>,
+          <code>/runtime</code>, and <code>/webContent</code> are trusted system-extension internals; they do not create standalone
+          user-facing authority and should stay scoped to active hook/action context rather than growing into broad service APIs.
+        </p>
+        <p>
+          For model-backed extension workflows, use <code>@neon-pilot/extensions/backend/agent</code> instead of importing Pi directly.
+          <code>runAgentTask</code> runs a host-owned one-shot hidden agent task with optional image inputs, <code>tools: 'none'</code>, and
+          timeout cleanup; the host owns model lookup, auth storage, session creation, cancellation boundaries, and runtime policy.
+          Extensions must declare <code>agent:run</code> to use this seam. For multi-turn extension-owned workers, use
+          <code>createAgentConversation</code>, <code>sendAgentMessage</code>, <code>getAgentConversation</code>,
+          <code>listAgentConversations</code>, <code>abortAgentConversation</code>, and <code>disposeAgentConversation</code>; conversations
+          support hidden+ephemeral private worker sessions and visible+saved host conversations that appear in the normal conversation
+          system. Both modes are scoped to the owner extension id and require <code>agent:conversations</code>.
+        </p>
+        <p>Backend extensions can record fire-and-forget app telemetry through the dedicated telemetry seam:</p>
+        <pre><code>import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
+
+recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_completed', durationMs: 42 });</code></pre>
+        <p>
+          Backend action handlers can also use <code>ctx.telemetry.record(...)</code>, which records the same event shape and adds the
+          current extension id to metadata automatically.
+        </p>
+        <h2 id="main-page-layout">Main page layout</h2>
+        <p>Main-route extension pages should use the shared app page primitives instead of hand-rolled widths or padding:</p>
+        <pre><code>&lt;div className=&quot;h-full overflow-y-auto&quot;&gt;
+  &lt;AppPageLayout shellClassName=&quot;max-w-[72rem]&quot; contentClassName=&quot;space-y-10&quot;&gt;
+    &lt;AppPageIntro title=&quot;Page title&quot; summary=&quot;One sentence explaining what this page controls.&quot; actions={actions} /&gt;
+    {/* page sections */}
+  &lt;/AppPageLayout&gt;
+&lt;/div&gt;</code></pre>
+        <p>
+          Use the same <code>max-w-[72rem]</code>, <code>space-y-10</code>, and <code>AppPageIntro</code> title/summary pattern for normal
+          pages. Only use a wider shell for table-heavy management surfaces that genuinely need it.
+        </p>
+        <h2 id="styling-guidance">Styling guidance</h2>
+        <p>
+          Extension UIs should look native to Neon Pilot, not like embedded websites. Default to the shared primitives from
+          <code>@neon-pilot/extensions/ui</code> and Tailwind utility classes that use app theme tokens.
+        </p>
+        <pre><code>&lt;section className=&quot;space-y-4 border-t border-border-subtle pt-6&quot;&gt;
+  &lt;div className=&quot;flex items-baseline justify-between gap-4&quot;&gt;
+    &lt;h2 className=&quot;text-[18px] font-semibold tracking-tight text-primary&quot;&gt;Section title&lt;/h2&gt;
+    &lt;span className=&quot;text-[12px] text-dim&quot;&gt;Optional metadata&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;p className=&quot;max-w-3xl text-[13px] leading-6 text-secondary&quot;&gt;Short explanatory copy.&lt;/p&gt;
+  &lt;ToolbarButton&gt;Action&lt;/ToolbarButton&gt;
+&lt;/section&gt;</code></pre>
+        <p>Guidelines:</p>
+        <ul>
+          <li>
+            Use semantic theme tokens: <code>bg-base</code>, <code>bg-surface</code>, <code>bg-elevated</code>, <code>text-primary</code>,
+            <code>text-secondary</code>, <code>text-dim</code>, <code>border-border-subtle</code>, <code>text-accent</code>,
+            <code>text-success</code>, <code>text-warning</code>, and <code>text-danger</code>.
+          </li>
+          <li>
+            Avoid hard-coded colors, custom shadows, gradients, decorative pills, and nested bordered cards. Spacing, typography, and
+            alignment should do most of the hierarchy work.
+          </li>
+          <li>
+            Keep typography consistent: page titles come from <code>AppPageIntro</code>; section titles are usually
+            <code>text-[18px] font-semibold tracking-tight</code>; body copy is usually <code>text-[13px] leading-6 text-secondary</code>.
+          </li>
+          <li>
+            Prefer <code>ToolbarButton</code>, <code>EmptyState</code>, <code>LoadingState</code>, <code>ErrorState</code>,
+            <code>AppPageEmptyState</code>, and <code>AppPageSection</code> over local button/state implementations.
+          </li>
+          <li>
+            Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers
+            there.
+          </li>
+        </ul>
+        <p>
+          If a page needs a style that fights these defaults, first ask whether it should be a new shared primitive. One-off chrome is how
+          UI entropy sneaks in wearing a fake mustache.
+        </p>
+        <h2 id="backend-server-side">Backend (Server-side)</h2>
+        <p>
+          The backend runs in the Node.js server process. It exposes actions that the frontend can call via
+          <code>pa.extension.invoke()</code>. A backend can also declare <code>onEnableAction</code> in <code>extension.json</code> to run
+          an action immediately after the user enables the extension.
+        </p>
+        <p>
+          Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions,
+          services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls
+          <code>process.exit(...)</code>, <code>process.abort()</code>, or <code>process.kill(process.pid, ...)</code>, the call is blocked,
+          surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
+        </p>
+        <p>
+          Repeated backend infrastructure failures trip a circuit breaker: three failures in ten minutes disables the extension and adds an
+          Extension Manager diagnostic. This covers backend load/import failures, health checks, service startup, and similar host-level
+          failures; normal action handler errors are returned to the caller and do not quarantine the extension. Startup also has a
+          safe-mode marker. If the previous launch did not finish extension backend health checks, startup actions, service startup, and
+          subscription installation, the next launch disables enabled runtime/user extensions before loading them again.
+        </p>
+        <pre><code>import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+
+export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
+  ctx.log.info('ping received');
+  return { ok: true, at: new Date().toISOString() };
+}</code></pre>
+        <h3 id="settings">Settings</h3>
+        <p>
+          Extensions can declare user-facing settings in their manifest. These appear in the Settings UI (under &quot;Extensions&quot;)
+          grouped by the <code>group</code> field — no React code required for basic types.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;settings&quot;: {
+      &quot;myExt.timeout&quot;: {
+        &quot;type&quot;: &quot;number&quot;,
+        &quot;default&quot;: 30,
+        &quot;description&quot;: &quot;Timeout in seconds&quot;,
+        &quot;group&quot;: &quot;My Extension&quot;,
+        &quot;order&quot;: 1
+      },
+      &quot;myExt.featureEnabled&quot;: {
+        &quot;type&quot;: &quot;boolean&quot;,
+        &quot;default&quot;: true,
+        &quot;description&quot;: &quot;Enable the new feature&quot;,
+        &quot;group&quot;: &quot;My Extension&quot;,
+        &quot;order&quot;: 2
+      },
+      &quot;myExt.mode&quot;: {
+        &quot;type&quot;: &quot;select&quot;,
+        &quot;default&quot;: &quot;auto&quot;,
+        &quot;enum&quot;: [&quot;auto&quot;, &quot;manual&quot;, &quot;off&quot;],
+        &quot;description&quot;: &quot;Operation mode&quot;,
+        &quot;group&quot;: &quot;My Extension&quot;,
+        &quot;order&quot;: 3
+      }
+    }
+  }
+}</code></pre>
+        <p>
+          Each setting key is a dot-separated path (e.g. <code>myExt.timeout</code>). The Settings UI renders the appropriate control based
+          on <code>type</code>:
+        </p>
+        <p>
+          | Type | Control | | --------- | ------------ | | <code>string</code> | Text input | | <code>boolean</code> | Checkbox | |
+          <code>number</code> | Number input | | <code>select</code> | Dropdown |
+        </p>
+        <p>All settings are stored in a single <code>&lt;stateRoot&gt;/settings.json</code> file.</p>
+        <p>
+          | Property | Description | Required | | ------------- | --------------------------------------------- | ---------- | |
+          <code>type</code> | <code>string</code>, <code>boolean</code>, <code>number</code>, or <code>select</code> | Yes | |
+          <code>default</code> | Default value | No | | <code>description</code> | Shown next to the field in the Settings UI | No | |
+          <code>group</code> | Groups settings together. Default <code>&quot;General&quot;</code> | No | | <code>enum</code> | Allowed
+          values for <code>select</code> type | For select | | <code>placeholder</code> | Placeholder text for string inputs | No | |
+          <code>order</code> | Sort order within group. Default 0. | No |
+        </p>
+        <p>#### Settings vs Extension Storage</p>
+        <p>Extensions have two storage mechanisms for different purposes:</p>
+        <p>
+          | Mechanism | Location | Purpose | | ------------ | ------------------------------------ |
+          ---------------------------------------- | | <strong>Settings</strong> | <code>&lt;stateRoot&gt;/settings.json</code> (shared) |
+          User-facing config declared in manifest | | <strong>Storage</strong> | SQLite-backed, per-extension | Internal runtime state
+          (caches, session) |
+        </p>
+        <ul>
+          <li>Use <strong>settings</strong> for values the user configures through the Settings UI.</li>
+          <li>Use <strong>storage</strong> (<code>ctx.storage</code> / <code>pa.storage</code>) for internal state like</li>
+          <p>cached API responses, session tokens, or counter values.</p>
+          <li>
+            Use the <a href="https://github.com/patleeman/neon-pilot/blob/main/filesystem-authority.md">Filesystem Authority</a> for
+            extension-owned files/blobs, workspace files, temp workspaces, artifacts, and any path addressed by a user, agent, archive, or
+            external protocol.
+          </li>
+          <li>Settings are discoverable (all extensions contribute to a unified schema);</li>
+          <p>storage is private to each extension.</p>
+        </ul>
+        <h3 id="backend-context-ctx">Backend Context (<code>ctx</code>)</h3>
+        <p>The <code>ExtensionBackendContext</code> provides:</p>
+        <p>
+          | Property | Purpose | | ------------------- |
+          ------------------------------------------------------------------------------------------------------- | |
+          <code>ctx.storage</code> | Persistent key-value store per extension (SQLite-backed) | | <code>ctx.attention</code> |
+          Enqueue/list/cancel async conversation attention events (wakeups, callbacks) | | <code>ctx.automations</code> | Scheduled task
+          management | | <code>ctx.runs</code> | Background run management | | <code>ctx.conversations</code> | Conversation read/write
+          operations | | <code>ctx.filesystem</code> | Scoped filesystem authority for workspace, extension file storage, temp, artifact,
+          and other host roots | | <code>ctx.workspace</code> | Workspace file operations (read, write, list); convenience wrapper over the
+          filesystem authority | | <code>ctx.vault</code> | Knowledge vault operations | | <code>ctx.git</code> | Git status, diff, log | |
+          <code>ctx.shell</code> | Shell command execution | | <code>ctx.notify</code> | Toast, system notifications, badge (see below) | |
+          <code>ctx.events</code> | Inter-extension event pub/sub | | <code>ctx.extensions</code> | Call actions on other extensions | |
+          <code>ctx.ui</code> | Invalidate UI state topics | | <code>ctx.log</code> | Structured logging |
+        </p>
+        <h2 id="attention-events">Attention events</h2>
+        <p>
+          Use <code>ctx.attention</code> when an extension has async work that should resume or notify a conversation later. Extensions
+          submit intent; core owns batching, ordering, retries, and delivery.
+        </p>
+        <pre><code>await ctx.attention.enqueue({
+  prompt: 'The import finished. Summarize the result for the user.',
+  title: 'Import finished',
+  delivery: { mode: 'batchable', priority: 'normal' },
+});</code></pre>
+        <p>Delivery modes:</p>
+        <ul>
+          <li><code>batchable</code> — combine with other ready wakeups when possible.</li>
+          <li><code>sequential</code> — preserve order as a distinct follow-up.</li>
+          <li><code>isolated</code> — do not batch; use for approvals/ack-required events.</li>
+        </ul>
+        <p>
+          <code>ctx.attention.enqueue</code> uses the active conversation session when called from a tool/action context. Outside an active
+          conversation, pass <code>sessionFile</code> and optionally <code>conversationId</code>.
+        </p>
+        <p>
+          <strong>Permissions:</strong> <code>attention:write</code> for <code>enqueue</code>/<code>cancel</code>,
+          <code>attention:read</code> for <code>list</code>.
+        </p>
+        <h2 id="conversation-write-api">Conversation Write API</h2>
+        <p>The <code>conversations</code> object in the backend context now supports write operations in addition to reads.</p>
+        <pre><code>// Send a message into a live conversation
+await ctx.conversations.sendMessage(
+  conversationId,
+  'Your message here',
+  { steer: true }, // or { steer: false } for followUp
+);
+
+// Update the conversation title
+await ctx.conversations.setTitle(conversationId, 'New Title');
+
+// Trigger compaction
+await ctx.conversations.compact(conversationId);
+
+// Read operations (pre-existing)
+await ctx.conversations.list();
+await ctx.conversations.getMeta(conversationId);
+await ctx.conversations.get(conversationId, { tailBlocks: 20 });
+await ctx.conversations.searchIndex(sessionIds);</code></pre>
+        <p><strong>Permission required:</strong> <code>conversations:readwrite</code> for write operations.</p>
+        <p>The <code>conversations</code> capability also exposes first-class lifecycle helpers:</p>
+        <pre><code>const created = await ctx.conversations.create({ title: 'Research thread', cwd, initialPrompt: 'Start here' });
+const forked = await ctx.conversations.fork({ conversationId, title: 'Bug bash branch' });</code></pre>
+        <p>
+          <code>ctx.conversations.create(...)</code> accepts <code>allowedToolNames</code> for extension-created sessions that need a
+          runtime-enforced tool allowlist:
+        </p>
+        <pre><code>await ctx.conversations.create({
+  title: 'Web-only research',
+  allowedToolNames: ['web_search', 'web_fetch'],
+});</code></pre>
+        <p>
+          Use this for purpose-built conversations that must not receive the default local tool surface. The runtime applies the allowlist
+          when the live session is created; do not rely on prompt instructions alone for tool restrictions.
+        </p>
+        <p><strong>Limitations:</strong></p>
+        <ul>
+          <li>Most mutating operations still require the source conversation to be live (in-memory).</li>
+        </ul>
+        <h2 id="selection-actions-transcript-blocks-services-and-subscriptions">
+          Selection actions, transcript blocks, services, and subscriptions
+        </h2>
+        <p>
+          Extensions can declare selection-aware actions for selected text, files, messages, or transcript ranges. Selection actions can
+          include compact <code>icon</code> labels and static <code>args</code>; transcript selection menus merge those args with the active
+          selection for composer actions such as <code>composer.replyToSelection</code>. The frontend SDK exposes
+          <code>pa.selection.get()</code>, <code>pa.selection.set(...)</code>, and <code>pa.selection.subscribe(...)</code>; hosts and
+          extensions publish the current selection through the same shared model.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;selectionActions&quot;: [
+      {
+        &quot;id&quot;: &quot;reply-agree&quot;,
+        &quot;title&quot;: &quot;Agree / proceed&quot;,
+        &quot;action&quot;: &quot;composer.replyToSelection&quot;,
+        &quot;kinds&quot;: [&quot;text&quot;, &quot;transcriptRange&quot;],
+        &quot;icon&quot;: &quot;👍&quot;,
+        &quot;args&quot;: { &quot;draftText&quot;: &quot;👍 Agree&quot; }
+      }
+    ]
+  }
+}</code></pre>
+        <p>
+          Extensions can declare custom durable transcript block renderers and write extension-authored blocks from backend code. Blocks get
+          stable <code>extensionBlockId</code> metadata; updates mutate the live transcript block and fail if the block id is not found.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;transcriptBlocks&quot;: [{ &quot;id&quot;: &quot;approval&quot;, &quot;component&quot;: &quot;ApprovalBlock&quot;, &quot;schemaVersion&quot;: 1 }]
+  }
+}</code></pre>
+        <pre><code>await ctx.conversations.appendTranscriptBlock({ conversationId, blockType: 'approval', data: { status: 'pending' } });
+await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockType: 'approval', data: { status: 'approved' } });</code></pre>
+        <p>
+          Long-lived backend services are declared under <code>backend.services</code> so the host can own lifecycle, health, and restart
+          policy. Enabled extension services are started during extension startup; a service handler may return a stop function that the
+          host calls on shutdown, disable, reload, or restart. Extension Manager shows declared services plus live runtime state
+          (<code>running</code>, <code>stopped</code>, start time) from the host.
+        </p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;dist/backend.mjs&quot;,
+    &quot;services&quot;: [{ &quot;id&quot;: &quot;sync&quot;, &quot;handler&quot;: &quot;startSync&quot;, &quot;healthCheck&quot;: &quot;checkSync&quot;, &quot;restart&quot;: &quot;on-failure&quot; }],
+    &quot;onDisableAction&quot;: &quot;stopSync&quot;,
+    &quot;onUninstallAction&quot;: &quot;cleanup&quot;
+  }
+}</code></pre>
+        <p>
+          Event subscriptions are declared under <code>contributes.subscriptions</code> for host-owned event sources such as workspace
+          files, vault files, settings, conversations, routes, and selection changes. The host dispatches these through the extension event
+          bus as <code>host:{source}</code> events; <code>pattern</code> narrows the event name. Current built-in producers include
+          <code>host:workspaceFiles</code> for workspace writes/deletes/renames/moves, <code>host:settings</code> for settings updates,
+          frontend <code>host:selection</code> notifications when shared selection changes, and <code>host:conversation:*</code> lifecycle
+          events for live transcript/stream state.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;subscriptions&quot;: [{ &quot;id&quot;: &quot;watch-notes&quot;, &quot;source&quot;: &quot;vaultFiles&quot;, &quot;pattern&quot;: &quot;notes/**&quot;, &quot;handler&quot;: &quot;onVaultChange&quot; }]
+  }
+}</code></pre>
+        <p>Secrets are public manifest API, not an internal convention:</p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;secrets&quot;: {
+      &quot;apiKey&quot;: { &quot;label&quot;: &quot;API key&quot;, &quot;env&quot;: &quot;MY_EXTENSION_API_KEY&quot; }
+    }
+  },
+  &quot;permissions&quot;: [&quot;secrets:read&quot;]
+}</code></pre>
+        <p>
+          Resolve them in backend code with <code>ctx.secrets.get('apiKey')</code>. Environment variables declared by the extension take
+          precedence over stored values.
+        </p>
+        <p>Extensions can declare dependencies on other extensions:</p>
+        <pre><code>{
+  &quot;dependsOn&quot;: [&quot;system-knowledge&quot;, { &quot;id&quot;: &quot;agent-board&quot;, &quot;optional&quot;: true, &quot;version&quot;: &quot;^1.0.0&quot; }]
+}</code></pre>
+        <p>
+          Missing required dependencies are surfaced in Extension Manager diagnostics and block enabling the dependent extension. Optional
+          dependencies are documentation/discovery contracts and should be checked with <code>pa.extensions.getStatus(...)</code> or
+          <code>ctx.extensions.getStatus(...)</code> before use.
+        </p>
+        <h2 id="inter-extension-communication">Inter-extension Communication</h2>
+        <p>Extensions can communicate with each other through a shared event bus and by calling each other's actions.</p>
+        <h3 id="event-bus">Event Bus</h3>
+        <p>Publish events that other extensions subscribe to:</p>
+        <pre><code>// In extension A — backend.ts
+await ctx.events.publish({
+  event: 'task:completed',
+  payload: { taskId: '123', result: 'success' },
+});</code></pre>
+        <p>Subscribe to events from other extensions:</p>
+        <pre><code>// In extension B — backend.ts
+const sub = ctx.events.subscribe('task:*', async (event) =&gt; {
+  console.log(`Received ${event.event} from ${event.sourceExtensionId}`);
+  // event.payload, event.publishedAt
+});
+
+// Later, to unsubscribe:
+sub.unsubscribe();</code></pre>
+        <p><strong>Pattern syntax:</strong></p>
+        <ul>
+          <li><code>&quot;*&quot;</code> — matches all events</li>
+          <li><code>&quot;task:*&quot;</code> — matches <code>task:completed</code>, <code>task:failed</code>, etc.</li>
+          <li><code>&quot;task:completed&quot;</code> — exact match only</li>
+        </ul>
+        <h3 id="cross-extension-action-calls">Cross-extension Action Calls</h3>
+        <p>Call an action exposed by another extension:</p>
+        <pre><code>const result = await ctx.extensions.callAction('other-extension', 'someAction', { key: 'value' });</code></pre>
+        <p>List available extension actions:</p>
+        <pre><code>const actions = await ctx.extensions.listActions();
+// Returns: [{ extensionId, extensionName, actions: [{ id, title, description }] }]</code></pre>
+        <h2 id="notifications-and-badge">Notifications and Badge</h2>
+        <p>Extensions can send notifications and set dock badges:</p>
+        <pre><code>// In-app toast
+ctx.notify.toast('Hello!', 'info'); // &quot;info&quot; | &quot;warning&quot; | &quot;error&quot;
+
+// System notification (macOS notification centre)
+ctx.notify.system({
+  title: 'Task Complete',
+  message: 'Your background task finished.',
+  subtitle: 'Optional subtitle',
+  persistent: true, // stays until acknowledged
+});
+
+// Dock badge count (accumulated across all extensions)
+ctx.notify.setBadge(5); // Set badge to 5
+ctx.notify.clearBadge(); // Clear this extension's badge
+
+// Check if system notifications are available
+const available = ctx.notify.isSystemAvailable();</code></pre>
+        <h2 id="permissions">Permissions</h2>
+        <p>
+          Extensions must declare the permissions they need. The system currently enforces permissions for storage and conversation
+          operations.
+        </p>
+        <pre><code>{
+  &quot;permissions&quot;: [
+    &quot;storage:read&quot;,
+    &quot;storage:write&quot;,
+    &quot;storage:readwrite&quot;,
+    &quot;attention:read&quot;,
+    &quot;attention:write&quot;,
+    &quot;conversations:read&quot;,
+    &quot;conversations:readwrite&quot;,
+    &quot;vault:read&quot;,
+    &quot;vault:write&quot;,
+    &quot;vault:readwrite&quot;,
+    &quot;runs:read&quot;,
+    &quot;runs:start&quot;,
+    &quot;runs:cancel&quot;,
+    &quot;ui:notify&quot;
+  ]
+}</code></pre>
+        <p>Custom permissions are also supported: <code>&quot;${string}:${string}&quot;</code>.</p>
+        <h2 id="agent-lifecycle-hooks">Agent Lifecycle Hooks</h2>
+        <p>
+          Desktop manifest extensions can hook into the agent's lifecycle by exporting an <code>ExtensionFactory</code> function via the
+          <code>backend.agentExtension</code> field.
+        </p>
+        <pre><code>// backend.ts — exported as the value referenced by agentExtension
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+
+export default function (pi: ExtensionAPI) {
+  // Subscribe to agent lifecycle events
+  pi.on('before_agent_start', async (event, ctx) =&gt; {
+    // Modify the system prompt before each turn
+    return {
+      systemPrompt: event.systemPrompt + '\nExtra instructions for this turn...',
+    };
+  });
+
+  pi.on('tool_call', async (event, ctx) =&gt; {
+    // Block or modify tool calls
+    if (event.toolName === 'bash' &amp;&amp; event.input.command?.includes('rm -rf')) {
+      return { block: true, reason: 'Dangerous command blocked by extension' };
+    }
+  });
+
+  pi.on('tool_result', async (event, ctx) =&gt; {
+    // Post-process results
+    if (event.toolName === 'read') {
+      return { content: [{ type: 'text', text: event.content + '\n— End of file' }] };
+    }
+  });
+
+  pi.on('session_start', async (event, ctx) =&gt; {
+    ctx.ui.notify(`Session started: ${event.reason}`, 'info');
+  });
+
+  // Register custom tools
+  pi.registerTool({
+    name: 'my_tool',
+    label: 'My Tool',
+    description: 'A custom tool',
+    parameters: { type: 'object', properties: {} },
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      return { content: [{ type: 'text', text: 'Done!' }] };
+    },
+  });
+
+  // Override a built-in tool
+  pi.registerTool({
+    name: 'bash', // Same name as built-in → replaces it
+    label: 'Safe Bash',
+    description: 'Bash with guardrails',
+    parameters: { type: 'object', properties: { command: { type: 'string' } } },
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      // Custom implementation
+      return { content: [{ type: 'text', text: params.command }] };
+    },
+  });
+}</code></pre>
+        <p>Then in your manifest:</p>
+        <pre><code>{
+  &quot;backend&quot;: {
+    &quot;entry&quot;: &quot;src/backend.ts&quot;,
+    &quot;agentExtension&quot;: &quot;default&quot;
+  }
+}</code></pre>
+        <p>
+          The <code>agentExtension</code> field names the exported function that receives the <code>ExtensionAPI</code>. If set to
+          <code>&quot;default&quot;</code>, the default export is used.
+        </p>
+        <p><strong>All pi-coding-agent events are available:</strong></p>
+        <p>
+          | Event | When | Use Case | | -------------------------- | ----------------------------------- |
+          ------------------------------------ | | <code>before_agent_start</code> | Before the agent processes a prompt | Inject context,
+          modify system prompt | | <code>input</code> | User input received | Intercept or transform input | | <code>context</code> | Before
+          LLM call | Modify messages | | <code>tool_call</code> | Before tool execution | Block/modify tool calls | |
+          <code>tool_result</code> | After tool execution | Post-process results | | <code>session_start</code> | Session loaded |
+          Initialize state | | <code>session_shutdown</code> | Session ending | Clean up resources | | <code>session_before_compact</code> |
+          Before compaction | Customize compaction | | <code>message_start/update/end</code> | Message lifecycle | Custom rendering | |
+          <code>turn_start/end</code> | Turn lifecycle | Track progress | | <code>agent_start/end</code> | Agent cycle lifecycle | Track
+          agent activity |
+        </p>
+        <p>
+          For the full list of Pi lifecycle events and signatures, inspect the installed
+          <code>@earendil-works/pi-coding-agent</code> package docs that match the pinned dependency version.
+        </p>
+        <h2 id="development-workflow">Development Workflow</h2>
+        <h3 id="building">Building</h3>
+        <p>Extensions need to be built before they can be loaded:</p>
+        <pre><code>POST /api/extensions/my-ext/build
+
+# Or from the extension manager UI, click &quot;Build&quot;
+# Or from the repo for a local extension directory:
+pnpm run extension:build -- /path/to/my-extension</code></pre>
+        <p>
+          Frontend builds bundle the authoring SDK UI modules (<code>@neon-pilot/extensions/ui</code>, <code>/host</code>,
+          <code>/workbench</code>, <code>/data</code>, and <code>/settings</code>) into <code>dist/frontend.js</code>. The browser loads
+          that built file directly from <code>/api/extensions/&lt;id&gt;/files/...</code>, so frontend dist output must not leave
+          <code>@neon-pilot/extensions/*</code> as bare runtime imports.
+        </p>
+        <h3 id="hot-reload">Hot Reload</h3>
+        <p>After changing backend code:</p>
+        <pre><code>POST /api/extensions/my-ext/reload</code></pre>
+        <p>Note: the frontend is re-evaluated on page load. Use the extension manager UI's &quot;Reload&quot; button or restart the app.</p>
+        <h3 id="testing-integration">Testing Integration</h3>
+        <p>
+          Run the extension integration smoke tests to catch cross-extension issues before starting the app (manifest validation, route
+          conflicts, missing backend/frontend entries, handler export mismatches, and packaged-runtime backend import failures):
+        </p>
+        <pre><code># Run the full extension integration suite (includes ~25s dynamic import check)
+pnpm run check:extensions
+
+# Quick release/development gate (backend API check, packaged extension check, runtime smoke, filesystem authority)
+pnpm run check:extensions:quick
+
+# Run alongside the server endpoint smoke tests
+npx vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts \
+  packages/desktop/server/routes/registerAll.smoke.test.ts
+
+# Or include in the full test suite
+pnpm test</code></pre>
+        <p>
+          <code>pnpm run check:extensions</code> and <code>pnpm run check:extensions:quick</code> first run
+          <code>scripts/check-extension-backend-api.mjs</code> to keep the SDK backend subpath list and host backend API implementation list
+          in lockstep, and to block backend API seams from statically importing known heavy/runtime internals. They also run
+          <code>scripts/check-packaged-extensions.mjs</code>. That packaged check imports every system and experimental extension backend
+          from its built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool surfaces such as
+          <code>scheduled_task</code>, and runs product-critical smoke calls for Knowledge, Automations, and Diffs extension actions. It
+          fails on forbidden bare imports that are not available inside the packaged desktop app, such as
+          <code>@earendil-works/pi-coding-agent</code>, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, <code>jsdom</code>,
+          and <code>@sinclair/typebox</code>. It also rejects absolute or <code>file:</code> imports, forbidden bundled runtime path
+          fragments, and backend bundles over their explicit byte budget. The packaged-extension hardening knobs live in
+          <code>scripts/extension-hardening-config.mjs</code>, so smoke inputs and size budgets are explicit instead of being buried in the
+          checker. This catches release-temp paths, accidental daemon bundling, runaway backend API seams, and the “works from repo
+          node_modules, breaks in the signed app” class of extension bug before release.
+        </p>
+        <p>
+          The desktop server also runs an enabled-extension backend health check on startup. Failures are logged, surfaced as extension
+          diagnostics, and shown by Extension Manager instead of silently making tools or actions disappear. System extension diagnostics
+          are release blockers: the integration smoke suite fails when a system extension has registry errors, diagnostics, stale
+          <code>dist/</code> output, missing exports, forbidden imports, or backend import crashes. Extension builds write
+          <code>dist/build-manifest.json</code> with output files, byte sizes, and remaining external imports. Use Extension Manager UI
+          actions or <code>/api/extensions</code> endpoints for local extension authoring: list, create, snapshot, build, validate, and
+          reload. Run validate after each build to check manifest references, dist files, stale output, frontend/backend exports, tool
+          schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes for one extension. The
+          release publisher reruns the packaged-extension check against the built <code>.app</code> before notarization/upload.
+        </p>
+        <p>The integration suite covers these categories:</p>
+        <p>
+          | Category | What it validates | | ------------------------- |
+          ---------------------------------------------------------------------------------------------------------------------------------------------------------
+          | | Manifest structure | JSON parses, schemaVersion, version field, required fields, permissions format, routes, startup action
+          validity, backend/no-backend consistency | | Tool schema | <code>inputSchema</code> has <code>type:object</code> +
+          <code>properties</code>, <code>replaces</code> targets valid built-ins | | Action references | All <code>action</code> fields in
+          context menus, commands, toolbar actions, nav badge actions reference known backend handlers or valid system patterns | |
+          Settings/Secrets | Setting type/default consistency, select enum values, dot-separated key format, secret env var format | |
+          Frontend components | Every component field in views/buttons/shelves/panels exists in the frontend bundle | | Cross-extension
+          conflicts | Duplicate IDs, routes, tool names, commands, keybindings, settings, secrets, env variables, mention ids, prompt
+          reference/context provider/quick open ids | | Registry sanity | All 25 system extensions registered, routes point to real
+          extensions | | Backend files | <code>dist/backend.mjs</code> exists, source files present, handler names match | | Frontend files
+          | <code>dist/frontend.js</code> exists, style files present | | Agent extensions | Registration listing, export names, backend
+          entry references | | Skills | File existence, valid Agent Skills frontmatter | | Summary report | Printed overview with counts
+          across 21 registration categories |
+        </p>
+        <h3 id="debugging">Debugging</h3>
+        <ul>
+          <li>Backend logs appear in the server console with <code>[extension:my-ext]</code> prefix.</li>
+          <li>Frontend errors appear in the web console.</li>
+          <li>Use <code>ctx.log.info/warn/error()</code> for structured logging.</li>
+          <li>Check the extension manager UI for diagnostics.</li>
+        </ul>
+        <h3 id="state">State</h3>
+        <p>Extensions get persistent key-value storage:</p>
+        <pre><code>// Write
+await ctx.storage.put('my-key', { count: 42 });
+
+// Read
+const data = await ctx.storage.get('my-key');
+
+// List
+const items = await ctx.storage.list('prefix-');
+
+// Delete
+await ctx.storage.delete('my-key');</code></pre>
+        <p>State is SQLite-backed and survives app restarts.</p>
+        <h2 id="examples">Examples</h2>
+        <p>See the system extensions in <code>extensions/</code> for practical examples:</p>
+        <ul>
+          <li>
+            <strong><code>system-artifacts</code></strong> — Tools + views + transcript renderer + skills
+          </li>
+          <li>
+            <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
+            (<code>experimental-extensions/extensions/system-browser</code>)
+          </li>
+          <li>
+            <strong><code>system-automations</code></strong> — Scheduled tasks, follow-up queues, and the Automations page
+          </li>
+          <li>
+            <strong><code>system-images</code></strong> — Experimental image generation tool
+            (<code>experimental-extensions/extensions/system-images</code>)
+          </li>
+          <li>
+            <strong><code>system-conversation-tools</code></strong> — Agent lifecycle hooks + contextMenus
+          </li>
+          <li>
+            <strong><code>system-extension-manager</code></strong> — Extension management UI + nav
+          </li>
+          <li>
+            <strong><code>system-runs</code></strong> — Background runs + composer shelf (ActivityShelf)
+          </li>
+          <li>
+            <strong><code>system-gateways</code></strong> — Experimental Telegram gateway management UI + nav
+            (<code>experimental-extensions/extensions/system-gateways</code>)
+          </li>
+          <li>
+            <strong><code>system-settings</code></strong> — Settings panels + nav
+          </li>
+        </ul>
+        <p>
+          Each system extension has a complete <code>extension.json</code> manifest and <code>src/backend.ts</code> + optionally
+          <code>src/frontend.tsx</code>.
+        </p>
+        <p>
+          Bundled system extensions keep source next to their built output for development. Backend <code>dist/</code> output is
+          authoritative by default in both dev and packaged runtimes: if <code>backend.entry</code> points at source
+          (<code>src/backend.ts</code>), normal app startup loads sibling <code>dist/backend.mjs</code>; source recompilation is reserved
+          for explicit extension-authoring mode (<code>NEON_PILOT_EXTENSION_AUTHORING=1</code>). If <code>backend.entry</code> already
+          points at built output such as <code>dist/backend.mjs</code>, both dev and packaged builds load that file directly. System
+          extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their
+          <code>dist/frontend.js</code> bundles are still built and validated as release artifacts.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extensions.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#contents">Contents</a><a href="#agent-first-workflow">Agent-first workflow</a
+        ><a href="#core-vs-extensions">Core vs extensions</a><a href="#extension-structure">Extension Structure</a
+        ><a href="#manifest-extension-json">Manifest (`extension.json`)</a><a href="#frontend-ui">Frontend (UI)</a
+        ><a href="#main-page-layout">Main page layout</a><a href="#styling-guidance">Styling guidance</a
+        ><a href="#backend-server-side">Backend (Server-side)</a><a href="#attention-events">Attention events</a
+        ><a href="#conversation-write-api">Conversation Write API</a
+        ><a href="#selection-actions-transcript-blocks-services-and-subscriptions"
+          >Selection actions, transcript blocks, services, and subscriptions</a
+        ><a href="#inter-extension-communication">Inter-extension Communication</a
+        ><a href="#notifications-and-badge">Notifications and Badge</a><a href="#permissions">Permissions</a
+        ><a href="#agent-lifecycle-hooks">Agent Lifecycle Hooks</a><a href="#development-workflow">Development Workflow</a
+        ><a href="#examples">Examples</a>
+      </aside>
+    </main>
+  </body>
+</html>

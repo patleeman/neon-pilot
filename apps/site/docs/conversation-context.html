@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Conversation Context · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="active" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="conversation-context">Conversation Context</h1>
+        <p>
+          Conversations can carry durable context through file references, attached docs, and binary uploads. The agent sees this context
+          alongside the conversation history.
+        </p>
+        <h2 id="file-references">File References</h2>
+        <p>
+          Type <code>@</code> in the composer to fuzzy-search workspace files. Matching files appear in a dropdown. Select one to insert a
+          reference.
+        </p>
+        <p>
+          The referenced file content is injected into the prompt when the message is sent. The agent sees the full file contents, not just
+          the path.
+        </p>
+        <pre><code>User: @src/auth.ts Can you review this file?
+      @src/auth.test.ts And its tests?
+
+Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
+        <h2 id="attached-context-docs">Attached Context Docs</h2>
+        <p>Drag a markdown file into the composer or use the attach button to pin it as conversation-scoped durable context.</p>
+        <p>Attached docs:</p>
+        <ul>
+          <li>Persist across all turns in the conversation</li>
+          <li>Appear in the Knowledge rail when workbench mode is active</li>
+          <li>Are loaded by the agent on every turn</li>
+          <li>Do not modify the vault — they are scoped to the conversation</li>
+        </ul>
+        <p>Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge rail.</p>
+        <h2 id="binary-attachments">Binary Attachments</h2>
+        <p>Images, PDFs, and other binary files can be attached to individual messages:</p>
+        <p>
+          | Method | How | | ----------- | ----------------------------------------- | | Paste | <code>Ctrl+V</code> (macOS) or
+          <code>Ctrl+V</code> (Windows) | | Drag | Drag file into the composer | | File picker | Use the attachment button in the composer |
+        </p>
+        <p>
+          Images are sent to image-capable models as image content. The composer downscales large images before upload, and text-only image
+          probing caps each prompt at 8 images / 8 MiB per image. For text-only models, Neon Pilot saves the images locally, assigns stable
+          <code>img_&lt;hash&gt;</code> IDs, and injects the <code>probe_image</code> tool only when a preferred vision model is configured
+          in Settings. The agent calls <code>probe_image</code> with one or more image IDs and a focused question; multi-image calls handle
+          comparisons. Other binary formats are stored as conversation attachments but may not be visible to all models.
+        </p>
+        <h2 id="context-loading-order">Context Loading Order</h2>
+        <p>When the agent builds context for a turn, it merges inputs in this order:</p>
+        <p>
+          1. <strong>Instruction files</strong> — standing behavior and policy from vault or config 2.
+          <strong>Attached context docs</strong> — durable docs pinned to this conversation 3.
+          <strong>Inline <code>@</code> file references</strong> — files referenced in the current message 4.
+          <strong>Binary attachments</strong> — images and files attached to the current message 5. <strong>Conversation history</strong> —
+          previous turns in this thread
+        </p>
+        <p>Later entries have higher priority for conflicting instructions.</p>
+        <h2 id="use-cases">Use Cases</h2>
+        <ul>
+          <li><strong>Project setup</strong> — attach a <code>CONTEXT.md</code> doc that describes the project</li>
+          <li><strong>Code review</strong> — <code>@</code> reference specific files for the agent to analyze</li>
+          <li><strong>Design feedback</strong> — paste a screenshot and ask for visual feedback</li>
+          <li><strong>Multi-file changes</strong> — reference several files and ask for coordinated edits</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/conversation-context.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#file-references">File References</a><a href="#attached-context-docs">Attached Context Docs</a
+        ><a href="#binary-attachments">Binary Attachments</a><a href="#context-loading-order">Context Loading Order</a
+        ><a href="#use-cases">Use Cases</a>
+      </aside>
+    </main>
+  </body>
+</html>

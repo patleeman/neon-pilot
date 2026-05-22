@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Daemon · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="active" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="daemon">Daemon</h1>
+        <p>
+          The daemon is a long-lived background process that owns durable runtime behavior. The desktop app manages it automatically — start
+          and stop happen with the app lifecycle.
+        </p>
+        <h2 id="what-the-daemon-owns">What the Daemon Owns</h2>
+        <p>
+          | Component | Description | | --------------- | ----------------------------------------------------------------------------- | |
+          Background work | Detached commands and subagents, started from conversations, inspected later | | Scheduled tasks | Recurring or
+          one-time automations with cron or natural-language schedules | | Wakeups | Conversation callbacks triggered by completed
+          background work and automations | | Follow-up queue | Tell-me-later wakeups that resume a specific conversation |
+        </p>
+        <h2 id="lifecycle">Lifecycle</h2>
+        <p>
+          The desktop app spawns the daemon as a child process on launch and sends SIGTERM on quit. The daemon communicates over a local
+          Unix socket.
+        </p>
+        <pre><code>Desktop app ←──→ Daemon (child process)
+                    │
+                    ├── Runtime DB (SQLite)
+                    ├── Automation store
+                    ├── Run logs</code></pre>
+        <p>If the daemon crashes or is killed, the desktop app restarts it automatically.</p>
+        <h2 id="durable-agent-runs">Durable Agent Runs</h2>
+        <p>
+          Subagents and scheduled agent tasks run through the daemon's internal background agent runner. The daemon still spawns a child
+          process for isolation, logs, cancellation, and replay, but that child imports the same server-side agent session stack used by
+          live conversations instead of shelling out to the <code>pi</code> or <code>pa</code> CLI binaries.
+        </p>
+        <h2 id="daemon-state-api">Daemon State API</h2>
+        <p>
+          | Endpoint | Method | What it returns | | ------------- | ------ | ---------------------------------------- | |
+          <code>/api/daemon</code> | GET | Current daemon runtime status and uptime |
+        </p>
+        <h3 id="state-response">State response</h3>
+        <pre><code>{
+  &quot;running&quot;: true,
+  &quot;pid&quot;: 82341,
+  &quot;uptimeMs&quot;: 2845000
+}</code></pre>
+        <h2 id="state-storage">State Storage</h2>
+        <p>
+          The daemon stores its state in <code>&lt;state-root&gt;/daemon/</code> by default. If <code>NEON_PILOT_DAEMON_NAMESPACE</code> is
+          set, daemon runtime files live in <code>&lt;state-root&gt;/daemon-&lt;namespace&gt;/</code>; the namespace is sanitized for path
+          safety. Dev/test desktop processes set a unique namespace per invocation unless one is explicitly provided, so multiple dev/test
+          apps can run without sharing sockets, pid locks, runtime DBs, or logs. If <code>NEON_PILOT_DAEMON_SOCKET_PATH</code> is set,
+          daemon runtime files live beside that explicit socket path instead and the namespace is ignored; this lets dev hosts pin a
+          specific isolated runtime DB.
+        </p>
+        <p>
+          | Path | Content | | ------------ | ------------------------------------------------------------ | | <code>runtime.db</code> |
+          SQLite database for durable runs, scheduled tasks, reminders | | <code>socket</code> | Local Unix socket for desktop app
+          communication | | <code>logs/</code> | Background work output logs |
+        </p>
+        <p>
+          On startup, the runtime DB is integrity-checked before schema setup. If SQLite reports corruption, the app tries to recover it
+          with <code>sqlite3 .recover</code>, quarantines the original files under <code>.corrupt/</code>, and recreates a healthy DB if
+          recovery is unavailable.
+        </p>
+        <h2 id="configuration">Configuration</h2>
+        <p>Daemon settings are part of the main config.json:</p>
+        <pre><code>{
+  &quot;daemon&quot;: {}
+}</code></pre>
+        <p>Most daemon settings are managed through the desktop Settings UI and do not require manual config file edits.</p>
+        <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/daemon.md">Edit this page on GitHub →</a></p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#what-the-daemon-owns">What the Daemon Owns</a><a href="#lifecycle">Lifecycle</a
+        ><a href="#durable-agent-runs">Durable Agent Runs</a><a href="#daemon-state-api">Daemon State API</a
+        ><a href="#state-storage">State Storage</a><a href="#configuration">Configuration</a>
+      </aside>
+    </main>
+  </body>
+</html>

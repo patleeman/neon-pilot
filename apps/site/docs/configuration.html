@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Configuration · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="active" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="configuration-and-settings">Configuration and Settings</h1>
+        <p>
+          Neon Pilot has several configuration stores. Do not treat <code>config.json</code> as the whole settings system: machine config,
+          runtime agent settings, extension settings, provider definitions, credentials, desktop preferences, and browser-local UI state
+          each have different owners.
+        </p>
+        <p>
+          Neon Pilot no longer has user-selectable profiles. Some storage paths and compatibility APIs still use the legacy word
+          <code>profile</code>; treat those as the single shared runtime scope, not a product concept.
+        </p>
+        <h2 id="path-roots">Path roots</h2>
+        <p>
+          | Root | Default | Override | Purpose | | ------------------- | ----------------------------------------------------------- |
+          ------------------------------ | ------------------------------------------------------------------------------- | |
+          <code>&lt;state-root&gt;</code> | <code>~/.local/state/neon-pilot</code> or <code>$XDG_STATE_HOME/neon-pilot</code> |
+          <code>NEON_PILOT_STATE_ROOT</code> | Runtime state, daemon DBs, extension installs, active agent files | |
+          <code>&lt;config-root&gt;</code> | <code>&lt;state-root&gt;/config</code> | <code>NEON_PILOT_CONFIG_ROOT</code> | Machine-local
+          durable config | | Machine config file | <code>&lt;config-root&gt;/config.json</code> | <code>NEON_PILOT_CONFIG_FILE</code> |
+          Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections | | Local config dir |
+          <code>&lt;config-root&gt;/local</code> | <code>NEON_PILOT_LOCAL_PROFILE_DIR</code> | Local settings mirror for active runtime
+          settings |
+        </p>
+        <h2 id="machine-config">Machine config</h2>
+        <p>
+          <code>&lt;config-root&gt;/config.json</code> is machine-local configuration. It is not a layered settings file and there is no
+          active <code>&lt;config-root&gt;/local/config.json</code> overlay.
+        </p>
+        <p>Current machine config keys:</p>
+        <p>
+          | Key | Type | Used for | | ---------------------- | -------- |
+          ------------------------------------------------------------------- | | <code>vaultRoot</code> | string | Legacy explicit
+          knowledge vault root | | <code>knowledgeBaseRepoUrl</code> | string | Managed git-backed knowledge base repo | |
+          <code>knowledgeBaseBranch</code> | string | Managed knowledge base branch, default <code>main</code> | |
+          <code>instructionFiles</code> | string[] | Extra AGENTS.md-style files appended to runtime instructions | |
+          <code>skillDirs</code> | string[] | Extra skill directories loaded alongside the vault skills directory | | <code>daemon</code> |
+          object | Daemon machine config section | | <code>ui</code> | object | UI machine config section, including fallback resume prompt
+          |
+        </p>
+        <p>Example:</p>
+        <pre><code>{
+  &quot;knowledgeBaseRepoUrl&quot;: &quot;git@github.com:user/neon-pilot-kb.git&quot;,
+  &quot;knowledgeBaseBranch&quot;: &quot;main&quot;,
+  &quot;instructionFiles&quot;: [&quot;/Users/me/agent/extra-AGENTS.md&quot;],
+  &quot;skillDirs&quot;: [&quot;/Users/me/agent/skills&quot;]
+}</code></pre>
+        <h2 id="runtime-agent-settings">Runtime agent settings</h2>
+        <p>The active agent/runtime settings file is:</p>
+        <pre><code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code></pre>
+        <p>
+          This file is materialized from resolved runtime resources and is also where app-level runtime preferences are written. The desktop
+          Settings page writes through APIs that preserve existing settings and mirror writes to the legacy local settings path where
+          needed.
+        </p>
+        <p>Common runtime settings include:</p>
+        <p>
+          | Key | Purpose | | --------------------------------------------- |
+          ------------------------------------------------------------------ | | <code>defaultProvider</code>, <code>defaultModel</code> |
+          Default model for new conversations and runs | | <code>defaultVisionProvider</code>, <code>defaultVisionModel</code> | Vision
+          model used by <code>probe_image</code> for text-only models | | <code>defaultThinkingLevel</code> | Default reasoning level | |
+          <code>defaultServiceTier</code> | Optional model service tier, e.g. fast/priority mode | | <code>defaultCwd</code> | Default
+          working directory for new chats and web actions | | <code>ui.*</code> | Conversation list/layout preferences and conversation plan
+          presets | | <code>lastChangelogVersion</code> | Runtime UI bookkeeping |
+        </p>
+        <p>
+          Do not put arbitrary product feature state here. Product features should own state through their extension storage, daemon/runtime
+          DB tables, or a deliberate extension API.
+        </p>
+        <h2 id="extension-settings">Extension settings</h2>
+        <p>Extensions have two settings mechanisms:</p>
+        <p>
+          1. <strong>Scalar settings</strong> declared in <code>extension.json</code> under <code>contributes.settings</code>. These are
+          exposed through <code>/api/settings</code>, merged with manifest defaults, and persisted as overrides in:
+        </p>
+        <p>``<code>text &lt;state-root&gt;/settings.json </code>``</p>
+        <p>
+          2. <strong>Component-backed settings UI</strong> declared by an extension as <code>contributes.settingsComponent</code>. The
+          component renders inside the Settings page and should read/write through extension backend actions or stable SDK APIs.
+        </p>
+        <p>
+          The Settings page has an <strong>Extension Settings</strong> section for scalar manifest settings. Rich first-party panels, such
+          as Dictation or Knowledge, should live in their owning system extension and use stable extension APIs rather than app-shell
+          special cases.
+        </p>
+        <h2 id="models-providers-and-credentials">Models, providers, and credentials</h2>
+        <p>Model/provider configuration is split on purpose:</p>
+        <p>
+          | Store | Default path | Purpose | | ----------------------------- | -------------------------------------------------------------
+          | ------------------------------------------------------------------------------ | | Provider/model definitions |
+          <code>&lt;config-root&gt;/runtime/shared/models.json</code> | Custom providers, model overrides, context windows, costs,
+          compatibility flags | | Active runtime model registry | <code>&lt;state-root&gt;/neon-pilot-runtime/models.json</code> |
+          Materialized model definitions read by the runtime | | Legacy provider credentials |
+          <code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> | Existing API keys and OAuth tokens managed through Settings | |
+          Extension secrets | macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, or env-only | Extension-declared secrets such as
+          integration API keys | | Environment credentials | <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>,
+          <code>GOOGLE_API_KEY</code>, etc. | Runtime-only credential source; not persisted |
+        </p>
+        <p>
+          Provider credentials should be managed through Settings. Manual edits to <code>auth.json</code> are possible but discouraged. New
+          extension secrets should use <code>contributes.secrets</code>; the active backend is configured by
+          <code>secrets.provider</code> (<code>keychain</code>, <code>file</code>, or <code>env-only</code>). Environment variables declared
+          by the extension take precedence over stored values.
+        </p>
+        <p>
+          Enabled extensions may contribute <code>modelProfiles</code> that match provider/model refs with simple globs over
+          <code>&lt;provider&gt;/&lt;model&gt;</code>, for example <code>openai-codex/*</code> or <code>*/gpt-5.5</code>. These are model
+          compatibility profiles, not user-selectable app profiles. The owning extension implements runtime behavior through normal
+          extension hooks and tools; disabled extensions do not participate, and models do not declare profiles.
+        </p>
+        <p>
+          If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists
+          still take precedence.
+        </p>
+        <h2 id="knowledge-vault-resolution">Knowledge vault resolution</h2>
+        <p>The effective knowledge vault root resolves in this order:</p>
+        <p>
+          1. <code>NEON_PILOT_VAULT_ROOT</code> 2. Managed knowledge-base mirror at <code>&lt;state-root&gt;/knowledge-base/repo</code> when
+          <code>knowledgeBaseRepoUrl</code> is configured 3. Legacy <code>vaultRoot</code> from machine config 4.
+          <code>~/Documents/neon-pilot</code>
+        </p>
+        <p>
+          Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync
+          inputs.
+        </p>
+        <h2 id="desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</h2>
+        <p>Not every Settings-page control writes to the same JSON file:</p>
+        <p>
+          | Area | Source of truth | | ------------------------------------------------------- |
+          --------------------------------------------------------------------- | | Appearance theme picker | Browser/Electron
+          <code>localStorage</code> plus contributed extension themes | | Conversation defaults |
+          <code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code> | | Workspace default cwd |
+          <code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code> | | Skills and extra instruction files |
+          <code>&lt;config-root&gt;/config.json</code> | | Provider/model definitions |
+          <code>&lt;config-root&gt;/runtime/shared/models.json</code> | | Provider credentials |
+          <code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> and environment variables | | Extension secrets | macOS Keychain,
+          <code>&lt;state-root&gt;/secrets.json</code>, or environment only | | Desktop update/startup/keyboard preferences |
+          <code>&lt;state-root&gt;/desktop/config.json</code> | | Extension enablement and extension keybinding overrides |
+          <code>&lt;state-root&gt;/extensions/registry.json</code> | | Extension scalar settings |
+          <code>&lt;state-root&gt;/settings.json</code> | | Automations, reminders, durable executions | Daemon runtime database |
+        </p>
+        <h2 id="rule-of-thumb">Rule of thumb</h2>
+        <p>
+          Use machine config for machine-wide roots and discovery inputs. Use runtime settings for active agent defaults. Use extension
+          settings/storage for product features. If an extension needs a new kind of configuration, add a reusable extension API instead of
+          hiding feature-specific config in core.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/configuration.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#path-roots">Path roots</a><a href="#machine-config">Machine config</a
+        ><a href="#runtime-agent-settings">Runtime agent settings</a><a href="#extension-settings">Extension settings</a
+        ><a href="#models-providers-and-credentials">Models, providers, and credentials</a
+        ><a href="#knowledge-vault-resolution">Knowledge vault resolution</a
+        ><a href="#desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</a><a href="#rule-of-thumb">Rule of thumb</a>
+      </aside>
+    </main>
+  </body>
+</html>
