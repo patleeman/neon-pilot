@@ -7,14 +7,11 @@ import {
   readConversationCheckpointReviewContextCapability,
 } from '../conversations/conversationAssetsCapability.js';
 import { readConversationContextDocs, writeConversationContextDocs } from '../conversations/conversationContextDocs.js';
-import {
-  ConversationInspectCapabilityInputError,
-  searchConversationInspectSessions,
-} from '../conversations/conversationInspectCapability.js';
+import { ConversationInspectCapabilityInputError } from '../conversations/conversationInspectCapability.js';
 import { publishConversationSessionMetaChanged, setConversationServiceContext } from '../conversations/conversationService.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
-import { readSessionImageAsset } from '../conversations/sessions.js';
+import { readSessionImageAsset, readSessionSearchTextForMeta, type SessionMeta } from '../conversations/sessions.js';
 import { logError } from '../middleware/index.js';
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
 import type { ServerRouteContext } from './context.js';
@@ -41,6 +38,77 @@ function parseNonNegativeIntegerPath(value: string): number | null {
   }
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function normalizeSearchTerms(query: unknown): string[] {
+  return typeof query === 'string'
+    ? query
+        .toLowerCase()
+        .split(/\s+/)
+        .map((term) => term.trim())
+        .filter((term) => term.length > 0)
+    : [];
+}
+
+function extractSearchSnippet(text: string, terms: string[], maxCharacters = 220): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const lower = normalized.toLowerCase();
+  const firstIndex = terms.reduce((best, term) => {
+    const index = lower.indexOf(term);
+    return index >= 0 && (best < 0 || index < best) ? index : best;
+  }, -1);
+  const start = Math.max(0, (firstIndex < 0 ? 0 : firstIndex) - Math.floor(maxCharacters / 3));
+  const snippet = normalized.slice(start, start + maxCharacters).trim();
+  return `${start > 0 ? '…' : ''}${snippet}${start + maxCharacters < normalized.length ? '…' : ''}`;
+}
+
+function searchConversationContentFast(input: { query: unknown; limit: unknown }) {
+  const terms = normalizeSearchTerms(input.query);
+  if (terms.length === 0) {
+    throw new ConversationInspectCapabilityInputError('query is required.');
+  }
+  const limit = Math.min(100, Math.max(1, typeof input.limit === 'number' && Number.isFinite(input.limit) ? Math.floor(input.limit) : 80));
+  const matches = [] as Array<{
+    conversationId: string;
+    title: string;
+    cwd: string;
+    lastActivityAt: string;
+    isLive: boolean;
+    isRunning: boolean;
+    blockId: string;
+    blockType: string;
+    blockIndex: number;
+    snippet: string;
+  }>;
+
+  for (const session of readConversationSessionsCapability() as SessionMeta[]) {
+    if (matches.length >= limit) break;
+    const text = readSessionSearchTextForMeta(session);
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (!terms.every((term) => lower.includes(term))) continue;
+    matches.push({
+      conversationId: session.id,
+      title: session.title,
+      cwd: session.cwd,
+      lastActivityAt: session.lastActivityAt ?? session.timestamp,
+      isLive: session.isLive === true,
+      isRunning: session.isRunning === true,
+      blockId: 'search-index',
+      blockType: 'text',
+      blockIndex: 0,
+      snippet: extractSearchSnippet(text, terms),
+    });
+  }
+
+  return {
+    query: terms.join(' '),
+    mode: 'allTerms' as const,
+    scope: 'all' as const,
+    totalMatching: matches.length,
+    returnedCount: matches.length,
+    matches,
+  };
 }
 
 function writeConversationAssetCapabilityError(
@@ -126,16 +194,7 @@ export function registerConversationRoutes(
   router.post('/api/sessions/search', (req, res) => {
     try {
       const body = req.body as { query?: unknown; limit?: unknown };
-      res.json(
-        searchConversationInspectSessions({
-          query: body.query,
-          limit: body.limit,
-          scope: 'all',
-          searchMode: 'allTerms',
-          maxSnippetCharacters: 220,
-          stopAfterLimit: true,
-        }),
-      );
+      res.json(searchConversationContentFast({ query: body.query, limit: body.limit }));
     } catch (err) {
       if (err instanceof ConversationInspectCapabilityInputError) {
         res.status(400).json({ error: err.message });

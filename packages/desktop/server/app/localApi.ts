@@ -133,6 +133,7 @@ import {
   buildAppendOnlySessionDetailResponse,
   readSessionBlocks,
   readSessionMeta,
+  readSessionSearchTextForMeta,
   renameStoredSession,
 } from '../conversations/sessions.js';
 import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
@@ -1020,12 +1021,64 @@ export async function subscribeDesktopLocalApiStream(
   return subscribeDesktopLocalApiStreamByUrl(url, onEvent);
 }
 
+function dispatchFastConversationContentSearch(input: { body?: unknown }): DesktopLocalApiDispatchResult | null {
+  const body = input.body && typeof input.body === 'object' ? (input.body as { query?: unknown; limit?: unknown }) : {};
+  if (typeof body.query !== 'string' || body.query.trim().length === 0) {
+    return null;
+  }
+  const terms = body.query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+  const limit = Math.min(100, Math.max(1, typeof body.limit === 'number' && Number.isFinite(body.limit) ? Math.floor(body.limit) : 80));
+  const matches = [];
+  for (const session of readConversationSessionsCapability()) {
+    if (matches.length >= limit) break;
+    const text = readSessionSearchTextForMeta(session);
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (!terms.every((term) => lower.includes(term))) continue;
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    matches.push({
+      conversationId: session.id,
+      title: session.title,
+      cwd: session.cwd,
+      lastActivityAt: session.lastActivityAt ?? session.timestamp,
+      isLive: session.isLive === true,
+      isRunning: session.isRunning === true,
+      blockId: 'search-index',
+      blockType: 'text',
+      blockIndex: 0,
+      snippet: normalized.slice(0, 220),
+    });
+  }
+  const payload = JSON.stringify({
+    query: terms.join(' '),
+    mode: 'allTerms',
+    scope: 'all',
+    totalMatching: matches.length,
+    returnedCount: matches.length,
+    matches,
+  });
+  return {
+    statusCode: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: new TextEncoder().encode(payload),
+  };
+}
+
 export async function dispatchDesktopLocalApiRequest(input: {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   body?: unknown;
   headers?: Record<string, string>;
 }): Promise<DesktopLocalApiDispatchResult> {
+  if (input.method === 'POST' && new URL(input.path, 'http://desktop.local').pathname === '/api/sessions/search') {
+    const fastResponse = dispatchFastConversationContentSearch({ body: input.body });
+    if (fastResponse) return fastResponse;
+  }
+
   const routes = await getLocalRoutes();
   const url = new URL(input.path, 'http://desktop.local');
   const route = findMatchingRoute(routes, input.method, url.pathname);

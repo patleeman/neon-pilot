@@ -31,6 +31,7 @@ const {
   readSessionBlockMock,
   readSessionDetailForRouteMock,
   readSessionImageAssetMock,
+  readSessionSearchTextForMetaMock,
   readSessionSearchTextMock,
   searchConversationInspectSessionsMock,
   resolveConversationSessionFileMock,
@@ -73,6 +74,7 @@ const {
   readSessionBlockMock: vi.fn(),
   readSessionDetailForRouteMock: vi.fn(),
   readSessionImageAssetMock: vi.fn(),
+  readSessionSearchTextForMetaMock: vi.fn(),
   readSessionSearchTextMock: vi.fn(),
   searchConversationInspectSessionsMock: vi.fn(),
   resolveConversationSessionFileMock: vi.fn(),
@@ -136,7 +138,12 @@ vi.mock('../conversations/sessions.js', () => ({
   buildAppendOnlySessionDetailResponse: buildAppendOnlySessionDetailResponseMock,
   readSessionBlock: readSessionBlockMock,
   readSessionImageAsset: readSessionImageAssetMock,
+  readSessionSearchTextForMeta: readSessionSearchTextForMetaMock,
   readSessionSearchText: readSessionSearchTextMock,
+}));
+
+vi.mock('../conversations/conversationSessionCapability.js', () => ({
+  readConversationSessionsCapability: listConversationSessionsSnapshotMock,
 }));
 
 vi.mock('../shared/httpHeaders.js', () => ({
@@ -283,6 +290,7 @@ describe('conversation routes', () => {
     readSessionBlockMock.mockReset();
     readSessionDetailForRouteMock.mockReset();
     readSessionImageAssetMock.mockReset();
+    readSessionSearchTextForMetaMock.mockReset();
     readSessionSearchTextMock.mockReset();
     searchConversationInspectSessionsMock.mockReset();
     resolveConversationSessionFileMock.mockReset();
@@ -306,7 +314,19 @@ describe('conversation routes', () => {
     isLocalLiveMock.mockReturnValue(false);
     listConversationArtifactsMock.mockReturnValue([{ id: 'artifact-1', title: 'Artifact 1' }]);
     listConversationAttachmentsMock.mockReturnValue([{ id: 'attachment-1', kind: 'excalidraw' }]);
-    listConversationSessionsSnapshotMock.mockReturnValue([{ id: 'session-1', title: 'Session 1' }]);
+    listConversationSessionsSnapshotMock.mockReturnValue([
+      {
+        id: 'session-1',
+        title: 'Session 1',
+        cwd: '/repo',
+        cwdSlug: 'repo',
+        file: '/sessions/session-1.jsonl',
+        timestamp: '2026-05-22T00:00:00.000Z',
+        lastActivityAt: '2026-05-22T00:00:00.000Z',
+        model: 'gpt-4o',
+        messageCount: 2,
+      },
+    ]);
     listDeferredResumesForSessionFileMock.mockReturnValue([{ id: 'resume-1' }]);
     parseTailBlocksQueryMock.mockReturnValue(25);
     readConversationAttachmentDownloadMock.mockReturnValue({
@@ -331,6 +351,7 @@ describe('conversation routes', () => {
       fileName: 'image.png',
       mimeType: 'image/png',
     });
+    readSessionSearchTextForMetaMock.mockReturnValue('needle found');
     readSessionSearchTextMock.mockReturnValue('search text');
     searchConversationInspectSessionsMock.mockReturnValue({
       query: 'needle',
@@ -408,21 +429,27 @@ describe('conversation routes', () => {
 
     const contentSearchRes = createResponse();
     postHandler('/api/sessions/search')(createRequest({ body: { query: 'needle', limit: 25 } }), contentSearchRes);
-    expect(searchConversationInspectSessionsMock).toHaveBeenCalledWith({
-      query: 'needle',
-      limit: 25,
-      scope: 'all',
-      searchMode: 'allTerms',
-      maxSnippetCharacters: 220,
-      stopAfterLimit: true,
-    });
+    expect(readSessionSearchTextForMetaMock).toHaveBeenCalledWith(expect.objectContaining({ id: 'session-1' }));
     expect(contentSearchRes.json).toHaveBeenCalledWith({
       query: 'needle',
       mode: 'allTerms',
       scope: 'all',
       totalMatching: 1,
       returnedCount: 1,
-      matches: [{ conversationId: 'session-1', title: 'Session 1', snippet: 'needle found' }],
+      matches: [
+        {
+          conversationId: 'session-1',
+          title: 'Session 1',
+          cwd: '/repo',
+          lastActivityAt: '2026-05-22T00:00:00.000Z',
+          isLive: false,
+          isRunning: false,
+          blockId: 'search-index',
+          blockType: 'text',
+          blockIndex: 0,
+          snippet: 'needle found',
+        },
+      ],
     });
   });
 
