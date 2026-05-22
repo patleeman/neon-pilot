@@ -218,6 +218,5 @@ The desktop app and system extensions register these routes:
 | `/knowledge`         | Knowledge browser     |
 | `/automations`       | Automation list       |
 | `/automations/:id`   | Automation detail     |
-| `/extensions`        | Extension Manager     |
 | `/telemetry`         | Telemetry traces      |
 | `/gateways`          | Gateway connections   |

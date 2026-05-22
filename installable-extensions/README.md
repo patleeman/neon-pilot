@@ -1,8 +1,8 @@
 # Neon Pilot Installable Extensions
 
-This repo area contains first-party extension packages that are **not bundled as core/system extensions**. They are source examples and optional workflows. Normal users install released bundles from **Extension Manager → Available**. Once installed, they load as normal user extensions from `<state-root>/extensions/{extension-id}`.
+This repo area contains first-party extension packages that are **not bundled as core/system extensions**. They are source examples and optional workflows. Normal users install released bundles from **Settings → Extensions → Available**. Once installed, they load as normal user extensions from `<state-root>/extensions/{extension-id}`.
 
-Agents should tell users to check the installed extension registry after installation: use the main **Extensions** tab to enable, disable, inspect, validate, or reload the extension.
+Agents should tell users to check the installed extension registry after installation: use the main **Installed** tab in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
 
 Each top-level `system-*` directory is a complete extension package.
 

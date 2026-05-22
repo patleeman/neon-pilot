@@ -2107,9 +2107,9 @@ await ctx.storage.delete('my-key');</code></pre>
         </p>
         <p>
           Installable repo extensions are not bundled or auto-loaded. Users install released optional extensions from
-          <strong>Extension Manager → Available</strong>, which downloads the <code>.neon-extension.zip</code> bundle from the GitHub
-          release tag matching the installed app version. After install, check the main extension registry to enable and inspect the
-          extension. For local development, build and install into runtime state with
+          <strong>Settings → Extensions → Available</strong>, which downloads the <code>.neon-extension.zip</code> bundle from the GitHub
+          release tag matching the installed app version. After install, check the Installed tab in Settings → Extensions to enable and
+          inspect the extension. For local development, build and install into runtime state with
           <code>pnpm --dir installable-extensions run build -- --extension &lt;id&gt;</code> and
           <code>pnpm --dir installable-extensions run install -- --extension &lt;id&gt; --target &lt;state-root|testing|production&gt;</code
           >.

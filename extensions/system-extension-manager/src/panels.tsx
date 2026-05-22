@@ -230,10 +230,6 @@ function isLocked(extension: ExtensionInstallSummary): boolean {
   return LOCKED_EXTENSION_IDS.includes(extension.id);
 }
 
-function isExperimentalExtension(extension: ExtensionInstallSummary): boolean {
-  return extension.manifest?.defaultEnabled === false;
-}
-
 function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
   const locked = isLocked(extension);
   return (
@@ -495,7 +491,6 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
   const [createDraft, setCreateDraft] = useState<ExtensionCreateDraft | null>(null);
   const [importDraft, setImportDraft] = useState(false);
-  const [showExperimental, setShowExperimental] = useState(false);
   const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
   const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
@@ -796,12 +791,6 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
         .includes(normalizedQuery);
     });
   }, [extensions, filter, query]);
-
-  const visibleStandardExtensions = useMemo(
-    () => visibleExtensions.filter((extension) => !isExperimentalExtension(extension)),
-    [visibleExtensions],
-  );
-  const visibleExperimentalExtensions = useMemo(() => visibleExtensions.filter(isExperimentalExtension), [visibleExtensions]);
 
   const visibleCatalogExtensions = useMemo(() => {
     const normalizedQuery = catalogQuery.trim().toLowerCase();
@@ -1154,30 +1143,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
               {visibleExtensions.length === 0 ? (
                 <EmptyState title="No matching extensions" body="Adjust the filter or search query." />
               ) : (
-                <div className="space-y-6">
-                  {visibleStandardExtensions.length ? renderExtensionTable(visibleStandardExtensions) : null}
-                  {visibleExperimentalExtensions.length ? (
-                    <section className="space-y-3 border-t border-border-subtle/70 pt-4">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between gap-3 text-left"
-                        onClick={() => setShowExperimental((value) => !value)}
-                        aria-expanded={showExperimental}
-                      >
-                        <div>
-                          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Experimental</div>
-                          <div className="mt-1 text-[12px] text-secondary">
-                            Off by default. Enable only when you want to try unfinished extension surfaces.
-                          </div>
-                        </div>
-                        <span className="text-[12px] text-dim">
-                          {visibleExperimentalExtensions.length} {showExperimental ? 'Hide' : 'Show'}
-                        </span>
-                      </button>
-                      {showExperimental ? renderExtensionTable(visibleExperimentalExtensions) : null}
-                    </section>
-                  ) : null}
-                </div>
+                renderExtensionTable(visibleExtensions)
               )}
             </div>
           )}
@@ -1903,199 +1869,6 @@ function ImportWarningModal({
   );
 }
 
-interface ExtensionSearchPathsState {
-  defaultLocation: string;
-  configuredPaths: string[];
-  environmentPaths: string[];
-}
-
-function normalizePathRows(paths: string[]): string[] {
-  const seen = new Set<string>();
-  return paths
-    .map((path) => path.trim())
-    .filter(Boolean)
-    .filter((path) => {
-      if (seen.has(path)) return false;
-      seen.add(path);
-      return true;
-    });
-}
-
-async function pickExtensionFolder(pa: NativeExtensionClient, cwd?: string): Promise<string | null> {
-  const result = await pa.pickFolder({ cwd, prompt: 'Choose a folder containing extension packages' });
-  return result.cancelled ? null : (result.path ?? null);
-}
-
-function ReadOnlyPathRow({ label, path, detail }: { label: string; path: string; detail?: string }) {
-  return (
-    <div className="rounded-xl border border-border-subtle bg-base/45 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[12px] font-semibold text-secondary">{label}</div>
-          <div className="mt-1 break-all font-mono text-[12px] text-primary">{path}</div>
-          {detail ? <div className="mt-1 text-[12px] text-dim">{detail}</div> : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
-  const [state, setState] = useState<ExtensionSearchPathsState | null>(null);
-  const [paths, setPaths] = useState<string[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const next = (await pa.extension.invoke('readSearchPaths')) as ExtensionSearchPathsState;
-    setState(next);
-    setPaths(next.configuredPaths.length > 0 ? next.configuredPaths : ['']);
-  }, [pa]);
-
-  useEffect(() => {
-    void load().catch((error) => setMessage(error instanceof Error ? error.message : String(error)));
-  }, [load]);
-
-  const cleanPaths = useMemo(() => normalizePathRows(paths), [paths]);
-  const hasChanges = useMemo(() => {
-    const current = normalizePathRows(state?.configuredPaths ?? []);
-    if (current.length !== cleanPaths.length) return true;
-    return current.some((path, index) => path !== cleanPaths[index]);
-  }, [cleanPaths, state]);
-
-  function updatePath(index: number, value: string) {
-    setPaths((current) => current.map((path, pathIndex) => (pathIndex === index ? value : path)));
-  }
-
-  async function choosePath(index: number) {
-    setBusy('Choosing folder…');
-    setMessage(null);
-    try {
-      const selected = await pickExtensionFolder(pa, paths[index] || state?.defaultLocation);
-      if (selected) updatePath(index, selected);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function addFolder() {
-    setBusy('Choosing folder…');
-    setMessage(null);
-    try {
-      const selected = await pickExtensionFolder(pa, state?.defaultLocation);
-      setPaths((current) => [...current, selected ?? '']);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function save() {
-    setBusy('Saving…');
-    setMessage(null);
-    try {
-      const next = (await pa.extension.invoke('updateSearchPaths', { paths: cleanPaths })) as ExtensionSearchPathsState;
-      setState(next);
-      setPaths(next.configuredPaths.length > 0 ? next.configuredPaths : ['']);
-      setMessage('Saved. Reload extensions to rescan these folders.');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function reloadExtensions() {
-    setBusy('Reloading extensions…');
-    setMessage(null);
-    try {
-      await pa.extension.invoke('reloadExtensions');
-      notifyExtensionRegistryChanged();
-      setMessage('Extensions reloaded.');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  if (!state) return <LoadingState title="Loading extension paths…" />;
-
-  return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <ReadOnlyPathRow label="Default install location" path={state.defaultLocation} detail="Neon Pilot always scans this folder." />
-        {state.environmentPaths.map((path) => (
-          <ReadOnlyPathRow key={path} label="Environment search path" path={path} detail="Set by NEON_PILOT_EXTENSION_PATHS." />
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-[13px] font-semibold text-primary">Additional search folders</h3>
-          <p className="mt-1 text-[12px] text-secondary">
-            Add parent folders that contain extension packages, or point directly at one extension folder with an extension.json file.
-          </p>
-        </div>
-        <div className="space-y-2">
-          {paths.map((path, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <input
-                value={path}
-                onChange={(event) => updatePath(index, event.target.value)}
-                placeholder="/Users/patrick/path/to/extensions"
-                className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-base px-3 py-2 font-mono text-[12px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/60"
-              />
-              <button
-                type="button"
-                className="ui-toolbar-button rounded-lg px-3 py-2 text-[12px]"
-                disabled={Boolean(busy)}
-                onClick={() => choosePath(index)}
-              >
-                Choose…
-              </button>
-              <button
-                type="button"
-                className="rounded-lg px-3 py-2 text-[12px] text-secondary hover:bg-surface hover:text-primary disabled:opacity-50"
-                disabled={Boolean(busy)}
-                onClick={() => setPaths((current) => (current.length === 1 ? [''] : current.filter((_, pathIndex) => pathIndex !== index)))}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-        <button type="button" className="ui-toolbar-button rounded-lg px-3 py-2 text-[12px]" disabled={Boolean(busy)} onClick={addFolder}>
-          Add folder…
-        </button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
-        <button
-          type="button"
-          className="ui-toolbar-button rounded-lg px-4 py-2 text-[12px]"
-          disabled={Boolean(busy) || !hasChanges}
-          onClick={save}
-        >
-          {busy === 'Saving…' ? 'Saving…' : 'Save paths'}
-        </button>
-        <button
-          type="button"
-          className="rounded-lg px-4 py-2 text-[12px] text-secondary hover:bg-surface hover:text-primary disabled:opacity-50"
-          disabled={Boolean(busy)}
-          onClick={reloadExtensions}
-        >
-          Reload extensions
-        </button>
-        {message ? (
-          <span className="text-[12px] text-secondary">{message}</span>
-        ) : busy ? (
-          <span className="text-[12px] text-secondary">{busy}</span>
-        ) : null}
-      </div>
-    </div>
-  );
+  return <ExtensionManagerPage pa={pa as ExtensionSurfaceProps['pa']} />;
 }

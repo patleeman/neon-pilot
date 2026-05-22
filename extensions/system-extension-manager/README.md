@@ -14,7 +14,7 @@ The old iframe/HTML extension model is deprecated. New extensions render native 
 
 Extension frontends must use the native PA client/action bridge for app-internal communication. Extension HTTP routes are for external or side-channel consumers only, not for Neon Pilot renderer-to-extension calls.
 
-The Extension Manager should make that loop boring:
+Settings → Extensions should make that loop boring:
 
 - create a starter native extension package
 - list installed system and user extensions
@@ -22,11 +22,11 @@ The Extension Manager should make that loop boring:
 - expose host and extension command/keybinding inspection in a separate Commands tab
 - reload extension registry/runtime
 - keep per-extension actions visibly acknowledged with inline progress and result notices even when the list is scrolled
-- enable/disable user extensions without replacing the Extension Manager page; registry-backed navigation and surfaces refresh in place
+- enable/disable user extensions without replacing the Settings page; registry-backed navigation and surfaces refresh in place
 - export/import extension packages
 - snapshot a user extension before agent edits
 - open an extension folder in Finder/editor
-- expose validate/reload operations through the Extension Manager UI and backend actions
+- expose validate/reload operations through the Settings → Extensions UI and backend actions
 - show build/runtime errors in a way an agent can fix
 
 ## Operational model
@@ -41,7 +41,7 @@ Bundled first-party extensions live in the repo/app bundle under `extensions/` a
 
 Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as user extensions.
 
-The Extension Manager page includes an **Available** tab for normal users. It lists optional first-party extensions and installs their `.neon-extension.zip` bundles from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. After installation, tell users to check the installed extension registry on the main **Extensions** tab to enable, disable, inspect, validate, or reload the extension.
+The Settings → Extensions includes an **Available** tab for normal users. It lists optional first-party extensions and installs their `.neon-extension.zip` bundles from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. After installation, tell users to check the installed extension registry on the main **Installed** tab in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
@@ -56,7 +56,7 @@ When modifying Extension Manager itself:
 3. Inspect `packages/desktop/ui/src/extensions/*` before changing native surface hosting, registry state, or extension UI.
 4. If a first-party extension needs a new stable host primitive, add it deliberately to `packages/extensions` instead of importing app internals.
 5. Validate create/validate/reload flows after changes.
-6. Visually inspect the Extension Manager UI before reporting done.
+6. Visually inspect the Settings → Extensions UI before reporting done.
 
 ## Migration stance
 
@@ -98,5 +98,5 @@ Target order:
 6. Wire manifest `views`, `nav`, commands, slash commands, skills, tools, and settings through registry surfaces.
 7. Migrate system product surfaces to native extensions.
 8. Remove legacy iframe extension UI runtime and starter HTML templates when no longer needed.
-9. Keep Extension Manager validate/reload/status flows agent-fixable.
+9. Keep Settings → Extensions validate/reload/status flows agent-fixable.
 10. Backfill tests around manifest parsing, lazy loading, action invocation, CSS scoping, and system extension migrations.

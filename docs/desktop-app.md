@@ -96,7 +96,6 @@ All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
 | `/automations`       | Automation list       |
 | `/automations/:id`   | Automation detail     |
 | `/settings`          | Settings panel        |
-| `/extensions`        | Extension Manager     |
 | `/telemetry`         | Telemetry traces page |
 | `/gateways`          | Gateway connections   |
 

@@ -33,22 +33,11 @@
       "component": "ExtensionManagerSettingsPanel",
       "sectionId": "settings-extensions",
       "label": "Extensions",
-      "description": "Choose additional folders to scan for extension packages.",
+      "description": "Install, enable, inspect, and manage extensions.",
       "order": 35
     },
     "nav": [],
-    "views": [
-      {
-        "id": "page",
-        "title": "Extensions",
-        "location": "main",
-        "route": "/extensions",
-        "component": "ExtensionManagerPage",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
-      }
-    ],
+    "views": [],
     "skills": [
       {
         "id": "skills-and-capabilities",
