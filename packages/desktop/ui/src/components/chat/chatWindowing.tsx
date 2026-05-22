@@ -12,14 +12,14 @@ export interface ChatWindowingProfile {
 
 export const CHAT_VIEW_RENDERING_PROFILE: Record<ChatViewPerformanceMode, ChatWindowingProfile> = {
   default: {
-    contentVisibilityThreshold: Number.MAX_SAFE_INTEGER,
-    windowingThreshold: Number.MAX_SAFE_INTEGER,
+    contentVisibilityThreshold: 160,
+    windowingThreshold: 220,
     windowingChunkSize: 80,
     windowingOverscanChunks: 2,
   },
   aggressive: {
-    contentVisibilityThreshold: Number.MAX_SAFE_INTEGER,
-    windowingThreshold: Number.MAX_SAFE_INTEGER,
+    contentVisibilityThreshold: 96,
+    windowingThreshold: 120,
     windowingChunkSize: 40,
     windowingOverscanChunks: 1,
   },

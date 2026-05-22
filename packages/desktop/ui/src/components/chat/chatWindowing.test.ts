@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildChatRenderChunks,
+  CHAT_VIEW_RENDERING_PROFILE,
   formatWindowingCount,
   getChatRenderItemAbsoluteRange,
   getChatRenderItemsSpanCount,
@@ -75,5 +76,13 @@ describe('chatWindowing', () => {
     expect(formatWindowingCount(12_000)).toBe('12k');
     expect(formatWindowingCount(1_200_000)).toBe('1.2m');
     expect(formatWindowingCount(12_000_000)).toBe('12m');
+  });
+
+  it('enables bounded rendering before the transcript cap can mount hundreds of blocks', () => {
+    expect(CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingThreshold).toBeLessThanOrEqual(120);
+    expect(CHAT_VIEW_RENDERING_PROFILE.default.windowingThreshold).toBeLessThanOrEqual(220);
+    expect(CHAT_VIEW_RENDERING_PROFILE.aggressive.contentVisibilityThreshold).toBeLessThan(
+      CHAT_VIEW_RENDERING_PROFILE.default.contentVisibilityThreshold,
+    );
   });
 });
