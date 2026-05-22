@@ -187,6 +187,7 @@ export interface DestroyLiveSessionCapabilityInput {
 export interface BranchLiveSessionCapabilityInput {
   conversationId: string;
   entryId: string;
+  surfaceId?: string;
 }
 
 export interface ForkLiveSessionCapabilityInput {
@@ -194,6 +195,7 @@ export interface ForkLiveSessionCapabilityInput {
   entryId: string;
   preserveSource?: boolean;
   beforeEntry?: boolean;
+  surfaceId?: string;
 }
 
 export class LiveSessionCapabilityInputError extends Error {}
@@ -996,7 +998,7 @@ export async function branchLiveSessionCapability(
     throw new LiveSessionCapabilityInputError('entryId required');
   }
 
-  return branchLiveSession(conversationId, entryId, await buildLiveSessionOptionsAsync(context));
+  return branchLiveSession(conversationId, entryId, await buildLiveSessionOptionsAsync(context), input.surfaceId);
 }
 
 export async function forkLiveSessionCapability(
@@ -1013,11 +1015,16 @@ export async function forkLiveSessionCapability(
     throw new LiveSessionCapabilityInputError('entryId required');
   }
 
-  return forkLiveSession(conversationId, entryId, {
-    preserveSource: input.preserveSource,
-    beforeEntry: input.beforeEntry,
-    ...(await buildLiveSessionOptionsAsync(context)),
-  });
+  return forkLiveSession(
+    conversationId,
+    entryId,
+    {
+      preserveSource: input.preserveSource,
+      beforeEntry: input.beforeEntry,
+      ...(await buildLiveSessionOptionsAsync(context)),
+    },
+    input.surfaceId,
+  );
 }
 
 export async function abortLiveSessionCapability(input: { conversationId: string }): Promise<{ ok: true }> {

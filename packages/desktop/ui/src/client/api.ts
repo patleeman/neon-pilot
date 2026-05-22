@@ -939,16 +939,19 @@ export const api = {
     return (await requireLocalDesktopBridge('Reading live session fork entries')).readLiveSessionForkEntries(id);
   },
   branchSession: async (id: string, entryId: string, surfaceId?: string) => {
-    void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Branching live sessions')).branchLiveSession({ conversationId: id, entryId });
+    return (await requireLocalDesktopConversationBridge(id, 'Branching live sessions')).branchLiveSession({
+      conversationId: id,
+      entryId,
+      ...(surfaceId ? { surfaceId } : {}),
+    });
   },
   forkSession: async (id: string, entryId: string, options?: { preserveSource?: boolean; beforeEntry?: boolean }, surfaceId?: string) => {
-    void surfaceId;
     return (await requireLocalDesktopConversationBridge(id, 'Forking live sessions')).forkLiveSession({
       conversationId: id,
       entryId,
       preserveSource: options?.preserveSource,
       beforeEntry: options?.beforeEntry,
+      ...(surfaceId ? { surfaceId } : {}),
     });
   },
 

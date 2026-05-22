@@ -369,12 +369,17 @@ export interface NeonPilotDesktopBridge {
   exportLiveSession(input: { conversationId: string; outputPath?: string }): Promise<LiveSessionExportResult>;
   reloadLiveSession(conversationId: string): Promise<{ ok: true }>;
   destroyLiveSession(conversationId: string): Promise<{ ok: true }>;
-  branchLiveSession(input: { conversationId: string; entryId: string }): Promise<{ newSessionId: string; sessionFile: string }>;
+  branchLiveSession(input: {
+    conversationId: string;
+    entryId: string;
+    surfaceId?: string;
+  }): Promise<{ newSessionId: string; sessionFile: string }>;
   forkLiveSession(input: {
     conversationId: string;
     entryId: string;
     preserveSource?: boolean;
     beforeEntry?: boolean;
+    surfaceId?: string;
   }): Promise<{ newSessionId: string; sessionFile: string }>;
   submitLiveSessionPrompt(input: {
     conversationId: string;

@@ -980,9 +980,11 @@ export async function branchSession(
   sessionId: string,
   entryId: string,
   options: LiveSessionLoaderOptions = {},
+  surfaceId?: string,
 ): Promise<{ newSessionId: string; sessionFile: string }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
+  ensureLiveSessionSurfaceCanControl(entry, surfaceId);
   const result = await branchLiveSession(entry, entryId, options, { resumeSession });
   // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
   publishSessionMetaChanged(sessionId);
@@ -993,9 +995,11 @@ export async function forkSession(
   sessionId: string,
   entryId: string,
   options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean } = {},
+  surfaceId?: string,
 ): Promise<{ newSessionId: string; sessionFile: string }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
+  ensureLiveSessionSurfaceCanControl(entry, surfaceId);
   const availableModelsForTier = await getAvailableModelObjects();
   const result = await forkLiveSession(entry, entryId, options, {
     createSession,

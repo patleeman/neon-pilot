@@ -2237,7 +2237,7 @@ export async function destroyDesktopLiveSession(conversationId: string): Promise
   return destroyLiveSessionCapability({ conversationId });
 }
 
-export async function branchDesktopLiveSession(input: { conversationId: string; entryId: string }) {
+export async function branchDesktopLiveSession(input: { conversationId: string; entryId: string; surfaceId?: string }) {
   return branchLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
 }
 
@@ -2246,6 +2246,7 @@ export async function forkDesktopLiveSession(input: {
   entryId: string;
   preserveSource?: boolean;
   beforeEntry?: boolean;
+  surfaceId?: string;
 }) {
   return forkLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
 }

@@ -152,6 +152,39 @@ describe('api.extensions', () => {
   });
 });
 
+describe('api live session surface forwarding', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('forwards surface ids for branch and fork controls', async () => {
+    const branchLiveSession = vi.fn(async () => ({ newSessionId: 'branched', sessionFile: '/tmp/branched.jsonl' }));
+    const forkLiveSession = vi.fn(async () => ({ newSessionId: 'forked', sessionFile: '/tmp/forked.jsonl' }));
+    vi.stubGlobal('window', {
+      neonPilotDesktop: {
+        getEnvironment: vi.fn(async () => ({ activeHostKind: 'local' })),
+        branchLiveSession,
+        forkLiveSession,
+      },
+    });
+
+    const { api } = await import('./api.js');
+    await api.branchSession('thread-1', 'entry-1', 'surface-1');
+    await api.forkSession('thread-1', 'entry-2', { preserveSource: false, beforeEntry: true }, 'surface-1');
+
+    expect(branchLiveSession).toHaveBeenCalledWith({ conversationId: 'thread-1', entryId: 'entry-1', surfaceId: 'surface-1' });
+    expect(forkLiveSession).toHaveBeenCalledWith({
+      conversationId: 'thread-1',
+      entryId: 'entry-2',
+      preserveSource: false,
+      beforeEntry: true,
+      surfaceId: 'surface-1',
+    });
+  });
+});
+
 describe('api.memory', () => {
   beforeEach(() => {
     vi.resetModules();
