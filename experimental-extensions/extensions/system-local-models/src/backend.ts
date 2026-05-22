@@ -166,6 +166,11 @@ export async function ggufStop(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.stopServer(input, ctx);
 }
 
+export async function stopAll(input: unknown, ctx: ExtensionBackendContext) {
+  await Promise.allSettled([mlx.stop(input, ctx), gguf.stopServer(input, ctx), gguf.cancelDownload(input, ctx)]);
+  return { ok: true, status: await status(input, ctx) };
+}
+
 export async function toggleServer(input: unknown, ctx: ExtensionBackendContext) {
   const current = await status(input, ctx);
   if (
@@ -174,7 +179,7 @@ export async function toggleServer(input: unknown, ctx: ExtensionBackendContext)
     current.mlx.process.managedRunning ||
     current.gguf.process.managedRunning
   ) {
-    await Promise.allSettled([mlx.stop(input, ctx), gguf.stopServer(input, ctx)]);
+    await stopAll(input, ctx);
     return { ok: true, running: false, status: await status(input, ctx) };
   }
 

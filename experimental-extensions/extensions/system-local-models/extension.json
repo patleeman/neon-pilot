@@ -11,6 +11,7 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
+    "onDisableAction": "localModelsStopAll",
     "actions": [
       {
         "id": "localModelsStatus",
@@ -106,6 +107,11 @@
         "id": "localModelsGgufStop",
         "handler": "ggufStop",
         "title": "Stop llama.cpp server"
+      },
+      {
+        "id": "localModelsStopAll",
+        "handler": "stopAll",
+        "title": "Stop all local model runtimes"
       },
       {
         "id": "localModelsToggleServer",
