@@ -104,8 +104,8 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
 
   const visibleAgentCapabilities = useMemo(() => visible.filter((capability) => capability.kind !== 'extension'), [visible]);
 
-  if (error) return <ErrorState title="Failed to inspect agent runtime" message={error} />;
-  if (!data) return <LoadingState label="Inspecting agent runtime…" />;
+  if (error) return <ErrorState title="Failed to load Agent Runtime" message={error} />;
+  if (!data) return <LoadingState label="Loading Agent Runtime…" className="h-full justify-center" />;
 
   return (
     <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
