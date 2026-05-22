@@ -50,6 +50,8 @@ pnpm run smoke:startup-idle -- --seconds=30 --sessions=2500 --blocks=80
 
 This creates a temporary old-profile fixture with many historical conversations and no conversation context DB, launches the desktop app against that state root, samples CPU, and fails if idle startup spawns local model processes or sustains excessive CPU. Use `--app="/Applications/Neon Pilot RC.app"` to test a packaged app instead of the dev launcher.
 
+The npm script uses a loose CPU threshold because the dev launcher may include build-tool CPU. RC/release publishing passes `--app` and uses the stricter packaged-app threshold.
+
 If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
 
 ## Web UI and desktop QA

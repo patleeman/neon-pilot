@@ -40,6 +40,8 @@ Live conversations emit explicit `compaction_start` and `compaction_end` stream 
 
 Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline cutoff marker with the visible percentage range and a small **Load previous** action; implementation counts such as block totals and windowed chunks stay out of the main UI.
 
+Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local conversation context DB; they must not generate missing summaries on the request path. New closed conversations enqueue summary generation immediately. Older missing/stale summaries are discovered by a delayed, metered background queue after startup grace, processed one at a time with a short gap between jobs, and skipped for live/running conversations. This keeps old profiles useful over time without turning app launch or list rendering into a whole-profile summarization burst.
+
 ## Branching
 
 Conversations support tree-style branching. Each turn creates a node in the conversation tree.

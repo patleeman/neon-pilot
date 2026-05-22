@@ -12,15 +12,17 @@ import { readConversationAutoTitleSettings } from './conversationAutoTitle.js';
 import { readSessionSearchText, type SessionMeta } from './sessions.js';
 
 const SUMMARY_SCHEMA_VERSION = 2;
-const MAX_BACKFILL_PER_CALL = 8;
+const MAX_BACKFILL_PER_CALL = 25;
 const MAX_BACKFILL_LOOP_INITIAL_DELAY_MS = 60_000;
 const MAX_BACKFILL_LOOP_INTERVAL_MS = 600_000;
-const MAX_BACKFILL_LOOP_LIMIT = 50;
+const MAX_BACKFILL_LOOP_LIMIT = 500;
 const MAX_SOURCE_CHARACTERS = 18_000;
 const MAX_ACTIVE_JOBS = 1;
 const SUMMARY_ATTEMPT_COOLDOWN_MS = 10 * 60 * 1000;
-const DEFAULT_BACKFILL_INITIAL_DELAY_MS = 5_000;
-const DEFAULT_BACKFILL_INTERVAL_MS = 60_000;
+const DEFAULT_BACKFILL_INITIAL_DELAY_MS = 60_000;
+const DEFAULT_BACKFILL_INTERVAL_MS = 10 * 60_000;
+const DEFAULT_BACKFILL_JOB_DELAY_MS = 1_500;
+const MAX_BACKFILL_JOB_DELAY_MS = 60_000;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 
 export type ConversationSummaryStatus = 'done' | 'blocked' | 'in_progress' | 'needs_user' | 'unknown';
@@ -68,6 +70,10 @@ const activeSessionIds = new Set<string>();
 const pendingQueue: SessionMeta[] = [];
 let activeJobs = 0;
 let backfillLoopStarted = false;
+let summaryDrainTimer: ReturnType<typeof setTimeout> | null = null;
+let backfillInitialTimer: ReturnType<typeof setTimeout> | null = null;
+let backfillInterval: ReturnType<typeof setInterval> | null = null;
+let currentBackfillJobDelayMs = DEFAULT_BACKFILL_JOB_DELAY_MS;
 
 function getDb(): SqliteDatabase {
   if (db) {
@@ -525,6 +531,23 @@ async function runSummaryJob(meta: SessionMeta): Promise<void> {
   }
 }
 
+function normalizeConversationSummaryBackfillJobDelayMs(value: unknown): number {
+  return Number.isSafeInteger(value) && typeof value === 'number' && value >= 0
+    ? Math.min(MAX_BACKFILL_JOB_DELAY_MS, value)
+    : DEFAULT_BACKFILL_JOB_DELAY_MS;
+}
+
+function scheduleDrainQueue(delayMs = DEFAULT_BACKFILL_JOB_DELAY_MS): void {
+  if (summaryDrainTimer) {
+    return;
+  }
+  summaryDrainTimer = setTimeout(() => {
+    summaryDrainTimer = null;
+    drainQueue();
+  }, delayMs);
+  summaryDrainTimer.unref?.();
+}
+
 function drainQueue(): void {
   while (activeJobs < MAX_ACTIVE_JOBS && pendingQueue.length > 0) {
     const meta = pendingQueue.shift() as SessionMeta;
@@ -545,7 +568,7 @@ function drainQueue(): void {
       .finally(() => {
         activeJobs -= 1;
         activeSessionIds.delete(meta.id);
-        drainQueue();
+        scheduleDrainQueue(currentBackfillJobDelayMs);
       });
   }
 }
@@ -595,6 +618,7 @@ export function normalizeConversationSummaryBackfillLoopOptions(input: { initial
   initialDelayMs: number;
   intervalMs: number;
   limit: number;
+  jobDelayMs: number;
 } {
   const initialDelayMs =
     Number.isSafeInteger(input.initialDelayMs) && (input.initialDelayMs as number) >= 0
@@ -608,7 +632,8 @@ export function normalizeConversationSummaryBackfillLoopOptions(input: { initial
     Number.isSafeInteger(input.limit) && (input.limit as number) > 0
       ? Math.min(MAX_BACKFILL_LOOP_LIMIT, input.limit as number)
       : MAX_BACKFILL_PER_CALL;
-  return { initialDelayMs, intervalMs, limit };
+  const jobDelayMs = normalizeConversationSummaryBackfillJobDelayMs((input as { jobDelayMs?: unknown }).jobDelayMs);
+  return { initialDelayMs, intervalMs, limit, jobDelayMs };
 }
 
 export function startConversationSummaryBackfillLoop(input: {
@@ -616,6 +641,7 @@ export function startConversationSummaryBackfillLoop(input: {
   initialDelayMs?: number;
   intervalMs?: number;
   limit?: number;
+  jobDelayMs?: number;
 }): void {
   if (backfillLoopStarted) {
     return;
@@ -633,13 +659,36 @@ export function startConversationSummaryBackfillLoop(input: {
   };
 
   const options = normalizeConversationSummaryBackfillLoopOptions(input);
-  const initialTimer = setTimeout(runBackfillTick, options.initialDelayMs);
-  initialTimer.unref?.();
-  const interval = setInterval(runBackfillTick, options.intervalMs);
-  interval.unref?.();
+  currentBackfillJobDelayMs = options.jobDelayMs;
+  backfillInitialTimer = setTimeout(runBackfillTick, options.initialDelayMs);
+  backfillInitialTimer.unref?.();
+  backfillInterval = setInterval(runBackfillTick, options.intervalMs);
+  backfillInterval.unref?.();
+}
+
+export function stopConversationSummaryBackfillLoop(): void {
+  if (backfillInitialTimer) {
+    clearTimeout(backfillInitialTimer);
+    backfillInitialTimer = null;
+  }
+  if (backfillInterval) {
+    clearInterval(backfillInterval);
+    backfillInterval = null;
+  }
+  if (summaryDrainTimer) {
+    clearTimeout(summaryDrainTimer);
+    summaryDrainTimer = null;
+  }
+  backfillLoopStarted = false;
+  queuedSessionIds.clear();
+  activeSessionIds.clear();
+  pendingQueue.length = 0;
+  activeJobs = 0;
+  currentBackfillJobDelayMs = DEFAULT_BACKFILL_JOB_DELAY_MS;
 }
 
 export function closeConversationSummariesDb(): void {
+  stopConversationSummaryBackfillLoop();
   if (db) {
     try {
       db.pragma('wal_checkpoint(TRUNCATE)');

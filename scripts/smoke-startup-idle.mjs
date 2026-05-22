@@ -36,16 +36,33 @@ function run(command, args, options = {}) {
 
 async function sampleCpu(pid) {
   const { stdout } = await run('ps', ['-axo', 'pid,ppid,%cpu,command']);
-  let total = 0;
-  const offenders = [];
+  const rows = [];
   for (const line of stdout.split('\n').slice(1)) {
     const match = line.trim().match(/^(\d+)\s+(\d+)\s+([0-9.]+)\s+(.+)$/);
     if (!match) continue;
     const [, rawPid, rawPpid, rawCpu, command] = match;
-    if (rawPid === String(pid) || rawPpid === String(pid) || command.includes('Neon Pilot')) {
-      const cpu = Number(rawCpu);
+    rows.push({ pid: Number(rawPid), ppid: Number(rawPpid), cpu: Number(rawCpu), command });
+  }
+
+  const descendants = new Set([pid]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const row of rows) {
+      if (!descendants.has(row.pid) && descendants.has(row.ppid)) {
+        descendants.add(row.pid);
+        changed = true;
+      }
+    }
+  }
+
+  let total = 0;
+  const offenders = [];
+  for (const row of rows) {
+    if (descendants.has(row.pid)) {
+      const cpu = row.cpu;
       total += cpu;
-      if (cpu > 5) offenders.push({ pid: Number(rawPid), ppid: Number(rawPpid), cpu, command: command.slice(0, 180) });
+      if (cpu > 5) offenders.push({ pid: row.pid, ppid: row.ppid, cpu, command: row.command.slice(0, 180) });
     }
   }
   return { total, offenders };

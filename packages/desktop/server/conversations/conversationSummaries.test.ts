@@ -1,13 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { normalizeConversationSummaryBackfillLoopOptions, parseConversationSummaryAttemptTimestamp } from './conversationSummaries.js';
+import {
+  normalizeConversationSummaryBackfillLoopOptions,
+  parseConversationSummaryAttemptTimestamp,
+  startConversationSummaryBackfillLoop,
+  stopConversationSummaryBackfillLoop,
+} from './conversationSummaries.js';
+
+afterEach(() => {
+  stopConversationSummaryBackfillLoop();
+  vi.useRealTimers();
+});
 
 describe('normalizeConversationSummaryBackfillLoopOptions', () => {
   it('uses defaults when no input provided', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({});
-    expect(result.initialDelayMs).toBe(5_000);
-    expect(result.intervalMs).toBe(60_000);
-    expect(result.limit).toBe(8);
+    expect(result.initialDelayMs).toBe(60_000);
+    expect(result.intervalMs).toBe(600_000);
+    expect(result.limit).toBe(25);
+    expect(result.jobDelayMs).toBe(1_500);
   });
 
   it('clamps initialDelayMs to max', () => {
@@ -17,7 +28,7 @@ describe('normalizeConversationSummaryBackfillLoopOptions', () => {
 
   it('uses default for negative initialDelayMs', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({ initialDelayMs: -1 });
-    expect(result.initialDelayMs).toBe(5_000);
+    expect(result.initialDelayMs).toBe(60_000);
   });
 
   it('uses 0 initialDelayMs as-is', () => {
@@ -32,17 +43,22 @@ describe('normalizeConversationSummaryBackfillLoopOptions', () => {
 
   it('uses default when intervalMs is below minimum', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({ intervalMs: 1_000 });
-    expect(result.intervalMs).toBe(60_000);
+    expect(result.intervalMs).toBe(600_000);
+  });
+
+  it('preserves moderate limit values', () => {
+    const result = normalizeConversationSummaryBackfillLoopOptions({ limit: 100 });
+    expect(result.limit).toBe(100);
   });
 
   it('clamps limit to max', () => {
-    const result = normalizeConversationSummaryBackfillLoopOptions({ limit: 100 });
-    expect(result.limit).toBe(50);
+    const result = normalizeConversationSummaryBackfillLoopOptions({ limit: 1_000 });
+    expect(result.limit).toBe(500);
   });
 
   it('uses default for non-positive limit', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({ limit: 0 });
-    expect(result.limit).toBe(8);
+    expect(result.limit).toBe(25);
   });
 
   it('preserves valid custom values', () => {
@@ -50,10 +66,32 @@ describe('normalizeConversationSummaryBackfillLoopOptions', () => {
       initialDelayMs: 10_000,
       intervalMs: 120_000,
       limit: 16,
+      jobDelayMs: 25,
     });
     expect(result.initialDelayMs).toBe(10_000);
     expect(result.intervalMs).toBe(120_000);
     expect(result.limit).toBe(16);
+    expect(result.jobDelayMs).toBe(25);
+  });
+
+  it('clamps jobDelayMs to max', () => {
+    const result = normalizeConversationSummaryBackfillLoopOptions({ jobDelayMs: 120_000 } as never);
+    expect(result.jobDelayMs).toBe(60_000);
+  });
+});
+
+describe('startConversationSummaryBackfillLoop', () => {
+  it('waits for the startup grace period before scanning old sessions', async () => {
+    vi.useFakeTimers();
+    const listSessions = vi.fn(() => []);
+
+    startConversationSummaryBackfillLoop({ listSessions, initialDelayMs: 60_000, intervalMs: 120_000 });
+
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(listSessions).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(listSessions).toHaveBeenCalledTimes(1);
   });
 });
 

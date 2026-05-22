@@ -12,7 +12,8 @@ import {
   searchConversationInspectSessions,
 } from '../conversations/conversationInspectCapability.js';
 import { publishConversationSessionMetaChanged, setConversationServiceContext } from '../conversations/conversationService.js';
-import { readConversationSummaryIndexCapability } from '../conversations/conversationSummaries.js';
+import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
+import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
 import { readSessionImageAsset } from '../conversations/sessions.js';
 import { logError } from '../middleware/index.js';
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
@@ -116,6 +117,9 @@ export function registerConversationRoutes(
   context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences'>,
 ): void {
   initializeConversationRoutesContext(context);
+  startConversationSummaryBackfillLoop({
+    listSessions: readConversationSessionsCapability,
+  });
 
   registerConversationReadRoutes(router);
 

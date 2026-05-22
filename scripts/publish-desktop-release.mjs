@@ -712,7 +712,7 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
     console.log('Running seeded-profile startup idle smoke test against the built app...');
-    run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80'], {
+    run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-cpu=120'], {
       cwd: buildRoot,
       env,
     });

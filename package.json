@@ -56,7 +56,7 @@
     "extension:build": "node scripts/extension-build.mjs",
     "smoke:local-models": "node experimental-extensions/extensions/system-local-models/scripts/smoke.mjs",
     "smoke:local-models:full": "node experimental-extensions/extensions/system-local-models/scripts/smoke.mjs --full",
-    "smoke:startup-idle": "node scripts/smoke-startup-idle.mjs"
+    "smoke:startup-idle": "node scripts/smoke-startup-idle.mjs --max-cpu=1000"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",
