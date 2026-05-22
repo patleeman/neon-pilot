@@ -7,6 +7,8 @@ import { isMainThread } from 'node:worker_threads';
 import { installProcessLogging } from '../middleware/index.js';
 installProcessLogging();
 
+const DESKTOP_SCHEDULED_TASK_PROFILE = 'shared';
+
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import {
   getPiAgentRuntimeDir,
@@ -1404,22 +1406,22 @@ export async function subscribeDesktopProviderOAuthLogin(loginId: string, onStat
 
 export async function readDesktopScheduledTasks() {
   await getLocalRoutes();
-  return listScheduledTasksCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant');
+  return listScheduledTasksCapability(DESKTOP_SCHEDULED_TASK_PROFILE);
 }
 
 export async function readDesktopScheduledTaskDetail(taskId: string) {
   await getLocalRoutes();
-  return readScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
+  return readScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
 }
 
 export async function readDesktopScheduledTaskSchedulerHealth() {
   await getLocalRoutes();
-  return readScheduledTaskSchedulerHealth(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant');
+  return readScheduledTaskSchedulerHealth(DESKTOP_SCHEDULED_TASK_PROFILE);
 }
 
 export async function readDesktopScheduledTaskLog(taskId: string) {
   await getLocalRoutes();
-  return readScheduledTaskLogCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
+  return readScheduledTaskLogCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
 }
 
 export async function createDesktopScheduledTask(input: {
@@ -1446,7 +1448,7 @@ export async function createDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return createScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', {
+  return createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, {
     ...input,
     title: input.title ?? '',
     prompt: input.prompt ?? '',
@@ -1478,17 +1480,17 @@ export async function updateDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return updateScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', input);
+  return updateScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, input);
 }
 
 export async function runDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return runScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
+  return runScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
 }
 
 export async function deleteDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return deleteScheduledTaskCapability(localLiveSessionCapabilityContext?.getRuntimeScope() ?? 'assistant', taskId);
+  return deleteScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId);
 }
 
 export async function markDesktopConversationAttention(input: { conversationId: string; read?: boolean }) {
