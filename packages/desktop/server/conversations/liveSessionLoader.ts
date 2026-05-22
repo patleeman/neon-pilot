@@ -5,7 +5,7 @@ import { logWarn } from '../shared/logging.js';
 
 const AGENT_DIR = getPiAgentRuntimeDir();
 const PREWARMED_LIVE_SESSION_LOADERS_MAX = 4;
-const PREWARMED_LIVE_SESSION_LOADERS_TTL_MS = 60_000;
+const PREWARMED_LIVE_SESSION_LOADERS_TTL_MS = 10 * 60_000;
 
 export interface LiveSessionLoaderOptions {
   agentDir?: string;
