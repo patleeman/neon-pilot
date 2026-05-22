@@ -1014,6 +1014,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const computedHistoricalTotalBlocksRaw = stream.hasSnapshot
     ? stream.totalBlocks
     : (visibleSessionDetail?.totalBlocks ?? computedMessagesRaw?.length ?? 0);
+  const actualTranscriptMessageCount = baseMessages.length + visibleStreamBlocks.length;
 
   // Prune old transcript blocks above MAX_RENDERED_BLOCKS so the renderer doesn't
   // accumulate thousands of blocks in memory. Dropped blocks are still on disk and
@@ -3360,7 +3361,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
         pendingInitialPromptDispatching,
         hasStreamSnapshot: stream.hasSnapshot,
-        hasTranscriptMessages: (realMessages?.length ?? 0) > 0,
+        hasTranscriptMessages: actualTranscriptMessageCount > 0,
       })
     ) {
       return;
@@ -3440,6 +3441,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     pendingInitialPrompt,
     pendingInitialPromptDispatching,
     allowQueuedPrompts,
+    actualTranscriptMessageCount,
     realMessages?.length,
     stream.hasSnapshot,
     stream.send,
