@@ -4600,28 +4600,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
           rememberComposerInput(inputSnapshot, newId);
           persistPendingConversationPrompt(newId, initialPrompt);
-          setPendingConversationPromptDispatching(newId, true);
           if (composerGoalPending && text) {
             await api.updateGoal(newId, { objective: text }).catch(() => {});
             setComposerGoalPending(false);
           }
-
-          const sendResult = await api.promptSession(
-            newId,
-            initialPrompt.text,
-            initialPrompt.behavior,
-            initialPrompt.images,
-            initialPrompt.attachmentRefs,
-            undefined,
-            initialPrompt.contextMessages,
-          );
-          for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
-            showNotice('danger', warning, 5000);
-          }
-          if (sendResult.accepted) {
-            clearPendingConversationPrompt(newId);
-          }
-          setPendingConversationPromptDispatching(newId, false);
 
           clearDraftConversationAttachments();
           clearDraftConversationContextDocs();
