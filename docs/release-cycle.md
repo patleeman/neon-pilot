@@ -94,7 +94,7 @@ The check verifies:
 7. A live conversation can be created and its `bash` tool returns output
 8. The Knowledge route renders
 9. A conversation route renders
-10. A seeded old-profile startup idle smoke passes with 1,000 synthetic historical conversations, no prebuilt conversation context DB, bounded CPU, and no local model process startup
+10. A seeded old-profile startup idle smoke passes with 2,500 synthetic historical conversations, no prebuilt conversation context DB, bounded CPU, and no local model process startup
 
 `pnpm run build` also verifies the current daemon output under `packages/desktop/dist/server/daemon/` and rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with missing `@neon-pilot/extensions/backend` exports, rerun the full build before cutting the release.
 
