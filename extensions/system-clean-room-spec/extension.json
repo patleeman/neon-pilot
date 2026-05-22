@@ -23,15 +23,6 @@
         "action": "start"
       }
     ],
-    "messageActions": [
-      {
-        "id": "start-implementation",
-        "title": "Start implementation from this spec",
-        "action": "startImplementation",
-        "when": "role:assistant && hasText",
-        "priority": 20
-      }
-    ],
     "turnContextProviders": [
       {
         "id": "clean-room-spec-instructions",

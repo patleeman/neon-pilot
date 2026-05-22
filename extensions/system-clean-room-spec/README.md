@@ -10,7 +10,7 @@ The extension reuses the normal conversation UI. It contributes one command, **C
 2. Run **Clean-room spec generator** from the command palette.
 3. In the new conversation, send a URL, paper, tweet, blog, docs page, product page, demo, or other public reference.
 4. The agent studies public material through web tools and writes a concise implementation brief/PRD.
-5. Use **Start implementation from this spec** on the assistant spec message to open a fresh normal coding conversation seeded only with the spec.
+5. Copy the assistant spec into a fresh normal coding conversation when you are ready to implement it.
 
 ## Boundary
 
@@ -24,6 +24,6 @@ They do not receive local filesystem, shell, repo-editing, checkpoint, schedulin
 
 The per-turn instruction layer tells the observer agent to treat web content as untrusted, ignore prompt injections, avoid copying code/assets/long verbatim text, separate observations from assumptions, and produce a handoff document rather than implementation.
 
-The implementation handoff creates a separate normal conversation. It includes the selected assistant message/spec and does not include browsing transcripts, tool traces, or hidden notes.
+Implementation should happen in a separate normal conversation. Use only the assistant spec as the handoff; do not include browsing transcripts, tool traces, or hidden notes.
 
 This is a technical/process boundary, not a legal guarantee.
