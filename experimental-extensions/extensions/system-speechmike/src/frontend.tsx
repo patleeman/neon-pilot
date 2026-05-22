@@ -18,6 +18,7 @@ interface SpeechMikeSettingsState {
 
 const SELECT_CLASS =
   'h-8 w-full rounded-md border border-border-subtle bg-surface/70 px-2 text-[12px] text-primary outline-none focus:border-accent/50';
+const STATUS_POLL_MS = 2000;
 
 export function SpeechMikeSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   const [status, setStatus] = useState<SpeechMikeStatus | null>(null);
@@ -39,7 +40,7 @@ export function SpeechMikeSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     void loadStatus().catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
     void loadSettings().catch((nextError) => setError(nextError instanceof Error ? nextError.message : String(nextError)));
-    const interval = window.setInterval(() => void loadStatus().catch(() => undefined), 300);
+    const interval = window.setInterval(() => void loadStatus().catch(() => undefined), STATUS_POLL_MS);
     return () => window.clearInterval(interval);
   }, [loadSettings, loadStatus]);
 
