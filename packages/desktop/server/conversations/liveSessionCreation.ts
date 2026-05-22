@@ -33,14 +33,18 @@ export async function createLiveSession(input: {
     queuePrewarmLiveSessionLoader(input.cwd, options);
   }, 5_000);
   prewarmTimer.unref?.();
+  const beforeResolveSessionFileAtMs = performance.now();
+  const sessionFile = resolveLiveSessionFile(session) ?? '';
+  const resolvedSessionFileAtMs = performance.now();
   return {
     id,
-    sessionFile: resolveLiveSessionFile(session) ?? '',
+    sessionFile,
     perf: {
       sessionManagerMs: Math.round(sessionManagerAtMs - startedAtMs),
       preparedMs: Math.round(wiredAtMs - sessionManagerAtMs),
       wireMs: Math.round(wiredAtMs - sessionManagerAtMs - (preparedPerf?.totalMs ?? 0)),
-      totalMs: Math.round(performance.now() - startedAtMs),
+      resolveSessionFileMs: Math.round(resolvedSessionFileAtMs - beforeResolveSessionFileAtMs),
+      totalMs: Math.round(resolvedSessionFileAtMs - startedAtMs),
       ...(preparedPerf ? Object.fromEntries(Object.entries(preparedPerf).map(([key, value]) => [`prepared.${key}`, value])) : {}),
     },
   };
