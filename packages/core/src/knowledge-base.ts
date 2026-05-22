@@ -785,7 +785,8 @@ export class KnowledgeBaseManager {
       repoUrl: config.repoUrl,
       branch: config.branch,
       configured,
-      effectiveRoot: configured && !sourceOverrideActive ? managedRoot : getVaultRoot(),
+      effectiveRoot:
+        configured && !sourceOverrideActive ? managedRoot : getVaultRoot({ configRoot: this.configRoot, stateRoot: this.stateRoot }),
       managedRoot,
       usesManagedRoot: configured && !sourceOverrideActive,
       syncStatus: configured ? this.runtimeState.syncStatus : 'disabled',

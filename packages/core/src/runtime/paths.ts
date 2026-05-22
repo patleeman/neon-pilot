@@ -81,17 +81,29 @@ export function getConfigRoot(): string {
   return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultConfigRoot();
 }
 
-function getMachineConfigFilePathForRuntimePaths(): string {
+interface RuntimePathMachineConfigOptions {
+  configRoot?: string;
+  stateRoot?: string;
+}
+
+function getMachineConfigFilePathForRuntimePaths(options: RuntimePathMachineConfigOptions = {}): string {
   const explicit = process.env.NEON_PILOT_CONFIG_FILE;
   if (explicit && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
 
+  if (options.configRoot) {
+    return join(resolve(options.configRoot), 'config.json');
+  }
+
   return join(resolve(getConfigRoot()), 'config.json');
 }
 
-function readMachineConfigRuntimeOverrides(): { vaultRoot?: string; knowledgeBaseRepoUrl?: string } {
-  const filePath = getMachineConfigFilePathForRuntimePaths();
+function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOptions = {}): {
+  vaultRoot?: string;
+  knowledgeBaseRepoUrl?: string;
+} {
+  const filePath = getMachineConfigFilePathForRuntimePaths(options);
   if (!existsSync(filePath)) {
     return {};
   }
@@ -140,15 +152,15 @@ export function getManagedKnowledgeBaseRoot(stateRoot: string = getStateRoot()):
 /**
  * Get the configured durable knowledge vault root directory.
  */
-export function getVaultRoot(): string {
+export function getVaultRoot(options: RuntimePathMachineConfigOptions = {}): string {
   const explicit = process.env.NEON_PILOT_VAULT_ROOT;
   if (explicit && explicit.trim().length > 0) {
     return expandHomePath(explicit.trim());
   }
 
-  const configured = readMachineConfigRuntimeOverrides();
+  const configured = readMachineConfigRuntimeOverrides(options);
   if (configured.knowledgeBaseRepoUrl) {
-    return getManagedKnowledgeBaseRoot();
+    return getManagedKnowledgeBaseRoot(options.stateRoot);
   }
 
   return configured.vaultRoot ?? getDefaultVaultRoot();

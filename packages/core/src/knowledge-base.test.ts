@@ -134,6 +134,34 @@ describe('KnowledgeBaseManager', () => {
     expect(existsSync(join(remoteClone, 'skills', 'capture', 'SKILL.md'))).toBe(false);
   });
 
+  it('resolves the effective unmanaged vault from the manager config root', () => {
+    const stateRoot = createTempDir('pa-kb-state-');
+    const configRoot = createTempDir('pa-kb-config-');
+    const vaultRoot = createTempDir('pa-kb-vault-');
+    writeMachineConfigFile(configRoot, { vaultRoot });
+
+    const manager = new KnowledgeBaseManager({ stateRoot, configRoot });
+    const state = manager.readKnowledgeBaseState();
+
+    expect(state.configured).toBe(false);
+    expect(state.effectiveRoot).toBe(vaultRoot);
+    expect(state.usesManagedRoot).toBe(false);
+  });
+
+  it('resolves an existing managed vault under the manager state root', () => {
+    const remoteRepo = initBareRepo();
+    const stateRoot = createTempDir('pa-kb-state-');
+    const configRoot = createTempDir('pa-kb-config-');
+    writeMachineConfigFile(configRoot, { knowledgeBaseRepoUrl: remoteRepo, knowledgeBaseBranch: 'main' });
+
+    const manager = new KnowledgeBaseManager({ stateRoot, configRoot });
+    const state = manager.readKnowledgeBaseState();
+
+    expect(state.configured).toBe(true);
+    expect(state.effectiveRoot).toBe(join(stateRoot, 'knowledge-base', 'repo'));
+    expect(state.usesManagedRoot).toBe(true);
+  });
+
   it('does not import the old unmanaged vault into an already-configured bootstrap-only repo on the next sync', () => {
     const remoteRepo = initBareRepo();
     const stateRoot = createTempDir('pa-kb-state-');
