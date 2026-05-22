@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
@@ -4617,28 +4618,30 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             setComposerGoalPending(false);
           }
 
-          navigate(`/conversations/${newId}`, {
-            replace: true,
-            state: {
-              initialModelPreferenceState: buildConversationInitialModelPreferenceState({
-                conversationId: newId,
-                currentModel,
-                currentThinkingLevel,
-                currentServiceTier,
-                hasExplicitServiceTier,
-                defaultModel,
-                defaultThinkingLevel,
-                defaultServiceTier,
-              }),
-              initialDeferredResumeState: {
-                conversationId: newId,
-                resumes: [],
+          flushSync(() => {
+            navigate(`/conversations/${newId}`, {
+              replace: true,
+              state: {
+                initialModelPreferenceState: buildConversationInitialModelPreferenceState({
+                  conversationId: newId,
+                  currentModel,
+                  currentThinkingLevel,
+                  currentServiceTier,
+                  hasExplicitServiceTier,
+                  defaultModel,
+                  defaultThinkingLevel,
+                  defaultServiceTier,
+                }),
+                initialDeferredResumeState: {
+                  conversationId: newId,
+                  resumes: [],
+                },
+                initialPendingPromptState: {
+                  conversationId: newId,
+                  prompt: initialPrompt,
+                },
               },
-              initialPendingPromptState: {
-                conversationId: newId,
-                prompt: initialPrompt,
-              },
-            },
+            });
           });
           navigatedToCreatedConversation = true;
 
