@@ -1400,7 +1400,17 @@ function formatInjectedExtensionDescription(entries: UnifiedSettingsEntry[]): Re
   );
 }
 
-function ExtensionSettingsSection() {
+function ExtensionSettingsSection({
+  includeExtensionIds,
+  excludeExtensionIds,
+  includeGroups,
+  separated = true,
+}: {
+  includeExtensionIds?: readonly string[];
+  excludeExtensionIds?: readonly string[];
+  includeGroups?: readonly string[];
+  separated?: boolean;
+} = {}) {
   const { data: values, loading, error } = useApi<Record<string, unknown>>(api.settings as never);
   const { data: schema, loading: schemaLoading, error: schemaError } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
@@ -1463,10 +1473,16 @@ function ExtensionSettingsSection() {
 
   const grouped = useMemo(() => {
     if (!schema) return new Map<string, UnifiedSettingsEntry[]>();
+    const includedExtensionIds = includeExtensionIds ? new Set(includeExtensionIds) : null;
+    const excludedExtensionIds = excludeExtensionIds ? new Set(excludeExtensionIds) : null;
+    const includedGroups = includeGroups ? new Set(includeGroups) : null;
     const groups = new Map<string, UnifiedSettingsEntry[]>();
     for (const entry of schema) {
       if (entry.key === 'secrets.provider') continue;
       const group = entry.group || 'General';
+      if (includedExtensionIds && !includedExtensionIds.has(entry.extensionId)) continue;
+      if (excludedExtensionIds?.has(entry.extensionId)) continue;
+      if (includedGroups && !includedGroups.has(group)) continue;
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group)!.push(entry);
     }
@@ -1474,14 +1490,14 @@ function ExtensionSettingsSection() {
       entries.sort((a, b) => a.order - b.order);
     }
     return groups;
-  }, [schema]);
+  }, [excludeExtensionIds, includeExtensionIds, includeGroups, schema]);
 
   if (loading || schemaLoading) return null;
   if (error || schemaError) return null;
   if (grouped.size === 0) return null;
 
   return (
-    <div className="space-y-0 border-t border-border-subtle/70 pt-6">
+    <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
       {[...grouped.entries()].map(([group, entries]) => (
         <SettingsPanel key={group} title={group} description={formatInjectedExtensionDescription(entries)}>
           {entries.map((entry) => (
@@ -3109,11 +3125,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                   {defaultCwdSaveError && <p className="text-[12px] text-danger">{defaultCwdSaveError}</p>}
                 </SettingsPanel>
+
+                <ExtensionSettingsSection includeExtensionIds={['system-settings']} includeGroups={['Conversation']} separated={false} />
               </div>
             </SettingsSection>
 
             <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
-              <ExtensionSettingsSection />
+              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
               {extensionSettingsComponents.map((settingsComponent) => (
                 <ExtensionSettingsComponentPanel
                   key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
