@@ -4617,12 +4617,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             setComposerGoalPending(false);
           }
 
-          clearDraftConversationAttachments();
-          clearDraftConversationContextDocs();
-          clearDraftConversationCwd();
-          clearDraftConversationModelPreferences();
-
-          ensureConversationTabOpen(newId);
           navigate(`/conversations/${newId}`, {
             replace: true,
             state: {
@@ -4647,6 +4641,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             },
           });
           navigatedToCreatedConversation = true;
+
+          window.setTimeout(() => {
+            clearDraftConversationAttachments();
+            clearDraftConversationContextDocs();
+            clearDraftConversationCwd();
+            clearDraftConversationModelPreferences();
+            ensureConversationTabOpen(newId);
+          }, 1_000);
         } catch (error) {
           if (createdSessionId) {
             setPendingConversationPromptDispatching(createdSessionId, false);
