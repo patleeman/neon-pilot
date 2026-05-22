@@ -6,20 +6,15 @@ import { api } from '../client/api';
 import { completeConversationOpenPhase, ensureConversationOpenStart } from '../client/perfDiagnostics';
 import { buildSlashMenuItems, parseSlashInput } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
-import { ConversationActivityShelf } from '../components/conversation/ConversationActivityShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../components/conversation/ConversationComposerMenus';
 import { ConversationComposerMeta } from '../components/conversation/ConversationComposerMeta';
-import { ConversationContextShelf } from '../components/conversation/ConversationContextShelf';
 import {
   ConversationDraftEmptyAction,
   DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS,
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
-import { ConversationQuestionShelf } from '../components/conversation/ConversationQuestionShelf';
-import { ConversationQueueShelf } from '../components/conversation/ConversationQueueShelf';
-import { ConversationSavedHeader } from '../components/ConversationSavedHeader';
 import { addNotification } from '../components/notifications/notificationStore';
 import { AppPageEmptyState, cx, EmptyState, LoadingState, PageHeader, Pill } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
@@ -300,6 +295,21 @@ const ConversationDrawingsPickerModal = lazy(() =>
   import('../components/ConversationDrawingsPickerModal').then((module) => ({ default: module.ConversationDrawingsPickerModal })),
 );
 const ChatView = lazy(() => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView })));
+const ConversationActivityShelf = lazy(() =>
+  import('../components/conversation/ConversationActivityShelf').then((module) => ({ default: module.ConversationActivityShelf })),
+);
+const ConversationContextShelf = lazy(() =>
+  import('../components/conversation/ConversationContextShelf').then((module) => ({ default: module.ConversationContextShelf })),
+);
+const ConversationQuestionShelf = lazy(() =>
+  import('../components/conversation/ConversationQuestionShelf').then((module) => ({ default: module.ConversationQuestionShelf })),
+);
+const ConversationQueueShelf = lazy(() =>
+  import('../components/conversation/ConversationQueueShelf').then((module) => ({ default: module.ConversationQueueShelf })),
+);
+const ConversationSavedHeader = lazy(() =>
+  import('../components/ConversationSavedHeader').then((module) => ({ default: module.ConversationSavedHeader })),
+);
 
 interface ExcalidrawEditorSavePayload {
   title: string;
@@ -5487,25 +5497,27 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                       {title}
                     </h1>
                   ) : (
-                    <ConversationSavedHeader
-                      title={title}
-                      cwd={currentCwd}
-                      onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
-                      cwdEditing={false}
-                      cwdDraft={conversationCwdDraft}
-                      cwdError={null}
-                      cwdSaveBusy={conversationCwdBusy}
-                      onCwdDraftChange={(value) => {
-                        setConversationCwdDraft(value);
-                        if (conversationCwdError) {
-                          setConversationCwdError(null);
-                        }
-                      }}
-                      onCancelEditingCwd={cancelConversationCwdEdit}
-                      onSaveCwd={() => {
-                        void submitConversationCwdChange();
-                      }}
-                    />
+                    <Suspense fallback={<h1 className="ui-conversation-title-clamp text-[30px] font-semibold">{title}</h1>}>
+                      <ConversationSavedHeader
+                        title={title}
+                        cwd={currentCwd}
+                        onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
+                        cwdEditing={false}
+                        cwdDraft={conversationCwdDraft}
+                        cwdError={null}
+                        cwdSaveBusy={conversationCwdBusy}
+                        onCwdDraftChange={(value) => {
+                          setConversationCwdDraft(value);
+                          if (conversationCwdError) {
+                            setConversationCwdError(null);
+                          }
+                        }}
+                        onCancelEditingCwd={cancelConversationCwdEdit}
+                        onSaveCwd={() => {
+                          void submitConversationCwdChange();
+                        }}
+                      />
+                    </Suspense>
                   )}
                 </div>
               </div>
@@ -5973,72 +5985,80 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     </div>
                   ) : null}
 
-                  <ConversationContextShelf
-                    attachedContextDocs={attachedContextDocs}
-                    draftMentionItems={draftMentionItems}
-                    unattachedDraftMentionItems={unattachedDraftMentionItems}
-                    contextDocsBusy={contextDocsBusy}
-                    onRemoveAttachedContextDoc={(path) => {
-                      void removeAttachedContextDoc(path);
-                    }}
-                    onAttachMentionedDocs={(items) => {
-                      void attachMentionedDocsToConversation(items);
-                    }}
-                  />
-
-                  <ConversationQueueShelf
-                    pendingQueue={pendingQueue}
-                    conversationNeedsTakeover={conversationNeedsTakeover}
-                    onRestoreQueuedPrompt={(behavior, queueIndex, previewId) => {
-                      void restoreQueuedPromptToComposer(behavior, queueIndex, previewId);
-                    }}
-                  />
-
-                  {!draft && (
-                    <ConversationActivityShelf
-                      backgroundExecutions={visibleActiveConversationBackgroundExecutions}
-                      backgroundExecutionIndicatorText={backgroundExecutionIndicatorText}
-                      showBackgroundRunDetails={showActiveBackgroundRunDetails}
-                      cancellingBackgroundRunIds={cancellingBackgroundRunIds}
-                      onToggleBackgroundRunDetails={() => {
-                        setShowBackgroundRunDetails((open) => !open);
+                  <Suspense fallback={null}>
+                    <ConversationContextShelf
+                      attachedContextDocs={attachedContextDocs}
+                      draftMentionItems={draftMentionItems}
+                      unattachedDraftMentionItems={unattachedDraftMentionItems}
+                      contextDocsBusy={contextDocsBusy}
+                      onRemoveAttachedContextDoc={(path) => {
+                        void removeAttachedContextDoc(path);
                       }}
-                      onCancelBackgroundRun={cancelBackgroundRunFromShelf}
-                      onOpenBackgroundRun={openRun}
-                      deferredResumes={orderedDeferredResumes}
-                      deferredResumeIndicatorText={deferredResumeIndicatorText}
-                      deferredResumeNowMs={deferredResumeNowMs}
-                      hasReadyDeferredResumes={hasReadyDeferredResumes}
-                      isLiveSession={isLiveSession}
-                      deferredResumesBusy={deferredResumesBusy}
-                      showDeferredResumeDetails={showDeferredResumeDetails}
-                      onContinueDeferredResumesNow={() => {
-                        void continueDeferredResumesNow();
-                      }}
-                      onToggleDeferredResumeDetails={() => {
-                        setShowDeferredResumeDetails((open) => !open);
-                      }}
-                      onFireDeferredResumeNow={(resumeId) => {
-                        void fireDeferredResumeNow(resumeId);
-                      }}
-                      onCancelDeferredResume={(resumeId) => {
-                        void cancelDeferredResume(resumeId);
+                      onAttachMentionedDocs={(items) => {
+                        void attachMentionedDocsToConversation(items);
                       }}
                     />
+                  </Suspense>
+
+                  <Suspense fallback={null}>
+                    <ConversationQueueShelf
+                      pendingQueue={pendingQueue}
+                      conversationNeedsTakeover={conversationNeedsTakeover}
+                      onRestoreQueuedPrompt={(behavior, queueIndex, previewId) => {
+                        void restoreQueuedPromptToComposer(behavior, queueIndex, previewId);
+                      }}
+                    />
+                  </Suspense>
+
+                  {!draft && (
+                    <Suspense fallback={null}>
+                      <ConversationActivityShelf
+                        backgroundExecutions={visibleActiveConversationBackgroundExecutions}
+                        backgroundExecutionIndicatorText={backgroundExecutionIndicatorText}
+                        showBackgroundRunDetails={showActiveBackgroundRunDetails}
+                        cancellingBackgroundRunIds={cancellingBackgroundRunIds}
+                        onToggleBackgroundRunDetails={() => {
+                          setShowBackgroundRunDetails((open) => !open);
+                        }}
+                        onCancelBackgroundRun={cancelBackgroundRunFromShelf}
+                        onOpenBackgroundRun={openRun}
+                        deferredResumes={orderedDeferredResumes}
+                        deferredResumeIndicatorText={deferredResumeIndicatorText}
+                        deferredResumeNowMs={deferredResumeNowMs}
+                        hasReadyDeferredResumes={hasReadyDeferredResumes}
+                        isLiveSession={isLiveSession}
+                        deferredResumesBusy={deferredResumesBusy}
+                        showDeferredResumeDetails={showDeferredResumeDetails}
+                        onContinueDeferredResumesNow={() => {
+                          void continueDeferredResumesNow();
+                        }}
+                        onToggleDeferredResumeDetails={() => {
+                          setShowDeferredResumeDetails((open) => !open);
+                        }}
+                        onFireDeferredResumeNow={(resumeId) => {
+                          void fireDeferredResumeNow(resumeId);
+                        }}
+                        onCancelDeferredResume={(resumeId) => {
+                          void cancelDeferredResume(resumeId);
+                        }}
+                      />
+                    </Suspense>
                   )}
 
                   {pendingAskUserQuestion && composerActiveQuestion && (
-                    <ConversationQuestionShelf
-                      presentation={pendingAskUserQuestion.presentation}
-                      activeQuestion={composerActiveQuestion}
-                      activeQuestionIndex={composerQuestionIndex}
-                      activeOptionIndex={composerQuestionOptionIndex}
-                      answers={composerQuestionAnswers}
-                      submitting={composerQuestionSubmitting}
-                      answeredCount={composerQuestionAnsweredCount}
-                      onActivateQuestion={activateComposerQuestion}
-                      onSelectOption={handleComposerQuestionOptionSelect}
-                    />
+                    <Suspense fallback={null}>
+                      <ConversationQuestionShelf
+                        presentation={pendingAskUserQuestion.presentation}
+                        activeQuestion={composerActiveQuestion}
+                        activeQuestionIndex={composerQuestionIndex}
+                        activeOptionIndex={composerQuestionOptionIndex}
+                        answers={composerQuestionAnswers}
+                        submitting={composerQuestionSubmitting}
+                        answeredCount={composerQuestionAnsweredCount}
+                        onActivateQuestion={activateComposerQuestion}
+                        onSelectOption={handleComposerQuestionOptionSelect}
+                      />
+                    </Suspense>
                   )}
                   {composerShelvesBottom.map((shelf) => (
                     <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
