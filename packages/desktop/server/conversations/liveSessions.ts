@@ -322,7 +322,10 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
   entry.parallelJobs = loadPersistedParallelJobs(entry.session.sessionFile, resolveParallelChildSession);
   registry.set(id, entry);
   publishSessionMetaChanged(id);
-  void syncDurableConversationRun(entry, session.isStreaming ? 'running' : 'waiting', { force: true });
+  const durableRunSyncTimer = setTimeout(() => {
+    void syncDurableConversationRun(entry, session.isStreaming ? 'running' : 'waiting', { force: true });
+  }, 5_000);
+  durableRunSyncTimer.unref?.();
   if (entry.parallelJobs.length > 0) {
     queueMicrotask(() => {
       void tryImportReadyParallelJobs(entry);
