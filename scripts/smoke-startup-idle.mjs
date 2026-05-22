@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 const repo = resolve(new URL('..', import.meta.url).pathname);
 function arg(name, fallback) {
@@ -62,7 +62,18 @@ async function main() {
   const env = { ...process.env, NEON_PILOT_STATE_ROOT: stateRoot, NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config') };
   let child;
   if (app) {
-    child = spawn('open', ['-n', '-W', app, '--args', `--neon-pilot-state-root=${stateRoot}`], { env, stdio: 'ignore' });
+    const executablePath = join(app, 'Contents', 'MacOS', basename(app, '.app'));
+    if (!existsSync(executablePath)) throw new Error(`Packaged app executable not found: ${executablePath}`);
+    child = spawn(executablePath, ['--no-quit-confirmation'], {
+      env: {
+        ...env,
+        NEON_PILOT_RUNTIME_CHANNEL: 'test',
+        NEON_PILOT_DESKTOP_USER_DATA_DIR: join(stateRoot, 'user-data'),
+        NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'daemon.sock'),
+        NEON_PILOT_COMPANION_PORT: '0',
+      },
+      stdio: 'ignore',
+    });
   } else {
     child = spawn('pnpm', ['--dir', 'packages/desktop', 'run', 'start', '--', `--neon-pilot-state-root=${stateRoot}`], {
       cwd: repo,

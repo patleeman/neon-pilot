@@ -706,10 +706,16 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     fail(`Packaged desktop app not found under ${releaseDir}; cannot run release smoke test.`);
   }
   const smokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs');
+  const startupIdleSmokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-startup-idle.mjs');
 
   if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
+    console.log('Running seeded-profile startup idle smoke test against the built app...');
+    run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=1000', '--blocks=80'], {
+      cwd: buildRoot,
+      env,
+    });
     return;
   }
 
