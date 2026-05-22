@@ -343,6 +343,8 @@ export const UserMessage = memo(function UserMessage({
   layout?: ChatViewLayout;
 }) {
   const hasText = block.text.trim().length > 0;
+  const imageCount = block.images?.length ?? 0;
+  const hasImages = imageCount > 0;
   const skillBlock = hasText ? parseSkillBlock(block.text) : null;
   const handleRewind = useCallback(() => {
     if (typeof messageIndex !== 'number') {
@@ -394,9 +396,9 @@ export const UserMessage = memo(function UserMessage({
     <div className="group flex flex-col items-end gap-1.5">
       <div className={layout === 'compact' ? 'min-w-0 max-w-[92%] sm:max-w-[88%]' : 'min-w-0 max-w-[86%]'}>
         <div className="ui-message-card-user space-y-2">
-          {block.images && block.images.length > 0 && (
+          {hasImages && (
             <div className="space-y-2">
-              {block.images.map((image, index) => {
+              {block.images?.map((image, index) => {
                 const blockId = block.id?.trim();
                 const loading = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
                 const canHydrate = Boolean(image.deferred && blockId && onHydrateMessage);
@@ -465,6 +467,10 @@ export const UserMessage = memo(function UserMessage({
             </div>
           ) : hasText ? (
             <div className="px-1.5 pb-0.5">{renderMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint })}</div>
+          ) : hasImages ? (
+            <div className="px-1.5 pb-0.5 text-sm text-secondary">
+              {imageCount === 1 ? 'Image attachment' : `${imageCount} image attachments`}
+            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2 pt-1 pr-1">

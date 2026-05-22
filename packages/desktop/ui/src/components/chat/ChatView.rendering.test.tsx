@@ -127,6 +127,21 @@ describe('ChatView rendering stability', () => {
     expect(setIntervalSpy).not.toHaveBeenCalled();
   });
 
+  it('renders a visible label for image-only user messages', () => {
+    const { container } = renderChatView([
+      {
+        id: 'user-image-only',
+        type: 'user',
+        ts: '2026-04-23T18:00:00.000Z',
+        text: '',
+        images: [{ alt: 'Attached image', src: 'data:image/png;base64,abc' }],
+      },
+      createAssistantBlock(),
+    ]);
+
+    expect(container.textContent).toContain('Image attachment');
+  });
+
   it('keeps the tail trace cluster open across transient streaming-state drops', () => {
     vi.useFakeTimers();
     const toolBlock = {
