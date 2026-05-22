@@ -27,5 +27,5 @@ Uses the `tool_call` agent lifecycle hook to intercept bash commands before exec
 ## Tests
 
 ```bash
-npx vitest run extensions/system-self-preservation/src/backend.test.ts
+npx vitest run installable-extensions/system-self-preservation/src/backend.test.ts
 ```

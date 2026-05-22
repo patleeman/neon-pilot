@@ -21,9 +21,24 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Agent Client Protocol experiments.',
   },
   {
+    id: 'system-alleycat',
+    name: 'Kitty Litter Mobile Pairing',
+    description: 'Mobile pairing bridge for Kitty Litter clients.',
+  },
+  {
     id: 'system-browser',
     name: 'Browser',
     description: 'Browser automation tool and Workbench browser views.',
+  },
+  {
+    id: 'system-clean-room-spec',
+    name: 'Clean-room Spec Generator',
+    description: 'Generate sanitized specs from untrusted extension source.',
+  },
+  {
+    id: 'system-exa-search',
+    name: 'Exa Search',
+    description: 'Agent tool for Exa web search.',
   },
   {
     id: 'system-gateways',
@@ -41,6 +56,16 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Local MLX and GGUF model management UI.',
   },
   {
+    id: 'system-loose-ends',
+    name: 'Loose Ends',
+    description: 'Conversation-scoped notes for assumptions, risks, and follow-ups.',
+  },
+  {
+    id: 'system-self-preservation',
+    name: 'Self Preservation',
+    description: 'Agent self-preservation instruction and context hooks.',
+  },
+  {
     id: 'system-session-exchange',
     name: 'Session Exchange',
     description: 'Import/export flow for conversation session handoff experiments.',
@@ -49,6 +74,11 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     id: 'system-speechmike',
     name: 'SpeechMike',
     description: 'SpeechMike hardware integration.',
+  },
+  {
+    id: 'system-video-probe',
+    name: 'Video Probe',
+    description: 'Analyze UI recordings and videos with a video-capable model.',
   },
 ];
 
