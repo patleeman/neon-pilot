@@ -4551,6 +4551,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   conversationId: created.id,
                   resumes: [],
                 },
+                preserveConversationSurfaceKey: 'draft',
               },
             });
             navigatedToCreatedConversation = true;
@@ -4635,6 +4636,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 conversationId: newId,
                 prompt: initialPrompt,
               },
+              preserveConversationSurfaceKey: 'draft',
             },
           });
           navigatedToCreatedConversation = true;

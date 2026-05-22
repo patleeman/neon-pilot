@@ -1,5 +1,5 @@
 import { Component, type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 import { api } from '../client/api';
 import { Layout } from '../components/Layout';
@@ -148,7 +148,15 @@ function DraftConversationRoute() {
 
 function SavedConversationRoute() {
   const { id } = useParams<{ id?: string }>();
-  return suspendRoute(<ConversationPage key={id ?? 'conversation'} />);
+  const location = useLocation();
+  const surfaceKey =
+    location.state &&
+    typeof location.state === 'object' &&
+    'preserveConversationSurfaceKey' in location.state &&
+    location.state.preserveConversationSurfaceKey === 'draft'
+      ? 'draft'
+      : (id ?? 'conversation');
+  return suspendRoute(<ConversationPage key={surfaceKey} />);
 }
 
 export function App() {
