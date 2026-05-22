@@ -41,7 +41,6 @@ import { NotificationCenter } from './notifications/NotificationCenter';
 import { NotificationProvider } from './notifications/notificationStore';
 import { NotificationToaster } from './notifications/NotificationToaster';
 import { PageSearchBar } from './PageSearchBar';
-import { Sidebar } from './Sidebar';
 import { cx } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
@@ -66,6 +65,7 @@ const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact
 const ConversationBackgroundWorkWorkbenchPane = lazyRouteWithRecovery('layout-background-work-workbench', () =>
   import('./ConversationBackgroundWorkWorkbench').then((module) => ({ default: module.ConversationBackgroundWorkWorkbenchPane })),
 );
+const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
 
 const WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY = 'pa:workbench-document-width';
 const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
@@ -1518,7 +1518,9 @@ export function Layout() {
                 style={{ width: sidebar.width }}
                 className="flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
               >
-                <Sidebar />
+                <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
+                  <Sidebar />
+                </Suspense>
               </div>
             ) : null}
 
