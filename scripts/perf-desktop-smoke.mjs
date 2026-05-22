@@ -26,6 +26,7 @@ const blocks = Number(arg('blocks', '80')) || 80;
 const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
+const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '15000')) || 15000;
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
 const stateRoot = join(root, 'state');
@@ -61,6 +62,9 @@ async function fetchJson(url) {
   if (!r.ok) throw new Error(`${url} ${r.status}`);
   return r.json();
 }
+function childExited(child) {
+  return child.exitCode !== null && child.exitCode !== undefined;
+}
 function connectCdp(url) {
   const ws = new WebSocket(url);
   let nextId = 1;
@@ -70,7 +74,7 @@ function connectCdp(url) {
     if (!msg.id || !pending.has(msg.id)) return;
     const p = pending.get(msg.id);
     pending.delete(msg.id);
-    msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result);
+    msg.error ? p.reject(new Error(`${p.method}: ${msg.error.message}`)) : p.resolve(msg.result);
   });
   const opened = new Promise((res, rej) => {
     ws.once('open', res);
@@ -80,7 +84,7 @@ function connectCdp(url) {
     async send(method, params = {}) {
       await opened;
       const id = nextId++;
-      const promise = new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+      const promise = new Promise((resolve, reject) => pending.set(id, { resolve, reject, method }));
       ws.send(JSON.stringify({ id, method, params }));
       return promise;
     },
@@ -90,13 +94,14 @@ function connectCdp(url) {
   };
 }
 async function evalJs(cdp, expression) {
+  if (typeof expression !== 'string') throw new Error(`Runtime.evaluate expression must be string, got ${typeof expression}`);
   const r = await cdp.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
   return r?.result?.value;
 }
 async function waitForPage(port, child, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`app exited ${child.exitCode}`);
+    if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
     try {
       const targets = await fetchJson(`http://127.0.0.1:${port}/json/list`);
       const page = targets.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
@@ -109,7 +114,7 @@ async function waitForPage(port, child, timeoutMs = 45_000) {
 async function waitBody(cdp, child, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`app exited ${child.exitCode}`);
+    if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
     const body = String((await evalJs(cdp, 'document.body?.innerText || ""')) || '').trim();
     if (body.length > 0 && !/startup error|could not load/i.test(body)) return body;
     await sleep(100);
@@ -119,7 +124,7 @@ async function waitBody(cdp, child, timeoutMs = 30_000) {
 async function waitAppHydrated(cdp, child, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`app exited ${child.exitCode}`);
+    if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
     const hydrated = await evalJs(cdp, `!document.querySelector('#app-loader') && document.body?.innerText?.trim().length > 0`);
     if (hydrated) return;
     await sleep(100);
@@ -169,6 +174,15 @@ async function measure(name, fn) {
   await fn();
   return Math.round(performance.now() - t);
 }
+async function waitForExpression(cdp, child, expression, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
+    if (await evalJs(cdp, expression)) return;
+    await sleep(100);
+  }
+  throw new Error(`timed out waiting for expression: ${expression}`);
+}
 async function main() {
   await run(process.execPath, [
     join(repo, 'scripts/seed-startup-profile.mjs'),
@@ -208,6 +222,22 @@ async function main() {
     const firstBodyMs = startupReadyMs - cdpReadyMs;
     await waitAppHydrated(cdp, child);
     const appHydratedMs = Math.round(performance.now() - start);
+    const draftSubmitVisibleMs = await measure('draft submit visible', async () => {
+      const prompt = `Perf draft submit ${Date.now()}`;
+      await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
+      await waitAppHydrated(cdp, child);
+      await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea'))`);
+      await evalJs(
+        cdp,
+        `(async()=>{const prompt=${JSON.stringify(prompt)}; const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:prompt})); await new Promise(r=>requestAnimationFrame(r)); await new Promise(r=>setTimeout(r,50)); const button=document.querySelector('button[aria-label="Send"]'); if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
+      );
+      await waitForExpression(
+        cdp,
+        child,
+        `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
+        45_000,
+      );
+    });
     const routeSettingsMs = await measure('settings', async () => {
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
       await waitBody(cdp, child);
@@ -248,6 +278,7 @@ async function main() {
       cdpReadyMs,
       firstBodyMs,
       appHydratedMs,
+      draftSubmitVisibleMs,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
@@ -267,16 +298,18 @@ async function main() {
     if (cpuPeak > maxCpu) failures.push(`idleCpuPeak ${cpuPeak.toFixed(1)} > ${maxCpu}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
     if (longTranscriptOpenMs > 2500) failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > 2500`);
+    if (draftSubmitVisibleMs > maxDraftSubmitVisibleMs)
+      failures.push(`draftSubmitVisibleMs ${draftSubmitVisibleMs} > ${maxDraftSubmitVisibleMs}`);
     if (failures.length)
       throw new Error(
         `Desktop perf smoke failed:\n${failures.join('\n')}\nTop offenders: ${JSON.stringify(cpuSamples.toSorted((a, b) => b.total - a.total)[0]?.offenders ?? [], null, 2)}`,
       );
   } finally {
     cdp?.close();
-    if (child.exitCode === null) {
+    if (!childExited(child)) {
       child.kill('SIGTERM');
       await sleep(1_000);
-      if (child.exitCode === null) child.kill('SIGKILL');
+      if (!childExited(child)) child.kill('SIGKILL');
     }
     if (!keep) rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }

@@ -1,7 +1,7 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import type { Express, Request, Response } from 'express';
 
-import { resolveConversationCwd } from '../conversations/conversationCwd.js';
+import { resolveNeutralChatCwd } from '../conversations/conversationCwd.js';
 import { parseTailBlocksQuery } from '../conversations/conversationService.js';
 import {
   type LiveSessionCapabilityContext,
@@ -101,12 +101,7 @@ function buildLiveSessionResourceOptions(overrides: Record<string, unknown> = {}
 function queueDefaultLiveSessionLoaderPrewarm(): void {
   try {
     const profile = getRuntimeScopeFn();
-    const cwd = resolveConversationCwd({
-      repoRoot: getRepoRootFn(),
-      profile,
-      explicitCwd: undefined,
-      defaultCwd: getDefaultWebCwdFn(),
-    });
+    const cwd = resolveNeutralChatCwd(profile);
 
     void prewarmLiveSessionLoader(cwd, buildLiveSessionResourceOptions()).catch((error) => {
       logWarn('default live session loader prewarm failed', {
