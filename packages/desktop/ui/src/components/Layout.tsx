@@ -25,10 +25,10 @@ import {
   type NativeExtensionViewSummary,
 } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
-import { useConversations } from '../hooks/useConversations';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsContextRail, routeSupportsWorkbench } from '../navigation/routeRegistry';
+import { readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
@@ -836,7 +836,6 @@ export function Layout() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { sessions } = useAppData();
-  const { pinnedSessions, tabs } = useConversations();
   const { versions } = useAppEvents();
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
@@ -1090,7 +1089,8 @@ export function Layout() {
       },
       navigateConversation(direction: 'next' | 'previous') {
         if (!activeConversationId) return false;
-        const conversationIds = [...pinnedSessions, ...tabs].map((session) => session.id);
+        const layout = readConversationLayout();
+        const conversationIds = [...layout.pinnedSessionIds, ...layout.sessionIds];
         const currentIndex = conversationIds.indexOf(activeConversationId);
         if (currentIndex === -1 || conversationIds.length < 2) return false;
         const delta = direction === 'next' ? 1 : -1;
@@ -1110,10 +1110,8 @@ export function Layout() {
       extensionRightToolPanels,
       location.pathname,
       navigate,
-      pinnedSessions,
       sessions,
       setActiveConversationTool,
-      tabs,
     ],
   );
 
