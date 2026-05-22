@@ -788,7 +788,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
     // fans out across extension manifests and frontend entries. Extension pages
     // still load quickly when the current route is extension-owned.
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-    const delayMs = pathname === '/conversations/new' || pathname.startsWith('/conversations/') ? 30_000 : 250;
+    const delayMs = pathname === '/conversations/new' || pathname.startsWith('/conversations/') ? 1_500 : 250;
     loadTimer = window.setTimeout(load, delayMs);
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
 
