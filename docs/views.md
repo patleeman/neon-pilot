@@ -6,21 +6,6 @@ Neon Pilot has two view modes. Switch between them with `F1`/`F2` or the dropdow
 
 The default layout. A single conversation pane with the left sidebar for conversation navigation.
 
-```
-┌────────────────────────────────────┐
-│ Sidebar │                          │
-│          │   Transcript            │
-│ ┌──────┐ │   ┌──────────────────┐  │
-│ │Conv 1│ │   │ User message     │  │
-│ │Conv 2│ │   │                  │  │
-│ │Conv 3│ │   │ Assistant resp.  │  │
-│ └──────┘ │   └──────────────────┘  │
-│          │   ┌──────────────────┐  │
-│          │   │ Composer         │  │
-│          │   └──────────────────┘  │
-└────────────────────────────────────┘
-```
-
 - **Left sidebar** — conversation list, toggle with `Cmd+/` (or `Ctrl+/`)
 - **Center** — transcript and composer
 - Use this for focused single-thread work
@@ -28,21 +13,6 @@ The default layout. A single conversation pane with the left sidebar for convers
 ## Workbench View (F2)
 
 A multi-pane layout for working alongside knowledge and tools. Available on conversation routes.
-
-```
-┌──────────────────────────────────────────────────────┐
-│ Sidebar │  Transcript         │  Workbench nav     │
-│          │                    │                      │
-│ ┌──────┐│  ┌──────────────┐  │  ┌──────────────────┐│
-│ │Conv 1││  │ User msg     │  │  │ Files/Artifacts/ ││
-│ │Conv 2││  │              │  │  │ Artifacts/       ││
-│ │Conv 3││  │ Assistant    │  │  │ Browser          ││
-│ └──────┘│  └──────────────┘  │  └──────────────────┘│
-│          │  ┌──────────────┐  │                      │
-│          │  │ Composer     │  │                      │
-│          │  └──────────────┘  │                      │
-└──────────────────────────────────────────────────────┘
-```
 
 The right rail nav tabs include:
 
