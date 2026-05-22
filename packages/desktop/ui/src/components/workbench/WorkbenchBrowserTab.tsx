@@ -7,6 +7,7 @@ import {
   type DesktopWorkbenchBrowserState,
   getDesktopBridge,
 } from '../../desktop/desktopBridge';
+import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
@@ -208,18 +209,23 @@ export function WorkbenchBrowserTab({
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .extensionKeybindings()
-      .then((keybindings) => {
-        if (!cancelled) {
-          setSurfaceKeybindings(keybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'surface'));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setSurfaceKeybindings([]);
-      });
+    const load = () => {
+      api
+        .extensionKeybindings()
+        .then((keybindings) => {
+          if (!cancelled) {
+            setSurfaceKeybindings(keybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'surface'));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setSurfaceKeybindings([]);
+        });
+    };
+    load();
+    window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
     };
   }, []);
 

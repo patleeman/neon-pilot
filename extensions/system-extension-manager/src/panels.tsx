@@ -569,6 +569,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
           return next;
         });
         showActionNotice(`Updated ${keybinding.title}`);
+        notifyExtensionRegistryChanged();
         loadCommandInspector();
       } catch (err) {
         showActionError(`Failed to update ${keybinding.title}`, err instanceof Error ? err.message : String(err));
@@ -581,6 +582,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
     async (keybinding: KeybindingInspectorEntry) => {
       try {
         await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { enabled: !keybinding.enabled });
+        notifyExtensionRegistryChanged();
         loadCommandInspector();
       } catch (err) {
         showActionError(`Failed to toggle ${keybinding.title}`, err instanceof Error ? err.message : String(err));
@@ -593,6 +595,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
     async (keybinding: KeybindingInspectorEntry) => {
       try {
         await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { reset: true });
+        notifyExtensionRegistryChanged();
         loadCommandInspector();
       } catch (err) {
         showActionError(`Failed to reset ${keybinding.title}`, err instanceof Error ? err.message : String(err));
