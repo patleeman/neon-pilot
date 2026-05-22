@@ -5169,13 +5169,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       textareaRef.current?.focus();
     };
 
+    const handleComposerAppendTextCommand = (event: Event) => {
+      const text = event instanceof CustomEvent && typeof event.detail?.text === 'string' ? event.detail.text : '';
+      if (!text.trim()) return;
+      composerController.appendText(text);
+    };
+
     window.addEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
     window.addEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
     window.addEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
+    window.addEventListener('neon-pilot:composer-append-text', handleComposerAppendTextCommand);
     return () => {
       window.removeEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
       window.removeEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
       window.removeEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
+      window.removeEventListener('neon-pilot:composer-append-text', handleComposerAppendTextCommand);
     };
   }, [composerController, composerShowsQuestionSubmit, submitComposerQuestionIfReady, submitComposerActionForModifiers]);
   const composerSubmit = resolveConversationComposerSubmitState(

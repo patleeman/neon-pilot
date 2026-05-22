@@ -152,7 +152,7 @@ export function DictationButton({
         pa.ui.toast('Dictation did not detect any speech.');
         return;
       }
-      (buttonContext.appendText ?? buttonContext.insertText)(text);
+      window.dispatchEvent(new CustomEvent('neon-pilot:composer-append-text', { detail: { text } }));
       pa.ui.toast('Dictation inserted.');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
