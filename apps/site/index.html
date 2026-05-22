@@ -220,6 +220,11 @@
       </section>
     </main>
 
+    <dialog class="image-popout" aria-label="Expanded screenshot">
+      <button type="button" class="image-popout-close" aria-label="Close expanded screenshot">×</button>
+      <img alt="" />
+    </dialog>
+
     <footer>
       <span>Open source · MIT · macOS today</span>
       <div>
@@ -227,5 +232,36 @@
         ><a href="./docs/">Docs</a>
       </div>
     </footer>
+    <script>
+      const popout = document.querySelector('.image-popout');
+      const popoutImage = popout?.querySelector('img');
+      const closePopout = popout?.querySelector('button');
+
+      document.querySelectorAll('.app-shot img, .surface-strip img, .screen-card img').forEach((image) => {
+        image.tabIndex = 0;
+        image.setAttribute('role', 'button');
+        image.setAttribute('aria-label', `Expand screenshot: ${image.alt}`);
+
+        const open = () => {
+          if (!popout || !popoutImage) return;
+          popoutImage.src = image.currentSrc || image.src;
+          popoutImage.alt = image.alt;
+          popout.showModal();
+        };
+
+        image.addEventListener('click', open);
+        image.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            open();
+          }
+        });
+      });
+
+      closePopout?.addEventListener('click', () => popout?.close());
+      popout?.addEventListener('click', (event) => {
+        if (event.target === popout) popout.close();
+      });
+    </script>
   </body>
 </html>
