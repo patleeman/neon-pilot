@@ -26,7 +26,7 @@
       </a>
       <nav aria-label="Primary">
         <a href="#overview">Overview</a>
-        <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md" rel="noopener">Docs</a>
+        <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/README.md" rel="noopener">Docs</a>
         <a href="#extensions">Extensions</a>
         <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub ↗</a>
       </nav>
@@ -37,11 +37,8 @@
       <section class="hero" id="overview" aria-labelledby="hero-title">
         <div class="hero-copy">
           <h1 id="hero-title">A self-extensible agent that adapts to your needs</h1>
-          <p>
-            Neon Pilot is an agentic coding companion that you can shape and extend. Ask for features in plain English — Neon Pilot builds
-            and integrates them.
-          </p>
-          <p>Powered by Pi. Built for developers. Designed for control.</p>
+          <p>Neon Pilot is a self-extensible coding agent. Just tell it what you want it to do, and it can add the feature.</p>
+          <p>Powered by <a href="https://pi.dev/">Pi</a>. Built for developers. Designed to grow with you.</p>
           <div class="cta-row">
             <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
             <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub <span>◖</span></a>
@@ -72,15 +69,15 @@
         </div>
       </section>
 
-      <section class="flow" aria-label="How self-extension works">
+      <section class="flow" aria-label="A feature request becoming a reusable capability">
         <div class="flow-step request">
-          <small>Example request</small>
+          <small>You ask for a capability</small>
           <div class="message"><b>PM</b><span>Add a command to summarize open PRs</span></div>
           <em>9:41 AM</em>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step">
-          <small>Neon Pilot’s plan</small>
+          <small>Neon Pilot turns it into product</small>
           <ul>
             <li>Design command interface</li>
             <li>Implement PR summarizer</li>
@@ -90,7 +87,7 @@
         </div>
         <div class="arrow">→</div>
         <div class="flow-step build">
-          <small>Build &amp; integrate</small>
+          <small>It builds, tests, and wires it in</small>
           <ul>
             <li>Created: commands/pr_summary.ts</li>
             <li>Added: Summarize open PRs</li>
@@ -101,7 +98,7 @@
         </div>
         <div class="arrow">→</div>
         <div class="flow-step ready">
-          <small>Ready to use</small>
+          <small>It becomes reusable</small>
           <p class="integrated">Command integrated</p>
           <div class="command">› Summarize open PRs <kbd>⌘K</kbd><span>Command</span></div>
         </div>
@@ -158,16 +155,19 @@
           <p class="eyebrow">Self-extension lifecycle</p>
           <h2>Ask for a feature. Keep the capability.</h2>
           <p class="section-copy">
-            Neon Pilot does not stop at answering. It can decide whether your request belongs as a command, tool, workflow, automation,
-            knowledge surface, or extension — then add it to the product surface.
+            Neon Pilot is not a bog-standard coding agent bolted into a chat box. Your workflow changes all the time. Your agent harness
+            should change with it.
           </p>
         </div>
-        <div class="mini-terminal">
-          <p><span>&gt;</span> add a command that summarizes open PRs</p>
-          <p><em>plan</em> command + GitHub tool + tests + docs</p>
-          <p><em>write</em> commands/pr_summary.ts</p>
-          <p><em>run</em> pnpm run check:extensions:quick</p>
-          <p><b>✓</b> Summarize open PRs available in ⌘K</p>
+        <div class="feature-ideas panel">
+          <div class="panel-title">Features you can ask it to build</div>
+          <ul>
+            <li>“Add a command that summarizes open PRs.”</li>
+            <li>“Create a release checklist for this repo.”</li>
+            <li>“Build a workflow that triages failed CI logs.”</li>
+            <li>“Turn this recurring process into a reusable skill.”</li>
+            <li>“Add a local tool for cleaning stale branches.”</li>
+          </ul>
         </div>
       </section>
 
@@ -197,8 +197,11 @@
 
       <section id="pi" class="support">
         <div>
-          <h2>Everything around the agent</h2>
-          <p>Knowledge, scheduled automations, telemetry, artifacts, workspace context, and provider routing live in one local runtime.</p>
+          <h2>Not a cage for your agent. Power armor.</h2>
+          <p>
+            Neon Pilot gives the agent durable knowledge, scheduled automations, telemetry, artifacts, workspace context, and provider
+            routing — all in one local runtime.
+          </p>
         </div>
         <div class="support-grid">
           <span>Knowledge</span><span>Automations</span><span>Telemetry</span><span>Workspace</span><span>Artifacts</span
@@ -209,17 +212,17 @@
       <section class="closing">
         <div>
           <h2>Ready to make Neon Pilot your own?</h2>
-          <p>Download for macOS and start building your agent.</p>
+          <p>Fully open source under MIT. Available on macOS today.</p>
         </div>
         <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
       </section>
     </main>
 
     <footer>
-      <span>Patrick Lee · MIT</span>
+      <span>Open source · MIT · macOS today</span>
       <div>
         <a href="https://github.com/patleeman/neon-pilot">GitHub</a><a href="https://github.com/patleeman/neon-pilot/releases">Releases</a
-        ><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md">Docs</a>
+        ><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/README.md">Docs</a>
       </div>
     </footer>
   </body>
