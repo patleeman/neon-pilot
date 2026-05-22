@@ -95,6 +95,15 @@ const FILTER_LABELS: Record<AutomationFilter, string> = {
   disabled: 'Disabled',
 };
 
+const MAX_RENDERED_LOG_CHARS = 20_000;
+
+function truncateLogForRender(value: string | undefined | null): string {
+  if (!value) return 'No log yet.';
+  return value.length > MAX_RENDERED_LOG_CHARS
+    ? `… truncated to latest ${MAX_RENDERED_LOG_CHARS} chars …\n${value.slice(-MAX_RENDERED_LOG_CHARS)}`
+    : value;
+}
+
 const emptyForm: AutomationFormState = {
   title: '',
   prompt: '',
@@ -864,7 +873,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
       setLogById((prev) => ({ ...prev, [taskId]: 'Loading log…' }));
       try {
         const result = (await pa.automations.readLog(taskId)) as { log?: string };
-        setLogById((prev) => ({ ...prev, [taskId]: result.log || 'No log yet.' }));
+        setLogById((prev) => ({ ...prev, [taskId]: truncateLogForRender(result.log) }));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setLogById((prev) => ({
