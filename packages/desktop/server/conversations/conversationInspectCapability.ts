@@ -7,7 +7,7 @@ import {
   resolveConversationSessionFile,
 } from './conversationService.js';
 import { readConversationSummary } from './conversationSummaries.js';
-import { type DisplayBlock, readSessionBlocksByFile } from './sessions.js';
+import { type DisplayBlock, readSessionBlocksByFile, readSessionSearchText } from './sessions.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
 export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;
@@ -931,6 +931,29 @@ export function searchConversationInspectSessions(
   for (const session of sessions) {
     if (stopAfterLimit && matches.length >= limit) {
       break;
+    }
+
+    if (!includeAroundMatches) {
+      const searchText = readSessionSearchText(session.id);
+      if (searchText) {
+        if (!matchesSearchText(searchText, query, mode)) {
+          continue;
+        }
+
+        matches.push({
+          conversationId: session.id,
+          title: session.title,
+          cwd: session.cwd,
+          lastActivityAt: session.lastActivityAt,
+          isLive: session.isLive,
+          isRunning: session.isRunning,
+          blockId: 'search-index',
+          blockType: 'text',
+          blockIndex: 0,
+          snippet: extractQuerySnippet(searchText, query, mode, maxSnippetCharacters),
+        });
+        continue;
+      }
     }
 
     const detail = readSessionBlocksByFile(session.file);

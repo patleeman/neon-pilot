@@ -6,12 +6,14 @@ const {
   readConversationSessionSignatureMock,
   resolveConversationSessionFileMock,
   readSessionBlocksByFileMock,
+  readSessionSearchTextMock,
 } = vi.hoisted(() => ({
   listConversationSessionsSnapshotMock: vi.fn(),
   readConversationSessionMetaMock: vi.fn(),
   readConversationSessionSignatureMock: vi.fn(),
   resolveConversationSessionFileMock: vi.fn(),
   readSessionBlocksByFileMock: vi.fn(),
+  readSessionSearchTextMock: vi.fn(),
 }));
 
 vi.mock('./conversationService.js', () => ({
@@ -23,6 +25,7 @@ vi.mock('./conversationService.js', () => ({
 
 vi.mock('./sessions.js', () => ({
   readSessionBlocksByFile: readSessionBlocksByFileMock,
+  readSessionSearchText: readSessionSearchTextMock,
 }));
 
 import {
@@ -42,6 +45,8 @@ beforeEach(() => {
   readConversationSessionSignatureMock.mockReset();
   resolveConversationSessionFileMock.mockReset();
   readSessionBlocksByFileMock.mockReset();
+  readSessionSearchTextMock.mockReset();
+  readSessionSearchTextMock.mockReturnValue(null);
 });
 
 describe('conversationInspectCapability', () => {
@@ -317,6 +322,29 @@ describe('conversationInspectCapability', () => {
     expect(result.totalMatching).toBe(1);
     expect(result.matches[0]?.conversationId).toBe('conv-one');
     expect(readSessionBlocksByFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses cached session search text for non-context searches before reading full blocks', () => {
+    listConversationSessionsSnapshotMock.mockReturnValue([
+      {
+        id: 'conv-indexed',
+        title: 'Indexed',
+        cwd: '/repo',
+        file: '/sessions/conv-indexed.jsonl',
+        timestamp: '2026-04-20T10:00:00.000Z',
+        lastActivityAt: '2026-04-20T10:00:00.000Z',
+        isLive: false,
+        isRunning: false,
+        messageCount: 10,
+      },
+    ]);
+    readSessionSearchTextMock.mockReturnValue('indexed needle transcript text');
+
+    const result = searchConversationInspectSessions({ query: 'needle', limit: 1 });
+
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0]).toMatchObject({ conversationId: 'conv-indexed', blockId: 'search-index' });
+    expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
   });
 
   it('centers all-terms search snippets around the first matched term when the phrase is not contiguous', () => {

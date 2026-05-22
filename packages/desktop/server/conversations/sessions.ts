@@ -1973,14 +1973,40 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
   let legacyToolWorkspaceMetadata: LegacyToolWorkspaceMetadata | null = null;
 
   for (const rawLine of raw.split('\n')) {
-    if (!rawLine.trim()) {
+    const trimmedLine = rawLine.trim();
+    if (!trimmedLine) {
       continue;
     }
 
-    const line = parseJsonLine(rawLine);
-    if (!line) {
+    // Session list rendering is a startup-hot path. Avoid JSON.parse for every
+    // transcript message in large historical profiles; only parse metadata
+    // records and the first title-bearing message.
+    const isMessageLine = trimmedLine.includes('"type":"message"') || trimmedLine.includes('"type": "message"');
+    if (isMessageLine) {
+      messageCount += 1;
+      if (fallbackTitle !== null && legacyToolWorkspaceMetadata) {
+        continue;
+      }
+
+      const line = parseJsonLine(trimmedLine);
+      if (!line || line.type !== 'message') {
+        continue;
+      }
+      const message = line as RawMessage;
+      legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
+      if (fallbackTitle === null) {
+        fallbackTitle = extractTitleFromMessage(message.message);
+      }
       continue;
     }
+
+    if (trimmedLine.includes('"type":"custom_message"') || trimmedLine.includes('"type": "custom_message"')) {
+      messageCount += 1;
+      continue;
+    }
+
+    const line = parseJsonLine(trimmedLine);
+    if (!line) continue;
 
     if (line.type === 'session') {
       if (!sessionRecord) {
@@ -2006,21 +2032,11 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
       continue;
     }
 
-    if (line.type === 'custom_message') {
+    if (line.type === 'message') {
+      const message = line as RawMessage;
       messageCount += 1;
-      continue;
-    }
-
-    if (line.type !== 'message') {
-      continue;
-    }
-
-    const message = line as RawMessage;
-    messageCount += 1;
-    legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
-
-    if (fallbackTitle === null) {
-      fallbackTitle = extractTitleFromMessage(message.message);
+      legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
+      if (fallbackTitle === null) fallbackTitle = extractTitleFromMessage(message.message);
     }
   }
 
