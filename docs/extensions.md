@@ -1281,7 +1281,7 @@ Secrets are public manifest API, not an internal convention:
 }
 ```
 
-Resolve them in backend code with `ctx.secrets.get('apiKey')`. Environment variables declared by the extension take precedence over stored values.
+Resolve them in backend code with `ctx.secrets.get('apiKey')`. Stored values take precedence; environment variables declared by the extension are used as a fallback when no stored value exists.
 
 Extensions can declare dependencies on other extensions:
 

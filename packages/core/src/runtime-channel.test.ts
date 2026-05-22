@@ -19,7 +19,7 @@ describe('runtime channel resolution', () => {
     expect(resolveNeonPilotRuntimeChannelConfig({}, { version: '0.8.0-rc.12', packaged: true })).toMatchObject({
       channel: 'rc',
       companionPort: 3843,
-      updatesEnabled: false,
+      updatesEnabled: true,
     });
   });
 

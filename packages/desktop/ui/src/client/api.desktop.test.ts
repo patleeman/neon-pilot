@@ -589,12 +589,13 @@ describe('api desktop transport', () => {
     expect(compactLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', customInstructions: 'be shorter' });
     expect(exportLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', outputPath: '/tmp/live-1.html' });
     expect(reloadLiveSession).toHaveBeenCalledWith('live-1');
-    expect(branchLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', entryId: 'entry-1' });
+    expect(branchLiveSession).toHaveBeenCalledWith({ conversationId: 'live-1', entryId: 'entry-1', surfaceId: 'surface-1' });
     expect(forkLiveSession).toHaveBeenCalledWith({
       conversationId: 'live-1',
       entryId: 'entry-1',
       preserveSource: true,
       beforeEntry: true,
+      surfaceId: 'surface-1',
     });
     expect(abortLiveSession).toHaveBeenCalledWith('live-1');
     expect(destroyLiveSession).toHaveBeenCalledWith('conversation-1');

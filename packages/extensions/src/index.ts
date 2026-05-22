@@ -629,14 +629,6 @@ export interface ExtensionSecretContribution {
   order?: number;
 }
 
-export interface ExtensionSecretBackendContribution {
-  id: string;
-  label: string;
-  description?: string;
-  handler: string;
-  order?: number;
-}
-
 export type ExtensionSettingType = 'string' | 'boolean' | 'number' | 'select';
 
 export interface ExtensionSettingsContribution {
@@ -739,7 +731,6 @@ export interface ExtensionContributions {
   activityTreeItemActions?: ExtensionActivityTreeItemActionContribution[];
   settings?: Record<string, ExtensionSettingsContribution>;
   secrets?: Record<string, ExtensionSecretContribution>;
-  secretBackends?: ExtensionSecretBackendContribution[];
   settingsComponent?: ExtensionSettingsComponentContribution;
 }
 

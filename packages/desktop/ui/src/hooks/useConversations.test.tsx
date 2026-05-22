@@ -76,7 +76,7 @@ function HookProbe() {
   return null;
 }
 
-function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null }) {
+function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -86,7 +86,10 @@ function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSumma
   mountedRoots.push(root);
 }
 
-function renderProbeIntoRoot(root: Root, input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null }) {
+function renderProbeIntoRoot(
+  root: Root,
+  input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> },
+) {
   act(() => {
     root.render(
       <SseConnectionContext.Provider value={{ status: 'offline' }}>
@@ -102,7 +105,7 @@ function renderProbeIntoRoot(root: Root, input: { sessions: SessionMeta[]; tasks
             setRuns: () => {},
           }}
         >
-          <LiveTitlesContext.Provider value={{ titles: new Map(), setTitle: () => {} }}>
+          <LiveTitlesContext.Provider value={{ titles: input.liveTitles ?? new Map(), setTitle: () => {} }}>
             <HookProbe />
           </LiveTitlesContext.Provider>
         </AppDataContext.Provider>
@@ -207,6 +210,40 @@ describe('useConversations', () => {
     expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not let stale remote layout sync close locally visible live conversation tabs', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-live']));
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    renderProbeIntoRoot(root, {
+      sessions: [createSession({ id: 'conv-live', title: 'Running tab' })],
+      tasks: null,
+      liveTitles: new Map([['conv-live', 'Running tab']]),
+    });
+    await flushAsyncWork();
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-live']);
+
+    renderProbeIntoRoot(root, {
+      sessions: [createSession({ id: 'conv-live', title: 'Running tab', messageCount: 5 })],
+      tasks: null,
+      liveTitles: new Map([['conv-live', 'Running tab']]),
+    });
+    await flushAsyncWork();
+
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-live']);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-live']);
   });
 
   it('uses the latest session snapshot as the source of truth for running state', () => {

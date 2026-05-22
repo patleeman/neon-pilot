@@ -70,6 +70,30 @@ function buildPlaceholderSessionMeta(id: string, title?: string): SessionMeta {
   };
 }
 
+function mergeRemoteConversationLayoutWithProtectedLocalIds(
+  remote: ConversationLayout,
+  current: ConversationLayout,
+  protectedSessionIds: ReadonlySet<string>,
+): ConversationLayout {
+  const appendProtectedIds = (remoteIds: string[], currentIds: string[]) => {
+    const nextIds = [...remoteIds];
+    const nextIdSet = new Set(nextIds);
+    for (const id of currentIds) {
+      if (protectedSessionIds.has(id) && !nextIdSet.has(id)) {
+        nextIds.push(id);
+        nextIdSet.add(id);
+      }
+    }
+    return nextIds;
+  };
+
+  return {
+    ...remote,
+    sessionIds: appendProtectedIds(remote.sessionIds, current.sessionIds),
+    pinnedSessionIds: appendProtectedIds(remote.pinnedSessionIds, current.pinnedSessionIds),
+  };
+}
+
 export function useConversations() {
   const initialLayout = useMemo(() => readConversationLayout(), []);
   const [openIds, setOpenIds] = useState(() => initialLayout.sessionIds);
@@ -85,6 +109,18 @@ export function useConversations() {
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
+
+  const automationThreadTitleBySessionId = useMemo(
+    () =>
+      new Map(
+        (tasks ?? []).flatMap((task) =>
+          task.running && task.threadConversationId
+            ? [[task.threadConversationId, task.threadTitle ?? task.title ?? `Automation: ${task.id}`] as const]
+            : [],
+        ),
+      ),
+    [tasks],
+  );
 
   useEffect(() => {
     function handleConversationLayoutChanged() {
@@ -183,11 +219,18 @@ export function useConversations() {
           return;
         }
 
+        const protectedSessionIds = new Set([...liveTitles.keys(), ...automationThreadTitleBySessionId.keys()]);
+        const remoteLayout = mergeRemoteConversationLayoutWithProtectedLocalIds(
+          { sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId: activeConversationId },
+          currentLayout,
+          protectedSessionIds,
+        );
+
         const nextLayout = applyRemoteConversationLayout({
-          sessionIds,
-          pinnedSessionIds,
-          archivedSessionIds,
-          activeSessionId: activeConversationId,
+          sessionIds: remoteLayout.sessionIds,
+          pinnedSessionIds: remoteLayout.pinnedSessionIds,
+          archivedSessionIds: remoteLayout.archivedSessionIds,
+          activeSessionId: remoteLayout.activeSessionId,
         });
         applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
       })
@@ -198,7 +241,7 @@ export function useConversations() {
     return () => {
       cancelled = true;
     };
-  }, [sessions]);
+  }, [automationThreadTitleBySessionId, liveTitles, sessions]);
 
   useEffect(() => {
     if (tasks === null) {
@@ -290,18 +333,6 @@ export function useConversations() {
     const nextLayout = shiftConversationTab(sessionId, direction);
     applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
   }, []);
-
-  const automationThreadTitleBySessionId = useMemo(
-    () =>
-      new Map(
-        (tasks ?? []).flatMap((task) =>
-          task.running && task.threadConversationId
-            ? [[task.threadConversationId, task.threadTitle ?? task.title ?? `Automation: ${task.id}`] as const]
-            : [],
-        ),
-      ),
-    [tasks],
-  );
 
   const withTitles = useMemo(
     () =>

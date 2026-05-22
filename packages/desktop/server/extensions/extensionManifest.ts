@@ -147,7 +147,6 @@ export interface ExtensionContributions {
   activityTreeItemActions?: ExtensionActivityTreeItemActionContribution[];
   settings?: Record<string, ExtensionSettingsContribution>;
   secrets?: Record<string, ExtensionSecretContribution>;
-  secretBackends?: ExtensionSecretBackendContribution[];
   settingsComponent?: ExtensionSettingsComponentContribution;
   /** Dynamic model discovery. The named action is called at model-list query time. */
   modelDiscovery?: ExtensionModelDiscoveryContribution;
@@ -344,14 +343,6 @@ export interface ExtensionSecretContribution {
   description?: string;
   env?: string;
   placeholder?: string;
-  order?: number;
-}
-
-export interface ExtensionSecretBackendContribution {
-  id: string;
-  label: string;
-  description?: string;
-  handler: string;
   order?: number;
 }
 

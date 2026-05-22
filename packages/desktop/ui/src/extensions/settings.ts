@@ -35,6 +35,7 @@ export type {
 } from '../shared/types';
 export type { SecretsState, SecretStatusEntry, UnifiedSettingsEntry } from '../shared/types';
 export { type ColorTheme, type ThemeAccent, type ThemePreference, useTheme } from '../ui-state/theme';
+export { EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from './extensionRegistryEvents';
 export { SettingsField } from './SettingsField';
 export { SettingsPanelHost } from './SettingsPanelHost';
 export type { ExtensionKeybindingRegistration } from './types';

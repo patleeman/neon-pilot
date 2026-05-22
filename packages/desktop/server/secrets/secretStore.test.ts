@@ -56,11 +56,22 @@ describe('secretStore', () => {
     });
   });
 
-  it('prefers environment variables over stored secrets', () => {
+  it('prefers stored secrets over environment variables', () => {
     const stateRoot = createTempStateRoot();
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
     setSecret('system-exa-search', 'exaApiKey', 'stored-secret', stateRoot);
+
+    process.env.EXA_API_KEY = 'env-secret';
+
+    expect(resolveSecret('system-exa-search', 'exaApiKey', stateRoot)).toBe('stored-secret');
+    expect(listSecretStatuses(stateRoot)[0]).toMatchObject({ configured: true, source: 'file', writable: true });
+  });
+
+  it('uses environment variables when no stored secret exists', () => {
+    const stateRoot = createTempStateRoot();
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
 
     process.env.EXA_API_KEY = 'env-secret';
 
@@ -86,5 +97,14 @@ describe('secretStore', () => {
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'env-only' } }));
 
     expect(() => setSecret('system-exa-search', 'exaApiKey', 'secret', stateRoot)).toThrow('env-only');
+  });
+
+  it('rejects writes for undeclared extension secrets', () => {
+    const stateRoot = createTempStateRoot();
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+
+    expect(() => setSecret('unknown-extension', 'apiKey', 'secret', stateRoot)).toThrow('not registered');
+    expect(() => deleteSecret('unknown-extension', 'apiKey', stateRoot)).toThrow('not registered');
   });
 });

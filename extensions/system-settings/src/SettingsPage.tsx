@@ -12,7 +12,9 @@ import {
   cx,
   type DesktopAppPreferencesState,
   type DesktopEnvironmentState,
+  EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
+  type ExtensionSettingsComponentRegistration,
   formatContextWindowLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
@@ -24,6 +26,7 @@ import {
   type ModelProviderModelConfig,
   type ModelProviderState,
   type ModelState,
+  notifyExtensionRegistryChanged,
   parseOptionalJsonObject,
   parseOptionalNonNegativeNumber,
   parseOptionalPositiveInteger,
@@ -1117,6 +1120,7 @@ function ExtensionsSettingsSection() {
     setError(null);
     try {
       await api.updateExtension(extension.id, { enabled: !extension.enabled });
+      notifyExtensionRegistryChanged();
       await load();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -1695,13 +1699,24 @@ function ExtensionSecretsSection() {
   };
 
   const saveBackend = async (provider: string) => {
+    if (provider !== activeBackend) {
+      const confirmed = window.confirm(
+        'Changing the secret storage backend does not migrate existing secrets. Continue? You can ask an agent to migrate them if needed.',
+      );
+      if (!confirmed) {
+        setSelectedBackend(activeBackend);
+        return;
+      }
+    }
     setSavingBackend(true);
     setErrorMessage(null);
     setNotice(null);
     try {
       await api.updateSettings({ 'secrets.provider': provider });
       setSelectedBackend(provider);
-      setNotice('Secret storage backend saved. Restart any active agents that need newly stored secrets.');
+      setNotice(
+        'Secret storage backend saved. Existing secrets were not migrated. Restart any active agents that need newly stored secrets.',
+      );
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
@@ -1774,7 +1789,7 @@ function ExtensionSecretsSection() {
                     <div>
                       <p className="text-[13px] font-medium text-primary">{secret.label}</p>
                       {secret.description ? <p className="ui-card-meta">{secret.description}</p> : null}
-                      {secret.env ? <p className="ui-card-meta">Environment override: {secret.env}</p> : null}
+                      {secret.env ? <p className="ui-card-meta">Environment fallback: {secret.env}</p> : null}
                     </div>
                     <p className="ui-card-meta">
                       <SecretSourceLabel source={secret.source} />
@@ -1829,6 +1844,33 @@ function ExtensionSecretsSection() {
       {notice ? <p className="text-[12px] text-accent">{notice}</p> : null}
       {errorMessage ? <p className="text-[12px] text-danger">{errorMessage}</p> : null}
     </div>
+  );
+}
+
+function ExtensionSettingsComponentPanel({ registration }: { registration: ExtensionSettingsComponentRegistration }) {
+  const [enabled, setEnabled] = useState(true);
+
+  const refreshEnabled = useCallback(async () => {
+    try {
+      const status = await api.extensionStatus(registration.extensionId);
+      setEnabled(status.enabled);
+    } catch {
+      setEnabled(false);
+    }
+  }, [registration.extensionId]);
+
+  useEffect(() => {
+    void refreshEnabled();
+    window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refreshEnabled);
+    return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refreshEnabled);
+  }, [refreshEnabled]);
+
+  if (!enabled) return null;
+
+  return (
+    <SettingsPanel id={registration.sectionId} title={registration.label} description={registration.description}>
+      <SettingsPanelHost registration={registration} />
+    </SettingsPanel>
   );
 }
 
@@ -3191,14 +3233,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
             <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
               <ExtensionsSettingsSection />
               {extensionSettingsComponents.map((settingsComponent) => (
-                <SettingsPanel
+                <ExtensionSettingsComponentPanel
                   key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
-                  id={settingsComponent.sectionId}
-                  title={settingsComponent.label}
-                  description={settingsComponent.description}
-                >
-                  <SettingsPanelHost registration={settingsComponent} />
-                </SettingsPanel>
+                  registration={settingsComponent}
+                />
               ))}
               <ExtensionSettingsSection />
             </SettingsSection>
@@ -3288,14 +3326,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </div>
 
               {capabilitySettingsComponents.map((settingsComponent) => (
-                <SettingsPanel
+                <ExtensionSettingsComponentPanel
                   key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
-                  id={settingsComponent.sectionId}
-                  title={settingsComponent.label}
-                  description={settingsComponent.description}
-                >
-                  <SettingsPanelHost registration={settingsComponent} />
-                </SettingsPanel>
+                  registration={settingsComponent}
+                />
               ))}
             </SettingsSection>
 

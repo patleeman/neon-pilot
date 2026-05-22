@@ -8,7 +8,6 @@ import type {
   ExtensionMentionContribution,
   ExtensionModelProfileContribution,
   ExtensionPackageType,
-  ExtensionSecretBackendContribution,
   ExtensionSecretContribution,
   ExtensionSkillContribution,
   ExtensionSurface,
@@ -401,16 +400,6 @@ export interface ExtensionSecretRegistration {
   order: number;
 }
 
-export interface ExtensionSecretBackendRegistration {
-  extensionId: string;
-  packageType: ExtensionPackageType;
-  id: string;
-  label: string;
-  description?: string;
-  handler: string;
-  order: number;
-}
-
 export interface ExtensionSettingsComponentRegistration {
   extensionId: string;
   id: string;
@@ -757,28 +746,6 @@ function buildExtensionSecretRegistrations(entry: ExtensionRegistryEntry): Exten
       },
     ];
   });
-}
-
-function buildExtensionSecretBackendRegistrations(entry: ExtensionRegistryEntry): ExtensionSecretBackendRegistration[] {
-  return (entry.manifest.contributes?.secretBackends ?? []).flatMap(
-    (backend: ExtensionSecretBackendContribution): ExtensionSecretBackendRegistration[] => {
-      const id = backend.id.trim();
-      const label = backend.label.trim();
-      const handler = backend.handler.trim();
-      if (!id || !label || !handler) return [];
-      return [
-        {
-          extensionId: entry.manifest.id,
-          packageType: entry.manifest.packageType ?? 'user',
-          id,
-          label,
-          description: typeof backend.description === 'string' ? backend.description : undefined,
-          handler,
-          order: typeof backend.order === 'number' ? backend.order : 0,
-        },
-      ];
-    },
-  );
 }
 
 function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): ExtensionToolRegistration[] {
@@ -1725,21 +1692,7 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.secretBackends !== undefined) {
-    if (!Array.isArray(contributes.secretBackends)) {
-      throw new Error('Extension manifest contributes.secretBackends must be an array.');
-    }
-    contributes.secretBackends.forEach((backend, index) => {
-      if (!isRecord(backend)) {
-        throw new Error(`Extension manifest contributes.secretBackends[${index}] must be an object.`);
-      }
-      requireString(backend.id, `contributes.secretBackends[${index}].id`);
-      requireString(backend.label, `contributes.secretBackends[${index}].label`);
-      requireString(backend.handler, `contributes.secretBackends[${index}].handler`);
-      validateOptionalString(backend.description, `contributes.secretBackends[${index}].description`);
-      if (backend.order !== undefined && !Number.isInteger(backend.order)) {
-        throw new Error(`Extension manifest contributes.secretBackends[${index}].order must be an integer.`);
-      }
-    });
+    throw new Error('Extension manifest contributes.secretBackends is not supported. Use the built-in secrets.provider backends.');
   }
 }
 
@@ -2738,8 +2691,8 @@ export function listExtensionSecretRegistrations(stateRoot: string = getStateRoo
   return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionSecretRegistrations);
 }
 
-export function listExtensionSecretBackendRegistrations(stateRoot: string = getStateRoot()): ExtensionSecretBackendRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionSecretBackendRegistrations);
+export function listExtensionSecretBackendRegistrations(_stateRoot: string = getStateRoot()): [] {
+  return [];
 }
 
 export function listExtensionSettingsComponentRegistrations(stateRoot: string = getStateRoot()): ExtensionSettingsComponentRegistration[] {

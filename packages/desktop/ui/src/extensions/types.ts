@@ -412,7 +412,6 @@ interface ExtensionContributions {
   activityTreeItemActions?: ExtensionActivityTreeItemActionContribution[];
   settings?: Record<string, unknown>;
   secrets?: Record<string, unknown>;
-  secretBackends?: unknown[];
   settingsComponent?: ExtensionSettingsComponentContribution;
 }
 

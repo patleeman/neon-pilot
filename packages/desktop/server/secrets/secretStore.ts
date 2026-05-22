@@ -165,16 +165,28 @@ export function createSecretBackend(stateRoot: string = getStateRoot()): SecretB
   return createFileSecretBackend(stateRoot);
 }
 
-export function resolveSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): string | undefined {
+function findSecretRegistration(
+  extensionId: string,
+  secretId: string,
+  stateRoot: string,
+): ReturnType<typeof listExtensionSecretRegistrations>[number] {
   const declaration = listExtensionSecretRegistrations(stateRoot).find(
     (secret) => secret.extensionId === extensionId && secret.id === secretId,
   );
+  if (!declaration) throw new Error(`Secret "${extensionId}/${secretId}" is not registered by an enabled extension.`);
+  return declaration;
+}
+
+export function resolveSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): string | undefined {
+  const declaration = findSecretRegistration(extensionId, secretId, stateRoot);
+  const backendValue = createSecretBackend(stateRoot).get(makeSecretKey(extensionId, secretId));
+  if (backendValue) return backendValue;
   const envName = declaration?.env;
   if (envName) {
     const envValue = process.env[envName]?.trim();
     if (envValue) return envValue;
   }
-  return createSecretBackend(stateRoot).get(makeSecretKey(extensionId, secretId));
+  return undefined;
 }
 
 export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretStatus[] {
@@ -183,7 +195,7 @@ export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretSt
     const key = makeSecretKey(secret.extensionId, secret.id);
     const envValue = secret.env ? process.env[secret.env]?.trim() : undefined;
     const backendValue = backend.get(key);
-    const source: SecretSource | null = envValue ? 'env' : backendValue ? backend.id : null;
+    const source: SecretSource | null = backendValue ? backend.id : envValue ? 'env' : null;
     return {
       extensionId: secret.extensionId,
       secretId: secret.id,
@@ -201,11 +213,13 @@ export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretSt
 export function setSecret(extensionId: string, secretId: string, value: string, stateRoot: string = getStateRoot()): SecretStatus[] {
   const normalized = value.trim();
   if (!normalized) throw new Error('secret value is required');
+  findSecretRegistration(extensionId, secretId, stateRoot);
   createSecretBackend(stateRoot).set(makeSecretKey(extensionId, secretId), normalized);
   return listSecretStatuses(stateRoot);
 }
 
 export function deleteSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): SecretStatus[] {
+  findSecretRegistration(extensionId, secretId, stateRoot);
   createSecretBackend(stateRoot).delete(makeSecretKey(extensionId, secretId));
   return listSecretStatuses(stateRoot);
 }
