@@ -1008,6 +1008,13 @@ export function setExtensionKeybinding(input: {
     disabledKeybindings.delete(key);
   }
   if (input.command && input.title) {
+    const command = findExtensionCommandRegistration(input.command);
+    if (!command) {
+      throw new Error(`Cannot create keybinding for unknown command: ${input.command}`);
+    }
+    if (command.extensionId !== input.extensionId) {
+      throw new Error(`Cannot create keybinding for command owned by ${command.extensionId}.`);
+    }
     commandKeybindings[key] = {
       extensionId: input.extensionId,
       surfaceId: input.keybindingId,

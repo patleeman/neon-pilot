@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   beginExtensionStartupGuard,
@@ -27,15 +27,32 @@ import {
 } from './extensionRegistry.js';
 
 describe('extension registry', () => {
-  it('persists custom keybindings for arbitrary commands', () => {
+  afterEach(() => {
+    delete process.env.NEON_PILOT_STATE_ROOT;
+  });
+
+  it('persists custom keybindings only for declared commands', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'declared-command');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'declared-command',
+        name: 'Declared Command',
+        enabled: true,
+        contributes: { commands: [{ id: 'open-palette', title: 'Open Palette', action: 'palette.open' }] },
+      }),
+    );
 
     setExtensionKeybinding({
-      extensionId: 'host',
-      keybindingId: 'command:palette.open',
+      extensionId: 'declared-command',
+      keybindingId: 'command:declared-command.open-palette',
       title: 'Open Command Palette',
-      command: 'palette.open',
-      packageType: 'system',
+      command: 'declared-command.open-palette',
+      packageType: 'user',
       scope: 'global',
       keys: ['CommandOrControl+P'],
       enabled: true,
@@ -44,15 +61,30 @@ describe('extension registry', () => {
 
     expect(listExtensionKeybindingRegistrations(stateRoot)).toContainEqual(
       expect.objectContaining({
-        extensionId: 'host',
-        surfaceId: 'command:palette.open',
+        extensionId: 'declared-command',
+        surfaceId: 'command:declared-command.open-palette',
         title: 'Open Command Palette',
-        command: 'palette.open',
+        command: 'declared-command.open-palette',
         keys: ['CommandOrControl+P'],
         enabled: true,
-        packageType: 'system',
+        packageType: 'user',
       }),
     );
+
+    expect(() =>
+      setExtensionKeybinding({
+        extensionId: 'declared-command',
+        keybindingId: 'command:palette.open',
+        title: 'Injected',
+        command: 'palette.open',
+        packageType: 'user',
+        keys: ['CommandOrControl+Shift+P'],
+        enabled: true,
+        stateRoot,
+      }),
+    ).toThrow('Cannot create keybinding for unknown command: palette.open');
+
+    rmSync(stateRoot, { recursive: true, force: true });
   });
 
   it('resolves enabled model profiles by provider/model glob and priority', () => {
