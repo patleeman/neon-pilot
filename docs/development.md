@@ -60,7 +60,7 @@ Desktop performance smoke:
 pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30
 ```
 
-This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, route switches, model fetch, conversation search, long-transcript open, basic interaction timing, and renderer heap delta. For release candidates, use:
+This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, draft submit click-to-visible timing, route switches, model fetch, conversation search, long-transcript open, basic interaction timing, and renderer heap delta. `draftSubmitVisibleMs` measures from clicking Send on `/conversations/new` until the submitted prompt is visible on the saved conversation route; setup time to navigate to the draft page is reported separately as `draftSubmitSetupMs`. Use `--draft-submit-wait-ms=<ms>` to simulate a user waiting/typing before sending. For release candidates, use:
 
 ```bash
 pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120
