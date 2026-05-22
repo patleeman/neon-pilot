@@ -4608,6 +4608,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
           rememberComposerInput(inputSnapshot, newId);
           persistPendingConversationPrompt(newId, initialPrompt);
+          setPendingConversationPromptDispatching(newId, true);
           if (composerGoalPending && text) {
             await api.updateGoal(newId, { objective: text }).catch(() => {});
             setComposerGoalPending(false);
@@ -4637,6 +4638,34 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             },
           });
           navigatedToCreatedConversation = true;
+
+          window.setTimeout(() => {
+            void api
+              .promptSession(
+                newId,
+                initialPrompt.text,
+                initialPrompt.behavior,
+                initialPrompt.images,
+                initialPrompt.attachmentRefs,
+                undefined,
+                initialPrompt.contextMessages,
+              )
+              .then((sendResult) => {
+                for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
+                  showNotice('danger', warning, 5000);
+                }
+                if (sendResult.accepted) {
+                  clearPendingConversationPrompt(newId);
+                }
+              })
+              .catch((error) => {
+                persistPendingConversationPrompt(newId, initialPrompt);
+                showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+              })
+              .finally(() => {
+                setPendingConversationPromptDispatching(newId, false);
+              });
+          }, 0);
 
           window.setTimeout(() => {
             clearDraftConversationAttachments();
