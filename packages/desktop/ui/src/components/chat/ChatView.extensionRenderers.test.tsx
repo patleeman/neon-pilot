@@ -21,6 +21,22 @@ vi.mock('../../extensions/useExtensionRegistry', () => ({
           },
         },
       },
+      {
+        id: 'system-diffs',
+        enabled: true,
+        manifest: {
+          contributes: {
+            transcriptRenderers: [
+              {
+                id: 'checkpoint-tool-block',
+                tool: 'checkpoint',
+                component: 'CheckpointTranscriptRenderer',
+                standalone: true,
+              },
+            ],
+          },
+        },
+      },
     ],
     routes: [],
     surfaces: [],
@@ -87,5 +103,25 @@ describe('chat view extension transcript renderers', () => {
     expect(html).toContain('artifact');
     expect(html).toContain('Artifact Test');
     expect(html).not.toContain('data-extension-tool-host');
+  });
+
+  it('renders checkpoint tool rows with the extension card so inline diffs are visible', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:00.000Z',
+            tool: 'checkpoint',
+            input: { action: 'save', message: 'fix: inline checkpoint diff', paths: ['src/file.ts'] },
+            output: 'Saved checkpoint abc1234 fix: inline checkpoint diff (1 files, +1 -0).',
+            status: 'ok',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('data-extension-tool-host');
+    expect(html).toContain('checkpoint transcript card');
   });
 });

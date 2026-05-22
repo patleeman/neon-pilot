@@ -221,6 +221,7 @@ async function createCheckpointCommit(ctx: CheckpointBackendContext, options: { 
     ['show', '--format=', '--patch', '--find-renames', '--find-copies', '--no-color', '--unified=3', commitSha],
     { allowEmptyStdout: true },
   );
+  await runGit(ctx, options.cwd, ['push'], { allowEmptyStdout: true });
   return { metadata, files: parseDiffSections(rawPatch) };
 }
 

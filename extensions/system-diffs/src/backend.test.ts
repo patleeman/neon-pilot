@@ -142,6 +142,7 @@ describe('system-diffs backend', () => {
           if (command.startsWith('show --format= --patch')) {
             return { stdout: 'diff --git a/src/file.ts b/src/file.ts\n--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1 +1 @@\n-old\n+new\n' };
           }
+          if (command === 'push') return { stdout: '' };
           throw new Error(`unexpected git command: ${command}`);
         }),
       };
@@ -186,6 +187,7 @@ describe('system-diffs backend', () => {
                 'diff --git "a/caf\\303\\251.txt" "b/caf\\303\\251.txt"\n--- "a/caf\\303\\251.txt"\n+++ "b/caf\\303\\251.txt"\n@@ -1 +1 @@\n-old\n+new\n',
             };
           }
+          if (command === 'push') return { stdout: '' };
           throw new Error(`unexpected git command: ${command}`);
         }),
       };
@@ -234,6 +236,7 @@ describe('system-diffs backend', () => {
                 'diff --git a/old/deleted.ts b/old/deleted.ts\ndeleted file mode 100644\n--- a/old/deleted.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n',
             };
           }
+          if (command === 'push') return { stdout: '' };
           throw new Error(`unexpected git command: ${command}`);
         }),
       };
@@ -253,7 +256,35 @@ describe('system-diffs backend', () => {
       await checkpoint({ action: 'save', message: 'delete-file', paths: ['old/deleted.ts'] }, createCtx({ shell }));
 
       expect(commands).toContain('commit -m delete-file');
+      expect(commands).toContain('push');
       expect(commands.some((command) => command.startsWith('commit --only'))).toBe(false);
+    });
+
+    it('returns a tool error when git push fails after committing', async () => {
+      const shell = {
+        exec: vi.fn(async ({ args }: { args: string[] }) => {
+          const command = args.join(' ');
+          if (command === 'rev-parse --show-toplevel') return { stdout: '/tmp/test-repo\n' };
+          if (command.startsWith('add --all --')) return { stdout: '' };
+          if (command === 'diff --cached --name-only -- src/file.ts') return { stdout: 'src/file.ts\n' };
+          if (command === 'diff --cached --name-only') return { stdout: 'src/file.ts\n' };
+          if (command === 'commit -m msg') return { stdout: '[main abc1234] msg\n' };
+          if (command === 'rev-parse HEAD') return { stdout: 'abc1234def5678\n' };
+          if (command.startsWith('show -s --format=')) {
+            return {
+              stdout: 'abc1234def5678\u0000abc1234\u0000msg\u0000msg\u0000Test User\u0000test@example.com\u00002025-01-01T00:00:00Z',
+            };
+          }
+          if (command.startsWith('show --format= --patch')) return { stdout: '' };
+          if (command === 'push') throw new Error('failed to push some refs');
+          throw new Error(`unexpected git command: ${command}`);
+        }),
+      };
+
+      const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell }));
+
+      expect(result).toMatchObject({ isError: true, action: 'save', text: 'failed to push some refs' });
+      expect(mockSaveCheckpoint).not.toHaveBeenCalled();
     });
 
     it('returns a tool error for unrelated staged paths without throwing', async () => {

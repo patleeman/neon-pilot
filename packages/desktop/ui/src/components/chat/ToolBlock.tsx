@@ -155,6 +155,24 @@ export function ToolBlock({
   const pinnedFileChange = isFileChangingTool(block, fileChanges);
   const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual || pinnedFileChange;
 
+  if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && block.tool === 'checkpoint') {
+    return (
+      <NativeExtensionToolBlockHost
+        extension={extensionRenderer.extension}
+        renderer={extensionRenderer.renderer}
+        block={block}
+        context={{
+          onOpenCheckpoint,
+          activeCheckpointId,
+          messages,
+          messageIndex,
+          onHydrateMessage,
+          hydratingMessageBlockIds,
+        }}
+      />
+    );
+  }
+
   if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && !pinnedTool) {
     // ask_user_question is handled as a local fallback below so the question
     // submit callback stays wired even when the extension isn't loaded yet.
