@@ -108,7 +108,7 @@ describe('api desktop transport', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(invokeLocalApi).toHaveBeenCalledWith({
       method: 'POST',
-      path: '/extensions/agent-board/actions/ping',
+      path: '/api/extensions/agent-board/actions/ping',
       body: { hello: true },
     });
   });

@@ -16,8 +16,9 @@
     "build:main": "node scripts/build-main.mjs",
     "build": "pnpm run clean && pnpm run build:deps && pnpm run build:main && tsc --build --force",
     "launch": "node scripts/launch-dev-app.mjs",
-    "start": "pnpm run build && pnpm run launch --",
-    "dev": "pnpm run clean && pnpm run build:deps && pnpm run build:main && pnpm run launch --",
+    "stop": "node scripts/stop-dev-app.mjs",
+    "start": "pnpm run stop && pnpm run build && pnpm run launch --",
+    "dev": "pnpm run stop && pnpm run clean && pnpm run build:deps && pnpm run build:main && pnpm run launch --",
     "clean": "rm -rf dist ui/dist server/dist tsconfig.tsbuildinfo"
   },
   "dependencies": {

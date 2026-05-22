@@ -126,9 +126,10 @@ async function requestDesktopLocalApiJson<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
+  const requestPath = buildApiPath(path);
   const desktopBridge = getDesktopBridge();
   if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
-    return (await desktopBridge.invokeLocalApi({ method, path, body })) as T;
+    return (await desktopBridge.invokeLocalApi({ method, path: requestPath, body })) as T;
   }
   return requestJson<T>(method, path, body);
 }
