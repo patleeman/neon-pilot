@@ -43,6 +43,11 @@ interface AutomationFormState {
   enabled: boolean;
 }
 
+type AutomationTaskForEditor = ScheduledTaskSummary & {
+  threadMode?: 'dedicated' | 'existing' | 'none';
+  timeoutSeconds?: number;
+};
+
 type AutomationFilter = 'all' | 'current' | 'past-due' | 'failed' | 'disabled';
 type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-delivery' | 'automation-runtime';
 
@@ -291,7 +296,13 @@ function numberOrNull(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formFromTask(task: ScheduledTaskSummary): AutomationFormState {
+function normalizeThreadModeForTarget(targetType: 'background-agent' | 'conversation', threadMode: 'dedicated' | 'existing' | 'none') {
+  return targetType === 'conversation' && threadMode === 'none' ? 'dedicated' : threadMode;
+}
+
+function formFromTask(task: AutomationTaskForEditor): AutomationFormState {
+  const targetType = task.targetType === 'conversation' ? 'conversation' : 'background-agent';
+  const threadMode = normalizeThreadModeForTarget(targetType, task.threadMode ?? 'dedicated');
   return {
     title: task.title || '',
     prompt: task.prompt || '',
@@ -299,18 +310,19 @@ function formFromTask(task: ScheduledTaskSummary): AutomationFormState {
     cron: task.cron || (task.at ? '' : '0 9 * * 1-5'),
     at: task.at || '',
     cwd: task.cwd || '',
-    targetType: task.targetType === 'conversation' ? 'conversation' : 'background-agent',
-    threadMode: 'dedicated',
+    targetType,
+    threadMode,
     threadConversationId: task.threadConversationId || '',
     model: task.model || '',
     thinkingLevel: task.thinkingLevel || '',
-    timeoutSeconds: '',
+    timeoutSeconds: task.timeoutSeconds ? String(task.timeoutSeconds) : '',
     catchUpWindowSeconds: task.catchUpWindowSeconds ? String(task.catchUpWindowSeconds) : '',
     enabled: task.enabled !== false,
   };
 }
 
 function readFormInput(form: AutomationFormState) {
+  const threadMode = normalizeThreadModeForTarget(form.targetType, form.threadMode);
   return {
     title: form.title.trim(),
     enabled: form.enabled,
@@ -319,7 +331,7 @@ function readFormInput(form: AutomationFormState) {
     at: form.scheduleType === 'at' ? form.at.trim() : null,
     cwd: form.cwd.trim() || null,
     targetType: form.targetType,
-    threadMode: form.threadMode,
+    threadMode,
     threadConversationId: form.threadConversationId.trim() || null,
     model: form.model.trim() || null,
     thinkingLevel: form.thinkingLevel.trim() || null,
@@ -1099,7 +1111,10 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                         className={fieldClass()}
                         name="automation-target"
                         value={form.targetType}
-                        onChange={(event) => setForm({ ...form, targetType: event.target.value as 'background-agent' | 'conversation' })}
+                        onChange={(event) => {
+                          const targetType = event.target.value as 'background-agent' | 'conversation';
+                          setForm({ ...form, targetType, threadMode: normalizeThreadModeForTarget(targetType, form.threadMode) });
+                        }}
                       >
                         <option value="background-agent">Background job</option>
                         <option value="conversation">Conversation</option>
@@ -1110,11 +1125,19 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                         className={fieldClass()}
                         name="automation-thread-mode"
                         value={form.threadMode}
-                        onChange={(event) => setForm({ ...form, threadMode: event.target.value as 'dedicated' | 'existing' | 'none' })}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            threadMode: normalizeThreadModeForTarget(
+                              form.targetType,
+                              event.target.value as 'dedicated' | 'existing' | 'none',
+                            ),
+                          })
+                        }
                       >
                         <option value="dedicated">Dedicated thread</option>
                         <option value="existing">Existing thread</option>
-                        <option value="none">No thread</option>
+                        {form.targetType === 'background-agent' ? <option value="none">No thread</option> : null}
                       </select>
                     </Field>
                   </div>

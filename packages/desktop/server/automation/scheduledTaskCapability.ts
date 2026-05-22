@@ -73,10 +73,6 @@ export interface ScheduledTaskUpdateCapabilityInput extends ScheduledTaskThreadI
   autoResumeIfOpen?: boolean | null;
 }
 
-function summarizePrompt(value: string): string {
-  return value.split('\n')[0]?.slice(0, 120) ?? '';
-}
-
 function buildScheduledTaskSummary(
   task: StoredAutomation,
   runtime?: TaskRuntimeEntry,
@@ -93,11 +89,13 @@ function buildScheduledTaskSummary(
     enabled: task.enabled,
     cron: task.schedule.type === 'cron' ? task.schedule.expression : undefined,
     at: task.schedule.type === 'at' ? task.schedule.at : undefined,
-    prompt: summarizePrompt(task.prompt),
+    prompt: task.prompt,
     model: task.modelRef,
     thinkingLevel: task.thinkingLevel,
     cwd: task.cwd,
+    ...(task.timeoutSeconds !== undefined ? { timeoutSeconds: task.timeoutSeconds } : {}),
     ...(task.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: task.catchUpWindowSeconds } : {}),
+    threadMode: threadDetail.threadMode,
     threadConversationId: threadDetail.threadConversationId,
     threadTitle: threadDetail.threadTitle,
     conversationBehavior: task.conversationBehavior,
