@@ -45,11 +45,11 @@ const componentLoaders: Record<string, () => Promise<{ default: ExtensionHostVie
     default: (await import('../../../../../extensions/system-files/src/panels')).WorkspaceFileDetailPanel as ExtensionHostViewComponent,
   }),
   'workbench.browser.rail': async () => ({
-    default: (await import('../../../../../experimental-extensions/extensions/system-browser/src/panels'))
+    default: (await import('../../../../../installable-extensions/system-browser/src/panels'))
       .BrowserTabsPanel as ExtensionHostViewComponent,
   }),
   'workbench.browser.detail': async () => ({
-    default: (await import('../../../../../experimental-extensions/extensions/system-browser/src/panels'))
+    default: (await import('../../../../../installable-extensions/system-browser/src/panels'))
       .BrowserWorkbenchPanel as ExtensionHostViewComponent,
   }),
 };

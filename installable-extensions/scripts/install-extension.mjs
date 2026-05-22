@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 /* eslint-env node */
-import { cpSync, existsSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const labsRoot = resolve(repoRoot, 'experimental-extensions');
+const installableRoot = resolve(repoRoot, 'installable-extensions');
 const extensionId = readFlag('--extension') ?? process.argv[2];
 const target = readFlag('--target') ?? 'testing';
 
 if (!extensionId) fail('Usage: pnpm run install -- --extension <extension-id> [--target testing|production|/custom/state/root]');
 
-const extensionRoot = resolve(labsRoot, 'extensions', extensionId);
+const extensionRoot = resolve(installableRoot, extensionId);
 if (!existsSync(resolve(extensionRoot, 'extension.json'))) fail(`No extension found at ${extensionRoot}`);
 
 const stateRoot = resolveTargetStateRoot(target);
 const destination = resolve(stateRoot, 'extensions', extensionId);
+mkdirSync(resolve(stateRoot, 'extensions'), { recursive: true });
 rmSync(destination, { recursive: true, force: true });
 cpSync(extensionRoot, destination, { recursive: true });
 console.log(`Installed ${extensionId} to ${destination}`);

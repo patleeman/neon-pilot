@@ -37,7 +37,7 @@ User extensions live in runtime state by default:
 
 Bundled first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as user extensions; there is no hard-coded system extension allowlist.
 
-The loader also includes repo-local experimental extensions from `experimental-extensions/extensions/` as external extension packages. They should declare `defaultEnabled: false`, which keeps them visible in Extension Manager's collapsed Experimental section without registering routes/tools until enabled.
+Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as user extensions.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
@@ -67,7 +67,6 @@ Preferred split: core records and serves cross-cutting state; native extensions 
 Native system extensions include:
 
 - `system-automations` owns `/automations` and scheduled/conversation-bound automation UI.
-- `system-gateways` owns `/gateways` while the core app keeps gateway state and APIs. It lives under `experimental-extensions/extensions/` and is default-disabled until enabled.
 - `system-telemetry` owns `/telemetry` while telemetry collection remains core infrastructure.
 - `system-files` owns the workspace File Explorer rail and paired workbench file detail view while workspace filesystem APIs remain core infrastructure.
 - `system-diffs` owns the checkpoint tool and inline transcript diff rendering while checkpoint persistence remains core infrastructure.

@@ -11,7 +11,7 @@ export interface SystemExtensionEntry {
   packageRoot: string;
 }
 
-function readExtensionEntries(source: 'bundled' | 'experimental'): SystemExtensionEntry[] {
+function readExtensionEntries(source: 'bundled'): SystemExtensionEntry[] {
   return listExtensionPackagePaths()
     .filter((entry) => entry.source === source)
     .flatMap((entry): SystemExtensionEntry[] => {
@@ -29,10 +29,5 @@ export function readBundledExtensionEntries(): SystemExtensionEntry[] {
   return readExtensionEntries('bundled');
 }
 
-export function readExperimentalExtensionEntries(): SystemExtensionEntry[] {
-  return readExtensionEntries('experimental');
-}
-
 export const SYSTEM_EXTENSION_ENTRIES: SystemExtensionEntry[] = readBundledExtensionEntries();
-export const EXPERIMENTAL_EXTENSION_ENTRIES: SystemExtensionEntry[] = readExperimentalExtensionEntries();
 export const SYSTEM_EXTENSIONS: LoadedSystemExtensionManifest[] = SYSTEM_EXTENSION_ENTRIES.map((entry) => entry.manifest);

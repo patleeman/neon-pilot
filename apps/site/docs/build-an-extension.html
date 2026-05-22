@@ -171,8 +171,9 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>User-created extensions live in runtime state by default:</p>
         <pre><code>~/.local/state/neon-pilot/extensions/{extension-id}/</code></pre>
         <p>
-          Bundled first-party extensions live in the repo under <code>extensions/</code>. Experimental bundled extensions live under
-          <code>experimental-extensions/extensions/</code> and should usually set <code>defaultEnabled: false</code>.
+          Bundled first-party system extensions live in the repo under <code>extensions/</code>. Optional first-party installable extensions
+          live under <code>installable-extensions/</code>; they are not bundled or auto-loaded and must be installed into runtime state
+          before use.
         </p>
         <p>A normal native extension package looks like:</p>
         <pre><code>my-extension/
@@ -235,9 +236,7 @@ POST /api/extensions/{id}/reload</code></pre>
             >
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions">System extension examples</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions">Experimental extension examples</a>
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions">Installable extension examples</a></li>
         </ul>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/build-an-extension.md">Edit this page on GitHub →</a>

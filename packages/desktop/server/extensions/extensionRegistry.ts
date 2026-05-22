@@ -27,7 +27,7 @@ import {
   getHostViewComponentDefinition,
 } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
-import { EXPERIMENTAL_EXTENSION_ENTRIES, SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
+import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
 // Per-extension health errors stored in memory. Cleared on successful load/reload.
 const buildErrors = new Map<string, string>();
@@ -1808,7 +1808,7 @@ function fallbackInvalidExtensionId(packageRoot: string): string {
 
 export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateRoot()): InvalidExtensionEntry[] {
   return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
-    .filter((entry) => entry.source === 'external' || entry.source === 'experimental')
+    .filter((entry) => entry.source === 'external')
     .flatMap((entry): InvalidExtensionEntry[] => {
       const manifestPath = join(entry.packageRoot, 'extension.json');
       try {
@@ -1856,11 +1856,6 @@ export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()):
 
 export function listExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
   const entries = [
-    ...EXPERIMENTAL_EXTENSION_ENTRIES.map((entry) => ({
-      manifest: entry.manifest,
-      packageRoot: entry.packageRoot,
-      source: 'runtime' as const,
-    })),
     ...SYSTEM_EXTENSION_ENTRIES.map((entry) => ({ manifest: entry.manifest, packageRoot: entry.packageRoot, source: 'system' as const })),
     ...readRuntimeExtensionEntries(stateRoot),
   ];

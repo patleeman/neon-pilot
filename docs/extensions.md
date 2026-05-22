@@ -118,7 +118,7 @@ The manifest declares what your extension contributes:
 
 **`packageType`**: derived by the loader from install location: repo/app-bundled extensions are `"system"`; runtime-installed extensions are `"user"`. The manifest field is accepted for compatibility but is not authoritative.
 
-**`defaultEnabled`**: set to `false` for experimental extensions that should ship installed but disabled until the user explicitly enables them.
+**`defaultEnabled`**: set to `false` for extensions that should install disabled until the user explicitly enables them.
 
 **`permissions`**: See [Permissions](#permissions).
 
@@ -1539,8 +1539,8 @@ pnpm test
 `scripts/check-extension-backend-api.mjs` to keep the SDK backend subpath list and
 host backend API implementation list in lockstep, and to block backend API seams
 from statically importing known heavy/runtime internals. It also runs
-`scripts/check-filesystem-authority.mjs` and `scripts/check-packaged-extensions.mjs`. That packaged check imports every system
-and experimental extension backend from its built `dist` output, verifies backend
+`scripts/check-filesystem-authority.mjs` and `scripts/check-packaged-extensions.mjs`. That packaged check imports every bundled system
+extension backend from its built `dist` output, verifies backend
 action handler exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs product-critical smoke calls for Knowledge,
 Automations, and Diffs extension actions. It fails on forbidden bare imports
 that are not available inside the packaged desktop app, such as
@@ -1615,19 +1615,21 @@ State is SQLite-backed and survives app restarts.
 
 ## Examples
 
-See the system extensions in `extensions/` for practical examples:
+See bundled system extensions in `extensions/` and optional installable extensions in `installable-extensions/` for practical examples:
 
 - **`system-artifacts`** — Tools + views + transcript renderer + skills
-- **`system-browser`** — Experimental browser automation tool + views (`experimental-extensions/extensions/system-browser`)
+- **`system-browser`** — Experimental browser automation tool + views (`installable-extensions/system-browser`)
 - **`system-automations`** — Scheduled tasks, follow-up queues, and the Automations page
-- **`system-images`** — Experimental image generation tool (`experimental-extensions/extensions/system-images`)
+- **`system-images`** — Experimental image generation tool (`installable-extensions/system-images`)
 - **`system-conversation-tools`** — Agent lifecycle hooks + contextMenus
 - **`system-extension-manager`** — Extension management UI + nav
 - **`system-runs`** — Background runs + composer shelf (ActivityShelf)
-- **`system-gateways`** — Experimental Telegram gateway management UI + nav (`experimental-extensions/extensions/system-gateways`)
+- **`system-gateways`** — Experimental Telegram gateway management UI + nav (`installable-extensions/system-gateways`)
 - **`system-settings`** — Settings panels + nav
 
-Each system extension has a complete `extension.json` manifest and
+Each extension has a complete `extension.json` manifest and
 `src/backend.ts` + optionally `src/frontend.tsx`.
 
 Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`NEON_PILOT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.
+
+Installable repo extensions are not bundled or auto-loaded. Build and install them into runtime state with `pnpm --dir installable-extensions run build -- --extension <id>` and `pnpm --dir installable-extensions run install -- --extension <id> --target <state-root|testing|production>`.

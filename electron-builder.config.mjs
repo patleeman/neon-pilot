@@ -126,11 +126,6 @@ const electronBuilderConfig = {
       filter: packagedExtensionFilter,
     },
     {
-      from: 'experimental-extensions/extensions',
-      to: 'experimental-extensions/extensions',
-      filter: packagedExtensionFilter,
-    },
-    {
       from: 'docs',
       to: 'docs',
     },

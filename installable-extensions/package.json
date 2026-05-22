@@ -1,5 +1,5 @@
 {
-  "name": "@neon-pilot/experimental-extensions",
+  "name": "@neon-pilot/installable-extensions",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -13,10 +13,7 @@ vi.mock('@neon-pilot/extensions/backend/runtime', () => ({
   buildSessionContextForRuntime: buildSessionContextForRuntimeMock,
 }));
 
-import {
-  createImageAgentExtension,
-  parseImageGenerationSse,
-} from '../../../../experimental-extensions/extensions/system-images/src/imageTool.js';
+import { createImageAgentExtension, parseImageGenerationSse } from '../../../../installable-extensions/system-images/src/imageTool.js';
 
 function createJwtWithAccountId(accountId: string): string {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');

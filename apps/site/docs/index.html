@@ -128,8 +128,8 @@ pnpm run desktop:start</code></pre>
             implementation packages
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions">Experimental extensions</a> — rough user
-            extensions that are not bundled with the app
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions">Installable extensions</a> — optional
+            first-party extensions that install into runtime state as user extensions
           </li>
         </ul>
         <h2 id="extension-docs">Extension docs</h2>
@@ -142,25 +142,20 @@ pnpm run desktop:start</code></pre>
           changing extension APIs.
         </p>
         <p>
-          System extensions are bundled under <code>extensions/system-*</code>. Experimental extensions are bundled under
-          <code>experimental-extensions/extensions/*</code>, are loaded by the registry, and should set <code>defaultEnabled: false</code>.
-          User extensions live under <code>&lt;state-root&gt;/extensions/{extension-id}</code> by default and follow the same package
-          contract.
+          System extensions are bundled under <code>extensions/system-*</code>. Installable extensions live under
+          <code>installable-extensions/*</code> in the repo, are not bundled or auto-loaded, and become normal user extensions only after
+          installation into <code>&lt;state-root&gt;/extensions/{extension-id}</code>.
         </p>
         <p>Feature-specific documentation lives beside the owning extension package:</p>
         <ul>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-acp/README.md"
-              >ACP Protocol</a
-            >
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-acp/README.md">ACP Protocol</a>
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-artifacts/README.md">Artifacts</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-auto-mode/README.md">Auto Mode</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-automations/README.md">Automations</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-browser/README.md"
-              >Browser</a
-            >
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-browser/README.md">Browser</a>
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-caffeinate/README.md">Caffeinate</a></li>
           <li>
@@ -208,11 +203,7 @@ pnpm run desktop:start</code></pre>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-git-status/README.md">Git Status</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/host-view-components.md">Host view components</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-image-probe/README.md">Image Probe</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-images/README.md"
-              >Images</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-images/README.md">Images</a></li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-alleycat/README.md"
               >Kitty Litter Mobile Pairing</a
@@ -223,7 +214,7 @@ pnpm run desktop:start</code></pre>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-local-dictation/README.md">Local Dictation</a>
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-local-models/README.md"
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-local-models/README.md"
               >Local Models</a
             >
           </li>
@@ -243,8 +234,7 @@ pnpm run desktop:start</code></pre>
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-runs/README.md">Runs</a></li>
           <li>
-            <a
-              href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-session-exchange/README.md"
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-session-exchange/README.md"
               >Session Exchange</a
             >
           </li>
@@ -256,9 +246,7 @@ pnpm run desktop:start</code></pre>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-settings/README.md">Settings</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-skills/README.md">Skills</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-speechmike/README.md"
-              >SpeechMike</a
-            >
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-speechmike/README.md">SpeechMike</a>
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-suggested-context/README.md"
@@ -266,7 +254,7 @@ pnpm run desktop:start</code></pre>
             >
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../experimental-extensions/extensions/system-gateways/README.md"
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-gateways/README.md"
               >Telegram Gateway</a
             >
           </li>

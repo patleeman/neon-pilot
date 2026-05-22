@@ -167,8 +167,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
         </p>
         <p>
           <strong><code>defaultEnabled</code></strong
-          >: set to <code>false</code> for experimental extensions that should ship installed but disabled until the user explicitly enables
-          them.
+          >: set to <code>false</code> for extensions that should install disabled until the user explicitly enables them.
         </p>
         <p>
           <strong><code>permissions</code></strong
@@ -1222,8 +1221,8 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension source may use type-only Pi imports for
           extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be
           thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in
-          half the app. <code>pnpm run check:extensions:quick</code> enforces this with
-          <code>scripts/check-extension-backend-api.mjs</code> and packaged source/bundle checks before packaged bundle checks run.
+          half the app. <code>pnpm run check:extensions</code> enforces this with <code>scripts/check-extension-backend-api.mjs</code> and
+          packaged source/bundle checks before packaged bundle checks run.
         </p>
         <p>
           Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions
@@ -1680,8 +1679,8 @@ await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockTy
   &quot;permissions&quot;: [&quot;secrets:read&quot;]
 }</code></pre>
         <p>
-          Resolve them in backend code with <code>ctx.secrets.get('apiKey')</code>. Environment variables declared by the extension take
-          precedence over stored values.
+          Resolve them in backend code with <code>ctx.secrets.get('apiKey')</code>. Stored values take precedence; environment variables
+          declared by the extension are used as a fallback when no stored value exists.
         </p>
         <p>Extensions can declare dependencies on other extensions:</p>
         <pre><code>{
@@ -1928,24 +1927,20 @@ pnpm run extension:build -- /path/to/my-extension</code></pre>
           Run the extension integration smoke tests to catch cross-extension issues before starting the app (manifest validation, route
           conflicts, missing backend/frontend entries, handler export mismatches, and packaged-runtime backend import failures):
         </p>
-        <pre><code># Run the full extension integration suite (includes ~25s dynamic import check)
+        <pre><code># Run the full extension gate: static extension checks plus focused extension smoke tests
 pnpm run check:extensions
 
-# Quick release/development gate (backend API check, packaged extension check, runtime smoke, filesystem authority)
-pnpm run check:extensions:quick
-
-# Run alongside the server endpoint smoke tests
-npx vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts \
-  packages/desktop/server/routes/registerAll.smoke.test.ts
+# Run only the focused extension smoke tests
+pnpm run test:extensions
 
 # Or include in the full test suite
 pnpm test</code></pre>
         <p>
-          <code>pnpm run check:extensions</code> and <code>pnpm run check:extensions:quick</code> first run
-          <code>scripts/check-extension-backend-api.mjs</code> to keep the SDK backend subpath list and host backend API implementation list
-          in lockstep, and to block backend API seams from statically importing known heavy/runtime internals. They also run
-          <code>scripts/check-packaged-extensions.mjs</code>. That packaged check imports every system and experimental extension backend
-          from its built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool surfaces such as
+          <code>pnpm run check:extensions</code> first runs <code>scripts/check-extension-backend-api.mjs</code> to keep the SDK backend
+          subpath list and host backend API implementation list in lockstep, and to block backend API seams from statically importing known
+          heavy/runtime internals. It also runs <code>scripts/check-filesystem-authority.mjs</code> and
+          <code>scripts/check-packaged-extensions.mjs</code>. That packaged check imports every bundled system extension backend from its
+          built <code>dist</code> output, verifies backend action handler exports, smoke-calls known safe tool surfaces such as
           <code>scheduled_task</code>, and runs product-critical smoke calls for Knowledge, Automations, and Diffs extension actions. It
           fails on forbidden bare imports that are not available inside the packaged desktop app, such as
           <code>@earendil-works/pi-coding-agent</code>, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, <code>jsdom</code>,
@@ -2059,21 +2054,24 @@ const items = await ctx.storage.list('prefix-');
 await ctx.storage.delete('my-key');</code></pre>
         <p>State is SQLite-backed and survives app restarts.</p>
         <h2 id="examples">Examples</h2>
-        <p>See the system extensions in <code>extensions/</code> for practical examples:</p>
+        <p>
+          See bundled system extensions in <code>extensions/</code> and optional installable extensions in
+          <code>installable-extensions/</code> for practical examples:
+        </p>
         <ul>
           <li>
             <strong><code>system-artifacts</code></strong> — Tools + views + transcript renderer + skills
           </li>
           <li>
             <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
-            (<code>experimental-extensions/extensions/system-browser</code>)
+            (<code>installable-extensions/system-browser</code>)
           </li>
           <li>
             <strong><code>system-automations</code></strong> — Scheduled tasks, follow-up queues, and the Automations page
           </li>
           <li>
             <strong><code>system-images</code></strong> — Experimental image generation tool
-            (<code>experimental-extensions/extensions/system-images</code>)
+            (<code>installable-extensions/system-images</code>)
           </li>
           <li>
             <strong><code>system-conversation-tools</code></strong> — Agent lifecycle hooks + contextMenus
@@ -2086,14 +2084,14 @@ await ctx.storage.delete('my-key');</code></pre>
           </li>
           <li>
             <strong><code>system-gateways</code></strong> — Experimental Telegram gateway management UI + nav
-            (<code>experimental-extensions/extensions/system-gateways</code>)
+            (<code>installable-extensions/system-gateways</code>)
           </li>
           <li>
             <strong><code>system-settings</code></strong> — Settings panels + nav
           </li>
         </ul>
         <p>
-          Each system extension has a complete <code>extension.json</code> manifest and <code>src/backend.ts</code> + optionally
+          Each extension has a complete <code>extension.json</code> manifest and <code>src/backend.ts</code> + optionally
           <code>src/frontend.tsx</code>.
         </p>
         <p>
@@ -2104,6 +2102,12 @@ await ctx.storage.delete('my-key');</code></pre>
           points at built output such as <code>dist/backend.mjs</code>, both dev and packaged builds load that file directly. System
           extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their
           <code>dist/frontend.js</code> bundles are still built and validated as release artifacts.
+        </p>
+        <p>
+          Installable repo extensions are not bundled or auto-loaded. Build and install them into runtime state with
+          <code>pnpm --dir installable-extensions run build -- --extension &lt;id&gt;</code> and
+          <code>pnpm --dir installable-extensions run install -- --extension &lt;id&gt; --target &lt;state-root|testing|production&gt;</code
+          >.
         </p>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extensions.md">Edit this page on GitHub →</a>

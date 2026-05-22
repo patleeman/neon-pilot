@@ -6,4 +6,4 @@ Shared backend implementation for the `system-local-models` extension.
 - `gguf.ts` owns GGUF model cache management, cancellable downloads, llama.cpp server start/stop, delete, reveal, and prompt testing.
 - `bin/darwin-arm64` stores bundled llama.cpp runtime binaries and their `.dylib` dependencies for local development and packaging.
 
-This directory is intentionally not an extension package. The user-facing extension is `experimental-extensions/extensions/system-local-models`.
+This directory is intentionally not an extension package. The user-facing extension is `installable-extensions/system-local-models`.

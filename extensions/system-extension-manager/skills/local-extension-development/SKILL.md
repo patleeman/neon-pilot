@@ -160,7 +160,7 @@ Rules:
 - Frontend `component` values must be named exports from `src/frontend.tsx`.
 - Backend action `handler` values must be named exports from `src/backend.ts`.
 - Declare host contributions in the manifest; code implements them.
-- Use `defaultEnabled: false` for experimental extensions that should be visible but inactive until enabled.
+- Use `defaultEnabled: false` for installable extensions that should be visible but inactive until enabled.
 
 ## Common contributions
 

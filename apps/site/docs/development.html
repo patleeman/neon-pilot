@@ -68,7 +68,7 @@ pnpm run desktop:dev</code></pre>
           changes.
         </p>
         <pre><code>pnpm run fix      # prettier --write + eslint --fix
-pnpm run check    # types, lint, format, extension quick check, knip advisory</code></pre>
+pnpm run check    # types, lint, format, full test suite, extension static checks, knip advisory</code></pre>
         <p>Focused checks:</p>
         <table>
           <thead>
@@ -91,16 +91,16 @@ pnpm run check    # types, lint, format, extension quick check, knip advisory</c
               <td>Formatting-only verification</td>
             </tr>
             <tr>
-              <td><code>pnpm run check:extensions:quick</code></td>
-              <td>Before desktop dev or after extension manifest/backend API changes</td>
+              <td><code>pnpm test</code></td>
+              <td>Broad regression pass; deterministic unit, integration, smoke, and regression tests</td>
+            </tr>
+            <tr>
+              <td><code>pnpm run test:extensions</code></td>
+              <td>Focused extension runtime smoke tests</td>
             </tr>
             <tr>
               <td><code>pnpm run check:extensions</code></td>
-              <td>Before release or deep extension runtime verification</td>
-            </tr>
-            <tr>
-              <td><code>pnpm test</code></td>
-              <td>Broad regression pass</td>
+              <td>Extension static checks plus focused extension smoke tests</td>
             </tr>
             <tr>
               <td><code>pnpm run check:coverage</code></td>
@@ -108,6 +108,35 @@ pnpm run check    # types, lint, format, extension quick check, knip advisory</c
             </tr>
           </tbody>
         </table>
+        <p>
+          Use <code>pnpm test</code> as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app
+          or external-environment checks that should not run in every deterministic test pass.
+        </p>
+        <p>Startup idle smoke:</p>
+        <pre><code>pnpm run smoke:startup-idle -- --seconds=30 --sessions=2500 --blocks=80</code></pre>
+        <p>
+          This creates a temporary old-profile fixture with many historical conversations and no conversation context DB, launches the
+          desktop app against that state root, samples CPU, and fails if idle startup spawns local model processes or sustains excessive
+          CPU. Use <code>--app=&quot;/Applications/Neon Pilot RC.app&quot;</code> to test a packaged app instead of the dev launcher.
+        </p>
+        <p>
+          The npm script uses a loose CPU threshold because the dev launcher may include build-tool CPU. RC/release publishing passes
+          <code>--app</code> and uses the stricter packaged-app threshold.
+        </p>
+        <p>Desktop performance smoke:</p>
+        <pre><code>pnpm run perf:desktop -- --app=&quot;/Applications/Neon Pilot RC.app&quot; --sessions=2500 --blocks=80 --seconds=30</code></pre>
+        <p>
+          This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU,
+          draft submit click-to-visible timing, route switches, model fetch, conversation search, long-transcript open, basic interaction
+          timing, and renderer heap delta. <code>appUsableMs</code> is the startup readiness gate: it waits for React hydration, an enabled
+          composer, and the extension registry/critical extension UI to be available. <code>startupReadyMs</code> and
+          <code>appHydratedMs</code> are diagnostic paint/hydration timings, not sufficient readiness on their own.
+          <code>draftSubmitVisibleMs</code> measures from clicking Send on <code>/conversations/new</code> until the submitted prompt is
+          visible on the saved conversation route; setup time to navigate to the draft page is reported separately as
+          <code>draftSubmitSetupMs</code>. Use <code>--draft-submit-wait-ms=&lt;ms&gt;</code> to simulate a user waiting/typing before
+          sending. For release candidates, use:
+        </p>
+        <pre><code>pnpm run perf:desktop -- --app=&quot;/Applications/Neon Pilot RC.app&quot; --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120</code></pre>
         <p>
           If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
         </p>

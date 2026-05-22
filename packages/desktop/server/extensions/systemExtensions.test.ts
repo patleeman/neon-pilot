@@ -20,11 +20,11 @@ describe('systemExtensions', () => {
   it('reads bundled extension manifests and marks them as system packages', async () => {
     listExtensionPackagePaths.mockReturnValue([
       { source: 'bundled', packageRoot: '/extensions/system-a' },
-      { source: 'experimental', packageRoot: '/experimental/system-b' },
+      { source: 'external', packageRoot: '/runtime/user-b' },
     ]);
     vi.mocked(readFileSync).mockImplementation((path) => {
       if (String(path).includes('system-a')) return JSON.stringify({ schemaVersion: 2, id: 'system-a', name: 'System A' });
-      if (String(path).includes('system-b')) return JSON.stringify({ schemaVersion: 2, id: 'system-b', name: 'System B' });
+      if (String(path).includes('user-b')) return JSON.stringify({ schemaVersion: 2, id: 'user-b', name: 'User B' });
       throw new Error('missing');
     });
 
@@ -32,9 +32,6 @@ describe('systemExtensions', () => {
 
     expect(module.readBundledExtensionEntries()).toEqual([
       { packageRoot: '/extensions/system-a', manifest: { schemaVersion: 2, id: 'system-a', name: 'System A', packageType: 'system' } },
-    ]);
-    expect(module.readExperimentalExtensionEntries()).toEqual([
-      { packageRoot: '/experimental/system-b', manifest: { schemaVersion: 2, id: 'system-b', name: 'System B', packageType: 'system' } },
     ]);
   });
 

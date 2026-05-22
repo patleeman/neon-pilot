@@ -69,7 +69,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Extensions.
 - Actions: `listExtensions`, `createExtension`, `snapshotExtension`, `reloadExtension`, `validateExtension`, `listHostViewComponents`, `readSearchPaths`, `updateSearchPaths`, `manageExtension`.
 - Page controls: extension list, enable/disable, reload, validate, snapshot, create extension, search paths editor, host component list.
-- States: bundled system extension, experimental extension default-disabled, user extension, invalid manifest, missing build artifact, action failure.
+- States: bundled system extension, installed user extension, invalid manifest, missing build artifact, action failure.
 - Skills: `skills-and-capabilities`, `local-extension-development`.
 
 ### `/knowledge` and knowledge rail/detail (`system-knowledge`)
@@ -309,7 +309,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ## Cross-cutting release checks
 
 - Extension enable/disable/reload changes nav, tools, skills, transcript renderers, and settings without restart where supported.
-- Default-disabled experimental extensions stay disabled in fresh profiles.
+- Repo installable extensions are not visible in fresh profiles until installed into runtime state.
 - All pages handle empty state, loading state, failure state, narrow window, and dark/light mode.
 - All destructive actions ask for confirmation or are clearly reversible where intended.
 - Secrets are never shown in transcript, logs, telemetry, exported sessions, or screenshots.

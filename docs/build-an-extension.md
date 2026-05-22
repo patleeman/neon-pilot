@@ -73,7 +73,7 @@ User-created extensions live in runtime state by default:
 ~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
-Bundled first-party extensions live in the repo under `extensions/`. Experimental bundled extensions live under `experimental-extensions/extensions/` and should usually set `defaultEnabled: false`.
+Bundled first-party system extensions live in the repo under `extensions/`. Optional first-party installable extensions live under `installable-extensions/`; they are not bundled or auto-loaded and must be installed into runtime state before use.
 
 A normal native extension package looks like:
 
@@ -146,4 +146,4 @@ Validation is not optional. The extension doctor catches missing bundles, stale 
 - [Extension SDK/API reference](../packages/extensions/README.md)
 - [Extension Manager behavior](../extensions/system-extension-manager/README.md)
 - [System extension examples](../extensions)
-- [Experimental extension examples](../experimental-extensions)
+- [Installable extension examples](../installable-extensions)

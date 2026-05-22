@@ -261,8 +261,8 @@
         <p>
           Provider credentials should be managed through Settings. Manual edits to <code>auth.json</code> are possible but discouraged. New
           extension secrets should use <code>contributes.secrets</code>; the active backend is configured by
-          <code>secrets.provider</code> (<code>keychain</code>, <code>file</code>, or <code>env-only</code>). Environment variables declared
-          by the extension take precedence over stored values.
+          <code>secrets.provider</code> (<code>keychain</code>, <code>file</code>, or <code>env-only</code>). Stored extension secrets take
+          precedence over declared environment variables; the environment variable is a fallback when no stored secret exists.
         </p>
         <p>
           Enabled extensions may contribute <code>modelProfiles</code> that match provider/model refs with simple globs over

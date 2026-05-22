@@ -38,7 +38,7 @@ Neon Pilot keeps core small and pushes user-facing behavior into extensions.
 - `packages/desktop` — Electron app shell, desktop/server runtime, local API, extension host, daemon integration, UI.
 - `packages/extensions` — public extension SDK types and frontend/backend seams.
 - `extensions/system-*` — bundled first-party product features.
-- `experimental-extensions/extensions/*` — bundled experimental extensions, generally default-disabled.
+- `installable-extensions/*` — optional first-party extensions that install into runtime state as user extensions.
 - `apps/site` — static marketing/docs site published at [neonpilot.net](https://neonpilot.net).
 - `docs` — agent-facing product, architecture, extension, and development docs.
 

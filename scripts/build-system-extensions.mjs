@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionsRoot = join(repoRoot, 'extensions');
-const experimentalExtensionsRoot = join(repoRoot, 'experimental-extensions', 'extensions');
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 
 function readJson(path) {
@@ -23,18 +22,6 @@ function listSystemExtensionDirs() {
   return readdirSync(extensionsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('system-'))
     .map((entry) => join(extensionsRoot, entry.name))
-    .filter((extensionDir) => existsSync(join(extensionDir, 'extension.json')))
-    .sort((left, right) => left.localeCompare(right));
-}
-
-function listExperimentalExtensionDirs() {
-  if (!existsSync(experimentalExtensionsRoot)) {
-    return [];
-  }
-
-  return readdirSync(experimentalExtensionsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => join(experimentalExtensionsRoot, entry.name))
     .filter((extensionDir) => existsSync(join(extensionDir, 'extension.json')))
     .sort((left, right) => left.localeCompare(right));
 }
@@ -62,7 +49,7 @@ function assertBuiltEntriesExist(extensionDir) {
   }
 }
 
-const extensionDirs = [...listSystemExtensionDirs(), ...listExperimentalExtensionDirs()];
+const extensionDirs = listSystemExtensionDirs();
 
 for (const extensionDir of extensionDirs) {
   console.log(`Building ${extensionDir.replace(`${repoRoot}/`, '')}`);
@@ -71,5 +58,4 @@ for (const extensionDir of extensionDirs) {
 }
 
 const systemCount = listSystemExtensionDirs().length;
-const experimentalCount = listExperimentalExtensionDirs().length;
-console.log(`Built and verified ${extensionDirs.length} extensions (${systemCount} system, ${experimentalCount} experimental).`);
+console.log(`Built and verified ${extensionDirs.length} system extensions (${systemCount} system).`);

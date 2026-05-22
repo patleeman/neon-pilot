@@ -27,9 +27,6 @@ process.env.NEON_PILOT_VAULT_ROOT ??= smokeVaultRoot;
 const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
-const experimentalExtensionsRoot = packagedAppResourcesRoot
-  ? join(packagedAppResourcesRoot, 'experimental-extensions', 'extensions')
-  : join(inputRoot, 'experimental-extensions', 'extensions');
 
 if (packagedAppResourcesRoot) {
   Object.defineProperty(process, 'resourcesPath', {
@@ -76,14 +73,11 @@ function listExtensionDirs(root, predicate = () => true) {
 }
 
 function listSourceExtensionDirs() {
-  return [
-    ...listExtensionDirs(join(repoRoot, 'extensions'), (name) => name.startsWith('system-')),
-    ...listExtensionDirs(join(repoRoot, 'experimental-extensions', 'extensions')),
-  ];
+  return listExtensionDirs(join(repoRoot, 'extensions'), (name) => name.startsWith('system-'));
 }
 
 function listPackagedExtensionDirs() {
-  return [...listExtensionDirs(extensionsRoot, (name) => name.startsWith('system-')), ...listExtensionDirs(experimentalExtensionsRoot)];
+  return listExtensionDirs(extensionsRoot, (name) => name.startsWith('system-'));
 }
 
 function isBareSpecifier(specifier) {
@@ -156,7 +150,6 @@ function isTypeOnlyImportStatement(statement) {
 }
 
 function collectForbiddenExtensionSourceImports(extensionDir) {
-  if (extensionDir.startsWith(experimentalExtensionsRoot)) return [];
   const sourceRoot = join(extensionDir, 'src');
   const failures = [];
   for (const sourcePath of collectSourceFiles(sourceRoot)) {

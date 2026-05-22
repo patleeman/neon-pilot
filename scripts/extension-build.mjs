@@ -64,6 +64,10 @@ if (manifest.frontend?.entry && existsSync(frontendSource)) {
     platform: 'browser',
     format: 'esm',
     target: 'es2022',
+    define: {
+      'import.meta.env.PROD': 'false',
+      'import.meta.env.DEV': 'true',
+    },
     jsx: 'automatic',
     sourcemap: emitSourceMaps,
     logLevel: 'info',

@@ -26,10 +26,10 @@ describe('extension package paths', () => {
     });
   });
 
-  it('discovers packaged experimental extensions from Electron resources', () => {
+  it('does not auto-discover repo installable extensions from Electron resources', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
-    const experimentalRoot = join(tempRoot, 'experimental-extensions', 'extensions');
-    const packageRoot = writeExtension(experimentalRoot, 'sample-experiment');
+    const installableRoot = join(tempRoot, 'installable-extensions');
+    const packageRoot = writeExtension(installableRoot, 'sample-installable');
 
     Object.defineProperty(process, 'resourcesPath', {
       value: tempRoot,
@@ -38,42 +38,34 @@ describe('extension package paths', () => {
 
     try {
       expect(existsSync(packageRoot)).toBe(true);
-      expect(listExtensionPackagePaths()).toEqual(
-        expect.arrayContaining([expect.objectContaining({ packageRoot, source: 'experimental' })]),
-      );
+      expect(listExtensionPackagePaths()).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot })]));
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('does not load documentation templates as experimental extensions', () => {
+  it('loads configured installable extension paths as external user extensions', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
-    const experimentalRoot = join(tempRoot, 'experimental-extensions', 'extensions');
-    const templateRoot = writeExtension(experimentalRoot, 'template-crud-page');
-    const extensionRoot = writeExtension(experimentalRoot, 'system-images');
-
-    Object.defineProperty(process, 'resourcesPath', {
-      value: tempRoot,
-      configurable: true,
-    });
+    const extensionRoot = writeExtension(join(tempRoot, 'installable-extensions'), 'system-images');
+    const runtimeRoot = join(tempRoot, 'runtime-extensions');
 
     try {
-      const paths = listExtensionPackagePaths();
-      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: extensionRoot, source: 'experimental' })]));
-      expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: templateRoot })]));
+      const paths = listExtensionPackagePaths({ runtimeRoot: extensionRoot });
+      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: extensionRoot, source: 'external' })]));
+      expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: runtimeRoot })]));
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('prefers unpacked packaged extensions over asar-adjacent source paths', () => {
+  it('prefers unpacked bundled extensions over asar-adjacent source paths', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const resourcesRoot = join(tempRoot, 'Resources');
-    const unpackedRoot = join(resourcesRoot, 'experimental-extensions', 'extensions');
+    const unpackedRoot = join(resourcesRoot, 'extensions');
     const asarAppRoot = join(resourcesRoot, 'app.asar', 'server', 'dist', 'app');
-    const asarRoot = join(asarAppRoot, 'experimental-extensions', 'extensions');
-    const unpackedPackageRoot = writeExtension(unpackedRoot, 'system-images');
-    const asarPackageRoot = writeExtension(asarRoot, 'system-images');
+    const asarRoot = join(asarAppRoot, 'extensions');
+    const unpackedPackageRoot = writeExtension(unpackedRoot, 'system-files');
+    const asarPackageRoot = writeExtension(asarRoot, 'system-files');
 
     Object.defineProperty(process, 'resourcesPath', {
       value: resourcesRoot,
@@ -83,9 +75,9 @@ describe('extension package paths', () => {
     try {
       mkdirSync(asarAppRoot, { recursive: true });
       chdir(asarAppRoot);
-      const paths = listExtensionPackagePaths().filter((entry) => entry.packageRoot.endsWith('/system-images'));
-      expect(paths[0]).toMatchObject({ packageRoot: unpackedPackageRoot, source: 'experimental' });
-      expect(paths[1]).toMatchObject({ packageRoot: realpathSync(asarPackageRoot), source: 'experimental' });
+      const paths = listExtensionPackagePaths().filter((entry) => entry.packageRoot.endsWith('/system-files'));
+      expect(paths[0]).toMatchObject({ packageRoot: unpackedPackageRoot, source: 'bundled' });
+      expect(paths[1]).toMatchObject({ packageRoot: realpathSync(asarPackageRoot), source: 'bundled' });
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }

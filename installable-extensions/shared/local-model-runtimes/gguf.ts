@@ -56,7 +56,7 @@ type RevealInput = { modelPath?: string };
 const here = dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = join(here, '..');
 const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
-const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'experimental-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
+const sourceRuntimeRoot = repoRoot ? join(repoRoot, 'installable-extensions', 'shared', 'local-model-runtimes') : runtimeRoot;
 const runtimeCacheRoot = join(homedir(), '.cache', 'neon-pilot', 'llama-cpp');
 const runtimeBinDir = join(runtimeCacheRoot, 'bin', 'darwin-arm64');
 function bundledRuntimePath(name: string) {

@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const labsRoot = resolve(repoRoot, 'experimental-extensions');
+const installableRoot = resolve(repoRoot, 'installable-extensions');
 const extensionId = readFlag('--extension') ?? process.argv[2];
 
 if (!extensionId) fail('Usage: pnpm run build -- --extension <extension-id>');
 
-const extensionRoot = resolve(labsRoot, 'extensions', extensionId);
+const extensionRoot = resolve(installableRoot, extensionId);
 if (!existsSync(resolve(extensionRoot, 'extension.json'))) fail(`No extension found at ${extensionRoot}`);
 
 const result = spawnSync(process.execPath, [resolve(repoRoot, 'scripts/extension-build.mjs'), extensionRoot], {

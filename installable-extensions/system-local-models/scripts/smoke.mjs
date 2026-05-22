@@ -112,7 +112,7 @@ async function main() {
   }
 
   log('checking llama.cpp runtime bundle');
-  run('node experimental-extensions/shared/local-model-runtimes/scripts/check-runtime.mjs');
+  run('node installable-extensions/shared/local-model-runtimes/scripts/check-runtime.mjs');
 
   log('importing backend actions');
   const backend = await import(pathToFileURL(join(extensionRoot, 'dist', 'backend.mjs')).href + `?smoke=${Date.now()}`);

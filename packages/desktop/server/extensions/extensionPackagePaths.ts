@@ -6,7 +6,7 @@ import { readConfiguredExtensionPaths, readEnvironmentExtensionPaths } from './e
 
 export interface ExtensionPackagePath {
   packageRoot: string;
-  source: 'bundled' | 'experimental' | 'external';
+  source: 'bundled' | 'external';
 }
 
 function candidateBundledExtensionRoots(): string[] {
@@ -17,17 +17,6 @@ function candidateBundledExtensionRoots(): string[] {
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions') : null,
     resolve(currentDir, '../../../../extensions'),
     resolve(currentDir, '../../../../../extensions'),
-  ].filter((value): value is string => Boolean(value));
-}
-
-function candidateExperimentalExtensionRoots(): string[] {
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  return [
-    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'experimental-extensions/extensions') : null,
-    resolve(process.cwd(), 'experimental-extensions/extensions'),
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'experimental-extensions/extensions') : null,
-    resolve(currentDir, '../../../../experimental-extensions/extensions'),
-    resolve(currentDir, '../../../../../experimental-extensions/extensions'),
   ].filter((value): value is string => Boolean(value));
 }
 
@@ -45,9 +34,6 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
     .sort((left, right) => left.localeCompare(right))
     .flatMap((entryName): ExtensionPackagePath[] => {
       const packageRoot = resolve(root, entryName);
-      if (source === 'experimental' && entryName.startsWith('template-')) {
-        return [];
-      }
       if (!statSync(packageRoot).isDirectory() || !existsSync(resolve(packageRoot, 'extension.json'))) {
         return [];
       }
@@ -59,7 +45,6 @@ export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}
   const seen = new Set<string>();
   const inputs: Array<{ path: string; source: ExtensionPackagePath['source'] }> = [
     ...candidateBundledExtensionRoots().map((path) => ({ path, source: 'bundled' as const })),
-    ...candidateExperimentalExtensionRoots().map((path) => ({ path, source: 'experimental' as const })),
     ...(options.runtimeRoot ? [{ path: options.runtimeRoot, source: 'external' as const }] : []),
     ...readConfiguredExtensionPaths().map((path) => ({ path, source: 'external' as const })),
     ...readEnvironmentExtensionPaths().map((path) => ({ path, source: 'external' as const })),

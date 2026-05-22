@@ -305,7 +305,7 @@ function assertPackagedAgentReadableResources(appBundlePath) {
   const requiredResources = ['docs/README.md', 'extensions/system-settings/README.md', 'extensions/system-runs/skills/runs/SKILL.md'];
   const missing = requiredResources.filter((relativePath) => !existsSync(join(resourcesPath, relativePath)));
 
-  for (const extensionRootRelativePath of ['extensions', 'experimental-extensions/extensions']) {
+  for (const extensionRootRelativePath of ['extensions']) {
     const extensionsRoot = join(resourcesPath, extensionRootRelativePath);
     if (!existsSync(extensionsRoot)) continue;
     for (const entry of readdirSync(extensionsRoot, { withFileTypes: true })) {

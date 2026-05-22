@@ -39,21 +39,21 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [System extensions](../extensions) — feature-owned docs and implementation packages
-- [Experimental extensions](../experimental-extensions) — rough user extensions that are not bundled with the app
+- [Installable extensions](../installable-extensions) — optional first-party extensions that install into runtime state as user extensions
 
 ## Extension docs
 
 Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
-System extensions are bundled under `extensions/system-*`. Experimental extensions are bundled under `experimental-extensions/extensions/*`, are loaded by the registry, and should set `defaultEnabled: false`. User extensions live under `<state-root>/extensions/{extension-id}` by default and follow the same package contract.
+System extensions are bundled under `extensions/system-*`. Installable extensions live under `installable-extensions/*` in the repo, are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`.
 
 Feature-specific documentation lives beside the owning extension package:
 
-- [ACP Protocol](../experimental-extensions/extensions/system-acp/README.md)
+- [ACP Protocol](../installable-extensions/system-acp/README.md)
 - [Artifacts](../extensions/system-artifacts/README.md)
 - [Auto Mode](../extensions/system-auto-mode/README.md)
 - [Automations](../extensions/system-automations/README.md)
-- [Browser](../experimental-extensions/extensions/system-browser/README.md)
+- [Browser](../installable-extensions/system-browser/README.md)
 - [Caffeinate](../extensions/system-caffeinate/README.md)
 - [Codex Profile](../extensions/system-codex-profile/README.md)
 - [Composer Attachments](../extensions/system-composer-attachments/README.md)
@@ -70,11 +70,11 @@ Feature-specific documentation lives beside the owning extension package:
 - [Git Status](../extensions/system-git-status/README.md)
 - [Host view components](host-view-components.md)
 - [Image Probe](../extensions/system-image-probe/README.md)
-- [Images](../experimental-extensions/extensions/system-images/README.md)
+- [Images](../installable-extensions/system-images/README.md)
 - [Kitty Litter Mobile Pairing](../extensions/system-alleycat/README.md)
 - [Knowledge](../extensions/system-knowledge/README.md)
 - [Local Dictation](../extensions/system-local-dictation/README.md)
-- [Local Models](../experimental-extensions/extensions/system-local-models/README.md)
+- [Local Models](../installable-extensions/system-local-models/README.md)
 - [Loose Ends](../extensions/system-loose-ends/README.md)
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
@@ -82,13 +82,13 @@ Feature-specific documentation lives beside the owning extension package:
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)
-- [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
+- [Session Exchange](../installable-extensions/system-session-exchange/README.md)
 - [Self Preservation](../extensions/system-self-preservation/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)
-- [SpeechMike](../experimental-extensions/extensions/system-speechmike/README.md)
+- [SpeechMike](../installable-extensions/system-speechmike/README.md)
 - [Suggested Context](../extensions/system-suggested-context/README.md)
-- [Telegram Gateway](../experimental-extensions/extensions/system-gateways/README.md)
+- [Telegram Gateway](../installable-extensions/system-gateways/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
 - [Video Probe](../extensions/system-video-probe/README.md)
 - [Web Fetch](../extensions/system-web-tools/README.md)

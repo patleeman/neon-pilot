@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { backendBundleByteLimit, frontendInitialBundleByteLimit } from './extension-hardening-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const roots = [join(repoRoot, 'extensions'), join(repoRoot, 'experimental-extensions/extensions')];
+const roots = [join(repoRoot, 'extensions'), join(repoRoot, 'installable-extensions')];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
