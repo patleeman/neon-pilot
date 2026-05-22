@@ -166,6 +166,34 @@ export async function ggufStop(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.stopServer(input, ctx);
 }
 
+export async function toggleServer(input: unknown, ctx: ExtensionBackendContext) {
+  const current = await status(input, ctx);
+  if (
+    current.mlx.server.reachable ||
+    current.gguf.server.reachable ||
+    current.mlx.process.managedRunning ||
+    current.gguf.process.managedRunning
+  ) {
+    await Promise.allSettled([mlx.stop(input, ctx), gguf.stopServer(input, ctx)]);
+    return { ok: true, running: false, status: await status(input, ctx) };
+  }
+
+  if (
+    current.gguf.selectedModelPath &&
+    current.gguf.models.some((model: { path: string }) => model.path === current.gguf.selectedModelPath)
+  ) {
+    const result = await gguf.startServer({ modelPath: current.gguf.selectedModelPath }, ctx);
+    return { ok: true, running: true, result, status: await status(input, ctx) };
+  }
+
+  if (current.mlx.installed) {
+    const result = await mlx.start({}, ctx);
+    return { ok: true, running: true, result, status: await status(input, ctx) };
+  }
+
+  throw new Error('Download or select a local model before starting the local model server.');
+}
+
 export async function ggufSetServerEnabled(input: unknown, ctx: ExtensionBackendContext) {
   return gguf.setServerEnabled(input, ctx);
 }

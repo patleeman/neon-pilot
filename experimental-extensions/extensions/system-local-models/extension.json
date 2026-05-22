@@ -108,6 +108,16 @@
         "title": "Stop llama.cpp server"
       },
       {
+        "id": "localModelsToggleServer",
+        "handler": "toggleServer",
+        "title": "Toggle local model server"
+      },
+      {
+        "id": "localModelsGgufSetServerEnabled",
+        "handler": "ggufSetServerEnabled",
+        "title": "Enable or disable GGUF server"
+      },
+      {
         "id": "localModelsGgufRunPrompt",
         "handler": "ggufRunPrompt",
         "title": "Run GGUF prompt"
@@ -136,6 +146,13 @@
         "label": "Local Models",
         "icon": "sparkle",
         "route": "/ext/system-local-models"
+      }
+    ],
+    "topBarElements": [
+      {
+        "id": "local-models-toggle",
+        "label": "Local models toggle",
+        "component": "LocalModelsToggle"
       }
     ],
     "tools": []

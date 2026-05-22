@@ -21,7 +21,6 @@ const SETUP_MODEL_KEY = 'mlx/process/setupModel';
 const ESTIMATED_MODEL_BYTES = 22 * 1024 * 1024 * 1024;
 const MAX_RECOMMENDED_CONTEXT = 131072;
 const FALLBACK_CONTEXT = 32768;
-const packageUpdateCache = new Map<string, { checkedAt: number; latestVersion: string | null; error: string | null }>();
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
@@ -133,43 +132,6 @@ async function readServerHealth() {
   }
 }
 
-async function runProcess(ctx: ExtensionBackendContext, command: string, args: string[], timeoutMs = 10_000) {
-  try {
-    const result = await ctx.shell.exec({ command, args, timeoutMs, maxBuffer: 1024 * 1024 });
-    return { exitCode: 0, stdout: result.stdout, stderr: result.stderr };
-  } catch (error) {
-    return { exitCode: 1, stdout: '', stderr: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-function parsePackageVersion(output: string, packageName: string) {
-  const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = output.match(new RegExp(`^${escaped}\\s+([^\\s]+)`, 'im'));
-  return match?.[1] ?? null;
-}
-
-async function readInstalledPackageVersion(ctx: ExtensionBackendContext, packageName: string) {
-  if (!existsSync(VENV_PYTHON)) return null;
-  const result = await runProcess(ctx, VENV_PYTHON, ['-m', 'pip', 'show', packageName]);
-  const match = result.stdout.match(/^Version:\s*(.+)$/im);
-  return match?.[1]?.trim() ?? null;
-}
-
-async function readLatestPackageVersion(ctx: ExtensionBackendContext, packageName: string) {
-  const cached = packageUpdateCache.get(packageName);
-  if (cached && Date.now() - cached.checkedAt < 6 * 60 * 60 * 1000) return cached;
-  const next = { checkedAt: Date.now(), latestVersion: null as string | null, error: null as string | null };
-  packageUpdateCache.set(packageName, next);
-  if (!existsSync(VENV_PYTHON)) return next;
-  const result = await runProcess(ctx, VENV_PYTHON, ['-m', 'pip', 'list', '--outdated', '--format=columns'], 20_000);
-  if (result.exitCode !== 0) {
-    next.error = result.stderr || 'Failed to check package updates.';
-    return next;
-  }
-  next.latestVersion = parsePackageVersion(result.stdout, packageName);
-  return next;
-}
-
 async function readPid(ctx: ExtensionBackendContext, key: string) {
   const stored = await ctx.storage.get(key).catch(() => null);
   const pid = typeof stored === 'number' ? stored : Number(stored);
@@ -189,10 +151,9 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   const downloadedBytes = getDownloadedBytes(modelCacheDir(setupRunning ? setupModel : selectedModelId));
   const runtimeInstalled = existsSync(VENV_MLX_SERVER);
   const installed = existsSync(VENV_PYTHON) && hasDownloadedModel(selectedModelId);
-  const [installedMlxLmVersion, latestMlxLm] = await Promise.all([
-    readInstalledPackageVersion(ctx, 'mlx-lm'),
-    readLatestPackageVersion(ctx, 'mlx-lm'),
-  ]);
+  // Status is called from model discovery and top-bar polling. Keep it strictly
+  // observational: no Python, pip, network, or runtime process startup just
+  // because the extension is enabled or the shell is rendering.
   const metadata = readModelContextLength(selectedModelId);
   const setupProgress = setupRunning
     ? Math.min(95, Math.max(15, Math.round((downloadedBytes / ESTIMATED_MODEL_BYTES) * 90)))
@@ -214,10 +175,10 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     runtime: {
       name: 'mlx-lm',
       installed: runtimeInstalled,
-      installedVersion: installedMlxLmVersion,
-      latestVersion: latestMlxLm.latestVersion,
-      updateCheckError: latestMlxLm.error,
-      needsUpdate: Boolean(installedMlxLmVersion && latestMlxLm.latestVersion),
+      installedVersion: null,
+      latestVersion: null,
+      updateCheckError: null,
+      needsUpdate: false,
     },
     setup: setupRunning
       ? {
@@ -254,7 +215,6 @@ export async function updateRuntime(_input: unknown, ctx: ExtensionBackendContex
     timeoutMs: 120_000,
     maxBuffer: 4 * 1024 * 1024,
   });
-  packageUpdateCache.clear();
   await appendLog(ctx, '--- update complete ---\n');
   return { ok: true, status: await status({}, ctx) };
 }

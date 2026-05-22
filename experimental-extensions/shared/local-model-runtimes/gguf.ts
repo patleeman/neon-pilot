@@ -354,7 +354,10 @@ export async function saveSettings(input: unknown, ctx: ExtensionBackendContext)
   return { ok: true };
 }
 
-export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContext) {
+export async function runtimeStatus(input: unknown, ctx: ExtensionBackendContext) {
+  const checkRuntimeDetails = Boolean(
+    typeof input === 'object' && input !== null && (input as { checkRuntimeDetails?: unknown }).checkRuntimeDetails,
+  );
   const [cliAvailable, serverAvailable, modelPath, pid] = await Promise.all([
     exists(bundledCli()),
     exists(bundledServer()),
@@ -363,12 +366,12 @@ export async function runtimeStatus(_input: unknown, ctx: ExtensionBackendContex
   ]);
   const [serverRunning, health] = await Promise.all([isPidRunning(ctx, pid), readServerHealth()]);
   const runtimeAvailable = cliAvailable || serverAvailable;
-  const version = cliAvailable ? await runProcess(ctx, bundledCli(), ['--version']) : null;
+  const version = checkRuntimeDetails && cliAvailable ? await runProcess(ctx, bundledCli(), ['--version']) : null;
 
   if (cliAvailable) await chmod(bundledCli(), 0o755).catch(() => undefined);
   if (serverAvailable) await chmod(bundledServer(), 0o755).catch(() => undefined);
 
-  const latestRelease = runtimeAvailable ? await readLlamaLatestRelease() : { latestTag: null, error: null };
+  const latestRelease = checkRuntimeDetails && runtimeAvailable ? await readLlamaLatestRelease() : { latestTag: null, error: null };
   const installedBuild = parseLlamaBuild(version?.stdout.trim() || version?.stderr.trim());
   const latestBuild = parseLlamaReleaseBuild(latestRelease.latestTag);
   const download = currentDownloadJob();
