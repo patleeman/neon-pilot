@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
@@ -4587,13 +4586,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         let createdSessionId: string | null = null;
         let navigatedToCreatedConversation = false;
         try {
-          const created = await api.createLiveSession(draftCwdValue || undefined, textToSend, {
-            ...createLiveSessionPreferenceInput,
-            behavior: queuedBehavior,
-            images: promptImages,
-            attachmentRefs: [],
-            contextMessages: browserContextMessages,
-          });
+          const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
           createdSessionId = created.id;
           primeCreatedConversationOpenCaches(created, {
             tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
@@ -4618,30 +4611,28 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             setComposerGoalPending(false);
           }
 
-          flushSync(() => {
-            navigate(`/conversations/${newId}`, {
-              replace: true,
-              state: {
-                initialModelPreferenceState: buildConversationInitialModelPreferenceState({
-                  conversationId: newId,
-                  currentModel,
-                  currentThinkingLevel,
-                  currentServiceTier,
-                  hasExplicitServiceTier,
-                  defaultModel,
-                  defaultThinkingLevel,
-                  defaultServiceTier,
-                }),
-                initialDeferredResumeState: {
-                  conversationId: newId,
-                  resumes: [],
-                },
-                initialPendingPromptState: {
-                  conversationId: newId,
-                  prompt: initialPrompt,
-                },
+          navigate(`/conversations/${newId}`, {
+            replace: true,
+            state: {
+              initialModelPreferenceState: buildConversationInitialModelPreferenceState({
+                conversationId: newId,
+                currentModel,
+                currentThinkingLevel,
+                currentServiceTier,
+                hasExplicitServiceTier,
+                defaultModel,
+                defaultThinkingLevel,
+                defaultServiceTier,
+              }),
+              initialDeferredResumeState: {
+                conversationId: newId,
+                resumes: [],
               },
-            });
+              initialPendingPromptState: {
+                conversationId: newId,
+                prompt: initialPrompt,
+              },
+            },
           });
           navigatedToCreatedConversation = true;
 
