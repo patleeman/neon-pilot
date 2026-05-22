@@ -10,7 +10,7 @@ import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
-import { renderMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
+import { renderMarkdownText, renderPlainText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { isTopologyBlock } from './transcriptItems.js';
@@ -537,6 +537,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   }, [messageIndex, onForkMessage]);
   const rawRunCallbackRuns = useMemo(() => readRawRunCallbackLinkedRuns(block.text), [block.text]);
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
+  const renderStreamingPlainText = shouldShowCursor && !showRawRunCallbackCard;
 
   return (
     <div className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5 pr-3 sm:pr-6' : 'gap-3 pr-8 sm:pr-14')}>
@@ -549,6 +550,8 @@ export const AssistantMessage = memo(function AssistantMessage({
               isInlineRunExpanded={isInlineRunExpanded}
               onToggleInlineRun={onToggleInlineRun}
             />
+          ) : renderStreamingPlainText ? (
+            renderPlainText(block.text)
           ) : (
             renderText(block.text, { onOpenFilePath, onOpenCheckpoint })
           )}

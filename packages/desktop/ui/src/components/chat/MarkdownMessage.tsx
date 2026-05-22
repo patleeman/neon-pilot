@@ -433,6 +433,10 @@ export function renderMarkdownText(
   return <MarkdownText text={text} onOpenFilePath={options?.onOpenFilePath} onOpenCheckpoint={options?.onOpenCheckpoint} />;
 }
 
+export function renderPlainText(text: string) {
+  return <div className="whitespace-pre-wrap break-words">{text}</div>;
+}
+
 function parseSkillContentSections(content: string): { relativeTo: string | null; body: string } {
   const match = content.match(/^References are relative to (.+?)\.\n\n([\s\S]*)$/);
   if (!match) {

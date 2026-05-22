@@ -110,6 +110,21 @@ describe('ChatView rendering stability', () => {
     expect(timeAgoSpy).toHaveBeenCalledWith(updatedTail.ts);
   });
 
+  it('renders the streaming assistant tail as plain text until the stream settles', () => {
+    const streamingTail = createStreamingTail('**streaming** tail');
+    const { container, root } = renderChatView([streamingTail], { isStreaming: true });
+
+    expect(container.textContent).toContain('**streaming** tail');
+    expect(container.querySelector('strong')).toBeNull();
+
+    act(() => {
+      root.render(<ChatView messages={[streamingTail]} isStreaming={false} />);
+    });
+
+    expect(container.textContent).toContain('streaming tail');
+    expect(container.querySelector('strong')?.textContent).toBe('streaming');
+  });
+
   it('does not install continuous reply-selection polling when selection replies are enabled', () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
 
