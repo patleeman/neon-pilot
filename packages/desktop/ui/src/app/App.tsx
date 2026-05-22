@@ -131,8 +131,9 @@ function ConversationsRouteRedirect() {
   return <Navigate to={redirectPath} replace />;
 }
 
+const conversationPageModulePromise = import('../pages/ConversationPage');
 const ConversationPage = lazyRouteWithRecovery('conversation-page', () =>
-  import('../pages/ConversationPage').then((module) => ({ default: module.ConversationPage })),
+  conversationPageModulePromise.then((module) => ({ default: module.ConversationPage })),
 );
 function suspendRoute(element: React.ReactNode) {
   return (
