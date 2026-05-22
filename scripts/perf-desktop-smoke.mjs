@@ -26,7 +26,7 @@ const blocks = Number(arg('blocks', '80')) || 80;
 const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
-const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '15000')) || 15000;
+const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '5000')) || 5000;
 const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
@@ -244,7 +244,8 @@ async function main() {
       );
       return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
-    const draftSubmitVisibleMs = draftSubmitResult.durationMs;
+    const draftSubmitVisibleMs = draftSubmitResult.result.routeMs + draftSubmitResult.result.promptVisibleAfterRouteMs;
+    const draftSubmitSetupMs = draftSubmitResult.durationMs - draftSubmitVisibleMs;
     const createLiveSessionClientMs = await evalJs(
       cdp,
       `globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.filter(s=>s.name==='desktop.createLiveSession').at(-1)?.durationMs ?? null`,
@@ -303,6 +304,7 @@ async function main() {
       cdpReadyMs,
       firstBodyMs,
       appHydratedMs,
+      draftSubmitSetupMs,
       draftSubmitVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
