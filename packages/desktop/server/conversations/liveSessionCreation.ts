@@ -31,7 +31,7 @@ export async function createLiveSession(input: {
   const wiredAtMs = performance.now();
   const prewarmTimer = setTimeout(() => {
     queuePrewarmLiveSessionLoader(input.cwd, options);
-  }, 0);
+  }, 5_000);
   prewarmTimer.unref?.();
   return {
     id,

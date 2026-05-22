@@ -2215,7 +2215,7 @@ export async function createDesktopLiveSession(input: {
           stack: error instanceof Error ? error.stack : undefined,
         });
       });
-    }, 0);
+    }, 1_000);
     dispatchTimer.unref?.();
   }
   return {
