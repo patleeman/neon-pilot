@@ -31,6 +31,7 @@ vi.mock('../client/api', () => ({
 
 const mountedRoots: Root[] = [];
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
+const THREADS_DETACHED_CHILDREN_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-detached-children');
 
 function createStorage() {
   const map = new Map<string, string>();
@@ -62,14 +63,14 @@ function createSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
   };
 }
 
-function renderSidebar(sessions: SessionMeta[]) {
+function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new') {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
     root.render(
-      <MemoryRouter initialEntries={['/conversations/new']}>
+      <MemoryRouter initialEntries={[pathname]}>
         <SseConnectionContext.Provider value={{ status: 'offline' }}>
           <AppDataContext.Provider
             value={{
@@ -331,5 +332,54 @@ describe('Sidebar group drag reordering', () => {
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String));
     expect(apiMocks.sessions).toHaveBeenCalled();
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
+  });
+
+  it('detaches a child thread from parent lineage when dragged as a top-level thread', async () => {
+    const projectPath = '/tmp/project-worktree';
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child', 'sibling']));
+    localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([projectPath]));
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['parent', 'child', 'sibling'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [projectPath],
+    });
+
+    const container = renderSidebar(
+      [
+        createSession({ id: 'parent', title: 'Parent thread', cwd: projectPath, cwdSlug: 'project-worktree' }),
+        createSession({
+          id: 'child',
+          title: 'Child branch',
+          cwd: projectPath,
+          cwdSlug: 'project-worktree',
+          parentSessionId: 'parent',
+          offshootKind: 'fork',
+        }),
+        createSession({ id: 'sibling', title: 'Sibling thread', cwd: projectPath, cwdSlug: 'project-worktree' }),
+      ],
+      '/conversations/child',
+    );
+
+    await flushAsyncWork();
+
+    const childRow = container.querySelector<HTMLElement>('[data-sidebar-session-id="child"]');
+    const siblingRow = container.querySelector<HTMLElement>('[data-sidebar-session-id="sibling"]');
+    if (!childRow || !siblingRow) {
+      throw new Error('Missing child or sibling row');
+    }
+    setDragBounds(childRow);
+    setDragBounds(siblingRow);
+
+    const dataTransfer = new TestDataTransfer();
+    await act(async () => {
+      childRow.dispatchEvent(createDragEvent('dragstart', dataTransfer, 75));
+      siblingRow.dispatchEvent(createDragEvent('dragover', dataTransfer, 10));
+      siblingRow.dispatchEvent(createDragEvent('drop', dataTransfer, 10));
+    });
+    await flushAsyncWork();
+
+    expect(JSON.parse(localStorage.getItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY) ?? '[]')).toEqual(['child']);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['parent', 'child', 'sibling']);
   });
 });
