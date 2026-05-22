@@ -335,7 +335,7 @@ describe('Sidebar', () => {
     });
 
     expect(html).toContain('Morning briefing thread');
-    expect(html).not.toContain('aria-label="Pending background work"');
+    expect(html).not.toContain('aria-label="Background work running"');
   });
 
   it('groups open conversations by working directory with collapsible headers and quick-start actions', () => {

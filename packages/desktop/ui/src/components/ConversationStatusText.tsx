@@ -1,22 +1,11 @@
 import { sessionNeedsAttention } from '../session/sessionIndicators';
 import { cx } from './ui';
 
-function PendingRunsIcon() {
+function BackgroundWorkIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="pa-pending-runs-hourglass"
-    >
-      <path d="M6 3h12M6 21h12M7 3c0 4 2.5 6 5 9-2.5 3-5 5-5 9M17 3c0 4-2.5 6-5 9 2.5 3 5 5 5 9" />
-    </svg>
+    <span aria-hidden="true" className="font-mono text-[10px] leading-none tracking-[-0.08em]">
+      ›_
+    </span>
   );
 }
 
@@ -48,11 +37,11 @@ export function ConversationStatusText({
     return (
       <span
         role="img"
-        aria-label="Pending background work"
+        aria-label="Background work running"
         className={cx('flex h-3 w-3 items-center justify-center text-accent/80', className)}
-        title="Background work is pending"
+        title="Background work is running"
       >
-        <PendingRunsIcon />
+        <BackgroundWorkIcon />
       </span>
     );
   }
