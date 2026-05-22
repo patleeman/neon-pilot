@@ -1,173 +1,94 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { normalizeServerExtensionModuleSpecifier, resolveServerModuleSpecifierFrom } from './serverModuleResolver.js';
+import {
+  callServerModuleExport,
+  normalizeServerExtensionModuleSpecifier,
+  normalizeServerModuleSpecifier,
+  resolveServerModuleSpecifierFrom,
+} from './serverModuleResolver.js';
 
-const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
-const previousCwd = process.cwd();
-const tempRoots: string[] = [];
+const originalCwd = process.cwd();
+const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 
-function makeTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'pa-server-module-resolver-'));
-  tempRoots.push(root);
-  return root;
-}
+describe('backendApi/serverModuleResolver', () => {
+  const dir = join(tmpdir(), `server-module-resolver-${process.pid}`);
 
-function touch(path: string): void {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, '');
-}
-
-afterEach(() => {
-  if (previousRepoRoot === undefined) {
+  beforeEach(() => {
+    vi.resetModules();
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
     delete process.env.NEON_PILOT_REPO_ROOT;
-  } else {
-    process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
-  }
+  });
 
-  process.chdir(previousCwd);
+  afterEach(() => {
+    process.chdir(originalCwd);
+    if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
+    else process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
+    rmSync(dir, { recursive: true, force: true });
+  });
 
-  for (const root of tempRoots.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
+  it('normalizes server and extension module specifiers', () => {
+    expect(normalizeServerModuleSpecifier('../../conversations/liveSessions.js')).toBe('conversations/liveSessions.js');
+    expect(normalizeServerModuleSpecifier('/shared/appEvents.js')).toBe('shared/appEvents.js');
+    expect(normalizeServerExtensionModuleSpecifier('../extensionLifecycle.js')).toBe('extensions/extensionLifecycle.js');
+    expect(normalizeServerExtensionModuleSpecifier('/extensionRegistry.js')).toBe('extensionRegistry.js');
+  });
 
-describe('resolveServerModuleSpecifierFrom', () => {
-  it('resolves known backend package specifiers to packaged entries when present', () => {
-    const resourcesRoot = makeTempRoot();
-    const cwdRoot = makeTempRoot();
-    const corePath = join(resourcesRoot, 'app.asar/server/dist/core/index.js');
-    touch(corePath);
-    delete process.env.NEON_PILOT_REPO_ROOT;
-    process.chdir(cwdRoot);
+  it('resolves relative modules from repo dist roots before falling back to the raw specifier', () => {
+    const repoRoot = join(dir, 'repo');
+    const target = join(repoRoot, 'packages/desktop/server/dist/conversations/liveSessions.js');
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    writeFileSync(target, 'export const marker = true;');
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 
     expect(
       resolveServerModuleSpecifierFrom({
-        importMetaUrl: import.meta.url,
+        importMetaUrl: pathToFileURL(join(repoRoot, 'packages/desktop/server/extensions/backendApi/index.js')).href,
+        relativeSpecifier: '../../conversations/liveSessions.js',
+      }),
+    ).toBe(pathToFileURL(target).href);
+  });
+
+  it('resolves known package entries from repo roots', () => {
+    const repoRoot = join(dir, 'repo');
+    const target = join(repoRoot, 'packages/desktop/server/dist/core/index.js');
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    writeFileSync(target, 'export const marker = true;');
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+
+    expect(
+      resolveServerModuleSpecifierFrom({
+        importMetaUrl: pathToFileURL(join(repoRoot, 'x.js')).href,
         relativeSpecifier: '@neon-pilot/core',
-        resourcesPath: resourcesRoot,
       }),
-    ).toBe(pathToFileURL(corePath).href);
+    ).toBe(pathToFileURL(target).href);
   });
 
-  it('returns unknown package specifiers unchanged', () => {
+  it('returns the raw specifier when no candidate exists', () => {
+    process.chdir(dir);
     expect(
       resolveServerModuleSpecifierFrom({
-        importMetaUrl: import.meta.url,
-        relativeSpecifier: 'left-pad',
+        importMetaUrl: pathToFileURL(join(dir, 'source.js')).href,
+        relativeSpecifier: '../../missing.js',
       }),
-    ).toBe('left-pad');
+    ).toBe('../../missing.js');
+    expect(
+      resolveServerModuleSpecifierFrom({ importMetaUrl: pathToFileURL(join(dir, 'source.js')).href, relativeSpecifier: 'unknown-package' }),
+    ).toBe('unknown-package');
   });
 
-  it('prefers bundled server/dist over tsc dist/server when both exist', () => {
-    const repoRoot = makeTempRoot();
-    const bundledPath = join(repoRoot, 'packages/desktop/server/dist/conversations/conversationInspectWorkerClient.js');
-    const tscPath = join(repoRoot, 'packages/desktop/dist/server/conversations/conversationInspectWorkerClient.js');
-    touch(bundledPath);
-    touch(tscPath);
-    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+  it('calls resolved module exports and reports unavailable exports clearly', async () => {
+    const modulePath = join(dir, 'module.mjs');
+    writeFileSync(modulePath, 'export function greet(name) { return `hello ${name}`; }');
 
-    const resolved = resolveServerModuleSpecifierFrom({
-      importMetaUrl: pathToFileURL(join(repoRoot, 'extension-cache/system-conversation-tools/backend.mjs')).href,
-      relativeSpecifier: '../../conversations/conversationInspectWorkerClient.js',
-    });
-
-    expect(resolved).toBe(pathToFileURL(bundledPath).href);
-  });
-
-  it('uses the sibling module when no bundled, cwd, or tsc module exists', () => {
-    const root = makeTempRoot();
-    const backendPath = join(root, 'extension-cache/system-conversation-tools/backend.mjs');
-    const siblingPath = join(root, 'unlikely-test-only-module/serverModuleResolverFallback.js');
-    touch(backendPath);
-    touch(siblingPath);
-    delete process.env.NEON_PILOT_REPO_ROOT;
-
-    const resolved = resolveServerModuleSpecifierFrom({
-      importMetaUrl: pathToFileURL(backendPath).href,
-      relativeSpecifier: '../../unlikely-test-only-module/serverModuleResolverFallback.js',
-    });
-
-    expect(resolved).toBe(pathToFileURL(siblingPath).href);
-  });
-
-  it('supports extension server module normalization through the same precedence', () => {
-    const repoRoot = makeTempRoot();
-    const bundledPath = join(repoRoot, 'packages/desktop/server/dist/extensions/extensionLifecycle.js');
-    const tscPath = join(repoRoot, 'packages/desktop/dist/server/extensions/extensionLifecycle.js');
-    touch(bundledPath);
-    touch(tscPath);
-    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
-
-    const resolved = resolveServerModuleSpecifierFrom({
-      importMetaUrl: pathToFileURL(join(repoRoot, 'extension-cache/system-extension-manager/backend.mjs')).href,
-      relativeSpecifier: '../extensionLifecycle.js',
-      normalize: normalizeServerExtensionModuleSpecifier,
-    });
-
-    expect(resolved).toBe(pathToFileURL(bundledPath).href);
-  });
-
-  it('resolves packaged Extension Manager helper modules from server output', () => {
-    const resourcesRoot = makeTempRoot();
-    const cwdRoot = makeTempRoot();
-    const backendPath = join(resourcesRoot, 'app.asar/server/dist/extensions/extensionBackend.js');
-    const doctorPath = join(resourcesRoot, 'app.asar/server/dist/extensions/extensionDoctor.js');
-    touch(backendPath);
-    touch(doctorPath);
-    delete process.env.NEON_PILOT_REPO_ROOT;
-    process.chdir(cwdRoot);
-
-    for (const [specifier, expected] of [
-      ['../extensionBackend.js', backendPath],
-      ['../extensionDoctor.js', doctorPath],
-    ] as const) {
-      const resolved = resolveServerModuleSpecifierFrom({
-        importMetaUrl: pathToFileURL(join(resourcesRoot, 'extensions/system-extension-manager/dist/backend.mjs')).href,
-        relativeSpecifier: specifier,
-        normalize: normalizeServerExtensionModuleSpecifier,
-        resourcesPath: resourcesRoot,
-      });
-
-      expect(resolved).toBe(pathToFileURL(expected).href);
-    }
-  });
-
-  it('resolves packaged server modules inside app.asar before falling back to extension siblings', () => {
-    const resourcesRoot = makeTempRoot();
-    const cwdRoot = makeTempRoot();
-    const appAsarPath = join(resourcesRoot, 'app.asar/server/dist/conversations/sessions.js');
-    touch(appAsarPath);
-    delete process.env.NEON_PILOT_REPO_ROOT;
-    process.chdir(cwdRoot);
-
-    const resolved = resolveServerModuleSpecifierFrom({
-      importMetaUrl: pathToFileURL(join(resourcesRoot, 'extensions/system-conversation-tools/dist/backend.mjs')).href,
-      relativeSpecifier: '../../conversations/sessions.js',
-      resourcesPath: resourcesRoot,
-    });
-
-    expect(resolved).toBe(pathToFileURL(appAsarPath).href);
-  });
-
-  it('resolves packaged automation modules from bundled server output', () => {
-    const resourcesRoot = makeTempRoot();
-    const cwdRoot = makeTempRoot();
-    const appAsarPath = join(resourcesRoot, 'app.asar/server/dist/automation/deferredResumes.js');
-    touch(appAsarPath);
-    delete process.env.NEON_PILOT_REPO_ROOT;
-    process.chdir(cwdRoot);
-
-    const resolved = resolveServerModuleSpecifierFrom({
-      importMetaUrl: pathToFileURL(join(resourcesRoot, 'extensions/system-automations/dist/backend.mjs')).href,
-      relativeSpecifier: '../../automation/deferredResumes.js',
-      resourcesPath: resourcesRoot,
-    });
-
-    expect(resolved).toBe(pathToFileURL(appAsarPath).href);
+    await expect(callServerModuleExport(pathToFileURL(modulePath).href, 'greet', 'Patrick')).resolves.toBe('hello Patrick');
+    await expect(callServerModuleExport(pathToFileURL(modulePath).href, 'missing')).rejects.toThrow(
+      'Backend API export missing is unavailable.',
+    );
   });
 });
