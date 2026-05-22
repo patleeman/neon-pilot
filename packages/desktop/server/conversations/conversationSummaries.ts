@@ -507,7 +507,9 @@ async function generateConversationSummary(meta: SessionMeta): Promise<Conversat
   return buildRecordFromModel(meta, fingerprint, sourceText, extractAssistantText(response.content));
 }
 
-async function runSummaryJob(meta: SessionMeta): Promise<void> {
+type ConversationSummaryJobRunner = (meta: SessionMeta) => Promise<void>;
+
+async function runSummaryJobImpl(meta: SessionMeta): Promise<void> {
   if (isSummaryFresh(meta) || isSummaryAttemptCoolingDown(meta)) {
     return;
   }
@@ -529,6 +531,16 @@ async function runSummaryJob(meta: SessionMeta): Promise<void> {
     recordSummaryAttempt(meta.id, fingerprint, error instanceof Error ? error.message : String(error));
     throw error;
   }
+}
+
+let runSummaryJob: ConversationSummaryJobRunner = runSummaryJobImpl;
+
+export function setConversationSummaryJobRunnerForTests(runner: ConversationSummaryJobRunner | null): void {
+  runSummaryJob = runner ?? runSummaryJobImpl;
+}
+
+export function readConversationSummaryBackfillStateForTests(): { pending: number; active: number; queued: number } {
+  return { pending: pendingQueue.length, active: activeJobs, queued: queuedSessionIds.size };
 }
 
 function normalizeConversationSummaryBackfillJobDelayMs(value: unknown): number {

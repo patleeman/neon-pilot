@@ -1,15 +1,53 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   normalizeConversationSummaryBackfillLoopOptions,
   parseConversationSummaryAttemptTimestamp,
+  queueConversationSummaryBackfill,
+  readConversationSummaryBackfillStateForTests,
+  readConversationSummaryIndexCapability,
+  setConversationSummaryJobRunnerForTests,
   startConversationSummaryBackfillLoop,
   stopConversationSummaryBackfillLoop,
 } from './conversationSummaries.js';
+import type { SessionMeta } from './sessions.js';
 
 afterEach(() => {
+  setConversationSummaryJobRunnerForTests(null);
   stopConversationSummaryBackfillLoop();
   vi.useRealTimers();
+});
+
+const tempRoots: string[] = [];
+
+function meta(id: string, overrides: Partial<SessionMeta> = {}): SessionMeta {
+  const root = mkdtempSync(join(tmpdir(), 'neon-summary-test-'));
+  tempRoots.push(root);
+  const file = join(root, `${id}.jsonl`);
+  writeFileSync(file, `${JSON.stringify({ type: 'session', id, timestamp: '2026-05-01T00:00:00.000Z', cwd: '/repo' })}\n`);
+  return {
+    id,
+    file,
+    timestamp: '2026-05-01T00:00:00.000Z',
+    cwd: '/repo',
+    cwdSlug: 'repo',
+    model: 'test-model',
+    title: `Conversation ${id}`,
+    messageCount: 2,
+    lastActivityAt: '2026-05-01T00:00:01.000Z',
+    isRunning: false,
+    isLive: false,
+    needsAttention: false,
+    ...overrides,
+  };
+}
+
+afterEach(() => {
+  for (const root of tempRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe('normalizeConversationSummaryBackfillLoopOptions', () => {
@@ -92,6 +130,86 @@ describe('startConversationSummaryBackfillLoop', () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(listSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues only closed sessions up to the configured limit', async () => {
+    vi.useFakeTimers();
+    const started: string[] = [];
+    setConversationSummaryJobRunnerForTests(async (session) => {
+      started.push(session.id);
+    });
+
+    startConversationSummaryBackfillLoop({
+      listSessions: () => [
+        meta('closed-1'),
+        meta('running', { isRunning: true }),
+        meta('live', { isLive: true }),
+        meta('empty', { messageCount: 0 }),
+        meta('closed-2'),
+        meta('closed-3'),
+      ],
+      initialDelayMs: 0,
+      intervalMs: 120_000,
+      limit: 2,
+      jobDelayMs: 1,
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(started).toEqual(['closed-1', 'closed-2']);
+  });
+
+  it('runs one summary job at a time and waits jobDelayMs before the next job', async () => {
+    vi.useFakeTimers();
+    const started: string[] = [];
+    const resolvers: Array<() => void> = [];
+    setConversationSummaryJobRunnerForTests(
+      (session) =>
+        new Promise<void>((resolve) => {
+          started.push(session.id);
+          resolvers.push(resolve);
+        }),
+    );
+
+    queueConversationSummaryBackfill([meta('a'), meta('b'), meta('c')], 3);
+    expect(started).toEqual(['a']);
+    expect(readConversationSummaryBackfillStateForTests()).toMatchObject({ active: 1, pending: 2 });
+
+    resolvers.shift()?.();
+    await vi.advanceTimersByTimeAsync(1_499);
+    expect(started).toEqual(['a']);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(started).toEqual(['a', 'b']);
+    expect(readConversationSummaryBackfillStateForTests()).toMatchObject({ active: 1, pending: 1 });
+
+    resolvers.shift()?.();
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(started).toEqual(['a', 'b', 'c']);
+  });
+
+  it('deduplicates queued sessions while a job is pending or active', async () => {
+    vi.useFakeTimers();
+    const started: string[] = [];
+    setConversationSummaryJobRunnerForTests(
+      (session) =>
+        new Promise<void>(() => {
+          started.push(session.id);
+        }),
+    );
+
+    queueConversationSummaryBackfill([meta('dup'), meta('dup'), meta('other')], 10);
+
+    expect(started).toEqual(['dup']);
+    expect(readConversationSummaryBackfillStateForTests()).toMatchObject({ active: 1, pending: 1, queued: 1 });
+  });
+
+  it('summary reads are cache-only and do not enqueue work', () => {
+    const before = readConversationSummaryBackfillStateForTests();
+    const result = readConversationSummaryIndexCapability({ sessionIds: ['missing-a', 'missing-b'] });
+    expect(result).toEqual({ summaries: {} });
+    expect(readConversationSummaryBackfillStateForTests()).toEqual(before);
   });
 });
 
