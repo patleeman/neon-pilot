@@ -5,7 +5,6 @@ import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { completeConversationOpenPhase, ensureConversationOpenStart } from '../client/perfDiagnostics';
 import { buildSlashMenuItems, parseSlashInput } from '../commands/slashMenu';
-import { ChatView } from '../components/chat/ChatView';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { ConversationActivityShelf } from '../components/conversation/ConversationActivityShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
@@ -300,6 +299,7 @@ const ConversationArtifactModal = lazy(() =>
 const ConversationDrawingsPickerModal = lazy(() =>
   import('../components/ConversationDrawingsPickerModal').then((module) => ({ default: module.ConversationDrawingsPickerModal })),
 );
+const ChatView = lazy(() => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView })));
 
 interface ExcalidrawEditorSavePayload {
   title: string;
@@ -5552,7 +5552,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           {showBlockingConversationLoadingState ? (
             <LoadingState label="Loading messages…" className="justify-center h-full" />
           ) : visibleTranscriptMessages ? (
-            <>
+            <Suspense fallback={<LoadingState label="Loading messages…" className="justify-center h-full" />}>
               <ChatView
                 key={visibleTranscriptState?.conversationId ?? id ?? 'draft-conversation'}
                 conversationId={visibleTranscriptState?.conversationId ?? id ?? null}
@@ -5626,7 +5626,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 }
                 anchorWindowingToTail={atBottom}
               />
-            </>
+            </Suspense>
           ) : (
             <AppPageEmptyState
               align={draft ? 'start' : 'center'}

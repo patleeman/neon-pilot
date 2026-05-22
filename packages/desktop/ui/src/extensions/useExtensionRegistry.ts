@@ -714,6 +714,77 @@ function normalizeStatusBarItems(extensions: ExtensionManifest[]): ExtensionStat
   return result;
 }
 
+function canLoadExtensionRegistry(): boolean {
+  return (
+    typeof api.extensionInstallations === 'function' &&
+    typeof api.extensionRoutes === 'function' &&
+    typeof api.extensionSurfaces === 'function'
+  );
+}
+
+async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
+  if (!canLoadExtensionRegistry()) {
+    return EMPTY_EXTENSION_REGISTRY_STATE;
+  }
+
+  const [extensions, routes, surfaces] = await Promise.all([api.extensionInstallations(), api.extensionRoutes(), api.extensionSurfaces()]);
+  const registryExtensions = normalizeRegistryExtensions(extensions);
+  const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
+  const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
+  const composerControls = [
+    ...normalizeComposerControls(enabledRegistryExtensions),
+    ...normalizeComposerButtons(enabledRegistryExtensions),
+  ].sort(compareComposerControls);
+
+  return {
+    extensions: registryExtensions,
+    routes,
+    surfaces,
+    topBarElements: normalizeTopBarElements(enabledRegistryExtensions),
+    messageActions: normalizeMessageActions(enabledRegistryExtensions),
+    composerShelves: normalizeComposerShelves(enabledRegistryExtensions),
+    newConversationPanels: normalizeNewConversationPanels(enabledRegistryExtensions),
+    settingsComponents,
+    settingsComponent: settingsComponents[0] ?? null,
+    composerControls,
+    composerButtons: normalizeComposerButtons(enabledRegistryExtensions),
+    composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
+    toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
+    contextMenus: normalizeContextMenus(enabledRegistryExtensions),
+    selectionActions: normalizeSelectionActions(enabledRegistryExtensions),
+    threadHeaderActions: normalizeThreadHeaderActions(enabledRegistryExtensions),
+    statusBarItems: normalizeStatusBarItems(enabledRegistryExtensions),
+    conversationHeaderElements: normalizeConversationHeaderElements(enabledRegistryExtensions),
+    conversationDecorators: normalizeConversationDecorators(enabledRegistryExtensions),
+    activityTreeItemElements: normalizeActivityTreeItemElements(enabledRegistryExtensions),
+    activityTreeItemStyles: normalizeActivityTreeItemStyles(enabledRegistryExtensions),
+    conversationLifecycle: normalizeConversationLifecycle(enabledRegistryExtensions),
+    composerAttachmentProviders: normalizeComposerAttachmentProviders(enabledRegistryExtensions),
+    composerAttachmentRenderers: normalizeComposerAttachmentRenderers(enabledRegistryExtensions),
+    composerAttachmentResolvers: normalizeComposerAttachmentResolvers(enabledRegistryExtensions),
+    activityTreeItemActions: normalizeActivityTreeItemActions(enabledRegistryExtensions),
+    loading: false,
+    error: null,
+  };
+}
+
+let initialExtensionRegistryLoad: Promise<ExtensionRegistryState> | null =
+  import.meta.env.PROD && canLoadExtensionRegistry() ? fetchExtensionRegistryState().catch(() => EMPTY_EXTENSION_REGISTRY_STATE) : null;
+
+function recordLoadedExtensionRegistry(state: ExtensionRegistryState): void {
+  recordExtensionRegistryUsability({
+    loading: false,
+    counts: {
+      extensions: state.extensions.length,
+      routes: state.routes.length,
+      surfaces: state.surfaces.length,
+      topBarElements: state.topBarElements.length,
+      composerButtons: state.composerButtons.length,
+      composerInputTools: state.composerInputTools.length,
+    },
+  });
+}
+
 function useExtensionRegistryLoader(): ExtensionRegistryState {
   const { versions } = useAppEvents();
   const [state, setState] = useState<ExtensionRegistryState>(INITIAL_EXTENSION_REGISTRY_STATE);
@@ -725,68 +796,19 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
     const load = () => {
       setState((previous) => ({ ...previous, loading: true, error: null }));
 
-      if (
-        typeof api.extensionInstallations !== 'function' ||
-        typeof api.extensionRoutes !== 'function' ||
-        typeof api.extensionSurfaces !== 'function'
-      ) {
+      if (!canLoadExtensionRegistry()) {
         if (cancelled) return;
         setState(EMPTY_EXTENSION_REGISTRY_STATE);
         return;
       }
 
-      Promise.all([api.extensionInstallations(), api.extensionRoutes(), api.extensionSurfaces()])
-        .then(([extensions, routes, surfaces]) => {
+      const loadPromise = initialExtensionRegistryLoad ?? fetchExtensionRegistryState();
+      initialExtensionRegistryLoad = null;
+      loadPromise
+        .then((nextState) => {
           if (cancelled) return;
-          const registryExtensions = normalizeRegistryExtensions(extensions);
-          const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
-          const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
-          const composerControls = [
-            ...normalizeComposerControls(enabledRegistryExtensions),
-            ...normalizeComposerButtons(enabledRegistryExtensions),
-          ].sort(compareComposerControls);
-          const nextState = {
-            extensions: registryExtensions,
-            routes,
-            surfaces,
-            topBarElements: normalizeTopBarElements(enabledRegistryExtensions),
-            messageActions: normalizeMessageActions(enabledRegistryExtensions),
-            composerShelves: normalizeComposerShelves(enabledRegistryExtensions),
-            newConversationPanels: normalizeNewConversationPanels(enabledRegistryExtensions),
-            settingsComponents,
-            settingsComponent: settingsComponents[0] ?? null,
-            composerControls,
-            composerButtons: normalizeComposerButtons(enabledRegistryExtensions),
-            composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
-            toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
-            contextMenus: normalizeContextMenus(enabledRegistryExtensions),
-            selectionActions: normalizeSelectionActions(enabledRegistryExtensions),
-            threadHeaderActions: normalizeThreadHeaderActions(enabledRegistryExtensions),
-            statusBarItems: normalizeStatusBarItems(enabledRegistryExtensions),
-            conversationHeaderElements: normalizeConversationHeaderElements(enabledRegistryExtensions),
-            conversationDecorators: normalizeConversationDecorators(enabledRegistryExtensions),
-            activityTreeItemElements: normalizeActivityTreeItemElements(enabledRegistryExtensions),
-            activityTreeItemStyles: normalizeActivityTreeItemStyles(enabledRegistryExtensions),
-            conversationLifecycle: normalizeConversationLifecycle(enabledRegistryExtensions),
-            composerAttachmentProviders: normalizeComposerAttachmentProviders(enabledRegistryExtensions),
-            composerAttachmentRenderers: normalizeComposerAttachmentRenderers(enabledRegistryExtensions),
-            composerAttachmentResolvers: normalizeComposerAttachmentResolvers(enabledRegistryExtensions),
-            activityTreeItemActions: normalizeActivityTreeItemActions(enabledRegistryExtensions),
-            loading: false,
-            error: null,
-          };
           setState(nextState);
-          recordExtensionRegistryUsability({
-            loading: false,
-            counts: {
-              extensions: nextState.extensions.length,
-              routes: nextState.routes.length,
-              surfaces: nextState.surfaces.length,
-              topBarElements: nextState.topBarElements.length,
-              composerButtons: nextState.composerButtons.length,
-              composerInputTools: nextState.composerInputTools.length,
-            },
-          });
+          recordLoadedExtensionRegistry(nextState);
         })
         .catch((error: Error) => {
           if (cancelled) return;
@@ -798,9 +820,9 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
         });
     };
 
-    // Keep this short and uniform: startup readiness now waits for the registry,
-    // so large route-specific delays would only hide work and make the app less usable.
-    loadTimer = window.setTimeout(load, 250);
+    // Startup readiness waits for this registry, so kick the critical chrome
+    // metadata request immediately instead of burning an artificial frame delay.
+    loadTimer = window.setTimeout(load, 0);
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
 
     return () => {

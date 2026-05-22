@@ -245,6 +245,34 @@ async function main() {
     const appHydratedMs = Math.round(performance.now() - start);
     await waitAppUsable(cdp, child);
     const appUsableMs = Math.round(performance.now() - start);
+    const startupResources = await evalJs(
+      cdp,
+      `performance.getEntriesByType('resource')
+        .filter((entry) => /\\.(js|css)(?:\\?|$)/.test(entry.name))
+        .map((entry) => ({
+          name: entry.name.split('/').pop(),
+          startTime: Math.round(entry.startTime),
+          durationMs: Math.round(entry.duration),
+          transferKb: Math.round(((entry.transferSize || 0) / 1024) * 10) / 10,
+          encodedKb: Math.round(((entry.encodedBodySize || 0) / 1024) * 10) / 10,
+        }))
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, 20)`,
+    );
+    const startupPerfStore = await evalJs(
+      cdp,
+      `(() => {
+        const perf = globalThis.__NEON_PILOT_APP_PERF__;
+        if (!perf) return null;
+        return {
+          extensionRegistryLoadedAt: perf.extensionRegistryLoadedAt ?? null,
+          extensionRegistryLoadedAtMs: perf.extensionRegistryLoadedAtMs ? Math.round(perf.extensionRegistryLoadedAtMs) : null,
+          extensionRegistryCounts: perf.extensionRegistryCounts ?? null,
+          clientSamples: perf.clientSamples ?? [],
+          apiSamples: perf.apiSamples ?? [],
+        };
+      })()`,
+    );
     const draftSubmitResult = await measure('draft submit visible', async () => {
       const prompt = `Perf draft submit ${Date.now()}`;
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
@@ -327,6 +355,8 @@ async function main() {
       firstBodyMs,
       appHydratedMs,
       appUsableMs,
+      startupResources,
+      startupPerfStore,
       draftSubmitSetupMs,
       draftSubmitVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,

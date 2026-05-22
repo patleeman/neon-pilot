@@ -46,6 +46,7 @@ interface PerfStore {
   clientSamples: ClientPerfSample[];
   extensionRegistryLoading?: boolean;
   extensionRegistryLoadedAt?: string;
+  extensionRegistryLoadedAtMs?: number;
   extensionRegistryCounts?: Record<string, number>;
 }
 
@@ -133,6 +134,7 @@ export function recordExtensionRegistryUsability(input: { loading: boolean; coun
   perfStore.extensionRegistryLoading = input.loading;
   if (!input.loading) {
     perfStore.extensionRegistryLoadedAt = new Date().toISOString();
+    perfStore.extensionRegistryLoadedAtMs = performance.now();
     perfStore.extensionRegistryCounts = input.counts ?? {};
   }
   publishPerfStore();
