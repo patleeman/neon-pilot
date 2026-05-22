@@ -277,7 +277,7 @@ function readJsonFile(path) {
 
 function assertPackagedAgentReadableResources(appBundlePath) {
   const resourcesPath = join(appBundlePath, 'Contents', 'Resources');
-  const requiredResources = ['docs/index.md', 'extensions/system-settings/README.md', 'extensions/system-runs/skills/runs/SKILL.md'];
+  const requiredResources = ['docs/README.md', 'extensions/system-settings/README.md', 'extensions/system-runs/skills/runs/SKILL.md'];
   const missing = requiredResources.filter((relativePath) => !existsSync(join(resourcesPath, relativePath)));
 
   for (const extensionRootRelativePath of ['extensions', 'experimental-extensions/extensions']) {

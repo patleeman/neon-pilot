@@ -24,7 +24,7 @@ Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patle
 
 ## Documentation
 
-See [./docs/index.md](./docs/index.md)
+See [./docs/README.md](./docs/README.md)
 
 ---
 

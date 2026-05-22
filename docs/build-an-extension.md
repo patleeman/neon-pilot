@@ -24,11 +24,11 @@ Add concrete product details after the first sentence: what data it should show,
 Before writing from scratch, check [`docs/extension-templates/`](extension-templates/README.md) for copy-paste stubs
 derived from real first-party extensions:
 
-| Template                                                    | Pattern                                                   |
-| ----------------------------------------------------------- | --------------------------------------------------------- |
-| [`data-dashboard`](extension-templates/data-dashboard/)     | Read-only page — load from backend, render table or cards |
-| [`crud-page`](extension-templates/crud-page/)               | List + slide-in form editor. Full CRUD.                   |
-| [`settings-section`](extension-templates/settings-section/) | Section in the shared Settings page. No separate route.   |
+| Template                                                                       | Pattern                                                   |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| [`data-dashboard`](extension-templates/templates/template-data-dashboard/)     | Read-only page — load from backend, render table or cards |
+| [`crud-page`](extension-templates/templates/template-crud-page/)               | List + slide-in form editor. Full CRUD.                   |
+| [`settings-section`](extension-templates/templates/template-settings-section/) | Section in the shared Settings page. No separate route.   |
 
 Copy the matching folder, rename the extension id, replace domain types, and build.
 

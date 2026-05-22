@@ -848,7 +848,7 @@ export function materializeRuntimeResourcesToAgentDir(
     skills_dir: getDurableSkillsDir(resources.vaultRoot),
     tasks_dir: getDurableTasksDir(getSyncRoot(getStateRoot())),
     docs_dir: join(resources.repoRoot, 'docs'),
-    docs_index: join(resources.repoRoot, 'docs', 'index.md'),
+    docs_index: join(resources.repoRoot, 'docs', 'README.md'),
   };
 
   const generatedAppendContent = renderSystemPromptTemplate(templateVariables);

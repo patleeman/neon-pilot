@@ -17,8 +17,11 @@ See [Getting Started](getting-started.md) for the full setup.
 
 ## Start here
 
+- [Getting Started](getting-started.md) — install from source and verify the app
 - [Views](views.md) — Conversation, Workbench layouts
+- [Conversation context](conversation-context.md) — attach files, folders, and generated context
 - [Conversations](conversations.md) — live threads, branching, async follow-through
+- [Projects](projects.md) — project records and workspace metadata
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
 - [Desktop API Boundary](desktop-api-boundary.md) — renderer IPC/local-api contract and HTTP edge policy
 - [Knowledge](../extensions/system-knowledge/README.md) — vault, docs, skills, instruction files, and managed sync
@@ -40,7 +43,7 @@ See [Getting Started](getting-started.md) for the full setup.
 
 ## Extension docs
 
-Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this index as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
+Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
 System extensions are bundled under `extensions/system-*`. Experimental extensions are bundled under `experimental-extensions/extensions/*`, are loaded by the registry, and should set `defaultEnabled: false`. User extensions live under `<state-root>/extensions/{extension-id}` by default and follow the same package contract.
 
@@ -80,12 +83,14 @@ Feature-specific documentation lives beside the owning extension package:
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)
 - [Session Exchange](../experimental-extensions/extensions/system-session-exchange/README.md)
+- [Self Preservation](../extensions/system-self-preservation/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)
 - [SpeechMike](../experimental-extensions/extensions/system-speechmike/README.md)
 - [Suggested Context](../extensions/system-suggested-context/README.md)
 - [Telegram Gateway](../experimental-extensions/extensions/system-gateways/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
+- [Video Probe](../extensions/system-video-probe/README.md)
 - [Web Fetch](../extensions/system-web-tools/README.md)
 
 ## Sections

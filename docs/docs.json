@@ -1,71 +1,64 @@
 {
   "navigation": [
     {
+      "title": "Start Here",
+      "items": [
+        { "title": "Documentation Home", "path": "README.md" },
+        { "title": "Getting Started", "path": "getting-started.md" }
+      ]
+    },
+    {
       "title": "View Modes",
       "items": [
-        {
-          "title": "Views",
-          "path": "views.md"
-        },
-        {
-          "title": "Conversation Context",
-          "path": "conversation-context.md"
-        }
+        { "title": "Views", "path": "views.md" },
+        { "title": "Conversation Context", "path": "conversation-context.md" },
+        { "title": "Host View Components", "path": "host-view-components.md" }
       ]
     },
     {
       "title": "Core Product Model",
       "items": [
-        {
-          "title": "Conversations",
-          "path": "conversations.md"
-        },
-        {
-          "title": "Projects",
-          "path": "projects.md"
-        }
+        { "title": "Conversations", "path": "conversations.md" },
+        { "title": "Projects", "path": "projects.md" },
+        { "title": "Activity Tree", "path": "activity-tree.md" }
       ]
     },
     {
       "title": "Desktop App",
       "items": [
-        {
-          "title": "Desktop App",
-          "path": "desktop-app.md"
-        }
+        { "title": "Desktop App", "path": "desktop-app.md" },
+        { "title": "Desktop API Boundary", "path": "desktop-api-boundary.md" },
+        { "title": "Performance Diagnostics", "path": "performance-diagnostics.md" }
       ]
     },
     {
       "title": "Background Runtime",
       "items": [
-        {
-          "title": "Daemon",
-          "path": "daemon.md"
-        }
+        { "title": "Daemon", "path": "daemon.md" },
+        { "title": "Sandboxing", "path": "sandboxing.md" },
+        { "title": "Filesystem Authority", "path": "filesystem-authority.md" },
+        { "title": "SQLite Migrations", "path": "sqlite-migrations.md" },
+        { "title": "Telemetry", "path": "telemetry.md" }
       ]
     },
     {
       "title": "Extensions",
       "items": [
-        {
-          "title": "Extension Authoring",
-          "path": "extensions.md"
-        }
+        { "title": "Build an Extension", "path": "build-an-extension.md" },
+        { "title": "Extension Authoring", "path": "extensions.md" },
+        { "title": "Extension Templates", "path": "extension-templates/README.md" }
       ]
     },
     {
       "title": "Operations",
       "items": [
-        {
-          "title": "Configuration",
-          "path": "configuration.md"
-        },
-        {
-          "title": "Release Cycle",
-          "path": "release-cycle.md"
-        }
+        { "title": "Configuration", "path": "configuration.md" },
+        { "title": "Development Workflow", "path": "development.md" },
+        { "title": "Knowledge Base Sync", "path": "knowledge-base.md" },
+        { "title": "Release Cycle", "path": "release-cycle.md" },
+        { "title": "Release Test Inventory", "path": "release-test-inventory.md" }
       ]
     }
   ],
-  "redirects": []
+  "redirects": [{ "from": "index.md", "to": "README.md" }]
 }

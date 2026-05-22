@@ -1487,8 +1487,8 @@ the `ExtensionAPI`. If set to `"default"`, the default export is used.
 | `turn_start/end`           | Turn lifecycle                      | Track progress                       |
 | `agent_start/end`          | Agent cycle lifecycle               | Track agent activity                 |
 
-For the full list of events and their signatures, see the
-[pi-coding-agent extensions documentation](../../node_modules/@earendil-works/pi-coding-agent/docs/extensions.md).
+For the full list of Pi lifecycle events and signatures, inspect the installed
+`@earendil-works/pi-coding-agent` package docs that match the pinned dependency version.
 
 ## Development Workflow
 

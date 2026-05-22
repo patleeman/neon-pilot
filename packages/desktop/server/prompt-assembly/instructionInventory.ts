@@ -171,7 +171,7 @@ async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<Instr
     skills_dir: getDurableSkillsDir(resolved.vaultRoot),
     tasks_dir: getDurableTasksDir(getSyncRoot(getStateRoot())),
     docs_dir: `${resolved.repoRoot}/docs`,
-    docs_index: `${resolved.repoRoot}/docs/index.md`,
+    docs_index: `${resolved.repoRoot}/docs/README.md`,
   };
   const content = renderSystemPromptTemplate(variables);
   return content

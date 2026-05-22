@@ -49,13 +49,13 @@ Runtime identity is centralized as `stable`, `rc`, `dev`, or `test`. The channel
 | Channel  | App name           | State root suffix | Updates  |
 | -------- | ------------------ | ----------------- | -------- |
 | `stable` | Neon Pilot         | none              | enabled  |
-| `rc`     | Neon Pilot RC      | `-rc`             | disabled |
+| `rc`     | Neon Pilot RC      | `-rc`             | enabled  |
 | `dev`    | Neon Pilot Dev     | `-dev`            | disabled |
 | `test`   | Neon Pilot Testing | `-testing`        | disabled |
 
-Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`neon-pilot-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it. RC update checks are disabled until the updater has a separate RC feed; install newer RCs manually from GitHub releases.
+Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`neon-pilot-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it. RC update checks are enabled for the RC runtime channel and stay isolated from stable by channel-specific app identity and artifact names.
 
-Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. RC/dev/test launches disable update checks so local and prerelease builds do not consume stable updater metadata.
+Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. Dev/test launches disable update checks so local builds do not consume updater metadata.
 
 ## Release Flow
 
@@ -87,7 +87,7 @@ The check verifies:
 1. The app process starts successfully
 2. The Electron renderer exposes a page over CDP
 3. The initial route renders non-empty UI without startup errors
-4. Agent-readable packaged resources exist (`docs/index.md`, system and experimental extension READMEs, extension skills, and manifest-declared extension bundles)
+4. Agent-readable packaged resources exist (`docs/README.md`, system and experimental extension READMEs, extension skills, and manifest-declared extension bundles)
 5. Packaged renderer API endpoints return successful responses for extensions, gateways, and models
 6. Packaged extension backends import successfully with Electron-style `process.resourcesPath`
 7. A live conversation can be created and its `bash` tool returns output
