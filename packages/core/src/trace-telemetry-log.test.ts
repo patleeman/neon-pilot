@@ -1,0 +1,141 @@
+import { randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  closeTraceTelemetryLogs,
+  readTraceTelemetryLogEvents,
+  resolveTraceTelemetryLogDir,
+  resolveTraceTelemetryLogPath,
+  type TraceTelemetryLogEvent,
+  writeTraceTelemetryLogEvent,
+} from './trace-telemetry-log.js';
+
+function event(overrides: Partial<TraceTelemetryLogEvent> = {}): TraceTelemetryLogEvent {
+  return {
+    schemaVersion: 1,
+    id: overrides.id ?? randomUUID(),
+    ts: overrides.ts ?? '2026-05-22T12:00:00.000Z',
+    type: overrides.type ?? 'stats',
+    sessionId: overrides.sessionId ?? 'session-1',
+    runId: overrides.runId ?? null,
+    profile: overrides.profile ?? 'default',
+    payload: overrides.payload ?? { totalTokens: 123 },
+  };
+}
+
+describe('trace-telemetry-log', () => {
+  const stateRoot = join(tmpdir(), `trace-telemetry-log-test-${randomUUID()}`);
+  const originalMaxBytes = process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_MAX_BYTES;
+  const originalRetentionDays = process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_RETENTION_DAYS;
+
+  beforeEach(() => {
+    closeTraceTelemetryLogs();
+    rmSync(stateRoot, { recursive: true, force: true });
+    delete process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_MAX_BYTES;
+    delete process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_RETENTION_DAYS;
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    closeTraceTelemetryLogs();
+    rmSync(stateRoot, { recursive: true, force: true });
+    if (originalMaxBytes) process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_MAX_BYTES = originalMaxBytes;
+    else delete process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_MAX_BYTES;
+    if (originalRetentionDays) process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_RETENTION_DAYS = originalRetentionDays;
+    else delete process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_RETENTION_DAYS;
+  });
+
+  it('writes JSONL trace events and reads valid events at or after the requested timestamp', () => {
+    writeTraceTelemetryLogEvent(event({ id: 'old', ts: '2026-05-21T23:59:59.000Z' }), stateRoot);
+    writeTraceTelemetryLogEvent(event({ id: 'newer', ts: '2026-05-22T12:00:00.000Z', payload: { model: 'gpt' } }), stateRoot);
+    writeTraceTelemetryLogEvent(event({ id: 'newest', ts: '2026-05-22T13:00:00.000Z', type: 'tool_call' }), stateRoot);
+
+    const events = readTraceTelemetryLogEvents({ since: '2026-05-22T00:00:00.000Z', stateRoot });
+
+    expect(events.map((item) => item.id)).toEqual(['newer', 'newest']);
+    expect(events[0]).toMatchObject({ schemaVersion: 1, type: 'stats', sessionId: 'session-1', payload: { model: 'gpt' } });
+
+    const logPath = resolveTraceTelemetryLogPath('2026-05-22T12:00:00.000Z', stateRoot);
+    expect(readFileSync(logPath, 'utf-8').trim().split('\n')).toHaveLength(2);
+  });
+
+  it('coerces malformed optional fields and skips malformed required fields while reading', () => {
+    const dir = resolveTraceTelemetryLogDir(stateRoot);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, 'trace-telemetry-2026-05-22.jsonl'),
+      [
+        JSON.stringify({
+          schemaVersion: 1,
+          id: 'valid',
+          ts: '2026-05-22T12:00:00.000Z',
+          type: 'context',
+          sessionId: 's',
+          runId: 42,
+          payload: [],
+        }),
+        JSON.stringify({ schemaVersion: 1, id: 'missing-session', ts: '2026-05-22T12:00:00.000Z', type: 'context' }),
+        '{not-json}',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    const events = readTraceTelemetryLogEvents({ since: '2026-05-22T00:00:00.000Z', stateRoot });
+
+    expect(events).toEqual([
+      {
+        schemaVersion: 1,
+        id: 'valid',
+        ts: '2026-05-22T12:00:00.000Z',
+        type: 'context',
+        sessionId: 's',
+        runId: '42',
+        profile: '',
+        payload: {},
+      },
+    ]);
+  });
+
+  it('rotates to numbered segments when the daily log would exceed the configured max bytes', () => {
+    process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_MAX_BYTES = '120';
+    writeTraceTelemetryLogEvent(event({ id: 'first', payload: { text: 'x'.repeat(80) } }), stateRoot);
+    writeTraceTelemetryLogEvent(event({ id: 'second', payload: { text: 'y'.repeat(80) } }), stateRoot);
+
+    const dir = resolveTraceTelemetryLogDir(stateRoot);
+    expect(readFileSync(join(dir, 'trace-telemetry-2026-05-22.jsonl'), 'utf-8')).toContain('first');
+    expect(existsSync(join(dir, 'trace-telemetry-2026-05-22.1.jsonl'))).toBe(true);
+    expect(readFileSync(join(dir, 'trace-telemetry-2026-05-22.1.jsonl'), 'utf-8')).toContain('second');
+  });
+
+  it('prunes old trace telemetry files every 250 writes', () => {
+    process.env.NEON_PILOT_TRACE_TELEMETRY_LOG_RETENTION_DAYS = '1';
+    const dir = resolveTraceTelemetryLogDir(stateRoot);
+    mkdirSync(dir, { recursive: true });
+    const oldFile = join(dir, 'trace-telemetry-2026-05-20.jsonl');
+    writeFileSync(oldFile, `${JSON.stringify(event({ id: 'old' }))}\n`, 'utf-8');
+    const oldTime = new Date('2026-05-20T00:00:00.000Z');
+    utimesSync(oldFile, oldTime, oldTime);
+    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-22T00:00:00.000Z').getTime());
+
+    for (let index = 0; index < 250; index += 1) {
+      writeTraceTelemetryLogEvent(event({ id: `event-${index}` }), stateRoot);
+    }
+
+    expect(existsSync(oldFile)).toBe(false);
+    expect(statSync(resolveTraceTelemetryLogPath('2026-05-22T12:00:00.000Z', stateRoot)).size).toBeGreaterThan(0);
+  });
+
+  it('falls back to the base path if segment inspection fails', () => {
+    mkdirSync(resolveTraceTelemetryLogDir(stateRoot), { recursive: true });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(basename(resolveTraceTelemetryLogPath('invalid-date', stateRoot))).toMatch(/^trace-telemetry-\d{4}-\d{2}-\d{2}\.jsonl$/);
+    writeTraceTelemetryLogEvent(event({ ts: 'bad-date' }), '/dev/null/not-a-directory');
+
+    expect(spy).toHaveBeenCalled();
+  });
+});
