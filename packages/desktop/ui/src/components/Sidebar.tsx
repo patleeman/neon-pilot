@@ -148,6 +148,7 @@ const THREADS_ORGANIZE_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-o
 const THREADS_FILTER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-filter');
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
 const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-manual-group-order');
+const THREADS_DETACHED_CHILDREN_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-detached-children');
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
@@ -213,6 +214,31 @@ type SidebarConversationGroup = {
 
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
   return session.offshootKind !== 'subagent' && !session.sourceRunId;
+}
+
+function readDetachedChildConversationIds(): string[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY) ?? '[]') as unknown;
+    return Array.isArray(parsed) ? normalizeStoredStringList(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDetachedChildConversationIds(ids: readonly string[]): string[] {
+  const normalized = normalizeStoredStringList(ids);
+  if (typeof localStorage === 'undefined') return normalized;
+  try {
+    if (normalized.length > 0) {
+      localStorage.setItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY, JSON.stringify(normalized));
+    } else {
+      localStorage.removeItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+  return normalized;
 }
 
 type PointerPosition = { x: number; y: number };
@@ -1887,6 +1913,7 @@ export function Sidebar() {
   const [threadsFilterMode, setThreadsFilterMode] = useState<ThreadsFilterMode>(() => readThreadsFilterMode());
   const [threadsSortMode, setThreadsSortMode] = useState<ThreadsSortMode>(() => readThreadsSortMode());
   const [manualConversationGroupOrder, setManualConversationGroupOrder] = useState(() => readManualConversationGroupOrder());
+  const [detachedChildConversationIds, setDetachedChildConversationIds] = useState(() => readDetachedChildConversationIds());
   const [collapsedConversationGroupKeys, setCollapsedConversationGroupKeys] = useState(() => readCollapsedConversationGroupKeys());
   const [conversationGroupLabelOverrides, setConversationGroupLabelOverrides] = useState(() => readConversationGroupLabelOverrides());
   const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
@@ -2029,6 +2056,20 @@ export function Sidebar() {
     writeManualConversationGroupOrder(normalized);
     setManualConversationGroupOrder(normalized);
     return normalized;
+  }, []);
+  const detachChildConversation = useCallback((conversationId: string) => {
+    const normalizedConversationId = conversationId.trim();
+    if (!normalizedConversationId) {
+      return;
+    }
+
+    setDetachedChildConversationIds((current) => {
+      if (current.includes(normalizedConversationId)) {
+        return current;
+      }
+
+      return writeDetachedChildConversationIds([...current, normalizedConversationId]);
+    });
   }, []);
 
   const loadSavedWorkspacePaths = useCallback(async () => {
@@ -2310,9 +2351,11 @@ export function Sidebar() {
   );
   const activityTreeSessions = useMemo(() => {
     const byId = new Map<string, SessionMeta>();
+    const detachedChildConversationIdSet = new Set(detachedChildConversationIds);
     const allConversationSessions = (sessions ?? []).map((session) => {
       const liveTitle = liveTitles.get(session.id);
-      return liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
+      const titledSession = liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
+      return detachedChildConversationIdSet.has(session.id) ? { ...titledSession, parentSessionId: undefined } : titledSession;
     });
     const allSessionsById = new Map(allConversationSessions.map((session) => [session.id, session] as const));
     const archivedConversationIdSet = new Set(archivedConversationIds);
@@ -2358,7 +2401,7 @@ export function Sidebar() {
     }
 
     return [...byId.values()];
-  }, [archivedConversationIds, liveTitles, renderedConversationItems, sessions]);
+  }, [archivedConversationIds, detachedChildConversationIds, liveTitles, renderedConversationItems, sessions]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({
@@ -2607,6 +2650,13 @@ export function Sidebar() {
     setConversationCwdDropTargetGroupKey(null);
   }
 
+  function detachDraggedChildConversationIfNeeded(sessionId: string) {
+    const session = (sessions ?? []).find((candidate) => candidate.id === sessionId);
+    if (session?.parentSessionId) {
+      detachChildConversation(sessionId);
+    }
+  }
+
   function getDropPosition(event: DragEvent<HTMLElement>): OpenConversationDropPosition {
     const bounds = event.currentTarget.getBoundingClientRect();
     return event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
@@ -2801,6 +2851,7 @@ export function Sidebar() {
       writeThreadsSortMode('manual');
     }
 
+    detachDraggedChildConversationIfNeeded(draggingSessionId);
     moveSession(draggingSessionId, targetSection, targetSessionId, position);
     clearDragState();
   }
@@ -2988,6 +3039,7 @@ export function Sidebar() {
     if (draggedConversationId) {
       const targetGroupKey = getActivityTreeGroupKey(targetItem);
       if (targetGroupKey) {
+        detachDraggedChildConversationIfNeeded(draggedConversationId);
         void handleConversationCwdDrop(targetGroupKey, event);
         return;
       }
@@ -3001,11 +3053,13 @@ export function Sidebar() {
         !canDropConversationOnSession(draggedConversationId, targetConversationId) &&
         canDropConversationOnGroup(draggedConversationId, targetConversationGroupKey)
       ) {
+        detachDraggedChildConversationIfNeeded(draggedConversationId);
         void handleConversationCwdDrop(targetConversationGroupKey, event);
         return;
       }
 
       if (targetConversationId && targetSection) {
+        detachDraggedChildConversationIfNeeded(draggedConversationId);
         handleConversationDrop(targetSection, targetConversationId, position);
       } else {
         clearDragState();
