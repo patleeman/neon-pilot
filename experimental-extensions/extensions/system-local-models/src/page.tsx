@@ -92,6 +92,14 @@ type ModelDetails = {
 type PageId = 'server' | 'library';
 
 const MLX_BASE_URL = 'http://127.0.0.1:8011/v1';
+const MAX_RENDERED_LOG_CHARS = 20_000;
+
+function truncateLogForRender(value: string | undefined | null) {
+  if (!value) return '';
+  return value.length > MAX_RENDERED_LOG_CHARS
+    ? `… truncated to latest ${MAX_RENDERED_LOG_CHARS} chars …\n${value.slice(-MAX_RENDERED_LOG_CHARS)}`
+    : value;
+}
 
 function LocalModelsIcon({ active }: { active: boolean }) {
   return (
@@ -375,8 +383,11 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const [details, setDetails] = useState<ModelDetails | null>(null);
   const [selectedFile, setSelectedFile] = useState('');
   const contextInitKeyRef = useRef('');
+  const refreshInFlightRef = useRef(false);
 
   async function refresh() {
+    if (refreshInFlightRef.current) return status;
+    refreshInFlightRef.current = true;
     setError(null);
     try {
       const next = await pa.extension.invoke<Status>('localModelsStatus', {});
@@ -387,6 +398,8 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       return null;
+    } finally {
+      refreshInFlightRef.current = false;
     }
   }
 
@@ -520,6 +533,10 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
   const selectedSearch = searchResults.find((model) => model.id === selectedSearchId) ?? null;
   const detailsFormat = details ? detectFormat(details.id, details.tags) : (selectedSearch?.format ?? 'unknown');
   const ggufFiles = details?.files.filter((file) => file.name.toLowerCase().endsWith('.gguf')) ?? [];
+  const runtimeLog =
+    activeRuntime === 'mlx'
+      ? truncateLogForRender(status?.mlx?.log) || 'No logs yet.'
+      : truncateLogForRender(status?.gguf?.log) || status?.gguf?.version || 'No logs yet.';
 
   function markDirty(setter: (value: string) => void, value: string) {
     setter(value);
@@ -1202,9 +1219,7 @@ export function LocalModelsPage({ pa }: ExtensionSurfaceProps) {
                     <p className="mt-1 text-sm text-secondary">Live runtime logs refresh automatically.</p>
                   </div>
                   <pre className="mt-5 max-h-96 overflow-auto rounded-md border border-border-subtle bg-base p-4 text-xs leading-5 text-secondary">
-                    {activeRuntime === 'mlx'
-                      ? status?.mlx?.log || 'No logs yet.'
-                      : status?.gguf?.log || status?.gguf?.version || 'No logs yet.'}
+                    {runtimeLog}
                   </pre>
                 </section>
               </main>
