@@ -814,8 +814,8 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <code>priority</code> ascending, then extension id, then contribution id. The component receives <code>pa</code>,
           <code>controlContext</code>, and the legacy alias <code>buttonContext</code>. <code>controlContext.renderMode</code> is
           <code>inline</code> or <code>menu</code>; <code>insertText(text)</code> inserts at the current composer selection;
-          <code>openFilePicker()</code> opens the core-owned attachment input; and model/goal fields expose the current composer preference
-          state.
+          <code>appendText(text)</code> inserts at the end when available; <code>openFilePicker()</code> opens the core-owned attachment
+          input; and model/goal fields expose the current composer preference state.
         </p>
         <h3 id="composer-buttons-composerbuttons">Composer Buttons (<code>composerButtons</code>)</h3>
         <p>
@@ -1039,9 +1039,9 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         </p>
         <h3 id="composer-host-boundary">Composer host boundary</h3>
         <p>
-          Composer contribution contexts expose intent methods such as <code>insertText(text)</code>, <code>addFiles(files)</code>, and
-          <code>openFilePicker()</code>. Extensions request these actions; the host owns composer state, attachment ingestion, selection,
-          focus, and caret restoration.
+          Composer contribution contexts expose intent methods such as <code>insertText(text)</code>, <code>appendText(text)</code>,
+          <code>addFiles(files)</code>, and <code>openFilePicker()</code>. Extensions request these actions; the host owns composer state,
+          attachment ingestion, selection, focus, and caret restoration.
         </p>
         <p>Rules:</p>
         <ul>

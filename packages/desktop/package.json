@@ -5,7 +5,7 @@
   "description": "Neon Pilot Electron desktop shell",
   "repository": "github:patleeman/neon-pilot",
   "bugs": "https://github.com/patleeman/neon-pilot/issues",
-  "homepage": "https://github.com/patleeman/neon-pilot",
+  "homepage": "https://neonpilot.net",
   "productName": "Neon Pilot",
   "type": "module",
   "main": "./dist/main.js",

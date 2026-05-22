@@ -6,7 +6,7 @@
   "description": "Neon Pilot monorepo",
   "repository": "github:patleeman/neon-pilot",
   "bugs": "https://github.com/patleeman/neon-pilot/issues",
-  "homepage": "https://github.com/patleeman/neon-pilot",
+  "homepage": "https://neonpilot.net",
   "bin": {
     "neon-pilot": "./scripts/neon-pilot-cli.mjs",
     "neon-pilot-extension": "./scripts/neon-pilot-extension-cli.mjs"
