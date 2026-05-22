@@ -798,12 +798,9 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
         });
     };
 
-    // Let conversation routes hydrate and accept first input before the registry
-    // fans out across extension manifests and frontend entries. Extension pages
-    // still load quickly when the current route is extension-owned.
-    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-    const delayMs = pathname === '/conversations/new' || pathname.startsWith('/conversations/') ? 1_500 : 250;
-    loadTimer = window.setTimeout(load, delayMs);
+    // Keep this short and uniform: startup readiness now waits for the registry,
+    // so large route-specific delays would only hide work and make the app less usable.
+    loadTimer = window.setTimeout(load, 250);
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
 
     return () => {
