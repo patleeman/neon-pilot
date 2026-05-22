@@ -99,6 +99,7 @@ const EMPTY_QUERY_LIMITS: Record<string, number> = {
 };
 const DEFAULT_QUICK_OPEN_EMPTY_QUERY_LIMIT = 30;
 const MAX_EMPTY_QUERY_LIMIT = 100;
+const MAX_QUERY_RESULTS_PER_SECTION = 80;
 
 function readEmptyQueryLimit(section: CommandPaletteSection, value: number | undefined): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
@@ -221,7 +222,7 @@ export function searchCommandPaletteItems<TAction>(
     }
 
     const emptyQueryLimit = readEmptyQueryLimit(section, options.emptyQueryLimits?.[section]);
-    const limited = emptyQuery ? rankedItems.slice(0, emptyQueryLimit) : rankedItems;
+    const limited = emptyQuery ? rankedItems.slice(0, emptyQueryLimit) : rankedItems.slice(0, MAX_QUERY_RESULTS_PER_SECTION);
 
     return [
       {

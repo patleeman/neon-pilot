@@ -157,6 +157,20 @@ describe('command palette search', () => {
     expect(results[0]?.items).toHaveLength(100);
   });
 
+  it('caps non-empty query results per section to keep keystrokes bounded', () => {
+    const items = Array.from({ length: 150 }, (_, index) => ({
+      ...ITEMS[1]!,
+      id: `archived:${index}`,
+      title: `Archived beta ${index}`,
+      order: index,
+    }));
+
+    const results = searchCommandPaletteItems(items, { query: 'beta', scope: 'threads' });
+
+    expect(results[0]?.total).toBe(150);
+    expect(results[0]?.items).toHaveLength(80);
+  });
+
   it('bootstraps thread results when the palette opens before sessions load', () => {
     expect(
       shouldBootstrapCommandPaletteThreads({
