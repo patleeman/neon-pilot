@@ -966,7 +966,7 @@ See `packages/extensions/src/index.ts` for the full API.
 
 Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as `@neon-pilot/extensions/backend/artifacts`, `/automations`, `/browser`, `/compaction`, `/conversations`, `/images`, `/knowledge`, `/knowledgeVault`, `/mcp`, `/runs`, `/runtime`, `/telemetry`, and `/webContent`. Prefer a focused subpath over the broad backend barrel when bundling a system extension that only needs one backend service. For daemon-backed shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action actually starts or inspects background work.
 
-The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source may use type-only Pi imports for extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. `pnpm run check:extensions:quick` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
+The backend API is deliberately two-layered: public stubs under `packages/extensions/src/backend/*.ts`, and host implementations under `packages/desktop/server/extensions/backendApi/*.ts`. Extension source imports only `@neon-pilot/extensions/backend/{name}`. It must not import desktop server files, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly. System extension source may use type-only Pi imports for extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app. `pnpm run check:extensions` enforces this with `scripts/check-extension-backend-api.mjs` and packaged source/bundle checks before packaged bundle checks run.
 
 Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions (`agent:run`, `agent:conversations`, etc.). Narrow host helpers such as `/compaction`, `/runtime`, and `/webContent` are trusted system-extension internals; they do not create standalone user-facing authority and should stay scoped to active hook/action context rather than growing into broad service APIs.
 
@@ -1525,25 +1525,21 @@ backend/frontend entries, handler export mismatches, and packaged-runtime
 backend import failures):
 
 ```bash
-# Run the full extension integration suite (includes ~25s dynamic import check)
+# Run the full extension gate: static extension checks plus focused extension smoke tests
 pnpm run check:extensions
 
-# Quick release/development gate (backend API check, packaged extension check, runtime smoke, filesystem authority)
-pnpm run check:extensions:quick
-
-# Run alongside the server endpoint smoke tests
-npx vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts \
-  packages/desktop/server/routes/registerAll.smoke.test.ts
+# Run only the focused extension smoke tests
+pnpm run test:extensions
 
 # Or include in the full test suite
 pnpm test
 ```
 
-`pnpm run check:extensions` and `pnpm run check:extensions:quick` first run
+`pnpm run check:extensions` first runs
 `scripts/check-extension-backend-api.mjs` to keep the SDK backend subpath list and
 host backend API implementation list in lockstep, and to block backend API seams
-from statically importing known heavy/runtime internals. They also run
-`scripts/check-packaged-extensions.mjs`. That packaged check imports every system
+from statically importing known heavy/runtime internals. It also runs
+`scripts/check-filesystem-authority.mjs` and `scripts/check-packaged-extensions.mjs`. That packaged check imports every system
 and experimental extension backend from its built `dist` output, verifies backend
 action handler exports, smoke-calls known safe tool surfaces such as `scheduled_task`, and runs product-critical smoke calls for Knowledge,
 Automations, and Diffs extension actions. It fails on forbidden bare imports

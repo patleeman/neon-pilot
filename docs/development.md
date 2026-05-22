@@ -27,20 +27,22 @@ Pick checks based on the change. Do not run the whole world for a docs-only edit
 
 ```bash
 pnpm run fix      # prettier --write + eslint --fix
-pnpm run check    # types, lint, format, extension quick check, knip advisory
+pnpm run check    # types, lint, format, full test suite, extension static checks, knip advisory
 ```
 
 Focused checks:
 
-| Command                           | Use when                                                           |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `pnpm run check:types`            | TypeScript/import/unused-symbol risk                               |
-| `pnpm run lint`                   | Lint/import-order risk                                             |
-| `pnpm run fmt`                    | Formatting-only verification                                       |
-| `pnpm run check:extensions:quick` | Before desktop dev or after extension manifest/backend API changes |
-| `pnpm run check:extensions`       | Before release or deep extension runtime verification              |
-| `pnpm test`                       | Broad regression pass                                              |
-| `pnpm run check:coverage`         | Periodic coverage review; advisory, not blocking                   |
+| Command                     | Use when                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm run check:types`      | TypeScript/import/unused-symbol risk                                                |
+| `pnpm run lint`             | Lint/import-order risk                                                              |
+| `pnpm run fmt`              | Formatting-only verification                                                        |
+| `pnpm test`                 | Broad regression pass; deterministic unit, integration, smoke, and regression tests |
+| `pnpm run test:extensions`  | Focused extension runtime smoke tests                                               |
+| `pnpm run check:extensions` | Extension static checks plus focused extension smoke tests                          |
+| `pnpm run check:coverage`   | Periodic coverage review; advisory, not blocking                                    |
+
+Use `pnpm test` as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app or external-environment checks that should not run in every deterministic test pass.
 
 Startup idle smoke:
 

@@ -193,4 +193,4 @@ Agents can inspect the catalog through the Extension Manager UI or `/api/extensi
 3. If the component needs configuration, define JSON-serializable `propsSchema` in the catalog.
 4. If it needs customization, add named override slots to the catalog and make the host component read `slotOverrides`.
 5. Update this doc's catalog table.
-6. Run `pnpm run build:extensions`, `pnpm run check:extensions:quick`, `pnpm run check:types`, and `pnpm --dir packages/desktop run build:ui`.
+6. Run `pnpm run build:extensions`, `pnpm run check:extensions`, `pnpm run check:types`, and `pnpm --dir packages/desktop run build:ui`.
