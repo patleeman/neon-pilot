@@ -1271,11 +1271,20 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
   }, [draft, id, pushTitle, sessions, setSessions, stream.title, titles]);
 
-  const shouldLoadModels = shouldLoadConversationModels({
-    draft,
-    hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
-    hasPendingInitialPromptInFlight,
-  });
+  const [nonCriticalComposerMetadataReady, setNonCriticalComposerMetadataReady] = useState(false);
+  useEffect(() => {
+    setNonCriticalComposerMetadataReady(false);
+    const timeout = window.setTimeout(() => setNonCriticalComposerMetadataReady(true), 1_500);
+    return () => window.clearTimeout(timeout);
+  }, [draft, id]);
+
+  const shouldLoadModels =
+    nonCriticalComposerMetadataReady &&
+    shouldLoadConversationModels({
+      draft,
+      hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
+      hasPendingInitialPromptInFlight,
+    });
 
   // Model
   const { models, defaultModel, defaultVisionModel, defaultThinkingLevel, defaultServiceTier } = useConversationModels(shouldLoadModels);
@@ -1492,6 +1501,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [extensionMentionItems, setExtensionMentionItems] = useState<MentionItem[]>([]);
 
   useEffect(() => {
+    if (!nonCriticalComposerMetadataReady) {
+      return;
+    }
+
     let cancelled = false;
     Promise.all([api.extensionSlashCommands(), api.extensionMentions()])
       .then(([commands, mentions]) => {
@@ -1510,7 +1523,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [nonCriticalComposerMetadataReady]);
 
   // Current context usage (compaction-aware)
   const sessionTokens = useMemo(
