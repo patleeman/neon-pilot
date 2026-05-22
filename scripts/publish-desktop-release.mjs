@@ -707,6 +707,7 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
   }
   const smokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs');
   const startupIdleSmokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-startup-idle.mjs');
+  const perfSmokeScriptPath = resolve(buildRoot, 'scripts', 'perf-desktop-smoke.mjs');
 
   if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
@@ -716,6 +717,15 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
       cwd: buildRoot,
       env,
     });
+    console.log('Running full desktop performance smoke test against the built app...');
+    run(
+      'node',
+      [perfSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-ready-ms=5000', '--max-cpu=120'],
+      {
+        cwd: buildRoot,
+        env,
+      },
+    );
     return;
   }
 

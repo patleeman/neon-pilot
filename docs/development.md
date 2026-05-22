@@ -54,6 +54,18 @@ This creates a temporary old-profile fixture with many historical conversations 
 
 The npm script uses a loose CPU threshold because the dev launcher may include build-tool CPU. RC/release publishing passes `--app` and uses the stricter packaged-app threshold.
 
+Desktop performance smoke:
+
+```bash
+pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30
+```
+
+This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, route switches, model fetch, conversation search, long-transcript open, basic interaction timing, and renderer heap delta. For release candidates, use:
+
+```bash
+pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120
+```
+
 If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
 
 ## Web UI and desktop QA
