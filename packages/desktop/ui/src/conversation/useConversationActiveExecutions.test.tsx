@@ -1,8 +1,8 @@
 /* @vitest-environment jsdom */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppEventsContext, INITIAL_APP_EVENT_VERSIONS } from '../app/contexts';
 import { api } from '../client/api';
@@ -44,7 +44,12 @@ function createWrapper(overrides: { versions?: Partial<typeof INITIAL_APP_EVENT_
 
 describe('useConversationActiveExecutions', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.mocked(api.conversationExecutions).mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('loads active primary executions from scoped backend truth', async () => {
@@ -74,6 +79,70 @@ describe('useConversationActiveExecutions', () => {
     const { result } = renderHook(() => useConversationActiveExecutions('conv-1'), { wrapper: createWrapper() });
 
     await waitFor(() => expect(api.conversationExecutions).toHaveBeenCalled());
+    expect(result.current.executions).toEqual([]);
+  });
+
+  it('refreshes when the executions app version changes', async () => {
+    vi.mocked(api.conversationExecutions)
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        primary: [execution({ id: 'run-1' })],
+        system: [],
+        hidden: [],
+        executions: [execution({ id: 'run-1' })],
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        primary: [execution({ id: 'run-2' })],
+        system: [],
+        hidden: [],
+        executions: [execution({ id: 'run-2' })],
+      });
+
+    let executionsVersion = 0;
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <AppEventsContext.Provider
+          value={{ versions: { ...INITIAL_APP_EVENT_VERSIONS, executions: executionsVersion }, conversationVersions: {} }}
+        >
+          {children}
+        </AppEventsContext.Provider>
+      );
+    }
+
+    const { result, rerender } = renderHook(() => useConversationActiveExecutions('conv-1'), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.executions.map((item) => item.id)).toEqual(['run-1']));
+
+    executionsVersion = 1;
+    rerender();
+
+    await waitFor(() => expect(result.current.executions.map((item) => item.id)).toEqual(['run-2']));
+  });
+
+  it('polls while active and clears rows when backend truth becomes empty', async () => {
+    vi.useFakeTimers();
+    vi.mocked(api.conversationExecutions)
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        primary: [execution({ id: 'run-1' })],
+        system: [],
+        hidden: [],
+        executions: [execution({ id: 'run-1' })],
+      })
+      .mockResolvedValueOnce({ conversationId: 'conv-1', primary: [], system: [], hidden: [], executions: [] });
+
+    const { result } = renderHook(() => useConversationActiveExecutions('conv-1'), { wrapper: createWrapper() });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.executions.map((item) => item.id)).toEqual(['run-1']);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
     expect(result.current.executions).toEqual([]);
   });
 });

@@ -100,6 +100,18 @@ describe('registerExecutionRoutes', () => {
     expect(scopedRes.json).toHaveBeenCalledWith(scoped);
   });
 
+  it('ignores malformed conversation execution query filters', async () => {
+    const { conversationHandler } = createHarness();
+    const scoped = { conversationId: 'conv-1', primary: [], system: [], hidden: [], executions: [] };
+    listConversationExecutionsMock.mockResolvedValue(scoped);
+
+    const res = createJsonResponse();
+    await conversationHandler({ params: { id: 'conv-1' }, query: { active: 'wat', visibility: 'everything' } }, res);
+
+    expect(listConversationExecutionsMock).toHaveBeenCalledWith('conv-1', { active: undefined, visibility: undefined });
+    expect(res.json).toHaveBeenCalledWith(scoped);
+  });
+
   it('returns details, logs, and 404s missing executions', async () => {
     const { detailHandler, logHandler } = createHarness();
     getExecutionMock.mockResolvedValue({ execution: { id: 'run-1' } });
