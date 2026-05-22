@@ -42,6 +42,14 @@ Focused checks:
 | `pnpm test`                       | Broad regression pass                                              |
 | `pnpm run check:coverage`         | Periodic coverage review; advisory, not blocking                   |
 
+Startup idle smoke:
+
+```bash
+pnpm run smoke:startup-idle -- --seconds=30 --sessions=1000 --blocks=80
+```
+
+This creates a temporary old-profile fixture with many historical conversations and no conversation context DB, launches the desktop app against that state root, samples CPU, and fails if idle startup spawns local model processes or sustains excessive CPU. Use `--app="/Applications/Neon Pilot RC.app"` to test a packaged app instead of the dev launcher.
+
 If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
 
 ## Web UI and desktop QA
