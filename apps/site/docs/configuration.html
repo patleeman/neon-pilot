@@ -58,33 +58,94 @@
           <code>profile</code>; treat those as the single shared runtime scope, not a product concept.
         </p>
         <h2 id="path-roots">Path roots</h2>
-        <p>
-          | Root | Default | Override | Purpose | | ------------------- | ----------------------------------------------------------- |
-          ------------------------------ | ------------------------------------------------------------------------------- | |
-          <code>&lt;state-root&gt;</code> | <code>~/.local/state/neon-pilot</code> or <code>$XDG_STATE_HOME/neon-pilot</code> |
-          <code>NEON_PILOT_STATE_ROOT</code> | Runtime state, daemon DBs, extension installs, active agent files | |
-          <code>&lt;config-root&gt;</code> | <code>&lt;state-root&gt;/config</code> | <code>NEON_PILOT_CONFIG_ROOT</code> | Machine-local
-          durable config | | Machine config file | <code>&lt;config-root&gt;/config.json</code> | <code>NEON_PILOT_CONFIG_FILE</code> |
-          Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections | | Local config dir |
-          <code>&lt;config-root&gt;/local</code> | <code>NEON_PILOT_LOCAL_PROFILE_DIR</code> | Local settings mirror for active runtime
-          settings |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Root</th>
+              <th>Default</th>
+              <th>Override</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>&lt;state-root&gt;</code></td>
+              <td><code>~/.local/state/neon-pilot</code> or <code>$XDG_STATE_HOME/neon-pilot</code></td>
+              <td><code>NEON_PILOT_STATE_ROOT</code></td>
+              <td>Runtime state, daemon DBs, extension installs, active agent files</td>
+            </tr>
+            <tr>
+              <td><code>&lt;config-root&gt;</code></td>
+              <td><code>&lt;state-root&gt;/config</code></td>
+              <td><code>NEON_PILOT_CONFIG_ROOT</code></td>
+              <td>Machine-local durable config</td>
+            </tr>
+            <tr>
+              <td>Machine config file</td>
+              <td><code>&lt;config-root&gt;/config.json</code></td>
+              <td><code>NEON_PILOT_CONFIG_FILE</code></td>
+              <td>Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections</td>
+            </tr>
+            <tr>
+              <td>Local config dir</td>
+              <td><code>&lt;config-root&gt;/local</code></td>
+              <td><code>NEON_PILOT_LOCAL_PROFILE_DIR</code></td>
+              <td>Local settings mirror for active runtime settings</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="machine-config">Machine config</h2>
         <p>
           <code>&lt;config-root&gt;/config.json</code> is machine-local configuration. It is not a layered settings file and there is no
           active <code>&lt;config-root&gt;/local/config.json</code> overlay.
         </p>
         <p>Current machine config keys:</p>
-        <p>
-          | Key | Type | Used for | | ---------------------- | -------- |
-          ------------------------------------------------------------------- | | <code>vaultRoot</code> | string | Legacy explicit
-          knowledge vault root | | <code>knowledgeBaseRepoUrl</code> | string | Managed git-backed knowledge base repo | |
-          <code>knowledgeBaseBranch</code> | string | Managed knowledge base branch, default <code>main</code> | |
-          <code>instructionFiles</code> | string[] | Extra AGENTS.md-style files appended to runtime instructions | |
-          <code>skillDirs</code> | string[] | Extra skill directories loaded alongside the vault skills directory | | <code>daemon</code> |
-          object | Daemon machine config section | | <code>ui</code> | object | UI machine config section, including fallback resume prompt
-          |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Type</th>
+              <th>Used for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>vaultRoot</code></td>
+              <td>string</td>
+              <td>Legacy explicit knowledge vault root</td>
+            </tr>
+            <tr>
+              <td><code>knowledgeBaseRepoUrl</code></td>
+              <td>string</td>
+              <td>Managed git-backed knowledge base repo</td>
+            </tr>
+            <tr>
+              <td><code>knowledgeBaseBranch</code></td>
+              <td>string</td>
+              <td>Managed knowledge base branch, default <code>main</code></td>
+            </tr>
+            <tr>
+              <td><code>instructionFiles</code></td>
+              <td>string[]</td>
+              <td>Extra AGENTS.md-style files appended to runtime instructions</td>
+            </tr>
+            <tr>
+              <td><code>skillDirs</code></td>
+              <td>string[]</td>
+              <td>Extra skill directories loaded alongside the vault skills directory</td>
+            </tr>
+            <tr>
+              <td><code>daemon</code></td>
+              <td>object</td>
+              <td>Daemon machine config section</td>
+            </tr>
+            <tr>
+              <td><code>ui</code></td>
+              <td>object</td>
+              <td>UI machine config section, including fallback resume prompt</td>
+            </tr>
+          </tbody>
+        </table>
         <p>Example:</p>
         <pre><code>{
   &quot;knowledgeBaseRepoUrl&quot;: &quot;git@github.com:user/neon-pilot-kb.git&quot;,
@@ -101,15 +162,44 @@
           needed.
         </p>
         <p>Common runtime settings include:</p>
-        <p>
-          | Key | Purpose | | --------------------------------------------- |
-          ------------------------------------------------------------------ | | <code>defaultProvider</code>, <code>defaultModel</code> |
-          Default model for new conversations and runs | | <code>defaultVisionProvider</code>, <code>defaultVisionModel</code> | Vision
-          model used by <code>probe_image</code> for text-only models | | <code>defaultThinkingLevel</code> | Default reasoning level | |
-          <code>defaultServiceTier</code> | Optional model service tier, e.g. fast/priority mode | | <code>defaultCwd</code> | Default
-          working directory for new chats and web actions | | <code>ui.*</code> | Conversation list/layout preferences and conversation plan
-          presets | | <code>lastChangelogVersion</code> | Runtime UI bookkeeping |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>defaultProvider</code>, <code>defaultModel</code></td>
+              <td>Default model for new conversations and runs</td>
+            </tr>
+            <tr>
+              <td><code>defaultVisionProvider</code>, <code>defaultVisionModel</code></td>
+              <td>Vision model used by <code>probe_image</code> for text-only models</td>
+            </tr>
+            <tr>
+              <td><code>defaultThinkingLevel</code></td>
+              <td>Default reasoning level</td>
+            </tr>
+            <tr>
+              <td><code>defaultServiceTier</code></td>
+              <td>Optional model service tier, e.g. fast/priority mode</td>
+            </tr>
+            <tr>
+              <td><code>defaultCwd</code></td>
+              <td>Default working directory for new chats and web actions</td>
+            </tr>
+            <tr>
+              <td><code>ui.*</code></td>
+              <td>Conversation list/layout preferences and conversation plan presets</td>
+            </tr>
+            <tr>
+              <td><code>lastChangelogVersion</code></td>
+              <td>Runtime UI bookkeeping</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           Do not put arbitrary product feature state here. Product features should own state through their extension storage, daemon/runtime
           DB tables, or a deliberate extension API.
@@ -132,17 +222,42 @@
         </p>
         <h2 id="models-providers-and-credentials">Models, providers, and credentials</h2>
         <p>Model/provider configuration is split on purpose:</p>
-        <p>
-          | Store | Default path | Purpose | | ----------------------------- | -------------------------------------------------------------
-          | ------------------------------------------------------------------------------ | | Provider/model definitions |
-          <code>&lt;config-root&gt;/runtime/shared/models.json</code> | Custom providers, model overrides, context windows, costs,
-          compatibility flags | | Active runtime model registry | <code>&lt;state-root&gt;/neon-pilot-runtime/models.json</code> |
-          Materialized model definitions read by the runtime | | Legacy provider credentials |
-          <code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> | Existing API keys and OAuth tokens managed through Settings | |
-          Extension secrets | macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, or env-only | Extension-declared secrets such as
-          integration API keys | | Environment credentials | <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>,
-          <code>GOOGLE_API_KEY</code>, etc. | Runtime-only credential source; not persisted |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Store</th>
+              <th>Default path</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Provider/model definitions</td>
+              <td><code>&lt;config-root&gt;/runtime/shared/models.json</code></td>
+              <td>Custom providers, model overrides, context windows, costs, compatibility flags</td>
+            </tr>
+            <tr>
+              <td>Active runtime model registry</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/models.json</code></td>
+              <td>Materialized model definitions read by the runtime</td>
+            </tr>
+            <tr>
+              <td>Legacy provider credentials</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code></td>
+              <td>Existing API keys and OAuth tokens managed through Settings</td>
+            </tr>
+            <tr>
+              <td>Extension secrets</td>
+              <td>macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, or env-only</td>
+              <td>Extension-declared secrets such as integration API keys</td>
+            </tr>
+            <tr>
+              <td>Environment credentials</td>
+              <td><code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GOOGLE_API_KEY</code>, etc.</td>
+              <td>Runtime-only credential source; not persisted</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           Provider credentials should be managed through Settings. Manual edits to <code>auth.json</code> are possible but discouraged. New
           extension secrets should use <code>contributes.secrets</code>; the active backend is configured by
@@ -172,20 +287,60 @@
         </p>
         <h2 id="desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</h2>
         <p>Not every Settings-page control writes to the same JSON file:</p>
-        <p>
-          | Area | Source of truth | | ------------------------------------------------------- |
-          --------------------------------------------------------------------- | | Appearance theme picker | Browser/Electron
-          <code>localStorage</code> plus contributed extension themes | | Conversation defaults |
-          <code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code> | | Workspace default cwd |
-          <code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code> | | Skills and extra instruction files |
-          <code>&lt;config-root&gt;/config.json</code> | | Provider/model definitions |
-          <code>&lt;config-root&gt;/runtime/shared/models.json</code> | | Provider credentials |
-          <code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> and environment variables | | Extension secrets | macOS Keychain,
-          <code>&lt;state-root&gt;/secrets.json</code>, or environment only | | Desktop update/startup/keyboard preferences |
-          <code>&lt;state-root&gt;/desktop/config.json</code> | | Extension enablement and extension keybinding overrides |
-          <code>&lt;state-root&gt;/extensions/registry.json</code> | | Extension scalar settings |
-          <code>&lt;state-root&gt;/settings.json</code> | | Automations, reminders, durable executions | Daemon runtime database |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Source of truth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Appearance theme picker</td>
+              <td>Browser/Electron <code>localStorage</code> plus contributed extension themes</td>
+            </tr>
+            <tr>
+              <td>Conversation defaults</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code></td>
+            </tr>
+            <tr>
+              <td>Workspace default cwd</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code></td>
+            </tr>
+            <tr>
+              <td>Skills and extra instruction files</td>
+              <td><code>&lt;config-root&gt;/config.json</code></td>
+            </tr>
+            <tr>
+              <td>Provider/model definitions</td>
+              <td><code>&lt;config-root&gt;/runtime/shared/models.json</code></td>
+            </tr>
+            <tr>
+              <td>Provider credentials</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> and environment variables</td>
+            </tr>
+            <tr>
+              <td>Extension secrets</td>
+              <td>macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, or environment only</td>
+            </tr>
+            <tr>
+              <td>Desktop update/startup/keyboard preferences</td>
+              <td><code>&lt;state-root&gt;/desktop/config.json</code></td>
+            </tr>
+            <tr>
+              <td>Extension enablement and extension keybinding overrides</td>
+              <td><code>&lt;state-root&gt;/extensions/registry.json</code></td>
+            </tr>
+            <tr>
+              <td>Extension scalar settings</td>
+              <td><code>&lt;state-root&gt;/settings.json</code></td>
+            </tr>
+            <tr>
+              <td>Automations, reminders, durable executions</td>
+              <td>Daemon runtime database</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="rule-of-thumb">Rule of thumb</h2>
         <p>
           Use machine config for machine-wide roots and discovery inputs. Use runtime settings for active agent defaults. Use extension

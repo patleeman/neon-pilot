@@ -57,6 +57,7 @@ function markdownToHtml(markdown) {
   let inCode = false;
   let code = [];
   let list = false;
+  let table = null;
   let para = [];
 
   const flushPara = () => {
@@ -68,6 +69,13 @@ function markdownToHtml(markdown) {
     if (!list) return;
     out.push('</ul>');
     list = false;
+  };
+  const flushTable = () => {
+    if (!table) return;
+    const head = table.headers.map((cell) => `<th>${inlineMd(cell)}</th>`).join('');
+    const rows = table.rows.map((row) => `<tr>${row.map((cell) => `<td>${inlineMd(cell)}</td>`).join('')}</tr>`).join('\n');
+    out.push(`<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`);
+    table = null;
   };
   const flushCode = () => {
     out.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
@@ -94,6 +102,7 @@ function markdownToHtml(markdown) {
     if (!line.trim()) {
       flushPara();
       closeList();
+      flushTable();
       continue;
     }
 
@@ -101,6 +110,7 @@ function markdownToHtml(markdown) {
     if (heading) {
       flushPara();
       closeList();
+      flushTable();
       const level = heading[1].length;
       const text = heading[2].replace(/\s+#+$/, '');
       const id = slugify(text);
@@ -112,6 +122,7 @@ function markdownToHtml(markdown) {
     const item = line.match(/^[-*]\s+(.+)$/);
     if (item) {
       flushPara();
+      flushTable();
       if (!list) {
         out.push('<ul>');
         list = true;
@@ -120,10 +131,28 @@ function markdownToHtml(markdown) {
       continue;
     }
 
+    if (line.trim().startsWith('|')) {
+      flushPara();
+      closeList();
+      const cells = line
+        .trim()
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
+        .split('|')
+        .map((cell) => cell.trim());
+      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+      if (isSeparator) continue;
+      if (!table) table = { headers: cells, rows: [] };
+      else table.rows.push(cells);
+      continue;
+    }
+
+    flushTable();
     para.push(line.trim());
   }
   flushPara();
   closeList();
+  flushTable();
   return { html: out.join('\n'), toc };
 }
 

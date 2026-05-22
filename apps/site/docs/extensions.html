@@ -175,67 +175,272 @@ Implement it with editable source files, build it, reload it, visually test it, 
           >: See <a href="#permissions">Permissions</a>.
         </p>
         <h3 id="contribution-types">Contribution Types</h3>
-        <p>
-          | Field | Purpose | Docs | | ----------------------------- | ------------------------------------------------------------------ |
-          ----------------------------------------------------------------------------------------- | | <code>views</code> | UI surfaces
-          (pages, panels) | See <code>docs/views.md</code> | | <code>nav</code> | Left sidebar navigation items | | |
-          <code>commands</code> | Extension actions invokable by command IDs | See
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
-            >Commands and keybindings</a
-          >
-          | | <code>keybindings</code> | Keyboard shortcuts that execute commands | See
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
-            >Commands and keybindings</a
-          >
-          | | <code>slashCommands</code> | <code>/command</code> in composer | | | <code>tools</code> | Agent-callable tools | | |
-          <code>skillProviders</code> | Dynamic Prompt Assembly skill providers | <a href="#prompt-assembly">See below</a> | |
-          <code>toolProviders</code> | Dynamic Prompt Assembly tool providers | <a href="#prompt-assembly">See below</a> | |
-          <code>promptTemplateProviders</code> | Dynamic Prompt Assembly template providers | <a href="#prompt-assembly">See below</a> | |
-          <code>instructionProviders</code> | Dynamic Prompt Assembly instruction layers | <a href="#prompt-assembly">See below</a> | |
-          <code>promptAssemblyHooks</code> | Privileged Prompt Assembly hooks | <a href="#prompt-assembly">See below</a> | |
-          <code>modelProfiles</code> | Enabled extension runtime profiles matched by provider/model globs | | | <code>mentions</code> |
-          @-mention providers | | | <code>skills</code> | Agent Skills (markdown) | | | <code>themes</code> | Color themes | | |
-          <code>backend.protocolEntrypoints</code> | Extension-owned stdio protocols launched by the host CLI |
-          <a href="#protocol-entrypoints-backendprotocolentrypoints">See below</a> | | <code>transcriptRenderers</code> | Custom tool result
-          rendering | | | <code>promptReferences</code> | @-mention resolvers | | | <code>turnContextProviders</code> | Ordered per-turn
-          context injection | <a href="#turn-context-providers-turncontextproviders">See below</a> | | <code>promptContextProviders</code> |
-          Prompt Assembly context diagnostics/providers | <a href="#prompt-context-providers-promptcontextproviders">See below</a> | |
-          <code>selectionActions</code> | Actions available for selected transcript/composer text |
-          <a href="#selection-actions-selectionactions">See below</a> | | <code>transcriptBlocks</code> | Extension-owned transcript block
-          renderers | <a href="#transcript-blocks-transcriptblocks">See below</a> | | <code>subscriptions</code> | Backend event
-          subscriptions | <a href="#backend-event-subscriptions-subscriptions">See below</a> | | <code>secrets</code> | Secret declarations
-          surfaced in Settings | <a href="#settings">See below</a> | | <code>activityTreeItemElements</code> | Custom content in
-          thread/activity tree rows | <a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a> | |
-          <code>activityTreeItemStyles</code> | Custom row styling for thread/activity tree items |
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a> | | <code>quickOpen</code> |
-          Command palette surfaces/tabs backed by extension providers | <a href="#quick-open-surfaces-quickopen">See below</a> | |
-          <code>searchProviders</code> | Backend-powered global search providers |
-          <a href="#global-search-providers-searchproviders">See below</a> | | <code>runtimeProviders</code> | Extension-advertised
-          local/remote runtime targets | <a href="#runtime-providers-runtimeproviders">See below</a> | | <code>settings</code> | Settings
-          schema contributions | <a href="#settings">See below</a> | | <code>settingsComponent</code> | Component panel in Settings |
-          <a href="#settings-component-settingscomponent">See below</a> | | <code>topBarElements</code> | Top bar indicator icons |
-          <a href="#top-bar-elements-topbarelements">See below</a> | | <code>conversationHeaderElements</code> | Badges in conversation
-          header | <a href="#conversation-header-elements-conversationheaderelements">See below</a> | | <code>messageActions</code> | Hover
-          buttons on messages | <a href="#message-actions-messageactions">See below</a> | | <code>composerShelves</code> | Sections above
-          the composer | <a href="#composer-shelves-composershelves">See below</a> | | <code>newConversationPanels</code> | Panels on the
-          new conversation page | <a href="#new-conversation-panels-newconversationpanels">See below</a> | | <code>composerControls</code> |
-          Component controls in the composer bottom row | <a href="#composer-controls-composercontrols">See below</a> | |
-          <code>composerButtons</code> | Legacy composer controls | <a href="#composer-buttons-composerbuttons">See below</a> | |
-          <code>composerInputTools</code> | Component tools beside composer controls |
-          <a href="#composer-input-tools-composerinputtools">See below</a> | | <code>toolbarActions</code> | Icon buttons in composer
-          toolbar | <a href="#toolbar-actions-toolbaractions">See below</a> | | <code>conversationDecorators</code> | Badges on conversation
-          list items | <a href="#conversation-decorators-conversationdecorators">See below</a> | | <code>contextMenus</code> | Right-click
-          menu items | <a href="#context-menus-contextmenus">See below</a> | | <code>threadHeaderActions</code> | Component buttons in the
-          Threads header | <a href="#thread-header-actions-threadheaderactions">See below</a> | | <code>statusBarItems</code> | Labels in
-          the composer status bar | <a href="#status-bar-items-statusbaritems">See below</a> | | <code>conversationLifecycle</code> |
-          Conversation-state banners/inline UI | <a href="#conversation-lifecycle-conversationlifecycle">See below</a> | |
-          <code>composerAttachmentProviders</code> | Buttons that add/derive composer attachment context |
-          <a href="#composer-attachments">See below</a> | | <code>composerAttachmentRenderers</code> | Renderers for extension-owned
-          composer attachment chips | <a href="#composer-attachments">See below</a> | | <code>composerAttachmentResolvers</code> | Backend
-          resolvers for extension-owned attachment refs | <a href="#composer-attachments">See below</a> | |
-          <code>activityTreeItemActions</code> | Inline action buttons on thread/activity tree rows |
-          <a href="#activity-tree-item-actions-activitytreeitemactions">See below</a> |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Purpose</th>
+              <th>Docs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>views</code></td>
+              <td>UI surfaces (pages, panels)</td>
+              <td>See <code>docs/views.md</code></td>
+            </tr>
+            <tr>
+              <td><code>nav</code></td>
+              <td>Left sidebar navigation items</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>commands</code></td>
+              <td>Extension actions invokable by command IDs</td>
+              <td>
+                See
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+                  >Commands and keybindings</a
+                >
+              </td>
+            </tr>
+            <tr>
+              <td><code>keybindings</code></td>
+              <td>Keyboard shortcuts that execute commands</td>
+              <td>
+                See
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md#commands-and-keybindings"
+                  >Commands and keybindings</a
+                >
+              </td>
+            </tr>
+            <tr>
+              <td><code>slashCommands</code></td>
+              <td><code>/command</code> in composer</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>tools</code></td>
+              <td>Agent-callable tools</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>skillProviders</code></td>
+              <td>Dynamic Prompt Assembly skill providers</td>
+              <td><a href="#prompt-assembly">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>toolProviders</code></td>
+              <td>Dynamic Prompt Assembly tool providers</td>
+              <td><a href="#prompt-assembly">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>promptTemplateProviders</code></td>
+              <td>Dynamic Prompt Assembly template providers</td>
+              <td><a href="#prompt-assembly">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>instructionProviders</code></td>
+              <td>Dynamic Prompt Assembly instruction layers</td>
+              <td><a href="#prompt-assembly">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>promptAssemblyHooks</code></td>
+              <td>Privileged Prompt Assembly hooks</td>
+              <td><a href="#prompt-assembly">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>modelProfiles</code></td>
+              <td>Enabled extension runtime profiles matched by provider/model globs</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>mentions</code></td>
+              <td>@-mention providers</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>skills</code></td>
+              <td>Agent Skills (markdown)</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>themes</code></td>
+              <td>Color themes</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>backend.protocolEntrypoints</code></td>
+              <td>Extension-owned stdio protocols launched by the host CLI</td>
+              <td><a href="#protocol-entrypoints-backendprotocolentrypoints">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>transcriptRenderers</code></td>
+              <td>Custom tool result rendering</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>promptReferences</code></td>
+              <td>@-mention resolvers</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>turnContextProviders</code></td>
+              <td>Ordered per-turn context injection</td>
+              <td><a href="#turn-context-providers-turncontextproviders">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>promptContextProviders</code></td>
+              <td>Prompt Assembly context diagnostics/providers</td>
+              <td><a href="#prompt-context-providers-promptcontextproviders">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>selectionActions</code></td>
+              <td>Actions available for selected transcript/composer text</td>
+              <td><a href="#selection-actions-selectionactions">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>transcriptBlocks</code></td>
+              <td>Extension-owned transcript block renderers</td>
+              <td><a href="#transcript-blocks-transcriptblocks">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>subscriptions</code></td>
+              <td>Backend event subscriptions</td>
+              <td><a href="#backend-event-subscriptions-subscriptions">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>secrets</code></td>
+              <td>Secret declarations surfaced in Settings</td>
+              <td><a href="#settings">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>activityTreeItemElements</code></td>
+              <td>Custom content in thread/activity tree rows</td>
+              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a></td>
+            </tr>
+            <tr>
+              <td><code>activityTreeItemStyles</code></td>
+              <td>Custom row styling for thread/activity tree items</td>
+              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/activity-tree.md">Activity tree</a></td>
+            </tr>
+            <tr>
+              <td><code>quickOpen</code></td>
+              <td>Command palette surfaces/tabs backed by extension providers</td>
+              <td><a href="#quick-open-surfaces-quickopen">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>searchProviders</code></td>
+              <td>Backend-powered global search providers</td>
+              <td><a href="#global-search-providers-searchproviders">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>runtimeProviders</code></td>
+              <td>Extension-advertised local/remote runtime targets</td>
+              <td><a href="#runtime-providers-runtimeproviders">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>settings</code></td>
+              <td>Settings schema contributions</td>
+              <td><a href="#settings">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>settingsComponent</code></td>
+              <td>Component panel in Settings</td>
+              <td><a href="#settings-component-settingscomponent">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>topBarElements</code></td>
+              <td>Top bar indicator icons</td>
+              <td><a href="#top-bar-elements-topbarelements">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>conversationHeaderElements</code></td>
+              <td>Badges in conversation header</td>
+              <td><a href="#conversation-header-elements-conversationheaderelements">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>messageActions</code></td>
+              <td>Hover buttons on messages</td>
+              <td><a href="#message-actions-messageactions">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerShelves</code></td>
+              <td>Sections above the composer</td>
+              <td><a href="#composer-shelves-composershelves">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>newConversationPanels</code></td>
+              <td>Panels on the new conversation page</td>
+              <td><a href="#new-conversation-panels-newconversationpanels">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerControls</code></td>
+              <td>Component controls in the composer bottom row</td>
+              <td><a href="#composer-controls-composercontrols">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerButtons</code></td>
+              <td>Legacy composer controls</td>
+              <td><a href="#composer-buttons-composerbuttons">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerInputTools</code></td>
+              <td>Component tools beside composer controls</td>
+              <td><a href="#composer-input-tools-composerinputtools">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>toolbarActions</code></td>
+              <td>Icon buttons in composer toolbar</td>
+              <td><a href="#toolbar-actions-toolbaractions">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>conversationDecorators</code></td>
+              <td>Badges on conversation list items</td>
+              <td><a href="#conversation-decorators-conversationdecorators">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>contextMenus</code></td>
+              <td>Right-click menu items</td>
+              <td><a href="#context-menus-contextmenus">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>threadHeaderActions</code></td>
+              <td>Component buttons in the Threads header</td>
+              <td><a href="#thread-header-actions-threadheaderactions">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>statusBarItems</code></td>
+              <td>Labels in the composer status bar</td>
+              <td><a href="#status-bar-items-statusbaritems">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>conversationLifecycle</code></td>
+              <td>Conversation-state banners/inline UI</td>
+              <td><a href="#conversation-lifecycle-conversationlifecycle">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerAttachmentProviders</code></td>
+              <td>Buttons that add/derive composer attachment context</td>
+              <td><a href="#composer-attachments">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerAttachmentRenderers</code></td>
+              <td>Renderers for extension-owned composer attachment chips</td>
+              <td><a href="#composer-attachments">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>composerAttachmentResolvers</code></td>
+              <td>Backend resolvers for extension-owned attachment refs</td>
+              <td><a href="#composer-attachments">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>activityTreeItemActions</code></td>
+              <td>Inline action buttons on thread/activity tree rows</td>
+              <td><a href="#activity-tree-item-actions-activitytreeitemactions">See below</a></td>
+            </tr>
+          </tbody>
+        </table>
         <h3 id="standard-file-change-metadata">Standard file change metadata</h3>
         <p>
           File-mutating tools should return standard <code>details.fileChanges</code> metadata when they can identify the exact mutation
@@ -1159,27 +1364,102 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
           Each setting key is a dot-separated path (e.g. <code>myExt.timeout</code>). The Settings UI renders the appropriate control based
           on <code>type</code>:
         </p>
-        <p>
-          | Type | Control | | --------- | ------------ | | <code>string</code> | Text input | | <code>boolean</code> | Checkbox | |
-          <code>number</code> | Number input | | <code>select</code> | Dropdown |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>string</code></td>
+              <td>Text input</td>
+            </tr>
+            <tr>
+              <td><code>boolean</code></td>
+              <td>Checkbox</td>
+            </tr>
+            <tr>
+              <td><code>number</code></td>
+              <td>Number input</td>
+            </tr>
+            <tr>
+              <td><code>select</code></td>
+              <td>Dropdown</td>
+            </tr>
+          </tbody>
+        </table>
         <p>All settings are stored in a single <code>&lt;stateRoot&gt;/settings.json</code> file.</p>
-        <p>
-          | Property | Description | Required | | ------------- | --------------------------------------------- | ---------- | |
-          <code>type</code> | <code>string</code>, <code>boolean</code>, <code>number</code>, or <code>select</code> | Yes | |
-          <code>default</code> | Default value | No | | <code>description</code> | Shown next to the field in the Settings UI | No | |
-          <code>group</code> | Groups settings together. Default <code>&quot;General&quot;</code> | No | | <code>enum</code> | Allowed
-          values for <code>select</code> type | For select | | <code>placeholder</code> | Placeholder text for string inputs | No | |
-          <code>order</code> | Sort order within group. Default 0. | No |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Description</th>
+              <th>Required</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>type</code></td>
+              <td><code>string</code>, <code>boolean</code>, <code>number</code>, or <code>select</code></td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td><code>default</code></td>
+              <td>Default value</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td><code>description</code></td>
+              <td>Shown next to the field in the Settings UI</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td><code>group</code></td>
+              <td>Groups settings together. Default <code>&quot;General&quot;</code></td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td><code>enum</code></td>
+              <td>Allowed values for <code>select</code> type</td>
+              <td>For select</td>
+            </tr>
+            <tr>
+              <td><code>placeholder</code></td>
+              <td>Placeholder text for string inputs</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td><code>order</code></td>
+              <td>Sort order within group. Default 0.</td>
+              <td>No</td>
+            </tr>
+          </tbody>
+        </table>
         <p>#### Settings vs Extension Storage</p>
         <p>Extensions have two storage mechanisms for different purposes:</p>
-        <p>
-          | Mechanism | Location | Purpose | | ------------ | ------------------------------------ |
-          ---------------------------------------- | | <strong>Settings</strong> | <code>&lt;stateRoot&gt;/settings.json</code> (shared) |
-          User-facing config declared in manifest | | <strong>Storage</strong> | SQLite-backed, per-extension | Internal runtime state
-          (caches, session) |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mechanism</th>
+              <th>Location</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Settings</strong></td>
+              <td><code>&lt;stateRoot&gt;/settings.json</code> (shared)</td>
+              <td>User-facing config declared in manifest</td>
+            </tr>
+            <tr>
+              <td><strong>Storage</strong></td>
+              <td>SQLite-backed, per-extension</td>
+              <td>Internal runtime state (caches, session)</td>
+            </tr>
+          </tbody>
+        </table>
         <ul>
           <li>Use <strong>settings</strong> for values the user configures through the Settings UI.</li>
           <li>Use <strong>storage</strong> (<code>ctx.storage</code> / <code>pa.storage</code>) for internal state like</li>
@@ -1194,19 +1474,76 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
         </ul>
         <h3 id="backend-context-ctx">Backend Context (<code>ctx</code>)</h3>
         <p>The <code>ExtensionBackendContext</code> provides:</p>
-        <p>
-          | Property | Purpose | | ------------------- |
-          ------------------------------------------------------------------------------------------------------- | |
-          <code>ctx.storage</code> | Persistent key-value store per extension (SQLite-backed) | | <code>ctx.attention</code> |
-          Enqueue/list/cancel async conversation attention events (wakeups, callbacks) | | <code>ctx.automations</code> | Scheduled task
-          management | | <code>ctx.runs</code> | Background run management | | <code>ctx.conversations</code> | Conversation read/write
-          operations | | <code>ctx.filesystem</code> | Scoped filesystem authority for workspace, extension file storage, temp, artifact,
-          and other host roots | | <code>ctx.workspace</code> | Workspace file operations (read, write, list); convenience wrapper over the
-          filesystem authority | | <code>ctx.vault</code> | Knowledge vault operations | | <code>ctx.git</code> | Git status, diff, log | |
-          <code>ctx.shell</code> | Shell command execution | | <code>ctx.notify</code> | Toast, system notifications, badge (see below) | |
-          <code>ctx.events</code> | Inter-extension event pub/sub | | <code>ctx.extensions</code> | Call actions on other extensions | |
-          <code>ctx.ui</code> | Invalidate UI state topics | | <code>ctx.log</code> | Structured logging |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ctx.storage</code></td>
+              <td>Persistent key-value store per extension (SQLite-backed)</td>
+            </tr>
+            <tr>
+              <td><code>ctx.attention</code></td>
+              <td>Enqueue/list/cancel async conversation attention events (wakeups, callbacks)</td>
+            </tr>
+            <tr>
+              <td><code>ctx.automations</code></td>
+              <td>Scheduled task management</td>
+            </tr>
+            <tr>
+              <td><code>ctx.runs</code></td>
+              <td>Background run management</td>
+            </tr>
+            <tr>
+              <td><code>ctx.conversations</code></td>
+              <td>Conversation read/write operations</td>
+            </tr>
+            <tr>
+              <td><code>ctx.filesystem</code></td>
+              <td>Scoped filesystem authority for workspace, extension file storage, temp, artifact, and other host roots</td>
+            </tr>
+            <tr>
+              <td><code>ctx.workspace</code></td>
+              <td>Workspace file operations (read, write, list); convenience wrapper over the filesystem authority</td>
+            </tr>
+            <tr>
+              <td><code>ctx.vault</code></td>
+              <td>Knowledge vault operations</td>
+            </tr>
+            <tr>
+              <td><code>ctx.git</code></td>
+              <td>Git status, diff, log</td>
+            </tr>
+            <tr>
+              <td><code>ctx.shell</code></td>
+              <td>Shell command execution</td>
+            </tr>
+            <tr>
+              <td><code>ctx.notify</code></td>
+              <td>Toast, system notifications, badge (see below)</td>
+            </tr>
+            <tr>
+              <td><code>ctx.events</code></td>
+              <td>Inter-extension event pub/sub</td>
+            </tr>
+            <tr>
+              <td><code>ctx.extensions</code></td>
+              <td>Call actions on other extensions</td>
+            </tr>
+            <tr>
+              <td><code>ctx.ui</code></td>
+              <td>Invalidate UI state topics</td>
+            </tr>
+            <tr>
+              <td><code>ctx.log</code></td>
+              <td>Structured logging</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="attention-events">Attention events</h2>
         <p>
           Use <code>ctx.attention</code> when an extension has async work that should resume or notify a conversation later. Extensions
@@ -1498,17 +1835,72 @@ export default function (pi: ExtensionAPI) {
           <code>&quot;default&quot;</code>, the default export is used.
         </p>
         <p><strong>All pi-coding-agent events are available:</strong></p>
-        <p>
-          | Event | When | Use Case | | -------------------------- | ----------------------------------- |
-          ------------------------------------ | | <code>before_agent_start</code> | Before the agent processes a prompt | Inject context,
-          modify system prompt | | <code>input</code> | User input received | Intercept or transform input | | <code>context</code> | Before
-          LLM call | Modify messages | | <code>tool_call</code> | Before tool execution | Block/modify tool calls | |
-          <code>tool_result</code> | After tool execution | Post-process results | | <code>session_start</code> | Session loaded |
-          Initialize state | | <code>session_shutdown</code> | Session ending | Clean up resources | | <code>session_before_compact</code> |
-          Before compaction | Customize compaction | | <code>message_start/update/end</code> | Message lifecycle | Custom rendering | |
-          <code>turn_start/end</code> | Turn lifecycle | Track progress | | <code>agent_start/end</code> | Agent cycle lifecycle | Track
-          agent activity |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>When</th>
+              <th>Use Case</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>before_agent_start</code></td>
+              <td>Before the agent processes a prompt</td>
+              <td>Inject context, modify system prompt</td>
+            </tr>
+            <tr>
+              <td><code>input</code></td>
+              <td>User input received</td>
+              <td>Intercept or transform input</td>
+            </tr>
+            <tr>
+              <td><code>context</code></td>
+              <td>Before LLM call</td>
+              <td>Modify messages</td>
+            </tr>
+            <tr>
+              <td><code>tool_call</code></td>
+              <td>Before tool execution</td>
+              <td>Block/modify tool calls</td>
+            </tr>
+            <tr>
+              <td><code>tool_result</code></td>
+              <td>After tool execution</td>
+              <td>Post-process results</td>
+            </tr>
+            <tr>
+              <td><code>session_start</code></td>
+              <td>Session loaded</td>
+              <td>Initialize state</td>
+            </tr>
+            <tr>
+              <td><code>session_shutdown</code></td>
+              <td>Session ending</td>
+              <td>Clean up resources</td>
+            </tr>
+            <tr>
+              <td><code>session_before_compact</code></td>
+              <td>Before compaction</td>
+              <td>Customize compaction</td>
+            </tr>
+            <tr>
+              <td><code>message_start/update/end</code></td>
+              <td>Message lifecycle</td>
+              <td>Custom rendering</td>
+            </tr>
+            <tr>
+              <td><code>turn_start/end</code></td>
+              <td>Turn lifecycle</td>
+              <td>Track progress</td>
+            </tr>
+            <tr>
+              <td><code>agent_start/end</code></td>
+              <td>Agent cycle lifecycle</td>
+              <td>Track agent activity</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           For the full list of Pi lifecycle events and signatures, inspect the installed
           <code>@earendil-works/pi-coding-agent</code> package docs that match the pinned dependency version.
@@ -1575,22 +1967,76 @@ pnpm test</code></pre>
           release publisher reruns the packaged-extension check against the built <code>.app</code> before notarization/upload.
         </p>
         <p>The integration suite covers these categories:</p>
-        <p>
-          | Category | What it validates | | ------------------------- |
-          ---------------------------------------------------------------------------------------------------------------------------------------------------------
-          | | Manifest structure | JSON parses, schemaVersion, version field, required fields, permissions format, routes, startup action
-          validity, backend/no-backend consistency | | Tool schema | <code>inputSchema</code> has <code>type:object</code> +
-          <code>properties</code>, <code>replaces</code> targets valid built-ins | | Action references | All <code>action</code> fields in
-          context menus, commands, toolbar actions, nav badge actions reference known backend handlers or valid system patterns | |
-          Settings/Secrets | Setting type/default consistency, select enum values, dot-separated key format, secret env var format | |
-          Frontend components | Every component field in views/buttons/shelves/panels exists in the frontend bundle | | Cross-extension
-          conflicts | Duplicate IDs, routes, tool names, commands, keybindings, settings, secrets, env variables, mention ids, prompt
-          reference/context provider/quick open ids | | Registry sanity | All 25 system extensions registered, routes point to real
-          extensions | | Backend files | <code>dist/backend.mjs</code> exists, source files present, handler names match | | Frontend files
-          | <code>dist/frontend.js</code> exists, style files present | | Agent extensions | Registration listing, export names, backend
-          entry references | | Skills | File existence, valid Agent Skills frontmatter | | Summary report | Printed overview with counts
-          across 21 registration categories |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>What it validates</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Manifest structure</td>
+              <td>
+                JSON parses, schemaVersion, version field, required fields, permissions format, routes, startup action validity,
+                backend/no-backend consistency
+              </td>
+            </tr>
+            <tr>
+              <td>Tool schema</td>
+              <td>
+                <code>inputSchema</code> has <code>type:object</code> + <code>properties</code>, <code>replaces</code> targets valid
+                built-ins
+              </td>
+            </tr>
+            <tr>
+              <td>Action references</td>
+              <td>
+                All <code>action</code> fields in context menus, commands, toolbar actions, nav badge actions reference known backend
+                handlers or valid system patterns
+              </td>
+            </tr>
+            <tr>
+              <td>Settings/Secrets</td>
+              <td>Setting type/default consistency, select enum values, dot-separated key format, secret env var format</td>
+            </tr>
+            <tr>
+              <td>Frontend components</td>
+              <td>Every component field in views/buttons/shelves/panels exists in the frontend bundle</td>
+            </tr>
+            <tr>
+              <td>Cross-extension conflicts</td>
+              <td>
+                Duplicate IDs, routes, tool names, commands, keybindings, settings, secrets, env variables, mention ids, prompt
+                reference/context provider/quick open ids
+              </td>
+            </tr>
+            <tr>
+              <td>Registry sanity</td>
+              <td>All 25 system extensions registered, routes point to real extensions</td>
+            </tr>
+            <tr>
+              <td>Backend files</td>
+              <td><code>dist/backend.mjs</code> exists, source files present, handler names match</td>
+            </tr>
+            <tr>
+              <td>Frontend files</td>
+              <td><code>dist/frontend.js</code> exists, style files present</td>
+            </tr>
+            <tr>
+              <td>Agent extensions</td>
+              <td>Registration listing, export names, backend entry references</td>
+            </tr>
+            <tr>
+              <td>Skills</td>
+              <td>File existence, valid Agent Skills frontmatter</td>
+            </tr>
+            <tr>
+              <td>Summary report</td>
+              <td>Printed overview with counts across 21 registration categories</td>
+            </tr>
+          </tbody>
+        </table>
         <h3 id="debugging">Debugging</h3>
         <ul>
           <li>Backend logs appear in the server console with <code>[extension:my-ext]</code> prefix.</li>

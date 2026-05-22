@@ -76,33 +76,85 @@ Implement it with editable source files, build it, reload it, visually test it, 
           >
           for copy-paste stubs derived from real first-party extensions:
         </p>
-        <p>
-          | Template | Pattern | | ------------------------------------------------------------------------------ |
-          --------------------------------------------------------- | |
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-data-dashboard/"
-            ><code>data-dashboard</code></a
-          >
-          | Read-only page — load from backend, render table or cards | |
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-crud-page/"
-            ><code>crud-page</code></a
-          >
-          | List + slide-in form editor. Full CRUD. | |
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-settings-section/"
-            ><code>settings-section</code></a
-          >
-          | Section in the shared Settings page. No separate route. |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Template</th>
+              <th>Pattern</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-data-dashboard/"
+                  ><code>data-dashboard</code></a
+                >
+              </td>
+              <td>Read-only page — load from backend, render table or cards</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-crud-page/"
+                  ><code>crud-page</code></a
+                >
+              </td>
+              <td>List + slide-in form editor. Full CRUD.</td>
+            </tr>
+            <tr>
+              <td>
+                <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/templates/template-settings-section/"
+                  ><code>settings-section</code></a
+                >
+              </td>
+              <td>Section in the shared Settings page. No separate route.</td>
+            </tr>
+          </tbody>
+        </table>
         <p>Copy the matching folder, rename the extension id, replace domain types, and build.</p>
         <h2 id="pick-the-right-surface">Pick the right surface</h2>
         <p>Use this as agent guidance, not homework for the user:</p>
-        <p>
-          | If you want... | Ask for... | | ---------------------------------------------------- |
-          ------------------------------------------ | | A full app, dashboard, or workflow | <code>main-page</code> extension | | Context
-          beside the current conversation | <code>right-rail</code> extension | | A compact rail panel plus workbench pane detail view |
-          <code>workbench-detail</code> extension | | Something the agent can call | backend tool or action | | A command palette, slash
-          command, or composer button | command/composer contribution | | Settings for an integration | settings contribution | | Recurring
-          or background behavior | automation/scheduled-task backed extension | | A color theme only | theme contribution |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>If you want...</th>
+              <th>Ask for...</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A full app, dashboard, or workflow</td>
+              <td><code>main-page</code> extension</td>
+            </tr>
+            <tr>
+              <td>Context beside the current conversation</td>
+              <td><code>right-rail</code> extension</td>
+            </tr>
+            <tr>
+              <td>A compact rail panel plus workbench pane detail view</td>
+              <td><code>workbench-detail</code> extension</td>
+            </tr>
+            <tr>
+              <td>Something the agent can call</td>
+              <td>backend tool or action</td>
+            </tr>
+            <tr>
+              <td>A command palette, slash command, or composer button</td>
+              <td>command/composer contribution</td>
+            </tr>
+            <tr>
+              <td>Settings for an integration</td>
+              <td>settings contribution</td>
+            </tr>
+            <tr>
+              <td>Recurring or background behavior</td>
+              <td>automation/scheduled-task backed extension</td>
+            </tr>
+            <tr>
+              <td>A color theme only</td>
+              <td>theme contribution</td>
+            </tr>
+          </tbody>
+        </table>
         <p>When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits.</p>
         <h2 id="what-your-agent-should-do">What your agent should do</h2>
         <p>For a new extension, the agent should:</p>

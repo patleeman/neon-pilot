@@ -111,20 +111,55 @@ pnpm run desktop:demo</code></pre>
           </li>
         </ul>
         <h2 id="layout-modes">Layout Modes</h2>
-        <p>
-          | Mode | Shortcut | Description | | ------------ | -------- | ------------------------------------ | | Conversation |
-          <code>F1</code> | Single-pane layout with left sidebar | | Workbench | <code>F2</code> | Multi-pane layout with side rails |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Shortcut</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Conversation</td>
+              <td><code>F1</code></td>
+              <td>Single-pane layout with left sidebar</td>
+            </tr>
+            <tr>
+              <td>Workbench</td>
+              <td><code>F2</code></td>
+              <td>Multi-pane layout with side rails</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           Toggle the left sidebar with <code>Cmd+/</code> (or <code>Ctrl+/</code>). Toggle the right rail with <code>Cmd+\</code> (or
           <code>Ctrl+\</code>).
         </p>
         <h2 id="workbench-rails">Workbench Rails</h2>
         <p>In Workbench mode, the right rail nav tabs include:</p>
-        <p>
-          | Tab | Description | | ------------- | ----------------------------- | | File Explorer | Project file tree browser | | Artifacts
-          | Rendered HTML, Mermaid, LaTeX | | Browser | Embedded webview |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Tab</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>File Explorer</td>
+              <td>Project file tree browser</td>
+            </tr>
+            <tr>
+              <td>Artifacts</td>
+              <td>Rendered HTML, Mermaid, LaTeX</td>
+            </tr>
+            <tr>
+              <td>Browser</td>
+              <td>Embedded webview</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are
           context-sensitive — Artifacts appear when the conversation has rendered artifacts. Checkpoint diffs and background work render
@@ -132,19 +167,91 @@ pnpm run desktop:demo</code></pre>
         </p>
         <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
         <p>All desktop shortcuts are configurable in Settings → Keyboard. Defaults:</p>
-        <p>
-          | Action | Default | | ----------------- | --------------------- | | New conversation | <code>Cmd+N</code> | | Conversation mode |
-          <code>F1</code> | | Workbench mode | <code>F2</code> | | Toggle sidebar | <code>Cmd+/</code> (or <code>Ctrl+/</code>) | | Toggle
-          right rail | <code>Cmd+\</code> (or <code>Ctrl+\</code>) | | Settings | <code>Cmd+,</code> |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>New conversation</td>
+              <td><code>Cmd+N</code></td>
+            </tr>
+            <tr>
+              <td>Conversation mode</td>
+              <td><code>F1</code></td>
+            </tr>
+            <tr>
+              <td>Workbench mode</td>
+              <td><code>F2</code></td>
+            </tr>
+            <tr>
+              <td>Toggle sidebar</td>
+              <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
+            </tr>
+            <tr>
+              <td>Toggle right rail</td>
+              <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td><code>Cmd+,</code></td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="routes">Routes</h2>
-        <p>
-          | Route | Page | | -------------------- | --------------------- | | <code>/conversations</code> | Conversation list | |
-          <code>/conversations/new</code> | New conversation | | <code>/conversations/:id</code> | Existing conversation | |
-          <code>/knowledge</code> | Knowledge browser | | <code>/automations</code> | Automation list | | <code>/automations/:id</code> |
-          Automation detail | | <code>/settings</code> | Settings panel | | <code>/extensions</code> | Extension Manager | |
-          <code>/telemetry</code> | Telemetry traces page | | <code>/gateways</code> | Gateway connections |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Page</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/conversations</code></td>
+              <td>Conversation list</td>
+            </tr>
+            <tr>
+              <td><code>/conversations/new</code></td>
+              <td>New conversation</td>
+            </tr>
+            <tr>
+              <td><code>/conversations/:id</code></td>
+              <td>Existing conversation</td>
+            </tr>
+            <tr>
+              <td><code>/knowledge</code></td>
+              <td>Knowledge browser</td>
+            </tr>
+            <tr>
+              <td><code>/automations</code></td>
+              <td>Automation list</td>
+            </tr>
+            <tr>
+              <td><code>/automations/:id</code></td>
+              <td>Automation detail</td>
+            </tr>
+            <tr>
+              <td><code>/settings</code></td>
+              <td>Settings panel</td>
+            </tr>
+            <tr>
+              <td><code>/extensions</code></td>
+              <td>Extension Manager</td>
+            </tr>
+            <tr>
+              <td><code>/telemetry</code></td>
+              <td>Telemetry traces page</td>
+            </tr>
+            <tr>
+              <td><code>/gateways</code></td>
+              <td>Gateway connections</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="demo-mode">Demo Mode</h2>
         <p>
           <code>pnpm run desktop:demo</code> creates an isolated temporary state root with seeded conversations, automations, executions,

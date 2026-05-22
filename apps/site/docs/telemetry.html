@@ -57,17 +57,39 @@
           Telemetry is local to the active state root. The default state root is <code>~/.local/state/neon-pilot</code>, or
           <code>$NEON_PILOT_STATE_ROOT</code> when set.
         </p>
-        <p>
-          | Data | Location | Role | | ----------------------------- |
-          ----------------------------------------------------------------------------------------- |
-          ---------------------------------------------------------- | | Raw app telemetry |
-          <code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code> | Source of truth for generic app events.
-          Append-only JSONL. | | Telemetry export bundles |
-          <code>&lt;state-root&gt;/exports/telemetry/app-telemetry-&lt;timestamp&gt;.jsonl</code> | Bug-report bundles generated from
-          Settings. | | Query index and trace metrics | <code>&lt;state-root&gt;/observability/observability.db</code> | SQLite index for UI
-          queries plus structured trace tables. | | Legacy trace DBs | <code>&lt;state-root&gt;/pi-agent/state/trace/*.db</code> or
-          <code>&lt;state-root&gt;/sync/pi-agent/state/trace/*.db</code> | Imported once when present, then deleted after success. |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Location</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Raw app telemetry</td>
+              <td><code>&lt;state-root&gt;/logs/telemetry/app-telemetry-YYYY-MM-DD[.N].jsonl</code></td>
+              <td>Source of truth for generic app events. Append-only JSONL.</td>
+            </tr>
+            <tr>
+              <td>Telemetry export bundles</td>
+              <td><code>&lt;state-root&gt;/exports/telemetry/app-telemetry-&lt;timestamp&gt;.jsonl</code></td>
+              <td>Bug-report bundles generated from Settings.</td>
+            </tr>
+            <tr>
+              <td>Query index and trace metrics</td>
+              <td><code>&lt;state-root&gt;/observability/observability.db</code></td>
+              <td>SQLite index for UI queries plus structured trace tables.</td>
+            </tr>
+            <tr>
+              <td>Legacy trace DBs</td>
+              <td>
+                <code>&lt;state-root&gt;/pi-agent/state/trace/*.db</code> or <code>&lt;state-root&gt;/sync/pi-agent/state/trace/*.db</code>
+              </td>
+              <td>Imported once when present, then deleted after success.</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           The important bit: <strong>raw app telemetry lives in JSONL first</strong>. SQLite is a derived index for convenient filtering and
           charts. If SQLite is locked, migrating, or corrupt, telemetry writes should still preserve the raw event in the log file.

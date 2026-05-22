@@ -53,12 +53,32 @@
           and stop happen with the app lifecycle.
         </p>
         <h2 id="what-the-daemon-owns">What the Daemon Owns</h2>
-        <p>
-          | Component | Description | | --------------- | ----------------------------------------------------------------------------- | |
-          Background work | Detached commands and subagents, started from conversations, inspected later | | Scheduled tasks | Recurring or
-          one-time automations with cron or natural-language schedules | | Wakeups | Conversation callbacks triggered by completed
-          background work and automations | | Follow-up queue | Tell-me-later wakeups that resume a specific conversation |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Background work</td>
+              <td>Detached commands and subagents, started from conversations, inspected later</td>
+            </tr>
+            <tr>
+              <td>Scheduled tasks</td>
+              <td>Recurring or one-time automations with cron or natural-language schedules</td>
+            </tr>
+            <tr>
+              <td>Wakeups</td>
+              <td>Conversation callbacks triggered by completed background work and automations</td>
+            </tr>
+            <tr>
+              <td>Follow-up queue</td>
+              <td>Tell-me-later wakeups that resume a specific conversation</td>
+            </tr>
+          </tbody>
+        </table>
         <h2 id="lifecycle">Lifecycle</h2>
         <p>
           The desktop app spawns the daemon as a child process on launch and sends SIGTERM on quit. The daemon communicates over a local
@@ -77,10 +97,22 @@
           live conversations instead of shelling out to the <code>pi</code> or <code>pa</code> CLI binaries.
         </p>
         <h2 id="daemon-state-api">Daemon State API</h2>
-        <p>
-          | Endpoint | Method | What it returns | | ------------- | ------ | ---------------------------------------- | |
-          <code>/api/daemon</code> | GET | Current daemon runtime status and uptime |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Endpoint</th>
+              <th>Method</th>
+              <th>What it returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/api/daemon</code></td>
+              <td>GET</td>
+              <td>Current daemon runtime status and uptime</td>
+            </tr>
+          </tbody>
+        </table>
         <h3 id="state-response">State response</h3>
         <pre><code>{
   &quot;running&quot;: true,
@@ -96,11 +128,28 @@
           daemon runtime files live beside that explicit socket path instead and the namespace is ignored; this lets dev hosts pin a
           specific isolated runtime DB.
         </p>
-        <p>
-          | Path | Content | | ------------ | ------------------------------------------------------------ | | <code>runtime.db</code> |
-          SQLite database for durable runs, scheduled tasks, reminders | | <code>socket</code> | Local Unix socket for desktop app
-          communication | | <code>logs/</code> | Background work output logs |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Content</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>runtime.db</code></td>
+              <td>SQLite database for durable runs, scheduled tasks, reminders</td>
+            </tr>
+            <tr>
+              <td><code>socket</code></td>
+              <td>Local Unix socket for desktop app communication</td>
+            </tr>
+            <tr>
+              <td><code>logs/</code></td>
+              <td>Background work output logs</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           On startup, the runtime DB is integrity-checked before schema setup. If SQLite reports corruption, the app tries to recover it
           with <code>sqlite3 .recover</code>, quarantines the original files under <code>.corrupt/</code>, and recreates a healthy DB if

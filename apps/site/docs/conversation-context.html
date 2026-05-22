@@ -77,10 +77,28 @@ Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
         <p>Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge rail.</p>
         <h2 id="binary-attachments">Binary Attachments</h2>
         <p>Images, PDFs, and other binary files can be attached to individual messages:</p>
-        <p>
-          | Method | How | | ----------- | ----------------------------------------- | | Paste | <code>Ctrl+V</code> (macOS) or
-          <code>Ctrl+V</code> (Windows) | | Drag | Drag file into the composer | | File picker | Use the attachment button in the composer |
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>How</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Paste</td>
+              <td><code>Ctrl+V</code> (macOS) or <code>Ctrl+V</code> (Windows)</td>
+            </tr>
+            <tr>
+              <td>Drag</td>
+              <td>Drag file into the composer</td>
+            </tr>
+            <tr>
+              <td>File picker</td>
+              <td>Use the attachment button in the composer</td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           Images are sent to image-capable models as image content. The composer downscales large images before upload, and text-only image
           probing caps each prompt at 8 images / 8 MiB per image. For text-only models, Neon Pilot saves the images locally, assigns stable

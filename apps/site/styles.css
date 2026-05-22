@@ -762,7 +762,8 @@ footer a {
 
 .docs-content p,
 .docs-content ul,
-.docs-content pre {
+.docs-content pre,
+.docs-content table {
   margin-bottom: 18px;
 }
 
@@ -797,6 +798,37 @@ footer a {
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.docs-content th,
+.docs-content td {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.docs-content th {
+  color: #f4f1ea;
+  background: #0d121c;
+  font-weight: 700;
+}
+
+.docs-content td {
+  color: #c3c0b8;
+}
+
+.docs-content tr:last-child td {
+  border-bottom: 0;
 }
 
 .edit-link {
