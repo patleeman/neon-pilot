@@ -243,6 +243,10 @@ async function main() {
       return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
     const draftSubmitVisibleMs = draftSubmitResult.durationMs;
+    const createLiveSessionClientMs = await evalJs(
+      cdp,
+      `globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.filter(s=>s.name==='desktop.createLiveSession').at(-1)?.durationMs ?? null`,
+    );
     const routeSettingsMs = (
       await measure('settings', async () => {
         await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
@@ -296,6 +300,7 @@ async function main() {
       draftSubmitVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
+      createLiveSessionClientMs,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,

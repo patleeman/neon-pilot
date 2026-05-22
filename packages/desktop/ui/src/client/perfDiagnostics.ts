@@ -32,10 +32,18 @@ interface ChatRenderSample {
   meta: Record<string, unknown>;
 }
 
+interface ClientPerfSample {
+  name: string;
+  recordedAt: string;
+  durationMs: number;
+  meta?: Record<string, unknown>;
+}
+
 interface PerfStore {
   apiSamples: PerfApiSample[];
   conversationOpenSamples: ConversationOpenPhaseSample[];
   chatRenderSamples: ChatRenderSample[];
+  clientSamples: ClientPerfSample[];
 }
 
 const MAX_PERF_SAMPLES = 120;
@@ -43,6 +51,7 @@ const perfStore: PerfStore = {
   apiSamples: [],
   conversationOpenSamples: [],
   chatRenderSamples: [],
+  clientSamples: [],
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
 publishPerfStore();
@@ -100,6 +109,20 @@ export function recordChatRenderTiming(input: {
   publishPerfStore();
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][chat-render]', sample);
+  }
+}
+
+export function recordClientPerfTiming(input: { name: string; startedAtMs: number; meta?: Record<string, unknown> }): void {
+  const sample: ClientPerfSample = {
+    name: input.name,
+    recordedAt: new Date().toISOString(),
+    durationMs: Math.max(0, performance.now() - input.startedAtMs),
+    ...(input.meta ? { meta: input.meta } : {}),
+  };
+  appendSample(perfStore.clientSamples, sample);
+  publishPerfStore();
+  if (shouldLogPerfSamples()) {
+    console.info('[pa-perf][client]', sample);
   }
 }
 

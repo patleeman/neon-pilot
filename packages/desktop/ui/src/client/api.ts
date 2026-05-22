@@ -58,7 +58,7 @@ import type {
   WorkspaceFileContent,
 } from '../shared/types';
 import { buildApiPath } from './apiBase';
-import { recordApiTiming } from './perfDiagnostics';
+import { recordApiTiming, recordClientPerfTiming } from './perfDiagnostics';
 
 // ── Retry helpers for transient network errors (e.g. server restarts) ────────
 
@@ -867,7 +867,10 @@ export const api = {
       relatedConversationIds?: unknown;
     },
   ) => {
-    return (await requireLocalDesktopBridge('Creating live sessions')).createLiveSession({
+    const startedAtMs = performance.now();
+    const result = await (
+      await requireLocalDesktopBridge('Creating live sessions')
+    ).createLiveSession({
       cwd,
       ...(options?.workspaceCwd !== undefined ? { workspaceCwd: options.workspaceCwd } : {}),
       ...(options?.model !== undefined ? { model: options.model } : {}),
@@ -880,6 +883,12 @@ export const api = {
       ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
       ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
     });
+    recordClientPerfTiming({
+      name: 'desktop.createLiveSession',
+      startedAtMs,
+      meta: { hasPrompt: Boolean(text?.trim()), hasCwd: Boolean(cwd?.trim()) },
+    });
+    return result;
   },
 
   resumeSession: async (sessionFile: string, cwd?: string) => {
