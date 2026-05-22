@@ -3,6 +3,7 @@
  * Fetches all telemetry endpoints with a configurable time range.
  */
 
+import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import type {
   AppTelemetryEventRow,
   AutoModeSummary,
@@ -22,13 +23,6 @@ import type {
   TraceToolHealth,
 } from '@neon-pilot/extensions/data';
 import { useCallback, useEffect, useState } from 'react';
-
-async function telemetryGet<T>(path: string, range: TraceRange): Promise<T> {
-  const params = new URLSearchParams({ range });
-  const response = await fetch(`/api/extensions/system-telemetry/routes${path}?${params.toString()}`);
-  if (!response.ok) throw new Error(`Telemetry request failed: ${response.status}`);
-  return (await response.json()) as T;
-}
 
 function notifyError(message: string) {
   window.dispatchEvent(new CustomEvent('neon-pilot-notification', { detail: { type: 'error', message, source: 'system-telemetry' } }));
@@ -57,6 +51,22 @@ export interface TracesData {
   error: string | null;
 }
 
+interface TelemetryActionData {
+  summary: TraceSummary;
+  modelUsage: { models: TraceModelUsage[]; throughput: TraceThroughput[] };
+  costByConversation: TraceCostRow[];
+  toolHealth: TraceToolHealth[];
+  context: { sessions: TraceContextSession[]; compactions: TraceCompactionEvent[]; compactionAggs: TraceCompactionAggs };
+  agentLoop: TraceAgentLoop;
+  tokensDaily: TraceTokenDaily[];
+  toolFlow: ToolFlowResult;
+  autoMode: AutoModeSummary;
+  cacheEfficiency: { series: unknown[]; aggregate: CacheEfficiencyAggregate };
+  systemPrompt: { series: unknown[]; aggregate: SystemPromptAggregate };
+  contextPointers: ContextPointerUsageResult;
+  sessionIntegrity: AppTelemetryEventRow[];
+}
+
 const EMPTY: TracesData = {
   summary: null,
   modelUsage: null,
@@ -78,75 +88,33 @@ const EMPTY: TracesData = {
   error: null,
 };
 
-export function useTracesData(range: TraceRange): TracesData & { refetch: () => void } {
+export function useTracesData(range: TraceRange, pa: NativeExtensionClient): TracesData & { refetch: () => void } {
   const [data, setData] = useState<TracesData>(EMPTY);
 
   const fetch = useCallback(async () => {
     setData((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const results = await Promise.allSettled([
-        telemetryGet<TraceSummary>('/traces/summary', range),
-        telemetryGet<{ models: TraceModelUsage[]; throughput: TraceThroughput[] }>('/traces/model-usage', range),
-        telemetryGet<TraceCostRow[]>('/traces/cost-by-conversation', range),
-        telemetryGet<TraceToolHealth[]>('/traces/tool-health', range),
-        telemetryGet<{ sessions: TraceContextSession[]; compactions: TraceCompactionEvent[]; compactionAggs: TraceCompactionAggs }>(
-          '/traces/context',
-          range,
-        ),
-        telemetryGet<TraceAgentLoop>('/traces/agent-loop', range),
-        telemetryGet<TraceTokenDaily[]>('/traces/tokens-daily', range),
-        telemetryGet<ToolFlowResult>('/traces/tool-flow', range),
-        telemetryGet<AutoModeSummary>('/traces/auto-mode', range),
-        telemetryGet<{ series: unknown[]; aggregate: CacheEfficiencyAggregate }>('/traces/cache-efficiency', range),
-        telemetryGet<{ series: unknown[]; aggregate: SystemPromptAggregate }>('/traces/system-prompt', range),
-        telemetryGet<ContextPointerUsageResult>('/traces/context-pointers', range),
-        telemetryGet<AppTelemetryEventRow[]>('/traces/session-integrity', range),
-      ]);
-
-      const ok = <T>(r: PromiseSettledResult<T>): T | null => (r.status === 'fulfilled' ? r.value : null);
-
-      const summary = ok<TraceSummary>(results[0]);
-      const modelUsage = ok<{ models: TraceModelUsage[]; throughput: TraceThroughput[] }>(results[1]);
-      const costByConversation = ok<TraceCostRow[]>(results[2]);
-      const toolHealth = ok<TraceToolHealth[]>(results[3]);
-      const context = ok<{ sessions: TraceContextSession[]; compactions: TraceCompactionEvent[]; compactionAggs: TraceCompactionAggs }>(
-        results[4],
-      );
-      const agentLoop = ok<TraceAgentLoop>(results[5]);
-      const tokensDaily = ok<TraceTokenDaily[]>(results[6]);
-      const toolFlow = ok<ToolFlowResult>(results[7]);
-      const autoMode = ok<AutoModeSummary>(results[8]);
-      const cacheEff = ok<{ series: unknown[]; aggregate: CacheEfficiencyAggregate }>(results[9]);
-      const sysPrompt = ok<{ series: unknown[]; aggregate: SystemPromptAggregate }>(results[10]);
-      const contextPointers = ok<ContextPointerUsageResult>(results[11]);
-      const sessionIntegrity = ok<AppTelemetryEventRow[]>(results[12]);
-
-      // Log any rejected endpoints for debugging
-      for (let i = 0; i < results.length; i++) {
-        if (results[i].status === 'rejected') {
-          console.warn('[telemetry] endpoint failed:', results[i].reason);
-        }
-      }
+      const result = (await pa.extension.invoke('getTelemetryData', { range })) as TelemetryActionData;
 
       setData({
-        summary,
-        modelUsage: modelUsage?.models ?? null,
-        throughput: modelUsage?.throughput ?? null,
-        costByConversation,
-        toolHealth,
-        contextSessions: context?.sessions ?? null,
-        compactions: context?.compactions ?? null,
-        compactionAggs: context?.compactionAggs ?? null,
-        agentLoop,
-        tokensDaily,
-        toolFlow,
-        autoMode,
-        cacheEfficiency: cacheEff?.aggregate ?? null,
-        systemPrompt: sysPrompt?.aggregate ?? null,
-        contextPointers,
-        sessionIntegrity,
+        summary: result.summary,
+        modelUsage: result.modelUsage.models,
+        throughput: result.modelUsage.throughput,
+        costByConversation: result.costByConversation,
+        toolHealth: result.toolHealth,
+        contextSessions: result.context.sessions,
+        compactions: result.context.compactions,
+        compactionAggs: result.context.compactionAggs,
+        agentLoop: result.agentLoop,
+        tokensDaily: result.tokensDaily,
+        toolFlow: result.toolFlow,
+        autoMode: result.autoMode,
+        cacheEfficiency: result.cacheEfficiency.aggregate,
+        systemPrompt: result.systemPrompt.aggregate,
+        contextPointers: result.contextPointers,
+        sessionIntegrity: result.sessionIntegrity,
         loading: false,
-        error: results.every((r) => r.status === 'rejected') ? 'All telemetry endpoints failed' : null,
+        error: null,
       });
     } catch (err) {
       setData((prev) => ({
@@ -156,7 +124,7 @@ export function useTracesData(range: TraceRange): TracesData & { refetch: () => 
       }));
       notifyError(err instanceof Error ? err.message : 'Failed to load trace data');
     }
-  }, [range]);
+  }, [pa, range]);
 
   useEffect(() => {
     fetch();

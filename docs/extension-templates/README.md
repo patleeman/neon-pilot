@@ -22,8 +22,7 @@ cp -r docs/extension-templates/templates/template-crud-page \
 # 3. Build
 pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-extension
 
-# 4. Reload via Extension Manager or:
-#    POST /api/extensions/my-extension/reload
+# 4. Reload via Extension Manager
 ```
 
 ## When to pick each template

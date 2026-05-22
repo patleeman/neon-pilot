@@ -177,7 +177,7 @@ The canonical catalog lives in `@neon-pilot/extensions/host-view-components` and
 | `workbench.browser.rail`     | Browser rail          | `rightRail` | none  | `wrapper`      |
 | `workbench.browser.detail`   | Browser detail        | `workbench` | none  | `wrapper`      |
 
-Agents can inspect the catalog through the Extension Manager UI or `/api/extensions/host-view-components` once the extension registry has been regenerated/reloaded in the running app.
+Agents can inspect the catalog through the Extension Manager UI once the extension registry has been regenerated/reloaded in the running app.
 
 ## Runtime split
 

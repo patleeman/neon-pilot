@@ -164,8 +164,8 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           1. Read matching JSONL log events first. 2. Fall back to SQLite when no JSONL events exist, which keeps old indexed data visible.
         </p>
         <p>
-          Extension action telemetry uses the same app telemetry data. <code>/api/extensions/telemetry</code> reads
-          <code>extension_action</code> events from the telemetry stream, with the old in-memory ring buffer only as an empty-log fallback.
+          Extension action telemetry uses the same app telemetry data. Extension Manager and other renderer-owned UI should read it through
+          the native bridge/action surfaces, not direct extension HTTP routes.
         </p>
         <h2 id="settings-diagnostics">Settings diagnostics</h2>
         <p>Settings → Desktop includes a <strong>Telemetry logs</strong> panel. It shows:</p>

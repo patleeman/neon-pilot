@@ -122,13 +122,7 @@ pnpm run extension:build -- /path/to/my-extension
 neon-pilot-extension build /path/to/my-extension
 ```
 
-In the packaged app, use Extension Manager actions or endpoints to create, validate, and reload built artifacts:
-
-```text
-POST /api/extensions
-POST /api/extensions/{id}/validate
-POST /api/extensions/{id}/reload
-```
+In the packaged app, use Extension Manager actions to create, validate, and reload built artifacts. Extension UI communicates with backend actions through the native PA client/IPC bridge; do not build extension frontends that fetch `/api/extensions/*`.
 
 Validation is not optional. The extension doctor catches missing bundles, stale output, bad manifest references, missing frontend/backend exports, tool schema problems, forbidden backend imports, non-portable paths, and backend import crashes.
 

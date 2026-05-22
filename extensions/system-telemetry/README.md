@@ -88,7 +88,7 @@ Generic app telemetry reads use `queryAppTelemetryEvents`:
 1. Read matching JSONL log events first.
 2. Fall back to SQLite when no JSONL events exist, which keeps old indexed data visible.
 
-Extension action telemetry uses the same app telemetry data. `/api/extensions/telemetry` reads `extension_action` events from the telemetry stream, with the old in-memory ring buffer only as an empty-log fallback.
+Extension action telemetry uses the same app telemetry data. Renderer-owned UI reads telemetry through extension backend actions/native bridge surfaces, not direct extension HTTP routes.
 
 ## Settings diagnostics
 

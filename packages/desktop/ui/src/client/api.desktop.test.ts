@@ -83,6 +83,36 @@ describe('api desktop transport', () => {
     expect(tools.cwd).toBe('/repo');
   });
 
+  it('routes extension APIs through the desktop local API bridge when available', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const getEnvironment = vi.fn().mockResolvedValue({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local backend is healthy.',
+    });
+    const invokeLocalApi = vi.fn().mockResolvedValue({ ok: true, result: 'pong' });
+    Object.assign(window as { neonPilotDesktop?: unknown }, {
+      neonPilotDesktop: {
+        getEnvironment,
+        invokeLocalApi,
+      },
+    });
+
+    const { api } = await import('./api');
+    const result = await api.invokeExtensionAction('agent-board', 'ping', { hello: true });
+
+    expect(result).toEqual({ ok: true, result: 'pong' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(invokeLocalApi).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/extensions/agent-board/actions/ping',
+      body: { hello: true },
+    });
+  });
+
   it('restores queued messages through the local desktop bridge', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

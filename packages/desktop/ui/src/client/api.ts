@@ -121,6 +121,38 @@ async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE
   return readJsonResponse<T>(res, requestPath);
 }
 
+async function requestDesktopLocalApiJson<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const desktopBridge = getDesktopBridge();
+  if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
+    return (await desktopBridge.invokeLocalApi({ method, path, body })) as T;
+  }
+  return requestJson<T>(method, path, body);
+}
+
+async function extensionGet<T>(path: string): Promise<T> {
+  return requestDesktopLocalApiJson<T>('GET', path);
+}
+
+async function extensionPost<T>(path: string, body?: unknown): Promise<T> {
+  return requestDesktopLocalApiJson<T>('POST', path, body);
+}
+
+async function extensionPut<T>(path: string, body?: unknown): Promise<T> {
+  return requestDesktopLocalApiJson<T>('PUT', path, body);
+}
+
+async function extensionPatch<T>(path: string, body?: unknown): Promise<T> {
+  return requestDesktopLocalApiJson<T>('PATCH', path, body);
+}
+
+async function extensionDelete<T>(path: string): Promise<T> {
+  return requestDesktopLocalApiJson<T>('DELETE', path);
+}
+
 async function get<T>(path: string): Promise<T> {
   return requestJson<T>('GET', path);
 }
@@ -255,29 +287,29 @@ export const api = {
   daemon: async () => {
     return (await requireLocalDesktopBridge('Reading daemon state')).readDaemonState();
   },
-  extensions: async () => get<ExtensionManifest[]>('/extensions'),
-  extensionInstallations: async () => get<ExtensionInstallSummary[]>('/extensions/installed'),
+  extensions: async () => extensionGet<ExtensionManifest[]>('/extensions'),
+  extensionInstallations: async () => extensionGet<ExtensionInstallSummary[]>('/extensions/installed'),
   createExtension: async (input: {
     id: string;
     name: string;
     description?: string;
     template?: 'main-page' | 'right-rail' | 'workbench-detail';
-  }) => post<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions', input),
+  }) => extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions', input),
   importExtension: async (input: { zipPath: string }) =>
-    post<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions/import', input),
+    extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions/import', input),
   cleanRoomImport: async (input: { zipPath: string }) =>
-    post<{ ok: true; runId: string; logPath: string; prompt: string }>('/extensions/clean-room-import', input),
-  extensionRoutes: async () => get<ExtensionRouteSummary[]>('/extensions/routes'),
-  extensionSurfaces: async () => get<ExtensionSurfaceSummary[]>('/extensions/surfaces'),
-  extensionCommands: async () => get<ExtensionCommandRegistration[]>('/extensions/commands'),
+    extensionPost<{ ok: true; runId: string; logPath: string; prompt: string }>('/extensions/clean-room-import', input),
+  extensionRoutes: async () => extensionGet<ExtensionRouteSummary[]>('/extensions/routes'),
+  extensionSurfaces: async () => extensionGet<ExtensionSurfaceSummary[]>('/extensions/surfaces'),
+  extensionCommands: async () => extensionGet<ExtensionCommandRegistration[]>('/extensions/commands'),
   executeExtensionCommand: async (commandId: string, input?: unknown) =>
-    post<{ ok: true; result: unknown } | { ok: false; error: string }>(
+    extensionPost<{ ok: true; result: unknown } | { ok: false; error: string }>(
       `/extensions/commands/${encodeURIComponent(commandId)}/execute`,
       input ?? {},
     ),
   acknowledgeExtensionCommand: async (requestId: string, handled: boolean) =>
-    post<{ ok: true; acknowledged: boolean }>(`/extensions/commands/acks/${encodeURIComponent(requestId)}`, { handled }),
-  extensionKeybindings: async () => get<ExtensionKeybindingRegistration[]>('/extensions/keybindings'),
+    extensionPost<{ ok: true; acknowledged: boolean }>(`/extensions/commands/acks/${encodeURIComponent(requestId)}`, { handled }),
+  extensionKeybindings: async () => extensionGet<ExtensionKeybindingRegistration[]>('/extensions/keybindings'),
   updateExtensionKeybinding: async (
     extensionId: string,
     keybindingId: string,
@@ -291,40 +323,45 @@ export const api = {
       enabled?: boolean;
       reset?: boolean;
     },
-  ) => patch<{ ok: true }>(`/extensions/keybindings/${encodeURIComponent(extensionId)}/${encodeURIComponent(keybindingId)}`, input),
-  extensionSlashCommands: async () => get<ExtensionSlashCommandRegistration[]>('/extensions/slash-commands'),
-  extensionMentions: async () => get<ExtensionMentionRegistration[]>('/extensions/mentions'),
-  extensionQuickOpen: async () => get<ExtensionQuickOpenRegistration[]>('/extensions/quick-open'),
-  extensionSearchProviders: async () => get<ExtensionSearchProviderRegistration[]>('/extensions/search-providers'),
+  ) =>
+    extensionPatch<{ ok: true }>(`/extensions/keybindings/${encodeURIComponent(extensionId)}/${encodeURIComponent(keybindingId)}`, input),
+  extensionSlashCommands: async () => extensionGet<ExtensionSlashCommandRegistration[]>('/extensions/slash-commands'),
+  extensionMentions: async () => extensionGet<ExtensionMentionRegistration[]>('/extensions/mentions'),
+  extensionQuickOpen: async () => extensionGet<ExtensionQuickOpenRegistration[]>('/extensions/quick-open'),
+  extensionSearchProviders: async () => extensionGet<ExtensionSearchProviderRegistration[]>('/extensions/search-providers'),
   extensionSearch: async (input: { query: string; limit?: number; providerId?: string }) =>
-    post<{ providers: ExtensionSearchProviderRegistration[]; items: ExtensionSearchItem[] }>('/extensions/search', input),
-  extensionManifest: async (extensionId: string) => get<ExtensionManifest>(`/extensions/${encodeURIComponent(extensionId)}/manifest`),
+    extensionPost<{ providers: ExtensionSearchProviderRegistration[]; items: ExtensionSearchItem[] }>('/extensions/search', input),
+  extensionManifest: async (extensionId: string) =>
+    extensionGet<ExtensionManifest>(`/extensions/${encodeURIComponent(extensionId)}/manifest`),
   extensionSurfacesForExtension: async (extensionId: string) =>
-    get<ExtensionSurfaceSummary[]>(`/extensions/${encodeURIComponent(extensionId)}/surfaces`),
+    extensionGet<ExtensionSurfaceSummary[]>(`/extensions/${encodeURIComponent(extensionId)}/surfaces`),
   extensionStateList: async <T = unknown>(extensionId: string, prefix = '') =>
-    get<Array<{ key: string; value: T; version: number; createdAt: number; updatedAt: number }>>(
+    extensionGet<Array<{ key: string; value: T; version: number; createdAt: number; updatedAt: number }>>(
       `/extensions/${encodeURIComponent(extensionId)}/state${prefix ? `?prefix=${encodeURIComponent(prefix)}` : ''}`,
     ),
   extensionState: async <T = unknown>(extensionId: string, key: string) =>
-    get<{ key: string; value: T; version: number; createdAt: number; updatedAt: number }>(
+    extensionGet<{ key: string; value: T; version: number; createdAt: number; updatedAt: number }>(
       `/extensions/${encodeURIComponent(extensionId)}/state/${encodeURIComponent(key)}`,
     ),
   putExtensionState: async (extensionId: string, key: string, value: unknown, opts?: { expectedVersion?: number }) =>
-    put<{ ok: true; key: string; version: number }>(`/extensions/${encodeURIComponent(extensionId)}/state/${encodeURIComponent(key)}`, {
-      value,
-      expectedVersion: opts?.expectedVersion,
-    }),
+    extensionPut<{ ok: true; key: string; version: number }>(
+      `/extensions/${encodeURIComponent(extensionId)}/state/${encodeURIComponent(key)}`,
+      {
+        value,
+        expectedVersion: opts?.expectedVersion,
+      },
+    ),
   deleteExtensionState: async (extensionId: string, key: string) =>
-    del<{ ok: true; deleted: boolean }>(`/extensions/${encodeURIComponent(extensionId)}/state/${encodeURIComponent(key)}`),
+    extensionDelete<{ ok: true; deleted: boolean }>(`/extensions/${encodeURIComponent(extensionId)}/state/${encodeURIComponent(key)}`),
   startExtensionRun: async (extensionId: string, input: unknown) =>
-    post<unknown>(`/extensions/${encodeURIComponent(extensionId)}/runs`, input),
+    extensionPost<unknown>(`/extensions/${encodeURIComponent(extensionId)}/runs`, input),
   invokeExtensionAction: async (extensionId: string, actionId: string, input: unknown) =>
-    post<{ ok: true; result: unknown } | { ok: false; error: string }>(
+    extensionPost<{ ok: true; result: unknown } | { ok: false; error: string }>(
       `/extensions/${encodeURIComponent(extensionId)}/actions/${encodeURIComponent(actionId)}`,
       input,
     ),
   listExtensionActions: async () =>
-    get<
+    extensionGet<
       Array<{
         extensionId: string;
         extensionName: string;
@@ -332,30 +369,31 @@ export const api = {
       }>
     >('/extensions/actions'),
   extensionStatus: async (extensionId: string) =>
-    get<{ enabled: boolean; healthy: boolean; errors?: string[] }>(`/extensions/${encodeURIComponent(extensionId)}/status`),
+    extensionGet<{ enabled: boolean; healthy: boolean; errors?: string[] }>(`/extensions/${encodeURIComponent(extensionId)}/status`),
   extensionSelfTest: async (extensionId: string) =>
-    post<{ ok: boolean; extensionId: string; checks: Array<{ name: string; ok: boolean; error?: string }> }>(
+    extensionPost<{ ok: boolean; extensionId: string; checks: Array<{ name: string; ok: boolean; error?: string }> }>(
       `/extensions/${encodeURIComponent(extensionId)}/self-test`,
     ),
   extensionTelemetry: async (extensionId?: string) =>
-    get<Array<{ extensionId: string; actionId: string; ok: boolean; durationMs: number; at: string; error?: string }>>(
+    extensionGet<Array<{ extensionId: string; actionId: string; ok: boolean; durationMs: number; at: string; error?: string }>>(
       `/extensions/telemetry${extensionId ? `?extensionId=${encodeURIComponent(extensionId)}` : ''}`,
     ),
-  reloadExtensions: async () => post<{ ok: boolean; reloaded: boolean; message: string }>('/extensions/reload'),
+  reloadExtensions: async () => extensionPost<{ ok: boolean; reloaded: boolean; message: string }>('/extensions/reload'),
   updateExtension: async (extensionId: string, input: { enabled: boolean }) =>
-    patch<{ ok: true; extension?: ExtensionInstallSummary; actionResult?: { ok: boolean; result?: unknown; error?: string } }>(
+    extensionPatch<{ ok: true; extension?: ExtensionInstallSummary; actionResult?: { ok: boolean; result?: unknown; error?: string } }>(
       `/extensions/${encodeURIComponent(extensionId)}`,
       input,
     ),
   buildExtension: async (extensionId: string) =>
-    post<{ ok: true; extensionId: string; outputs: string[] }>(`/extensions/${encodeURIComponent(extensionId)}/build`),
-  validateExtension: async (extensionId: string) => post<ExtensionDoctorReport>(`/extensions/${encodeURIComponent(extensionId)}/validate`),
+    extensionPost<{ ok: true; extensionId: string; outputs: string[] }>(`/extensions/${encodeURIComponent(extensionId)}/build`),
+  validateExtension: async (extensionId: string) =>
+    extensionPost<ExtensionDoctorReport>(`/extensions/${encodeURIComponent(extensionId)}/validate`),
   reloadExtension: async (extensionId: string) =>
-    post<{ ok: true; id: string; reloaded: boolean; message: string }>(`/extensions/${encodeURIComponent(extensionId)}/reload`),
+    extensionPost<{ ok: true; id: string; reloaded: boolean; message: string }>(`/extensions/${encodeURIComponent(extensionId)}/reload`),
   snapshotExtension: async (extensionId: string) =>
-    post<{ ok: true; extensionId: string; snapshotPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/snapshot`),
+    extensionPost<{ ok: true; extensionId: string; snapshotPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/snapshot`),
   exportExtension: async (extensionId: string) =>
-    post<{ ok: true; extensionId: string; exportPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/export`),
+    extensionPost<{ ok: true; extensionId: string; exportPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/export`),
   sessions: async () => {
     return (await requireLocalDesktopBridge('Reading sessions')).readSessions();
   },

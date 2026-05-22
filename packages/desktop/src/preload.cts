@@ -86,6 +86,8 @@ const desktopBridge = {
   checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
   readAppStatus: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-app-status`),
   readDaemonState: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-daemon-state`),
+  invokeLocalApi: (input: { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; body?: unknown }) =>
+    ipcRenderer.invoke(`${CHANNEL_PREFIX}:invoke-local-api`, input),
   readSessions: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-sessions`),
   readSessionMeta: (sessionId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-session-meta`, sessionId),
   readSessionSearchIndex: (sessionIds: string[]) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-session-search-index`, sessionIds),

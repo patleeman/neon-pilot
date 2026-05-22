@@ -16,6 +16,10 @@ interface ExtensionRouteResponse {
   body?: unknown;
 }
 
+interface TelemetryDataInput {
+  range?: unknown;
+}
+
 type TraceTelemetryLogEventType =
   | 'stats'
   | 'tool_call'
@@ -847,4 +851,24 @@ export function contextPointers(req: ExtensionRouteRequest): ExtensionRouteRespo
 export function sessionIntegrity(req: ExtensionRouteRequest): ExtensionRouteResponse {
   const since = parseRangeParam(req.query.range);
   return ok(queryAppTelemetryEvents({ since, limit: 200 }).filter((event) => event.category === 'session_integrity'));
+}
+
+export function getTelemetryData(input: TelemetryDataInput = {}) {
+  const req = { query: { range: typeof input.range === 'string' ? input.range : '24h' } };
+  return {
+    ok: true,
+    summary: summary(req).body,
+    modelUsage: modelUsage(req).body,
+    costByConversation: costByConversation().body,
+    toolHealth: toolHealth(req).body,
+    context: context(req).body,
+    agentLoop: agentLoop(req).body,
+    tokensDaily: tokensDaily(req).body,
+    toolFlow: toolFlow(req).body,
+    autoMode: autoMode(req).body,
+    cacheEfficiency: cacheEfficiency(req).body,
+    systemPrompt: systemPrompt(req).body,
+    contextPointers: contextPointers(req).body,
+    sessionIntegrity: sessionIntegrity(req).body,
+  };
 }

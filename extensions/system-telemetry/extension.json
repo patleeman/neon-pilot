@@ -11,6 +11,7 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
+    "actions": [{ "id": "getTelemetryData", "handler": "getTelemetryData", "title": "Get telemetry data" }],
     "routes": [
       { "method": "GET", "path": "/traces/summary", "handler": "summary" },
       { "method": "GET", "path": "/traces/model-usage", "handler": "modelUsage" },

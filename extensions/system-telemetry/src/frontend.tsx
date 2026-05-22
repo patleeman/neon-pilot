@@ -13,6 +13,7 @@
  * 9. Subagent flame graph
  */
 
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
 
@@ -30,7 +31,7 @@ import { TracesToolHealth } from './traces/TracesToolHealth';
 import type { TraceRange } from './traces/useTracesData';
 import { useTracesData } from './traces/useTracesData';
 
-export function TelemetryPage() {
+export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
   const [range, setRange] = useState<TraceRange>('24h');
   const {
     summary,
@@ -51,7 +52,7 @@ export function TelemetryPage() {
     loading,
     error,
     refetch,
-  } = useTracesData(range);
+  } = useTracesData(range, pa);
 
   if (loading && !summary) {
     return (
