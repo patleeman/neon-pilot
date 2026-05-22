@@ -1,6 +1,6 @@
 {
   "name": "neon-pilot",
-  "version": "0.9.0",
+  "version": "0.9.1-rc.0",
   "private": false,
   "license": "MIT",
   "description": "Neon Pilot monorepo",

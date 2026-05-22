@@ -4,17 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0** — current repo version. Published successfully.
+**v0.9.1-rc.0** — current repo version. Preparing RC release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.0
 
 Highlights in this train:
 
-- Ships the 0.9 desktop train as stable, including isolated RC/stable app identities, updater feeds, state roots, and safer release smoke validation.
-- Adds experimental SpeechMike hardware support, local dictation improvements, image/video probe tooling, and richer browser/agent automation surfaces.
-- Hardens conversations with safer branch/fork/rewind controls, stable live-session bootstrapping, and better background-run and scheduled-task attention routing.
-- Expands the extension platform with packaged backend validation, command/keybinding ownership checks, extension secrets, model profiles, and isolated action failure handling.
-- Refreshes Settings, Knowledge, Docs, and the public website with clearer provider/secret behavior, current screenshots, markdown-table support, and canonical terminology.
+- Keeps installed RC apps on the RC runtime channel even after they consume a stable-semver update.
+- Adds a desktop Settings update-path selector so users can choose stable releases only or opt into test/RC builds.
+- Defaults fresh RC runtime profiles to the test update path while keeping stable profiles on stable releases.
+- Validates the release-channel fix with focused runtime-channel, updater, desktop-config, and Settings UI coverage.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

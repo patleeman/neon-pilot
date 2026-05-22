@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.1-rc.0 — 2026-05-22
+
+### Highlights
+
+- Keeps installed RC apps on the RC runtime channel even after they consume a stable-semver update.
+- Adds a desktop Settings update-path selector so users can choose stable releases only or opt into test/RC builds.
+- Defaults fresh RC runtime profiles to the test update path while keeping stable profiles on stable releases.
+- Validates the release-channel fix with focused runtime-channel, updater, desktop-config, and Settings UI coverage.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.9.0 — 2026-05-22
 
 ### Highlights
