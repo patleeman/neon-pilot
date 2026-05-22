@@ -3,7 +3,7 @@
   "id": "system-speechmike",
   "name": "SpeechMike",
   "packageType": "system",
-  "description": "Direct Philips SpeechMike HID event integration for hands-free dictation controls.",
+  "description": "Direct Philips SpeechMike HID event integration for push-button dictation controls.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
