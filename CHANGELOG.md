@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0-rc.10 — 2026-05-22
+
+### Highlights
+
+- Enables RC auto-updates now that the RC channel has isolated app identity, state roots, ports, and updater metadata.
+- Hardens scheduled tasks, background runs, and automation callbacks so they validate schedules, use the right runtime profile, and await subagent setup correctly.
+- Tightens extension security by validating custom keybinding ownership, constraining extension search commands, and simplifying extension manifest exports.
+- Improves conversation branch/fork safety by preserving surface ownership across desktop IPC and live-session controls.
+- Fixes secrets precedence so stored extension secrets win over environment fallbacks, with docs and settings UI aligned.
+- Refreshes the public docs/marketing site with current screenshots, homepage copy, markdown tables, and canonical docs vocabulary.
+
+### Notes
+
+- 31 commits since the previous release.
+
 ## 0.9.0-rc.9 — 2026-05-21
 
 ### Highlights
