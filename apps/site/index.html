@@ -72,35 +72,35 @@
       <section class="flow" aria-label="A feature request becoming a reusable capability">
         <div class="flow-step request">
           <small>You ask for a capability</small>
-          <div class="message"><b>PM</b><span>Add a command to summarize open PRs</span></div>
+          <div class="message"><b>PM</b><span>I want to use Qwen 3.6 27B locally</span></div>
           <em>9:41 AM</em>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step">
           <small>Neon Pilot turns it into product</small>
           <ul>
-            <li>Design command interface</li>
-            <li>Implement PR summarizer</li>
-            <li>Add tests and docs</li>
-            <li>Integrate into command palette</li>
+            <li>Design local models interface</li>
+            <li>Add provider routing settings</li>
+            <li>Plan model serving controls</li>
+            <li>Wire status into the workspace</li>
           </ul>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step build">
           <small>It builds, tests, and wires it in</small>
           <ul>
-            <li>Created: commands/pr_summary.ts</li>
-            <li>Added: Summarize open PRs</li>
-            <li>Updated: command palette</li>
-            <li>Tests: pr-summary.test.ts</li>
-            <li>Docs: docs/commands/pr-summary.md</li>
+            <li>Created: local-models extension</li>
+            <li>Added: Qwen 3.6 27B profile</li>
+            <li>Built: start / stop server actions</li>
+            <li>Tests: provider routing</li>
+            <li>Docs: local model setup</li>
           </ul>
         </div>
         <div class="arrow">→</div>
         <div class="flow-step ready">
           <small>It becomes reusable</small>
-          <p class="integrated">Command integrated</p>
-          <div class="command">› Summarize open PRs <kbd>⌘K</kbd><span>Command</span></div>
+          <p class="integrated">Local model ready</p>
+          <div class="command">Qwen 3.6 27B <kbd>Running</kbd><span>Start, stop, and route tasks locally.</span></div>
         </div>
       </section>
 
@@ -138,7 +138,7 @@
       <section class="surface-strip" aria-label="Neon Pilot product surfaces">
         <figure>
           <img src="./command-palette.png" alt="Neon Pilot command palette screenshot." />
-          <figcaption>Command palette</figcaption>
+          <figcaption>Commands</figcaption>
         </figure>
         <figure>
           <img src="./extensions.png" alt="Neon Pilot extensions settings screenshot." />
@@ -162,7 +162,7 @@
         <div class="feature-ideas panel">
           <div class="panel-title">Features you can ask it to build</div>
           <ul>
-            <li>“Add a command that summarizes open PRs.”</li>
+            <li>“Let me run Qwen 3.6 27B locally.”</li>
             <li>“Create a release checklist for this repo.”</li>
             <li>“Build a workflow that triages failed CI logs.”</li>
             <li>“Turn this recurring process into a reusable skill.”</li>
