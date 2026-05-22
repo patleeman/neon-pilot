@@ -338,6 +338,31 @@ describe('Sidebar', () => {
     expect(html).not.toContain('aria-label="Background work running"');
   });
 
+  it('uses a subagent glyph for subagent-only background work', () => {
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-agent']));
+
+    const html = renderSidebar('/conversations/new', {
+      sessions: [createSession({ id: 'conv-agent', title: 'Review thread', isRunning: false })],
+      executions: {
+        executions: [
+          {
+            id: 'run-agent-1',
+            kind: 'subagent',
+            visibility: 'primary',
+            conversationId: 'conv-agent',
+            title: 'code-review',
+            status: 'running',
+            capabilities: { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+          },
+        ],
+      },
+    });
+
+    expect(html).toContain('aria-label="Background work running"');
+    expect(html).toContain('✦');
+    expect(html).not.toContain('›_');
+  });
+
   it('groups open conversations by working directory with collapsible headers and quick-start actions', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-a1', 'conv-b1', 'conv-a2']));
 

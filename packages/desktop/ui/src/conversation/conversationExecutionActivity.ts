@@ -1,5 +1,26 @@
 import type { ExecutionListResult, ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
 
+export type ConversationBackgroundWorkKind = 'command' | 'subagent' | 'mixed' | 'other';
+
+export function summarizeConversationBackgroundWorkKind(executions: readonly ExecutionRecord[]): ConversationBackgroundWorkKind | null {
+  if (executions.length === 0) return null;
+
+  let hasCommand = false;
+  let hasSubagent = false;
+  let hasOther = false;
+  for (const execution of executions) {
+    if (execution.kind === 'background-command') hasCommand = true;
+    else if (execution.kind === 'subagent') hasSubagent = true;
+    else hasOther = true;
+  }
+
+  const kindCount = Number(hasCommand) + Number(hasSubagent) + Number(hasOther);
+  if (kindCount > 1) return 'mixed';
+  if (hasCommand) return 'command';
+  if (hasSubagent) return 'subagent';
+  return 'other';
+}
+
 export function isActiveExecution(execution: ExecutionRecord): boolean {
   return (
     execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'

@@ -1,23 +1,30 @@
+import type { ConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
 import { cx } from './ui';
 
-function BackgroundWorkIcon() {
-  return (
-    <span aria-hidden="true" className="font-mono text-[10px] leading-none tracking-[-0.08em]">
-      ›_
-    </span>
-  );
+function BackgroundWorkIcon({ kind }: { kind?: ConversationBackgroundWorkKind | null }) {
+  if (kind === 'subagent') return <span aria-hidden="true">✦</span>;
+  if (kind === 'command') {
+    return (
+      <span aria-hidden="true" className="font-mono text-[10px] leading-none tracking-[-0.08em]">
+        ›_
+      </span>
+    );
+  }
+  return <span aria-hidden="true" className="h-2 w-2 rounded-full bg-current" />;
 }
 
 export function ConversationStatusText({
   isRunning,
   needsAttention,
   hasPendingRuns,
+  backgroundWorkKind,
   className,
 }: {
   isRunning?: boolean;
   needsAttention?: boolean;
   hasPendingRuns?: boolean;
+  backgroundWorkKind?: ConversationBackgroundWorkKind | null;
   className?: string;
 }) {
   if (isRunning) {
@@ -41,7 +48,7 @@ export function ConversationStatusText({
         className={cx('flex h-3 w-3 items-center justify-center text-accent/80', className)}
         title="Background work is running"
       >
-        <BackgroundWorkIcon />
+        <BackgroundWorkIcon kind={backgroundWorkKind} />
       </span>
     );
   }

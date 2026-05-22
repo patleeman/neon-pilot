@@ -3,6 +3,7 @@ import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConversationStatusText } from '../components/ConversationStatusText';
+import type { ConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import { timeAgoCompact } from '../shared/utils';
 import type { ActivityTreeItem } from './activityTree';
 import { buildActivityTreePathModel } from './activityTreePaths';
@@ -291,6 +292,10 @@ export function ActivityTreeView({
           const conversationIsRunning = item.kind === 'conversation' && item.metadata?.isRunning === true;
           const conversationNeedsAttention = item.kind === 'conversation' && item.metadata?.needsAttention === true;
           const conversationHasPendingRuns = item.kind === 'conversation' && item.metadata?.hasPendingRuns === true;
+          const conversationBackgroundWorkKind =
+            item.kind === 'conversation' && typeof item.metadata?.backgroundWorkKind === 'string'
+              ? (item.metadata.backgroundWorkKind as ConversationBackgroundWorkKind)
+              : null;
           const conversationIsPinned = item.kind === 'conversation' && item.metadata?.isPinned === true;
           const showConversationStatus = conversationIsRunning || conversationHasPendingRuns || conversationNeedsAttention;
           const showExpander = childCount > 0 && item.kind !== 'group';
@@ -438,6 +443,7 @@ export function ActivityTreeView({
                   <ConversationStatusText
                     isRunning={conversationIsRunning}
                     hasPendingRuns={conversationHasPendingRuns}
+                    backgroundWorkKind={conversationBackgroundWorkKind}
                     needsAttention={conversationNeedsAttention}
                   />
                 </span>
@@ -449,6 +455,7 @@ export function ActivityTreeView({
                   <ConversationStatusText
                     isRunning={conversationIsRunning}
                     hasPendingRuns={conversationHasPendingRuns}
+                    backgroundWorkKind={conversationBackgroundWorkKind}
                     needsAttention={conversationNeedsAttention}
                   />
                 </span>

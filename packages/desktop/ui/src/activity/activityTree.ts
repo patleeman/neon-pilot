@@ -1,3 +1,4 @@
+import { summarizeConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import type { ExecutionRecord, SessionMeta } from '../shared/types';
 
 export type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
@@ -66,6 +67,13 @@ export function buildActivityTreeItems({ conversations, executions = [] }: Build
         : [],
     ),
   );
+  const activeExecutionsByConversationId = new Map<string, ExecutionRecord[]>();
+  for (const execution of executions) {
+    if (!execution.conversationId || !executionIsActive(execution.status) || execution.visibility === 'hidden') continue;
+    const items = activeExecutionsByConversationId.get(execution.conversationId) ?? [];
+    items.push(execution);
+    activeExecutionsByConversationId.set(execution.conversationId, items);
+  }
   const conversationIdBySourceRunId = new Map(
     conversations.flatMap((session) => (session.sourceRunId ? [[session.sourceRunId, session.id] as const] : [])),
   );
@@ -87,6 +95,7 @@ export function buildActivityTreeItems({ conversations, executions = [] }: Build
       isRunning: Boolean(session.isRunning),
       needsAttention: Boolean(session.needsAttention),
       hasPendingRuns: !session.isRunning && activeExecutionConversationIds.has(session.id),
+      backgroundWorkKind: summarizeConversationBackgroundWorkKind(activeExecutionsByConversationId.get(session.id) ?? []),
     },
   }));
 

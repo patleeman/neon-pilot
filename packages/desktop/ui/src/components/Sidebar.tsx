@@ -22,7 +22,11 @@ import {
   groupConversationItemsByCwd,
   normalizeConversationGroupCwd,
 } from '../conversation/conversationCwdGroups';
-import { selectConversationActiveExecutions } from '../conversation/conversationExecutionActivity';
+import {
+  type ConversationBackgroundWorkKind,
+  selectConversationActiveExecutions,
+  summarizeConversationBackgroundWorkKind,
+} from '../conversation/conversationExecutionActivity';
 import {
   buildConversationDeeplink,
   buildConversationSurfacePath,
@@ -1307,6 +1311,7 @@ function OpenConversationRow({
   isAutomation = false,
   automationTitle,
   hasPendingRuns = false,
+  backgroundWorkKind = null,
   onDragStart,
   onDragOver,
   onDrop,
@@ -1332,6 +1337,7 @@ function OpenConversationRow({
   isAutomation?: boolean;
   automationTitle?: string;
   hasPendingRuns?: boolean;
+  backgroundWorkKind?: ConversationBackgroundWorkKind | null;
   onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
   onDrop?: (event: DragEvent<HTMLDivElement>) => void;
@@ -1663,6 +1669,7 @@ function OpenConversationRow({
             <ConversationStatusText
               isRunning={session.isRunning}
               hasPendingRuns={hasPendingRuns}
+              backgroundWorkKind={backgroundWorkKind}
               needsAttention={needsAttention}
               className="shrink-0"
             />
@@ -2121,18 +2128,24 @@ export function Sidebar() {
     () => new Set((tasks ?? []).flatMap((task) => (task.running && task.threadConversationId ? [task.threadConversationId] : []))),
     [tasks],
   );
-  const pendingExecutionConversationIdSet = useMemo(() => {
+  const backgroundWorkKindByConversationId = useMemo(() => {
     const conversationIds = new Set(
       (executions?.executions ?? [])
         .map((execution) => execution.conversationId?.trim())
         .filter((conversationId): conversationId is string => Boolean(conversationId)),
     );
-    return new Set(
-      [...conversationIds].filter(
-        (conversationId) => selectConversationActiveExecutions({ conversationId, executions, tasks, visibility: 'visible' }).length > 0,
-      ),
+    return new Map(
+      [...conversationIds].flatMap((conversationId) => {
+        const activeExecutions = selectConversationActiveExecutions({ conversationId, executions, tasks, visibility: 'visible' });
+        const kind = summarizeConversationBackgroundWorkKind(activeExecutions);
+        return kind ? [[conversationId, kind] as const] : [];
+      }),
     );
   }, [executions, tasks]);
+  const pendingExecutionConversationIdSet = useMemo(
+    () => new Set(backgroundWorkKindByConversationId.keys()),
+    [backgroundWorkKindByConversationId],
+  );
   const filteredConversationItems = useMemo(
     () =>
       orderedConversationItems.filter((item) => {
@@ -2360,7 +2373,7 @@ export function Sidebar() {
         ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
         ...(runningAutomationConversationIdSet.has(conversationId) ? { isRunning: true, hasPendingRuns: false } : {}),
         ...(pendingExecutionConversationIdSet.has(conversationId) && !runningAutomationConversationIdSet.has(conversationId)
-          ? { hasPendingRuns: true }
+          ? { hasPendingRuns: true, backgroundWorkKind: backgroundWorkKindByConversationId.get(conversationId) }
           : {}),
       };
       return { ...item, status: metadata.isRunning ? 'running' : item.status, metadata };
@@ -2405,6 +2418,7 @@ export function Sidebar() {
     return [...groupItems, ...groupedItems];
   }, [
     activityTreeSessions,
+    backgroundWorkKindByConversationId,
     groupedConversationRows,
     pendingExecutionConversationIdSet,
     pinnedIds,
@@ -3668,6 +3682,7 @@ export function Sidebar() {
 
     const isAutomationRunning = runningAutomationConversationIdSet.has(session.id);
     const hasPendingExecutions = pendingExecutionConversationIdSet.has(session.id);
+    const backgroundWorkKind = backgroundWorkKindByConversationId.get(session.id) ?? null;
     const gatewayProviders =
       gatewayState?.bindings
         .filter((binding) => binding.conversationId === session.id)
@@ -3684,6 +3699,7 @@ export function Sidebar() {
         isAutomation={isAutomationRunning}
         automationTitle={automationThreadTitleByConversationId.get(session.id)}
         hasPendingRuns={hasPendingExecutions && !session.isRunning && !isAutomationRunning}
+        backgroundWorkKind={backgroundWorkKind}
         isDragging={canDrag && draggingSessionId === session.id}
         dropPosition={dropPosition}
         onPin={!pinned && !isDraftTab ? () => handlePinConversation(session.id) : undefined}
