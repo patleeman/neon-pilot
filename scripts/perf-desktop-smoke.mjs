@@ -171,8 +171,8 @@ function writeLongTranscript() {
 }
 async function measure(name, fn) {
   const t = performance.now();
-  await fn();
-  return Math.round(performance.now() - t);
+  const result = await fn();
+  return { durationMs: Math.round(performance.now() - t), result };
 }
 async function waitForExpression(cdp, child, expression, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
@@ -222,43 +222,58 @@ async function main() {
     const firstBodyMs = startupReadyMs - cdpReadyMs;
     await waitAppHydrated(cdp, child);
     const appHydratedMs = Math.round(performance.now() - start);
-    const draftSubmitVisibleMs = await measure('draft submit visible', async () => {
+    const draftSubmitResult = await measure('draft submit visible', async () => {
       const prompt = `Perf draft submit ${Date.now()}`;
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
       await waitAppHydrated(cdp, child);
       await waitForExpression(cdp, child, `Boolean(document.querySelector('textarea'))`);
+      const clickStart = performance.now();
       await evalJs(
         cdp,
         `(async()=>{const prompt=${JSON.stringify(prompt)}; const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:prompt})); await new Promise(r=>requestAnimationFrame(r)); await new Promise(r=>setTimeout(r,50)); const button=document.querySelector('button[aria-label="Send"]'); if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
       );
+      await waitForExpression(cdp, child, `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`, 45_000);
+      const routeMs = Math.round(performance.now() - clickStart);
       await waitForExpression(
         cdp,
         child,
         `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
         45_000,
       );
+      return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
-    const routeSettingsMs = await measure('settings', async () => {
-      await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
-      await waitBody(cdp, child);
-    });
-    const routeKnowledgeMs = await measure('knowledge', async () => {
-      await cdp.send('Page.navigate', { url: 'neon-pilot://app/knowledge' });
-      await waitBody(cdp, child);
-    });
-    const conversationSearchMs = await measure('conversation search', async () => {
-      await evalJs(
-        cdp,
-        `fetch('/api/sessions/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query:'suggested context release regression',limit:80})}).then(r=>r.json())`,
-      );
-    });
-    const modelFetchMs = await measure('models', async () => {
-      await evalJs(cdp, `fetch('/api/models').then(r=>r.json())`);
-    });
-    const longTranscriptOpenMs = await measure('long transcript', async () => {
-      await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${longId}` });
-      await waitBody(cdp, child);
-    });
+    const draftSubmitVisibleMs = draftSubmitResult.durationMs;
+    const routeSettingsMs = (
+      await measure('settings', async () => {
+        await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
+        await waitBody(cdp, child);
+      })
+    ).durationMs;
+    const routeKnowledgeMs = (
+      await measure('knowledge', async () => {
+        await cdp.send('Page.navigate', { url: 'neon-pilot://app/knowledge' });
+        await waitBody(cdp, child);
+      })
+    ).durationMs;
+    const conversationSearchMs = (
+      await measure('conversation search', async () => {
+        await evalJs(
+          cdp,
+          `fetch('/api/sessions/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query:'suggested context release regression',limit:80})}).then(r=>r.json())`,
+        );
+      })
+    ).durationMs;
+    const modelFetchMs = (
+      await measure('models', async () => {
+        await evalJs(cdp, `fetch('/api/models').then(r=>r.json())`);
+      })
+    ).durationMs;
+    const longTranscriptOpenMs = (
+      await measure('long transcript', async () => {
+        await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${longId}` });
+        await waitBody(cdp, child);
+      })
+    ).durationMs;
     const interaction = await evalJs(
       cdp,
       `(async()=>{ const t=[]; function m(n,f){const s=performance.now(); f(); t.push([n, performance.now()-s]);} m('commandPalette',()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,bubbles:true}))); await new Promise(r=>requestAnimationFrame(r)); const el=document.querySelector('textarea,[contenteditable="true"],input'); if(el){m('composerFocus',()=>el.focus()); m('type100',()=>{ if('value' in el){el.value='x'.repeat(100); el.dispatchEvent(new Event('input',{bubbles:true}));} else {el.textContent='x'.repeat(100); el.dispatchEvent(new InputEvent('input',{bubbles:true}));}})} return t;})()`,
@@ -279,6 +294,8 @@ async function main() {
       firstBodyMs,
       appHydratedMs,
       draftSubmitVisibleMs,
+      draftSubmitRouteMs: draftSubmitResult.result.routeMs,
+      draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
