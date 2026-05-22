@@ -719,6 +719,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
 
   useEffect(() => {
     let cancelled = false;
+    let loadTimer: ReturnType<typeof window.setTimeout> | null = null;
 
     const load = () => {
       setState((previous) => ({ ...previous, loading: true, error: null }));
@@ -783,11 +784,17 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
         });
     };
 
-    load();
+    // Let the shell and initial conversation page hydrate before the registry
+    // fans out across extension manifests and frontend entries. Extension pages
+    // still load on demand below because ExtensionPage needs the registry.
+    loadTimer = window.setTimeout(load, 250);
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
 
     return () => {
       cancelled = true;
+      if (loadTimer !== null) {
+        window.clearTimeout(loadTimer);
+      }
       window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
     };
   }, [versions.extensions]);

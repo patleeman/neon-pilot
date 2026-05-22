@@ -363,41 +363,43 @@ export function App() {
         // Keep waiting for SSE or a later retry.
       });
 
-    void api
-      .tasks()
-      .then((items) => {
-        setTasks(items);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
+    window.setTimeout(() => {
+      void api
+        .tasks()
+        .then((items) => {
+          setTasks(items);
+        })
+        .catch(() => {
+          // Keep waiting for SSE or a later retry.
+        });
 
-    void api
-      .runs()
-      .then((result) => {
-        setRuns(result);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
+      void api
+        .runs()
+        .then((result) => {
+          setRuns(result);
+        })
+        .catch(() => {
+          // Keep waiting for SSE or a later retry.
+        });
 
-    void api
-      .executions()
-      .then((result) => {
-        setExecutions(result);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
+      void api
+        .executions()
+        .then((result) => {
+          setExecutions(result);
+        })
+        .catch(() => {
+          // Keep waiting for SSE or a later retry.
+        });
 
-    void api
-      .daemon()
-      .then((state) => {
-        setDaemon(state);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
+      void api
+        .daemon()
+        .then((state) => {
+          setDaemon(state);
+        })
+        .catch(() => {
+          // Keep waiting for SSE or a later retry.
+        });
+    }, 3_000);
   }, [setDaemon, setRuns, setSessions, setTasks]);
 
   // Track the latest subscription so we don't re-subscribe after a fresh mount.
