@@ -4608,8 +4608,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           };
 
           rememberComposerInput(inputSnapshot, newId);
-          persistPendingConversationPrompt(newId, initialPrompt);
-          setPendingConversationPromptDispatching(newId, true);
+          setPendingInitialPrompt(initialPrompt);
+          setPendingInitialPromptDispatchingState(true);
           if (composerGoalPending && text) {
             await api.updateGoal(newId, { objective: text }).catch(() => {});
             setComposerGoalPending(false);
@@ -4631,10 +4631,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               initialDeferredResumeState: {
                 conversationId: newId,
                 resumes: [],
-              },
-              initialPendingPromptState: {
-                conversationId: newId,
-                prompt: initialPrompt,
               },
               preserveConversationSurfaceKey: 'draft',
             },
@@ -4662,10 +4658,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               })
               .catch((error) => {
                 persistPendingConversationPrompt(newId, initialPrompt);
+                setPendingInitialPrompt(initialPrompt);
                 showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
               })
               .finally(() => {
-                setPendingConversationPromptDispatching(newId, false);
+                setPendingInitialPromptDispatchingState(false);
               });
           }, 0);
 
@@ -4678,7 +4675,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           }, 1_000);
         } catch (error) {
           if (createdSessionId) {
-            setPendingConversationPromptDispatching(createdSessionId, false);
+            setPendingInitialPromptDispatchingState(false);
           }
           if (createdSessionId && !navigatedToCreatedConversation) {
             await api.destroySession(createdSessionId).catch(() => {});
