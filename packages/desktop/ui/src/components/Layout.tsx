@@ -9,7 +9,6 @@ import { getConversationRunIdFromSearch } from '../conversation/conversationRuns
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
-import { ExtensionModalHost } from '../extensions/ExtensionModalHost';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
@@ -37,10 +36,7 @@ import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWid
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { DesktopTopBar } from './DesktopTopBar';
 import { NotificationBell } from './notifications/NotificationBell';
-import { NotificationCenter } from './notifications/NotificationCenter';
 import { NotificationProvider } from './notifications/notificationStore';
-import { NotificationToaster } from './notifications/NotificationToaster';
-import { PageSearchBar } from './PageSearchBar';
 import { cx } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
@@ -66,6 +62,18 @@ const ConversationBackgroundWorkWorkbenchPane = lazyRouteWithRecovery('layout-ba
   import('./ConversationBackgroundWorkWorkbench').then((module) => ({ default: module.ConversationBackgroundWorkWorkbenchPane })),
 );
 const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
+const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
+  import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
+);
+const NotificationCenter = lazyRouteWithRecovery('layout-notification-center', () =>
+  import('./notifications/NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
+);
+const NotificationToaster = lazyRouteWithRecovery('layout-notification-toaster', () =>
+  import('./notifications/NotificationToaster').then((module) => ({ default: module.NotificationToaster })),
+);
+const PageSearchBar = lazyRouteWithRecovery('layout-page-search-bar', () =>
+  import('./PageSearchBar').then((module) => ({ default: module.PageSearchBar })),
+);
 
 const WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY = 'pa:workbench-document-width';
 const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
@@ -1625,10 +1633,20 @@ export function Layout() {
         </div>
       </DesktopChromeContext.Provider>
 
-      <NotificationToaster />
-      {notificationCenterOpen && <NotificationCenter onClose={() => setNotificationCenterOpen(false)} />}
-      <ExtensionModalHost />
-      <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isElectron ?? isDesktopShell()} />
+      <Suspense fallback={null}>
+        <NotificationToaster />
+      </Suspense>
+      {notificationCenterOpen && (
+        <Suspense fallback={null}>
+          <NotificationCenter onClose={() => setNotificationCenterOpen(false)} />
+        </Suspense>
+      )}
+      <Suspense fallback={null}>
+        <ExtensionModalHost />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isElectron ?? isDesktopShell()} />
+      </Suspense>
       {commandPaletteMounted ? (
         <Suspense fallback={null}>
           <CommandPalette />
