@@ -23,11 +23,13 @@ function logUpdateMessage(message: string): void {
   writeDesktopMainLogLine(`[${new Date().toISOString()}] [updates] ${message}`);
 }
 
-function createDesktopUpdater(currentVersion: string): AppUpdater {
+export type DesktopUpdatePath = 'stable' | 'test';
+
+function createDesktopUpdater(updatePath: DesktopUpdatePath): AppUpdater {
   const updater = new MacUpdater();
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;
-  updater.allowPrerelease = currentVersion.includes('-');
+  updater.allowPrerelease = updatePath === 'test';
   return updater;
 }
 
@@ -42,7 +44,8 @@ function renderUpdateErrorMessage(error: unknown): string {
 function areDesktopUpdatesSupported(): boolean {
   return (
     app.isPackaged &&
-    resolveNeonPilotRuntimeChannelConfig(process.env, { version: app.getVersion(), packaged: app.isPackaged }).updatesEnabled
+    resolveNeonPilotRuntimeChannelConfig(process.env, { version: app.getVersion(), packaged: app.isPackaged, appName: app.getName() })
+      .updatesEnabled
   );
 }
 
@@ -71,6 +74,7 @@ export class DesktopUpdateManager {
     private readonly options: {
       onBeforeQuitForUpdate?: () => Promise<void> | void;
       shouldAutoInstallUpdates?: () => boolean;
+      getUpdatePath?: () => DesktopUpdatePath;
     } = {},
   ) {
     this.state = createDefaultDesktopAppUpdateState(this.currentVersion);
@@ -81,7 +85,7 @@ export class DesktopUpdateManager {
       return;
     }
 
-    this.updater = createDesktopUpdater(this.currentVersion);
+    this.updater = createDesktopUpdater(this.getUpdatePath());
     this.registerUpdaterEvents();
   }
 
@@ -114,6 +118,10 @@ export class DesktopUpdateManager {
   }
 
   preferencesChanged(): void {
+    if (this.updater) {
+      this.updater.allowPrerelease = this.getUpdatePath() === 'test';
+    }
+
     if (!this.downloadedUpdate) {
       return;
     }
@@ -295,6 +303,10 @@ export class DesktopUpdateManager {
 
   private shouldAutoInstallUpdates(): boolean {
     return this.options.shouldAutoInstallUpdates?.() === true;
+  }
+
+  private getUpdatePath(): DesktopUpdatePath {
+    return this.options.getUpdatePath?.() ?? 'stable';
   }
 
   private async maybeAutoInstallDownloadedUpdate(): Promise<void> {

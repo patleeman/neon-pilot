@@ -1432,6 +1432,7 @@ export function DesktopConnectionsSettingsPanel() {
 
   async function handleUpdateAppPreferences(nextPreferences: {
     autoInstallUpdates?: boolean;
+    updatePath?: 'stable' | 'test';
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }) {
@@ -1475,6 +1476,27 @@ export function DesktopConnectionsSettingsPanel() {
               <span>Install downloaded updates automatically</span>
             </label>
             <p className="ui-card-meta break-words">{formatDesktopUpdateSummary(appPreferencesState)}</p>
+
+            <div className="space-y-2">
+              <label className="block text-[12px] font-medium text-secondary" htmlFor="desktop-update-path">
+                Update path
+              </label>
+              <select
+                id="desktop-update-path"
+                value={appPreferencesState.updatePath}
+                onChange={(event) => {
+                  void handleUpdateAppPreferences({ updatePath: event.target.value === 'test' ? 'test' : 'stable' });
+                }}
+                disabled={action !== null || !appPreferencesState.update.supported}
+                className={`${INPUT_CLASS} max-w-sm`}
+              >
+                <option value="stable">Stable releases only</option>
+                <option value="test">Test releases and RCs</option>
+              </select>
+              <p className="ui-card-meta break-words">
+                Stable follows production releases. Test allows release candidates and pre-release builds for early validation.
+              </p>
+            </div>
 
             <label className="inline-flex items-center gap-3 text-[14px] text-primary" htmlFor="desktop-start-on-system-start">
               <input

@@ -15,7 +15,7 @@ const TESTING_APP_NAME = 'Neon Pilot Testing';
 
 export function resolveDesktopLaunchPresentation(
   env: NodeJS.ProcessEnv = process.env,
-  options: { version?: string; packaged?: boolean } = {},
+  options: { version?: string; packaged?: boolean; appName?: string; appId?: string } = {},
 ): DesktopLaunchPresentation {
   const channel = resolveNeonPilotRuntimeChannel(env, options);
 

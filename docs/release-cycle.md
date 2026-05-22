@@ -53,9 +53,11 @@ Runtime identity is centralized as `stable`, `rc`, `dev`, or `test`. The channel
 | `dev`    | Neon Pilot Dev     | `-dev`            | disabled |
 | `test`   | Neon Pilot Testing | `-testing`        | disabled |
 
-Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`neon-pilot-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it. RC update checks are enabled for the RC runtime channel and stay isolated from stable by channel-specific app identity and artifact names.
+Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** instead of **Neon Pilot**. The RC app uses a separate macOS bundle identifier (`com.neon-pilot.desktop.rc`), runtime state root (`neon-pilot-rc`), and artifact prefix (`Neon-Pilot-RC-*`), so it can be installed next to the stable app without replacing it. RC update checks are enabled for the RC runtime channel and stay isolated from stable by channel-specific app identity and artifact names. Installed RC apps keep the RC runtime channel by bundle/app identity even after consuming a stable-semver build, so the RC app can continue following the RC update path.
 
 Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. Dev/test launches disable update checks so local builds do not consume updater metadata.
+
+Users can choose **Settings → App behavior → Update path** to follow either stable releases only or the test path, which allows release candidates and pre-release builds. Fresh RC runtime profiles default to the test path; stable profiles default to stable releases only.
 
 ## Release Flow
 

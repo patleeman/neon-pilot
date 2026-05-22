@@ -113,6 +113,7 @@ export interface NeonPilotDesktopBridge {
   readDesktopAppPreferences(): Promise<DesktopAppPreferencesState>;
   updateDesktopAppPreferences(input: {
     autoInstallUpdates?: boolean;
+    updatePath?: 'stable' | 'test';
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }): Promise<DesktopAppPreferencesState>;

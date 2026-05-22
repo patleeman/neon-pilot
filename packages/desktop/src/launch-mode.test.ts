@@ -66,6 +66,14 @@ describe('resolveDesktopLaunchPresentation', () => {
     });
   });
 
+  it('preserves the RC app presentation for installed RC apps on stable semver builds', () => {
+    expect(resolveDesktopLaunchPresentation({}, { version: '0.9.0', packaged: true, appName: 'Neon Pilot RC' })).toEqual({
+      mode: 'rc',
+      appName: 'Neon Pilot RC',
+      launchLabel: 'RC',
+    });
+  });
+
   it('keeps unpackaged RC versions on the stable presentation unless explicitly marked', () => {
     expect(resolveDesktopLaunchPresentation({}, { version: '0.7.9-rc.10', packaged: false })).toEqual({
       mode: 'stable',

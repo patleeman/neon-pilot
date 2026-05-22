@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 
+import { resolveNeonPilotRuntimeChannel } from '@neon-pilot/core';
+
 import { resolveDesktopRuntimePaths } from '../desktop-env.js';
 import type { DesktopAppPreferences, DesktopConfig } from '../hosts/types.js';
 import { normalizeDesktopKeyboardShortcuts, validateDesktopKeyboardShortcuts } from '../keyboard-shortcuts.js';
@@ -12,9 +14,14 @@ const DEFAULT_WINDOW_STATE = {
 function createDefaultDesktopAppPreferences(): DesktopAppPreferences {
   return {
     autoInstallUpdates: false,
+    updatePath: resolveNeonPilotRuntimeChannel() === 'rc' ? 'test' : 'stable',
     startOnSystemStart: false,
     keyboardShortcuts: normalizeDesktopKeyboardShortcuts(null),
   };
+}
+
+function normalizeDesktopUpdatePath(value: unknown): DesktopAppPreferences['updatePath'] {
+  return value === 'test' ? 'test' : value === 'stable' ? 'stable' : createDefaultDesktopAppPreferences().updatePath;
 }
 
 function readSafeNumber(value: unknown): number | undefined {
@@ -34,6 +41,7 @@ function normalizeDesktopAppPreferences(value: unknown): DesktopAppPreferences {
   const candidate = value as Record<string, unknown>;
   return {
     autoInstallUpdates: candidate.autoInstallUpdates === true,
+    updatePath: normalizeDesktopUpdatePath(candidate.updatePath),
     startOnSystemStart: candidate.startOnSystemStart === true,
     keyboardShortcuts: normalizeDesktopKeyboardShortcuts(candidate.keyboardShortcuts),
   };
@@ -134,6 +142,7 @@ export function updateDesktopAppPreferences(
     appPreferences: {
       ...readDesktopAppPreferences(current),
       ...(appPreferences.autoInstallUpdates !== undefined ? { autoInstallUpdates: appPreferences.autoInstallUpdates } : {}),
+      ...(appPreferences.updatePath !== undefined ? { updatePath: appPreferences.updatePath } : {}),
       ...(appPreferences.startOnSystemStart !== undefined ? { startOnSystemStart: appPreferences.startOnSystemStart } : {}),
       ...(appPreferences.keyboardShortcuts !== undefined
         ? {

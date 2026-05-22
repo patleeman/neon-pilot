@@ -75,6 +75,7 @@ function buildDesktopAppPreferencesState() {
     available: true as const,
     supportsStartOnSystemStart: app.isPackaged,
     autoInstallUpdates: preferences.autoInstallUpdates,
+    updatePath: preferences.updatePath,
     startOnSystemStart: readStartOnSystemStartFromSystem(),
     keyboardShortcuts: preferences.keyboardShortcuts,
     update: updateManager?.getState() ?? {
@@ -87,6 +88,7 @@ function buildDesktopAppPreferencesState() {
 
 async function updateDesktopAppPreferencesState(input: {
   autoInstallUpdates?: boolean;
+  updatePath?: 'stable' | 'test';
   startOnSystemStart?: boolean;
   keyboardShortcuts?: Partial<DesktopKeyboardShortcuts>;
 }) {
@@ -99,6 +101,15 @@ async function updateDesktopAppPreferencesState(input: {
     }
 
     nextPreferences.autoInstallUpdates = input.autoInstallUpdates;
+    changed = true;
+  }
+
+  if (input.updatePath !== undefined) {
+    if (input.updatePath !== 'stable' && input.updatePath !== 'test') {
+      throw new Error('updatePath must be "stable" or "test" when provided.');
+    }
+
+    nextPreferences.updatePath = input.updatePath;
     changed = true;
   }
 
@@ -120,7 +131,7 @@ async function updateDesktopAppPreferencesState(input: {
   }
 
   if (!changed) {
-    throw new Error('Provide autoInstallUpdates, startOnSystemStart, and/or keyboardShortcuts.');
+    throw new Error('Provide autoInstallUpdates, updatePath, startOnSystemStart, and/or keyboardShortcuts.');
   }
 
   updateDesktopAppPreferences(nextPreferences);
@@ -128,7 +139,15 @@ async function updateDesktopAppPreferencesState(input: {
   return buildDesktopAppPreferencesState();
 }
 
-app.setName(resolveDesktopLaunchPresentation(process.env, { version: app.getVersion(), packaged: app.isPackaged }).appName);
+const desktopLaunchPresentation = resolveDesktopLaunchPresentation(process.env, {
+  version: app.getVersion(),
+  packaged: app.isPackaged,
+  appName: app.getName(),
+});
+app.setName(desktopLaunchPresentation.appName);
+if (desktopLaunchPresentation.mode === 'rc' && !process.env.NEON_PILOT_RUNTIME_CHANNEL && !process.env.NEON_PILOT_DESKTOP_VARIANT) {
+  process.env.NEON_PILOT_RUNTIME_CHANNEL = 'rc';
+}
 
 const desktopUserDataDir = process.env.NEON_PILOT_DESKTOP_USER_DATA_DIR?.trim();
 if (desktopUserDataDir) {
@@ -411,6 +430,7 @@ async function bootstrapDesktopApp(): Promise<void> {
       await prepareForQuit();
     },
     shouldAutoInstallUpdates: () => readDesktopAppPreferences(loadDesktopConfig()).autoInstallUpdates,
+    getUpdatePath: () => readDesktopAppPreferences(loadDesktopConfig()).updatePath,
   });
 
   try {

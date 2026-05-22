@@ -23,6 +23,11 @@ describe('runtime channel resolution', () => {
     });
   });
 
+  it('keeps an installed RC app on the RC runtime channel after stable-version updates', () => {
+    expect(resolveNeonPilotRuntimeChannel({}, { version: '0.9.0', packaged: true, appName: 'Neon Pilot RC' })).toBe('rc');
+    expect(resolveNeonPilotRuntimeChannel({}, { version: '0.9.0', packaged: true, appId: 'com.neon-pilot.desktop.rc' })).toBe('rc');
+  });
+
   it('keeps unpackaged prerelease versions stable unless explicitly overridden', () => {
     expect(resolveNeonPilotRuntimeChannel({}, { version: '0.8.0-rc.12', packaged: false })).toBe('stable');
   });

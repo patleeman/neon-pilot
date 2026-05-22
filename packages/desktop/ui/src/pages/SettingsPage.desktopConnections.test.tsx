@@ -77,6 +77,7 @@ describe('DesktopConnectionsSettingsPanel', () => {
       available: true,
       supportsStartOnSystemStart: true,
       autoInstallUpdates: true,
+      updatePath: 'test',
       startOnSystemStart: false,
       keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
       update: {
@@ -89,6 +90,7 @@ describe('DesktopConnectionsSettingsPanel', () => {
       available: true,
       supportsStartOnSystemStart: true,
       autoInstallUpdates: true,
+      updatePath: 'test',
       startOnSystemStart: false,
       keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
       update: {
@@ -115,6 +117,7 @@ describe('DesktopConnectionsSettingsPanel', () => {
     await flushAsyncWork();
 
     expect(container.textContent).toContain('Install downloaded updates automatically');
+    expect(container.textContent).toContain('Update path');
     expect(container.textContent).toContain('Start Neon Pilot when you sign in');
   });
 });
@@ -127,6 +130,7 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
       available: true,
       supportsStartOnSystemStart: true,
       autoInstallUpdates: true,
+      updatePath: 'test',
       startOnSystemStart: false,
       keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
       update: {
@@ -139,6 +143,7 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
       available: true,
       supportsStartOnSystemStart: true,
       autoInstallUpdates: true,
+      updatePath: 'test',
       startOnSystemStart: false,
       keyboardShortcuts: {
         ...DEFAULT_KEYBOARD_SHORTCUTS,

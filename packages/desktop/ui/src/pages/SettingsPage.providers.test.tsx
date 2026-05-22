@@ -466,6 +466,7 @@ describe('SettingsPage provider model editor', () => {
           available: true,
           supportsStartOnSystemStart: true,
           autoInstallUpdates: false,
+          updatePath: 'stable',
           startOnSystemStart: false,
           keyboardShortcuts: {
             showApp: 'CommandOrControl+Shift+A',

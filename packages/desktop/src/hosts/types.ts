@@ -6,6 +6,7 @@ export interface DesktopHostRecord {
 
 export interface DesktopAppPreferences {
   autoInstallUpdates: boolean;
+  updatePath: 'stable' | 'test';
   startOnSystemStart: boolean;
   keyboardShortcuts: {
     showApp: string;

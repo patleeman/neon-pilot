@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => {
     FakeUpdater,
     lastUpdater: null as InstanceType<typeof FakeUpdater> | null,
     showMessageBox: vi.fn(),
+    getName: vi.fn(() => 'Neon Pilot'),
     getVersion: vi.fn(() => '1.0.0'),
     resolveDesktopRuntimePaths: vi.fn(() => ({ desktopLogsDir: '/tmp/desktop-logs', colorIconFile: '/tmp/icon.png' })),
   };
@@ -35,6 +36,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('electron', () => ({
   app: {
     isPackaged: true,
+    getName: mocks.getName,
     getVersion: mocks.getVersion,
   },
   dialog: {
@@ -69,7 +71,9 @@ describe('DesktopUpdateManager', () => {
     mocks.lastUpdater = null;
     mocks.showMessageBox.mockReset();
     mocks.getVersion.mockReset();
+    mocks.getName.mockReset();
     mocks.getVersion.mockReturnValue('1.0.0');
+    mocks.getName.mockReturnValue('Neon Pilot');
     mocks.resolveDesktopRuntimePaths.mockClear();
   });
 
@@ -146,6 +150,14 @@ describe('DesktopUpdateManager', () => {
 
     expect(onBeforeQuitForUpdate).toHaveBeenCalledTimes(1);
     expect(mocks.lastUpdater?.quitAndInstall).toHaveBeenCalledTimes(1);
+
+    manager.dispose();
+  });
+
+  it('allows prerelease updates when the test update path is selected', () => {
+    const manager = new DesktopUpdateManager({ getUpdatePath: () => 'test' });
+
+    expect(mocks.lastUpdater?.allowPrerelease).toBe(true);
 
     manager.dispose();
   });

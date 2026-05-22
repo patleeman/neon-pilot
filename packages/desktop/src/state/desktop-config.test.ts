@@ -19,6 +19,7 @@ describe('desktop-config', () => {
   let dir: string;
 
   beforeEach(() => {
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'stable';
     dir = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-config-'));
     mocks.resolveDesktopRuntimePaths.mockReturnValue({
       desktopConfigFile: join(dir, 'config.json'),
@@ -28,6 +29,7 @@ describe('desktop-config', () => {
 
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
+    delete process.env.NEON_PILOT_RUNTIME_CHANNEL;
     vi.clearAllMocks();
   });
 
@@ -101,14 +103,16 @@ describe('desktop-config', () => {
     const initial = loadDesktopConfig();
     expect(readDesktopAppPreferences(initial)).toEqual({
       autoInstallUpdates: false,
+      updatePath: 'stable',
       startOnSystemStart: false,
       keyboardShortcuts: DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS,
     });
 
-    updateDesktopAppPreferences({ autoInstallUpdates: true, startOnSystemStart: true });
+    updateDesktopAppPreferences({ autoInstallUpdates: true, updatePath: 'test', startOnSystemStart: true });
 
     expect(readDesktopAppPreferences(loadDesktopConfig())).toEqual({
       autoInstallUpdates: true,
+      updatePath: 'test',
       startOnSystemStart: true,
       keyboardShortcuts: DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS,
     });

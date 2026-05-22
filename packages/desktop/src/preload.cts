@@ -79,6 +79,7 @@ const desktopBridge = {
   readDesktopAppPreferences: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:read-desktop-app-preferences`),
   updateDesktopAppPreferences: (input: {
     autoInstallUpdates?: boolean;
+    updatePath?: 'stable' | 'test';
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:update-desktop-app-preferences`, input),

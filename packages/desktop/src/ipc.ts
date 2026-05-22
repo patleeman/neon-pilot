@@ -18,6 +18,7 @@ export function registerDesktopIpc(options: {
   readDesktopAppPreferences?: () => Promise<unknown> | unknown;
   updateDesktopAppPreferences?: (input: {
     autoInstallUpdates?: boolean;
+    updatePath?: 'stable' | 'test';
     startOnSystemStart?: boolean;
     keyboardShortcuts?: Record<string, string>;
   }) => Promise<unknown> | unknown;

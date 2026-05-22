@@ -909,6 +909,7 @@ export interface DesktopAppPreferencesState {
   available: boolean;
   supportsStartOnSystemStart: boolean;
   autoInstallUpdates: boolean;
+  updatePath: 'stable' | 'test';
   startOnSystemStart: boolean;
   keyboardShortcuts: {
     showApp: string;

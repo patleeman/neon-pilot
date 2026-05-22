@@ -30,11 +30,12 @@ function normalizeRuntimeChannel(value: string | undefined): NeonPilotRuntimeCha
 
 export function resolveNeonPilotRuntimeChannel(
   env: NodeJS.ProcessEnv = process.env,
-  options: { version?: string; packaged?: boolean } = {},
+  options: { version?: string; packaged?: boolean; appName?: string; appId?: string } = {},
 ): NeonPilotRuntimeChannel {
   const explicit = normalizeRuntimeChannel(env.NEON_PILOT_RUNTIME_CHANNEL ?? env.NEON_PILOT_DESKTOP_VARIANT);
   if (explicit) return explicit;
   if (env.NEON_PILOT_DESKTOP_DEV_BUNDLE === '1') return 'test';
+  if (options.packaged && (options.appId === 'com.neon-pilot.desktop.rc' || options.appName === 'Neon Pilot RC')) return 'rc';
   if (options.packaged && isRcVersion(options.version)) return 'rc';
   return 'stable';
 }
@@ -45,7 +46,7 @@ export function getNeonPilotRuntimeChannelConfig(channel: NeonPilotRuntimeChanne
 
 export function resolveNeonPilotRuntimeChannelConfig(
   env: NodeJS.ProcessEnv = process.env,
-  options: { version?: string; packaged?: boolean } = {},
+  options: { version?: string; packaged?: boolean; appName?: string; appId?: string } = {},
 ): NeonPilotRuntimeChannelConfig {
   return getNeonPilotRuntimeChannelConfig(resolveNeonPilotRuntimeChannel(env, options));
 }
