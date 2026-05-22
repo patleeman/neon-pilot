@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 — 2026-05-22
+
+### Highlights
+
+- Ships the 0.9 desktop train as stable, including isolated RC/stable app identities, updater feeds, state roots, and safer release smoke validation.
+- Adds experimental SpeechMike hardware support, local dictation improvements, image/video probe tooling, and richer browser/agent automation surfaces.
+- Hardens conversations with safer branch/fork/rewind controls, stable live-session bootstrapping, and better background-run and scheduled-task attention routing.
+- Expands the extension platform with packaged backend validation, command/keybinding ownership checks, extension secrets, model profiles, and isolated action failure handling.
+- Refreshes Settings, Knowledge, Docs, and the public website with clearer provider/secret behavior, current screenshots, markdown-table support, and canonical terminology.
+- Validates the release with full tests, release checks, signed/notarized desktop artifacts, automated packaged smoke tests, and RC asset spot checks.
+
+### Notes
+
+- 0 commits since the previous release.
+
 ## 0.9.0-rc.10 — 2026-05-22
 
 ### Highlights

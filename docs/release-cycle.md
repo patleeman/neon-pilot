@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.0-rc.9** — current repo version. Published successfully.
+**v0.9.0** — current repo version. Published successfully.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0-rc.9
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.0
 
 Highlights in this train:
 
-- Adds experimental SpeechMike hardware integration with configurable button actions, dictation controls, and hardware command wiring.
-- Fixes composer action placement so extension buttons render in the right slot and command insertion targets the textarea reliably.
-- Keeps extension action failures isolated so one bad action does not trip the broader extension circuit breaker.
-- Improves conversation tree and transcript stability by allowing selected branches to collapse cleanly and keeping fork/rewind markers anchored at the source point.
-- Prevents duplicated live bootstrap transcript blocks when persisted history overlaps with stream state.
+- Ships the 0.9 desktop train as stable, including isolated RC/stable app identities, updater feeds, state roots, and safer release smoke validation.
+- Adds experimental SpeechMike hardware support, local dictation improvements, image/video probe tooling, and richer browser/agent automation surfaces.
+- Hardens conversations with safer branch/fork/rewind controls, stable live-session bootstrapping, and better background-run and scheduled-task attention routing.
+- Expands the extension platform with packaged backend validation, command/keybinding ownership checks, extension secrets, model profiles, and isolated action failure handling.
+- Refreshes Settings, Knowledge, Docs, and the public website with clearer provider/secret behavior, current screenshots, markdown-table support, and canonical terminology.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
