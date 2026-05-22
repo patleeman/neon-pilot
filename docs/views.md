@@ -4,7 +4,7 @@ Neon Pilot has two view modes. Switch between them with `F1`/`F2` or the dropdow
 
 ## Conversation View (F1)
 
-The default layout. A single conversation pane with a sidebar for thread navigation.
+The default layout. A single conversation pane with the left sidebar for conversation navigation.
 
 ```
 ┌────────────────────────────────────┐
@@ -46,12 +46,12 @@ A multi-pane layout for working alongside knowledge and tools. Available on conv
 
 The right rail nav tabs include:
 
-| Tab           | Shows when                          |
-| ------------- | ----------------------------------- |
-| File Explorer | Always — project file tree          |
-| Artifacts     | Conversation has rendered artifacts |
-| Browser       | Opened by user                      |
-| Knowledge     | Primary page with right rail        |
+| Tab           | Shows when                           |
+| ------------- | ------------------------------------ |
+| File Explorer | Always — working directory file tree |
+| Artifacts     | Conversation has rendered artifacts  |
+| Browser       | Opened by user                       |
+| Knowledge     | Primary page with right rail         |
 
 Knowledge appears as a left-sidebar route (not a workbench tab). Extension-contributed tool panels also appear in the nav. Toggle the right rail (in compact mode) with `Cmd+\` or toggle the workbench explorer (in workbench mode) with `Cmd+\`.
 
@@ -63,7 +63,7 @@ For extension authors, the right rail is for compact contextual tools. If a feat
 - The File Explorer shows the workspace file tree
 - Checkpoint diffs render inline in the transcript checkpoint card
 - Artifacts render inline (HTML, Mermaid, LaTeX)
-- Background commands and subagents render as inline transcript run cards
+- Background commands and subagents render as inline transcript execution cards
 - Browser loads pages alongside the conversation
 
 ## Layout Shortcuts

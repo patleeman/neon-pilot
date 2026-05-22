@@ -1,6 +1,6 @@
 # Conversations
 
-Conversations are live agent threads. Each conversation has a transcript, a composer, access to tools, and full message history.
+Conversations are live or saved agent threads. Each conversation has a transcript, a composer, access to tools, and full message history.
 
 ## Starting a Conversation
 
@@ -25,7 +25,7 @@ The composer is the text input area at the bottom of the conversation view. Imag
 | Clear composer     | Ctrl+C when composer is focused                               |
 | Recall history     | ↑/↓ cycles through recent prompts                             |
 
-## Session Lifecycle
+## Conversation Lifecycle
 
 Conversations are saved automatically. Every message, tool call, and tool result is persisted. Past conversations appear in the left sidebar. Click any conversation to resume it.
 
@@ -44,7 +44,7 @@ Long saved conversations open on their latest transcript segment. When earlier h
 
 Conversations support tree-style branching. Each turn creates a node in the conversation tree.
 
-Conversation files also keep file-level lineage. When a saved thread is branched, forked, rewound, duplicated from an existing session, or created as a side/subagent thread, its session metadata can point at the parent session and source message. The left **Threads** sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child threads appear nested under the parent, and the conversation context menu includes **Go to Parent Thread** when a parent is available.
+Conversation files also keep file-level lineage. When a saved conversation is branched, forked, rewound, duplicated, or created as a side/subagent conversation, its metadata can point at the parent conversation and source message. The left sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child conversations appear nested under the parent, and the conversation context menu includes **Go to Parent Conversation** when a parent is available.
 
 The transcript treats explicit branch actions (`fork`, `rewind`, `duplicate`) as timeline landmarks anchored after the source message when known. Tool-created side work stays with the tool call that created it: subagents, artifacts, checkpoints, prompts, and visual captures are pinned as compact rows inside the **Internal work** shelf so they remain visible even when low-level tool-call plumbing is collapsed.
 
@@ -53,14 +53,14 @@ The transcript treats explicit branch actions (`fork`, `rewind`, `duplicate`) as
 Create a new conversation from a previous user message. The new conversation starts fresh but carries the context up to that point.
 
 ```
-Original thread:
+Original conversation:
 
   ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (current)
 
 Fork from msg2:
 
   ┌─ msg1 ─ msg2 (forked)
-                └─ msg5 ─ msg6 (new thread)
+                └─ msg5 ─ msg6 (new conversation)
 ```
 
 ### /tree
@@ -104,7 +104,7 @@ When the run mode has a pending continuation (Nudge/Mission/Loop), normal submit
 
 Queued steer and follow-up prompts appear in the queue shelf above the composer. Use `restore` to pull a queued prompt back into the composer. Press Escape to abort the active response, clear local queued steer/follow-up prompts, and restore their text to the composer; agent-created queued text is annotated with `[Queued by agent]` so it is not mistaken for user-authored draft text. Press Alt+Up to retrieve queued messages back.
 
-Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above the composer. They are tied to the saved conversation and can be fired now, cancelled, or auto-resumed when the thread is reopened.
+Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above the composer. They are tied to the saved conversation and can be fired now, cancelled, or auto-resumed when the conversation is reopened.
 
 Interrupted prompts are not replayed automatically after an app restart. Durable run state is used for status and explicit recovery surfaces only; startup recovery must not silently resend the last prompt.
 
@@ -112,7 +112,7 @@ Interrupted prompts are not replayed automatically after an app restart. Durable
 
 Desktop conversations force pi's provider transport to SSE at session creation. pi's OpenAI Codex `auto` mode prefers cached WebSockets, but intermittent mid-turn 1006 closes can happen after tools have already run; at that point replaying through SSE is unsafe because it can duplicate side effects. SSE is slower than cached WebSockets, but it keeps conversation/tool execution reliable.
 
-## Run Mode / Auto Mode
+## Goal mode / Auto Mode
 
 The composer exposes a run-mode selector with four states:
 
@@ -133,16 +133,16 @@ The `goal` tool provides the legacy goal-mode path. Continuations are scheduled 
 
 Type `/` in the composer to open the command menu. Slash commands are intercepted by the UI. Some run local UI actions; others convert into prompts sent to the agent.
 
-| Command           | Action                                                      |
-| ----------------- | ----------------------------------------------------------- |
-| `/compact`        | Manually compact session context (optionally pass guidance) |
-| `/export [path]`  | Export session to HTML file                                 |
-| `/name <title>`   | Set session display name                                    |
-| `/run <cmd>`      | Send "Run this shell command: …" to the agent               |
-| `/search <query>` | Send "Search the web for: …" to the agent                   |
-| `/summarize`      | Send "Summarize our conversation so far" to the agent       |
-| `/think [topic]`  | Send "Think step-by-step about: …" to the agent             |
-| `/copy`           | Copy the last agent message to clipboard                    |
+| Command           | Action                                                           |
+| ----------------- | ---------------------------------------------------------------- |
+| `/compact`        | Manually compact conversation context (optionally pass guidance) |
+| `/export [path]`  | Export conversation to HTML file                                 |
+| `/name <title>`   | Set conversation display name                                    |
+| `/run <cmd>`      | Send "Run this shell command: …" to the agent                    |
+| `/search <query>` | Send "Search the web for: …" to the agent                        |
+| `/summarize`      | Send "Summarize our conversation so far" to the agent            |
+| `/think [topic]`  | Send "Think step-by-step about: …" to the agent                  |
+| `/copy`           | Copy the last agent message to clipboard                         |
 
 Several of these send a prompt to the agent instead of executing locally: `/run`, `/search`, `/summarize`, `/think`.
 
@@ -185,7 +185,7 @@ Select any portion of text in a conversation message. A **Reply** action appears
 
 ## Conversation Inspect
 
-The agent can read other conversation transcripts using the `conversation` action `inspect` tool. This provides read-only access to message history, tool calls, and results across threads. Live and running scopes include other currently active conversations, not just persisted session files. See [Conversation Inspect](../extensions/system-conversation-tools/README.md).
+The agent can read other conversation transcripts using the `conversation` action `inspect` tool. This provides read-only access to message history, tool calls, and results across conversations. Live and running scopes include other currently active conversations, not just persisted conversation files. See [Conversation Inspect](../extensions/system-conversation-tools/README.md).
 
 ## Keyboard Shortcuts
 
@@ -214,7 +214,7 @@ The desktop app and system extensions register these routes:
 | `/conversations/:id` | Existing conversation |
 | `/settings`          | Settings page         |
 | `/knowledge`         | Knowledge browser     |
-| `/automations`       | Scheduled task list   |
+| `/automations`       | Automation list       |
 | `/automations/:id`   | Automation detail     |
 | `/extensions`        | Extension Manager     |
 | `/telemetry`         | Telemetry traces      |

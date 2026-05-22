@@ -49,7 +49,7 @@ Electron main process
 - Freeze-prone local API work runs behind worker-thread RPC; do not import or execute heavy desktop server capabilities directly on the Electron main thread
 - Avoid `spawnSync`/`execSync` in desktop main-process flows
 - The daemon owns durable background behavior and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
-- The desktop app loads initial readonly snapshots first, then connects to server-pushed events for sessions, runs, tasks, and daemon status after startup settles
+- The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions, automations, and daemon status after startup settles
 
 ## Layout Modes
 
@@ -93,7 +93,7 @@ All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
 | `/conversations/new` | New conversation      |
 | `/conversations/:id` | Existing conversation |
 | `/knowledge`         | Knowledge browser     |
-| `/automations`       | Scheduled task list   |
+| `/automations`       | Automation list       |
 | `/automations/:id`   | Automation detail     |
 | `/settings`          | Settings panel        |
 | `/extensions`        | Extension Manager     |
@@ -102,4 +102,4 @@ All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
 
 ## Demo Mode
 
-`pnpm run desktop:demo` creates an isolated temporary state root with seeded conversations, automations, runs, and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent demos, and pathological fixtures.
+`pnpm run desktop:demo` creates an isolated temporary state root with seeded conversations, automations, executions, and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent demos, and pathological fixtures.

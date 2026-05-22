@@ -31,7 +31,7 @@ Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for conversation-specific side panel
+- right rail for a compact conversation-specific tool panel
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
@@ -709,7 +709,7 @@ The component receives:
 
 ### Activity Tree Item Elements (`activityTreeItemElements`)
 
-Add small component-backed elements to the shared activity tree rows used for conversations, runs, and future work items. Core owns row layout, routing, selection, and keyboard behavior; extensions only fill safe slots.
+Add small component-backed elements to the shared activity tree rows used for conversations, executions, and future work items. Core owns row layout, routing, selection, and keyboard behavior; extensions only fill safe slots.
 
 ```json
 {
@@ -763,7 +763,7 @@ Conversation list backend handler receives:
 
 ### Thread Header Actions (`threadHeaderActions`)
 
-Add compact component buttons beside the Threads sidebar header. Use this for thread-list actions such as importing a session.
+Add compact component buttons beside the left sidebar conversation header. Use this for conversation-list actions such as importing a session.
 
 ```json
 {

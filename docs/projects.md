@@ -1,6 +1,6 @@
 # Projects
 
-Projects are structured work packages that live in the vault. They have milestones, tasks, and durable status that persists across conversations and agent sessions.
+Projects are structured work packages that live in the vault. They have milestones, tasks, and durable status that persists across conversations and agent work.
 
 ## Project Structure
 
@@ -60,16 +60,16 @@ milestones:
 
 ## Project Tasks vs Daemon Tasks
 
-| Type                   | Storage               | Scope                | Managed by             |
-| ---------------------- | --------------------- | -------------------- | ---------------------- |
-| Project tasks          | `state.yaml` in vault | Project-specific     | Agent in conversations |
-| Daemon scheduled tasks | Daemon runtime DB     | Global/cross-project | Daemon scheduler       |
+| Type          | Storage               | Scope                | Managed by             |
+| ------------- | --------------------- | -------------------- | ---------------------- |
+| Project tasks | `state.yaml` in vault | Project-specific     | Agent in conversations |
+| Automations   | Daemon runtime DB     | Global/cross-project | Daemon scheduler       |
 
-These are independent systems. A project task tracks work within a project. A daemon scheduled task is a runtime automation.
+These are independent systems. A project task tracks work within a project. An automation is a user-managed scheduled behavior backed by a daemon scheduled task.
 
 ## Linking Conversations
 
-A conversation can be linked to a project. Linked conversations appear in the project context, so the agent can reference project state across threads. Links are stored in the conversation metadata.
+A conversation can be linked to a project. Linked conversations appear in the project context, so the agent can reference project state across related conversations. Links are stored in the conversation metadata.
 
 ## Project Artifacts
 

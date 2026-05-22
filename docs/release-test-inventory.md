@@ -23,16 +23,16 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Routes: `/`, `/conversations`, `/conversations/new`, `/conversations/:id`, and extension fallback routes.
 - Conversation list: create, open, search/palette, duplicate, archive/delete if available, title updates.
-- Sidebar: thread list grouping, archived section, hover quick actions, close/archive controls, workspace quick select modal, new conversation button.
-- Command palette: open/archived threads scope, files/quick-open scope, extension commands, extension search providers, keyboard navigation, empty/search/error states.
+- Left sidebar: conversation grouping, archived section, hover quick actions, close/archive controls, working directory quick select modal, new conversation button.
+- Command palette: open/archived conversations scope, files/quick-open scope, extension commands, extension search providers, keyboard navigation, empty/search/error states.
 - Composer: send prompt, multiline input, submit shortcuts, disabled/loading states, model selection, cwd display, context attachments, image/file attachments, dictation input, Excalidraw input.
 - Bash shortcut parsing: whole-line `!command` and `!!command`; empty/inline bang ignored.
 - Streaming transcript: user messages, assistant text, tool calls, tool results, errors, collapsed/expanded shelves, pinned tool rows.
 - Stop/cancel running agent, retry/try again, continue/resume, compact/context-hardening flows.
 - Branching/topology: alternate replies, branch navigation, transcript-native topology events.
 - Conversation context menu: duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
-- Thread header actions contributed by extensions, including Import Session when enabled.
-- CWD group context menu: copy working directory and grouped thread behavior.
+- Conversation header actions contributed by extensions, including Import Session when enabled.
+- Working directory group context menu: copy working directory and grouped conversation behavior.
 - Selection context menu: copy/selection actions.
 - Right rail/workbench tool slots: open, close, switch tabs, detail panes, preserved sizing.
 - Conversation resume after app restart: pending tool calls, background work, bash output, agent state.
@@ -89,8 +89,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Automations.
 - Agent tool: `scheduled_task` with actions `list`, `get`, `save`, `delete`, `validate`, `run`.
 - Actions: `scheduledTask`, `deferredResume`.
-- Page controls: task list, create/edit task, enable/disable, cron schedule, one-shot `at`, validate, run now, delete.
-- Delivery modes: conversation callback, background-agent target, dedicated/existing/no thread, steer vs follow-up, notify success/failure, require ack, auto-resume-if-open.
+- Page controls: automation list, create/edit automation, enable/disable, cron schedule, one-shot `at`, validate, run now, delete.
+- Delivery modes: conversation callback, background-agent target, dedicated/existing/no conversation binding, steer vs follow-up, notify success/failure, require ack, auto-resume-if-open.
 - Catch-up windows, timeouts, cwd/model/profile fields, missed schedule behavior.
 - Skills: `async-attention`, `scheduled-tasks`.
 
@@ -136,14 +136,14 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Transcript renderer: checkpoint pinned/tool block.
 - Test targeted commits only, no unrelated files, get/list, diff rendering, large diff, binary file, error from dirty/conflicting state.
 
-### Background work/runs (`system-runs`)
+### Background work (`system-runs`)
 
-- Views: activity shelf and inline transcript run cards.
+- Views: activity shelf and inline transcript execution cards.
 - Agent tools/actions: `bash`, `background_bash`, `subagent`.
 - `bash`: foreground command, background command, timeout, task slug, cwd, deliver result to conversation.
 - `background_bash`: `list`, `get`, `logs`, `start`, `rerun`, `cancel`.
 - `subagent`: `list`, `get`, `logs`, `start`, `rerun`, `follow_up`, `cancel`; loop options; allowed tools.
-- Test durable run creation, logs tailing, rerun, cancel, completion delivery, failure delivery, linked conversation, reload recovery, activity shelf pinning.
+- Test durable execution creation, logs tailing, rerun, cancel, completion delivery, failure delivery, linked conversation, reload recovery, activity shelf pinning.
 - Skills: `runs`.
 
 ### File Explorer (`system-files`)
@@ -241,7 +241,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Agent tool: `conversation`.
 - Actions: ask user question, duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
-- Command/keybinding: `open-thread-palette` / Open thread palette (`mod+k`).
+- Command/keybinding: `open-thread-palette` / Open conversation palette (`mod+k`).
 - Conversation list context menu IDs: `duplicate-conversation`, `copy-working-directory`, `copy-conversation-id`, `copy-deeplink`.
 - Transcript renderers: ask-user-question tool block, terminal bash tool block.
 - Tool operations to test:
@@ -284,8 +284,8 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Actions: `exportSession`, `importSession`.
 - Conversation list context menu: `export-session` / Export Session.
-- Thread header action: `import-session` / Import Session.
-- Test export current session, import valid session, malformed import, conflicts/duplicates, transcript/tool preservation.
+- Conversation header action: `import-session` / Import Session.
+- Test export current conversation, import valid conversation, malformed import, conflicts/duplicates, transcript/tool preservation.
 
 ### Alleycat mobile pairing (`system-alleycat`, default disabled)
 

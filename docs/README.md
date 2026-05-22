@@ -31,7 +31,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants
-- [Activity tree](activity-tree.md) — shared model for conversations, runs, and future sidebar sub-items
+- [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
 - [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions

@@ -11,7 +11,7 @@ Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for conversation-specific side panel
+- right rail for a compact conversation-specific tool panel
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
@@ -40,7 +40,7 @@ Use this as agent guidance, not homework for the user:
 | ---------------------------------------------------- | ------------------------------------------ |
 | A full app, dashboard, or workflow                   | `main-page` extension                      |
 | Context beside the current conversation              | `right-rail` extension                     |
-| A side panel plus center detail pane                 | `workbench-detail` extension               |
+| A compact rail panel plus workbench pane detail view | `workbench-detail` extension               |
 | Something the agent can call                         | backend tool or action                     |
 | A command palette, slash command, or composer button | command/composer contribution              |
 | Settings for an integration                          | settings contribution                      |
@@ -101,11 +101,11 @@ Build a right-rail extension that shows a checklist for the current conversation
 ```
 
 ```text
-Build a main-page extension for reviewing background runs. It should list recent runs, show status and duration, and open run logs in a detail pane.
+Build a main-page extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a detail pane.
 ```
 
 ```text
-Build an extension that adds an agent-callable tool for looking up snippets from my local project glossary. Include a small settings panel for the glossary path.
+Build an extension that adds an agent-callable tool for looking up snippets from my local workspace glossary. Include a small settings panel for the glossary path.
 ```
 
 ```text
