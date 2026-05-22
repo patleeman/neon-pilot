@@ -6,6 +6,7 @@ import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  appendChildConversationTopologyEntry,
   appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
   buildAppendOnlySessionDetailResponse,
@@ -2094,6 +2095,36 @@ describe('sessions', () => {
         customType: 'parent_conversation_backlink',
         text: expect.stringContaining('Fork conversation from parent: Fork parent session'),
       }),
+    );
+  });
+
+  it('does not append a bottom-positioned child topology marker to the parent log', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'no-direct-topology-parent',
+      title: 'No direct topology parent',
+      assistantTexts: ['Parent reply'],
+    });
+    const before = readFileSync(parentSessionFile, 'utf-8');
+
+    appendChildConversationTopologyEntry({
+      parentSessionFile,
+      childSessionId: 'no-direct-topology-child',
+      childTitle: 'No direct topology child',
+      kind: 'fork',
+    });
+
+    expect(readFileSync(parentSessionFile, 'utf-8')).toBe(before);
+    expect(readSessionBlocks('no-direct-topology-parent')?.blocks).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          customType: 'child_conversation_topology',
+          text: expect.stringContaining('No direct topology child'),
+        }),
+      ]),
     );
   });
 
