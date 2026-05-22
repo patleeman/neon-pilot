@@ -240,6 +240,31 @@ async function assertNoMemoryLeak(cdp, child, logs, { idleMs = 10_000, maxHeapGr
   };
 
   await cdp.send('Performance.enable');
+
+  // The packaged app can finish route hydration and daemon-backed bootstrap
+  // shortly after the smoke navigation succeeds. Do not treat that legitimate
+  // one-time DOM growth as an idle leak; first wait for the renderer to settle.
+  let settled = false;
+  let previous = await sample();
+  const settleDeadline = Date.now() + 20_000;
+  while (Date.now() < settleDeadline) {
+    await sleep(1_000);
+    await collectGarbage();
+    const current = await sample();
+    const heapDeltaMb = Math.abs(current.heapMb - previous.heapMb);
+    const domDelta = Math.abs(current.domNodes - previous.domNodes);
+    if (heapDeltaMb < 2 && domDelta < 200) {
+      settled = true;
+      break;
+    }
+    previous = current;
+  }
+
+  if (!settled) {
+    throw new Error(`Renderer did not settle before memory leak check; last sample had ${previous.domNodes} DOM nodes.
+${logs()}`);
+  }
+
   await collectGarbage();
   const before = await sample();
 
