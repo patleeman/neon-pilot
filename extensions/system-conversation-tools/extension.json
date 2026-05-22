@@ -220,7 +220,10 @@
         "surface": "conversationList"
       }
     ],
-    "commands": [{ "id": "open-thread-palette", "title": "Open thread palette", "action": "palette.open", "args": { "scope": "threads" } }],
+    "commands": [
+      { "id": "open-thread-palette", "title": "Open thread palette", "action": "palette.open", "args": { "scope": "threads" } },
+      { "id": "open-command-palette", "title": "Open command palette", "action": "palette.open", "args": { "scope": "commands" } }
+    ],
     "keybindings": [
       {
         "id": "open-thread-palette",
@@ -228,6 +231,13 @@
         "keys": ["mod+k"],
         "command": "palette.open",
         "args": { "scope": "threads" }
+      },
+      {
+        "id": "open-command-palette",
+        "title": "Open command palette",
+        "keys": ["mod+shift+p"],
+        "command": "palette.open",
+        "args": { "scope": "commands" }
       }
     ]
   },

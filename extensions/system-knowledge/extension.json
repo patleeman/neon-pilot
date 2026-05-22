@@ -111,6 +111,23 @@
         "order": 10
       }
     ],
+    "commands": [
+      {
+        "id": "open-knowledge-files-palette",
+        "title": "Open knowledge files palette",
+        "action": "palette.open",
+        "args": { "scope": "files" }
+      }
+    ],
+    "keybindings": [
+      {
+        "id": "open-knowledge-files-palette",
+        "title": "Open knowledge files palette",
+        "keys": ["mod+p"],
+        "command": "palette.open",
+        "args": { "scope": "files" }
+      }
+    ],
     "settingsComponent": {
       "id": "knowledge-base",
       "component": "KnowledgeSettingsPanel",
