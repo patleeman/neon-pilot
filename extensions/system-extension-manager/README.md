@@ -12,6 +12,8 @@ Extensions are Neon Pilot's native product-module system. They let Patrick or an
 
 The old iframe/HTML extension model is deprecated. New extensions render native React inside the Neon Pilot UI, declare their surfaces in `extension.json`, call stable PA capabilities from `@neon-pilot/extensions`, and use separate frontend/backend entries.
 
+Extension frontends must use the native PA client/action bridge for app-internal communication. Extension HTTP routes are for external or side-channel consumers only, not for Neon Pilot renderer-to-extension calls.
+
 The Extension Manager should make that loop boring:
 
 - create a starter native extension package
@@ -38,6 +40,8 @@ User extensions live in runtime state by default:
 Bundled first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as user extensions; there is no hard-coded system extension allowlist.
 
 Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as user extensions.
+
+The Extension Manager page includes an **Available** tab for normal users. It lists optional first-party extensions and installs their `.neon-extension.zip` bundles from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. After installation, tell users to check the installed extension registry on the main **Extensions** tab to enable, disable, inspect, validate, or reload the extension.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 

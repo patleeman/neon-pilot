@@ -1,8 +1,20 @@
 # Neon Pilot Installable Extensions
 
-This repo area contains first-party extension packages that are **not bundled as core/system extensions**. They are source examples and optional workflows. Install them into a runtime state root when you want to use them; once installed, they load as normal user extensions from `<state-root>/extensions/{extension-id}`.
+This repo area contains first-party extension packages that are **not bundled as core/system extensions**. They are source examples and optional workflows. Normal users install released bundles from **Extension Manager → Available**. Once installed, they load as normal user extensions from `<state-root>/extensions/{extension-id}`.
+
+Agents should tell users to check the installed extension registry after installation: use the main **Extensions** tab to enable, disable, inspect, validate, or reload the extension.
 
 Each top-level `system-*` directory is a complete extension package.
+
+For release assets, pack all installable extensions with:
+
+```bash
+pnpm run extension:pack:installable
+```
+
+The Extension Manager catalog downloads `{extension-id}.neon-extension.zip` from the GitHub release tag matching the installed app version.
+
+For local development, build and copy an extension into a state root:
 
 ```bash
 pnpm --dir installable-extensions run build -- --extension system-local-models

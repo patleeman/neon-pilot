@@ -48,6 +48,25 @@ interface KeybindingInspectorEntry {
   enabled: boolean;
 }
 
+interface InstallableExtensionCatalogItem {
+  id: string;
+  name: string;
+  description?: string;
+  version: string;
+  tag: string;
+  bundleUrl: string;
+  installed: boolean;
+  installedVersion?: string;
+  enabled?: boolean;
+}
+
+interface InstallableExtensionCatalogResponse {
+  ok: true;
+  version: string;
+  tag: string;
+  extensions: InstallableExtensionCatalogItem[];
+}
+
 interface LogicalSurfaceSummary {
   id: string;
   title: string;
@@ -468,7 +487,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'extensions' | 'commands'>('extensions');
+  const [activeTab, setActiveTab] = useState<'extensions' | 'available' | 'commands'>('extensions');
   const [filter, setFilter] = useState<'all' | 'system' | 'user' | 'enabled' | 'disabled'>('all');
   const [query, setQuery] = useState('');
   const location = useLocation();
@@ -479,6 +498,9 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const [showExperimental, setShowExperimental] = useState(false);
   const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
   const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
+  const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [commandArgsDraft, setCommandArgsDraft] = useState<Record<string, string>>({});
   const [keybindingDraft, setKeybindingDraft] = useState<Record<string, string>>({});
 
@@ -526,16 +548,30 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
       .catch(() => setKeybindings([]));
   }, [pa]);
 
+  const loadCatalog = useCallback(() => {
+    setCatalogError(null);
+    if (!pa.extensions?.callAction) {
+      setCatalog({ ok: true, version: '', tag: '', extensions: [] });
+      return;
+    }
+    void pa.extensions
+      .callAction('system-extension-manager', 'listInstallableExtensions', {})
+      .then((result) => setCatalog(result as InstallableExtensionCatalogResponse))
+      .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
+  }, [pa]);
+
   useEffect(() => {
     void load({ showLoading: true });
     loadCommandInspector();
+    loadCatalog();
     const refresh = () => {
       void load({ showLoading: false });
       loadCommandInspector();
+      loadCatalog();
     };
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
     return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
-  }, [load, loadCommandInspector]);
+  }, [load, loadCatalog, loadCommandInspector]);
 
   const executeInspectorCommand = useCallback(
     async (command: CommandInspectorEntry) => {
@@ -606,15 +642,15 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
 
   const reload = useCallback(() => {
     setNotice(null);
-    api
-      .reloadExtensions()
+    pa.extensions
+      .callAction('system-extension-manager', 'reloadExtensions', {})
       .then((result) => {
-        setNotice(result.message);
+        setNotice((result as { message?: string }).message ?? 'Extension registry reloaded.');
         notifyExtensionRegistryChanged();
         load();
       })
       .catch((err: Error) => setError(err.message));
-  }, [load]);
+  }, [load, pa]);
 
   const createExtension = useCallback(() => {
     setCreateDraft({ name: '', id: '', template: 'main-page' });
@@ -666,6 +702,25 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
   const cancelImport = useCallback(() => {
     setImportWarningZip(null);
   }, []);
+
+  const installCatalogExtension = useCallback(
+    async (item: InstallableExtensionCatalogItem) => {
+      setBusyId(item.id);
+      setNotice(`Installing ${item.name} from ${item.tag}…`);
+      try {
+        await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
+        setNotice(`Installed ${item.name}. Enable it from the extension registry when you're ready.`);
+        notifyExtensionRegistryChanged();
+        await load();
+        loadCatalog();
+      } catch (err) {
+        showActionError(`Failed to install ${item.name}`, err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [load, loadCatalog, pa, showActionError],
+  );
 
   const toggleExtension = useCallback(
     (extension: ExtensionInstallSummary) => {
@@ -747,6 +802,73 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
     [visibleExtensions],
   );
   const visibleExperimentalExtensions = useMemo(() => visibleExtensions.filter(isExperimentalExtension), [visibleExtensions]);
+
+  const visibleCatalogExtensions = useMemo(() => {
+    const normalizedQuery = catalogQuery.trim().toLowerCase();
+    const items = catalog?.extensions ?? [];
+    if (!normalizedQuery) return items;
+    return items.filter((item) => `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery));
+  }, [catalog, catalogQuery]);
+
+  const renderCatalog = () => (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Available extensions</div>
+          <div className="mt-1 max-w-[44rem] text-[12px] leading-5 text-secondary">
+            Optional Neon Pilot extensions are downloaded from the GitHub release for this installed version
+            {catalog?.tag ? <span className="font-mono text-dim"> ({catalog.tag})</span> : null}. After install, check the extension
+            registry below to enable or inspect them.
+          </div>
+        </div>
+        <input
+          value={catalogQuery}
+          onChange={(event) => setCatalogQuery(event.target.value)}
+          placeholder="Search available extensions…"
+          className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+        />
+      </div>
+      {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
+      {!catalog && !catalogError ? <LoadingState label="Loading available extensions…" /> : null}
+      {catalog && visibleCatalogExtensions.length === 0 ? (
+        <EmptyState title="No matching extensions" body="Adjust the search query." />
+      ) : null}
+      {visibleCatalogExtensions.length ? (
+        <div className="divide-y divide-border-subtle/70">
+          {visibleCatalogExtensions.map((item) => {
+            const busy = busyId === item.id;
+            return (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
+                    <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">{item.id}</span>
+                    {item.installed ? (
+                      <span className="shrink-0 rounded-md bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-success">
+                        Installed
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 max-w-[48rem] text-[12px] leading-5 text-secondary">
+                    {item.description || 'No description provided.'}
+                  </div>
+                  <div className="mt-1 break-all font-mono text-[11px] text-dim">{item.bundleUrl}</div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={busy || item.installed}
+                  onClick={() => void installCatalogExtension(item)}
+                >
+                  {busy ? 'Installing…' : item.installed ? 'Installed' : 'Install'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
 
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
@@ -881,7 +1003,7 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
           ) : null}
 
           <div className="flex flex-wrap gap-1 border-b border-border-subtle/70 pb-5">
-            {(['extensions', 'commands'] as const).map((tab) => (
+            {(['extensions', 'available', 'commands'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -896,7 +1018,9 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
             ))}
           </div>
 
-          {activeTab === 'commands' ? (
+          {activeTab === 'available' ? (
+            renderCatalog()
+          ) : activeTab === 'commands' ? (
             <section className="space-y-4">
               <div>
                 <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Commands</div>
@@ -1888,8 +2012,7 @@ export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClien
     setBusy('Reloading extensions…');
     setMessage(null);
     try {
-      const response = await fetch('/api/extensions/reload', { method: 'POST' });
-      if (!response.ok) throw new Error(await response.text());
+      await pa.extension.invoke('reloadExtensions');
       notifyExtensionRegistryChanged();
       setMessage('Extensions reloaded.');
     } catch (error) {

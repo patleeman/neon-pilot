@@ -17,9 +17,13 @@
       { "id": "snapshotExtension", "handler": "snapshotExtension", "title": "Snapshot extension" },
       { "id": "reloadExtension", "handler": "reloadExtension", "title": "Reload extension" },
       { "id": "validateExtension", "handler": "validateExtension", "title": "Validate extension" },
+      { "id": "listInstallableExtensions", "handler": "listInstallableExtensions", "title": "List installable extensions" },
+      { "id": "installCatalogExtension", "handler": "installCatalogExtension", "title": "Install catalog extension" },
+      { "id": "installExtensionFromUrl", "handler": "installExtensionFromUrl", "title": "Install extension from URL" },
       { "id": "listHostViewComponents", "handler": "listHostViewComponents", "title": "List host view components" },
       { "id": "readSearchPaths", "handler": "readSearchPaths", "title": "Read extension search paths" },
       { "id": "updateSearchPaths", "handler": "updateSearchPaths", "title": "Update extension search paths" },
+      { "id": "reloadExtensions", "handler": "reloadExtensions", "title": "Reload extension registry" },
       { "id": "manageExtension", "handler": "manageExtension", "title": "Manage extension" }
     ]
   },

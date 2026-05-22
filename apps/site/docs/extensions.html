@@ -114,13 +114,10 @@ Implement it with editable source files, build it, reload it, visually test it, 
 │   ├── frontend.tsx    # UI components (optional)
 │   └── backend.ts      # Backend handlers / protocol entrypoints (optional)
 └── dist/               # Built output</code></pre>
-        <p>Create a new extension by asking your agent to build it. Under the hood, the agent can use Extension Manager or the API:</p>
-        <pre><code>POST /api/extensions
-{
-  &quot;id&quot;: &quot;my-ext&quot;,
-  &quot;name&quot;: &quot;My Extension&quot;,
-  &quot;template&quot;: &quot;main-page&quot;   # &quot;main-page&quot;, &quot;right-rail&quot;, or &quot;workbench-detail&quot;
-}</code></pre>
+        <p>
+          Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the
+          packaged local-extension-development skill; renderer/extension UI should not call <code>/api/extensions/*</code> directly.
+        </p>
         <h2 id="manifest-extension-json">Manifest (<code>extension.json</code>)</h2>
         <p>The manifest declares what your extension contributes:</p>
         <pre><code>{
@@ -1308,6 +1305,13 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           an action immediately after the user enables the extension.
         </p>
         <p>
+          Desktop extension UI must use the native PA client/action bridge (<code>pa.extension.invoke</code>,
+          <code>pa.extensions.callAction</code>, or another typed <code>pa.*</code> capability) to communicate with backend code. Do not
+          fetch <code>/api/extensions/*</code> or an extension's own <code>backend.routes</code> from extension frontend code. Extension
+          HTTP routes are integration surfaces for external or side-channel consumers only: webhooks, OAuth callbacks, local protocol
+          adapters, browser/webview callbacks, or third-party tools that cannot use the desktop IPC bridge.
+        </p>
+        <p>
           Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions,
           services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls
           <code>process.exit(...)</code>, <code>process.abort()</code>, or <code>process.kill(process.pid, ...)</code>, the call is blocked,
@@ -1907,21 +1911,19 @@ export default function (pi: ExtensionAPI) {
         <h2 id="development-workflow">Development Workflow</h2>
         <h3 id="building">Building</h3>
         <p>Extensions need to be built before they can be loaded:</p>
-        <pre><code>POST /api/extensions/my-ext/build
-
-# Or from the extension manager UI, click &quot;Build&quot;
-# Or from the repo for a local extension directory:
+        <pre><code># From the repo for a local extension directory:
 pnpm run extension:build -- /path/to/my-extension</code></pre>
         <p>
           Frontend builds bundle the authoring SDK UI modules (<code>@neon-pilot/extensions/ui</code>, <code>/host</code>,
-          <code>/workbench</code>, <code>/data</code>, and <code>/settings</code>) into <code>dist/frontend.js</code>. The browser loads
-          that built file directly from <code>/api/extensions/&lt;id&gt;/files/...</code>, so frontend dist output must not leave
+          <code>/workbench</code>, <code>/data</code>, and <code>/settings</code>) into <code>dist/frontend.js</code>. The desktop host
+          serves that built file as an extension bundle resource, so frontend dist output must not leave
           <code>@neon-pilot/extensions/*</code> as bare runtime imports.
         </p>
         <h3 id="hot-reload">Hot Reload</h3>
-        <p>After changing backend code:</p>
-        <pre><code>POST /api/extensions/my-ext/reload</code></pre>
-        <p>Note: the frontend is re-evaluated on page load. Use the extension manager UI's &quot;Reload&quot; button or restart the app.</p>
+        <p>
+          After changing backend code, use Extension Manager's <strong>Reload</strong> button or restart the app. The frontend is
+          re-evaluated on page load.
+        </p>
         <h3 id="testing-integration">Testing Integration</h3>
         <p>
           Run the extension integration smoke tests to catch cross-extension issues before starting the app (manifest validation, route
@@ -1956,10 +1958,10 @@ pnpm test</code></pre>
           are release blockers: the integration smoke suite fails when a system extension has registry errors, diagnostics, stale
           <code>dist/</code> output, missing exports, forbidden imports, or backend import crashes. Extension builds write
           <code>dist/build-manifest.json</code> with output files, byte sizes, and remaining external imports. Use Extension Manager UI
-          actions or <code>/api/extensions</code> endpoints for local extension authoring: list, create, snapshot, build, validate, and
-          reload. Run validate after each build to check manifest references, dist files, stale output, frontend/backend exports, tool
-          schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes for one extension. The
-          release publisher reruns the packaged-extension check against the built <code>.app</code> before notarization/upload.
+          actions for local extension authoring: list, create, snapshot, build, validate, and reload. Run validate after each build to check
+          manifest references, dist files, stale output, frontend/backend exports, tool schemas, skill files, forbidden process imports,
+          non-portable bundled imports, and backend import crashes for one extension. The release publisher reruns the packaged-extension
+          check against the built <code>.app</code> before notarization/upload.
         </p>
         <p>The integration suite covers these categories:</p>
         <table>
@@ -2104,7 +2106,10 @@ await ctx.storage.delete('my-key');</code></pre>
           <code>dist/frontend.js</code> bundles are still built and validated as release artifacts.
         </p>
         <p>
-          Installable repo extensions are not bundled or auto-loaded. Build and install them into runtime state with
+          Installable repo extensions are not bundled or auto-loaded. Users install released optional extensions from
+          <strong>Extension Manager → Available</strong>, which downloads the <code>.neon-extension.zip</code> bundle from the GitHub
+          release tag matching the installed app version. After install, check the main extension registry to enable and inspect the
+          extension. For local development, build and install into runtime state with
           <code>pnpm --dir installable-extensions run build -- --extension &lt;id&gt;</code> and
           <code>pnpm --dir installable-extensions run install -- --extension &lt;id&gt; --target &lt;state-root|testing|production&gt;</code
           >.

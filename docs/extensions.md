@@ -61,16 +61,7 @@ my-extension/
 └── dist/               # Built output
 ```
 
-Create a new extension by asking your agent to build it. Under the hood, the agent can use Extension Manager or the API:
-
-```bash
-POST /api/extensions
-{
-  "id": "my-ext",
-  "name": "My Extension",
-  "template": "main-page"   # "main-page", "right-rail", or "workbench-detail"
-}
-```
+Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the packaged local-extension-development skill; renderer/extension UI should not call `/api/extensions/*` directly.
 
 ## Manifest (`extension.json`)
 
@@ -1027,6 +1018,8 @@ If a page needs a style that fights these defaults, first ask whether it should 
 The backend runs in the Node.js server process. It exposes actions
 that the frontend can call via `pa.extension.invoke()`. A backend can also declare `onEnableAction` in `extension.json` to run an action immediately after the user enables the extension.
 
+Desktop extension UI must use the native PA client/action bridge (`pa.extension.invoke`, `pa.extensions.callAction`, or another typed `pa.*` capability) to communicate with backend code. Do not fetch `/api/extensions/*` or an extension's own `backend.routes` from extension frontend code. Extension HTTP routes are integration surfaces for external or side-channel consumers only: webhooks, OAuth callbacks, local protocol adapters, browser/webview callbacks, or third-party tools that cannot use the desktop IPC bridge.
+
 Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions, services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)`, the call is blocked, surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
 
 Repeated backend infrastructure failures trip a circuit breaker: three failures in ten minutes disables the extension and adds an Extension Manager diagnostic. This covers backend load/import failures, health checks, service startup, and similar host-level failures; normal action handler errors are returned to the caller and do not quarantine the extension. Startup also has a safe-mode marker. If the previous launch did not finish extension backend health checks, startup actions, service startup, and subscription installation, the next launch disables enabled runtime/user extensions before loading them again.
@@ -1497,25 +1490,15 @@ For the full list of Pi lifecycle events and signatures, inspect the installed
 Extensions need to be built before they can be loaded:
 
 ```bash
-POST /api/extensions/my-ext/build
-
-# Or from the extension manager UI, click "Build"
-# Or from the repo for a local extension directory:
+# From the repo for a local extension directory:
 pnpm run extension:build -- /path/to/my-extension
 ```
 
-Frontend builds bundle the authoring SDK UI modules (`@neon-pilot/extensions/ui`, `/host`, `/workbench`, `/data`, and `/settings`) into `dist/frontend.js`. The browser loads that built file directly from `/api/extensions/<id>/files/...`, so frontend dist output must not leave `@neon-pilot/extensions/*` as bare runtime imports.
+Frontend builds bundle the authoring SDK UI modules (`@neon-pilot/extensions/ui`, `/host`, `/workbench`, `/data`, and `/settings`) into `dist/frontend.js`. The desktop host serves that built file as an extension bundle resource, so frontend dist output must not leave `@neon-pilot/extensions/*` as bare runtime imports.
 
 ### Hot Reload
 
-After changing backend code:
-
-```bash
-POST /api/extensions/my-ext/reload
-```
-
-Note: the frontend is re-evaluated on page load. Use the extension
-manager UI's "Reload" button or restart the app.
+After changing backend code, use Extension Manager's **Reload** button or restart the app. The frontend is re-evaluated on page load.
 
 ### Testing Integration
 
@@ -1561,7 +1544,7 @@ diagnostics are release blockers: the integration smoke suite fails when a syste
 extension has registry errors, diagnostics, stale `dist/` output, missing exports,
 forbidden imports, or backend import crashes. Extension builds write
 `dist/build-manifest.json` with output files, byte sizes, and remaining external
-imports. Use Extension Manager UI actions or `/api/extensions` endpoints for local
+imports. Use Extension Manager UI actions for local
 extension authoring: list, create, snapshot, build, validate, and reload. Run
 validate after each build to check manifest references, dist files, stale output,
 frontend/backend exports, tool schemas, skill files, forbidden process imports,
@@ -1632,4 +1615,4 @@ Each extension has a complete `extension.json` manifest and
 
 Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`NEON_PILOT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.
 
-Installable repo extensions are not bundled or auto-loaded. Build and install them into runtime state with `pnpm --dir installable-extensions run build -- --extension <id>` and `pnpm --dir installable-extensions run install -- --extension <id> --target <state-root|testing|production>`.
+Installable repo extensions are not bundled or auto-loaded. Users install released optional extensions from **Extension Manager → Available**, which downloads the `.neon-extension.zip` bundle from the GitHub release tag matching the installed app version. After install, check the main extension registry to enable and inspect the extension. For local development, build and install into runtime state with `pnpm --dir installable-extensions run build -- --extension <id>` and `pnpm --dir installable-extensions run install -- --extension <id> --target <state-root|testing|production>`.

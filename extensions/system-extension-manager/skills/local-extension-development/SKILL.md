@@ -4,7 +4,7 @@ description: Use when creating, editing, externally building, validating, reload
 metadata:
   id: local-extension-development
   title: Local Extension Development
-  summary: Built-in workflow and reference for agents building native extensions with packaged app resources and Extension Manager APIs.
+  summary: Built-in workflow and reference for agents building native extensions with packaged app resources and Extension Manager actions.
   status: active
 ---
 
@@ -20,12 +20,12 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 
 ## First moves
 
-1. Inspect installed extensions through Extension Manager or `GET /api/extensions/installed`.
-2. If editing an existing user extension, snapshot it first from Extension Manager or `POST /api/extensions/{id}/snapshot`.
-3. If creating a new extension, use Extension Manager **Create** or `POST /api/extensions`.
+1. Inspect installed extensions through Extension Manager.
+2. If editing an existing user extension, snapshot it first from Extension Manager.
+3. If creating a new extension, use Extension Manager **Create**.
 4. Edit `src/` files and `extension.json`, then build outside the app with `neon-pilot-extension build <extension-dir>` or repo tooling.
-5. Validate from Extension Manager or `POST /api/extensions/{id}/validate` and fix every error.
-6. Reload from Extension Manager or `POST /api/extensions/{id}/reload`.
+5. Validate from Extension Manager and fix every error.
+6. Reload from Extension Manager.
 7. Open the declared route/surface and visually inspect UI changes.
 8. Check Extension Manager diagnostics before reporting done.
 
@@ -53,9 +53,9 @@ Starter create payload:
 }
 ```
 
-## Extension Manager API contract
+## Extension Manager action contract
 
-Use Extension Manager UI actions or the `/api/extensions` endpoints for the built-app authoring loop when a repo checkout is not available.
+Use Extension Manager UI actions for the built-app authoring loop when a repo checkout is not available. Extension frontends must communicate with backend code through the native PA client/action bridge, not by fetching `/api/extensions/*`. HTTP routes are reserved for external or side-channel consumers.
 
 A validation result has this shape:
 
@@ -78,27 +78,6 @@ A validation result has this shape:
 ```
 
 Treat `ok: false` as actionable, not fatal. Fix every `error`, usually fix every `warning`, rebuild, validate again, then reload.
-
-## HTTP API contract
-
-If tools are unavailable but the app API is reachable, use the same operations over HTTP:
-
-```text
-GET  /api/extensions/installed
-POST /api/extensions
-POST /api/extensions/{id}/snapshot
-POST /api/extensions/{id}/validate
-POST /api/extensions/validate          # body: { id | extensionId | packageRoot }
-POST /api/extensions/{id}/reload
-POST /api/extensions/{id}/self-test
-POST /api/extensions/{id}/export
-```
-
-Successful reload response:
-
-```json
-{ "ok": true, "id": "my-extension", "reloaded": true, "message": "Extension backend reloaded." }
-```
 
 Templates:
 
@@ -333,8 +312,8 @@ Never import app internals like `packages/desktop/server/*`, `packages/desktop/u
 Built app path:
 
 1. Build outside the app with `neon-pilot-extension build /path/to/extension` or repo tooling.
-2. Validate with Extension Manager **Validate** or `POST /api/extensions/{id}/validate`. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
-3. Reload with Extension Manager **Reload** or `POST /api/extensions/{id}/reload`.
+2. Validate with Extension Manager **Validate**. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
+3. Reload with Extension Manager **Reload**.
 4. Inspect diagnostics in Extension Manager.
 
 Repo checkout fallback:

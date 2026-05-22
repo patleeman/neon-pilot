@@ -4,7 +4,10 @@ import { dirname, join, resolve } from 'node:path';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   createRuntimeExtension,
+  installCatalogExtension as installCatalogExtensionFromHost,
+  installExtensionBundleFromUrl,
   listExtensionInstallSummaries,
+  listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   reloadExtensionBackend,
   snapshotRuntimeExtension,
   validateExtensionPackage,
@@ -28,6 +31,20 @@ export async function listExtensions(_input: unknown, _ctx: ExtensionBackendCont
 
 export async function listHostViewComponents(_input: unknown, _ctx: ExtensionBackendContext) {
   return { ok: true, hostViewComponents: HOST_VIEW_COMPONENT_DEFINITIONS };
+}
+
+export async function listInstallableExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
+  return listInstallableExtensionCatalogFromHost();
+}
+
+export async function installCatalogExtension(input: unknown, _ctx: ExtensionBackendContext) {
+  const result = await installCatalogExtensionFromHost(asRecord(input));
+  return { ok: true, ...result };
+}
+
+export async function installExtensionFromUrl(input: unknown, _ctx: ExtensionBackendContext) {
+  const result = await installExtensionBundleFromUrl(asRecord(input));
+  return { ok: true, ...result };
 }
 
 export async function createExtension(input: unknown, _ctx: ExtensionBackendContext) {
@@ -86,6 +103,10 @@ export async function updateSearchPaths(input: unknown, ctx: ExtensionBackendCon
   return readSearchPaths(input, ctx);
 }
 
+export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
+  return { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
+}
+
 export async function manageExtension(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const action = typeof body.action === 'string' ? body.action : 'list';
@@ -95,8 +116,12 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'reload') return reloadExtension(input as ExtensionIdInput, ctx);
   if (action === 'validate') return validateExtension(input, ctx);
   if (action === 'hostViewComponents') return listHostViewComponents(input, ctx);
+  if (action === 'listInstallable') return listInstallableExtensions(input, ctx);
+  if (action === 'installCatalog') return installCatalogExtension(input, ctx);
+  if (action === 'installFromUrl') return installExtensionFromUrl(input, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(input, ctx);
   if (action === 'updateSearchPaths') return updateSearchPaths(input, ctx);
+  if (action === 'reloadExtensions') return reloadExtensions(input, ctx);
   throw new Error(`Unsupported extension manager action: ${action}`);
 }
 

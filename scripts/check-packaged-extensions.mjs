@@ -177,6 +177,21 @@ function collectForbiddenExtensionSourceImports(extensionDir) {
   return failures;
 }
 
+function collectForbiddenInternalExtensionFrontendFetches(extensionDir) {
+  const sourceRoot = join(extensionDir, 'src');
+  const failures = [];
+  for (const sourcePath of collectSourceFiles(sourceRoot)) {
+    if (!/\.(?:tsx|jsx)$/.test(sourcePath) || /\.test\.[cm]?[jt]sx?$/.test(sourcePath)) continue;
+    const source = readFileSync(sourcePath, 'utf8');
+    if (/fetch\s*\(\s*['"`]\/api\/extensions(?:\/|['"`])/.test(source)) {
+      failures.push(
+        `${sourcePath.slice(extensionDir.length + 1)} fetches an internal extension API route; extension UI must use the native PA client/action bridge`,
+      );
+    }
+  }
+  return failures;
+}
+
 function collectForbiddenBundledPaths(filePath) {
   const source = readFileSync(filePath, 'utf8');
   return FORBIDDEN_BUNDLED_PATH_FRAGMENTS.filter((fragment) => source.includes(fragment));
@@ -407,6 +422,11 @@ for (const extensionDir of listPackagedExtensionDirs()) {
   const forbiddenSourceImports = allowedHostBackedExtensionIds.has(id) ? [] : collectForbiddenExtensionSourceImports(extensionDir);
   if (forbiddenSourceImports.length > 0) {
     failures.push(`${id}: backend source imports forbidden host/runtime modules: ${forbiddenSourceImports.join(', ')}`);
+  }
+
+  const forbiddenFrontendFetches = collectForbiddenInternalExtensionFrontendFetches(extensionDir);
+  if (forbiddenFrontendFetches.length > 0) {
+    failures.push(`${id}: frontend uses internal extension HTTP routes: ${forbiddenFrontendFetches.join(', ')}`);
   }
 
   if (backendPath) {

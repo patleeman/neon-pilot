@@ -4,6 +4,7 @@ type ExtensionLifecycleModule = typeof import('../extensionLifecycle.js');
 type ExtensionBackendModule = typeof import('../extensionBackend.js');
 type ExtensionDoctorModule = typeof import('../extensionDoctor.js');
 type ExtensionRegistryModule = typeof import('../extensionRegistry.js');
+type ExtensionCatalogModule = typeof import('../extensionCatalog.js');
 
 type RuntimeExtensionCreateOptions = Parameters<ExtensionLifecycleModule['createRuntimeExtension']>[0];
 type ValidateExtensionPackageOptions = Parameters<ExtensionDoctorModule['validateExtensionPackage']>[0];
@@ -22,6 +23,10 @@ async function importExtensionDoctor(): Promise<ExtensionDoctorModule> {
 
 async function importExtensionRegistry(): Promise<ExtensionRegistryModule> {
   return importServerExtensionModule<ExtensionRegistryModule>('../extensionRegistry.js');
+}
+
+async function importExtensionCatalog(): Promise<ExtensionCatalogModule> {
+  return importServerExtensionModule<ExtensionCatalogModule>('../extensionCatalog.js');
 }
 
 export async function buildRuntimeExtension(extensionId: string) {
@@ -52,6 +57,21 @@ export async function validateExtensionPackage(options: ValidateExtensionPackage
 export async function listExtensionInstallSummaries() {
   const module = await importExtensionRegistry();
   return module.listExtensionInstallSummaries();
+}
+
+export async function listInstallableExtensionCatalog() {
+  const module = await importExtensionCatalog();
+  return module.listInstallableExtensionCatalog();
+}
+
+export async function installCatalogExtension(input: { id?: unknown }) {
+  const module = await importExtensionCatalog();
+  return module.installCatalogExtension(input);
+}
+
+export async function installExtensionBundleFromUrl(input: { url?: unknown; expectedId?: unknown }) {
+  const module = await importExtensionCatalog();
+  return module.installExtensionBundleFromUrl(input);
 }
 
 export type { ExtensionDoctorFinding, ExtensionDoctorReport, ExtensionDoctorSeverity } from '../extensionDoctor.js';
