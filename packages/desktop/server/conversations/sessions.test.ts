@@ -2179,6 +2179,75 @@ describe('sessions', () => {
     expect(backlinkIndex).toBeLessThan(laterReplyIndex);
   });
 
+  it.each(['fork', 'rewind'] as const)('anchors %s markers in both parent and child transcripts', (kind) => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: `${kind}-both-sides-parent`,
+      title: `${kind} both sides parent`,
+      assistantTexts: ['Parent reply'],
+    });
+    const sourceManager = SessionManager.open(parentSessionFile);
+    const parentMessageId = sourceManager.getLeafId();
+    expect(parentMessageId).toBeTruthy();
+
+    const childSessionFile = sourceManager.createBranchedSession(parentMessageId!);
+    expect(childSessionFile).toBeTruthy();
+    const childManager = SessionManager.open(childSessionFile!);
+    const childSessionId = childManager.getSessionId();
+    expect(childSessionId).toBeTruthy();
+    appendFileSync(
+      childSessionFile!,
+      `${JSON.stringify({
+        type: 'message',
+        id: `${kind}-both-sides-later-user`,
+        parentId: parentMessageId,
+        timestamp: '2026-03-11T12:00:10.000Z',
+        message: { role: 'user', content: 'Later child prompt' },
+      })}\n${JSON.stringify({
+        type: 'message',
+        id: `${kind}-both-sides-later-assistant`,
+        parentId: `${kind}-both-sides-later-user`,
+        timestamp: '2026-03-11T12:00:11.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'Later child reply' }] },
+      })}\n`,
+    );
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile!,
+      kind,
+      parentSessionFile,
+      parentSessionId: `${kind}-both-sides-parent`,
+      parentMessageId: parentMessageId!,
+    });
+
+    const label = kind.charAt(0).toUpperCase() + kind.slice(1);
+    const parentBlocks = readSessionBlocks(`${kind}-both-sides-parent`)?.blocks ?? [];
+    const parentAnchorIndex = parentBlocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+    const parentTopologyIndex = parentBlocks.findIndex(
+      (block) => block.type === 'context' && block.customType === 'child_conversation_topology',
+    );
+    expect(parentTopologyIndex).toBe(parentAnchorIndex + 1);
+    expect(parentBlocks[parentTopologyIndex]).toEqual(
+      expect.objectContaining({ text: expect.stringContaining(`${label} conversation created:`) }),
+    );
+    expect(parentBlocks[parentTopologyIndex]).toEqual(expect.objectContaining({ text: expect.stringContaining(childSessionId!) }));
+
+    const childBlocks = readSessionBlocks(childSessionId!)?.blocks ?? [];
+    const childAnchorIndex = childBlocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+    const childBacklinkIndex = childBlocks.findIndex(
+      (block) => block.type === 'context' && block.customType === 'parent_conversation_backlink',
+    );
+    const laterReplyIndex = childBlocks.findIndex((block) => block.type === 'text' && block.text === 'Later child reply');
+    expect(childBacklinkIndex).toBe(childAnchorIndex + 1);
+    expect(childBacklinkIndex).toBeLessThan(laterReplyIndex);
+    expect(childBlocks[childBacklinkIndex]).toEqual(
+      expect.objectContaining({ text: expect.stringContaining(`${label} conversation from parent: ${kind} both sides parent`) }),
+    );
+  });
+
   it('anchors tombstone when parentMessageId is the bare entry id (assistant block suffix stripped)', () => {
     // In the real fork flow, resolveSessionEntryIdFromBlockId strips block ID suffixes
     // like "-t0" or "-x0" from assistant blocks so parentMessageId is the bare entry id.
