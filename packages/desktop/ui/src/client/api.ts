@@ -855,15 +855,30 @@ export const api = {
   createLiveSession: async (
     cwd?: string,
     text?: string,
-    options?: { workspaceCwd?: string | null; model?: string | null; thinkingLevel?: string | null; serviceTier?: string | null },
+    options?: {
+      workspaceCwd?: string | null;
+      model?: string | null;
+      thinkingLevel?: string | null;
+      serviceTier?: string | null;
+      behavior?: 'steer' | 'followUp';
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      attachmentRefs?: unknown;
+      contextMessages?: Array<{ customType: string; content: string }>;
+      relatedConversationIds?: unknown;
+    },
   ) => {
-    void text;
     return (await requireLocalDesktopBridge('Creating live sessions')).createLiveSession({
       cwd,
       ...(options?.workspaceCwd !== undefined ? { workspaceCwd: options.workspaceCwd } : {}),
       ...(options?.model !== undefined ? { model: options.model } : {}),
       ...(options?.thinkingLevel !== undefined ? { thinkingLevel: options.thinkingLevel } : {}),
       ...(options?.serviceTier !== undefined ? { serviceTier: options.serviceTier } : {}),
+      ...(text !== undefined ? { prompt: text } : {}),
+      ...(options?.behavior !== undefined ? { behavior: options.behavior } : {}),
+      ...(options?.images !== undefined ? { images: options.images } : {}),
+      ...(options?.attachmentRefs !== undefined ? { attachmentRefs: options.attachmentRefs } : {}),
+      ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
+      ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
     });
   },
 

@@ -4586,7 +4586,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         let createdSessionId: string | null = null;
         let navigatedToCreatedConversation = false;
         try {
-          const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
+          const created = await api.createLiveSession(draftCwdValue || undefined, textToSend, {
+            ...createLiveSessionPreferenceInput,
+            behavior: queuedBehavior,
+            images: promptImages,
+            attachmentRefs: [],
+            contextMessages: browserContextMessages,
+          });
           createdSessionId = created.id;
           primeCreatedConversationOpenCaches(created, {
             tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,

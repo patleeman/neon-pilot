@@ -204,6 +204,12 @@ export interface DesktopLiveSessionCreateRequest {
   model?: string | null;
   thinkingLevel?: string | null;
   serviceTier?: string | null;
+  prompt?: string;
+  behavior?: 'steer' | 'followUp';
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+  attachmentRefs?: unknown;
+  contextMessages?: Array<{ customType: string; content: string }>;
+  relatedConversationIds?: unknown;
 }
 
 export interface DesktopLiveSessionTakeoverRequest {

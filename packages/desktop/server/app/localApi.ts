@@ -2182,8 +2182,37 @@ export async function createDesktopLiveSession(input: {
   model?: string | null;
   thinkingLevel?: string | null;
   serviceTier?: string | null;
+  prompt?: string;
+  behavior?: 'steer' | 'followUp';
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+  attachmentRefs?: unknown;
+  contextMessages?: Array<{ customType: string; content: string }>;
+  relatedConversationIds?: unknown;
 }): Promise<{ id: string; sessionFile: string; bootstrap?: unknown }> {
-  return createLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
+  const context = await getLocalLiveSessionCapabilityContext();
+  const created = await createLiveSessionCapability(input, context);
+  const prompt = typeof input.prompt === 'string' ? input.prompt : '';
+  if (prompt.trim().length > 0 || (input.images?.length ?? 0) > 0) {
+    void submitLiveSessionPromptCapability(
+      {
+        conversationId: created.id,
+        text: prompt,
+        behavior: input.behavior,
+        images: input.images,
+        attachmentRefs: input.attachmentRefs,
+        contextMessages: input.contextMessages,
+        relatedConversationIds: input.relatedConversationIds,
+      },
+      context,
+    ).catch((error) => {
+      logError('initial live-session prompt dispatch failed', {
+        conversationId: created.id,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    });
+  }
+  return created;
 }
 
 export async function resumeDesktopLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }> {
