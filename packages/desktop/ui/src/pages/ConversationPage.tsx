@@ -2482,6 +2482,32 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(activeConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
+
+  useEffect(() => {
+    if (activeConversationBackgroundExecutions.length === 0) return;
+
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    async function refreshExecutions() {
+      try {
+        const result = await api.executions();
+        if (!cancelled) setExecutions(result);
+      } catch {
+        // Keep the shelf based on the last known app state; the global app stream
+        // will recover independently.
+      }
+      if (!cancelled) timeout = setTimeout(refreshExecutions, 5000);
+    }
+
+    void refreshExecutions();
+
+    return () => {
+      cancelled = true;
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [activeConversationBackgroundExecutions.length, setExecutions]);
+
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
   const deferredResumeIndicatorText = deferredResumePresentation.indicatorText;
