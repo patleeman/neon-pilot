@@ -16,5 +16,17 @@ if (!existsSync(manifestPath) || !statSync(manifestPath).isFile()) {
 const outIndex = args.indexOf('--out');
 const outputPath = resolve(outIndex >= 0 && args[outIndex + 1] ? args[outIndex + 1] : `${packageRoot}.zip`);
 mkdirSync(dirname(outputPath), { recursive: true });
-execFileSync('zip', ['-qry', outputPath, basename(packageRoot)], { cwd: dirname(packageRoot), stdio: 'inherit' });
+execFileSync(
+  'zip',
+  [
+    '-qry',
+    outputPath,
+    basename(packageRoot),
+    '-x',
+    `${basename(packageRoot)}/node_modules/*`,
+    `${basename(packageRoot)}/sidecar/target/*`,
+    `${basename(packageRoot)}/.dist.tmp-*`,
+  ],
+  { cwd: dirname(packageRoot), stdio: 'inherit' },
+);
 console.log(outputPath);

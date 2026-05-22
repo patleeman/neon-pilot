@@ -1,7 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
-import * as gguf from '../../../shared/local-model-runtimes/gguf';
-import * as mlx from '../../../shared/local-model-runtimes/mlx';
+import * as gguf from '../../shared/local-model-runtimes/gguf';
+import * as mlx from '../../shared/local-model-runtimes/mlx';
 
 type SearchInput = { query?: string; format?: 'all' | 'mlx' | 'gguf'; limit?: number };
 type DetailsInput = { modelId?: string };
