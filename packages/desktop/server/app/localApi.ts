@@ -2193,24 +2193,27 @@ export async function createDesktopLiveSession(input: {
   const created = await createLiveSessionCapability(input, context);
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
   if (prompt.trim().length > 0 || (input.images?.length ?? 0) > 0) {
-    void submitLiveSessionPromptCapability(
-      {
-        conversationId: created.id,
-        text: prompt,
-        behavior: input.behavior,
-        images: input.images,
-        attachmentRefs: input.attachmentRefs,
-        contextMessages: input.contextMessages,
-        relatedConversationIds: input.relatedConversationIds,
-      },
-      context,
-    ).catch((error) => {
-      logError('initial live-session prompt dispatch failed', {
-        conversationId: created.id,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+    const dispatchTimer = setTimeout(() => {
+      void submitLiveSessionPromptCapability(
+        {
+          conversationId: created.id,
+          text: prompt,
+          behavior: input.behavior,
+          images: input.images,
+          attachmentRefs: input.attachmentRefs,
+          contextMessages: input.contextMessages,
+          relatedConversationIds: input.relatedConversationIds,
+        },
+        context,
+      ).catch((error) => {
+        logError('initial live-session prompt dispatch failed', {
+          conversationId: created.id,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       });
-    });
+    }, 0);
+    dispatchTimer.unref?.();
   }
   return created;
 }
