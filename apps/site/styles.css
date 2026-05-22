@@ -521,6 +521,11 @@ small,
   margin-top: 64px;
 }
 
+.anchor-target {
+  display: block;
+  scroll-margin-top: 72px;
+}
+
 .split {
   display: grid;
   grid-template-columns: 0.88fr 1.12fr;
