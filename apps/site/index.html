@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#07090f" />
+    <meta name="theme-color" content="#05070b" />
     <meta
       name="description"
-      content="Neon Pilot is a self-extensible desktop agent that builds commands, tools, workflows, and extensions as you need them."
+      content="Neon Pilot is a self-extensible coding companion that can build commands, tools, workflows, and extensions as you need them."
     />
-    <title>Neon Pilot — self-extensible agent runtime</title>
-    <link rel="icon" href="./icon-color.svg" type="image/svg+xml" />
+    <title>Neon Pilot — self-extensible agent</title>
+    <link rel="icon" href="./mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -20,12 +20,12 @@
 
     <header>
       <a class="brand" href="#main" aria-label="Neon Pilot home">
-        <img src="./icon-color.svg" alt="" width="22" height="22" />
+        <span class="brand-mark"><img src="./mark.svg" alt="" /></span>
         <span>Neon Pilot</span>
         <small>Built on Pi</small>
       </a>
       <nav aria-label="Primary">
-        <a href="#self-extension">Overview</a>
+        <a href="#overview">Overview</a>
         <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md" rel="noopener">Docs</a>
         <a href="#extensions">Extensions</a>
         <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub ↗</a>
@@ -34,214 +34,188 @@
     </header>
 
     <main id="main">
-      <section class="hero" aria-labelledby="hero-title">
+      <section class="hero" id="overview" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Self-extensible desktop agent</p>
-          <h1 id="hero-title">A self-extensible agent that adapts to your needs.</h1>
-          <p class="hero-sub">
-            Ask Neon Pilot for the feature you need. It can create commands, tools, workflows, and extensions just in time, then reuse them
-            in future runs.
+          <h1 id="hero-title">A self-extensible agent that adapts to your needs</h1>
+          <p>
+            Neon Pilot is an agentic coding companion that you can shape and extend. Ask for features in plain English — Neon Pilot builds
+            and integrates them.
           </p>
-          <p class="hero-note">Built on Pi. Works across model providers. No single-provider lock-in.</p>
+          <p>Powered by Pi. Built for developers. Designed for control.</p>
           <div class="cta-row">
-            <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-            <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub</a>
+            <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
+            <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub <span>◖</span></a>
           </div>
         </div>
-        <div class="hero-points" aria-label="Product strengths">
-          <div>
-            <span>⌘</span><strong>Self-extensible</strong>
-            <p>Ask for a feature. Neon Pilot builds it.</p>
-          </div>
-          <div>
-            <span>π</span><strong>Built on Pi</strong>
-            <p>Composable agent runtime surfaces.</p>
-          </div>
-          <div>
-            <span>☁</span><strong>Multi-provider</strong>
-            <p>Use the best model for the task.</p>
-          </div>
+        <div class="hero-points" aria-label="Primary differentiators">
+          <article>
+            <span>⌘</span>
+            <div>
+              <strong>Self-extensible</strong>
+              <p>Ask for a feature. Neon Pilot builds it.</p>
+            </div>
+          </article>
+          <article>
+            <span>π</span>
+            <div>
+              <strong>Built on Pi</strong>
+              <p>Secure, composable, and open.</p>
+            </div>
+          </article>
+          <article>
+            <span>☁</span>
+            <div>
+              <strong>Multi-provider</strong>
+              <p>Use the best model for the task. No lock-in.</p>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section class="screenshot-shell" aria-label="Neon Pilot app screenshot">
-        <img
-          src="./workbench.png"
-          alt="Neon Pilot desktop app showing a conversation bound to a local workspace with file explorer and workbench panes."
-        />
+      <section class="flow" aria-label="How self-extension works">
+        <div class="flow-step request">
+          <small>Example request</small>
+          <div class="message"><b>PM</b><span>Add a command to summarize open PRs</span></div>
+          <em>9:41 AM</em>
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-step">
+          <small>Neon Pilot’s plan</small>
+          <ul>
+            <li>Design command interface</li>
+            <li>Implement PR summarizer</li>
+            <li>Add tests and docs</li>
+            <li>Integrate into command palette</li>
+          </ul>
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-step build">
+          <small>Build &amp; integrate</small>
+          <ul>
+            <li>Created: commands/pr_summary.ts</li>
+            <li>Added: Summarize open PRs</li>
+            <li>Updated: command palette</li>
+            <li>Tests: pr-summary.test.ts</li>
+            <li>Docs: docs/commands/pr-summary.md</li>
+          </ul>
+        </div>
+        <div class="arrow">→</div>
+        <div class="flow-step ready">
+          <small>Ready to use</small>
+          <p class="integrated">Command integrated</p>
+          <div class="command">› Summarize open PRs <kbd>⌘K</kbd><span>Command</span></div>
+        </div>
       </section>
 
-      <section id="self-extension" class="section-grid" aria-labelledby="self-extension-title">
+      <section class="app-shot" aria-label="Neon Pilot screenshot">
+        <img src="./workbench.png" alt="Neon Pilot desktop app showing a local workspace, conversation, workbench, and file explorer." />
+      </section>
+
+      <section class="cards primary-cards" aria-label="Primary features">
+        <article>
+          <span>☷</span>
+          <h2>Self-extensible</h2>
+          <p>
+            Neon Pilot extends itself. Ask for new commands, tools, or workflows and it builds, tests, and integrates them — no manual
+            setup.
+          </p>
+          <a href="#self-extension">Learn more →</a>
+        </article>
+        <article>
+          <span>π</span>
+          <h2>Built on Pi</h2>
+          <p>
+            Pi is an open model context protocol for agents. Neon Pilot is built on Pi for security, composability, and long-term
+            flexibility.
+          </p>
+          <a href="#pi">Learn more →</a>
+        </article>
+        <article>
+          <span>☁</span>
+          <h2>Multi-provider</h2>
+          <p>Bring your own keys. Switch between providers anytime. Get the right model for every task without lock-in.</p>
+          <a href="#providers">Learn more →</a>
+        </article>
+      </section>
+
+      <section id="self-extension" class="deep split">
         <div>
-          <p class="eyebrow">How self-extension works</p>
-          <h2 id="self-extension-title">Ask for capabilities, not settings.</h2>
-          <p class="section-intro">
-            The unique loop is simple: request a feature in plain English, let the agent build the right product surface, validate it, and
-            keep it available for future work.
+          <p class="eyebrow">Self-extension lifecycle</p>
+          <h2>Ask for a feature. Keep the capability.</h2>
+          <p class="section-copy">
+            Neon Pilot does not stop at answering. It can decide whether your request belongs as a command, tool, workflow, automation,
+            knowledge surface, or extension — then add it to the product surface.
           </p>
         </div>
-        <div class="extension-flow" aria-label="Self-extension pipeline">
-          <article>
-            <small>Example request</small>
-            <p><b>PM</b> “Add a command to summarize open PRs.”</p>
-          </article>
-          <article>
-            <small>Neon Pilot’s plan</small>
-            <ul>
-              <li>Design command interface</li>
-              <li>Implement PR summarizer</li>
-              <li>Add tests and docs</li>
-              <li>Integrate command palette</li>
-            </ul>
-          </article>
-          <article>
-            <small>Build &amp; integrate</small>
-            <ul class="checks">
-              <li>Created command</li>
-              <li>Updated palette</li>
-              <li>Tests passed</li>
-              <li>Docs written</li>
-            </ul>
-          </article>
-          <article>
-            <small>Ready to reuse</small>
-            <p class="command">› Summarize open PRs <kbd>⌘K</kbd></p>
-          </article>
+        <div class="mini-terminal">
+          <p><span>&gt;</span> add a command that summarizes open PRs</p>
+          <p><em>plan</em> command + GitHub tool + tests + docs</p>
+          <p><em>write</em> commands/pr_summary.ts</p>
+          <p><em>run</em> pnpm run check:extensions:quick</p>
+          <p><b>✓</b> Summarize open PRs available in ⌘K</p>
         </div>
       </section>
 
-      <section id="extensions" class="split" aria-labelledby="extensions-title">
+      <section id="extensions" class="deep split reverse">
+        <div class="extension-list panel">
+          <div class="panel-title">Extensions</div>
+          <div><strong>PR Analyzer</strong><span>LOCAL · Summarizes open pull requests.</span><i></i></div>
+          <div><strong>Release Publisher</strong><span>LOCAL · Packages, validates, and publishes builds.</span><i></i></div>
+          <div><strong>Log Triage</strong><span>SYSTEM · Searches logs and groups failures.</span><i></i></div>
+          <div><strong>Repo Cleanup</strong><span>LOCAL · Finds dead files and stale scripts.</span><i></i></div>
+        </div>
         <div>
           <p class="eyebrow">Extensions are the product surface</p>
-          <h2 id="extensions-title">Capabilities are installed as extensions.</h2>
-          <p class="section-intro">
+          <h2>Capabilities are installed as extensions.</h2>
+          <p class="section-copy">
             Neon Pilot can add commands, tools, workflows, knowledge surfaces, composer controls, and runtime behaviors as modular
             extensions.
           </p>
         </div>
-        <div class="extension-list mock-panel">
-          <div class="panel-title">Installed capabilities</div>
-          <div class="ext-row">
-            <div><strong>PR Analyzer</strong><span>LOCAL · Summarizes open pull requests.</span></div>
-            <i></i>
-          </div>
-          <div class="ext-row">
-            <div><strong>Release Publisher</strong><span>LOCAL · Packages, validates, and publishes builds.</span></div>
-            <i></i>
-          </div>
-          <div class="ext-row">
-            <div><strong>Log Triage</strong><span>SYSTEM · Searches logs and groups failures.</span></div>
-            <i></i>
-          </div>
-          <div class="ext-row">
-            <div><strong>Repo Cleanup</strong><span>LOCAL · Finds dead files and stale scripts.</span></div>
-            <i></i>
-          </div>
-          <div class="ext-row">
-            <div><strong>Docs Generator</strong><span>LOCAL · Captures recurring context as docs.</span></div>
-            <i></i>
-          </div>
-        </div>
       </section>
 
-      <section class="split reverse" aria-labelledby="providers-title">
-        <div class="mock-panel provider-panel">
-          <div class="panel-title">Provider routing</div>
+      <section id="providers" class="deep split">
+        <div>
+          <p class="eyebrow">Multi-provider</p>
+          <h2>Use the best model for the job.</h2>
+          <p class="section-copy">
+            Run a frontier model for planning, a cheaper model for routine work, a vision model for screenshots, and local models when you
+            want control.
+          </p>
+        </div>
+        <div class="provider panel">
           <div><span>Default model</span><strong>GPT-5.5</strong></div>
           <div><span>Vision model</span><strong>MiMo V2.5</strong></div>
           <div><span>Low-cost tasks</span><strong>DeepSeek V4 Flash</strong></div>
           <div><span>Local / offline</span><strong>OpenAI-compatible endpoint</strong></div>
         </div>
+      </section>
+
+      <section id="pi" class="support">
         <div>
-          <p class="eyebrow">Multi-provider</p>
-          <h2 id="providers-title">Use the best model for the job.</h2>
-          <p class="section-intro">
-            Run a frontier model for planning, a cheaper model for routine work, a vision model for screenshots, and local models when you
-            want control.
-          </p>
+          <h2>Everything around the agent</h2>
+          <p>Knowledge, scheduled automations, telemetry, artifacts, workspace context, and provider routing live in one local runtime.</p>
+        </div>
+        <div class="support-grid">
+          <span>Knowledge</span><span>Automations</span><span>Telemetry</span><span>Workspace</span><span>Artifacts</span
+          ><span>Providers</span>
         </div>
       </section>
 
-      <section class="section-grid" aria-labelledby="workspace-title">
+      <section class="closing">
         <div>
-          <p class="eyebrow">Local workspace</p>
-          <h2 id="workspace-title">Works where your project lives.</h2>
-          <p class="section-intro">
-            Neon Pilot binds conversations to local workspaces, so the agent can reason over the files, context, commands, and artifacts
-            that matter for the task.
-          </p>
+          <h2>Ready to make Neon Pilot your own?</h2>
+          <p>Download for macOS and start building your agent.</p>
         </div>
-        <div class="workspace-map mock-panel">
-          <span>Conversation</span><span>Workspace</span><span>Artifacts</span><span>Knowledge</span>
-        </div>
-      </section>
-
-      <section class="split" aria-labelledby="pi-title">
-        <div>
-          <p class="eyebrow">Built on Pi</p>
-          <h2 id="pi-title">An extensible runtime foundation.</h2>
-          <p class="section-intro">
-            Neon Pilot uses Pi as the foundation for conversations, tools, product modules, extension surfaces, and agent runtime behavior.
-          </p>
-        </div>
-        <div class="architecture mock-panel">
-          <strong>Pi Runtime</strong><span>Conversations</span><span>Tools</span><span>Extensions</span><span>Workspace</span
-          ><span>Providers</span><span>Artifacts</span>
-        </div>
-      </section>
-
-      <section aria-labelledby="ops-title">
-        <p class="eyebrow">Everything around the agent</p>
-        <h2 id="ops-title">Operational surfaces included.</h2>
-        <div class="card-grid three">
-          <article>
-            <h3>Knowledge</h3>
-            <p>Durable notes, skills, and project context.</p>
-          </article>
-          <article>
-            <h3>Automations</h3>
-            <p>Scheduled and conversation-bound background work.</p>
-          </article>
-          <article>
-            <h3>Telemetry</h3>
-            <p>Usage, cost, model behavior, and runtime health.</p>
-          </article>
-        </div>
-      </section>
-
-      <section aria-labelledby="uses-title">
-        <p class="eyebrow">Use cases</p>
-        <h2 id="uses-title">Developer workflows you can ask for.</h2>
-        <div class="command-grid">
-          <span>/create release checklist</span><span>/generate project command</span><span>/analyze failed CI logs</span
-          ><span>/summarize open PRs</span><span>/capture context as skill</span><span>/run scheduled checks</span
-          ><span>/build internal tool</span><span>/clean repo scripts</span>
-        </div>
-      </section>
-
-      <section class="bottom-cta" aria-labelledby="bottom-cta-title">
-        <h2 id="bottom-cta-title">Ask for features. Keep control of your stack.</h2>
-        <p>Neon Pilot grows with your workflow without locking you into one model provider, one runtime, or one fixed set of features.</p>
-        <div class="cta-row">
-          <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-          <a class="btn" href="https://github.com/patleeman/neon-pilot">View on GitHub</a>
-        </div>
+        <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">⌄ Download for macOS</a>
       </section>
     </main>
 
     <footer>
+      <span>Patrick Lee · MIT</span>
       <div>
-        <strong>Product</strong><a href="#extensions">Extensions</a><a href="#providers-title">Providers</a
-        ><a href="#ops-title">Automations</a><a href="#ops-title">Knowledge</a><a href="#ops-title">Telemetry</a>
-      </div>
-      <div>
-        <strong>Developers</strong><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md">Docs</a
-        ><a href="https://github.com/patleeman/neon-pilot">GitHub</a><a href="https://github.com/patleeman/neon-pilot/releases">Changelog</a
-        ><a href="https://pi.dev/">Pi</a>
-      </div>
-      <div>
-        <strong>Install</strong><a href="https://github.com/patleeman/neon-pilot/releases/latest">macOS</a
-        ><a href="https://github.com/patleeman/neon-pilot">Linux</a><a href="#providers-title">OpenAI-compatible providers</a>
+        <a href="https://github.com/patleeman/neon-pilot">GitHub</a><a href="https://github.com/patleeman/neon-pilot/releases">Releases</a
+        ><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/index.md">Docs</a>
       </div>
     </footer>
   </body>

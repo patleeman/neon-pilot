@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Neon Pilot mark">
+  <defs>
+    <linearGradient id="g" x1="35" x2="200" y1="28" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9bb7ff"/>
+      <stop offset="1" stop-color="#4e79ff"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#g)">
+    <circle cx="120" cy="120" r="78" stroke-width="16" stroke-dasharray="380 110" stroke-dashoffset="-58" transform="rotate(-90 120 120)"/>
+  </g>
+  <polygon points="120,26 142,58 98,58" fill="#9bb7ff"/>
+</svg>
