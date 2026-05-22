@@ -1,3 +1,5 @@
+import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
+
 export interface ConversationInitialModelPreferenceState {
   conversationId: string;
   currentModel: string;
@@ -20,6 +22,10 @@ interface ConversationLocationState {
   initialModelPreferenceState?: ConversationInitialModelPreferenceState;
   initialDeferredResumeState?: ConversationInitialDeferredResumeState;
   draftHydrationState?: ConversationDraftHydrationState;
+  initialPendingPromptState?: {
+    conversationId: string;
+    prompt?: PendingConversationPrompt | null;
+  };
 }
 
 export function buildConversationServiceTierPreferenceInput(input: { currentServiceTier: string; hasExplicitServiceTier: boolean }): {
@@ -119,5 +125,34 @@ export function resolveConversationDraftHydrationState(input: {
   return {
     conversationId: candidate.conversationId,
     enableAutoModeOnLoad: candidate.enableAutoModeOnLoad,
+  };
+}
+
+export function resolveConversationInitialPendingPromptState(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  locationState: unknown;
+}): PendingConversationPrompt | null {
+  if (input.draft || !input.conversationId || !input.locationState || typeof input.locationState !== 'object') {
+    return null;
+  }
+
+  const candidate = (input.locationState as ConversationLocationState).initialPendingPromptState;
+  if (!candidate || typeof candidate !== 'object' || candidate.conversationId !== input.conversationId) {
+    return null;
+  }
+
+  const prompt = candidate.prompt;
+  if (!prompt || typeof prompt !== 'object' || typeof prompt.text !== 'string') {
+    return null;
+  }
+
+  return {
+    text: prompt.text,
+    ...(prompt.behavior === 'steer' || prompt.behavior === 'followUp' ? { behavior: prompt.behavior } : {}),
+    images: Array.isArray(prompt.images) ? prompt.images : [],
+    attachmentRefs: Array.isArray(prompt.attachmentRefs) ? prompt.attachmentRefs : [],
+    ...(Array.isArray(prompt.contextMessages) ? { contextMessages: prompt.contextMessages } : {}),
+    ...(Array.isArray(prompt.relatedConversationIds) ? { relatedConversationIds: prompt.relatedConversationIds } : {}),
   };
 }

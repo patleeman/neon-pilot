@@ -6,6 +6,7 @@ import {
   resolveConversationDraftHydrationState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
+  resolveConversationInitialPendingPromptState,
 } from './conversationInitialState';
 
 describe('conversation initial state helpers', () => {
@@ -131,6 +132,37 @@ describe('conversation initial state helpers', () => {
 
     expect(
       resolveConversationDraftHydrationState({
+        draft: true,
+        conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toBeNull();
+  });
+
+  it('accepts initial pending prompt state only for the active saved conversation', () => {
+    const prompt = { text: 'hello', behavior: 'followUp' as const, images: [], attachmentRefs: [] };
+    const locationState = {
+      initialPendingPromptState: { conversationId: 'conv-1', prompt },
+    };
+
+    expect(
+      resolveConversationInitialPendingPromptState({
+        draft: false,
+        conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toEqual(prompt);
+
+    expect(
+      resolveConversationInitialPendingPromptState({
+        draft: false,
+        conversationId: 'conv-2',
+        locationState,
+      }),
+    ).toBeNull();
+
+    expect(
+      resolveConversationInitialPendingPromptState({
         draft: true,
         conversationId: 'conv-1',
         locationState,

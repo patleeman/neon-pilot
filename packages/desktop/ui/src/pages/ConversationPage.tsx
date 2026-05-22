@@ -61,6 +61,7 @@ import {
   resolveConversationDraftHydrationState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
+  resolveConversationInitialPendingPromptState,
 } from '../conversation/conversationInitialState';
 import {
   buildMentionItems,
@@ -665,7 +666,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // We use a confirmed-live flag only for lightweight session-state labeling.
   const [confirmedLive, setConfirmedLive] = useState<boolean | null>(null);
   const [liveSessionHasStaleTurnState, setLiveSessionHasStaleTurnState] = useState(false);
-  const [pendingInitialPrompt, setPendingInitialPrompt] = useState<PendingConversationPrompt | null>(null);
+  const [pendingInitialPrompt, setPendingInitialPrompt] = useState<PendingConversationPrompt | null>(() =>
+    resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }),
+  );
   const [pendingInitialPromptDispatching, setPendingInitialPromptDispatchingState] = useState(false);
   const [draftPendingPrompt, setDraftPendingPrompt] = useState<PendingConversationPrompt | null>(null);
   const pendingInitialPromptSessionIdRef = useRef<string | null>(null);
@@ -1727,13 +1730,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    setPendingInitialPrompt(readPendingConversationPrompt(id));
+    setPendingInitialPrompt(
+      resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }) ??
+        readPendingConversationPrompt(id),
+    );
     setPendingInitialPromptDispatchingState(isPendingConversationPromptDispatching(id));
     pendingInitialPromptSessionIdRef.current = null;
     pendingInitialPromptFailureSessionIdRef.current = null;
     pinnedInitialPromptScrollSessionIdRef.current = null;
     pinnedInitialPromptTailKeyRef.current = null;
-  }, [draft, id]);
+  }, [draft, id, location.state]);
 
   useEffect(() => {
     if (draft || !id || typeof window === 'undefined') {
@@ -4627,6 +4633,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               initialDeferredResumeState: {
                 conversationId: newId,
                 resumes: [],
+              },
+              initialPendingPromptState: {
+                conversationId: newId,
+                prompt: initialPrompt,
               },
             },
           });
