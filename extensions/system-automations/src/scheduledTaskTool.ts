@@ -376,6 +376,10 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                 : undefined;
               const validatedThreadBinding = threadBindingInput ? await resolveScheduledTaskThreadBinding(threadBindingInput) : undefined;
 
+              if (!existing && params.cron === undefined && scheduledAt === undefined) {
+                throw new Error('Provide exactly one schedule for a new automation: cron or at.');
+              }
+
               if (targetType === 'conversation' && params.deliverResultToConversation === true) {
                 throw new Error('deliverResultToConversation is only supported for background-agent automations.');
               }

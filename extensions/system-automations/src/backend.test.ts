@@ -111,6 +111,24 @@ describe('system-automations backend', () => {
       expect(backendAutomationMock.createStoredAutomation).not.toHaveBeenCalled();
       expect(backendAutomationMock.updateStoredAutomation).not.toHaveBeenCalled();
     });
+
+    it('returns a validation error for new saved automations without a schedule', async () => {
+      backendAutomationMock.loadScheduledTasksForProfile.mockResolvedValue({ tasks: [], runtimeState: {}, parseErrors: [] });
+      backendAutomationMock.normalizeAutomationTargetTypeForSelection.mockReturnValue('background-agent');
+
+      const result = await scheduledTask(
+        {
+          action: 'save',
+          taskId: 'missing-schedule',
+          prompt: 'Run check',
+        },
+        createCtx(),
+      );
+
+      expect(result.text).toContain('Provide exactly one schedule for a new automation: cron or at.');
+      expect(backendAutomationMock.createStoredAutomation).not.toHaveBeenCalled();
+      expect(backendAutomationMock.updateStoredAutomation).not.toHaveBeenCalled();
+    });
   });
 
   describe('deferredResume handler', () => {
