@@ -305,13 +305,13 @@ describe('run agent extension', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-10T08:30:00Z'));
     pingDaemonMock.mockResolvedValue(true);
-    createStoredAutomationMock.mockReturnValue({
+    createStoredAutomationMock.mockResolvedValue({
       id: 'monitor-build',
       title: 'monitor-build',
       prompt: 'Watch the deployment and report back.',
       schedule: { type: 'at', at: '2026-04-10T09:00:00.000Z' },
     });
-    applyScheduledTaskThreadBindingMock.mockReturnValue({ id: 'monitor-build', prompt: 'Watch the deployment and report back.' });
+    applyScheduledTaskThreadBindingMock.mockResolvedValue({ id: 'monitor-build', prompt: 'Watch the deployment and report back.' });
 
     try {
       const runTool = registerTool('subagent');
@@ -410,13 +410,13 @@ describe('run agent extension', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-10T08:00:00Z'));
     pingDaemonMock.mockResolvedValue(true);
-    createStoredAutomationMock.mockReturnValue({
+    createStoredAutomationMock.mockResolvedValue({
       id: 'deploy-watch',
       title: 'deploy-watch',
       prompt: 'Watch the deployment and report back.',
       schedule: { type: 'cron', expression: '0 9 * * 1-5' },
     });
-    applyScheduledTaskThreadBindingMock.mockReturnValue({ id: 'deploy-watch', prompt: 'Watch the deployment and report back.' });
+    applyScheduledTaskThreadBindingMock.mockResolvedValue({ id: 'deploy-watch', prompt: 'Watch the deployment and report back.' });
 
     try {
       const runTool = registerTool('subagent');

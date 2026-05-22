@@ -416,7 +416,7 @@ export function createRunAgentExtension(options: {
 
                 const scheduledAt = resolveScheduledAt({ defer, at });
                 if (!(await pingDaemon())) throw new Error('Daemon is not responding. Ensure the desktop app is running.');
-                const automation = createStoredAutomation({
+                const automation = await createStoredAutomation({
                   id: taskSlug,
                   title: taskSlug,
                   enabled: true,
@@ -428,7 +428,7 @@ export function createRunAgentExtension(options: {
                   targetType: 'background-agent',
                 });
 
-                const task = applyScheduledTaskThreadBinding(
+                const task = await applyScheduledTaskThreadBinding(
                   automation.id,
                   conversationFile
                     ? {
@@ -444,7 +444,7 @@ export function createRunAgentExtension(options: {
                 );
 
                 if (deliverResultToConversation && conversationFile) {
-                  setTaskCallbackBinding({
+                  await setTaskCallbackBinding({
                     profile,
                     taskId: task.id,
                     conversationId,
