@@ -399,7 +399,7 @@ export function App() {
         .catch(() => {
           // Keep waiting for SSE or a later retry.
         });
-    }, 3_000);
+    }, 15_000);
   }, [setDaemon, setRuns, setSessions, setTasks]);
 
   // Track the latest subscription so we don't re-subscribe after a fresh mount.

@@ -79,7 +79,7 @@ async function renderApp() {
     root.render(<App />);
   });
   await act(async () => {
-    vi.advanceTimersByTime(5_000);
+    vi.advanceTimersByTime(16_000);
     await Promise.resolve();
     await Promise.resolve();
   });
