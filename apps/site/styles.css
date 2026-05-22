@@ -417,11 +417,13 @@ small,
 }
 
 .image-popout {
+  inset: 0;
   width: min(94vw, 1320px);
   max-width: none;
   max-height: 90vh;
+  margin: auto;
   padding: 0;
-  border: 1px solid rgba(134, 166, 255, 0.35);
+  border: 0;
   border-radius: 10px;
   background: #05070b;
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.72);
