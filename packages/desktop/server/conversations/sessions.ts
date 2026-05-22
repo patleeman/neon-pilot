@@ -1839,9 +1839,15 @@ function readCurrentSessionLeafId(filePath: string): string | null {
 }
 
 /**
- * Write a child topology marker directly into the parent session file.
- * This makes the "Forked →" tombstone self-contained — it doesn't depend on
- * scanning other session files at read time.
+ * Invalidate transcript topology after a child conversation is created.
+ *
+ * The visible "Forked →" marker is derived from the child session's offshoot
+ * metadata in buildChildConversationTopologyBlocks()/mergeTopologyBlocks(). Do
+ * not append a visible marker to the parent log here: because the SDK branch is
+ * ordered by the parent chain, a marker appended to the current leaf renders at
+ * the bottom of the transcript instead of at the source message. Keeping this as
+ * an invalidation-only seam preserves the call site contract while letting the
+ * derived topology renderer anchor the marker correctly.
  */
 export function appendChildConversationTopologyEntry(input: {
   parentSessionFile: string;
@@ -1849,28 +1855,7 @@ export function appendChildConversationTopologyEntry(input: {
   childTitle?: string;
   kind: ConversationOffshootKind;
 }): void {
-  const kind = input.kind;
-  const label = kind.charAt(0).toUpperCase() + kind.slice(1);
-  const title = input.childTitle || input.childSessionId;
-  const text = `${label} conversation created: ${title}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}`;
-  // Always chain from the current leaf so getBranch() traversal includes all
-  // messages. anchorEntryId is for display positioning only — the UI uses
-  // mergeTopologyBlocks to place the tombstone near the fork point.
-  const parentId = readCurrentSessionLeafId(input.parentSessionFile);
-
-  appendFileSync(
-    input.parentSessionFile,
-    `${JSON.stringify({
-      type: 'custom_message',
-      id: randomUUID(),
-      parentId,
-      timestamp: new Date().toISOString(),
-      customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
-      display: false,
-      content: [{ type: 'text', text }],
-    })}\n`,
-    'utf-8',
-  );
+  void input;
   clearSessionCaches();
 }
 
