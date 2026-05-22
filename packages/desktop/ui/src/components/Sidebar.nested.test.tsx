@@ -112,6 +112,7 @@ describe('Sidebar nested conversation interactions', () => {
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
     apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    Object.defineProperty(window, 'neonPilotDesktop', { value: {}, configurable: true });
   });
 
   afterEach(() => {
@@ -152,5 +153,22 @@ describe('Sidebar nested conversation interactions', () => {
     expect(row(container, 'grandparent').textContent).toContain('Grandparent thread');
     expect(row(container, 'parent').textContent).toContain('fork: Parent branch');
     expect(() => row(container, 'grandchild')).toThrow();
+  });
+
+  it('closes an active parent that is only visible as lineage while a running child stays open', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child']));
+    renderSidebar('/conversations/parent', [
+      session({ id: 'parent', title: 'Parent thread' }),
+      session({ id: 'child', title: 'Running child', parentSessionId: 'parent', sourceRunId: 'run-child', isRunning: true }),
+    ]);
+    await flush();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'close-conversation' } }));
+    });
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
   });
 });

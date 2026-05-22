@@ -3500,6 +3500,7 @@ export function Sidebar() {
 
   function handleCloseConversation(sessionId: string) {
     const closingActiveConversation = activeConversationId === sessionId;
+    const conversationIsOpen = tabs.some((session) => session.id === sessionId);
 
     if (draggingSessionId === sessionId) {
       clearDragState();
@@ -3507,12 +3508,20 @@ export function Sidebar() {
 
     if (closingActiveConversation) {
       const redirectPath = resolveCloseRedirectPath(sessionId);
-      closeSession(sessionId);
+      if (conversationIsOpen) {
+        closeSession(sessionId);
+      } else {
+        archiveSession(sessionId);
+      }
       navigate(redirectPath);
       return;
     }
 
-    closeSession(sessionId);
+    if (conversationIsOpen) {
+      closeSession(sessionId);
+    } else {
+      archiveSession(sessionId);
+    }
   }
 
   function handleClosePinnedConversation(sessionId: string) {
@@ -3549,7 +3558,10 @@ export function Sidebar() {
 
     if (tabs.some((session) => session.id === activeConversationId)) {
       handleCloseConversation(activeConversationId);
+      return;
     }
+
+    handleCloseConversation(activeConversationId);
   }
 
   function handleTogglePinnedActiveConversation() {
