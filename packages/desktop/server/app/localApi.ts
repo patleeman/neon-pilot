@@ -569,10 +569,10 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
       });
     }
 
-    // Check enabled extension backends before startup actions so failures are
-    // visible in Extension Manager instead of disappearing into spooky action at a distance.
-    void checkEnabledExtensionBackendHealth()
-      .then(() => startExtensionStartupActions(context))
+    // Startup actions/services are first-class startup work. Full backend
+    // health probes are diagnostic and can import heavyweight optional
+    // backends, so run them after the app has had a chance to paint.
+    void startExtensionStartupActions(context)
       .then(() => completeExtensionStartupGuard())
       .catch((error) => {
         logError('extension startup dispatch failed', { message: (error as Error).message });
@@ -583,6 +583,13 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
           severity: 'error',
         });
       });
+
+    const backendHealthTimer = setTimeout(() => {
+      void checkEnabledExtensionBackendHealth().catch((error) => {
+        logError('extension backend health check dispatch failed', { message: (error as Error).message });
+      });
+    }, 60_000);
+    backendHealthTimer.unref?.();
   }
 
   return routes;

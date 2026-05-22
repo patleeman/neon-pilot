@@ -116,6 +116,16 @@ async function waitBody(cdp, child, timeoutMs = 30_000) {
   }
   throw new Error('timed out waiting for non-empty body');
 }
+async function waitAppHydrated(cdp, child, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`app exited ${child.exitCode}`);
+    const hydrated = await evalJs(cdp, `!document.querySelector('#app-loader') && document.body?.innerText?.trim().length > 0`);
+    if (hydrated) return;
+    await sleep(100);
+  }
+  throw new Error('timed out waiting for app hydration');
+}
 async function sampleCpu(rootPid) {
   const { stdout } = await run('ps', ['-axo', 'pid,ppid,%cpu,command']);
   const rows = stdout
@@ -196,6 +206,8 @@ async function main() {
     await waitBody(cdp, child);
     const startupReadyMs = Math.round(performance.now() - start);
     const firstBodyMs = startupReadyMs - cdpReadyMs;
+    await waitAppHydrated(cdp, child);
+    const appHydratedMs = Math.round(performance.now() - start);
     const routeSettingsMs = await measure('settings', async () => {
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
       await waitBody(cdp, child);
@@ -235,6 +247,7 @@ async function main() {
       startupReadyMs,
       cdpReadyMs,
       firstBodyMs,
+      appHydratedMs,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
