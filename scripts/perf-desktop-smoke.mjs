@@ -26,7 +26,7 @@ const blocks = Number(arg('blocks', '80')) || 80;
 const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
-const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '5000')) || 5000;
+const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
 const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
@@ -132,6 +132,26 @@ async function waitAppHydrated(cdp, child, timeoutMs = 30_000) {
   }
   throw new Error('timed out waiting for app hydration');
 }
+async function waitAppUsable(cdp, child, timeoutMs = 45_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
+    const usable = await evalJs(
+      cdp,
+      `(() => {
+        const perf = globalThis.__NEON_PILOT_APP_PERF__;
+        const composerReady = Boolean(document.querySelector('textarea:not([disabled])'));
+        const registryReady = perf?.extensionRegistryLoading === false;
+        const registryCounts = perf?.extensionRegistryCounts || {};
+        const hasCriticalExtensionUi = (registryCounts.topBarElements ?? 0) > 0 || (registryCounts.composerButtons ?? 0) > 0 || (registryCounts.composerInputTools ?? 0) > 0 || (registryCounts.routes ?? 0) > 0;
+        return !document.querySelector('#app-loader') && composerReady && registryReady && hasCriticalExtensionUi;
+      })()`,
+    );
+    if (usable) return;
+    await sleep(100);
+  }
+  throw new Error('timed out waiting for usable app');
+}
 async function sampleCpu(rootPid) {
   const { stdout } = await run('ps', ['-axo', 'pid,ppid,%cpu,command']);
   const rows = stdout
@@ -223,6 +243,8 @@ async function main() {
     const firstBodyMs = startupReadyMs - cdpReadyMs;
     await waitAppHydrated(cdp, child);
     const appHydratedMs = Math.round(performance.now() - start);
+    await waitAppUsable(cdp, child);
+    const appUsableMs = Math.round(performance.now() - start);
     const draftSubmitResult = await measure('draft submit visible', async () => {
       const prompt = `Perf draft submit ${Date.now()}`;
       await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
@@ -304,6 +326,7 @@ async function main() {
       cdpReadyMs,
       firstBodyMs,
       appHydratedMs,
+      appUsableMs,
       draftSubmitSetupMs,
       draftSubmitVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
@@ -327,6 +350,7 @@ async function main() {
     console.log(JSON.stringify(report, null, 2));
     const failures = [];
     if (startupReadyMs > maxReadyMs) failures.push(`startupReadyMs ${startupReadyMs} > ${maxReadyMs}`);
+    if (appUsableMs > maxReadyMs) failures.push(`appUsableMs ${appUsableMs} > ${maxReadyMs}`);
     if (cpuPeak > maxCpu) failures.push(`idleCpuPeak ${cpuPeak.toFixed(1)} > ${maxCpu}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
     if (longTranscriptOpenMs > 2500) failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > 2500`);

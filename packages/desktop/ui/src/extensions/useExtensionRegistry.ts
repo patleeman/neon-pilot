@@ -2,6 +2,7 @@ import { createContext, createElement, type ReactNode, useContext, useEffect, us
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
+import { recordExtensionRegistryUsability } from '../client/perfDiagnostics';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from './extensionRegistryEvents';
 import type { ExtensionInstallSummary, ExtensionManifest, ExtensionRouteSummary, ExtensionSurfaceSummary } from './types';
 
@@ -744,7 +745,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
             ...normalizeComposerControls(enabledRegistryExtensions),
             ...normalizeComposerButtons(enabledRegistryExtensions),
           ].sort(compareComposerControls);
-          setState({
+          const nextState = {
             extensions: registryExtensions,
             routes,
             surfaces,
@@ -773,6 +774,18 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
             activityTreeItemActions: normalizeActivityTreeItemActions(enabledRegistryExtensions),
             loading: false,
             error: null,
+          };
+          setState(nextState);
+          recordExtensionRegistryUsability({
+            loading: false,
+            counts: {
+              extensions: nextState.extensions.length,
+              routes: nextState.routes.length,
+              surfaces: nextState.surfaces.length,
+              topBarElements: nextState.topBarElements.length,
+              composerButtons: nextState.composerButtons.length,
+              composerInputTools: nextState.composerInputTools.length,
+            },
           });
         })
         .catch((error: Error) => {
@@ -781,6 +794,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
             ...EMPTY_EXTENSION_REGISTRY_STATE,
             error: error.message,
           });
+          recordExtensionRegistryUsability({ loading: false, counts: {} });
         });
     };
 

@@ -44,6 +44,9 @@ interface PerfStore {
   conversationOpenSamples: ConversationOpenPhaseSample[];
   chatRenderSamples: ChatRenderSample[];
   clientSamples: ClientPerfSample[];
+  extensionRegistryLoading?: boolean;
+  extensionRegistryLoadedAt?: string;
+  extensionRegistryCounts?: Record<string, number>;
 }
 
 const MAX_PERF_SAMPLES = 120;
@@ -124,6 +127,15 @@ export function recordClientPerfTiming(input: { name: string; startedAtMs: numbe
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][client]', sample);
   }
+}
+
+export function recordExtensionRegistryUsability(input: { loading: boolean; counts?: Record<string, number> }): void {
+  perfStore.extensionRegistryLoading = input.loading;
+  if (!input.loading) {
+    perfStore.extensionRegistryLoadedAt = new Date().toISOString();
+    perfStore.extensionRegistryCounts = input.counts ?? {};
+  }
+  publishPerfStore();
 }
 
 export function recordApiTiming(path: string, res: Response): void {
