@@ -1,0 +1,98 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const daemon = vi.hoisted(() => ({
+  ensureAutomationThread: vi.fn(),
+  normalizeAutomationThreadModeForSelection: vi.fn((mode) => (mode === 'none' || mode === 'existing' ? mode : 'dedicated')),
+  resolveAutomationThreadTitle: vi.fn(),
+  setStoredAutomationThreadBinding: vi.fn(),
+}));
+const conversationService = vi.hoisted(() => ({ resolveConversationSessionFile: vi.fn() }));
+const sessions = vi.hoisted(() => ({ readSessionMeta: vi.fn() }));
+
+vi.mock('@neon-pilot/daemon', () => daemon);
+vi.mock('../conversations/conversationService.js', () => conversationService);
+vi.mock('../conversations/sessions.js', () => sessions);
+
+import {
+  applyScheduledTaskThreadBinding,
+  buildScheduledTaskThreadDetail,
+  resolveScheduledTaskThreadBinding,
+} from './scheduledTaskThreads.js';
+
+describe('scheduledTaskThreads', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    conversationService.resolveConversationSessionFile.mockReturnValue('/session.json');
+    sessions.readSessionMeta.mockReturnValue({ title: 'Planning', cwd: '/repo' });
+    daemon.resolveAutomationThreadTitle.mockReturnValue('Dedicated thread');
+  });
+
+  it('resolves none and dedicated modes without requiring conversation state', () => {
+    expect(resolveScheduledTaskThreadBinding({ threadMode: 'none' })).toEqual({ mode: 'none' });
+    expect(resolveScheduledTaskThreadBinding({ threadMode: 'dedicated' })).toEqual({ mode: 'dedicated' });
+    expect(conversationService.resolveConversationSessionFile).not.toHaveBeenCalled();
+  });
+
+  it('resolves existing thread bindings and validates cwd compatibility', () => {
+    expect(resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: ' conv-1 ', cwd: '/repo' })).toEqual({
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/session.json',
+    });
+    expect(conversationService.resolveConversationSessionFile).toHaveBeenCalledWith('conv-1');
+
+    expect(
+      resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', threadSessionFile: ' /explicit.json ' }),
+    ).toEqual({
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/explicit.json',
+    });
+  });
+
+  it('rejects invalid existing thread selections', () => {
+    expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing' })).toThrow('Choose an existing thread.');
+    conversationService.resolveConversationSessionFile.mockReturnValueOnce(undefined);
+    expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'missing' })).toThrow(
+      'Selected thread was not found.',
+    );
+    sessions.readSessionMeta.mockReturnValueOnce({ cwd: '/other' });
+    expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', cwd: '/repo' })).toThrow(
+      'Selected thread must use the same working directory as the automation.',
+    );
+  });
+
+  it('applies thread bindings through daemon storage and ensures threads unless mode is none', () => {
+    daemon.setStoredAutomationThreadBinding.mockReturnValueOnce({ id: 'task-1', threadMode: 'existing' });
+    daemon.ensureAutomationThread.mockReturnValueOnce({ id: 'task-1', threadMode: 'existing', threadConversationId: 'conv-1' });
+
+    expect(applyScheduledTaskThreadBinding('task-1', { threadMode: 'existing', threadConversationId: 'conv-1', dbPath: '/db' })).toEqual({
+      id: 'task-1',
+      threadMode: 'existing',
+      threadConversationId: 'conv-1',
+    });
+    expect(daemon.setStoredAutomationThreadBinding).toHaveBeenCalledWith('task-1', {
+      dbPath: '/db',
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/session.json',
+    });
+    expect(daemon.ensureAutomationThread).toHaveBeenCalledWith('task-1', { dbPath: '/db' });
+
+    daemon.setStoredAutomationThreadBinding.mockReturnValueOnce({ id: 'task-1', threadMode: 'none' });
+    expect(applyScheduledTaskThreadBinding('task-1', { threadMode: 'none' })).toEqual({ id: 'task-1', threadMode: 'none' });
+  });
+
+  it('builds thread details from conversation metadata or daemon title fallback', () => {
+    expect(buildScheduledTaskThreadDetail({ threadMode: 'existing', threadConversationId: 'conv-1' } as never)).toEqual({
+      threadMode: 'existing',
+      threadConversationId: 'conv-1',
+      threadTitle: 'Planning',
+    });
+    sessions.readSessionMeta.mockReturnValueOnce(undefined);
+    expect(buildScheduledTaskThreadDetail({ threadMode: 'dedicated' } as never)).toEqual({
+      threadMode: 'dedicated',
+      threadTitle: 'Dedicated thread',
+    });
+  });
+});
