@@ -46,7 +46,7 @@ import {
 import { destroyLiveSession } from './liveSessionDestroy.js';
 import { handleLiveSessionEvent } from './liveSessionEventHandling.js';
 import { type LiveContextUsage, type SseEvent } from './liveSessionEvents.js';
-import { makeAuth as makeFactoryAuth, makeRegistry } from './liveSessionFactory.js';
+import { makeAuth as makeFactoryAuth, makeRegistry, warmLiveSessionToolSelection } from './liveSessionFactory.js';
 import {
   getDefaultLifecycleHandlers,
   notifyLiveSessionLifecycleHandlers,
@@ -132,6 +132,10 @@ export {
 } from './liveSessionPresence.js';
 export { type PromptImageAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
+
+export function prewarmLiveSessionToolSelection(): void {
+  warmLiveSessionToolSelection(SETTINGS_FILE);
+}
 
 const AGENT_DIR = getPiAgentRuntimeDir();
 const SETTINGS_FILE = join(AGENT_DIR, 'settings.json');

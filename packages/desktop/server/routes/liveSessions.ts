@@ -12,6 +12,7 @@ import {
   isLive as isLocalLive,
   LiveSessionControlError,
   prewarmLiveSessionLoader,
+  prewarmLiveSessionToolSelection,
   subscribe as subscribeLocal,
 } from '../conversations/liveSessions.js';
 import { logError, logWarn } from '../middleware/index.js';
@@ -110,6 +111,14 @@ function queueDefaultLiveSessionLoaderPrewarm(): void {
         stack: error instanceof Error ? error.stack : undefined,
       });
     });
+    void Promise.resolve()
+      .then(() => prewarmLiveSessionToolSelection())
+      .catch((error) => {
+        logWarn('default live session tool selection prewarm failed', {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      });
   } catch (error) {
     logWarn('default live session loader prewarm setup failed', {
       message: error instanceof Error ? error.message : String(error),

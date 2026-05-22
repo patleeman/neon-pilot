@@ -28,6 +28,13 @@ interface ToolPatchableSessionInternals {
   _refreshToolRegistry?: (options: { activeToolNames: string[]; includeAllExtensionTools: boolean }) => void;
 }
 
+const TOOL_SELECTION_CACHE_TTL_MS = 60_000;
+let cachedToolSelection: {
+  key: string;
+  activeToolNames: string[];
+  cachedAtMs: number;
+} | null = null;
+
 export function makeAuth(agentDir: string): AuthStorage {
   return AuthStorage.create(`${agentDir}/auth.json`);
 }
@@ -82,16 +89,30 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
+export function warmLiveSessionToolSelection(settingsFile: string): string[] {
+  const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared';
+  const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
+  const modelRef = readSavedModelRef(settingsFile);
+  const cacheKey = JSON.stringify({ profile, repoRoot, modelRef });
+  const nowMs = Date.now();
+  let extensionToolNames =
+    cachedToolSelection?.key === cacheKey && nowMs - cachedToolSelection.cachedAtMs <= TOOL_SELECTION_CACHE_TTL_MS
+      ? cachedToolSelection.activeToolNames
+      : null;
+  if (!extensionToolNames) {
+    const plan = buildToolInjectionPlan({ profile, repoRoot, modelRef });
+    extensionToolNames = plan.activeToolNames;
+    cachedToolSelection = { key: cacheKey, activeToolNames: extensionToolNames, cachedAtMs: nowMs };
+  }
+  return extensionToolNames;
+}
+
 function applyExtensionToolSelection(session: AgentSession, settingsFile: string): void {
   const patchable = session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
   if (typeof patchable.setActiveTools !== 'function') return;
 
-  const plan = buildToolInjectionPlan({
-    profile: process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared',
-    repoRoot: process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd(),
-    modelRef: readSavedModelRef(settingsFile),
-  });
-  const activeToolNames = [...new Set([...(patchable.getActiveToolNames?.() ?? []), ...plan.activeToolNames])];
+  const extensionToolNames = warmLiveSessionToolSelection(settingsFile);
+  const activeToolNames = [...new Set([...(patchable.getActiveToolNames?.() ?? []), ...extensionToolNames])];
   patchable.setActiveTools(activeToolNames);
 }
 
