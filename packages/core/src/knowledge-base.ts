@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -12,6 +12,7 @@ import {
   readKnowledgeBaseRemoteFileBuffer,
   readKnowledgeBaseRemotePathTimestampMs,
 } from './knowledge-base-git-refs.js';
+import { listKnowledgeBaseRemoteSnapshot, listKnowledgeBaseWorkingSnapshot } from './knowledge-base-git-snapshots.js';
 import {
   buildKnowledgeBaseMaintenanceState,
   planKnowledgeBaseRepositoryMaintenance,
@@ -187,56 +188,7 @@ function getRemoteRef(branch: string): string {
 }
 
 function listRemoteSnapshot(cwd: string, branch: string): Snapshot {
-  const remoteRef = getRemoteRef(branch);
-  if (!refExists(cwd, remoteRef)) {
-    return {};
-  }
-
-  let output: Buffer;
-  try {
-    output = runGitBuffer(cwd, ['ls-tree', '-rz', '-r', remoteRef]);
-  } catch {
-    return {};
-  }
-  if (output.length === 0) {
-    return {};
-  }
-
-  const snapshot: Snapshot = {};
-  for (const rawEntry of output.toString('utf-8').split('\0')) {
-    if (!rawEntry) {
-      continue;
-    }
-
-    const tabIndex = rawEntry.indexOf('\t');
-    if (tabIndex < 0) {
-      continue;
-    }
-
-    const metadata = rawEntry.slice(0, tabIndex).trim().split(/\s+/);
-    const path = rawEntry.slice(tabIndex + 1).trim();
-    const blobHash = metadata[2]?.trim();
-    if (!path || !blobHash) {
-      continue;
-    }
-
-    snapshot[path] = { blobHash };
-  }
-
-  return snapshot;
-}
-
-function parseNullSeparatedPaths(value: string): string[] {
-  return value
-    .split('\0')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-}
-
-function listWorkingTreePaths(cwd: string): string[] {
-  const tracked = parseNullSeparatedPaths(runGitText(cwd, ['ls-files', '-z'], { allowFailure: true }));
-  const untracked = parseNullSeparatedPaths(runGitText(cwd, ['ls-files', '--others', '--exclude-standard', '-z'], { allowFailure: true }));
-  return [...new Set([...tracked, ...untracked])].sort((left, right) => left.localeCompare(right));
+  return listKnowledgeBaseRemoteSnapshot({ runGitBuffer, refExists, getRemoteRef, cwd, branch });
 }
 
 function computeWorkingBlobHash(cwd: string, relativePath: string): string {
@@ -244,23 +196,7 @@ function computeWorkingBlobHash(cwd: string, relativePath: string): string {
 }
 
 function listWorkingSnapshot(cwd: string): Snapshot {
-  const snapshot: Snapshot = {};
-  for (const relativePath of listWorkingTreePaths(cwd)) {
-    const absolutePath = join(cwd, relativePath);
-    if (!existsSync(absolutePath)) {
-      continue;
-    }
-
-    const stats = statSync(absolutePath);
-    if (!stats.isFile()) {
-      continue;
-    }
-
-    snapshot[relativePath] = {
-      blobHash: computeWorkingBlobHash(cwd, relativePath),
-    };
-  }
-  return snapshot;
+  return listKnowledgeBaseWorkingSnapshot({ runGitText, cwd, computeBlobHash: computeWorkingBlobHash });
 }
 
 function readGitRemoteUrl(cwd: string): string {
