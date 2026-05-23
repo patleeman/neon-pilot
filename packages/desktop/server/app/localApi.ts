@@ -184,6 +184,7 @@ import { buildFastConversationContentSearchResponse } from './localApiSearch.js'
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
+import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -1657,30 +1658,7 @@ export async function updateDesktopConversationModelPreferences(input: {
   surfaceId?: string;
 }) {
   await getLocalRoutes();
-
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) {
-    throw new Error('conversationId required');
-  }
-
-  const { model, thinkingLevel, serviceTier } = input;
-  if (model === undefined && thinkingLevel === undefined && serviceTier === undefined) {
-    throw new Error('model, thinkingLevel, or serviceTier required');
-  }
-
-  if (
-    (model !== undefined && model !== null && typeof model !== 'string') ||
-    (thinkingLevel !== undefined && thinkingLevel !== null && typeof thinkingLevel !== 'string') ||
-    (serviceTier !== undefined && serviceTier !== null && typeof serviceTier !== 'string')
-  ) {
-    throw new Error('model, thinkingLevel, and serviceTier must be strings or null');
-  }
-
-  const nextInput = {
-    ...(model !== undefined ? { model } : {}),
-    ...(thinkingLevel !== undefined ? { thinkingLevel } : {}),
-    ...(serviceTier !== undefined ? { serviceTier } : {}),
-  };
+  const { conversationId, preferences: nextInput } = normalizeDesktopConversationModelPreferenceUpdate(input);
 
   if (isLiveSession(conversationId)) {
     return updateLiveSessionModelPreferences(conversationId, nextInput, await getAvailableModelObjects());
