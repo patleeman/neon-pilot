@@ -188,6 +188,11 @@ import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { buildExecuteLiveSessionBashResponse } from './localApiBashResponse.js';
 import { buildConversationCheckpointRecordInput } from './localApiCheckpointRecord.js';
+import {
+  assertLocalLiveSessionCapabilityContext,
+  assertLocalProviderDesktopCapabilityContext,
+  assertLocalServerRouteContext,
+} from './localApiContextAssertions.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertConversationBootstrapFound } from './localApiConversationBootstrapResponse.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
@@ -616,29 +621,17 @@ async function getLocalRoutes(): Promise<RegisteredRoute[]> {
 
 async function getLocalServerRouteContext(): Promise<ServerRouteContext> {
   await getLocalRoutes();
-  if (!localServerRouteContext) {
-    throw new Error('Local server route context is not initialized.');
-  }
-
-  return localServerRouteContext;
+  return assertLocalServerRouteContext(localServerRouteContext);
 }
 
 async function getLocalLiveSessionCapabilityContext(): Promise<LiveSessionCapabilityContext> {
   await getLocalRoutes();
-  if (!localLiveSessionCapabilityContext) {
-    throw new Error('Local live-session capability context is not initialized.');
-  }
-
-  return localLiveSessionCapabilityContext;
+  return assertLocalLiveSessionCapabilityContext(localLiveSessionCapabilityContext);
 }
 
 async function getLocalProviderDesktopCapabilityContext(): Promise<ProviderDesktopCapabilityContext> {
   await getLocalRoutes();
-  if (!localProviderDesktopCapabilityContext) {
-    throw new Error('Local provider/model capability context is not initialized.');
-  }
-
-  return localProviderDesktopCapabilityContext;
+  return assertLocalProviderDesktopCapabilityContext(localProviderDesktopCapabilityContext);
 }
 
 subscribeKnowledgeBaseState(() => {
