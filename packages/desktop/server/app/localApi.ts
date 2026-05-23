@@ -197,6 +197,7 @@ import {
   resolvePreviousWorkspaceCwd,
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import { assertConversationFound, assertSessionFound } from './localApiConversationNotFound.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
@@ -1002,9 +1003,7 @@ export async function readDesktopSessionMeta(sessionId: string) {
   await getLocalRoutes();
 
   const session = readConversationSessionMetaCapability(sessionId);
-  if (!session) {
-    throw new Error('Session not found');
-  }
+  assertSessionFound(Boolean(session));
 
   return session;
 }
@@ -1622,14 +1621,10 @@ export async function readDesktopConversationModelPreferences(conversationId: st
   await getLocalRoutes();
 
   const normalizedConversationId = conversationId.trim();
-  if (!normalizedConversationId) {
-    throw new Error('Conversation not found');
-  }
+  assertConversationFound(Boolean(normalizedConversationId));
 
   const state = await readConversationModelPreferenceStateById(normalizedConversationId);
-  if (!state) {
-    throw new Error('Conversation not found');
-  }
+  assertConversationFound(Boolean(state));
 
   return state;
 }
@@ -1759,9 +1754,7 @@ export async function readDesktopSessionBlock(input: { sessionId: string; blockI
   await getLocalRoutes();
 
   const result = readConversationSessionBlockWithInlineAssetsCapability(input.sessionId, input.blockId);
-  if (!result) {
-    throw new Error('Session block not found');
-  }
+  assertSessionFound(Boolean(result), 'Session block not found');
 
   return result;
 }
