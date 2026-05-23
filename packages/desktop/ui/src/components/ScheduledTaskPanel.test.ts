@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ProjectRecord, ScheduledTaskDetail, SessionMeta } from '../shared/types';
+import { taskStatusMeta } from './ScheduledTaskPanel';
 import {
   buildTaskExistingThreadOptions,
   buildTaskProjectOptions,
@@ -8,8 +9,7 @@ import {
   parseCatchUpWindowMinutes,
   shouldClearMissingExistingThreadSelection,
   shouldShowTaskModelControls,
-  taskStatusMeta,
-} from './ScheduledTaskPanel';
+} from './scheduledTaskPanelModel';
 
 function createTask(overrides: Partial<ScheduledTaskDetail>): ScheduledTaskDetail {
   return {
