@@ -58,6 +58,7 @@ import {
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
   serializePersistentSessionIndex,
 } from './sessionIndexPersistence.js';
+import { isRawDisplayLineType, parseJsonLine as parseJsonLineValue } from './sessionJsonLines.js';
 export { GOAL_STATE_CUSTOM_TYPE, readGoalFromEntries, type ThreadGoal } from './sessionGoalState.js';
 import {
   sanitizeSessionLineForSearch as sanitizeSessionLineForSearchValue,
@@ -429,15 +430,11 @@ function resolveSessionsIndexFile(): string {
 }
 
 function parseJsonLine(rawLine: string): RawLine | null {
-  try {
-    return JSON.parse(rawLine) as RawLine;
-  } catch {
-    return null;
-  }
+  return parseJsonLineValue<RawLine>(rawLine);
 }
 
 function isRawDisplayLine(line: RawLine): line is RawDisplayLine {
-  return line.type === 'message' || line.type === 'custom_message' || line.type === 'compaction' || line.type === 'branch_summary';
+  return isRawDisplayLineType(line);
 }
 
 const REVERSE_READ_CHUNK_BYTES = 64 * 1024;
