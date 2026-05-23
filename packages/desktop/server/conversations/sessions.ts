@@ -22,6 +22,7 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
+import { rebaseDisplayBlockIds as rebaseDisplayBlockIdsForOffset } from './sessionBlockIds.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
 import {
   type ConversationOffshootKind,
@@ -1331,35 +1332,8 @@ export function buildDisplayBlocksFromEntries(messages: DisplayMessageEntryLike[
   return buildDisplayBlocksInternal(messages);
 }
 
-function rewriteIndexedBlockId(blockId: string, kind: 'm' | 't' | 'x' | 'c' | 'e' | 'i', absoluteIndex: number): string {
-  return blockId.replace(new RegExp(`-${kind}\\d+$`), `-${kind}${absoluteIndex}`);
-}
-
 function rebaseDisplayBlockIds(blocks: DisplayBlock[], blockOffset: number): DisplayBlock[] {
-  if (blockOffset <= 0) {
-    return blocks;
-  }
-
-  return blocks.map((block, index) => {
-    const absoluteIndex = blockOffset + index;
-
-    switch (block.type) {
-      case 'context':
-        return { ...block, id: rewriteIndexedBlockId(block.id, 'm', absoluteIndex) };
-      case 'thinking':
-        return { ...block, id: rewriteIndexedBlockId(block.id, 't', absoluteIndex) };
-      case 'text':
-        return { ...block, id: rewriteIndexedBlockId(block.id, 'x', absoluteIndex) };
-      case 'tool_use':
-        return { ...block, id: rewriteIndexedBlockId(block.id, 'c', absoluteIndex) };
-      case 'error':
-        return { ...block, id: rewriteIndexedBlockId(block.id, 'e', absoluteIndex) };
-      case 'image':
-        return block.alt === 'Injected context image' ? { ...block, id: rewriteIndexedBlockId(block.id, 'i', absoluteIndex) } : block;
-      default:
-        return block;
-    }
-  });
+  return rebaseDisplayBlockIdsForOffset(blocks, blockOffset) as DisplayBlock[];
 }
 
 function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): DisplayBlock[] {
