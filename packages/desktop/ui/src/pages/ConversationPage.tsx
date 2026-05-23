@@ -75,6 +75,11 @@ import {
 } from '../conversation/conversationInitialState';
 import { shouldSwitchToWorkbenchForSelectedRun } from '../conversation/conversationLayoutMode';
 import {
+  buildConversationLifecycleContext,
+  filterConversationLifecycleElements,
+  resolveConversationLifecycleEvent,
+} from '../conversation/conversationLifecyclePresentation';
+import {
   buildMentionItems,
   filterMentionItems,
   MAX_MENTION_MENU_ITEMS,
@@ -5032,36 +5037,30 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const showScrollToBottomControl = shouldShowScrollToBottomControl(messageCount, atBottom);
   const renameConversationDisabled = conversationNeedsTakeover || conversationCwdEditorOpen || conversationCwdBusy;
   const { composerShelves, conversationHeaderElements, newConversationPanels } = extensionRegistry;
-  const lifecycleEvent = sessionError
-    ? 'model-error'
-    : pendingAskUserQuestion
-      ? 'waiting-for-user'
-      : conversationNeedsTakeover
-        ? 'blocked'
-        : stream.goalState?.status === 'active' || composerGoalPending
-          ? 'goal-active'
-          : stream.isCompacting
-            ? 'compaction-available'
-            : conversationRunningForPage
-              ? 'after-run-start'
-              : null;
+  const lifecycleEvent = resolveConversationLifecycleEvent({
+    hasSessionError: Boolean(sessionError),
+    hasPendingAskUserQuestion: Boolean(pendingAskUserQuestion),
+    conversationNeedsTakeover,
+    goalActive: stream.goalState?.status === 'active',
+    composerGoalPending,
+    isCompacting: stream.isCompacting,
+    conversationRunningForPage,
+  });
   const conversationLifecycleElements = useMemo(
-    () => extensionRegistry.conversationLifecycle.filter((item) => lifecycleEvent && item.events.includes(lifecycleEvent)),
+    () => filterConversationLifecycleElements(extensionRegistry.conversationLifecycle, lifecycleEvent),
     [extensionRegistry.conversationLifecycle, lifecycleEvent],
   );
   const conversationLifecycleContext = useMemo(
     () =>
-      lifecycleEvent
-        ? {
-            conversationId: id ?? null,
-            cwd: currentCwd ?? null,
-            event: lifecycleEvent as NonNullable<typeof lifecycleEvent>,
-            isStreaming: conversationRunningForPage,
-            hasGoal: stream.goalState?.status === 'active' || composerGoalPending,
-            isCompacting: stream.isCompacting,
-            error: sessionError ?? null,
-          }
-        : null,
+      buildConversationLifecycleContext({
+        lifecycleEvent,
+        conversationId: id,
+        cwd: currentCwd,
+        isStreaming: conversationRunningForPage,
+        hasGoal: stream.goalState?.status === 'active' || composerGoalPending,
+        isCompacting: stream.isCompacting,
+        error: sessionError,
+      }),
     [
       composerGoalPending,
       conversationRunningForPage,
