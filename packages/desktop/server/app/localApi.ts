@@ -184,6 +184,7 @@ import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTas
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { buildConversationCheckpointRecordInput } from './localApiCheckpointRecord.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
@@ -1557,11 +1558,7 @@ export async function readDesktopConversationAttachmentAsset(input: {
   const download = readConversationAttachmentDownloadCapability(context.getRuntimeScope(), input);
   const data = readFileSync(download.filePath).toString('base64');
 
-  return {
-    dataUrl: `data:${download.mimeType};base64,${data}`,
-    mimeType: download.mimeType,
-    fileName: download.fileName,
-  };
+  return buildAttachmentAssetResponse({ mimeType: download.mimeType, fileName: download.fileName, base64Data: data });
 }
 
 export async function readDesktopConversationDeferredResumes(conversationId: string) {
