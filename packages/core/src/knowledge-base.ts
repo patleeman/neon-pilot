@@ -153,7 +153,7 @@ function runGitCommand(
   options: { allowFailure?: boolean; encoding?: BufferEncoding | 'buffer' } = {},
 ): string | Buffer {
   try {
-    return execFileSync('git', args, {
+    return execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
       cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: options.encoding === 'buffer' ? undefined : (options.encoding ?? 'utf-8'),

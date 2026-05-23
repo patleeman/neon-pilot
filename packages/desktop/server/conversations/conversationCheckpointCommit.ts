@@ -68,7 +68,7 @@ export function normalizeCheckpointPaths(cwd: string, values: string[]): string[
 }
 
 function runCheckpointGit(cwd: string, args: string[], options: { allowEmptyStdout?: boolean } = {}): string {
-  const result = spawnSync('git', args, {
+  const result = spawnSync('git', ['-c', 'core.fsmonitor=false', ...args], {
     cwd,
     encoding: 'utf-8',
   });
@@ -223,7 +223,7 @@ export function createConversationCheckpointCommit(options: {
   runCheckpointGit(options.cwd, ['rev-parse', '--show-toplevel']);
   runCheckpointGit(options.cwd, ['add', '--all', '--', ...options.paths], { allowEmptyStdout: true });
 
-  const stagedDiff = spawnSync('git', ['diff', '--cached', '--quiet', '--', ...options.paths], {
+  const stagedDiff = spawnSync('git', ['-c', 'core.fsmonitor=false', 'diff', '--cached', '--quiet', '--', ...options.paths], {
     cwd: options.cwd,
     encoding: 'utf-8',
   });
@@ -244,7 +244,7 @@ export function createConversationCheckpointCommit(options: {
     // rejection), the temporary index is discarded but the real index was already
     // modified by the earlier git add --all. Unstage the paths to leave the
     // index in a clean state for the caller.
-    spawnSync('git', ['reset', '--', ...options.paths], { cwd: options.cwd, encoding: 'utf-8' });
+    spawnSync('git', ['-c', 'core.fsmonitor=false', 'reset', '--', ...options.paths], { cwd: options.cwd, encoding: 'utf-8' });
     throw commitError;
   }
   const commitSha = runCheckpointGit(options.cwd, ['rev-parse', 'HEAD']).trim();

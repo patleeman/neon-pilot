@@ -51,7 +51,7 @@ export interface ReviewableConversationCommitCheckpointRecord extends Conversati
 }
 
 function runGit(cwd: string, args: string[], options?: { encoding?: BufferEncoding | 'buffer'; timeout?: number }): string | Buffer | null {
-  const result = spawnSync('git', args, {
+  const result = spawnSync('git', ['-c', 'core.fsmonitor=false', ...args], {
     cwd,
     encoding: options?.encoding ?? 'utf-8',
     timeout: options?.timeout ?? 4_000,

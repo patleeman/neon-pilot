@@ -62,7 +62,7 @@ interface GitCommandResult {
 }
 
 function runGitCommand(args: string[], cwd: string, timeoutMs = GIT_STATUS_COMMAND_TIMEOUT_MS): string {
-  return execFileSync('git', args, {
+  return execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
     cwd,
     stdio: ['ignore', 'pipe', 'ignore'],
     encoding: 'utf-8',

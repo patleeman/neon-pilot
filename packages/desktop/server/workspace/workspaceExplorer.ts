@@ -72,7 +72,7 @@ const UNCOMMITTED_DIFF_MAX_UNTRACKED_FILE_BYTES = 256 * 1024;
 const UNCOMMITTED_DIFF_TIMEOUT_MS = 5_000;
 
 function runGit(args: string[], cwd: string): string {
-  return execFileSync('git', args, {
+  return execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
     cwd,
     stdio: ['ignore', 'pipe', 'ignore'],
     encoding: 'utf-8',
