@@ -204,6 +204,11 @@ import {
 } from './localApiLiveSessionResponse.js';
 import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
+import {
+  buildUnchangedSessionDetailResponse,
+  shouldBuildAppendOnlySessionDetail,
+  shouldReturnUnchangedSessionDetail,
+} from './localApiSessionDetailResponse.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -1710,12 +1715,8 @@ export async function readDesktopSessionDetail(input: {
   const context = await getLocalLiveSessionCapabilityContext();
   const sessionId = input.sessionId.trim();
   const currentSessionSignature = readConversationSessionSignature(sessionId);
-  if (input.knownSessionSignature && currentSessionSignature && input.knownSessionSignature === currentSessionSignature) {
-    return {
-      unchanged: true as const,
-      sessionId,
-      signature: currentSessionSignature,
-    };
+  if (shouldReturnUnchangedSessionDetail({ knownSessionSignature: input.knownSessionSignature, currentSessionSignature })) {
+    return buildUnchangedSessionDetailResponse({ sessionId, signature: currentSessionSignature });
   }
 
   const { sessionRead } = await readSessionDetailForRoute({
@@ -1727,15 +1728,17 @@ export async function readDesktopSessionDetail(input: {
     throw new Error('Session not found');
   }
 
-  const appendOnly =
-    input.knownSessionSignature && sessionRead.detail.signature && input.knownSessionSignature !== sessionRead.detail.signature
-      ? buildAppendOnlySessionDetailResponse({
-          detail: sessionRead.detail,
-          knownBlockOffset: input.knownBlockOffset,
-          knownTotalBlocks: input.knownTotalBlocks,
-          knownLastBlockId: input.knownLastBlockId,
-        })
-      : null;
+  const appendOnly = shouldBuildAppendOnlySessionDetail({
+    knownSessionSignature: input.knownSessionSignature,
+    nextSessionSignature: sessionRead.detail.signature,
+  })
+    ? buildAppendOnlySessionDetailResponse({
+        detail: sessionRead.detail,
+        knownBlockOffset: input.knownBlockOffset,
+        knownTotalBlocks: input.knownTotalBlocks,
+        knownLastBlockId: input.knownLastBlockId,
+      })
+    : null;
 
   if (appendOnly) {
     return inlineConversationSessionDetailAppendOnlyAssetsCapability(sessionId, appendOnly);
