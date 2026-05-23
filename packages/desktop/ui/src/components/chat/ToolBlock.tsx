@@ -249,6 +249,22 @@ export function ToolBlock({
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
+  const headerDisclosureLabel =
+    pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError
+      ? pinnedDiffOpen
+        ? 'Hide diff'
+        : 'View diff'
+      : open
+        ? 'hide'
+        : 'show';
+  const toggleHeaderDisclosure = () => {
+    if (pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError) {
+      setPinnedDiffOpen((current) => !current);
+      return;
+    }
+
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  };
 
   return (
     <div
@@ -262,14 +278,17 @@ export function ToolBlock({
         role="button"
         tabIndex={0}
         data-background-run-id={backgroundRunId}
-        onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
+        onClick={toggleHeaderDisclosure}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+            toggleHeaderDisclosure();
           }
         }}
-        className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left"
+        className={cx(
+          'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
+          pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError && 'cursor-pointer',
+        )}
       >
         <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
           {meta.label}
@@ -326,10 +345,10 @@ export function ToolBlock({
         {isRunning ? (
           <>
             <span className="shrink-0 text-[10px] opacity-60 ml-2">running…</span>
-            <span className="shrink-0 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
+            <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
           </>
         ) : (
-          <span className="shrink-0 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
+          <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
         )}
       </div>
 

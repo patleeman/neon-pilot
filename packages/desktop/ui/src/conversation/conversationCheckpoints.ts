@@ -26,7 +26,10 @@ function normalizeToolDetails(value: unknown): ConversationCheckpointToolDetails
     return null;
   }
 
-  const candidate = value as Partial<ConversationCheckpointToolDetails>;
+  const root = value as Record<string, unknown>;
+  const candidate = (
+    root.result && typeof root.result === 'object' && !Array.isArray(root.result) ? root.result : value
+  ) as Partial<ConversationCheckpointToolDetails>;
   if (!(candidate.action === 'save' || candidate.action === 'get' || candidate.action === 'list')) {
     return null;
   }

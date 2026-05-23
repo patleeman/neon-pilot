@@ -86,6 +86,41 @@ describe('conversationCheckpoints', () => {
       expect(result!.linesDeleted).toBe(10);
     });
 
+    it('extracts presentation from extension result-wrapped details', () => {
+      const block = {
+        type: 'tool_use',
+        tool: 'checkpoint',
+        input: { action: 'save' },
+        details: {
+          result: {
+            action: 'save',
+            conversationId: 'conv-1',
+            checkpointId: 'abc1234',
+            commitSha: 'abc1234567890',
+            shortSha: 'abc1234',
+            title: 'Fix inline diff',
+            subject: 'Fix inline diff',
+            fileCount: 2,
+            linesAdded: 8,
+            linesDeleted: 1,
+            updatedAt: '2026-05-01T00:00:00.000Z',
+          },
+        },
+      } as unknown as Extract<MessageBlock, { type: 'tool_use' }>;
+
+      const result = readCheckpointPresentation(block);
+
+      expect(result).toMatchObject({
+        conversationId: 'conv-1',
+        checkpointId: 'abc1234',
+        shortSha: 'abc1234',
+        subject: 'Fix inline diff',
+        fileCount: 2,
+        linesAdded: 8,
+        linesDeleted: 1,
+      });
+    });
+
     it('returns null for empty object details', () => {
       const block = {
         type: 'tool_use',
