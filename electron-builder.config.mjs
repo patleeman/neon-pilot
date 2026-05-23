@@ -103,6 +103,10 @@ const electronBuilderConfig = {
   ],
   asarUnpack: [
     'server/dist/conversations/conversationInspectWorker.js',
+    // Extension backends import selected desktop server modules dynamically at
+    // runtime. Those imports run from extension-hosted code, so keep the server
+    // extension modules addressable as real files outside app.asar.
+    'server/dist/extensions/**/*.js',
     // Shared chunks may be imported by the unpacked conversationInspectWorker thread.
     'server/dist/chunks/**/*',
     'node_modules/better-sqlite3/**/*',
