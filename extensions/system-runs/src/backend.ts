@@ -83,7 +83,7 @@ async function runForegroundBash(
   timeoutSeconds: number | undefined,
   ctx: NativeBackendContext,
 ): Promise<ToolExecutionResult> {
-  if (ctx.shell.spawn) {
+  if (ctx.shell.spawn && ctx.toolContext?.onUpdate) {
     return runStreamingForegroundBash(command, cwd, timeoutSeconds, ctx);
   }
 

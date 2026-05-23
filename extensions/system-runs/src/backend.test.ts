@@ -89,7 +89,13 @@ describe('system-runs backend', () => {
       const ctx = createCtx();
       const result = await bash({ command: 'echo hi' }, ctx);
 
-      expect(ctx.shell.spawn).toHaveBeenCalledWith(expect.objectContaining({ command: 'sh', args: ['-lc', 'echo hi'], cwd: '/tmp/repo' }));
+      expect(ctx.shell.exec).toHaveBeenCalledWith({
+        command: 'sh',
+        args: ['-lc', 'echo hi'],
+        cwd: '/tmp/repo',
+        timeoutMs: undefined,
+        signal: undefined,
+      });
       expect(result.text).toBe('ok');
     });
 
