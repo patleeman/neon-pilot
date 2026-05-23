@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFile } from 'node:fs';
-import { dirname, join, sep } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -67,6 +67,11 @@ import {
   readSourceRunIdFromSessionFilePath as readSourceRunIdFromSessionPath,
   resolveSessionIdByFile as resolveSessionIdByFileFromMap,
 } from './sessionTopologyMetadata.js';
+import {
+  isNeutralChatWorkspaceCwd as isNeutralChatWorkspaceCwdForRuntime,
+  type LegacyToolWorkspaceMetadata,
+  readLegacyToolWorkspaceMetadata as readLegacyToolWorkspaceMetadataFromMessage,
+} from './sessionWorkspaceMetadata.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
 const DEFAULT_SESSIONS_DIR = getDurableSessionsDir();
@@ -236,11 +241,6 @@ export interface SessionMeta {
 
 export const CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE = 'personal_agent_conversation_workspace';
 export const CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE = 'conversation_workspace_change';
-
-interface LegacyToolWorkspaceMetadata {
-  cwd: string;
-  workspaceCwd: string;
-}
 
 export interface SessionDetail {
   meta: SessionMeta;
@@ -1426,13 +1426,7 @@ function extractTitleFromMessage(message: RawMessage['message']): string | null 
 }
 
 function isNeutralChatWorkspaceCwd(cwd: string): boolean {
-  const normalized = cwd.trim();
-  if (!normalized) {
-    return false;
-  }
-
-  const chatWorkspacesRoot = join(getPiAgentRuntimeDir(), 'chat-workspaces');
-  return normalized === chatWorkspacesRoot || normalized.startsWith(`${chatWorkspacesRoot}${sep}`);
+  return isNeutralChatWorkspaceCwdForRuntime({ cwd, runtimeDir: getPiAgentRuntimeDir() });
 }
 
 function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWorkspaceMetadata | null {
@@ -1539,28 +1533,7 @@ export function appendParentConversationBacklinkEntry(input: {
 }
 
 function readLegacyToolWorkspaceMetadata(line: RawMessage): LegacyToolWorkspaceMetadata | null {
-  if (line.message.role !== 'toolResult') {
-    return null;
-  }
-  const toolName = line.message.toolName;
-  if (toolName !== 'change_working_directory' && toolName !== 'conversation') {
-    return null;
-  }
-
-  const details = line.message.details;
-  if (!details || typeof details !== 'object') {
-    return null;
-  }
-
-  const data = details as Record<string, unknown>;
-  const action = typeof data.action === 'string' ? data.action.trim() : '';
-  const queued = data.queued === true;
-  const cwd = typeof data.cwd === 'string' && data.cwd.trim().length > 0 ? data.cwd.trim() : '';
-  if (action !== 'queue' || !queued || !cwd) {
-    return null;
-  }
-
-  return { cwd, workspaceCwd: cwd };
+  return readLegacyToolWorkspaceMetadataFromMessage(line.message);
 }
 
 function readCurrentSessionLeafId(filePath: string): string | null {
