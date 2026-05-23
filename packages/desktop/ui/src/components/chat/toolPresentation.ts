@@ -7,7 +7,7 @@ const TOOL_META: Record<
   { icon: string; label: string; color: string; tone: 'steel' | 'teal' | 'accent' | 'success' | 'warning' | 'muted' }
 > = {
   bash: { icon: '$', label: 'bash', color: 'text-steel bg-steel/5', tone: 'steel' },
-  background_bash: { icon: '$', label: 'background_bash', color: 'text-steel bg-steel/5', tone: 'steel' },
+  background_bash: { icon: '$', label: 'background task', color: 'text-steel bg-steel/5', tone: 'steel' },
   read: { icon: '≡', label: 'read', color: 'text-teal bg-teal/5', tone: 'teal' },
   write: { icon: '✎', label: 'write', color: 'text-accent bg-accent/5', tone: 'accent' },
   edit: { icon: '✎', label: 'edit', color: 'text-accent bg-accent/5', tone: 'accent' },

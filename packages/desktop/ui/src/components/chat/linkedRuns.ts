@@ -566,7 +566,7 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
     };
   }
 
-  if (block.tool === 'background_command' || block.tool === 'background_bash' || isBackgroundShellStart(block)) {
+  if (isBackgroundShellStart(block)) {
     const runId = extractDurableRunIdsFromBlock(block)[0];
     return { scope: 'mentioned', runs: runId ? [presentLinkedRun(runId)] : [] };
   }

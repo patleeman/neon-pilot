@@ -419,7 +419,7 @@ describe('ChatView inline run cards', () => {
     expect(container.textContent).toContain('tick-3');
   });
 
-  it('focuses a background bash run event by expanding and scrolling to the inline tool item', async () => {
+  it('focuses a background bash run event by expanding the trace cluster without opening tool output', async () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     const { container } = renderChatView(
@@ -453,6 +453,7 @@ describe('ChatView inline run cards', () => {
 
     expect(scrollIntoView).toHaveBeenCalled();
     expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
-    expect(container.textContent).toContain('$ echo background');
+    expect(container.textContent).toContain('echo background');
+    expect(container.textContent).not.toContain('$ echo background');
   });
 });

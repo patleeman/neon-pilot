@@ -180,10 +180,7 @@ describe('linkedRuns', () => {
       scope: 'mentioned',
       runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' }],
     });
-    expect(readLinkedRuns(inspectBlock)).toEqual({
-      scope: 'mentioned',
-      runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' }],
-    });
+    expect(readLinkedRuns(inspectBlock)).toEqual({ scope: 'mentioned', runs: [] });
     expect(collectTraceClusterLinkedRuns([startBlock, inspectBlock])).toEqual([
       { runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' },
     ]);
