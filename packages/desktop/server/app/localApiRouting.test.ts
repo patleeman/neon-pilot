@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting';
+import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting';
 
 describe('localApiRouting', () => {
   it('builds route patterns with named params and wildcard captures', () => {
@@ -25,5 +25,15 @@ describe('localApiRouting', () => {
       tag: ['a', 'b'],
       empty: '',
     });
+  });
+
+  it('finds matching routes by method and pattern', () => {
+    const routes = [
+      { method: 'GET', pattern: buildLocalApiRoutePattern('/api/items/:id').pattern, name: 'get-item' },
+      { method: 'POST', pattern: buildLocalApiRoutePattern('/api/items/:id').pattern, name: 'post-item' },
+    ];
+
+    expect(findMatchingLocalApiRoute(routes, 'POST', '/api/items/one')?.name).toBe('post-item');
+    expect(findMatchingLocalApiRoute(routes, 'DELETE', '/api/items/one')).toBeUndefined();
   });
 });

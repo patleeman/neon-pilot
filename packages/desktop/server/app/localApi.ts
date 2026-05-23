@@ -173,7 +173,7 @@ import { pickFolderCapability, readVaultFilesCapability } from '../workspace/wor
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
-import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
+import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
@@ -612,14 +612,6 @@ if (process.env.NEON_PILOT_DESKTOP_RUNTIME !== '1') {
   startKnowledgeBaseSyncLoop();
 }
 
-function findMatchingRoute(
-  routes: RegisteredRoute[],
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  pathname: string,
-): RegisteredRoute | undefined {
-  return routes.find((candidate) => candidate.method === method && candidate.pattern.test(pathname));
-}
-
 async function buildDesktopAppEventsForTopics(topics: readonly string[]): Promise<unknown[]> {
   const events: unknown[] = [];
   const seen = new Set<string>();
@@ -916,7 +908,7 @@ export async function dispatchDesktopLocalApiRequest(input: {
 
   const routes = await getLocalRoutes();
   const url = new URL(input.path, 'http://desktop.local');
-  const route = findMatchingRoute(routes, input.method, url.pathname);
+  const route = findMatchingLocalApiRoute(routes, input.method, url.pathname);
 
   if (!route) {
     throw new Error(`No local API route for ${input.method} ${url.pathname}`);

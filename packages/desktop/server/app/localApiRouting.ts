@@ -42,3 +42,11 @@ export function buildLocalApiQueryObject(searchParams: URLSearchParams): Record<
 
   return query;
 }
+
+export function findMatchingLocalApiRoute<T extends { method: string; pattern: RegExp }>(
+  routes: T[],
+  method: string,
+  pathname: string,
+): T | undefined {
+  return routes.find((candidate) => candidate.method === method && candidate.pattern.test(pathname));
+}
