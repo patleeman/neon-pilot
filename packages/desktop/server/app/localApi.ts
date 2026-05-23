@@ -186,6 +186,11 @@ import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } 
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
+import {
+  buildChangedConversationCwdResponse,
+  buildUnchangedConversationCwdResponse,
+  resolvePreviousWorkspaceCwd,
+} from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
@@ -1419,7 +1424,7 @@ export async function changeDesktopConversationCwd(input: {
   assertDesktopConversationCwdDirectory(nextCwd);
 
   if (nextCwd === currentCwd) {
-    return { id: conversationId, sessionFile: sourceSessionFile, cwd: currentCwd, changed: false };
+    return buildUnchangedConversationCwdResponse({ id: conversationId, sessionFile: sourceSessionFile, cwd: currentCwd });
   }
 
   const result = await createSessionFromExisting(sourceSessionFile, nextCwd, {
@@ -1430,10 +1435,11 @@ export async function changeDesktopConversationCwd(input: {
   appendConversationWorkspaceMetadata({
     sessionFile: result.sessionFile,
     previousCwd: currentCwd,
-    previousWorkspaceCwd:
-      sessionDetail?.meta && Object.prototype.hasOwnProperty.call(sessionDetail.meta, 'workspaceCwd')
-        ? (sessionDetail.meta.workspaceCwd ?? null)
-        : currentCwd,
+    previousWorkspaceCwd: resolvePreviousWorkspaceCwd({
+      hasWorkspaceCwd: Boolean(sessionDetail?.meta && Object.prototype.hasOwnProperty.call(sessionDetail.meta, 'workspaceCwd')),
+      workspaceCwd: sessionDetail?.meta.workspaceCwd,
+      currentCwd,
+    }),
     cwd: nextCwd,
     workspaceCwd: nextWorkspaceCwd,
     visibleMessage: true,
@@ -1445,7 +1451,7 @@ export async function changeDesktopConversationCwd(input: {
   }
 
   publishConversationSessionMetaChanged(conversationId, result.id);
-  return { id: result.id, sessionFile: result.sessionFile, cwd: nextCwd, changed: true };
+  return buildChangedConversationCwdResponse({ id: result.id, sessionFile: result.sessionFile, cwd: nextCwd });
 }
 
 export async function updateDesktopConversationGoal(input: { conversationId: string; objective?: string }) {
