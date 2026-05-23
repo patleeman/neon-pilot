@@ -86,6 +86,7 @@ import {
   sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
 } from './sessionLineSanitizers.js';
 import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } from './sessionMessageSearchText.js';
+import { detectSessionModification, shouldComputeSessionPrefixHash } from './sessionModificationDetection.js';
 import { normalizeSessionName } from './sessionNaming.js';
 import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
@@ -1970,19 +1971,8 @@ export function readSessionBlocksByFileWithTelemetry(
     const oldSize = parseSignatureSize(cachedDetail.signature);
     const newSize = parseSignatureSize(signature);
     if (oldSize !== null && newSize !== null) {
-      if (newSize < oldSize) {
-        // File was truncated (shorter than before) — definite modification.
-        telemetryModificationDetected = true;
-      } else if (newSize === oldSize) {
-        // Same size but mtime changed — content was rewritten in place.
-        telemetryModificationDetected = true;
-      } else {
-        // File grew — verify prefix integrity via content hash.
-        const prefixHash = computeFilePrefixHash(filePath, oldSize);
-        if (prefixHash !== null && prefixHash !== cachedDetail.contentHash) {
-          telemetryModificationDetected = true;
-        }
-      }
+      const prefixHash = shouldComputeSessionPrefixHash({ oldSize, newSize }) ? computeFilePrefixHash(filePath, oldSize) : undefined;
+      telemetryModificationDetected = detectSessionModification({ oldSize, newSize, oldContentHash: cachedDetail.contentHash, prefixHash });
 
       if (telemetryModificationDetected) {
         persistAppTelemetryEvent({
