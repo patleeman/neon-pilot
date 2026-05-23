@@ -254,7 +254,9 @@ export function ToolBlock({
             {wrapper.label ?? wrapper.id}
           </Pill>
         ))}
-        <span className="flex-1 truncate opacity-70 font-normal">{displayPreview}</span>
+        <span className={cx('flex-1 opacity-70 font-normal', agentBashTool ? 'whitespace-normal break-words' : 'truncate')}>
+          {displayPreview}
+        </span>
         {subagentConversationId ? (
           <Link
             to={`/conversations/${encodeURIComponent(subagentConversationId)}`}
@@ -366,7 +368,7 @@ export function ToolBlock({
       {open && !pinnedTool && agentBashTool && (
         <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2">
           <span className="sr-only">input</span>
-          <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-80">
+          <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
             <span className="opacity-60">$ </span>
             {readToolInputString(block.input, 'command') ?? preview}
             {output
