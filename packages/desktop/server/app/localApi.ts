@@ -173,6 +173,7 @@ import { pickFolderCapability, readVaultFilesCapability } from '../workspace/wor
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { shouldRefreshDesktopConversationStateForAppEvent } from './localApiConversationEvents.js';
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
+import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
@@ -1089,36 +1090,7 @@ export async function updateDesktopOpenConversationTabs(input: {
   workspacePaths?: string[];
 }) {
   const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } = input;
-
-  if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
-    throw new Error('sessionIds must be an array when provided');
-  }
-
-  if (pinnedSessionIds !== undefined && !Array.isArray(pinnedSessionIds)) {
-    throw new Error('pinnedSessionIds must be an array when provided');
-  }
-
-  if (archivedSessionIds !== undefined && !Array.isArray(archivedSessionIds)) {
-    throw new Error('archivedSessionIds must be an array when provided');
-  }
-
-  if (activeConversationId !== undefined && activeConversationId !== null && typeof activeConversationId !== 'string') {
-    throw new Error('activeConversationId must be a string or null when provided');
-  }
-
-  if (workspacePaths !== undefined && !Array.isArray(workspacePaths)) {
-    throw new Error('workspacePaths must be an array when provided');
-  }
-
-  if (
-    sessionIds === undefined &&
-    pinnedSessionIds === undefined &&
-    archivedSessionIds === undefined &&
-    activeConversationId === undefined &&
-    workspacePaths === undefined
-  ) {
-    throw new Error('sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, or workspacePaths required');
-  }
+  validateDesktopOpenConversationTabsUpdate(input);
 
   const context = await getLocalServerRouteContext();
   const saved = persistSettingsWrite(
@@ -1136,16 +1108,8 @@ export async function updateDesktopOpenConversationTabs(input: {
     { runtimeSettingsFile: context.getSettingsFile() },
   );
 
-  if (
-    sessionIds !== undefined ||
-    pinnedSessionIds !== undefined ||
-    archivedSessionIds !== undefined ||
-    activeConversationId !== undefined
-  ) {
-    invalidateAppTopics('sessions');
-  }
-  if (workspacePaths !== undefined) {
-    invalidateAppTopics('workspace');
+  for (const topic of desktopOpenConversationTabsInvalidationTopics(input)) {
+    invalidateAppTopics(topic);
   }
   return {
     ok: true as const,
