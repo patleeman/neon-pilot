@@ -67,6 +67,12 @@ import {
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
   serializePersistentSessionIndex,
 } from './sessionIndexPersistence.js';
+import {
+  CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
+  CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
+  isInjectedContextMessage as isInjectedContextMessageValue,
+  PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+} from './sessionInjectedContext.js';
 import { isRawDisplayLineType, parseJsonLine as parseJsonLineValue } from './sessionJsonLines.js';
 export { GOAL_STATE_CUSTOM_TYPE, readGoalFromEntries, type ThreadGoal } from './sessionGoalState.js';
 import { readFileLinesReverse as readFileLinesReverseValue } from './reverseFileLines.js';
@@ -270,7 +276,7 @@ export interface SessionMeta {
 }
 
 export const CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE = 'personal_agent_conversation_workspace';
-export const CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE = 'conversation_workspace_change';
+export { CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE } from './sessionInjectedContext.js';
 
 export interface SessionDetail {
   meta: SessionMeta;
@@ -685,20 +691,10 @@ export function getAssistantErrorDisplayMessage(message: { stopReason?: string; 
 
 const RELATED_THREADS_CONTEXT_CUSTOM_TYPE = 'related_threads_context';
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
-const GOAL_CONTINUATION_CUSTOM_TYPE = 'goal-continuation';
-const CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE = 'child_conversation_topology';
-const PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE = 'parent_conversation_backlink';
 const CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE = 'conversation_offshoot_metadata';
 
 function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): boolean {
-  return (
-    message.role === 'custom' &&
-    (message.customType === 'referenced_context' ||
-      message.customType === CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE ||
-      message.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE ||
-      message.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE ||
-      message.customType === GOAL_CONTINUATION_CUSTOM_TYPE)
-  );
+  return isInjectedContextMessageValue(message);
 }
 
 function extractSearchTextFromMessage(message: { role: string; content?: unknown }): string {
