@@ -66,6 +66,7 @@ const backendApiLazyModuleEntries = [
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
   ['traces/tracePersistence.js', 'server/traces/tracePersistence.ts'],
   ['extensions/extensionBackend.js', 'server/extensions/extensionBackend.ts'],
+  ['extensions/extensionCatalog.js', 'server/extensions/extensionCatalog.ts'],
   ['extensions/extensionDoctor.js', 'server/extensions/extensionDoctor.ts'],
   ['extensions/extensionLifecycle.js', 'server/extensions/extensionLifecycle.ts'],
   ['extensions/extensionRegistry.js', 'server/extensions/extensionRegistry.ts'],

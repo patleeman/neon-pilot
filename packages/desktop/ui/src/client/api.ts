@@ -851,10 +851,11 @@ export const api = {
       resumeId,
     });
   },
-  changeConversationCwd: async (id: string, cwd: string, surfaceId?: string) => {
+  changeConversationCwd: async (id: string, cwd: string | null, surfaceId?: string, workspaceCwd?: string | null) => {
     return (await requireLocalDesktopConversationBridge(id, 'Changing conversation working directories')).changeConversationCwd({
       conversationId: id,
       cwd,
+      ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
       ...(surfaceId ? { surfaceId } : {}),
     });
   },

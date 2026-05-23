@@ -61,7 +61,7 @@ import {
   normalizeCheckpointPaths,
   readRequiredCheckpointString,
 } from '../conversations/conversationCheckpointCommit.js';
-import { resolveRequestedCwd } from '../conversations/conversationCwd.js';
+import { resolveNeutralChatCwd, resolveRequestedCwd } from '../conversations/conversationCwd.js';
 import {
   cancelConversationDeferredResumeCapability,
   fireConversationDeferredResumeCapability,
@@ -1636,7 +1636,12 @@ export async function renameDesktopConversation(input: {
   return { ok: true, title: renamed.title };
 }
 
-export async function changeDesktopConversationCwd(input: { conversationId: string; cwd: string; surfaceId?: string }) {
+export async function changeDesktopConversationCwd(input: {
+  conversationId: string;
+  cwd?: string | null;
+  workspaceCwd?: string | null;
+  surfaceId?: string;
+}) {
   await getLocalRoutes();
 
   const conversationId = input.conversationId.trim();
@@ -1657,7 +1662,9 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
     throw new Error('Stop the current response before changing the working directory.');
   }
 
-  const nextCwd = resolveRequestedCwd(input.cwd, currentCwd);
+  const context = await getLocalLiveSessionCapabilityContext();
+  const movingToNeutralChats = input.workspaceCwd === null;
+  const nextCwd = movingToNeutralChats ? resolveNeutralChatCwd(context.getRuntimeScope()) : resolveRequestedCwd(input.cwd, currentCwd);
   if (!nextCwd) {
     throw new Error('cwd required');
   }
@@ -1674,7 +1681,7 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
     return { id: conversationId, sessionFile: sourceSessionFile, cwd: currentCwd, changed: false };
   }
 
-  const context = await getLocalLiveSessionCapabilityContext();
+  const nextWorkspaceCwd = movingToNeutralChats ? null : nextCwd;
   const result = await createSessionFromExisting(sourceSessionFile, nextCwd, {
     ...context.buildLiveSessionResourceOptions(context.getRuntimeScope()),
     extensionFactories: context.buildLiveSessionExtensionFactories(),
@@ -1688,7 +1695,7 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
         ? (sessionDetail.meta.workspaceCwd ?? null)
         : currentCwd,
     cwd: nextCwd,
-    workspaceCwd: nextCwd,
+    workspaceCwd: nextWorkspaceCwd,
     visibleMessage: true,
   });
   appendConversationOffshootDetachedMetadata({ sessionFile: result.sessionFile });

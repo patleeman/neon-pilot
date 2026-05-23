@@ -156,7 +156,8 @@ export interface CompanionConversationDuplicateInput {
 
 export interface CompanionConversationCwdChangeInput {
   conversationId: string;
-  cwd: string;
+  cwd?: string | null;
+  workspaceCwd?: string | null;
   surfaceId?: string;
 }
 

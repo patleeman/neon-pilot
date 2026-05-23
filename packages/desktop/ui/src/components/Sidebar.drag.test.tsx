@@ -278,7 +278,7 @@ describe('Sidebar group drag reordering', () => {
     });
     await flushAsyncWork();
 
-    expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String));
+    expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String), undefined);
     expect(apiMocks.sessions).toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-alpha-moved', 'conv-beta']);
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
@@ -329,9 +329,59 @@ describe('Sidebar group drag reordering', () => {
     });
     await flushAsyncWork();
 
-    expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String));
+    expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String), undefined);
     expect(apiMocks.sessions).toHaveBeenCalled();
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
+  });
+
+  it('moves a conversation into Chats when dropped on the Chats section', async () => {
+    const projectPath = '/tmp/project-worktree';
+    const neutralPath = '/tmp/neon-pilot-runtime/chat-workspaces/shared';
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-project', 'conv-chat']));
+    localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([projectPath]));
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['conv-project', 'conv-chat'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [projectPath],
+    });
+    apiMocks.changeConversationCwd.mockResolvedValue({
+      id: 'conv-project-moved',
+      sessionFile: '/tmp/conv-project-moved.jsonl',
+      cwd: neutralPath,
+      changed: true,
+    });
+    apiMocks.sessions.mockResolvedValue([
+      createSession({ id: 'conv-project-moved', title: 'Project thread', cwd: neutralPath, cwdSlug: 'shared', workspaceCwd: null }),
+      createSession({ id: 'conv-chat', title: 'Chat thread', cwd: neutralPath, cwdSlug: 'shared', workspaceCwd: null }),
+    ]);
+
+    const container = renderSidebar([
+      createSession({ id: 'conv-project', title: 'Project thread', cwd: projectPath, cwdSlug: 'project-worktree' }),
+      createSession({ id: 'conv-chat', title: 'Chat thread', cwd: neutralPath, cwdSlug: 'shared', workspaceCwd: null }),
+    ]);
+
+    await flushAsyncWork();
+
+    const projectRow = container.querySelector<HTMLElement>('[data-sidebar-session-id="conv-project"]');
+    const chatGroup = getGroup(container, '__no-cwd__');
+    if (!projectRow) {
+      throw new Error('Missing project row');
+    }
+    setDragBounds(projectRow);
+    setDragBounds(chatGroup);
+
+    const dataTransfer = new TestDataTransfer();
+    await act(async () => {
+      projectRow.dispatchEvent(createDragEvent('dragstart', dataTransfer, 75));
+      chatGroup.dispatchEvent(createDragEvent('dragover', dataTransfer, 50));
+      chatGroup.dispatchEvent(createDragEvent('drop', dataTransfer, 50));
+    });
+    await flushAsyncWork();
+
+    expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-project', null, expect.any(String), null);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-project-moved', 'conv-chat']);
+    expect(container.textContent).toContain('Moved conversation to Chats.');
   });
 
   it('detaches a child thread from parent lineage when dragged as a top-level thread', async () => {

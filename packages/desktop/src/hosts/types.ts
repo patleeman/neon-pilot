@@ -122,7 +122,8 @@ export interface DesktopConversationRenameRequest {
 
 export interface DesktopConversationCwdChangeRequest {
   conversationId: string;
-  cwd: string;
+  cwd?: string | null;
+  workspaceCwd?: string | null;
   surfaceId?: string;
 }
 

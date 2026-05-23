@@ -82,6 +82,20 @@ describe('backendApi/serverModuleResolver', () => {
     ).toBe('unknown-package');
   });
 
+  it('does not resolve backend API imports relative to extension bundles', () => {
+    const extensionBundleDir = join(dir, 'resources/extensions/system-extension-manager/dist');
+    const accidentalTarget = join(dir, 'resources/extensions/system-extension-manager/extensionCatalog.js');
+    mkdirSync(resolve(accidentalTarget, '..'), { recursive: true });
+    writeFileSync(accidentalTarget, 'export const marker = true;');
+
+    expect(
+      resolveServerModuleSpecifierFrom({
+        importMetaUrl: pathToFileURL(join(extensionBundleDir, 'backend.mjs')).href,
+        relativeSpecifier: '../extensionCatalog.js',
+      }),
+    ).toBe('../extensionCatalog.js');
+  });
+
   it('calls resolved module exports and reports unavailable exports clearly', async () => {
     const modulePath = join(dir, 'module.mjs');
     writeFileSync(modulePath, 'export function greet(name) { return `hello ${name}`; }');

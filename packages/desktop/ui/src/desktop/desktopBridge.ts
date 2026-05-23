@@ -247,7 +247,12 @@ export interface NeonPilotDesktopBridge {
     knownLastBlockId?: string;
   }): Promise<ConversationBootstrapState>;
   renameConversation(input: { conversationId: string; name: string; surfaceId?: string }): Promise<{ ok: true; title: string }>;
-  changeConversationCwd(input: { conversationId: string; cwd: string; surfaceId?: string }): Promise<ConversationCwdChangeResult>;
+  changeConversationCwd(input: {
+    conversationId: string;
+    cwd?: string | null;
+    workspaceCwd?: string | null;
+    surfaceId?: string;
+  }): Promise<ConversationCwdChangeResult>;
   updateConversationGoal(input: {
     conversationId: string;
     objective?: string;

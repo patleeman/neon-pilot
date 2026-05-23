@@ -1005,7 +1005,7 @@ export class DaemonCompanionServer {
       const payload = isRecord(body) ? body : {};
       const input: CompanionConversationCwdChangeInput = {
         conversationId: decodeURIComponent(conversationCwdMatch[1] || ''),
-        cwd: readRequiredString(payload.cwd, 'cwd'),
+        ...(payload.workspaceCwd === null ? { workspaceCwd: null } : { cwd: readRequiredString(payload.cwd, 'cwd') }),
         ...(readOptionalString(payload.surfaceId) ? { surfaceId: readOptionalString(payload.surfaceId) } : {}),
       };
       sendJson(response, 200, await runtime.changeConversationCwd(input));

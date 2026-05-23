@@ -2685,7 +2685,7 @@ export function Sidebar() {
 
   function canDropConversationOnGroup(draggedSessionId: string, targetGroupKey: string): boolean {
     const targetGroup = conversationGroupsByKey.get(targetGroupKey);
-    if (!targetGroup?.cwd) {
+    if (!targetGroup) {
       return false;
     }
 
@@ -2694,7 +2694,7 @@ export function Sidebar() {
       return false;
     }
 
-    return normalizeConversationGroupCwd(draggedSession.cwd) !== normalizeConversationGroupCwd(targetGroup.cwd);
+    return getSessionWorkspaceCwd(draggedSession) !== (targetGroup.cwd ?? null);
   }
 
   function handleTabDragStart(section: ConversationShelf, sessionId: string, event: DragEvent<HTMLElement>) {
@@ -2797,14 +2797,19 @@ export function Sidebar() {
     const draggedConversationId =
       draggingSessionId || event.dataTransfer.getData('application/x-neon-pilot-conversation') || event.dataTransfer.getData('text/plain');
     const targetGroup = conversationGroupsByKey.get(targetGroupKey);
-    if (!draggedConversationId || !targetGroup?.cwd || !canDropConversationOnGroup(draggedConversationId, targetGroupKey)) {
+    if (!draggedConversationId || !targetGroup || !canDropConversationOnGroup(draggedConversationId, targetGroupKey)) {
       clearDragState();
       return;
     }
 
     clearDragState();
     try {
-      const result = await api.changeConversationCwd(draggedConversationId, targetGroup.cwd, conversationSurfaceId);
+      const result = await api.changeConversationCwd(
+        draggedConversationId,
+        targetGroup.cwd,
+        conversationSurfaceId,
+        targetGroup.cwd === null ? null : undefined,
+      );
       if (result.changed && result.id !== draggedConversationId) {
         const nextActiveSessionId =
           activeConversationSurfaceId === draggedConversationId ? result.id : readConversationLayout().activeSessionId;

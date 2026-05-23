@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const dynamicImport = <T>(specifier: string): Promise<T> => import(specifier) as Promise<T>;
 
@@ -52,7 +52,7 @@ function packageEntryCandidates(specifier: string, resourcesPath: string | undef
 }
 
 export function resolveServerModuleSpecifierFrom({
-  importMetaUrl,
+  importMetaUrl: _importMetaUrl,
   relativeSpecifier,
   normalize = normalizeServerModuleSpecifier,
   resourcesPath: providedResourcesPath,
@@ -64,7 +64,6 @@ export function resolveServerModuleSpecifierFrom({
   }
 
   const normalized = normalize(relativeSpecifier);
-  const currentDir = dirname(fileURLToPath(importMetaUrl));
   const candidates = [
     ...(process.env.NEON_PILOT_REPO_ROOT
       ? [
@@ -74,7 +73,6 @@ export function resolveServerModuleSpecifierFrom({
       : []),
     resolve(process.cwd(), 'packages/desktop/server/dist', normalized),
     resolve(process.cwd(), 'packages/desktop/dist/server', normalized),
-    resolve(currentDir, relativeSpecifier),
     ...(typeof resourcesPath === 'string'
       ? [
           resolve(resourcesPath, 'app.asar.unpacked/packages/desktop/server/dist', normalized),
