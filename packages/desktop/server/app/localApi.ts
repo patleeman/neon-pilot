@@ -172,6 +172,7 @@ import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
+import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 import { createServerRouteContext } from './routeContext.js';
@@ -608,47 +609,6 @@ if (process.env.NEON_PILOT_DESKTOP_RUNTIME !== '1') {
   startKnowledgeBaseSyncLoop();
 }
 
-function renderStatusText(statusCode: number): string {
-  switch (statusCode) {
-    case 400:
-      return 'Bad Request';
-    case 401:
-      return 'Unauthorized';
-    case 403:
-      return 'Forbidden';
-    case 404:
-      return 'Not Found';
-    case 409:
-      return 'Conflict';
-    case 500:
-      return 'Internal Server Error';
-    default:
-      return 'Error';
-  }
-}
-
-function decodeBody(body: Uint8Array): string {
-  return Buffer.from(body).toString('utf-8');
-}
-
-function readLocalApiError(response: DesktopLocalApiDispatchResult): string {
-  const contentType = response.headers['content-type'] ?? '';
-  const bodyText = decodeBody(response.body);
-
-  if (contentType.toLowerCase().includes('application/json')) {
-    try {
-      const payload = JSON.parse(bodyText) as { error?: string };
-      if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-        return payload.error;
-      }
-    } catch {
-      // Ignore malformed local JSON error bodies.
-    }
-  }
-
-  return bodyText.trim() || `${response.statusCode} ${renderStatusText(response.statusCode)}`;
-}
-
 function findMatchingRoute(
   routes: RegisteredRoute[],
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
@@ -1048,7 +1008,7 @@ export async function invokeDesktopLocalApi<T = unknown>(input: {
   }
 
   const contentType = response.headers['content-type'] ?? '';
-  const bodyText = decodeBody(response.body);
+  const bodyText = decodeLocalApiBody(response.body);
   if (contentType.toLowerCase().includes('application/json')) {
     return (bodyText.length > 0 ? JSON.parse(bodyText) : null) as T;
   }
