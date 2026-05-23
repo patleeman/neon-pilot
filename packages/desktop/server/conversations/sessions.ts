@@ -21,6 +21,7 @@ import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-age
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { rebaseDisplayBlockIds as rebaseDisplayBlockIdsForOffset } from './sessionBlockIds.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
@@ -2470,54 +2471,13 @@ export function readSessionBlocksByFileWithTelemetry(
   };
 }
 
-function normalizeKnownBlockId(value: string | undefined): string | null {
-  const normalized = value?.trim();
-  return normalized && normalized.length > 0 ? normalized : null;
-}
-
 export function buildAppendOnlySessionDetailResponse(input: {
   detail: SessionDetail;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
   knownLastBlockId?: string;
 }): SessionDetailAppendOnlyResponse | null {
-  const knownBlockOffset =
-    Number.isSafeInteger(input.knownBlockOffset) && typeof input.knownBlockOffset === 'number' ? Math.max(0, input.knownBlockOffset) : null;
-  const knownTotalBlocks =
-    Number.isSafeInteger(input.knownTotalBlocks) && typeof input.knownTotalBlocks === 'number' ? Math.max(0, input.knownTotalBlocks) : null;
-
-  if (knownBlockOffset === null || knownTotalBlocks === null) {
-    return null;
-  }
-
-  if (input.detail.totalBlocks <= knownTotalBlocks || input.detail.blockOffset < knownBlockOffset) {
-    return null;
-  }
-
-  if (input.detail.blockOffset < knownTotalBlocks) {
-    const knownLastVisibleIndex = knownTotalBlocks - input.detail.blockOffset - 1;
-    const currentKnownLastBlock = knownLastVisibleIndex >= 0 ? input.detail.blocks[knownLastVisibleIndex] : undefined;
-    const knownLastBlockId = normalizeKnownBlockId(input.knownLastBlockId);
-    if (!knownLastBlockId || currentKnownLastBlock?.id !== knownLastBlockId) {
-      return null;
-    }
-  }
-
-  const appendedStartIndex = Math.max(0, knownTotalBlocks - input.detail.blockOffset);
-  const appendedBlocks = input.detail.blocks.slice(appendedStartIndex);
-  if (appendedBlocks.length === 0) {
-    return null;
-  }
-
-  return {
-    appendOnly: true,
-    meta: input.detail.meta,
-    blocks: appendedBlocks,
-    blockOffset: input.detail.blockOffset,
-    totalBlocks: input.detail.totalBlocks,
-    contextUsage: input.detail.contextUsage,
-    signature: input.detail.signature ?? null,
-  };
+  return buildAppendOnlySessionDetailResponseValue(input) as SessionDetailAppendOnlyResponse | null;
 }
 
 export function readSessionBlocksByFile(filePath: string, options?: { tailBlocks?: number }): SessionDetail | null {
