@@ -49,6 +49,7 @@ import {
 import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_EXTENSION_IDS } from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
+import { buildExtensionQuarantineDiagnostic, mergeExtensionInstallDiagnostics } from './extensionInstallSummaryDiagnostics.js';
 import {
   validateContextMenuContributions,
   validateSelectionActionContributions,
@@ -998,10 +999,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
     const quarantine = readExtensionRegistryConfig(stateRoot).quarantined?.[manifest.id];
-    const quarantineDiagnostic = quarantine
-      ? `Extension disabled by circuit breaker: ${quarantine.reason} (${quarantine.failures} failures at ${quarantine.at})`
-      : null;
-    const allDiagnostics = [...diagnostics, ...(quarantineDiagnostic ? [quarantineDiagnostic] : [])];
+    const quarantineDiagnostic = buildExtensionQuarantineDiagnostic(quarantine);
     return {
       id: manifest.id,
       name: manifest.name,
@@ -1009,11 +1007,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       enabled,
       status: enabled ? ('enabled' as const) : ('disabled' as const),
       ...(buildError ? { buildError } : {}),
-      ...(healthError
-        ? { healthError, diagnostics: [...allDiagnostics, `Backend health check failed: ${healthError}`] }
-        : allDiagnostics.length > 0
-          ? { diagnostics: allDiagnostics }
-          : {}),
+      ...mergeExtensionInstallDiagnostics({ diagnostics, quarantineDiagnostic, healthError }),
       ...(manifest.description ? { description: manifest.description } : {}),
       ...(manifest.version ? { version: manifest.version } : {}),
       ...(entry.packageRoot ? { packageRoot: entry.packageRoot } : {}),
