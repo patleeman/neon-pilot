@@ -113,6 +113,10 @@ import {
 } from '../conversation/conversationQuestionAnswers';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
+import {
+  filterVisibleActiveConversationBackgroundExecutions,
+  shouldLoadConversationRun as resolveShouldLoadConversationRun,
+} from '../conversation/conversationRunLoading';
 import { createConversationLiveRunId, getConversationRunIdFromSearch } from '../conversation/conversationRuns';
 import {
   getConversationInitialScrollKey,
@@ -2302,7 +2306,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
   const visibleActiveConversationBackgroundExecutions = useMemo(
-    () => activeConversationBackgroundExecutions.filter((execution) => execution.id !== conversationRunId),
+    () => filterVisibleActiveConversationBackgroundExecutions(activeConversationBackgroundExecutions, conversationRunId),
     [activeConversationBackgroundExecutions, conversationRunId],
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
@@ -2326,11 +2330,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => selectUnattachedMentionItems(draftMentionItems, attachedContextDocs),
     [attachedContextDocs, draftMentionItems],
   );
-  const shouldLoadConversationRun =
-    Boolean(conversationRunId) &&
-    !draft &&
-    !isLiveSession &&
-    (didConversationStopMidTurn(lastConversationMessage) || didConversationStopWithError(lastConversationMessage));
+  const shouldLoadConversationRun = resolveShouldLoadConversationRun({
+    conversationRunId,
+    draft,
+    isLiveSession,
+    stoppedMidTurn: didConversationStopMidTurn(lastConversationMessage),
+    stoppedWithError: didConversationStopWithError(lastConversationMessage),
+  });
 
   useEffect(() => {
     if (!conversationRunId || !shouldLoadConversationRun) {
