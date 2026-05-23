@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { completeConversationOpenPhase, ensureConversationOpenStart } from '../client/perfDiagnostics';
-import { buildSlashMenuItems, parseSlashInput } from '../commands/slashMenu';
+import { buildSlashMenuItems } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
@@ -38,6 +38,7 @@ import {
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
 } from '../conversation/conversationComposerEditing';
+import { resolveConversationComposerMenuState } from '../conversation/conversationComposerMenuState';
 import { shouldShowConversationComposerMeta } from '../conversation/conversationComposerMetaVisibility';
 import {
   appendMentionedConversationContextDocs,
@@ -1915,14 +1916,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
 
   // Derive menu states
-  const slashInput = useMemo(() => parseSlashInput(input), [input]);
-  const showModelPicker = slashInput?.command === '/model' && input.startsWith('/model ');
-  const mentionMatch = input.match(/(^|.*\s)(@[\w./-]*)$/);
-  const showSlash = !!slashInput && input === slashInput.command && !showModelPicker;
-  const showMention = !!mentionMatch && !showSlash && !showModelPicker;
-  const slashQuery = slashInput?.command ?? '';
-  const modelQuery = showModelPicker ? (slashInput?.argument ?? '') : '';
-  const mentionQuery = mentionMatch?.[2] ?? '';
+  const { showModelPicker, showSlash, showMention, slashQuery, modelQuery, mentionQuery } = useMemo(
+    () => resolveConversationComposerMenuState(input),
+    [input],
+  );
   const slashItems = useMemo(
     () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
     [extensionSlashCommands, input, memoryData],
