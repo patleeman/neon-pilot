@@ -117,6 +117,11 @@ import {
   shouldUseHealthyDesktopConversationState,
 } from '../conversation/conversationPageState';
 import {
+  shouldClearAcceptedPendingInitialPrompt,
+  shouldClearStalePendingInitialPrompt,
+  shouldResetPendingInitialPromptFailureSession,
+} from '../conversation/conversationPendingInitialPrompt';
+import {
   buildComposerQuestionAnswersStorageKey,
   EMPTY_ASK_USER_ANSWERS,
   hasAskUserQuestionAnswers,
@@ -182,7 +187,6 @@ import {
   resolveSessionEntryIdFromBlockId,
 } from '../conversation/forking';
 import {
-  hasConversationTranscriptAcceptedPendingInitialPrompt,
   normalizePendingRelatedConversationIds,
   shouldAutoDispatchPendingInitialPrompt,
   shouldClaimPendingInitialPromptForSession,
@@ -1601,13 +1605,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   useEffect(() => {
     if (
-      draft ||
-      !id ||
-      !pendingInitialPrompt ||
-      !pendingInitialPromptDispatching ||
-      !hasConversationTranscriptAcceptedPendingInitialPrompt({
+      !shouldClearAcceptedPendingInitialPrompt({
+        draft,
+        conversationId: id,
+        pendingInitialPrompt,
+        pendingInitialPromptDispatching,
         messages: realMessages,
-        prompt: pendingInitialPrompt,
       })
     ) {
       return;
@@ -1620,7 +1623,15 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, id, pendingInitialPrompt, pendingInitialPromptDispatching, realMessages]);
 
   useEffect(() => {
-    if (draft || !id || !pendingInitialPrompt || pendingInitialPromptDispatching || (realMessages?.length ?? 0) === 0) {
+    if (
+      !shouldClearStalePendingInitialPrompt({
+        draft,
+        conversationId: id,
+        pendingInitialPrompt,
+        pendingInitialPromptDispatching,
+        messageCount: realMessages?.length ?? 0,
+      })
+    ) {
       return;
     }
 
@@ -1630,7 +1641,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, id, pendingInitialPrompt, pendingInitialPromptDispatching, realMessages]);
 
   useEffect(() => {
-    if (!id || !pendingInitialPrompt) {
+    if (shouldResetPendingInitialPromptFailureSession({ conversationId: id, pendingInitialPrompt })) {
       pendingInitialPromptFailureSessionIdRef.current = null;
     }
   }, [id, pendingInitialPrompt]);
