@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFile } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -70,6 +70,7 @@ import {
   serializePersistentSessionIndex,
 } from './sessionIndexPersistence.js';
 import { didSessionIndexJsonChange, shouldPersistSessionIndex } from './sessionIndexPersistenceDecision.js';
+import { enqueueSessionIndexWrite } from './sessionIndexWriteQueue.js';
 import {
   CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
   CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
@@ -1617,15 +1618,7 @@ function persistSessionIndex(): void {
   persistedIndexJson = nextJson;
   sessionCacheDirty = false;
   mkdirSync(dirname(indexFile), { recursive: true });
-  const previousIndexWrite = pendingIndexWrite;
-  pendingIndexWrite = (previousIndexWrite ?? Promise.resolve()).then(
-    () =>
-      new Promise<void>((resolve) => {
-        writeFile(indexFile, nextJson, () => {
-          resolve(); // Ignore write failures — in-memory cache is the source of truth.
-        });
-      }),
-  );
+  pendingIndexWrite = enqueueSessionIndexWrite({ previousWrite: pendingIndexWrite, indexFile, json: nextJson });
 }
 
 function resolveSessionFileCwdSlug(filePath: string): string {
