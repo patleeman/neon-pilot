@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCustomSessionEntry, serializeSessionJsonLine } from './sessionCustomEntrySerialization';
+import { buildCustomMessageSessionEntry, buildCustomSessionEntry, serializeSessionJsonLine } from './sessionCustomEntrySerialization';
 
 describe('sessionCustomEntrySerialization', () => {
   it('serializes JSONL entries with a trailing newline', () => {
@@ -16,5 +16,28 @@ describe('sessionCustomEntrySerialization', () => {
       customType: 'kind',
       data: { ok: true },
     });
+  });
+
+  it('builds custom message session entries with optional details', () => {
+    expect(buildCustomMessageSessionEntry({ id: 'id', parentId: 'parent', timestamp: 'now', customType: 'kind', content: 'body' })).toEqual(
+      {
+        type: 'custom_message',
+        id: 'id',
+        parentId: 'parent',
+        timestamp: 'now',
+        customType: 'kind',
+        content: 'body',
+      },
+    );
+    expect(
+      buildCustomMessageSessionEntry({
+        id: 'id',
+        parentId: null,
+        timestamp: 'now',
+        customType: 'kind',
+        content: 'body',
+        details: { ok: true },
+      }),
+    ).toMatchObject({ details: { ok: true } });
   });
 });

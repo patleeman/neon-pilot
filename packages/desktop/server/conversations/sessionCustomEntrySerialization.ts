@@ -18,3 +18,22 @@ export function buildCustomSessionEntry(input: {
     data: input.data,
   };
 }
+
+export function buildCustomMessageSessionEntry(input: {
+  id: string;
+  parentId: string | null;
+  timestamp: string;
+  customType: string;
+  content: string;
+  details?: unknown;
+}): Record<string, unknown> {
+  return {
+    type: 'custom_message',
+    id: input.id,
+    parentId: input.parentId,
+    timestamp: input.timestamp,
+    customType: input.customType,
+    content: input.content,
+    ...(input.details !== undefined ? { details: input.details } : {}),
+  };
+}

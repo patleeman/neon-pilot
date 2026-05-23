@@ -31,7 +31,7 @@ import {
 } from './sessionCompactionSummary.js';
 import { normalizeContent, normalizeTimestamp } from './sessionContent.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
-import { buildCustomSessionEntry, serializeSessionJsonLine } from './sessionCustomEntrySerialization.js';
+import { buildCustomMessageSessionEntry, buildCustomSessionEntry, serializeSessionJsonLine } from './sessionCustomEntrySerialization.js';
 import {
   type ConversationOffshootKind,
   type ConversationOffshootMetadata,
@@ -1287,14 +1287,15 @@ export function appendParentConversationBacklinkEntry(input: {
 
   appendFileSync(
     input.sessionFile,
-    `${JSON.stringify({
-      type: 'custom_message',
-      id: randomUUID(),
-      parentId: leafId,
-      timestamp: new Date().toISOString(),
-      customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
-      content: buildParentBacklinkContent({ label, parentTitle, parentId, parentMessageId: input.parentMessageId }),
-    })}\n`,
+    serializeSessionJsonLine(
+      buildCustomMessageSessionEntry({
+        id: randomUUID(),
+        parentId: leafId,
+        timestamp: new Date().toISOString(),
+        customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+        content: buildParentBacklinkContent({ label, parentTitle, parentId, parentMessageId: input.parentMessageId }),
+      }),
+    ),
     'utf-8',
   );
   clearSessionCaches();
@@ -1345,17 +1346,18 @@ export function appendConversationWorkspaceMetadata(input: {
 
   appendFileSync(
     input.sessionFile,
-    `${JSON.stringify({
-      type: 'custom',
-      id: metadataId,
-      parentId: metadataParentId,
-      timestamp,
-      customType: CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE,
-      data: {
-        ...(cwd ? { cwd } : {}),
-        ...(input.workspaceCwd !== undefined ? { workspaceCwd: workspaceCwd || null } : {}),
-      },
-    })}\n`,
+    serializeSessionJsonLine(
+      buildCustomSessionEntry({
+        id: metadataId,
+        parentId: metadataParentId,
+        timestamp,
+        customType: CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE,
+        data: {
+          ...(cwd ? { cwd } : {}),
+          ...(input.workspaceCwd !== undefined ? { workspaceCwd: workspaceCwd || null } : {}),
+        },
+      }),
+    ),
     'utf-8',
   );
 
@@ -1372,20 +1374,21 @@ export function appendConversationWorkspaceMetadata(input: {
 
   appendFileSync(
     input.sessionFile,
-    `${JSON.stringify({
-      type: 'custom_message',
-      id: randomUUID(),
-      parentId: metadataId,
-      timestamp,
-      customType: CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
-      content: buildWorkspaceChangeContent(workspaceChangeLabels),
-      details: {
-        ...(input.previousCwd ? { previousCwd: input.previousCwd } : {}),
-        ...(input.previousWorkspaceCwd !== undefined ? { previousWorkspaceCwd: input.previousWorkspaceCwd } : {}),
-        ...(cwd ? { cwd } : {}),
-        ...(input.workspaceCwd !== undefined ? { workspaceCwd: workspaceCwd || null } : {}),
-      },
-    })}\n`,
+    serializeSessionJsonLine(
+      buildCustomMessageSessionEntry({
+        id: randomUUID(),
+        parentId: metadataId,
+        timestamp,
+        customType: CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
+        content: buildWorkspaceChangeContent(workspaceChangeLabels),
+        details: {
+          ...(input.previousCwd ? { previousCwd: input.previousCwd } : {}),
+          ...(input.previousWorkspaceCwd !== undefined ? { previousWorkspaceCwd: input.previousWorkspaceCwd } : {}),
+          ...(cwd ? { cwd } : {}),
+          ...(input.workspaceCwd !== undefined ? { workspaceCwd: workspaceCwd || null } : {}),
+        },
+      }),
+    ),
     'utf-8',
   );
 }
