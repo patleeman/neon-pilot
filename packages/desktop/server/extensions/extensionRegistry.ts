@@ -83,6 +83,10 @@ import { requireStringArray } from './extensionManifestValidation.js';
 import { type ExtensionModelProfileResolution, resolveExtensionModelProfileFromRegistrations } from './extensionModelProfileResolution.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
+  buildExtensionPromptContextProviderRegistrations,
+  sortExtensionPromptContextProviderRegistrations,
+} from './extensionPromptContextProviderRegistrations.js';
+import {
   validateDynamicProviderContributions,
   validateRuntimeProviderContributions,
   validateTurnContextProviderContributions,
@@ -1189,34 +1193,9 @@ export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandR
 export function listExtensionPromptContextProviderRegistrations(
   stateRoot: string = getStateRoot(),
 ): ExtensionPromptContextProviderRegistration[] {
-  return listEnabledExtensionEntries(stateRoot)
-    .flatMap((entry) =>
-      [...(entry.manifest.contributes?.promptContextProviders ?? []), ...(entry.manifest.contributes?.turnContextProviders ?? [])].flatMap(
-        (provider): ExtensionPromptContextProviderRegistration[] => {
-          const id = provider.id.trim();
-          const handler = provider.handler.trim();
-          if (!id || !handler) return [];
-          return [
-            {
-              extensionId: entry.manifest.id,
-              id,
-              packageType: entry.manifest.packageType ?? 'user',
-              handler,
-              ...(provider.title ? { title: provider.title } : {}),
-              ...('priority' in provider && Number.isInteger(provider.priority) ? { priority: provider.priority as number } : {}),
-              ...('scope' in provider && Array.isArray(provider.scope)
-                ? {
-                    scope: (provider.scope as Array<'global' | 'workspace' | 'conversation'>).filter(
-                      (s) => s === 'global' || s === 'workspace' || s === 'conversation',
-                    ),
-                  }
-                : {}),
-            },
-          ];
-        },
-      ),
-    )
-    .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0));
+  return sortExtensionPromptContextProviderRegistrations(
+    listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionPromptContextProviderRegistrations),
+  );
 }
 
 export function listExtensionRuntimeProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionRuntimeProviderRegistration[] {
