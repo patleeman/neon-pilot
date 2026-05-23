@@ -2153,7 +2153,7 @@ export function Sidebar() {
   const filteredConversationItems = useMemo(
     () =>
       orderedConversationItems.filter((item) => {
-        if (!isSidebarVisibleConversation(item.session)) {
+        if (!isSidebarVisibleConversation(item.session) && item.session.id !== activeConversationId) {
           return false;
         }
         const isAutomation = automationConversationIdSet.has(item.session.id);
@@ -2165,7 +2165,7 @@ export function Sidebar() {
         }
         return true;
       }),
-    [automationConversationIdSet, orderedConversationItems, threadsFilterMode],
+    [activeConversationId, automationConversationIdSet, orderedConversationItems, threadsFilterMode],
   );
   const workspaceOrder = useMemo(
     () => normalizeWorkspacePaths([...pinnedWorkspacePaths, ...savedWorkspacePaths, ...openWorkspacePaths]),

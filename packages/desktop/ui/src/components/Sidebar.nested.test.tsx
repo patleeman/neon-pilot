@@ -156,6 +156,25 @@ describe('Sidebar branch conversation interactions', () => {
     expect(() => row(container, 'grandchild')).toThrow();
   });
 
+  it('shows the active subagent thread as a flat sidebar row when opened from View', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent']));
+    const container = renderSidebar('/conversations/subagent-child', [
+      session({ id: 'parent', title: 'Parent thread' }),
+      session({
+        id: 'subagent-child',
+        title: 'Smoke test subagent',
+        parentSessionId: 'parent',
+        sourceRunId: 'run-subagent-child',
+        offshootKind: 'subagent',
+      }),
+    ]);
+    await flush();
+
+    expect(row(container, 'parent').textContent).toContain('Parent thread');
+    expect(row(container, 'subagent-child').textContent).toContain('Smoke test subagent');
+    expect(row(container, 'subagent-child').textContent).not.toContain('subagent:');
+  });
+
   it('closes an active parent that is only visible as lineage while a running child stays open', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child']));
     renderSidebar('/conversations/parent', [
