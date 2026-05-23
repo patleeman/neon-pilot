@@ -184,6 +184,7 @@ import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTas
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { buildDesktopAppBridgeError, buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
 import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { buildExecuteLiveSessionBashResponse } from './localApiBashResponse.js';
@@ -683,11 +684,11 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
   let writeQueue = Promise.resolve();
 
   const emitEvent = (event: unknown) => {
-    if (closed) {
+    if (!shouldProcessDesktopAppEvent(closed)) {
       return;
     }
 
-    onEvent({ type: 'event', event });
+    onEvent(buildDesktopAppBridgeEvent(event));
   };
 
   const enqueueWrite = (task: () => Promise<void> | void) => {
@@ -700,14 +701,11 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
         await task();
       })
       .catch((error) => {
-        if (closed) {
+        if (!shouldProcessDesktopAppEvent(closed)) {
           return;
         }
 
-        onEvent({
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
+        onEvent(buildDesktopAppBridgeError(error));
       });
   };
 
