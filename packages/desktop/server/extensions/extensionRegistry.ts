@@ -90,6 +90,7 @@ import {
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
+import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import {
   validateComposerButtonContributions,
@@ -1043,15 +1044,7 @@ function validateExtensionBackend(backend: Record<string, unknown>): void {
 }
 
 function validateExtensionSurfaces(surfaces: unknown): void {
-  for (const [index, surface] of assertRecordArray(surfaces, 'surfaces').entries()) {
-    requireString(surface.id, `surfaces[${index}].id`);
-    validateEnum(surface.placement, EXTENSION_PLACEMENTS, `surfaces[${index}].placement`);
-    validateEnum(surface.kind, EXTENSION_SURFACE_KINDS, `surfaces[${index}].kind`);
-    validateOptionalString(surface.title, `surfaces[${index}].title`);
-    validateOptionalString(surface.label, `surfaces[${index}].label`);
-    if (surface.icon !== undefined) validateEnum(surface.icon, EXTENSION_ICON_NAMES, `surfaces[${index}].icon`);
-    validateOptionalString(surface.action, `surfaces[${index}].action`);
-  }
+  validateExtensionSurfaceContributions(surfaces);
 }
 
 export function parseExtensionManifest(value: unknown): ExtensionManifest {
