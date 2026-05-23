@@ -26,6 +26,12 @@ import {
 } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
+  type ExtensionRegistryConfig,
+  isRecord,
+  normalizeExtensionRegistryConfig,
+  serializeExtensionRegistryConfig,
+} from './extensionRegistryConfig.js';
+import {
   buildExtensionSecretRegistrations as buildExtensionSecretContributionRegistrations,
   buildExtensionSettingsRegistrations as buildExtensionSettingsContributionRegistrations,
 } from './extensionSettingsContributions.js';
@@ -420,27 +426,6 @@ export interface ExtensionSettingsComponentRegistration {
   frontendEntry?: string;
 }
 
-interface ExtensionRegistryConfig {
-  disabledIds?: string[];
-  enabledIds?: string[];
-  disabledKeybindings?: string[];
-  keybindingOverrides?: Record<string, string[]>;
-  commandKeybindings?: Record<
-    string,
-    {
-      extensionId: string;
-      surfaceId: string;
-      packageType?: ExtensionPackageType;
-      title: string;
-      command: string;
-      args?: unknown;
-      scope?: 'global' | 'surface';
-      defaultKeys?: string[];
-    }
-  >;
-  quarantined?: Record<string, { reason: string; at: string; failures: number }>;
-}
-
 const EXTENSION_FAILURE_WINDOW_MS = 10 * 60 * 1000;
 const EXTENSION_FAILURE_THRESHOLD = 3;
 
@@ -460,10 +445,6 @@ function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): stri
   return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
   const configPath = getExtensionRegistryConfigPath(stateRoot);
   if (!existsSync(configPath)) {
@@ -471,56 +452,7 @@ function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): Extens
   }
 
   try {
-    const parsed = JSON.parse(readFileSync(configPath, 'utf-8')) as unknown;
-    if (!isRecord(parsed)) {
-      return {};
-    }
-    const disabledIds = Array.isArray(parsed.disabledIds) ? parsed.disabledIds.filter((id): id is string => typeof id === 'string') : [];
-    const enabledIds = Array.isArray(parsed.enabledIds) ? parsed.enabledIds.filter((id): id is string => typeof id === 'string') : [];
-    const disabledKeybindings = Array.isArray(parsed.disabledKeybindings)
-      ? parsed.disabledKeybindings.filter((id): id is string => typeof id === 'string')
-      : [];
-    const keybindingOverrides = isRecord(parsed.keybindingOverrides)
-      ? Object.fromEntries(
-          Object.entries(parsed.keybindingOverrides).flatMap(([id, keys]) =>
-            Array.isArray(keys) ? [[id, keys.filter((key): key is string => typeof key === 'string')]] : [],
-          ),
-        )
-      : {};
-    const commandKeybindings = isRecord(parsed.commandKeybindings)
-      ? Object.fromEntries(
-          Object.entries(parsed.commandKeybindings).flatMap(([id, value]) => {
-            if (!isRecord(value)) return [];
-            if (typeof value.extensionId !== 'string' || typeof value.surfaceId !== 'string') return [];
-            if (typeof value.title !== 'string' || typeof value.command !== 'string') return [];
-            const scope = value.scope === 'surface' ? 'surface' : 'global';
-            const defaultKeys = Array.isArray(value.defaultKeys)
-              ? value.defaultKeys.filter((key): key is string => typeof key === 'string')
-              : [];
-            const packageType = value.packageType === 'system' ? 'system' : value.packageType === 'user' ? 'user' : undefined;
-            const entry: NonNullable<ExtensionRegistryConfig['commandKeybindings']>[string] = {
-              extensionId: value.extensionId,
-              surfaceId: value.surfaceId,
-              title: value.title,
-              command: value.command,
-              ...(value.args !== undefined ? { args: value.args } : {}),
-              scope,
-              defaultKeys,
-              ...(packageType ? { packageType } : {}),
-            };
-            return [[id, entry]];
-          }),
-        )
-      : {};
-    const quarantined = isRecord(parsed.quarantined)
-      ? Object.fromEntries(
-          Object.entries(parsed.quarantined).flatMap(([id, value]) => {
-            if (!isRecord(value) || typeof value.reason !== 'string' || typeof value.at !== 'string') return [];
-            return [[id, { reason: value.reason, at: value.at, failures: typeof value.failures === 'number' ? value.failures : 0 }]];
-          }),
-        )
-      : {};
-    return { disabledIds, enabledIds, disabledKeybindings, keybindingOverrides, commandKeybindings, quarantined };
+    return normalizeExtensionRegistryConfig(JSON.parse(readFileSync(configPath, 'utf-8')) as unknown);
   } catch {
     return {};
   }
@@ -642,21 +574,7 @@ function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry):
 function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
   const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
   mkdirSync(extensionsRoot, { recursive: true });
-  writeFileSync(
-    getExtensionRegistryConfigPath(stateRoot),
-    `${JSON.stringify(
-      {
-        disabledIds: config.disabledIds ?? [],
-        enabledIds: config.enabledIds ?? [],
-        disabledKeybindings: config.disabledKeybindings ?? [],
-        keybindingOverrides: config.keybindingOverrides ?? {},
-        commandKeybindings: config.commandKeybindings ?? {},
-        quarantined: config.quarantined ?? {},
-      },
-      null,
-      2,
-    )}\n`,
-  );
+  writeFileSync(getExtensionRegistryConfigPath(stateRoot), serializeExtensionRegistryConfig(config));
 }
 
 export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot()): boolean {
