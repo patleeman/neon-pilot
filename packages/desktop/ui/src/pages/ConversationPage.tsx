@@ -28,13 +28,9 @@ import {
   readBrowserChangedContextMessage,
 } from '../conversation/browserContextMessages';
 import { appendComposerHistory, readComposerHistory } from '../conversation/composerHistory';
-import {
-  getConversationArtifactIdFromSearch,
-  readArtifactPresentation,
-  setConversationArtifactIdInSearch,
-} from '../conversation/conversationArtifacts';
+import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
-import { getConversationCheckpointIdFromSearch, setConversationCheckpointIdInSearch } from '../conversation/conversationCheckpoints';
+import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
 import {
   canNavigateComposerHistoryValue,
   resolveComposerClearShortcut,
@@ -110,6 +106,7 @@ import {
 import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from '../conversation/conversationSessionLifecycle';
 import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
+import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import {
   beginDraftConversationAttachmentsMutation,
   buildDraftConversationComposerStorageKey,
@@ -464,7 +461,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return;
       }
 
-      const nextSearch = setConversationCheckpointIdInSearch(setConversationArtifactIdInSearch(location.search, artifactId), null);
+      const nextSearch = buildOpenArtifactSearch(location.search, artifactId);
 
       navigate({
         pathname: location.pathname,
@@ -494,15 +491,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       setAppLayoutMode('workbench');
       writeAppLayoutMode('workbench');
 
-      const nextSearch = new URLSearchParams(location.search);
-      nextSearch.delete('artifact');
-      nextSearch.delete('checkpoint');
-      nextSearch.delete('run');
-      nextSearch.set('file', normalizedFileId);
+      const nextSearch = buildOpenKnowledgeFileSearch(location.search, normalizedFileId);
+      if (nextSearch === null) {
+        return;
+      }
 
       navigate({
         pathname: location.pathname,
-        search: nextSearch.toString(),
+        search: nextSearch,
       });
     },
     [location.pathname, location.search, navigate],
