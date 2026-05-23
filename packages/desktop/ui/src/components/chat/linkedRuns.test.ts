@@ -97,6 +97,27 @@ describe('linkedRuns', () => {
     expect(buildToolPreview({ ...base, tool: 'browser_screenshot', input: { tabId: 'tab-1' } })).toBe('tab tab-1');
   });
 
+  it('uses file paths instead of patch prologue for apply_patch previews', () => {
+    expect(
+      buildToolPreview({
+        type: 'tool_use',
+        ts: '2026-04-26T00:00:00.000Z',
+        tool: 'apply_patch',
+        input: {
+          patch: `*** Begin Patch
+*** Update File: packages/desktop/ui/src/components/chat/linkedRuns.ts
+@@
+-old
++new
+*** Add File: packages/desktop/ui/src/components/chat/linkedRuns.fixture.ts
++export {};
+*** End Patch`,
+        },
+        output: '',
+      }),
+    ).toBe('packages/desktop/ui/src/components/chat/linkedRuns.ts, packages/desktop/ui/src/components/chat/linkedRuns.fixture.ts');
+  });
+
   it('presents listed durable runs with kind and status detail', () => {
     const linkedRuns = readLinkedRuns(
       runToolBlock({

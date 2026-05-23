@@ -269,7 +269,7 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
     case 'write':
     case 'edit':
     case 'apply_patch': {
-      return excerpt('path') ?? summarizePathList(input.paths) ?? excerpt('patch') ?? '';
+      return excerpt('path') ?? summarizePathList(input.paths) ?? summarizePatchPaths(read('patch')) ?? excerpt('patch') ?? '';
     }
     case 'image':
       return excerpt('prompt') ?? '';
@@ -318,6 +318,40 @@ function summarizePathList(value: unknown): string | null {
   if (paths.length === 0) return null;
   const preview = paths.slice(0, 2).join(', ');
   return paths.length > 2 ? `${preview}, …` : preview;
+}
+
+function summarizePatchPaths(patch: string | null): string | null {
+  if (!patch) return null;
+
+  const paths: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: string | undefined): void => {
+    const path = value?.trim();
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    paths.push(path);
+  };
+
+  for (const line of patch.split('\n')) {
+    const fileMatch = line.match(/^\*\*\* (?:Add|Update|Delete) File:\s+(.+)$/);
+    if (fileMatch) {
+      push(fileMatch[1]);
+      continue;
+    }
+
+    const moveMatch = line.match(/^\*\*\* Move to:\s+(.+)$/);
+    if (moveMatch) {
+      push(moveMatch[1]);
+      continue;
+    }
+
+    const gitMatch = line.match(/^diff --git a\/(.+?) b\/(.+)$/);
+    if (gitMatch) {
+      push(gitMatch[2]);
+    }
+  }
+
+  return summarizePathList(paths);
 }
 
 function summarizeAskUserQuestion(input: Record<string, unknown>): string {
