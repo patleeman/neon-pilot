@@ -57,6 +57,7 @@ import {
   validateSubscriptionContributions,
   validateTranscriptBlockContributions,
 } from './extensionInteractionContributionValidation.js';
+import { buildInvalidExtensionInstallSummary } from './extensionInvalidInstallSummary.js';
 import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
 import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
@@ -1029,29 +1030,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
   const validIds = new Set(valid.map((extension) => extension.id));
   const invalid = readInvalidRuntimeExtensionEntries(stateRoot)
     .filter((entry) => !validIds.has(entry.id))
-    .map(
-      (entry): ExtensionInstallSummary => ({
-        id: entry.id,
-        name: entry.name,
-        packageType: entry.packageType,
-        enabled: false,
-        status: 'invalid',
-        errors: entry.errors,
-        packageRoot: entry.packageRoot,
-        manifest: { schemaVersion: 2, id: entry.id, name: entry.name, packageType: entry.packageType },
-        permissions: [],
-        surfaces: [],
-        backendActions: [],
-        services: [],
-        subscriptions: [],
-        dependsOn: [],
-        skills: [],
-        mentions: [],
-        tools: [],
-        modelProfiles: [],
-        routes: [],
-      }),
-    );
+    .map((entry): ExtensionInstallSummary => buildInvalidExtensionInstallSummary(entry));
   return [...valid, ...invalid];
 }
 
