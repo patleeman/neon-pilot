@@ -63,6 +63,30 @@ my-extension/
 
 Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the packaged local-extension-development skill; renderer/extension UI should not call `/api/extensions/*` directly.
 
+## Packaging and distribution
+
+Build before packaging. A packaged extension is a zip file containing one top-level extension directory with `extension.json`, source/docs/assets, and prebuilt `dist/` bundles. Do not include `node_modules`, transient `.dist.tmp-*` folders, or local build caches.
+
+From the repo root:
+
+```bash
+pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out /tmp/agent-board.neon-extension.zip
+```
+
+`neon-pilot-extension pack` is a thin wrapper around `scripts/extension-pack.mjs`. It zips the package directory itself, excludes `node_modules`, `sidecar/target`, and `.dist.tmp-*`, and writes either `<extension-dir>.zip` or the path passed with `--out`.
+
+Import/install expects the same shape: one safe top-level directory containing `extension.json`. The desktop runtime unzips into `<state-root>/extensions/{extension-id}` and loads the prebuilt `dist/` files. Packaged desktop releases do **not** compile extensions at install time.
+
+For optional first-party installable extensions under `installable-extensions/`, use the release packer instead:
+
+```bash
+pnpm run extension:pack:installable
+```
+
+That writes `{extension-id}.neon-extension.zip` bundles for release upload. The Settings → Extensions **Available** tab downloads those files from the GitHub release tag matching the installed app version.
+
 ## Manifest (`extension.json`)
 
 The manifest declares what your extension contributes:

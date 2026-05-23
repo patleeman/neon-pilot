@@ -77,6 +77,28 @@ Packaged desktop releases only load prebuilt `dist/` files. They do not run esbu
 
 After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route or right-rail surface and visually inspect it.
 
+## Packaging extensions
+
+Package only after building and validating the extension. The portable bundle format is a zip with one top-level extension directory containing `extension.json`, source/docs/assets, and prebuilt `dist/` files. Runtime-installed extensions are not compiled by the packaged app.
+
+```bash
+pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out /tmp/agent-board.neon-extension.zip
+```
+
+The pack command excludes `node_modules`, `sidecar/target`, and transient `.dist.tmp-*` folders. If `--out` is omitted, it writes `<extension-dir>.zip` beside the package.
+
+Import and catalog installs expect the same safe zip shape: exactly one top-level package directory with `extension.json`. The installer unpacks it into `<state-root>/extensions/{extension-id}` and loads the existing `dist/` bundles.
+
+Optional first-party extensions under `installable-extensions/` use the release packer instead:
+
+```bash
+pnpm run extension:pack:installable
+```
+
+Those bundles are named `{extension-id}.neon-extension.zip` and are uploaded to the matching GitHub release tag for Settings → Extensions → Available.
+
 ## Manifest contract
 
 Every extension package has an `extension.json` manifest. The desktop runtime validates the manifest before loading the extension, so malformed contributions fail fast instead of turning into mystery UI bugs.

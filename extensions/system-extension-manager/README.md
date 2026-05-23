@@ -47,6 +47,8 @@ The loader scans the default runtime install location `<state-root>/extensions`.
 
 Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then use **Validate** and **Reload** in Extension Manager. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
 
+Package a built user extension with `neon-pilot-extension pack <extension-dir> --out <name>.neon-extension.zip` before importing or sharing it. The bundle is a zip with one top-level extension directory and prebuilt `dist/` files; `node_modules`, `sidecar/target`, and `.dist.tmp-*` are excluded. Import installs that package into `<state-root>/extensions/{extension-id}` and does not build it at runtime. Optional first-party installable extensions use `pnpm run extension:pack:installable`, which emits `{extension-id}.neon-extension.zip` release assets for the **Available** tab catalog.
+
 ## Agent workflow for this extension
 
 When modifying Extension Manager itself:
