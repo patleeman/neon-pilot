@@ -205,6 +205,11 @@ import {
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { assertConversationFound, assertSessionFound } from './localApiConversationNotFound.js';
 import { buildDesktopConversationSource, normalizeResolvedSessionFile } from './localApiConversationSource.js';
+import {
+  buildConversationStateBridgeEvent,
+  shouldEmitConversationState,
+  shouldRecoverConversationState,
+} from './localApiConversationStateEvents.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
@@ -767,7 +772,13 @@ export async function subscribeDesktopConversationState(
   let lastSerializedState = '';
 
   const ensureCurrentStateIsLive = async () => {
-    if (closed || currentState.liveSession.live || !currentState.sessionDetail) {
+    if (
+      !shouldRecoverConversationState({
+        closed,
+        live: currentState.liveSession.live,
+        hasSessionDetail: Boolean(currentState.sessionDetail),
+      })
+    ) {
       return;
     }
 
@@ -786,17 +797,13 @@ export async function subscribeDesktopConversationState(
   };
 
   const emitState = (state: DesktopConversationState) => {
-    if (closed) {
-      return;
-    }
-
     const serialized = JSON.stringify(state);
-    if (serialized === lastSerializedState) {
+    if (!shouldEmitConversationState({ closed, serializedState: serialized, lastSerializedState })) {
       return;
     }
 
     lastSerializedState = serialized;
-    onEvent({ type: 'state', state });
+    onEvent(buildConversationStateBridgeEvent(state));
   };
 
   const closeLiveSubscription = () => {
