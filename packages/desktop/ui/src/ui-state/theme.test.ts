@@ -51,6 +51,12 @@ function renderThemeProbe() {
   return lastThemeState;
 }
 
+function renderThemeProbeWithoutProvider() {
+  lastThemeState = null;
+  renderToStaticMarkup(React.createElement(ThemeProbe));
+  return lastThemeState;
+}
+
 describe('theme preferences', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
@@ -86,6 +92,16 @@ describe('theme preferences', () => {
       theme: 'studio-light',
       themePreference: 'system',
       accent: 'violet',
+    });
+  });
+
+  it('provides a fallback value outside the provider for extension surfaces', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+
+    expect(renderThemeProbeWithoutProvider()).toEqual({
+      theme: 'studio-dark',
+      themePreference: 'dark',
+      accent: 'cobalt',
     });
   });
 

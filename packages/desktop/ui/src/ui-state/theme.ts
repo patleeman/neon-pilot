@@ -255,6 +255,14 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function setStoredThemeValue(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function normalizeThemeId(theme: Theme): Theme {
   if (theme === 'light' || theme === 'tokyo-night-light') return 'studio-light';
   if (theme === 'dark' || theme === 'tokyo-night-dark') return 'studio-dark';
@@ -574,8 +582,37 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme(): ThemeContextValue {
   const value = useContext(ThemeContext);
-  if (!value) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return value;
+  if (value) return value;
+
+  const themePreference = readStoredThemePreference();
+  const lightTheme = readStoredThemeId(LIGHT_THEME_STORAGE_KEY, DEFAULT_LIGHT_THEME);
+  const darkTheme = readStoredThemeId(DARK_THEME_STORAGE_KEY, DEFAULT_DARK_THEME);
+  const theme = findTheme(BUILT_IN_THEMES, resolveThemePreference(themePreference, readSystemTheme(), lightTheme, darkTheme)).id;
+  return {
+    theme,
+    themePreference,
+    lightTheme,
+    darkTheme,
+    availableThemes: BUILT_IN_THEMES,
+    setThemePreference: (nextThemePreference) => {
+      setStoredThemeValue(THEME_STORAGE_KEY, nextThemePreference);
+      applyTheme(
+        findTheme(BUILT_IN_THEMES, resolveThemePreference(nextThemePreference, readSystemTheme(), lightTheme, darkTheme)),
+        readStoredAccent(),
+      );
+    },
+    setLightTheme: (nextTheme) => setStoredThemeValue(LIGHT_THEME_STORAGE_KEY, normalizeThemeId(nextTheme)),
+    setDarkTheme: (nextTheme) => setStoredThemeValue(DARK_THEME_STORAGE_KEY, normalizeThemeId(nextTheme)),
+    accent: readStoredAccent(),
+    availableAccents: THEME_ACCENTS,
+    setAccent: (nextAccent) => {
+      const normalizedAccent = normalizeAccent(nextAccent);
+      setStoredThemeValue(ACCENT_STORAGE_KEY, normalizedAccent);
+      applyAccent(normalizedAccent, findTheme(BUILT_IN_THEMES, theme).appearance);
+    },
+    toggle: () => {
+      const currentTheme = findTheme(BUILT_IN_THEMES, theme);
+      setStoredThemeValue(THEME_STORAGE_KEY, currentTheme.appearance === 'light' ? 'dark' : 'light');
+    },
+  };
 }
