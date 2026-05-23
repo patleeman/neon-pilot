@@ -61,6 +61,7 @@ import {
   resolveConversationInitialModelPreferenceState,
   resolveConversationInitialPendingPromptState,
 } from '../conversation/conversationInitialState';
+import { shouldSwitchToWorkbenchForSelectedRun } from '../conversation/conversationLayoutMode';
 import {
   buildMentionItems,
   filterMentionItems,
@@ -521,7 +522,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const previousSelectedRunId = previousSelectedRunIdRef.current;
     previousSelectedRunIdRef.current = selectedRunId;
 
-    if (!selectedRunId || selectedRunId === previousSelectedRunId || appLayoutMode === 'workbench') {
+    if (!shouldSwitchToWorkbenchForSelectedRun({ selectedRunId, previousSelectedRunId, appLayoutMode })) {
       return;
     }
 
