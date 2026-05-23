@@ -16,7 +16,6 @@ import type {
   ExtensionMentionContribution,
   ExtensionModelProfileContribution,
   ExtensionPackageType,
-  ExtensionSecretContribution,
   ExtensionSurface,
   ExtensionToolContribution,
   ExtensionViewContribution,
@@ -34,6 +33,10 @@ import {
   getHostViewComponentDefinition,
 } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
+import {
+  buildExtensionSecretRegistrations as buildExtensionSecretContributionRegistrations,
+  buildExtensionSettingsRegistrations as buildExtensionSettingsContributionRegistrations,
+} from './extensionSettingsContributions.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
 import { buildExtensionToolRegistrationName } from './extensionToolNames.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
@@ -622,55 +625,18 @@ function buildExtensionMentionRegistrations(entry: ExtensionRegistryEntry): Exte
 }
 
 function buildExtensionSettingsRegistrations(entry: ExtensionRegistryEntry): ExtensionSettingsRegistration[] {
-  const contributes = entry.manifest.contributes?.settings;
-  if (!contributes) {
-    return [];
-  }
-  return Object.entries(contributes).flatMap(([key, setting]) => {
-    if (!setting || typeof setting !== 'object') {
-      return [];
-    }
-    const type = typeof setting.type === 'string' ? setting.type : 'string';
-    if (!['string', 'boolean', 'number', 'select'].includes(type)) {
-      return [];
-    }
-    return [
-      {
-        extensionId: entry.manifest.id,
-        packageType: entry.manifest.packageType ?? 'user',
-        key,
-        type,
-        default: setting.default,
-        description: typeof setting.description === 'string' ? setting.description : undefined,
-        group: typeof setting.group === 'string' && setting.group.trim() ? setting.group.trim() : 'General',
-        enum: Array.isArray(setting.enum) ? setting.enum.filter((e): e is string => typeof e === 'string') : undefined,
-        placeholder: typeof setting.placeholder === 'string' ? setting.placeholder : undefined,
-        order: typeof setting.order === 'number' ? setting.order : 0,
-      },
-    ];
+  return buildExtensionSettingsContributionRegistrations({
+    extensionId: entry.manifest.id,
+    packageType: entry.manifest.packageType ?? 'user',
+    settings: entry.manifest.contributes?.settings,
   });
 }
 
 function buildExtensionSecretRegistrations(entry: ExtensionRegistryEntry): ExtensionSecretRegistration[] {
-  const contributes = entry.manifest.contributes?.secrets;
-  if (!contributes) return [];
-  return Object.entries(contributes).flatMap(([id, secret]: [string, ExtensionSecretContribution]): ExtensionSecretRegistration[] => {
-    const normalizedId = id.trim();
-    const label = typeof secret.label === 'string' ? secret.label.trim() : '';
-    if (!normalizedId || !label) return [];
-    return [
-      {
-        extensionId: entry.manifest.id,
-        packageType: entry.manifest.packageType ?? 'user',
-        id: normalizedId,
-        key: `${entry.manifest.id}.${normalizedId}`,
-        label,
-        description: typeof secret.description === 'string' ? secret.description : undefined,
-        env: typeof secret.env === 'string' && secret.env.trim() ? secret.env.trim() : undefined,
-        placeholder: typeof secret.placeholder === 'string' ? secret.placeholder : undefined,
-        order: typeof secret.order === 'number' ? secret.order : 0,
-      },
-    ];
+  return buildExtensionSecretContributionRegistrations({
+    extensionId: entry.manifest.id,
+    packageType: entry.manifest.packageType ?? 'user',
+    secrets: entry.manifest.contributes?.secrets,
   });
 }
 
