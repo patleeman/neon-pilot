@@ -142,7 +142,6 @@ export function ToolBlock({
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllRuns, setShowAllRuns] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [pinnedDiffOpen, setPinnedDiffOpen] = useState(() => diffDisclosureMode === 'expanded');
   useEffect(() => {
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
@@ -447,23 +446,6 @@ export function ToolBlock({
         <div className="border-t border-border-subtle/70">
           {(isRunning || output || outputDeferred) && (
             <div className={cx('px-2.5 py-2', isRunning && output && 'max-h-40 overflow-y-auto')}>
-              <div className="mb-1 flex items-center gap-2">
-                <p className="text-[10px] uppercase tracking-wider opacity-40">
-                  {isRunning ? 'live output' : `output · ${output.split('\n').length} lines`}
-                </p>
-                {outputDeferred && blockId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void onHydrateMessage?.(blockId);
-                    }}
-                    disabled={hydratingDeferredOutput}
-                    className="ui-action-button text-[10px]"
-                  >
-                    {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
-                  </button>
-                )}
-              </div>
               {output ? (
                 <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-75">{output}</pre>
               ) : isRunning ? (
@@ -471,25 +453,20 @@ export function ToolBlock({
               ) : outputDeferred ? (
                 <p className="text-[11px] italic leading-relaxed opacity-55">Older tool output is available on demand.</p>
               ) : null}
+              {outputDeferred && blockId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onHydrateMessage?.(blockId);
+                  }}
+                  disabled={hydratingDeferredOutput}
+                  className="ui-action-button mt-2 text-[10px]"
+                >
+                  {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
+                </button>
+              )}
             </div>
           )}
-          <div className="border-t border-border-subtle/50 px-2.5 py-1.5">
-            <button
-              type="button"
-              onClick={() => setShowDetails((current) => !current)}
-              className="text-[10px] uppercase tracking-wider text-dim transition-colors hover:text-secondary"
-            >
-              {showDetails ? 'hide details' : 'show details'}
-            </button>
-          </div>
-          {showDetails ? (
-            <div className="border-t border-border-subtle/50 bg-black/5 px-2.5 py-2">
-              <p className="mb-1 text-[10px] uppercase tracking-wider opacity-40">input</p>
-              <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-75">
-                {JSON.stringify(block.input, null, 2)}
-              </pre>
-            </div>
-          ) : null}
         </div>
       )}
     </div>

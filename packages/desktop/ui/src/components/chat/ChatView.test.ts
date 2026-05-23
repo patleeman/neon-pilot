@@ -458,6 +458,31 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('show details');
   });
 
+  it('renders generic tool output without chrome labels or input JSON', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-03-11T18:00:00.000Z',
+            tool: 'subagent',
+            input: { action: 'list' },
+            output: 'No subagents found.',
+            status: 'running',
+            durationMs: 400,
+          },
+        ],
+        isStreaming: false,
+      }),
+    );
+
+    expect(html).toContain('No subagents found.');
+    expect(html).not.toContain('output ·');
+    expect(html).not.toContain('input');
+    expect(html).not.toContain('&quot;action&quot;');
+    expect(html).not.toContain('show details');
+  });
+
   it('resolves legacy linked run ids to current durable run records using task slug', () => {
     const html = renderToStaticMarkup(
       createElement(
