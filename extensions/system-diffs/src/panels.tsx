@@ -20,9 +20,13 @@ function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function isCheckpointFailureOutput(output: unknown): boolean {
+  return typeof output === 'string' && /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
+}
+
 function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlock }) {
   const isRunning = block.status === 'running' || !!block.running;
-  const isError = block.status === 'error' || !!block.error;
+  const isError = block.status === 'error' || !!block.error || isCheckpointFailureOutput(block.output);
   const input = readRecord(block.input);
   const action = readString(input.action) ?? 'checkpoint';
   const message = readString(input.message);

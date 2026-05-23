@@ -96,6 +96,12 @@ function isFileChangingTool(block: Extract<MessageBlock, { type: 'tool_use' }>, 
   return fileChanges.length > 0 || block.tool === 'write' || block.tool === 'edit' || block.tool === 'apply_patch';
 }
 
+function isCheckpointFailureOutput(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  if (block.tool !== 'checkpoint') return false;
+  const output = block.output ?? '';
+  return /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
+}
+
 export function ToolBlock({
   block,
   autoOpen,
@@ -158,7 +164,7 @@ export function ToolBlock({
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
   const fileChanges = useMemo(() => readFileChangesForToolBlock(block), [block]);
   const isRunning = block.status === 'running' || !!block.running;
-  const isError = block.status === 'error' || !!block.error;
+  const isError = block.status === 'error' || !!block.error || isCheckpointFailureOutput(block);
 
   if (terminalBashBlock) {
     return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;

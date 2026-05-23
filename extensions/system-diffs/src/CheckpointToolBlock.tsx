@@ -13,7 +13,10 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
   activeCheckpointId?: string | null;
 }) {
   const isRunning = block.status === 'running' || !!block.running;
-  const isError = block.status === 'error' || !!block.error;
+  const isError =
+    block.status === 'error' ||
+    !!block.error ||
+    /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(block.output ?? '');
   const commentCount = (checkpoint as { commentCount?: number }).commentCount;
 
   return (

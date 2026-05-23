@@ -64,4 +64,22 @@ describe('CheckpointTranscriptRenderer', () => {
     expect(html).toContain('fix: checkpoint cards');
     expect(html).toContain('inline diff abc1234');
   });
+
+  it('treats semantic checkpoint failures as danger cards even when the tool status is ok', () => {
+    readCheckpointPresentationMock.mockReturnValueOnce(null);
+
+    const html = renderToStaticMarkup(
+      <CheckpointTranscriptRenderer
+        block={{
+          status: 'ok',
+          input: { action: 'save', message: 'fix: retry checkpoint' },
+          output: 'Refusing to checkpoint unrelated staged changes: package.json',
+        }}
+        context={{}}
+      />,
+    );
+
+    expect(html).toContain('Checkpoint failed');
+    expect(html).toContain('border-danger');
+  });
 });

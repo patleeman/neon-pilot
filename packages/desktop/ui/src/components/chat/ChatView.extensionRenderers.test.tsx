@@ -124,4 +124,40 @@ describe('chat view extension transcript renderers', () => {
     expect(html).toContain('data-extension-tool-host');
     expect(html).toContain('checkpoint transcript card');
   });
+
+  it('collapses repeated checkpoint save attempts with the same message in pinned tool rows', () => {
+    const checkpointInput = { action: 'save', message: 'fix: dedupe checkpoint retries', paths: ['src/file.ts'] };
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:00.000Z',
+            tool: 'checkpoint',
+            input: checkpointInput,
+            output: 'Refusing to checkpoint unrelated staged changes: package.json',
+            status: 'ok',
+          },
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:01.000Z',
+            tool: 'checkpoint',
+            input: checkpointInput,
+            output: 'Saved checkpoint abc1234 fix: dedupe checkpoint retries (1 files, +1 -0).',
+            status: 'ok',
+          },
+          {
+            type: 'tool_use',
+            ts: '2026-05-12T18:00:02.000Z',
+            tool: 'checkpoint',
+            input: checkpointInput,
+            output: 'error: failed to push some refs to github.com:repo.git',
+            status: 'ok',
+          },
+        ],
+      }),
+    );
+
+    expect(html.match(/data-extension-tool-host/g)).toHaveLength(1);
+  });
 });

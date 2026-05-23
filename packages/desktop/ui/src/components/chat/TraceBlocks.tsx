@@ -120,6 +120,49 @@ function readToolRecordString(source: unknown, key: string): string | undefined 
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function isCheckpointSaveBlock(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
+  return (
+    block.tool === 'checkpoint' && (readToolRecordString(block.input, 'action') ?? readToolRecordString(block.details, 'action')) === 'save'
+  );
+}
+
+function readCheckpointCollapseKey(block: Extract<MessageBlock, { type: 'tool_use' }>): string | null {
+  if (!isCheckpointSaveBlock(block)) return null;
+  const message = readToolRecordString(block.input, 'message');
+  const subject = message?.split(/\r?\n/)[0]?.trim();
+  if (subject) return `message:${subject.toLowerCase()}`;
+
+  const commitId =
+    readToolRecordString(block.details, 'commitSha') ??
+    readToolRecordString(block.details, 'checkpointId') ??
+    /^Saved checkpoint\s+([a-f0-9]{7,40})\b/im.exec(block.output ?? '')?.[1];
+  if (commitId) return `commit:${commitId.toLowerCase()}`;
+
+  const paths = Array.isArray((block.input as Record<string, unknown> | undefined)?.paths)
+    ? ((block.input as Record<string, unknown>).paths as unknown[])
+        .filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+        .map((path) => path.trim())
+        .sort()
+        .join('\n')
+    : '';
+  return paths ? `paths:${paths}` : null;
+}
+
+function collapseRepeatedCheckpointBlocks(
+  blocks: Extract<MessageBlock, { type: 'tool_use' }>[],
+): Extract<MessageBlock, { type: 'tool_use' }>[] {
+  const latestByKey = new Map<string, number>();
+  blocks.forEach((block, index) => {
+    const key = readCheckpointCollapseKey(block);
+    if (key) latestByKey.set(key, index);
+  });
+
+  return blocks.filter((block, index) => {
+    const key = readCheckpointCollapseKey(block);
+    return !key || latestByKey.get(key) === index;
+  });
+}
+
 function hasArtifactPresentation(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
   if (block.tool !== 'artifact') return false;
   const action = readToolRecordString(block.input, 'action') ?? readToolRecordString(block.details, 'action');
@@ -170,7 +213,7 @@ function PinnedToolBlocks({
   diffDisclosureMode: ConversationDiffDisclosureMode;
 }) {
   if (!showPinnedToolCalls) return null;
-  const pinned = blocks.filter(hasPinnedToolBlock);
+  const pinned = collapseRepeatedCheckpointBlocks(blocks.filter(hasPinnedToolBlock));
   if (pinned.length === 0) return null;
 
   return (
