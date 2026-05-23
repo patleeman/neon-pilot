@@ -155,6 +155,11 @@ import {
   readDraftConversationThinkingLevel,
 } from '../conversation/draftConversation';
 import {
+  type ExtensionSlashCommandResult,
+  findExtensionSlashCommand as findExtensionSlashCommandMatch,
+  resolveExtensionSlashCommandResult,
+} from '../conversation/extensionSlashCommands';
+import {
   buildConversationComposerStorageKey,
   persistForkPromptDraft,
   resolveBranchEntryIdFromSessionDetailResult,
@@ -3992,14 +3997,32 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   });
 
   function findExtensionSlashCommand(text: string): { command: ExtensionSlashCommandRegistration; argument: string } | null {
-    const parsed = parseSlashInput(text.trim());
-    if (!parsed) {
-      return null;
-    }
+    return findExtensionSlashCommandMatch(text, extensionSlashCommands);
+  }
 
-    const name = parsed.command.slice(1);
-    const command = extensionSlashCommands.find((candidate) => candidate.name === name);
-    return command ? { command, argument: parsed.argument } : null;
+  function applyExtensionSlashCommandResult(
+    result: ExtensionSlashCommandResult,
+    inputSnapshot: string,
+  ): { kind: 'handled' } | { kind: 'send'; text: string } {
+    if (result.kind === 'notice') {
+      showNotice(result.tone, result.text);
+      return applyExtensionSlashCommandResult(result.next, inputSnapshot);
+    }
+    if (result.kind === 'send') {
+      return { kind: 'send', text: result.text };
+    }
+    if (result.kind === 'replace') {
+      composerController.setText(result.text);
+      return { kind: 'handled' };
+    }
+    if (result.kind === 'append') {
+      composerController.setText(`${inputSnapshot}${result.text}`);
+      return { kind: 'handled' };
+    }
+    if (result.effect === 'clear') {
+      composerController.clear();
+    }
+    return { kind: 'handled' };
   }
 
   async function executeExtensionSlashCommand(
@@ -4016,43 +4039,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         cwd: currentCwd,
         draft,
       });
-      const result = response.result;
-
-      if (typeof result === 'string') {
-        return { kind: 'send', text: result };
-      }
-      if (!result || typeof result !== 'object' || Array.isArray(result)) {
-        composerController.clear();
-        return { kind: 'handled' };
-      }
-
-      const payload = result as {
-        text?: unknown;
-        prompt?: unknown;
-        replaceComposerText?: unknown;
-        appendComposerText?: unknown;
-        notice?: { tone?: unknown; text?: unknown };
-      };
-      if (typeof payload.notice?.text === 'string') {
-        showNotice(payload.notice.tone === 'danger' ? 'danger' : 'accent', payload.notice.text);
-      }
-      if (typeof payload.replaceComposerText === 'string') {
-        composerController.setText(payload.replaceComposerText);
-        return { kind: 'handled' };
-      }
-      if (typeof payload.appendComposerText === 'string') {
-        composerController.setText(`${inputSnapshot}${payload.appendComposerText}`);
-        return { kind: 'handled' };
-      }
-      if (typeof payload.prompt === 'string') {
-        return { kind: 'send', text: payload.prompt };
-      }
-      if (typeof payload.text === 'string') {
-        return { kind: 'send', text: payload.text };
-      }
-
-      composerController.clear();
-      return { kind: 'handled' };
+      return applyExtensionSlashCommandResult(resolveExtensionSlashCommandResult(response.result), inputSnapshot);
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
       return { kind: 'handled' };
