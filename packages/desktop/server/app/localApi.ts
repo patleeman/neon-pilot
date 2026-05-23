@@ -218,6 +218,7 @@ import {
   normalizeRequiredLiveConversationId,
 } from './localApiLiveSessionResponse.js';
 import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
+import { resolveLocalApiRepoRoot } from './localApiPaths.js';
 import { normalizeRequiredProviderOAuthLoginId, shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
@@ -381,7 +382,11 @@ let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | nu
 const LOCAL_API_DEFERRED_RESUME_POLL_MS = 3_000;
 function resolveRepoRoot(): string {
   const defaultRepoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-  return process.env.NEON_PILOT_REPO_ROOT ?? process.env.NEON_PILOT_RESOURCES_ROOT ?? defaultRepoRoot;
+  return resolveLocalApiRepoRoot({
+    envRepoRoot: process.env.NEON_PILOT_REPO_ROOT,
+    envResourcesRoot: process.env.NEON_PILOT_RESOURCES_ROOT,
+    defaultRepoRoot,
+  });
 }
 
 function resolveDaemonRoot(): string {
