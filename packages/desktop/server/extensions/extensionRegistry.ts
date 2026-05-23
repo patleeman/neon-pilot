@@ -17,6 +17,11 @@ import {
   planStartupGuardQuarantines,
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
+import {
+  validateConversationDecoratorContributions,
+  validateConversationHeaderElementContributions,
+  validateConversationLifecycleContributions,
+} from './extensionConversationContributionValidation.js';
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import {
   validatePromptAssemblyHookContributions,
@@ -949,32 +954,11 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.conversationHeaderElements !== undefined) {
-    for (const [index, element] of assertRecordArray(
-      contributes.conversationHeaderElements,
-      'contributes.conversationHeaderElements',
-    ).entries()) {
-      requireString(element.id, `contributes.conversationHeaderElements[${index}].id`);
-      requireString(element.component, `contributes.conversationHeaderElements[${index}].component`);
-      validateOptionalString(element.label, `contributes.conversationHeaderElements[${index}].label`);
-    }
+    validateConversationHeaderElementContributions(contributes.conversationHeaderElements);
   }
 
   if (contributes.conversationDecorators !== undefined) {
-    for (const [index, decorator] of assertRecordArray(
-      contributes.conversationDecorators,
-      'contributes.conversationDecorators',
-    ).entries()) {
-      requireString(decorator.id, `contributes.conversationDecorators[${index}].id`);
-      requireString(decorator.component, `contributes.conversationDecorators[${index}].component`);
-      validateEnum(
-        decorator.position,
-        ['before-title', 'after-title', 'subtitle'],
-        `contributes.conversationDecorators[${index}].position`,
-      );
-      if (decorator.priority !== undefined && (typeof decorator.priority !== 'number' || !Number.isInteger(decorator.priority))) {
-        throw new Error(`Extension manifest contributes.conversationDecorators[${index}].priority must be an integer.`);
-      }
-    }
+    validateConversationDecoratorContributions(contributes.conversationDecorators);
   }
 
   if (contributes.activityTreeItemElements !== undefined) {
@@ -1006,30 +990,7 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.conversationLifecycle !== undefined) {
-    for (const [index, item] of assertRecordArray(contributes.conversationLifecycle, 'contributes.conversationLifecycle').entries()) {
-      requireString(item.id, `contributes.conversationLifecycle[${index}].id`);
-      requireString(item.component, `contributes.conversationLifecycle[${index}].component`);
-      requireStringArray(item.events, `contributes.conversationLifecycle[${index}].events`);
-      for (const [eventIndex, event] of (item.events as string[]).entries()) {
-        validateEnum(
-          event,
-          [
-            'before-run',
-            'after-run-start',
-            'blocked',
-            'waiting-for-user',
-            'model-error',
-            'tool-error',
-            'goal-active',
-            'compaction-available',
-          ],
-          `contributes.conversationLifecycle[${index}].events[${eventIndex}]`,
-        );
-      }
-      if (item.slot !== undefined) validateEnum(item.slot, ['banner', 'inline'], `contributes.conversationLifecycle[${index}].slot`);
-      if (item.priority !== undefined && (typeof item.priority !== 'number' || !Number.isInteger(item.priority)))
-        throw new Error(`Extension manifest contributes.conversationLifecycle[${index}].priority must be an integer.`);
-    }
+    validateConversationLifecycleContributions(contributes.conversationLifecycle);
   }
 
   if (contributes.composerAttachmentProviders !== undefined) {
