@@ -213,6 +213,7 @@ import {
 } from './localApiLiveSessionResponse.js';
 import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
+import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
 import {
   buildUnchangedSessionDetailResponse,
   shouldBuildAppendOnlySessionDetail,
@@ -1990,9 +1991,7 @@ export async function rollbackDesktopConversation(input: {
   const source = resolveDesktopConversationSource(conversationId);
   if (source.live) {
     const liveEntry = liveRegistry.get(conversationId);
-    if (liveEntry?.session.isStreaming) {
-      throw new Error('Cannot roll back a running conversation. Interrupt it first.');
-    }
+    assertRollbackLiveSessionNotStreaming(Boolean(liveEntry?.session.isStreaming));
     destroySession(conversationId);
   }
 
@@ -2005,10 +2004,7 @@ export async function rollbackDesktopConversation(input: {
     publishConversationSessionMetaChanged(conversationId);
   }
 
-  return {
-    id: conversationId,
-    sessionFile: source.sessionFile,
-  };
+  return buildRollbackConversationResponse({ id: conversationId, sessionFile: source.sessionFile });
 }
 
 export async function abortDesktopLiveSession(conversationId: string): Promise<{ ok: true }> {
