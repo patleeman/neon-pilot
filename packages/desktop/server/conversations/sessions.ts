@@ -54,7 +54,8 @@ interface RawSessionRecord {
 export type ConversationOffshootKind = 'fork' | 'rewind' | 'subagent' | 'duplicate' | 'side';
 
 interface ConversationOffshootMetadata {
-  kind: ConversationOffshootKind;
+  kind?: ConversationOffshootKind;
+  detached?: boolean;
   parentSessionFile?: string;
   parentSessionId?: string;
   parentMessageId?: string;
@@ -1733,6 +1734,7 @@ function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWo
 function readConversationOffshootMetadata(line: RawCustomEntry): ConversationOffshootMetadata | null {
   if (line.customType !== CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE || !line.data || typeof line.data !== 'object') return null;
   const data = line.data as Record<string, unknown>;
+  if (data.detached === true) return { detached: true };
   const kind = typeof data.kind === 'string' ? data.kind.trim() : '';
   if (!['fork', 'rewind', 'subagent', 'duplicate', 'side'].includes(kind)) return null;
   const parentSessionFile = typeof data.parentSessionFile === 'string' ? normalizeOptionalPath(data.parentSessionFile) : undefined;
@@ -1746,6 +1748,30 @@ function readConversationOffshootMetadata(line: RawCustomEntry): ConversationOff
     ...(parentMessageId ? { parentMessageId } : {}),
     ...(sourceRunId ? { sourceRunId } : {}),
   };
+}
+
+export function appendConversationOffshootDetachedMetadata(input: { sessionFile: string }): void {
+  let leafId: string | null = null;
+  try {
+    const manager = SessionManager.open(input.sessionFile);
+    leafId = manager.getLeafId() ?? null;
+  } catch {
+    // Non-fatal: metadata still works for session-list projection without a parent id.
+  }
+
+  appendFileSync(
+    input.sessionFile,
+    `${JSON.stringify({
+      type: 'custom',
+      id: randomUUID(),
+      parentId: leafId,
+      timestamp: new Date().toISOString(),
+      customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
+      data: { detached: true },
+    })}\n`,
+    'utf-8',
+  );
+  clearSessionCaches();
 }
 
 export function appendConversationOffshootMetadata(input: {
@@ -2044,8 +2070,12 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     return null;
   }
 
-  const parentSessionFile = offshootMetadata?.parentSessionFile ?? normalizeOptionalPath(sessionRecord.parentSession);
-  const sourceRunId = offshootMetadata?.sourceRunId ?? readSourceRunIdFromSessionFilePath(filePath);
+  const parentSessionFile = offshootMetadata?.detached
+    ? undefined
+    : (offshootMetadata?.parentSessionFile ?? normalizeOptionalPath(sessionRecord.parentSession));
+  const sourceRunId = offshootMetadata?.detached
+    ? undefined
+    : (offshootMetadata?.sourceRunId ?? readSourceRunIdFromSessionFilePath(filePath));
   const headerCwd = sessionRecord.cwd ?? slugToCwd(cwdSlug);
   const inferredLegacyWorkspaceMetadata =
     workspaceMetadata?.workspaceCwd === null && legacyToolWorkspaceMetadata ? legacyToolWorkspaceMetadata : null;

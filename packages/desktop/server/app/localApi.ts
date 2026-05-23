@@ -129,6 +129,7 @@ import {
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
 import {
+  appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
   buildAppendOnlySessionDetailResponse,
   readSessionBlocks,
@@ -1690,6 +1691,7 @@ export async function changeDesktopConversationCwd(input: { conversationId: stri
     workspaceCwd: nextCwd,
     visibleMessage: true,
   });
+  appendConversationOffshootDetachedMetadata({ sessionFile: result.sessionFile });
 
   if (liveEntry) {
     destroySession(conversationId);

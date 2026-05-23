@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   appendChildConversationTopologyEntry,
+  appendConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
   buildAppendOnlySessionDetailResponse,
@@ -1923,6 +1924,33 @@ describe('sessions', () => {
         }),
       ]),
     );
+  });
+
+  it('can detach a forked session from sidebar lineage when it becomes a moved workspace conversation', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'detached-parent-session',
+      title: 'Detached parent session',
+      assistantTexts: ['Parent reply'],
+    });
+
+    const childSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'detached-child-session',
+      title: 'Detached child session',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+    appendConversationOffshootDetachedMetadata({ sessionFile: childSessionFile });
+
+    const childMeta = listSessions().find((session) => session.id === 'detached-child-session');
+    expect(childMeta).toBeTruthy();
+    expect(childMeta).not.toHaveProperty('parentSessionFile');
+    expect(childMeta).not.toHaveProperty('parentSessionId');
+    expect(childMeta).not.toHaveProperty('offshootKind');
   });
 
   it('does not render tool-created side conversations as loose transcript topology events', () => {
