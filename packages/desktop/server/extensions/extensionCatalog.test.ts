@@ -4,11 +4,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const summaries = vi.fn(() => []);
 const findExtensionEntry = vi.fn(() => undefined);
+const setExtensionEnabled = vi.fn();
 const importRuntimeExtensionBundle = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
   listExtensionInstallSummaries: summaries,
   findExtensionEntry,
+  setExtensionEnabled,
 }));
 vi.mock('./extensionLifecycle.js', () => ({
   importRuntimeExtensionBundle,
@@ -21,7 +23,9 @@ describe('extension catalog', () => {
     vi.restoreAllMocks();
     summaries.mockReset().mockReturnValue([]);
     findExtensionEntry.mockReset().mockReturnValue(undefined);
+    setExtensionEnabled.mockReset();
     importRuntimeExtensionBundle.mockReset();
+    vi.unstubAllGlobals();
     if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
     else process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
   });
@@ -54,6 +58,28 @@ describe('extension catalog', () => {
     await expect(installExtensionBundleFromUrl({ url: 'https://example.com/system-browser.neon-extension.zip' })).rejects.toThrow(
       'Only github.com extension bundle URLs are supported',
     );
+  });
+
+  it('installs downloaded bundles disabled by default', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        headers: new Headers({ 'content-length': '4' }),
+        arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+      })),
+    );
+    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: true }, packageRoot: '/tmp/ext' });
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: false, version: '1.0.0' }]);
+
+    const { installExtensionBundleFromUrl } = await import('./extensionCatalog.js');
+    const result = await installExtensionBundleFromUrl({
+      url: 'https://github.com/patleeman/neon-pilot/releases/download/v1.0.0/system-browser.neon-extension.zip',
+      expectedId: 'system-browser',
+    });
+
+    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined);
+    expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
   });
 
   it('refuses to install a catalog item that is already installed', async () => {

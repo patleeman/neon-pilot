@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
 import { importRuntimeExtensionBundle } from './extensionLifecycle.js';
-import { findExtensionEntry, listExtensionInstallSummaries } from './extensionRegistry.js';
+import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/patleeman/neon-pilot/releases/download';
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
@@ -86,6 +86,8 @@ export interface InstallableExtensionCatalogItem extends CatalogSeed {
   version: string;
   tag: string;
   bundleUrl: string;
+  defaultEnabled: boolean;
+  source: 'github-release';
   installed: boolean;
   installedVersion?: string;
   enabled?: boolean;
@@ -141,6 +143,8 @@ export function listInstallableExtensionCatalog(): {
         version,
         tag,
         bundleUrl: bundleUrlFor(item.id, version),
+        defaultEnabled: false,
+        source: 'github-release' as const,
         installed: Boolean(installed),
         ...(installed?.version ? { installedVersion: installed.version } : {}),
         ...(installed ? { enabled: installed.enabled } : {}),
@@ -181,6 +185,11 @@ export async function installExtensionBundleFromUrl(input: { url?: unknown; expe
     const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
     if (expectedId && result.extension?.id !== expectedId) {
       throw new Error(`Downloaded extension id ${result.extension?.id ?? 'unknown'} did not match expected id ${expectedId}.`);
+    }
+    if (result.extension?.id) {
+      setExtensionEnabled(result.extension.id, false, stateRoot);
+      const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+      return { ...result, extension: disabled ?? result.extension };
     }
     return result;
   } finally {

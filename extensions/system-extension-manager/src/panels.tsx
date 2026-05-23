@@ -16,6 +16,8 @@ interface InstallableExtensionCatalogItem {
   version: string;
   tag: string;
   bundleUrl: string;
+  defaultEnabled?: boolean;
+  source?: 'github-release';
   installed: boolean;
   installedVersion?: string;
   enabled?: boolean;
@@ -127,11 +129,13 @@ function ExtensionActionsMenu({
   busy,
   onOpenFolder,
   onDelete,
+  onReinstall,
 }: {
   extension: ExtensionInstallSummary;
   busy: boolean;
   onOpenFolder: () => void;
   onDelete: () => void;
+  onReinstall?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -182,13 +186,18 @@ function ExtensionActionsMenu({
               Open folder
             </button>
           ) : null}
+          {onReinstall ? (
+            <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onReinstall)}>
+              Reinstall
+            </button>
+          ) : null}
           {canDelete ? (
             <button
               className={`${menuButtonClass} text-danger hover:text-danger`}
               disabled={busy}
               onClick={(event) => run(event, onDelete)}
             >
-              Delete
+              Uninstall
             </button>
           ) : null}
         </div>
@@ -237,6 +246,19 @@ function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInsta
       </span>
     </button>
   );
+}
+
+function HealthStatus({ extension }: { extension: ExtensionInstallSummary }) {
+  if (isLocked(extension)) return <span className="text-[12px] text-secondary">Required</span>;
+  if (extension.status === 'invalid') return <span className="text-[12px] text-danger">Invalid</span>;
+  if (extension.healthError || extension.buildError || extension.diagnostics?.length) {
+    return (
+      <span className="text-[12px] text-danger" title={extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}>
+        Issue
+      </span>
+    );
+  }
+  return <span className="text-[12px] text-secondary">{extension.enabled ? 'Loaded' : 'Disabled'}</span>;
 }
 
 function MoreIcon() {
@@ -556,7 +578,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             !nextEnabled &&
             extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))
           ) {
-            navigate('/extensions', { replace: true });
+            navigate('/settings#settings-extensions', { replace: true });
           }
         })
         .catch((err: Error) => {
@@ -580,7 +602,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         setExtensions((items) => items.filter((item) => item.id !== extension.id));
         notifyExtensionRegistryChanged();
         if (extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))) {
-          navigate('/extensions', { replace: true });
+          navigate('/settings#settings-extensions', { replace: true });
         }
       } catch (err) {
         showActionError(`Failed to delete ${extension.name}`, err instanceof Error ? err.message : String(err));
@@ -589,6 +611,32 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       }
     },
     [location.pathname, navigate, showActionError],
+  );
+
+  const reinstallExtension = useCallback(
+    async (extension: ExtensionInstallSummary) => {
+      if (extension.packageType === 'system') return;
+      const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
+      if (!catalogItem) return;
+      const confirmed = window.confirm(
+        `Reinstall ${extension.name}? This removes the current package and installs it again from ${catalogItem.tag}.`,
+      );
+      if (!confirmed) return;
+      setBusyId(extension.id);
+      setNotice(null);
+      try {
+        await api.deleteExtension(extension.id);
+        await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: extension.id });
+        await load();
+        await loadCatalog();
+        notifyExtensionRegistryChanged();
+      } catch (err) {
+        showActionError(`Failed to reinstall ${extension.name}`, err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [catalog, load, loadCatalog, pa, showActionError],
   );
 
   const openFolder = useCallback((extension: ExtensionInstallSummary) => {
@@ -642,6 +690,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       const route = firstRoute(extension);
       const counts = contributionCounts(extension);
       const busy = busyId === extension.id;
+      const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       return (
         <tr key={`installed:${extension.id}`} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
           <td className="min-w-0 py-3 pr-4 align-middle">
@@ -678,6 +727,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 <span className="text-dim">—</span>
               ) : null}
             </div>
+          </td>
+          <td className="whitespace-nowrap px-3 py-3 align-middle">
+            <HealthStatus extension={extension} />
           </td>
           <td className="whitespace-nowrap px-3 py-3 align-middle">
             {extension.status === 'invalid' ? (
@@ -717,6 +769,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 busy={busy}
                 onOpenFolder={() => openFolder(extension)}
                 onDelete={() => void deleteExtension(extension)}
+                onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
               />
             </div>
           </td>
@@ -745,7 +798,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               </div>
             </div>
           </td>
-          <td className="px-3 py-3 align-middle text-dim">—</td>
+          <td className="px-3 py-3 align-middle text-[12px] text-secondary">
+            <span title={item.bundleUrl}>{item.tag}</span>
+            <span className="ml-2">{item.defaultEnabled === false ? 'disabled after install' : null}</span>
+          </td>
+          <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">Available</td>
           <td className="whitespace-nowrap px-3 py-3 align-middle">
             <button
               type="button"
@@ -767,7 +824,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
           <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
             <th className="py-2 pr-4 font-semibold">Name</th>
-            <th className="py-2 px-3 font-semibold">Contributes</th>
+            <th className="py-2 px-3 font-semibold">Metadata</th>
+            <th className="py-2 px-3 font-semibold">Health</th>
             <th className="py-2 px-3 font-semibold">Status</th>
             <th className="py-2 pl-3 text-right font-semibold">Actions</th>
           </tr>

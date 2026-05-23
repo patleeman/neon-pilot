@@ -2097,18 +2097,7 @@ export function listExtensionCommandRegistrations(): ExtensionCommandRegistratio
           category: extension.name,
         })),
     ].filter((command) => !explicitCommandIds.has(command.surfaceId));
-    const backendActions = (extension.backend?.actions ?? [])
-      .filter((action) => !explicitCommandIds.has(action.id))
-      .map((action) => ({
-        extensionId: extension.id,
-        surfaceId: action.id,
-        packageType: extension.packageType ?? 'user',
-        title: action.title ?? action.id,
-        action: action.id,
-        category: extension.name,
-        ...(action.description ? { description: action.description } : {}),
-      }));
-    return [...contributed, ...autoCommands, ...backendActions];
+    return [...contributed, ...autoCommands];
   });
   return [...legacy, ...native];
 }
