@@ -6,6 +6,13 @@ import { dirname, join, resolve } from 'node:path';
 import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
 import {
+  getKnowledgeBaseRemoteRef,
+  knowledgeBaseHeadExists,
+  knowledgeBaseRefExists,
+  readKnowledgeBaseRemoteFileBuffer,
+  readKnowledgeBaseRemotePathTimestampMs,
+} from './knowledge-base-git-refs.js';
+import {
   buildKnowledgeBaseMaintenanceState,
   planKnowledgeBaseRepositoryMaintenance,
   runKnowledgeBaseRepositoryMaintenance,
@@ -164,12 +171,11 @@ function runGitBuffer(cwd: string, args: string[], options: { allowFailure?: boo
 }
 
 function refExists(cwd: string, ref: string): boolean {
-  const output = runGitText(cwd, ['show-ref', '--verify', ref], { allowFailure: true }).trim();
-  return output.length > 0;
+  return knowledgeBaseRefExists(runGitText, cwd, ref);
 }
 
 function headExists(cwd: string): boolean {
-  return runGitText(cwd, ['rev-parse', '--verify', 'HEAD'], { allowFailure: true }).trim().length > 0;
+  return knowledgeBaseHeadExists(runGitText, cwd);
 }
 
 function getHeadSha(cwd: string): string {
@@ -177,7 +183,7 @@ function getHeadSha(cwd: string): string {
 }
 
 function getRemoteRef(branch: string): string {
-  return `refs/remotes/origin/${branch}`;
+  return getKnowledgeBaseRemoteRef(branch);
 }
 
 function listRemoteSnapshot(cwd: string, branch: string): Snapshot {
@@ -354,13 +360,7 @@ function appendRecoveryIndex(filePath: string, entryId: string): number {
 }
 
 function readRemoteFileBuffer(cwd: string, branch: string, relativePath: string): Buffer | null {
-  const remoteRef = getRemoteRef(branch);
-  if (!refExists(cwd, remoteRef)) {
-    return null;
-  }
-
-  const buffer = runGitBuffer(cwd, ['show', `${remoteRef}:${relativePath}`], { allowFailure: true });
-  return buffer.length > 0 ? buffer : null;
+  return readKnowledgeBaseRemoteFileBuffer({ runGitText, runGitBuffer, cwd, branch, relativePath });
 }
 
 function readLocalFileBuffer(root: string, relativePath: string): Buffer | null {
@@ -369,13 +369,7 @@ function readLocalFileBuffer(root: string, relativePath: string): Buffer | null 
 }
 
 function readRemotePathTimestampMs(cwd: string, branch: string, relativePath: string, existsInRemote: boolean): number {
-  const remoteRef = getRemoteRef(branch);
-  const args = existsInRemote
-    ? ['log', '-1', '--format=%ct', remoteRef, '--', relativePath]
-    : ['log', '-1', '--diff-filter=D', '--format=%ct', remoteRef, '--', relativePath];
-  const output = runGitText(cwd, args, { allowFailure: true }).trim();
-  const parsed = Number.parseInt(output, 10);
-  return Number.isFinite(parsed) ? parsed * 1000 : 0;
+  return readKnowledgeBaseRemotePathTimestampMs({ runGitText, cwd, branch, relativePath, existsInRemote });
 }
 
 function readLocalPathTimestampMs(root: string, relativePath: string, existsInLocal: boolean): number {
