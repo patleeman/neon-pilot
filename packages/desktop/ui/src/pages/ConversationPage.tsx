@@ -77,6 +77,7 @@ import {
   resolveMentionItems,
 } from '../conversation/conversationMentions';
 import { shouldEnableMessageForkControls } from '../conversation/conversationMessageControls';
+import { pruneComputedMessages, resolveComputedMessagesRaw } from '../conversation/conversationMessageWindow';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
 import {
   hasConversationLoadedHistoricalTailBlocks,
@@ -800,31 +801,31 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   // Live sessions hydrate from the SSE snapshot; until that arrives, fall back to
   // JSONL + live deltas only when we have at least one source of blocks.
-  const computedMessagesRaw = useMemo<MessageBlock[] | undefined>(() => {
-    if (draft) {
-      return appendPendingInitialPromptBlock(undefined, draftPendingPrompt);
-    }
-
-    if (isLiveSession) {
-      const liveMessages = stream.hasSnapshot
-        ? visibleStreamBlocks
-        : baseMessages.length > 0 || visibleStreamBlocks.length > 0
-          ? mergeHistoricalAndStreamBlocks(baseMessages, visibleStreamBlocks)
-          : undefined;
-      return appendPendingInitialPromptBlock(liveMessages, pendingInitialPrompt);
-    }
-
-    return visibleSessionDetail ? baseMessages : undefined;
-  }, [
-    baseMessages,
-    draft,
-    draftPendingPrompt,
-    isLiveSession,
-    pendingInitialPrompt,
-    stream.hasSnapshot,
-    visibleSessionDetail,
-    visibleStreamBlocks,
-  ]);
+  const computedMessagesRaw = useMemo<MessageBlock[] | undefined>(
+    () =>
+      resolveComputedMessagesRaw({
+        draft,
+        draftPendingPrompt,
+        isLiveSession,
+        streamHasSnapshot: stream.hasSnapshot,
+        visibleStreamBlocks,
+        baseMessages,
+        pendingInitialPrompt,
+        visibleSessionDetailAvailable: Boolean(visibleSessionDetail),
+        mergeHistoricalAndStreamBlocks,
+        appendPendingInitialPromptBlock,
+      }),
+    [
+      baseMessages,
+      draft,
+      draftPendingPrompt,
+      isLiveSession,
+      pendingInitialPrompt,
+      stream.hasSnapshot,
+      visibleSessionDetail,
+      visibleStreamBlocks,
+    ],
+  );
   const computedHistoricalBlockOffsetRaw = stream.hasSnapshot ? stream.blockOffset : (visibleSessionDetail?.blockOffset ?? 0);
   const computedHistoricalTotalBlocksRaw = stream.hasSnapshot
     ? stream.totalBlocks
@@ -835,22 +836,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // accumulate thousands of blocks in memory. Dropped blocks are still on disk and
   // re-fetched if the user scrolls back up.
   const { computedMessages, computedHistoricalBlockOffset, computedHistoricalTotalBlocks } = useMemo(() => {
-    const msgs = computedMessagesRaw;
-    const maxRenderedBlocks = Math.max(MAX_RENDERED_BLOCKS, Math.min(historicalTailBlocks, computedHistoricalTotalBlocksRaw));
-    if (!msgs || msgs.length <= maxRenderedBlocks) {
-      return {
-        computedMessages: msgs,
-        computedHistoricalBlockOffset: computedHistoricalBlockOffsetRaw,
-        computedHistoricalTotalBlocks: computedHistoricalTotalBlocksRaw,
-      };
-    }
-
-    const excess = msgs.length - maxRenderedBlocks;
-    return {
-      computedMessages: msgs.slice(excess),
-      computedHistoricalBlockOffset: computedHistoricalBlockOffsetRaw + excess,
-      computedHistoricalTotalBlocks: computedHistoricalTotalBlocksRaw,
-    };
+    return pruneComputedMessages({
+      messages: computedMessagesRaw,
+      historicalBlockOffset: computedHistoricalBlockOffsetRaw,
+      historicalTotalBlocks: computedHistoricalTotalBlocksRaw,
+      historicalTailBlocks,
+      maxRenderedBlocks: MAX_RENDERED_BLOCKS,
+    });
   }, [computedHistoricalBlockOffsetRaw, computedHistoricalTotalBlocksRaw, computedMessagesRaw, historicalTailBlocks]);
 
   const [stableTranscriptState, setStableTranscriptState] = useState<{
