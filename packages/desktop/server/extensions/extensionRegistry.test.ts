@@ -153,6 +153,10 @@ describe('extension registry', () => {
       kind: 'resolved',
       profile: { id: 'codex-compatible' },
     });
+    expect(resolveExtensionModelProfile({ provider: 'openai', model: 'gpt-5.5' }, stateRoot)).toMatchObject({
+      kind: 'resolved',
+      profile: { id: 'gpt-anywhere' },
+    });
   });
 
   it('treats same-priority model profile matches as ambiguous and ignores disabled profiles', () => {
