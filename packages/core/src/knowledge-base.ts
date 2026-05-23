@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, s
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
+import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
 import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
@@ -20,7 +21,6 @@ import {
 import { readKnowledgeBaseSyncLockMetadata, type SyncLockMetadata } from './knowledge-base-sync-lock.js';
 import { parseKnowledgeBaseTimestampMs, toKnowledgeBaseIsoTimestamp } from './knowledge-base-time.js';
 import {
-  DEFAULT_MACHINE_KNOWLEDGE_BASE_BRANCH,
   type MachineConfigOptions,
   type MachineKnowledgeBaseState,
   readMachineKnowledgeBaseBranch,
@@ -99,12 +99,11 @@ const managerRegistry = new Map<string, KnowledgeBaseManager>();
 type KnowledgeBaseStateListener = (state: KnowledgeBaseState) => void;
 
 function normalizeRepoUrl(value: string | null | undefined): string {
-  return typeof value === 'string' ? value.trim() : '';
+  return normalizeKnowledgeBaseRepoUrl(value);
 }
 
 function normalizeBranch(value: string | null | undefined): string {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  return normalized.length > 0 ? normalized : DEFAULT_MACHINE_KNOWLEDGE_BASE_BRANCH;
+  return normalizeKnowledgeBaseBranch(value);
 }
 
 function computeRecoveryEntryId(relativePath: string, timestamp: string): string {
@@ -302,14 +301,7 @@ function readGitStatus(root: string, branch: string): KnowledgeBaseGitStatus | n
 }
 
 function safeSlug(value: string): string {
-  return (
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 48) || 'knowledge-base'
-  );
+  return safeKnowledgeBaseSlug(value);
 }
 
 function isProcessAlive(pid: number): boolean {
