@@ -49,6 +49,7 @@ import {
 import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_EXTENSION_IDS } from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
+import { buildExtensionInstallRoutes } from './extensionInstallRoutes.js';
 import { buildExtensionQuarantineDiagnostic, mergeExtensionInstallDiagnostics } from './extensionInstallSummaryDiagnostics.js';
 import {
   validateContextMenuContributions,
@@ -1022,12 +1023,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       mentions: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionMentionRegistrations(entry) : [],
       tools: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionToolRegistrations(entry) : [],
       modelProfiles: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionModelProfileRegistrations(entry) : [],
-      routes: [
-        ...surfaces.flatMap((surface) =>
-          surface.kind === 'page' && 'route' in surface ? [{ route: surface.route, surfaceId: surface.id }] : [],
-        ),
-        ...views.flatMap((view) => (view.location === 'main' && view.route ? [{ route: view.route, surfaceId: view.id }] : [])),
-      ],
+      routes: buildExtensionInstallRoutes({ surfaces, views }),
     };
   });
   const validIds = new Set(valid.map((extension) => extension.id));
