@@ -9,28 +9,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
 
-interface CommandInspectorEntry {
-  id?: string;
-  surfaceId?: string;
-  extensionId?: string;
-  title?: string;
-  category?: string;
-  action?: string;
-  args?: unknown;
-  argsSchema?: unknown;
-  enablement?: string;
-}
-
-interface KeybindingInspectorEntry {
-  extensionId: string;
-  surfaceId: string;
-  title: string;
-  keys: string[];
-  defaultKeys: string[];
-  command: string;
-  enabled: boolean;
-}
-
 interface InstallableExtensionCatalogItem {
   id: string;
   name: string;
@@ -257,7 +235,6 @@ function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInsta
           )}
         />
       </span>
-      <span>{locked ? 'Always on' : extension.enabled ? 'Enabled' : 'Disabled'}</span>
     </button>
   );
 }
@@ -469,19 +446,13 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'extensions' | 'available' | 'commands'>('extensions');
   const [filter, setFilter] = useState<'all' | 'system' | 'user' | 'enabled' | 'disabled'>('all');
   const [query, setQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
-  const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
-  const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
-  const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [commandArgsDraft, setCommandArgsDraft] = useState<Record<string, string>>({});
-  const [keybindingDraft, setKeybindingDraft] = useState<Record<string, string>>({});
 
   const load = useCallback(async (options: { showLoading?: boolean } = {}) => {
     if (options.showLoading) {
@@ -498,16 +469,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     }
   }, []);
 
-  const showActionNotice = useCallback(
-    (message: string, type: 'info' | 'warning' | 'error' = 'info') => {
-      setNotice(message);
-      if (type !== 'info') {
-        pa.ui.notify({ message, type, source: 'system-extension-manager' });
-      }
-    },
-    [pa],
-  );
-
   const showActionError = useCallback(
     (message: string, details?: string) => {
       setNotice(message);
@@ -515,17 +476,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     },
     [pa],
   );
-
-  const loadCommandInspector = useCallback(() => {
-    void pa.commands
-      .list()
-      .then((items) => setCommands(items as CommandInspectorEntry[]))
-      .catch(() => setCommands([]));
-    void api
-      .extensionKeybindings()
-      .then((items) => setKeybindings(items as KeybindingInspectorEntry[]))
-      .catch(() => setKeybindings([]));
-  }, [pa]);
 
   const loadCatalog = useCallback(() => {
     setCatalogError(null);
@@ -541,11 +491,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   useEffect(() => {
     void load({ showLoading: true });
-    loadCommandInspector();
     loadCatalog();
     const refresh = () => {
       void load({ showLoading: false });
-      loadCommandInspector();
       loadCatalog();
     };
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
@@ -558,74 +506,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       document.removeEventListener('visibilitychange', refresh);
       window.clearInterval(interval);
     };
-  }, [load, loadCatalog, loadCommandInspector]);
-
-  const executeInspectorCommand = useCallback(
-    async (command: CommandInspectorEntry) => {
-      const id =
-        command.extensionId && command.surfaceId ? `${command.extensionId}.${command.surfaceId}` : (command.id ?? command.surfaceId);
-      if (!id) return;
-      try {
-        const raw = commandArgsDraft[id]?.trim();
-        const args = raw ? JSON.parse(raw) : (command.args ?? {});
-        const handled = await pa.commands.execute(id, args);
-        showActionNotice(`${handled ? 'Handled' : 'Did not handle'} ${id}`);
-      } catch (err) {
-        showActionError(`Failed to execute ${id}`, err instanceof Error ? err.message : String(err));
-      }
-    },
-    [commandArgsDraft, pa, showActionError, showActionNotice],
-  );
-
-  const saveKeybinding = useCallback(
-    async (keybinding: KeybindingInspectorEntry) => {
-      const key = `${keybinding.extensionId}:${keybinding.surfaceId}`;
-      const keys = (keybindingDraft[key] ?? keybinding.keys.join(', '))
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean);
-      try {
-        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { keys });
-        setKeybindingDraft((current) => {
-          const next = { ...current };
-          delete next[key];
-          return next;
-        });
-        showActionNotice(`Updated ${keybinding.title}`);
-        notifyExtensionRegistryChanged();
-        loadCommandInspector();
-      } catch (err) {
-        showActionError(`Failed to update ${keybinding.title}`, err instanceof Error ? err.message : String(err));
-      }
-    },
-    [keybindingDraft, loadCommandInspector, showActionError, showActionNotice],
-  );
-
-  const toggleKeybinding = useCallback(
-    async (keybinding: KeybindingInspectorEntry) => {
-      try {
-        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { enabled: !keybinding.enabled });
-        notifyExtensionRegistryChanged();
-        loadCommandInspector();
-      } catch (err) {
-        showActionError(`Failed to toggle ${keybinding.title}`, err instanceof Error ? err.message : String(err));
-      }
-    },
-    [loadCommandInspector, showActionError],
-  );
-
-  const resetKeybinding = useCallback(
-    async (keybinding: KeybindingInspectorEntry) => {
-      try {
-        await api.updateExtensionKeybinding(keybinding.extensionId, keybinding.surfaceId, { reset: true });
-        notifyExtensionRegistryChanged();
-        loadCommandInspector();
-      } catch (err) {
-        showActionError(`Failed to reset ${keybinding.title}`, err instanceof Error ? err.message : String(err));
-      }
-    },
-    [loadCommandInspector, showActionError],
-  );
+  }, [load, loadCatalog]);
 
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
@@ -745,71 +626,16 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   }, [extensions, filter, query]);
 
   const visibleCatalogExtensions = useMemo(() => {
-    const normalizedQuery = catalogQuery.trim().toLowerCase();
+    const normalizedQuery = query.trim().toLowerCase();
+    const installedIds = new Set(extensions.map((extension) => extension.id));
     const items = catalog?.extensions ?? [];
-    if (!normalizedQuery) return items;
-    return items.filter((item) => `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery));
-  }, [catalog, catalogQuery]);
-
-  const renderCatalog = () => (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Available extensions</div>
-          <div className="mt-1 max-w-[44rem] text-[12px] leading-5 text-secondary">
-            Optional Neon Pilot extensions are downloaded from the GitHub release for this installed version
-            {catalog?.tag ? <span className="font-mono text-dim"> ({catalog.tag})</span> : null}. After install, check the extension
-            registry below to enable or inspect them.
-          </div>
-        </div>
-        <input
-          value={catalogQuery}
-          onChange={(event) => setCatalogQuery(event.target.value)}
-          placeholder="Search available extensions…"
-          className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-        />
-      </div>
-      {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
-      {!catalog && !catalogError ? <LoadingState label="Loading available extensions…" /> : null}
-      {catalog && visibleCatalogExtensions.length === 0 ? (
-        <EmptyState title="No matching extensions" body="Adjust the search query." />
-      ) : null}
-      {visibleCatalogExtensions.length ? (
-        <div className="divide-y divide-border-subtle/70">
-          {visibleCatalogExtensions.map((item) => {
-            const busy = busyId === item.id;
-            return (
-              <div key={item.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
-                    <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 font-mono text-[10px] text-dim">{item.id}</span>
-                    {item.installed ? (
-                      <span className="shrink-0 rounded-md bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-success">
-                        Installed
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-1 max-w-[48rem] text-[12px] leading-5 text-secondary">
-                    {item.description || 'No description provided.'}
-                  </div>
-                  <div className="mt-1 break-all font-mono text-[11px] text-dim">{item.bundleUrl}</div>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={busy || item.installed}
-                  onClick={() => void installCatalogExtension(item)}
-                >
-                  {busy ? 'Installing…' : item.installed ? 'Installed' : 'Install'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-    </section>
-  );
+    return items.filter((item) => {
+      if (installedIds.has(item.id)) return false;
+      if (filter !== 'all' && filter !== 'disabled') return false;
+      if (!normalizedQuery) return true;
+      return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
+    });
+  }, [catalog, extensions, filter, query]);
 
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
@@ -817,7 +643,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       const counts = contributionCounts(extension);
       const busy = busyId === extension.id;
       return (
-        <tr key={extension.id} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
+        <tr key={`installed:${extension.id}`} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
           <td className="min-w-0 py-3 pr-4 align-middle">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
@@ -898,6 +724,43 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       );
     });
 
+  const renderCatalogRows = (items: InstallableExtensionCatalogItem[]) =>
+    items.map((item) => {
+      const busy = busyId === item.id;
+      return (
+        <tr
+          key={`available:${item.id}`}
+          className="group border-t border-border-subtle/70 opacity-60 transition-colors hover:bg-surface/30"
+        >
+          <td className="min-w-0 py-3 pr-4 align-middle">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
+                <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
+                  available
+                </span>
+              </div>
+              <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                {item.description || 'No description provided.'}
+              </div>
+            </div>
+          </td>
+          <td className="px-3 py-3 align-middle text-dim">—</td>
+          <td className="whitespace-nowrap px-3 py-3 align-middle">
+            <button
+              type="button"
+              className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void installCatalogExtension(item)}
+            >
+              {busy ? 'Installing…' : 'Install'}
+            </button>
+          </td>
+          <td className="py-3 pl-3 align-middle" />
+        </tr>
+      );
+    });
+
   const renderExtensionTable = (items: ExtensionInstallSummary[]) => (
     <section className="min-w-0 overflow-auto">
       <table className="w-full border-collapse text-left text-[13px]">
@@ -909,7 +772,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <th className="py-2 pl-3 text-right font-semibold">Actions</th>
           </tr>
         </thead>
-        <tbody>{renderExtensionRows(items)}</tbody>
+        <tbody>
+          {renderExtensionRows(items)}
+          {renderCatalogRows(visibleCatalogExtensions)}
+        </tbody>
       </table>
     </section>
   );
@@ -934,129 +800,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-1 border-b border-border-subtle/70 pb-5">
-            {(['extensions', 'available', 'commands'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={cx(
-                  'rounded-lg px-3 py-1.5 text-[13px] capitalize transition-colors',
-                  activeTab === tab ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
-                )}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'available' ? (
-            renderCatalog()
-          ) : activeTab === 'commands' ? (
-            <section className="space-y-4">
-              <div>
-                <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-dim">Commands</div>
-                <div className="mt-1 text-[12px] text-secondary">{commands.length} host and extension commands registered.</div>
-              </div>
-              <div className="space-y-4">
-                <div className="overflow-auto rounded-xl bg-surface/30 p-2">
-                  <table className="w-full border-collapse text-left text-[12px]">
-                    <thead className="text-[10px] uppercase tracking-[0.14em] text-dim">
-                      <tr>
-                        <th className="px-2 py-1.5 font-semibold">Command</th>
-                        <th className="px-2 py-1.5 font-semibold">Source</th>
-                        <th className="px-2 py-1.5 font-semibold">Action</th>
-                        <th className="px-2 py-1.5 font-semibold">Args / Run</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {commands.map((command) => {
-                        const id = command.id ?? command.surfaceId ?? 'unknown';
-                        const commandId = command.extensionId ? `${command.extensionId}.${id}` : id;
-                        const source = command.extensionId ?? 'host';
-                        return (
-                          <tr key={`${source}:${id}`} className="border-t border-border-subtle/60 text-secondary align-top">
-                            <td className="px-2 py-1.5 text-primary">
-                              <div>{command.title ?? id}</div>
-                              <div className="font-mono text-[11px] text-dim">{commandId}</div>
-                              {command.enablement ? (
-                                <div className="mt-1 font-mono text-[11px] text-dim">when {command.enablement}</div>
-                              ) : null}
-                              {command.argsSchema ? <div className="mt-1 font-mono text-[11px] text-dim">args schema available</div> : null}
-                            </td>
-                            <td className="px-2 py-1.5">{source}</td>
-                            <td className="px-2 py-1.5 font-mono text-[11px]">{command.action ?? 'host'}</td>
-                            <td className="px-2 py-1.5">
-                              <div className="flex min-w-64 gap-1.5">
-                                <input
-                                  value={commandArgsDraft[commandId] ?? (command.args ? JSON.stringify(command.args) : '')}
-                                  onChange={(event) => setCommandArgsDraft((current) => ({ ...current, [commandId]: event.target.value }))}
-                                  placeholder="JSON args"
-                                  className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-base px-2 py-1 font-mono text-[11px] text-primary outline-none focus:border-accent/50"
-                                />
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-surface px-2 py-1 text-[11px] text-secondary hover:text-primary"
-                                  onClick={() => void executeInspectorCommand(command)}
-                                >
-                                  Run
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="overflow-auto rounded-xl bg-surface/30 p-2">
-                  <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Keybindings</div>
-                  <table className="w-full border-collapse text-left text-[12px]">
-                    <tbody>
-                      {keybindings.map((keybinding) => {
-                        const key = `${keybinding.extensionId}:${keybinding.surfaceId}`;
-                        return (
-                          <tr key={key} className="border-t border-border-subtle/60 text-secondary">
-                            <td className="px-2 py-1.5 text-primary">
-                              <div>{keybinding.title}</div>
-                              <div className="font-mono text-[11px] text-dim">{keybinding.command}</div>
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                value={keybindingDraft[key] ?? keybinding.keys.join(', ')}
-                                onChange={(event) => setKeybindingDraft((current) => ({ ...current, [key]: event.target.value }))}
-                                className="w-64 rounded-lg border border-border-subtle bg-base px-2 py-1 font-mono text-[11px] text-primary outline-none focus:border-accent/50"
-                              />
-                            </td>
-                            <td className="px-2 py-1.5 text-right">
-                              <button
-                                className="px-2 py-1 text-[11px] text-secondary hover:text-primary"
-                                onClick={() => void saveKeybinding(keybinding)}
-                              >
-                                Save
-                              </button>
-                              <button
-                                className="px-2 py-1 text-[11px] text-secondary hover:text-primary"
-                                onClick={() => void toggleKeybinding(keybinding)}
-                              >
-                                {keybinding.enabled ? 'Disable' : 'Enable'}
-                              </button>
-                              <button
-                                className="px-2 py-1 text-[11px] text-secondary hover:text-primary"
-                                onClick={() => void resetKeybinding(keybinding)}
-                              >
-                                Reset
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          ) : extensions.length === 0 ? (
+          {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
+          {extensions.length === 0 && visibleCatalogExtensions.length === 0 ? (
             <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
           ) : (
             <div className="space-y-4">
@@ -1083,7 +828,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
                 />
               </div>
-              {visibleExtensions.length === 0 ? (
+              {visibleExtensions.length === 0 && visibleCatalogExtensions.length === 0 ? (
                 <EmptyState title="No matching extensions" body="Adjust the filter or search query." />
               ) : (
                 renderExtensionTable(visibleExtensions)
