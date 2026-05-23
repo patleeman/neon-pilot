@@ -27,6 +27,14 @@ import {
   EXTENSION_VIEW_SCOPES,
   getHostViewComponentDefinition,
 } from './extensionManifest.js';
+import {
+  assertArray,
+  assertRecordArray,
+  requireString,
+  requireStringArray,
+  validateEnum,
+  validateOptionalString,
+} from './extensionManifestValidation.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
   type ExtensionRegistryConfig,
@@ -693,48 +701,6 @@ export function setExtensionKeybinding(input: {
   }
 
   writeExtensionRegistryConfig(applyExtensionKeybindingConfigPatch(config, input), stateRoot);
-}
-
-function requireString(value: unknown, path: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Extension manifest ${path} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function requireStringArray(value: unknown, path: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.trim().length === 0)) {
-    throw new Error(`Extension manifest ${path} must be an array of non-empty strings.`);
-  }
-  return value;
-}
-
-function assertArray(value: unknown, path: string): unknown[] {
-  if (!Array.isArray(value)) {
-    throw new Error(`Extension manifest ${path} must be an array.`);
-  }
-  return value;
-}
-
-function assertRecordArray(value: unknown, path: string): Record<string, unknown>[] {
-  return assertArray(value, path).map((item, index) => {
-    if (!isRecord(item)) {
-      throw new Error(`Extension manifest ${path}[${index}] must be an object.`);
-    }
-    return item;
-  });
-}
-
-function validateOptionalString(value: unknown, path: string): void {
-  if (value !== undefined && typeof value !== 'string') {
-    throw new Error(`Extension manifest ${path} must be a string.`);
-  }
-}
-
-function validateEnum(value: unknown, allowed: readonly string[], path: string): void {
-  if (typeof value !== 'string' || !allowed.includes(value)) {
-    throw new Error(`Extension manifest ${path} must be one of: ${allowed.join(', ')}.`);
-  }
 }
 
 function validateThemeTokens(value: unknown, path: string): void {
