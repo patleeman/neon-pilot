@@ -30,6 +30,7 @@ import {
 import { appendComposerHistory, readComposerHistory } from '../conversation/composerHistory';
 import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
+import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
 import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
 import {
   canNavigateComposerHistoryValue,
@@ -359,10 +360,6 @@ const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 1400;
 const HISTORICAL_BACKGROUND_PREFETCH_DELAY_MS = 1500;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
-
-function hasBlockingOverlayOpen(): boolean {
-  return typeof document !== 'undefined' && hasBlockingConversationOverlay();
-}
 
 export { shouldEnableMessageForkControls };
 
@@ -2925,7 +2922,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   useEscapeAbortStream({
     isStreaming: stream.isStreaming,
     abort: stopStreamAndRestoreQueuedPrompts,
-    hasBlockingOverlay: hasBlockingOverlayOpen,
+    hasBlockingOverlay: () => hasBlockingOverlayOpen(hasBlockingConversationOverlay),
   });
 
   // Forked/new conversations with a queued initial prompt should stay pinned to
