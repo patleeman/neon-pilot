@@ -13,7 +13,7 @@
  *   toolResult   → toolCallId, toolName, content: [{type:'text', text}|{type:'image', data, mimeType}]
  */
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {
   appendFileSync,
   closeSync,
@@ -33,6 +33,7 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
+import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
@@ -1621,67 +1622,6 @@ function extractTitleFromMessage(message: RawMessage['message']): string | null 
 function slugToCwd(slug: string): string {
   // slug: --Users-user-personal-neon-pilot-- → /Users/user/personal/neon-pilot
   return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
-}
-
-function getFileSignature(filePath: string): string | null {
-  try {
-    const stats = statSync(filePath);
-    return `${stats.size}:${stats.mtimeMs}`;
-  } catch {
-    return null;
-  }
-}
-
-/** Parse file size from a signature string (size:mtime). Returns null on invalid input. */
-function parseSignatureSize(signature: string): number | null {
-  const colon = signature.indexOf(':');
-  if (colon <= 0) return null;
-  const size = Number(signature.slice(0, colon));
-  return Number.isSafeInteger(size) && size >= 0 ? size : null;
-}
-
-/** Compute a sha256 hex hash of a file's first byteCount bytes. */
-function computeFilePrefixHash(filePath: string, byteCount: number): string | null {
-  try {
-    const hash = createHash('sha256');
-    const buffer = Buffer.alloc(Math.min(byteCount, 64 * 1024));
-    const fd = openSync(filePath, 'r');
-    try {
-      let remaining = byteCount;
-      while (remaining > 0) {
-        const chunkSize = Math.min(remaining, 64 * 1024);
-        const bytesRead = readSync(fd, buffer, 0, chunkSize, null);
-        if (bytesRead <= 0) break;
-        hash.update(buffer.subarray(0, bytesRead));
-        remaining -= bytesRead;
-      }
-    } finally {
-      closeSync(fd);
-    }
-    return hash.digest('hex');
-  } catch {
-    return null;
-  }
-}
-
-/** Compute a sha256 hex hash of an entire file. */
-function computeFileContentHash(filePath: string): string | null {
-  try {
-    const hash = createHash('sha256');
-    const buffer = Buffer.alloc(64 * 1024);
-    const fd = openSync(filePath, 'r');
-    try {
-      let bytesRead: number;
-      while ((bytesRead = readSync(fd, buffer, 0, 64 * 1024, null)) > 0) {
-        hash.update(buffer.subarray(0, bytesRead));
-      }
-    } finally {
-      closeSync(fd);
-    }
-    return hash.digest('hex');
-  } catch {
-    return null;
-  }
 }
 
 function normalizeOptionalPath(value: string | undefined): string | undefined {
