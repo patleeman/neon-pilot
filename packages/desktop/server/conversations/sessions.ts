@@ -40,6 +40,7 @@ import {
   trimSessionDetailCache as trimSessionDetailCacheMap,
 } from './sessionDetailCache.js';
 import { buildPromptCacheMissMetadata, buildSessionDetailTelemetry } from './sessionDetailTelemetry.js';
+import { buildDisplayMessageEntryFromRawLine as buildDisplayMessageEntryFromRawLineValue } from './sessionDisplayEntry.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import {
   listSessionFiles as listSessionFilesFromDir,
@@ -484,54 +485,7 @@ function readFileLinesReverse(filePath: string, visit: (line: string) => boolean
 }
 
 function buildDisplayMessageEntryFromRawLine(line: RawDisplayLine): DisplayMessageEntryLike {
-  if (line.type === 'message') {
-    return {
-      id: line.id,
-      parentId: line.parentId,
-      timestamp: line.timestamp,
-      message: line.message,
-    };
-  }
-
-  if (line.type === 'custom_message') {
-    return {
-      id: line.id,
-      parentId: line.parentId,
-      timestamp: line.timestamp,
-      message: {
-        role: 'custom',
-        content: line.content,
-        details: line.details,
-        customType: line.customType,
-        display: line.display,
-      },
-    };
-  }
-
-  if (line.type === 'compaction') {
-    return {
-      id: line.id,
-      parentId: line.parentId,
-      timestamp: line.timestamp,
-      message: {
-        role: 'compactionSummary',
-        summary: line.summary,
-        tokensBefore: line.tokensBefore,
-        details: line.details,
-      },
-    };
-  }
-
-  return {
-    id: line.id,
-    parentId: line.parentId,
-    timestamp: line.timestamp,
-    message: {
-      role: 'branchSummary',
-      summary: line.summary,
-      fromId: line.fromId,
-    },
-  };
+  return buildDisplayMessageEntryFromRawLineValue(line) as DisplayMessageEntryLike;
 }
 
 function summarizeTailScanEntry(rawLine: string): TailScanEntrySummary | null {
