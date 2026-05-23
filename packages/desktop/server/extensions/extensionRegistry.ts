@@ -34,6 +34,7 @@ import {
   getHostViewComponentDefinition,
 } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
+import { buildExtensionToolRegistrationName } from './extensionToolNames.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
 // Per-extension health errors stored in memory. Cleared on successful load/reload.
@@ -567,14 +568,6 @@ function assertInside(root: string, candidate: string): void {
   }
 }
 
-function normalizeToolNamePart(value: string): string {
-  return value
-    .trim()
-    .replace(/[^a-zA-Z0-9_]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toLowerCase();
-}
-
 function normalizeExtensionSkillContribution(skill: string | ExtensionSkillContribution): ExtensionSkillContribution {
   if (typeof skill === 'string') {
     const segments = skill.split(/[\\/]/).filter(Boolean);
@@ -755,11 +748,10 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
     if (!id || !tool.description?.trim()) {
       return [];
     }
-    const extensionPart = normalizeToolNamePart(entry.manifest.id);
-    const toolPart = normalizeToolNamePart(id);
     const explicitName = typeof tool.name === 'string' ? tool.name.trim() : '';
     const replaces = typeof tool.replaces === 'string' ? tool.replaces.trim() : '';
-    if ((!extensionPart || !toolPart) && !explicitName && !replaces) {
+    const name = buildExtensionToolRegistrationName({ extensionId: entry.manifest.id, toolId: id, explicitName, replaces });
+    if (!name) {
       return [];
     }
     return [
@@ -767,7 +759,7 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
         extensionId: entry.manifest.id,
         packageType: entry.manifest.packageType ?? 'user',
         id,
-        name: replaces || explicitName || `extension_${extensionPart}_${toolPart}`,
+        name,
         action: tool.action ?? tool.handler ?? id,
         ...(tool.title ? { title: tool.title } : {}),
         ...(tool.label ? { label: tool.label } : {}),
