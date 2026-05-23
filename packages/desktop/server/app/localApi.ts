@@ -203,6 +203,7 @@ import {
   normalizeExportLiveSessionConversationId,
   normalizeOptionalExportOutputPath,
 } from './localApiExportLiveSession.js';
+import { buildForkConversationInitialOptions, resolveForkConversationCwd } from './localApiForkConversation.js';
 import { buildLiveSessionContextResponse } from './localApiLiveSessionContextResponse.js';
 import {
   assertLiveConversationExists,
@@ -1979,11 +1980,11 @@ export async function forkDesktopConversation(input: {
   serviceTier?: string | null;
 }): Promise<{ id: string; sessionFile: string }> {
   const source = resolveDesktopConversationSource(input.conversationId);
-  return createSessionFromExisting(source.sessionFile, input.cwd?.trim() || source.cwd, {
-    ...(input.model !== undefined ? { initialModel: input.model } : {}),
-    ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
-    ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
-  });
+  return createSessionFromExisting(
+    source.sessionFile,
+    resolveForkConversationCwd({ requestedCwd: input.cwd, sourceCwd: source.cwd }),
+    buildForkConversationInitialOptions(input),
+  );
 }
 
 export async function rollbackDesktopConversation(input: {
