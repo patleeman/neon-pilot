@@ -83,7 +83,7 @@ import {
   sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
 } from './sessionLineSanitizers.js';
 import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } from './sessionMessageSearchText.js';
-import { buildSessionInfoRecord, normalizeSessionName } from './sessionNaming.js';
+import { normalizeSessionName } from './sessionNaming.js';
 import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
 import {
@@ -96,6 +96,7 @@ import {
   resolveRelatedConversationPointersDetail,
   resolveRelatedThreadsSummaryDetail,
 } from './sessionRelatedContext.js';
+import { buildMissingSessionRenameError, buildReloadSessionAfterRenameError, resolveStoredSessionRename } from './sessionRename.js';
 import { buildSessionSearchTextCacheKey, normalizeSessionSearchMaxCharacters } from './sessionSearchCacheKey.js';
 import { appendSessionSearchSegment, buildSessionSearchTextFromEntries } from './sessionSearchText.js';
 import {
@@ -1903,21 +1904,18 @@ export function readSessionMetaByFile(filePath: string): SessionMeta | null {
 }
 
 export function renameStoredSession(sessionId: string, name: string): SessionMeta {
-  const normalizedName = normalizeSessionName(name);
-  if (!normalizedName) {
-    throw new Error('Conversation title must not be empty.');
-  }
+  const rename = resolveStoredSessionRename(name);
 
   const meta = resolveSessionMeta(sessionId);
   if (!meta) {
-    throw new Error(`Conversation ${sessionId} not found.`);
+    throw buildMissingSessionRenameError(sessionId);
   }
 
-  appendFileSync(meta.file, `${buildSessionInfoRecord(normalizedName)}\n`);
+  appendFileSync(meta.file, rename.sessionInfoLine);
 
   const updatedMeta = readSessionMetaByFile(meta.file);
   if (!updatedMeta) {
-    throw new Error(`Conversation ${sessionId} could not be reloaded after renaming.`);
+    throw buildReloadSessionAfterRenameError(sessionId);
   }
 
   persistSessionIndex();
