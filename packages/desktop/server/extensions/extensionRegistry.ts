@@ -13,8 +13,6 @@ import {
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import type {
   ExtensionManifest,
-  ExtensionMentionContribution,
-  ExtensionModelProfileContribution,
   ExtensionPackageType,
   ExtensionSurface,
   ExtensionToolContribution,
@@ -37,6 +35,10 @@ import {
   buildExtensionSecretRegistrations as buildExtensionSecretContributionRegistrations,
   buildExtensionSettingsRegistrations as buildExtensionSettingsContributionRegistrations,
 } from './extensionSettingsContributions.js';
+import {
+  buildExtensionMentionRegistrations as buildExtensionMentionContributionRegistrations,
+  buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
+} from './extensionSimpleContributions.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
 import { buildExtensionToolRegistrationName } from './extensionToolNames.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
@@ -604,23 +606,10 @@ function buildExtensionSkillRegistrations(entry: ExtensionRegistryEntry): Extens
 }
 
 function buildExtensionMentionRegistrations(entry: ExtensionRegistryEntry): ExtensionMentionRegistration[] {
-  return (entry.manifest.contributes?.mentions ?? []).flatMap((mention: ExtensionMentionContribution): ExtensionMentionRegistration[] => {
-    const id = mention.id.trim();
-    const provider = mention.provider.trim();
-    if (!id || !mention.title.trim() || !provider) {
-      return [];
-    }
-    return [
-      {
-        extensionId: entry.manifest.id,
-        packageType: entry.manifest.packageType ?? 'user',
-        id,
-        title: mention.title,
-        ...(mention.description ? { description: mention.description } : {}),
-        kinds: mention.kinds,
-        provider,
-      },
-    ];
+  return buildExtensionMentionContributionRegistrations({
+    extensionId: entry.manifest.id,
+    packageType: entry.manifest.packageType ?? 'user',
+    mentions: entry.manifest.contributes?.mentions,
   });
 }
 
@@ -675,24 +664,11 @@ function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): Extensi
 }
 
 function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry): ExtensionModelProfileRegistration[] {
-  return (entry.manifest.contributes?.modelProfiles ?? []).flatMap(
-    (profile: ExtensionModelProfileContribution): ExtensionModelProfileRegistration[] => {
-      const id = profile.id.trim();
-      const match = Array.isArray(profile.match) ? profile.match.map((pattern) => pattern.trim()).filter(Boolean) : [];
-      if (!id || match.length === 0) return [];
-      return [
-        {
-          extensionId: entry.manifest.id,
-          packageType: entry.manifest.packageType ?? 'user',
-          id,
-          ...(profile.title ? { title: profile.title } : {}),
-          ...(profile.description ? { description: profile.description } : {}),
-          match,
-          priority: Number.isFinite(profile.priority) ? Number(profile.priority) : 0,
-        },
-      ];
-    },
-  );
+  return buildExtensionModelProfileContributionRegistrations({
+    extensionId: entry.manifest.id,
+    packageType: entry.manifest.packageType ?? 'user',
+    profiles: entry.manifest.contributes?.modelProfiles,
+  });
 }
 
 function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
