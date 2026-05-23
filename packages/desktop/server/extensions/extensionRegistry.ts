@@ -30,6 +30,7 @@ import {
   validateComposerAttachmentRendererContributions,
   validateComposerAttachmentResolverContributions,
 } from './extensionComposerAttachmentValidation.js';
+import { listExtensionContributionDiagnostics as listExtensionContributionDiagnosticsValue } from './extensionContributionDiagnostics.js';
 import {
   validateConversationDecoratorContributions,
   validateConversationHeaderElementContributions,
@@ -40,7 +41,6 @@ import {
   validateSkillContributions,
   validateToolContributions,
 } from './extensionCoreContributionValidation.js';
-import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import {
   validatePromptAssemblyHookContributions,
   validateQuickOpenContributions,
@@ -549,14 +549,12 @@ function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRe
 }
 
 function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry): string[] {
-  const skillDiagnostics = (entry.manifest.contributes?.skills ?? [])
-    .map((skill) => validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill }))
-    .filter((diagnostic): diagnostic is string => diagnostic !== null);
-  const dependencyDiagnostics = listMissingRequiredExtensionDependencies(
-    entry.manifest.dependsOn ?? [],
-    listExtensionEntries().map((candidate) => candidate.manifest.id),
-  );
-  return [...skillDiagnostics, ...dependencyDiagnostics];
+  return listExtensionContributionDiagnosticsValue({
+    packageRoot: entry.packageRoot,
+    skills: entry.manifest.contributes?.skills,
+    dependsOn: entry.manifest.dependsOn,
+    availableExtensionIds: listExtensionEntries().map((candidate) => candidate.manifest.id),
+  });
 }
 
 function buildExtensionSkillRegistrations(entry: ExtensionRegistryEntry): ExtensionSkillRegistration[] {
