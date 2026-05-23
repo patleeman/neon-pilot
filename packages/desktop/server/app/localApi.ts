@@ -186,6 +186,7 @@ import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } 
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
+import { buildExecuteLiveSessionBashResponse } from './localApiBashResponse.js';
 import { buildConversationCheckpointRecordInput } from './localApiCheckpointRecord.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertConversationBootstrapFound } from './localApiConversationBootstrapResponse.js';
@@ -1949,7 +1950,7 @@ export async function executeDesktopLiveSessionBash(input: {
   excludeFromContext?: boolean;
 }): Promise<{ ok: true; result: unknown }> {
   const result = await executeSessionBash(input.conversationId, input.command, { excludeFromContext: input.excludeFromContext });
-  return { ok: true, result };
+  return buildExecuteLiveSessionBashResponse({ result });
 }
 
 export async function destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }> {
