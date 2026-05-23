@@ -13,6 +13,7 @@ import {
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
+import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
   EXTENSION_HOST_VIEW_COMPONENTS,
@@ -681,16 +682,6 @@ export function setExtensionKeybinding(input: {
 }): void {
   const stateRoot = input.stateRoot ?? getStateRoot();
   const config = readExtensionRegistryConfig(stateRoot);
-  const key = `${input.extensionId}:${input.keybindingId}`;
-  const disabledKeybindings = new Set(config.disabledKeybindings ?? []);
-  const keybindingOverrides = { ...(config.keybindingOverrides ?? {}) };
-  const commandKeybindings = { ...(config.commandKeybindings ?? {}) };
-
-  if (input.reset) {
-    delete keybindingOverrides[key];
-    delete commandKeybindings[key];
-    disabledKeybindings.delete(key);
-  }
   if (input.command && input.title) {
     const command = findExtensionCommandRegistration(input.command);
     if (!command) {
@@ -699,40 +690,9 @@ export function setExtensionKeybinding(input: {
     if (command.extensionId !== input.extensionId) {
       throw new Error(`Cannot create keybinding for command owned by ${command.extensionId}.`);
     }
-    commandKeybindings[key] = {
-      extensionId: input.extensionId,
-      surfaceId: input.keybindingId,
-      title: input.title,
-      command: input.command,
-      ...(input.args !== undefined ? { args: input.args } : {}),
-      scope: input.scope ?? 'global',
-      ...(input.packageType ? { packageType: input.packageType } : {}),
-      defaultKeys: [],
-    };
-  }
-  if (input.keys) {
-    const keys = input.keys.map((candidate) => candidate.trim()).filter(Boolean);
-    if (keys.length > 0) {
-      keybindingOverrides[key] = keys;
-    }
-  }
-  if (input.enabled !== undefined) {
-    if (input.enabled) {
-      disabledKeybindings.delete(key);
-    } else {
-      disabledKeybindings.add(key);
-    }
   }
 
-  writeExtensionRegistryConfig(
-    {
-      ...config,
-      disabledKeybindings: [...disabledKeybindings].sort((left, right) => left.localeCompare(right)),
-      keybindingOverrides,
-      commandKeybindings,
-    },
-    stateRoot,
-  );
+  writeExtensionRegistryConfig(applyExtensionKeybindingConfigPatch(config, input), stateRoot);
 }
 
 function requireString(value: unknown, path: string): string {
