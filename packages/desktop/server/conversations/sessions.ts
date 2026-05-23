@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFile } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFile } from 'node:fs';
 import { join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -61,6 +61,7 @@ import {
 } from './sessionIndexPersistence.js';
 import { isRawDisplayLineType, parseJsonLine as parseJsonLineValue } from './sessionJsonLines.js';
 export { GOAL_STATE_CUSTOM_TYPE, readGoalFromEntries, type ThreadGoal } from './sessionGoalState.js';
+import { readFileLinesReverse as readFileLinesReverseValue } from './reverseFileLines.js';
 import {
   sanitizeSessionLineForSearch as sanitizeSessionLineForSearchValue,
   sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
@@ -439,8 +440,6 @@ function isRawDisplayLine(line: RawLine): line is RawDisplayLine {
   return isRawDisplayLineType(line) && (line.type !== 'custom_message' || typeof line.customType === 'string');
 }
 
-const REVERSE_READ_CHUNK_BYTES = 64 * 1024;
-
 function sanitizeSessionLineForSummary(rawLine: string): string {
   return sanitizeSessionLineForSummaryValue(rawLine);
 }
@@ -450,39 +449,7 @@ function sanitizeSessionLineForSearch(rawLine: string): string {
 }
 
 function readFileLinesReverse(filePath: string, visit: (line: string) => boolean | void): void {
-  const stats = statSync(filePath);
-  if (stats.size <= 0) {
-    return;
-  }
-
-  const fd = openSync(filePath, 'r');
-  const buffer = Buffer.alloc(REVERSE_READ_CHUNK_BYTES);
-  let position = stats.size;
-  let remainder = '';
-
-  try {
-    while (position > 0) {
-      const readLength = Math.min(REVERSE_READ_CHUNK_BYTES, position);
-      position -= readLength;
-      readSync(fd, buffer, 0, readLength, position);
-      const chunk = buffer.toString('utf-8', 0, readLength);
-      const combined = chunk + remainder;
-      const lines = combined.split('\n');
-      remainder = lines.shift() ?? '';
-
-      for (let index = lines.length - 1; index >= 0; index -= 1) {
-        if (visit(lines[index]?.replace(/\r$/, '') ?? '') === false) {
-          return;
-        }
-      }
-    }
-
-    if (remainder.length > 0) {
-      visit(remainder.replace(/\r$/, ''));
-    }
-  } finally {
-    closeSync(fd);
-  }
+  readFileLinesReverseValue(filePath, visit);
 }
 
 function buildDisplayMessageEntryFromRawLine(line: RawDisplayLine): DisplayMessageEntryLike {
