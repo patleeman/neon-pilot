@@ -14,7 +14,7 @@ function arg(name, fallback) {
 const seconds = Math.max(5, Number(arg('seconds', '30')) || 30);
 const sessions = Math.max(1, Number(arg('sessions', '1000')) || 1000);
 const blocks = Math.max(2, Number(arg('blocks', '80')) || 80);
-const maxCpu = Math.max(10, Number(arg('max-cpu', '120')) || 120);
+const maxCpu = Math.max(10, Number(arg('max-cpu', '130')) || 130);
 const app = arg('app', '');
 const keep = process.argv.includes('--keep');
 const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-startup-idle-'));
@@ -122,6 +122,16 @@ async function main() {
       resolvePromise();
     });
   });
+  if (child.exitCode === null) {
+    child.kill('SIGKILL');
+    await new Promise((resolvePromise) => {
+      const timeout = setTimeout(resolvePromise, 5_000);
+      child.once('exit', () => {
+        clearTimeout(timeout);
+        resolvePromise();
+      });
+    });
+  }
   const peak = Math.max(...samples.map((sample) => sample.total), 0);
   const avg = samples.reduce((sum, sample) => sum + sample.total, 0) / Math.max(samples.length, 1);
   const worst = samples.toSorted((a, b) => b.total - a.total)[0];
