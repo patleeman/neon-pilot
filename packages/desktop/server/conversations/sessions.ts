@@ -46,6 +46,11 @@ import {
   resolveSessionFileCwdSlug as resolveSessionFileCwdSlugFromDir,
   slugToCwd,
 } from './sessionFiles.js';
+import {
+  deferHeavyBlockContent as deferHeavyBlockContentValue,
+  findLastBlockIndex as findLastBlockIndexValue,
+  resolveTailBlockLimit as resolveTailBlockLimitValue,
+} from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
 import {
@@ -1294,12 +1299,7 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
 }
 
 function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBlock) => boolean): number {
-  for (let index = blocks.length - 1; index >= 0; index -= 1) {
-    if (predicate(blocks[index]!)) {
-      return index;
-    }
-  }
-  return -1;
+  return findLastBlockIndexValue(blocks, predicate);
 }
 
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
@@ -1327,47 +1327,14 @@ function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
 const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 80;
 const DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH = 600;
 
-function buildDeferredToolOutputPreview(output: string): string {
-  const trimmed = output.trim();
-  if (trimmed.length <= DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH) {
-    return trimmed;
-  }
-
-  return `${trimmed.slice(0, Math.max(0, DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH - 1)).trimEnd()}…`;
-}
-
 function deferHeavyBlockContent(blocks: DisplayBlock[], blockOffset: number, totalBlocks: number): DisplayBlock[] {
-  return blocks.map((block, index) => {
-    const absoluteIndex = blockOffset + index;
-    if (absoluteIndex >= Math.max(0, totalBlocks - RECENT_HEAVY_CONTENT_BLOCK_COUNT)) {
-      return block;
-    }
-
-    if (block.type === 'user' && block.images?.some((image) => image.src)) {
-      return {
-        ...block,
-        images: block.images.map((image) => (image.src ? { ...image, src: undefined, deferred: true } : image)),
-      };
-    }
-
-    if (block.type === 'tool_use' && block.output.trim().length > DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH) {
-      return {
-        ...block,
-        output: buildDeferredToolOutputPreview(block.output),
-        outputDeferred: true,
-      };
-    }
-
-    if (block.type === 'image' && block.src) {
-      return {
-        ...block,
-        src: undefined,
-        deferred: true,
-      };
-    }
-
-    return block;
-  });
+  return deferHeavyBlockContentValue({
+    blocks,
+    blockOffset,
+    totalBlocks,
+    recentHeavyContentBlockCount: RECENT_HEAVY_CONTENT_BLOCK_COUNT,
+    deferredToolOutputPreviewLength: DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH,
+  }) as DisplayBlock[];
 }
 
 function extractTitleFromMessage(message: RawMessage['message']): string | null {
@@ -2103,11 +2070,7 @@ export function renameStoredSession(sessionId: string, name: string): SessionMet
 }
 
 function resolveTailBlockLimit(tailBlocks: number | undefined, totalBlocks: number): number | null {
-  if (!Number.isSafeInteger(tailBlocks) || typeof tailBlocks !== 'number' || tailBlocks <= 0) {
-    return null;
-  }
-
-  return Math.min(tailBlocks, totalBlocks);
+  return resolveTailBlockLimitValue(tailBlocks, totalBlocks);
 }
 
 const MAX_SESSION_DETAIL_TAIL_BLOCKS = 10000;
