@@ -49,14 +49,19 @@ export function deferHeavyBlockContent<TBlock extends HeavyDisplayBlockLike>(inp
       return block;
     }
 
-    if (block.type === 'user' && block.images?.some((image) => image.src)) {
+    if (block.type === 'user' && Array.isArray(block.images) && block.images.some((image) => image.src)) {
+      const images = block.images;
       return {
         ...block,
-        images: block.images.map((image) => (image.src ? { ...image, src: undefined, deferred: true } : image)),
+        images: images.map((image) => (image.src ? { ...image, src: undefined, deferred: true } : image)),
       } as TBlock;
     }
 
-    if (block.type === 'tool_use' && block.output.trim().length > input.deferredToolOutputPreviewLength) {
+    if (
+      block.type === 'tool_use' &&
+      typeof block.output === 'string' &&
+      block.output.trim().length > input.deferredToolOutputPreviewLength
+    ) {
       return {
         ...block,
         output: buildDeferredToolOutputPreview(block.output, input.deferredToolOutputPreviewLength),

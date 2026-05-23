@@ -18,17 +18,18 @@ export function buildSessionBlockImagePath(sessionId: string, blockId: string): 
 
 export function decorateSessionAssetUrls<T extends DisplayBlockWithAssets>(blocks: T[], sessionId: string): T[] {
   return blocks.map((block) => {
-    if (block.type === 'user' && block.images?.length) {
+    if (block.type === 'user' && typeof block.id === 'string' && Array.isArray(block.images) && block.images.length > 0) {
+      const images = block.images;
       return {
         ...block,
-        images: block.images.map((image, imageIndex) => ({
+        images: images.map((image, imageIndex) => ({
           ...image,
           src: buildSessionUserImagePath(sessionId, block.id, imageIndex),
         })),
       } as T;
     }
 
-    if (block.type === 'image') {
+    if (block.type === 'image' && typeof block.id === 'string') {
       return {
         ...block,
         src: buildSessionBlockImagePath(sessionId, block.id),

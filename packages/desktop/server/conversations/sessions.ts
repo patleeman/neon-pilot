@@ -239,6 +239,7 @@ type TailScanEntrySummary = TailScanDisplayEntrySummary | TailScanLineageSummary
 // ── Public types ───────────────────────────────────────────────────────────────
 
 export interface SessionMeta {
+  [key: string]: unknown;
   id: string;
   file: string; // absolute path
   timestamp: string;
@@ -435,7 +436,7 @@ function parseJsonLine(rawLine: string): RawLine | null {
 }
 
 function isRawDisplayLine(line: RawLine): line is RawDisplayLine {
-  return isRawDisplayLineType(line);
+  return isRawDisplayLineType(line) && (line.type !== 'custom_message' || typeof line.customType === 'string');
 }
 
 const REVERSE_READ_CHUNK_BYTES = 64 * 1024;
@@ -1492,7 +1493,7 @@ function readSourceRunIdFromSessionFilePath(filePath: string): string | undefine
 }
 
 function decorateSessionParentIds(metas: SessionMeta[]): SessionMeta[] {
-  return decorateSessionParentIdsForMetas(metas, normalizeOptionalPath) as SessionMeta[];
+  return decorateSessionParentIdsForMetas(metas, normalizeOptionalPath);
 }
 
 function resolveSessionIdByFile(filePath: string): string | undefined {

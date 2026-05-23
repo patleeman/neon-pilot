@@ -2,7 +2,9 @@ import { existsSync } from 'node:fs';
 
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
-import { type ExtensionModelProfileResolution, resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
+import type { ExtensionModelProfileResolution } from '../extensions/extensionModelProfileResolution.js';
+import type { ExtensionModelProfileRegistration } from '../extensions/extensionRegistry.js';
+import { resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
 import type { LiveContextUsage, LiveSessionToolDefinition } from './liveSessionEvents.js';
 import { type ParallelPromptJob, type ParallelPromptPreview, readParallelState } from './liveSessionParallelJobs.js';
 import { buildLiveSessionPresenceState, type LiveSessionPresenceHost, type LiveSessionPresenceState } from './liveSessionPresence.js';
@@ -47,7 +49,7 @@ export interface LiveSessionStateSnapshot {
   goalState: ThreadGoal | null;
   systemPrompt: string | null;
   toolDefinitions: LiveSessionToolDefinition[];
-  modelProfile: ExtensionModelProfileResolution & { modelRef: string | null };
+  modelProfile: ExtensionModelProfileResolution<ExtensionModelProfileRegistration> & { modelRef: string | null };
   presence: LiveSessionPresenceState;
   cwdChange: { newConversationId: string; cwd: string; autoContinued: boolean } | null;
 }

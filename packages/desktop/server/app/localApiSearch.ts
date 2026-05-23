@@ -2,6 +2,7 @@ import type { DesktopLocalApiDispatchResult } from './localApi.js';
 
 export interface SearchableConversationSession {
   id: string;
+  file: string;
   title: string;
   cwd?: string;
   timestamp: string;

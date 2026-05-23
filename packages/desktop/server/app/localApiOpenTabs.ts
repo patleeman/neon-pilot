@@ -1,3 +1,5 @@
+import type { AppEventTopic } from '../shared/appEvents.js';
+
 export interface DesktopOpenConversationTabsUpdateInput {
   sessionIds?: string[];
   pinnedSessionIds?: string[];
@@ -40,8 +42,8 @@ export function validateDesktopOpenConversationTabsUpdate(input: DesktopOpenConv
   }
 }
 
-export function desktopOpenConversationTabsInvalidationTopics(input: DesktopOpenConversationTabsUpdateInput): string[] {
-  const topics: string[] = [];
+export function desktopOpenConversationTabsInvalidationTopics(input: DesktopOpenConversationTabsUpdateInput): AppEventTopic[] {
+  const topics: AppEventTopic[] = [];
   if (
     input.sessionIds !== undefined ||
     input.pinnedSessionIds !== undefined ||

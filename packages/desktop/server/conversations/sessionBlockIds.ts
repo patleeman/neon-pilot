@@ -14,6 +14,9 @@ export function rebaseDisplayBlockIds<T extends RebasableDisplayBlock>(blocks: T
 
   return blocks.map((block, index) => {
     const absoluteIndex = blockOffset + index;
+    if (typeof block.id !== 'string') {
+      return block;
+    }
 
     switch (block.type) {
       case 'context':
