@@ -96,6 +96,11 @@ import {
   shouldSubscribeToDesktopConversationState,
   shouldUseHealthyDesktopConversationState,
 } from '../conversation/conversationPageState';
+import {
+  buildComposerQuestionAnswersStorageKey,
+  EMPTY_ASK_USER_ANSWERS,
+  hasAskUserQuestionAnswers,
+} from '../conversation/conversationQuestionAnswers';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
 import { createConversationLiveRunId, getConversationRunIdFromSearch } from '../conversation/conversationRuns';
@@ -333,21 +338,8 @@ const MAX_AUTOMATIC_HISTORICAL_TAIL_BLOCKS = 200;
 const MAX_RENDERED_BLOCKS = 300;
 const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 1400;
 const HISTORICAL_BACKGROUND_PREFETCH_DELAY_MS = 1500;
-const EMPTY_ASK_USER_ANSWERS: AskUserQuestionAnswers = {};
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
-
-function buildComposerQuestionAnswersStorageKey(conversationId: string | undefined, pendingQuestionKey: string): string | null {
-  if (!conversationId || !pendingQuestionKey) {
-    return null;
-  }
-
-  return `pa:conversation-question-answers:${conversationId}:${pendingQuestionKey}`;
-}
-
-function hasAskUserQuestionAnswers(answers: AskUserQuestionAnswers): boolean {
-  return Object.values(answers).some((values) => values.length > 0);
-}
 
 function hasBlockingOverlayOpen(): boolean {
   return typeof document !== 'undefined' && hasBlockingConversationOverlay();
