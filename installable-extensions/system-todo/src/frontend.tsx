@@ -116,8 +116,8 @@ export function TodoShelf({
   if (!conversationId || (!loading && state.items.length === 0 && !error)) return null;
 
   return (
-    <div className="mx-2 mb-2 overflow-hidden rounded-xl border border-border-subtle bg-surface/70 text-[12px] text-primary">
-      <div className="flex h-8 items-center gap-2 border-b border-border-subtle/70 px-2.5 text-secondary">
+    <div className="border-b border-border-subtle/60 px-3 py-1.5 text-[12px] text-primary">
+      <div className="flex h-6 items-center gap-2 text-secondary">
         <button type="button" className="text-[11px] text-dim hover:text-primary" onClick={() => setCollapsed((value) => !value)}>
           {collapsed ? '▸' : '▾'}
         </button>
@@ -129,7 +129,7 @@ export function TodoShelf({
         {doneItems.length > 0 ? (
           <button
             type="button"
-            className="rounded-md px-1.5 py-1 text-[11px] text-secondary hover:bg-base hover:text-primary disabled:opacity-50"
+            className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-base hover:text-primary disabled:opacity-50"
             disabled={Boolean(busyId)}
             onClick={() => void run('clear-done', () => invoke<TodoState>('clearItems', { scope: 'done' }))}
           >
@@ -139,12 +139,12 @@ export function TodoShelf({
       </div>
 
       {!collapsed ? (
-        <div className="max-h-32 overflow-y-auto p-1">
-          {error ? <div className="m-1 rounded-md bg-danger/10 px-2 py-1.5 text-[11px] text-danger">{error}</div> : null}
+        <div className="max-h-28 overflow-y-auto py-0.5">
+          {error ? <div className="rounded-md bg-danger/10 px-2 py-1.5 text-[11px] text-danger">{error}</div> : null}
           {visibleItems.map((item) => (
             <div
               key={item.id}
-              className="group grid min-h-8 grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-1 rounded-lg px-1.5 hover:bg-base/70"
+              className="group grid min-h-7 grid-cols-[1.4rem_minmax(0,1fr)_auto] items-center gap-1 rounded-md hover:bg-base/60"
             >
               <button
                 type="button"
@@ -172,7 +172,7 @@ export function TodoShelf({
                 {!isDone(item) && item.status !== 'doing' ? (
                   <button
                     type="button"
-                    className="rounded-md px-1.5 py-1 text-[11px] text-secondary hover:bg-surface hover:text-primary"
+                    className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-surface hover:text-primary"
                     disabled={Boolean(busyId)}
                     onClick={() => void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: 'doing' }))}
                   >
@@ -182,7 +182,7 @@ export function TodoShelf({
                 {!isDone(item) && item.status !== 'blocked' ? (
                   <button
                     type="button"
-                    className="rounded-md px-1.5 py-1 text-[11px] text-secondary hover:bg-surface hover:text-warning"
+                    className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-surface hover:text-warning"
                     disabled={Boolean(busyId)}
                     onClick={() => void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: 'blocked' }))}
                   >
@@ -191,7 +191,7 @@ export function TodoShelf({
                 ) : null}
                 <button
                   type="button"
-                  className="rounded-md px-1.5 py-1 text-[12px] text-secondary hover:bg-surface hover:text-danger"
+                  className="rounded-md px-1.5 py-0.5 text-[12px] text-secondary hover:bg-surface hover:text-danger"
                   disabled={Boolean(busyId)}
                   title="Delete todo"
                   onClick={() => void run(item.id, () => invoke<TodoState>('deleteItem', { id: item.id }))}
