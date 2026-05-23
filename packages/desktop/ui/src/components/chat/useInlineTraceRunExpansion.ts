@@ -67,8 +67,13 @@ export function useInlineTraceRunExpansion(renderItems: ChatRenderItem[]) {
     setExpandedInlineRunKeys((current) => toggleInlineRunKey(current, inlineRunKey));
   }, []);
 
+  const expandInlineRun = useCallback((inlineRunKey: string) => {
+    setExpandedInlineRunKeys((current) => (current.has(inlineRunKey) ? current : new Set(current).add(inlineRunKey)));
+  }, []);
+
   return {
     isInlineRunExpanded,
     toggleInlineRun,
+    expandInlineRun,
   };
 }

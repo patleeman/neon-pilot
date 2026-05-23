@@ -158,7 +158,7 @@ describe('linkedRuns', () => {
     });
   });
 
-  it('does not render linked run cards for background shell tool calls', () => {
+  it('links background shell starts to their inline run card', () => {
     const startBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
       type: 'tool_use',
       ts: '2026-04-26T00:00:00.000Z',
@@ -176,9 +176,17 @@ describe('linkedRuns', () => {
       details: { action: 'logs', runId: 'run-desktop-dev-abc123' },
     };
 
-    expect(readLinkedRuns(startBlock)).toEqual({ scope: 'mentioned', runs: [] });
-    expect(readLinkedRuns(inspectBlock)).toEqual({ scope: 'mentioned', runs: [] });
-    expect(collectTraceClusterLinkedRuns([startBlock, inspectBlock])).toEqual([]);
+    expect(readLinkedRuns(startBlock)).toEqual({
+      scope: 'mentioned',
+      runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' }],
+    });
+    expect(readLinkedRuns(inspectBlock)).toEqual({
+      scope: 'mentioned',
+      runs: [{ runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' }],
+    });
+    expect(collectTraceClusterLinkedRuns([startBlock, inspectBlock])).toEqual([
+      { runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' },
+    ]);
   });
 
   it('collects trace cluster linked runs from newest to oldest without duplicates', () => {

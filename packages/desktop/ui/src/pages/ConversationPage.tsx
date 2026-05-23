@@ -93,11 +93,7 @@ import {
 } from '../conversation/conversationPageState';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
-import {
-  createConversationLiveRunId,
-  getConversationRunIdFromSearch,
-  setConversationRunIdInSearch,
-} from '../conversation/conversationRuns';
+import { createConversationLiveRunId, getConversationRunIdFromSearch } from '../conversation/conversationRuns';
 import {
   getConversationInitialScrollKey,
   getConversationTailBlockKey,
@@ -588,23 +584,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const openCheckpoint = useCallback(() => undefined, []);
 
-  const openRun = useCallback(
-    (runId: string) => {
-      setAppLayoutMode('workbench');
-      writeAppLayoutMode('workbench');
-
-      const nextSearch = setConversationArtifactIdInSearch(
-        setConversationCheckpointIdInSearch(setConversationRunIdInSearch(location.search, runId), null),
-        null,
-      );
-
-      navigate({
-        pathname: location.pathname,
-        search: nextSearch,
-      });
-    },
-    [location.pathname, location.search, navigate],
-  );
+  const openRun = useCallback((runId: string) => {
+    window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId } }));
+  }, []);
 
   const openWorkbenchBrowser = useCallback(() => {
     window.dispatchEvent(new CustomEvent(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT));

@@ -11,6 +11,8 @@ import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChatChunk } from './chatWindowing.js';
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
+import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
+import { collectTraceClusterLinkedRuns } from './linkedRuns.js';
 import { ContextShelf, SystemPromptMessage } from './MessageBlocks.js';
 import {
   CONVERSATION_DIFF_DISCLOSURE_SETTING_KEY,
@@ -197,7 +199,30 @@ export const ChatView = memo(function ChatView({
 
     return { messageItems, traceClusters, traceBlocks, toolBlocks, standaloneToolBlocks, markdownBlocks };
   }, [renderItems]);
-  const { isInlineRunExpanded, toggleInlineRun } = useInlineTraceRunExpansion(renderItems);
+  const { isInlineRunExpanded, toggleInlineRun, expandInlineRun } = useInlineTraceRunExpansion(renderItems);
+
+  useEffect(() => {
+    function handleFocusBackgroundRun(event: Event) {
+      const runId = event instanceof CustomEvent && typeof event.detail?.runId === 'string' ? event.detail.runId.trim() : '';
+      if (!runId) return;
+
+      const item = renderItems.find(
+        (candidate) =>
+          candidate.type === 'trace_cluster' && collectTraceClusterLinkedRuns(candidate.blocks).some((run) => run.runId === runId),
+      );
+      if (!item || item.type !== 'trace_cluster') return;
+
+      expandInlineRun(buildInlineRunExpansionKey(item.startIndex, runId));
+      window.requestAnimationFrame(() => {
+        const node = document.querySelector(`[data-trace-cluster-start-index="${messageIndexOffset + item.startIndex}"]`);
+        node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        node?.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click();
+      });
+    }
+
+    window.addEventListener('pa:focus-background-run', handleFocusBackgroundRun);
+    return () => window.removeEventListener('pa:focus-background-run', handleFocusBackgroundRun);
+  }, [expandInlineRun, messageIndexOffset, renderItems]);
 
   const streamingStatusLabel = isCompacting
     ? 'Compacting context…'

@@ -550,10 +550,6 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
   scope: 'listed' | 'mentioned';
   runs: LinkedRunPresentation[];
 } {
-  if (block.tool === 'background_command' || block.tool === 'background_bash' || isBackgroundShellStart(block)) {
-    return { scope: 'mentioned', runs: [] };
-  }
-
   const listedRuns = readListedRuns(block);
   if (listedRuns) {
     return {
@@ -568,6 +564,11 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
       scope: 'mentioned',
       runs: [runToolLinkedRun],
     };
+  }
+
+  if (block.tool === 'background_command' || block.tool === 'background_bash' || isBackgroundShellStart(block)) {
+    const runId = extractDurableRunIdsFromBlock(block)[0];
+    return { scope: 'mentioned', runs: runId ? [presentLinkedRun(runId)] : [] };
   }
 
   return {

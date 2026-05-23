@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppData } from '../../app/contexts';
-import { getRunConnections, type RunPresentationLookups } from '../../automation/runPresentation';
+import { getRunConnections, isRunActive, type RunPresentationLookups } from '../../automation/runPresentation';
 import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionToolBlockHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import type { DurableRunListResult, MessageBlock } from '../../shared/types';
@@ -12,6 +12,7 @@ import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrapper
 import { cx, Pill } from '../ui';
 import { DiffActionButton } from './DiffActionButton.js';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
+import { INLINE_RUN_LOG_TAIL_LINES, INLINE_RUN_POLL_INTERVAL_MS, usePolledDurableRunSnapshot } from './linkedRunPolling.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
@@ -24,6 +25,26 @@ import {
 } from './toolPresentation.js';
 
 const MAX_VISIBLE_LINKED_RUNS = 5;
+
+function BackgroundBashInlineOutput({ runId, command }: { runId: string; command: string }) {
+  const snapshot = usePolledDurableRunSnapshot(runId, true, {
+    tail: INLINE_RUN_LOG_TAIL_LINES,
+    pollIntervalMs: INLINE_RUN_POLL_INTERVAL_MS,
+  });
+  const running = isRunActive(snapshot.detail?.run ?? null);
+  const log = snapshot.log?.log ?? '';
+
+  return (
+    <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2">
+      <span className="sr-only">input</span>
+      <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
+        <span className="opacity-60">$ </span>
+        {command}
+        {log ? `\n${log}` : running || snapshot.loading ? '\nWaiting for output…' : '\n(no output)'}
+      </pre>
+    </div>
+  );
+}
 
 function getLinkedRunConversationRoute(
   runId: string,
@@ -220,6 +241,8 @@ export function ToolBlock({
           : preview;
   const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
+  const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
+  const bashCommand = readToolInputString(block.input, 'command') ?? preview;
 
   return (
     <div
@@ -303,7 +326,7 @@ export function ToolBlock({
         )}
       </div>
 
-      {linkedRuns.runs.length > 0 && !pinnedTool && (
+      {linkedRuns.runs.length > 0 && !pinnedTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
           <p className="mb-1.5 uppercase tracking-[0.14em] opacity-40">
             {linkedRuns.runs.length === 1
@@ -370,7 +393,7 @@ export function ToolBlock({
           <span className="sr-only">input</span>
           <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
             <span className="opacity-60">$ </span>
-            {readToolInputString(block.input, 'command') ?? preview}
+            {bashCommand}
             {output
               ? `\n${output}`
               : isRunning
@@ -394,7 +417,11 @@ export function ToolBlock({
         </div>
       )}
 
-      {open && !pinnedTool && !agentBashTool && (
+      {open && !pinnedTool && backgroundShellStart && backgroundRunId && (
+        <BackgroundBashInlineOutput runId={backgroundRunId} command={bashCommand} />
+      )}
+
+      {open && !pinnedTool && !agentBashTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70">
           <div className="px-2.5 py-2 bg-black/5">
             <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">input</p>
