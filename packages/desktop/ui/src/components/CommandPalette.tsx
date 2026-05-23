@@ -16,8 +16,8 @@ import {
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
 } from '../commands/commandPalette';
+import { activateCommandPaletteItem, type CommandPaletteAction } from '../commands/commandPaletteActions';
 import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
-import { buildCommandPaletteFileOpenRoute } from '../commands/commandPaletteNavigation';
 import { createHostCommands, evaluateCommandEnablement, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
@@ -25,12 +25,10 @@ import type {
   ExtensionQuickOpenRegistration,
   ExtensionSearchItem,
   ExtensionSearchProviderRegistration,
-  ExtensionSurfaceSummary,
 } from '../extensions/types';
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch, SessionMeta } from '../shared/types';
 import { timeAgo } from '../shared/utils';
-import { readAppLayoutMode } from '../ui-state/appLayoutMode';
 import { cx } from './ui';
 
 interface ExtensionQuickOpenItem {
@@ -48,13 +46,6 @@ type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
   search?: (query: string, limit: number) => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
 };
-
-type CommandPaletteAction =
-  | { kind: 'navigate'; to: string }
-  | { kind: 'restoreArchivedConversation'; conversationId: string }
-  | { kind: 'openFile'; fileId: string; extensionSurfaces?: ExtensionSurfaceSummary[] }
-  | { kind: 'command'; command: string; args?: unknown }
-  | { kind: 'extensionSearchAction'; extensionId: string; action: unknown };
 
 interface ScopedSessionMeta extends SessionMeta {
   pinned?: boolean;
@@ -644,65 +635,14 @@ export function CommandPalette() {
       setActionError(null);
       setBusyItemId(item.id);
 
-      const executeDeclaredPaletteCommand = async (command: string, args: unknown) => {
-        const declared = commandItems.some(
-          (candidate) => candidate.action.kind === 'command' && candidate.action.command === command && !candidate.disabled,
-        );
-        if (!declared) {
-          throw new Error(`Command is not available in the palette: ${command}`);
-        }
-        await api.executeExtensionCommand(command, args ?? {});
-      };
-
       try {
-        switch (item.action.kind) {
-          case 'navigate':
-            navigate(item.action.to);
-            closePalette();
-            return;
-          case 'restoreArchivedConversation':
-            openSession(item.action.conversationId);
-            navigate(`/conversations/${encodeURIComponent(item.action.conversationId)}`);
-            closePalette();
-            return;
-          case 'openFile':
-            navigate(
-              buildCommandPaletteFileOpenRoute({
-                pathname: location.pathname,
-                search: location.search,
-                hash: location.hash,
-                layoutMode: readAppLayoutMode(),
-                fileId: item.action.fileId,
-                extensionSurfaces: item.action.extensionSurfaces,
-              }),
-            );
-            closePalette();
-            return;
-          case 'command':
-            await api.executeExtensionCommand(item.action.command, item.action.args ?? {});
-            closePalette();
-            return;
-          case 'extensionSearchAction': {
-            const searchAction = item.action.action;
-            if (searchAction && typeof searchAction === 'object' && 'kind' in searchAction) {
-              const typedAction = searchAction as { kind?: unknown; to?: unknown; command?: unknown; args?: unknown };
-              if (typedAction.kind === 'navigate' && typeof typedAction.to === 'string') {
-                navigate(typedAction.to);
-              } else if (typedAction.kind === 'command' && typeof typedAction.command === 'string') {
-                await executeDeclaredPaletteCommand(typedAction.command, typedAction.args ?? {});
-              }
-            } else if (searchAction && typeof searchAction === 'object' && 'command' in searchAction) {
-              await executeDeclaredPaletteCommand(
-                String((searchAction as { command: unknown }).command),
-                (searchAction as { args?: unknown }).args ?? {},
-              );
-            }
-            closePalette();
-            return;
-          }
-          default:
-            return;
-        }
+        await activateCommandPaletteItem(item, {
+          commandItems,
+          location,
+          navigate,
+          openSession,
+          closePalette,
+        });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : String(error));
       } finally {
