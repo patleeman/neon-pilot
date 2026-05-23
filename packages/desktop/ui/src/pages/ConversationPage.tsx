@@ -76,6 +76,7 @@ import {
   type MentionItem,
   resolveMentionItems,
 } from '../conversation/conversationMentions';
+import { shouldEnableMessageForkControls } from '../conversation/conversationMessageControls';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
 import {
   hasConversationLoadedHistoricalTailBlocks,
@@ -352,15 +353,7 @@ function hasBlockingOverlayOpen(): boolean {
   return typeof document !== 'undefined' && hasBlockingConversationOverlay();
 }
 
-export function shouldEnableMessageForkControls({
-  renderingStaleTranscript,
-  conversationId,
-}: {
-  renderingStaleTranscript: boolean;
-  conversationId: string | undefined;
-}): boolean {
-  return !renderingStaleTranscript && Boolean(conversationId);
-}
+export { shouldEnableMessageForkControls };
 
 // ── ConversationPage ──────────────────────────────────────────────────────────
 
