@@ -68,7 +68,6 @@ import {
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
-  buildConversationServiceTierPreferenceInput,
   resolveConversationDraftHydrationState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
@@ -90,6 +89,7 @@ import {
 import { shouldEnableMessageForkControls } from '../conversation/conversationMessageControls';
 import { pruneComputedMessages, resolveComputedMessagesRaw } from '../conversation/conversationMessageWindow';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
+import { buildLiveSessionPreferenceInput, selectComposerModel } from '../conversation/conversationModelSelection';
 import {
   hasConversationLoadedHistoricalTailBlocks,
   mergeConversationSessionMeta,
@@ -1113,15 +1113,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [currentModel, defaultModel, models],
   );
   const selectedComposerModel = useMemo(
-    () => models.find((model) => model.id === (currentModel || defaultModel)) ?? null,
+    () => selectComposerModel(models, currentModel, defaultModel),
     [currentModel, defaultModel, models],
   );
   const createLiveSessionPreferenceInput = useMemo(
-    () => ({
-      ...(resolvedCurrentModelId ? { model: resolvedCurrentModelId } : {}),
-      ...(currentThinkingLevel ? { thinkingLevel: currentThinkingLevel } : {}),
-      ...buildConversationServiceTierPreferenceInput({ currentServiceTier, hasExplicitServiceTier }),
-    }),
+    () =>
+      buildLiveSessionPreferenceInput({
+        resolvedCurrentModelId,
+        currentThinkingLevel,
+        currentServiceTier,
+        hasExplicitServiceTier,
+      }),
     [currentThinkingLevel, currentServiceTier, hasExplicitServiceTier, resolvedCurrentModelId],
   );
   const initialModelPreferenceState = useMemo(
