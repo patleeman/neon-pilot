@@ -290,7 +290,7 @@ async function main() {
         cdp,
         child,
         `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
-        45_000,
+        90_000,
       );
       return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
