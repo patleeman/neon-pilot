@@ -2,7 +2,7 @@
 
 Contributes the `codex-compatible` model profile for GPT/Codex-style coding models, provides the `apply_patch` agent tool, and owns Codex/OpenAI native Responses compaction behavior.
 
-The model profile matches `openai-codex/*`. When the extension is enabled and a matching model is active, its agent extension adds `apply_patch` and removes the built-in `write` and `edit` tools. Other tools stay active.
+The model profile matches `openai-codex/*` and `*/gpt-5.5`. When the extension is enabled and a matching model is active, its agent extension adds `apply_patch` and removes the built-in `write` and `edit` tools. Other tools stay active.
 
 Disabled means disabled: profile behavior does not secretly activate.
 
