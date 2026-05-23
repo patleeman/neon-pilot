@@ -31,6 +31,7 @@ import {
 } from './sessionCompactionSummary.js';
 import { normalizeContent, normalizeTimestamp } from './sessionContent.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
+import { buildCustomSessionEntry, serializeSessionJsonLine } from './sessionCustomEntrySerialization.js';
 import {
   type ConversationOffshootKind,
   type ConversationOffshootMetadata,
@@ -1213,14 +1214,15 @@ export function appendConversationOffshootDetachedMetadata(input: { sessionFile:
 
   appendFileSync(
     input.sessionFile,
-    `${JSON.stringify({
-      type: 'custom',
-      id: randomUUID(),
-      parentId: leafId,
-      timestamp: new Date().toISOString(),
-      customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
-      data: buildConversationOffshootMetadataData({ detached: true }),
-    })}\n`,
+    serializeSessionJsonLine(
+      buildCustomSessionEntry({
+        id: randomUUID(),
+        parentId: leafId,
+        timestamp: new Date().toISOString(),
+        customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
+        data: buildConversationOffshootMetadataData({ detached: true }),
+      }),
+    ),
     'utf-8',
   );
   clearSessionCaches();
@@ -1248,20 +1250,21 @@ export function appendConversationOffshootMetadata(input: {
 
   appendFileSync(
     input.sessionFile,
-    `${JSON.stringify({
-      type: 'custom',
-      id: randomUUID(),
-      parentId: leafId,
-      timestamp: new Date().toISOString(),
-      customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
-      data: buildConversationOffshootMetadataData({
-        kind: input.kind,
-        parentSessionFile: input.parentSessionFile,
-        parentSessionId: input.parentSessionId,
-        parentMessageId: input.parentMessageId,
-        sourceRunId: input.sourceRunId,
+    serializeSessionJsonLine(
+      buildCustomSessionEntry({
+        id: randomUUID(),
+        parentId: leafId,
+        timestamp: new Date().toISOString(),
+        customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
+        data: buildConversationOffshootMetadataData({
+          kind: input.kind,
+          parentSessionFile: input.parentSessionFile,
+          parentSessionId: input.parentSessionId,
+          parentMessageId: input.parentMessageId,
+          sourceRunId: input.sourceRunId,
+        }),
       }),
-    })}\n`,
+    ),
     'utf-8',
   );
   clearSessionCaches();
