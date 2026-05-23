@@ -172,6 +172,7 @@ import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { shouldRefreshDesktopConversationStateForAppEvent } from './localApiConversationEvents.js';
+import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
@@ -1472,32 +1473,9 @@ export async function changeDesktopConversationCwd(input: {
 }
 
 export async function updateDesktopConversationGoal(input: { conversationId: string; objective?: string }) {
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) throw new Error('conversationId required');
-  if (Object.prototype.hasOwnProperty.call(input, 'objective') && typeof input.objective !== 'string') {
-    throw new Error('objective must be a string');
-  }
-
-  const trimmedObjective = typeof input.objective === 'string' ? input.objective.trim() : '';
-  const shouldSetGoal = Object.prototype.hasOwnProperty.call(input, 'objective') && trimmedObjective.length > 0;
+  const conversationId = validateDesktopConversationGoalInput(input);
   const writeGoal = (sessionManager: SessionManager) => {
-    const goalState = shouldSetGoal
-      ? {
-          objective: trimmedObjective,
-          status: 'active' as const,
-          tasks: [] as Array<{ id: string; description: string; status: string }>,
-          stopReason: null,
-          updatedAt: new Date().toISOString(),
-          noProgressTurns: 0,
-        }
-      : {
-          objective: '',
-          status: 'complete' as const,
-          tasks: [] as Array<{ id: string; description: string; status: string }>,
-          stopReason: 'cleared',
-          updatedAt: new Date().toISOString(),
-          noProgressTurns: 0,
-        };
+    const goalState = buildDesktopConversationGoalState(input);
     sessionManager.appendCustomEntry('conversation-goal', goalState);
     return goalState;
   };
