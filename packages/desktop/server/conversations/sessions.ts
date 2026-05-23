@@ -23,6 +23,7 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
+import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
 import { rebaseDisplayBlockIds as rebaseDisplayBlockIdsForOffset } from './sessionBlockIds.js';
 import { normalizeContent, normalizeTimestamp } from './sessionContent.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
@@ -708,12 +709,7 @@ function resolveCompactionSummarySupplement(details: unknown): string | undefine
 }
 
 export function getAssistantErrorDisplayMessage(message: { stopReason?: string; errorMessage?: string }): string | null {
-  if (message.stopReason !== 'error') {
-    return null;
-  }
-
-  const errorMessage = message.errorMessage?.trim();
-  return errorMessage && errorMessage.length > 0 ? errorMessage : 'The model returned an error before completing its response.';
+  return getAssistantErrorDisplayMessageValue(message);
 }
 
 const RELATED_THREADS_CONTEXT_CUSTOM_TYPE = 'related_threads_context';
