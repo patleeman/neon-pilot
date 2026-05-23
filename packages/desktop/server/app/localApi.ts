@@ -197,6 +197,11 @@ import {
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
+import {
+  buildExportLiveSessionResponse,
+  normalizeExportLiveSessionConversationId,
+  normalizeOptionalExportOutputPath,
+} from './localApiExportLiveSession.js';
 import { buildLiveSessionContextResponse } from './localApiLiveSessionContextResponse.js';
 import {
   assertLiveConversationExists,
@@ -1928,13 +1933,10 @@ export async function exportDesktopLiveSession(input: {
 }): Promise<{ ok: true; path: string }> {
   await getLocalRoutes();
 
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) {
-    throw new Error('conversationId required');
-  }
+  const conversationId = normalizeExportLiveSessionConversationId(input.conversationId);
 
-  const path = await exportSessionHtml(conversationId, input.outputPath?.trim() || undefined);
-  return { ok: true, path };
+  const path = await exportSessionHtml(conversationId, normalizeOptionalExportOutputPath(input.outputPath));
+  return buildExportLiveSessionResponse({ path });
 }
 
 export async function reloadDesktopLiveSession(input: { conversationId: string }) {
