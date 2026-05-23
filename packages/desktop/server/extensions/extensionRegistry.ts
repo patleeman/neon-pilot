@@ -108,6 +108,10 @@ import {
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
 import { buildExtensionSkillRegistrations as buildExtensionSkillRegistrationsValue } from './extensionSkillRegistrations.js';
+import {
+  buildLegacyExtensionSlashCommandRegistrations,
+  buildNativeExtensionSlashCommandRegistrations,
+} from './extensionSlashCommandRegistrations.js';
 import { buildExtensionStartupGuardResult, buildExtensionStartupMarker } from './extensionStartupMarker.js';
 import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
@@ -1177,30 +1181,8 @@ export function findExtensionCommandRegistration(commandId: string): ExtensionCo
 
 export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandRegistration[] {
   const snapshot = readExtensionRegistrySnapshot();
-  const legacy = snapshot.surfaces.flatMap((surface) =>
-    surface.kind === 'slashCommand'
-      ? [
-          {
-            extensionId: surface.extensionId,
-            surfaceId: surface.id,
-            packageType: surface.packageType,
-            name: surface.name,
-            description: surface.description,
-            action: surface.action,
-          },
-        ]
-      : [],
-  );
-  const native = snapshot.extensions.flatMap((extension) =>
-    (extension.contributes?.slashCommands ?? []).map((command) => ({
-      extensionId: extension.id,
-      surfaceId: command.name,
-      packageType: extension.packageType ?? 'user',
-      name: command.name,
-      description: command.description,
-      action: command.action,
-    })),
-  );
+  const legacy = buildLegacyExtensionSlashCommandRegistrations(snapshot.surfaces);
+  const native = buildNativeExtensionSlashCommandRegistrations(snapshot.extensions);
   return [...legacy, ...native];
 }
 
