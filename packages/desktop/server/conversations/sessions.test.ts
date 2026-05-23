@@ -2036,6 +2036,36 @@ describe('sessions', () => {
     );
   });
 
+  it('adds a parent backlink inside subagent child conversations even when only parentSessionFile is stored', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'subagent-backlink-parent',
+      title: 'Subagent backlink parent',
+      assistantTexts: ['Parent reply'],
+    });
+
+    writeSessionFile({
+      sessionsDir,
+      cwdSlug: '__runs/run-subagent-backlink',
+      sessionId: 'subagent-backlink-child',
+      title: 'Subagent backlink child',
+      assistantTexts: ['Child reply'],
+      parentSession: parentSessionFile,
+    });
+
+    const childBlocks = readSessionBlocks('subagent-backlink-child')?.blocks ?? [];
+    expect(childBlocks[0]).toEqual(
+      expect.objectContaining({
+        type: 'context',
+        customType: 'parent_conversation_backlink',
+        text: expect.stringContaining('Subagent conversation from parent: Subagent backlink parent'),
+      }),
+    );
+  });
+
   it('preserves conversation history in getBranch() after offshoot metadata is appended', () => {
     // Regression: appendConversationOffshootMetadata used parentId: null which made the
     // offshoot entry become the new session leaf. getBranch() then started traversal from

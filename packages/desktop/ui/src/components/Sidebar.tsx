@@ -2326,7 +2326,7 @@ export function Sidebar() {
         parentSessionId: undefined,
         parentSessionFile: undefined,
         parentMessageId: undefined,
-        offshootKind: undefined,
+        offshootKind: titledSession.offshootKind ?? (titledSession.sourceRunId ? 'subagent' : undefined),
       };
     });
   }, [liveTitles, renderedConversationItems]);

@@ -1490,7 +1490,7 @@ function isTopologyBlock(block: DisplayBlock): boolean {
 }
 
 function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
-  const parentId = meta.parentSessionId?.trim();
+  const parentId = meta.parentSessionId?.trim() || (meta.parentSessionFile ? resolveSessionIdByFile(meta.parentSessionFile) : undefined);
   if (!parentId) return blocks;
   const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
   const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);

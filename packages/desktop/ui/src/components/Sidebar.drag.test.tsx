@@ -418,7 +418,6 @@ describe('Sidebar group drag reordering', () => {
     }
 
     expect(childRow.getAttribute('draggable')).toBe('true');
-    expect(childRow.textContent).toContain('Child branch');
-    expect(childRow.textContent).not.toContain('fork:');
+    expect(childRow.textContent).toContain('fork: Child branch');
   });
 });
