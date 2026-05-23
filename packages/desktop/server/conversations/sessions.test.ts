@@ -2145,7 +2145,7 @@ describe('sessions', () => {
       }),
     );
 
-    // Synthetic child files without copied parent entry ids still fall back to the end.
+    // Synthetic child files whose metadata is appended after child messages still fall back to the end.
     const childBlocks = readSessionBlocks('fork-child-session')?.blocks ?? [];
     expect(childBlocks[childBlocks.length - 1]).toEqual(
       expect.objectContaining({
@@ -2304,6 +2304,61 @@ describe('sessions', () => {
     expect(childBlocks[childBacklinkIndex]).toEqual(
       expect.objectContaining({ text: expect.stringContaining(`${label} conversation from parent: ${kind} both sides parent`) }),
     );
+  });
+
+  it('anchors rewind backlink at inherited snapshot end when source entry is not copied into child', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'rewind-missing-source-parent',
+      title: 'Rewind missing source parent',
+      assistantTexts: ['First reply', 'Second reply'],
+    });
+    const sourceManager = SessionManager.open(parentSessionFile);
+    const sourceEntryId = sourceManager.getLeafId();
+    expect(sourceEntryId).toBeTruthy();
+    const sourceEntry = sourceManager.getEntry(sourceEntryId!);
+    expect(sourceEntry?.parentId).toBeTruthy();
+
+    const childSessionFile = sourceManager.createBranchedSession(sourceEntry!.parentId!);
+    expect(childSessionFile).toBeTruthy();
+    const childSessionId = SessionManager.open(childSessionFile!).getSessionId();
+    expect(childSessionId).toBeTruthy();
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile!,
+      kind: 'rewind',
+      parentSessionFile,
+      parentSessionId: 'rewind-missing-source-parent',
+      parentMessageId: sourceEntryId!,
+    });
+    appendFileSync(
+      childSessionFile!,
+      `${JSON.stringify({
+        type: 'message',
+        id: 'rewind-missing-source-later-user',
+        parentId: sourceEntry!.parentId!,
+        timestamp: '2099-03-11T12:00:10.000Z',
+        message: { role: 'user', content: 'Later child prompt' },
+      })}\n${JSON.stringify({
+        type: 'message',
+        id: 'rewind-missing-source-later-assistant',
+        parentId: 'rewind-missing-source-later-user',
+        timestamp: '2099-03-11T12:00:11.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'Later child reply' }] },
+      })}\n`,
+    );
+
+    const childBlocks = readSessionBlocks(childSessionId!)?.blocks ?? [];
+    const backlinkIndex = childBlocks.findIndex((block) => block.type === 'context' && block.customType === 'parent_conversation_backlink');
+    const sourceIndex = childBlocks.findIndex((block) => block.id === sourceEntryId || block.id.startsWith(`${sourceEntryId}-`));
+    const laterReplyIndex = childBlocks.findIndex((block) => block.type === 'text' && block.text === 'Later child reply');
+
+    expect(sourceIndex).toBe(-1);
+    expect(backlinkIndex).toBeGreaterThanOrEqual(0);
+    expect(backlinkIndex).toBeLessThan(laterReplyIndex);
   });
 
   it('anchors tombstone when parentMessageId is the bare entry id (assistant block suffix stripped)', () => {

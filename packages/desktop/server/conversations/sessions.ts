@@ -56,6 +56,7 @@ export type ConversationOffshootKind = 'fork' | 'rewind' | 'subagent' | 'duplica
 interface ConversationOffshootMetadata {
   kind?: ConversationOffshootKind;
   detached?: boolean;
+  timestamp?: string;
   parentSessionFile?: string;
   parentSessionId?: string;
   parentMessageId?: string;
@@ -207,6 +208,7 @@ export interface SessionMeta {
   parentSessionId?: string;
   parentMessageId?: string;
   offshootKind?: ConversationOffshootKind;
+  offshootTimestamp?: string;
   sourceRunId?: string;
 }
 
@@ -1514,9 +1516,31 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
         return [...blocks.slice(0, anchorIndex + 1), backlink, ...blocks.slice(anchorIndex + 1)];
       }
     }
+
+    // Rewinds fork the child from the entry *before* parentMessageId, so the
+    // source entry named in metadata may not exist in the copied child history.
+    // In that case, anchor the backlink at the end of the inherited snapshot
+    // instead of appending it after all new child work. Offshoot metadata is
+    // written before the child resumes, so its timestamp separates copied parent
+    // history from child-only turns for the normal fork/rewind flow.
+    const offshootTimestamp = meta.offshootTimestamp ?? meta.timestamp;
+    const inheritedSnapshotEndIndex = findLastBlockIndex(blocks, (block) => block.ts <= offshootTimestamp);
+    if (inheritedSnapshotEndIndex >= 0) {
+      return [...blocks.slice(0, inheritedSnapshotEndIndex + 1), backlink, ...blocks.slice(inheritedSnapshotEndIndex + 1)];
+    }
+
     return [...blocks, backlink];
   }
   return [backlink, ...blocks];
+}
+
+function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBlock) => boolean): number {
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    if (predicate(blocks[index]!)) {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
@@ -1743,6 +1767,7 @@ function readConversationOffshootMetadata(line: RawCustomEntry): ConversationOff
   const sourceRunId = typeof data.sourceRunId === 'string' && data.sourceRunId.trim() ? data.sourceRunId.trim() : undefined;
   return {
     kind: kind as ConversationOffshootKind,
+    ...(typeof line.timestamp === 'string' && line.timestamp.trim() ? { timestamp: line.timestamp.trim() } : {}),
     ...(parentSessionFile ? { parentSessionFile } : {}),
     ...(parentSessionId ? { parentSessionId } : {}),
     ...(parentMessageId ? { parentMessageId } : {}),
@@ -2106,6 +2131,7 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     ...(offshootMetadata?.parentSessionId ? { parentSessionId: offshootMetadata.parentSessionId } : {}),
     ...(offshootMetadata?.parentMessageId ? { parentMessageId: offshootMetadata.parentMessageId } : {}),
     ...(offshootMetadata?.kind ? { offshootKind: offshootMetadata.kind } : sourceRunId ? { offshootKind: 'subagent' as const } : {}),
+    ...(offshootMetadata?.timestamp ? { offshootTimestamp: offshootMetadata.timestamp } : {}),
     ...(sourceRunId ? { sourceRunId } : {}),
   };
 }
@@ -2180,6 +2206,15 @@ function loadPersistentSessionIndexEntry(value: unknown): PersistentSessionIndex
         : {}),
       ...(typeof meta.parentSessionId === 'string' && meta.parentSessionId.trim().length > 0
         ? { parentSessionId: meta.parentSessionId.trim() }
+        : {}),
+      ...(typeof meta.parentMessageId === 'string' && meta.parentMessageId.trim().length > 0
+        ? { parentMessageId: meta.parentMessageId.trim() }
+        : {}),
+      ...(typeof meta.offshootKind === 'string' && meta.offshootKind.trim().length > 0
+        ? { offshootKind: meta.offshootKind.trim() as ConversationOffshootKind }
+        : {}),
+      ...(typeof meta.offshootTimestamp === 'string' && meta.offshootTimestamp.trim().length > 0
+        ? { offshootTimestamp: meta.offshootTimestamp.trim() }
         : {}),
       ...(typeof meta.sourceRunId === 'string' && meta.sourceRunId.trim().length > 0 ? { sourceRunId: meta.sourceRunId.trim() } : {}),
     },
