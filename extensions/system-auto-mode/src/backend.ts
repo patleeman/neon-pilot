@@ -87,11 +87,11 @@ function createCompleteGoalState(stopReason: string): GoalState {
   };
 }
 
-function createPausedGoalState(state: GoalState): GoalState {
+function createPausedGoalState(state: GoalState, stopReason = 'paused'): GoalState {
   return {
     ...state,
     status: 'paused',
-    stopReason: 'paused',
+    stopReason,
     updatedAt: new Date().toISOString(),
     noProgressTurns: 0,
   };
@@ -423,7 +423,7 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       if (isOverflowRecoveryFailure(event)) {
         const state = readGoalState(ctx.sessionManager);
         if (state.status === 'active') {
-          writeGoalState(pi, createCompleteGoalState('overflow recovery failed'));
+          writeGoalState(pi, createPausedGoalState(state, 'overflow recovery failed'));
         }
         overflowRecoveryActive = false;
         clearPendingContinuation();

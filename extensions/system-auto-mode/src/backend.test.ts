@@ -461,7 +461,7 @@ describe('system-goal-mode extension', () => {
     );
   });
 
-  it('completes the goal when overflow recovery fails after its compact-and-retry attempt', async () => {
+  it('pauses the goal when overflow recovery fails after its compact-and-retry attempt', async () => {
     const harness = createHarness([activeGoal('ship it')]);
     const { compactionStart, compactionEnd, agentEnd, sendMessage, appendEntry, ctx } = harness;
 
@@ -482,7 +482,7 @@ describe('system-goal-mode extension', () => {
     expect(sendMessage).not.toHaveBeenCalled();
     expect(appendEntry).toHaveBeenCalledWith(
       'conversation-goal',
-      expect.objectContaining({ objective: '', status: 'complete', stopReason: 'overflow recovery failed' }),
+      expect.objectContaining({ objective: 'ship it', status: 'paused', stopReason: 'overflow recovery failed', noProgressTurns: 0 }),
     );
   });
 
