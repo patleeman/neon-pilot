@@ -14,7 +14,13 @@ import {
 type RunAgentExtensionFactory = (api: RegisterToolApi) => void;
 
 interface NativeBackendContext {
-  toolContext?: { conversationId?: string; cwd?: string; sessionFile?: string; sessionId?: string };
+  toolContext?: {
+    conversationId?: string;
+    cwd?: string;
+    sessionFile?: string;
+    sessionId?: string;
+    onUpdate?: (update: { content?: Array<{ type: string; text: string }>; details?: Record<string, unknown>; isError?: boolean }) => void;
+  };
   agentToolContext?: { signal?: AbortSignal };
   ui?: { invalidate?(topics: string | string[]): void };
   shell: {
@@ -23,6 +29,15 @@ interface NativeBackendContext {
       stderr?: string;
       executionWrappers?: Array<{ id: string; label?: string }>;
     }>;
+    spawn?(input: {
+      command: string;
+      args?: string[];
+      cwd?: string;
+      env?: Record<string, string>;
+      onStdout?: (chunk: string) => void;
+      onStderr?: (chunk: string) => void;
+      onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
+    }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => void }>;
   };
 }
 
@@ -68,6 +83,10 @@ async function runForegroundBash(
   timeoutSeconds: number | undefined,
   ctx: NativeBackendContext,
 ): Promise<ToolExecutionResult> {
+  if (ctx.shell.spawn) {
+    return runStreamingForegroundBash(command, cwd, timeoutSeconds, ctx);
+  }
+
   try {
     const result = await ctx.shell.exec({
       command: 'sh',
@@ -84,6 +103,91 @@ async function runForegroundBash(
   } catch (error) {
     return { content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }], isError: true };
   }
+}
+
+async function runStreamingForegroundBash(
+  command: string,
+  cwd: string | undefined,
+  timeoutSeconds: number | undefined,
+  ctx: NativeBackendContext,
+): Promise<ToolExecutionResult> {
+  let output = '';
+  let timeout: NodeJS.Timeout | undefined;
+  let killedByTimeout = false;
+  let settled = false;
+  let killProcess: (() => void) | undefined;
+  let executionWrappers: Array<{ id: string; label?: string }> = [];
+  const detailsBase = { displayMode: 'terminal' as const, command };
+  const emitUpdate = (chunk: string) => {
+    ctx.toolContext?.onUpdate?.({
+      content: [{ type: 'text', text: chunk }],
+      details: detailsBase,
+    });
+  };
+  const append = (chunk: string) => {
+    if (!chunk) return;
+    output += chunk;
+    emitUpdate(chunk);
+  };
+
+  return await new Promise<ToolExecutionResult>((resolve) => {
+    void (async () => {
+      const finish = (result: ToolExecutionResult) => {
+        if (settled) return;
+        settled = true;
+        if (timeout) clearTimeout(timeout);
+        ctx.agentToolContext?.signal?.removeEventListener('abort', onAbort);
+        resolve(result);
+      };
+      const onAbort = () => {
+        killProcess?.();
+        finish({ content: [{ type: 'text', text: output || 'cancelled' }], details: { ...detailsBase, cancelled: true }, isError: true });
+      };
+
+      try {
+        const processHandle = await ctx.shell.spawn!({
+          command: 'sh',
+          args: ['-lc', command],
+          cwd,
+          onStdout: append,
+          onStderr: append,
+          onExit: ({ code, signal }) => {
+            const exitCode = typeof code === 'number' ? code : undefined;
+            const timedOut = killedByTimeout;
+            const isError = timedOut || (exitCode !== undefined && exitCode !== 0) || signal !== null;
+            finish({
+              content: [{ type: 'text', text: output.trimEnd() || '(no output)' }],
+              details: {
+                ...detailsBase,
+                executionWrappers,
+                ...(exitCode !== undefined ? { exitCode } : {}),
+                ...(timedOut ? { cancelled: true } : {}),
+              },
+              ...(isError ? { isError: true } : {}),
+            });
+          },
+        });
+        killProcess = processHandle.kill;
+        executionWrappers = processHandle.executionWrappers ?? [];
+
+        if (ctx.agentToolContext?.signal?.aborted) {
+          onAbort();
+          return;
+        }
+        ctx.agentToolContext?.signal?.addEventListener('abort', onAbort, { once: true });
+
+        if (timeoutSeconds) {
+          timeout = setTimeout(() => {
+            killedByTimeout = true;
+            killProcess?.();
+          }, timeoutSeconds * 1000);
+        }
+      } catch (error) {
+        if (timeout) clearTimeout(timeout);
+        finish({ content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }], isError: true });
+      }
+    })();
+  });
 }
 
 async function loadRunAgentExtensionFactory(): Promise<RunAgentExtensionFactory> {

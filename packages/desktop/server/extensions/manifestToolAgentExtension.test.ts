@@ -150,6 +150,7 @@ describe('manifestToolAgentExtension', () => {
           { type: 'text', text: 'progress' },
           { type: 'image', text: 'ignored' },
         ],
+        details: { displayMode: 'terminal' },
       });
       return {
         ok: true,
@@ -172,7 +173,7 @@ describe('manifestToolAgentExtension', () => {
         { type: 'text', text: 'progress' },
         { type: 'text', text: 'ignored' },
       ],
-      details: undefined,
+      details: { displayMode: 'terminal' },
     });
   });
 

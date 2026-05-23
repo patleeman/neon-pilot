@@ -78,7 +78,7 @@ export interface ExtensionBackendContext {
     sessionId?: string;
     preferredVisionModel?: string;
     /** Streaming update callback for long-running tool operations. */
-    onUpdate?: (update: { content?: Array<{ type: string; text: string }>; isError?: boolean }) => void;
+    onUpdate?: (update: { content?: Array<{ type: string; text: string }>; details?: Record<string, unknown>; isError?: boolean }) => void;
   };
   agentToolContext?: unknown;
   runtime: {

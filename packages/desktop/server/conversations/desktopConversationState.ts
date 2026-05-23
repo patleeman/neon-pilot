@@ -434,11 +434,13 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
       const index = findLastToolUseIndex(blocks, event.toolCallId);
       if (index >= 0) {
         const block = blocks[index];
-        const partialResult = event.partialResult as { content?: Array<{ text?: string }> } | string | undefined;
+        const partialResult = event.partialResult as { content?: Array<{ text?: string }>; details?: unknown } | string | undefined;
         const partialText = typeof partialResult === 'string' ? partialResult : (partialResult?.content?.[0]?.text ?? '');
+        const partialDetails = typeof partialResult === 'object' && partialResult !== null ? partialResult.details : undefined;
         blocks[index] = {
           ...block,
           output: `${block.output ?? ''}${partialText}`,
+          details: partialDetails ?? block.details,
         };
       }
       return {

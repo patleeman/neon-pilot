@@ -136,7 +136,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
                 onUpdate: (update) => {
                   onUpdate?.({
                     content: normalizeUpdateContent(update.content),
-                    details: undefined,
+                    details: update.details,
                   });
                 },
               },

@@ -50,10 +50,17 @@ vi.mock('@neon-pilot/extensions/backend', () => ({
 import { background_bash, bash, subagent } from './backend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
+  const spawn = vi.fn(
+    async (input: { onStdout?: (chunk: string) => void; onExit?: (event: { code: number | null; signal: null }) => void }) => {
+      input.onStdout?.('ok\n');
+      queueMicrotask(() => input.onExit?.({ code: 0, signal: null }));
+      return { pid: 123, executionWrappers: [], kill: vi.fn() };
+    },
+  );
   return {
     toolContext: { conversationId: 'conv-1', cwd: '/tmp/repo', sessionFile: '/tmp/session.json', sessionId: 'sess-1' },
     ui: { invalidate: vi.fn() },
-    shell: { exec: vi.fn().mockResolvedValue({ stdout: 'ok', stderr: '', executionWrappers: [] }) },
+    shell: { exec: vi.fn().mockResolvedValue({ stdout: 'ok', stderr: '', executionWrappers: [] }), spawn },
     ...overrides,
   };
 }
@@ -82,19 +89,46 @@ describe('system-runs backend', () => {
       const ctx = createCtx();
       const result = await bash({ command: 'echo hi' }, ctx);
 
-      expect(ctx.shell.exec).toHaveBeenCalledWith({
-        command: 'sh',
-        args: ['-lc', 'echo hi'],
-        cwd: '/tmp/repo',
-        timeoutMs: undefined,
-        signal: undefined,
-      });
+      expect(ctx.shell.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'sh',
+          args: ['-lc', 'echo hi'],
+          cwd: '/tmp/repo',
+        }),
+      );
       expect(result.text).toBe('ok');
     });
 
-    it('passes the active tool abort signal to foreground shell commands', async () => {
+    it('streams foreground output through tool updates', async () => {
+      const onUpdate = vi.fn();
+      const ctx = createCtx({ toolContext: { cwd: '/tmp/repo', onUpdate } });
+
+      await bash({ command: 'printf hi' }, ctx);
+
+      expect(onUpdate).toHaveBeenCalledWith({
+        content: [{ type: 'text', text: 'ok\n' }],
+        details: { displayMode: 'terminal', command: 'printf hi' },
+      });
+    });
+
+    it('kills the foreground process when the active tool aborts', async () => {
+      const controller = new AbortController();
+      const kill = vi.fn();
+      const spawn = vi.fn(async () => ({ pid: 123, executionWrappers: [], kill }));
+      const ctx = createCtx({ agentToolContext: { signal: controller.signal }, shell: { exec: vi.fn(), spawn } });
+
+      const running = bash({ command: 'sleep 10' }, ctx);
+      await vi.waitFor(() => expect(spawn).toHaveBeenCalled());
+      controller.abort();
+
+      await expect(running).resolves.toMatchObject({ isError: true });
+      expect(kill).toHaveBeenCalled();
+    });
+
+    it('falls back to exec when spawn is unavailable', async () => {
       const signal = new AbortController().signal;
       const ctx = createCtx({ agentToolContext: { signal } });
+      delete (ctx.shell as { spawn?: unknown }).spawn;
 
       await bash({ command: 'sleep 10' }, ctx);
 
