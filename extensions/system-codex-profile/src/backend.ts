@@ -12,11 +12,6 @@ interface ApplyPatchInput {
   edits?: Array<{ oldText: string; newText: string }>;
 }
 
-interface WriteFileInput {
-  path?: string;
-  content?: string;
-}
-
 type FilePatch =
   | { type: 'add'; path: string; lines: string[] }
   | { type: 'delete'; path: string }
@@ -61,29 +56,30 @@ interface ApplyPatchOutcome {
 type ToolContext = ExtensionBackendContext & { cwd?: string; toolContext?: { cwd?: string } };
 
 export default function codexCompatibilityExtension(pi: ExtensionAPI): void {
-  let lastNonCodexActiveTools: string[] | undefined;
-  const activateCodexTools = (
-    ctx: {
-      modelProfile?: { kind?: string; profile?: { id?: string } };
-      setActiveTools?: (toolNames: string[]) => void;
-      getActiveTools?: () => string[];
-    },
-    options: { restoreOnNonCodex: boolean },
-  ): void => {
+  const activateCodexTools = (ctx: {
+    modelProfile?: { kind?: string; profile?: { id?: string } };
+    getActiveTools?: () => string[];
+    setActiveTools?: (toolNames: string[]) => void;
+    addActiveTools?: (toolNames: string[]) => void;
+    removeActiveTools?: (toolNames: string[]) => void;
+  }): void => {
     if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'codex-compatible') {
-      if (options.restoreOnNonCodex && lastNonCodexActiveTools) {
-        ctx.setActiveTools?.(lastNonCodexActiveTools);
-      }
-      lastNonCodexActiveTools = undefined;
       return;
     }
-    lastNonCodexActiveTools = ctx.getActiveTools?.() ?? lastNonCodexActiveTools;
-    ctx.setActiveTools?.(['bash', 'apply_patch']);
+    if (ctx.addActiveTools && ctx.removeActiveTools) {
+      ctx.addActiveTools(['apply_patch']);
+      ctx.removeActiveTools(['write', 'edit']);
+      return;
+    }
+
+    // Backward-compatible path for older runtimes that only expose setActiveTools.
+    const activeTools = ctx.getActiveTools?.() ?? [];
+    ctx.setActiveTools?.([...new Set([...activeTools.filter((tool) => tool !== 'write' && tool !== 'edit'), 'apply_patch'])]);
   };
 
   codexCompactionExtension(pi);
-  pi.on('session_start', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: false }));
-  pi.on('model_select', (_event, ctx) => activateCodexTools(ctx, { restoreOnNonCodex: true }));
+  pi.on('session_start', (_event, ctx) => activateCodexTools(ctx));
+  pi.on('model_select', (_event, ctx) => activateCodexTools(ctx));
 }
 
 function readCwd(ctx: ToolContext): string {
@@ -449,39 +445,4 @@ export async function applyPatch(input: ApplyPatchInput, ctx: ToolContext) {
   if (!input.patch?.trim()) throw new Error('patch is required.');
   const outcome = applyPatchesFromInput(input, ctx);
   return { text: formatResults(outcome.results), details: outcome };
-}
-
-export async function applyPatchEdit(input: ApplyPatchInput, ctx: ToolContext) {
-  const patch = input.patch?.trim();
-  if (!patch && !input.edits?.length) throw new Error('Either patch or edits are required.');
-  const outcome = applyPatchesFromInput(input, ctx);
-  return { text: formatResults(outcome.results), details: outcome };
-}
-
-export async function writeFile(input: WriteFileInput, ctx: ToolContext) {
-  const filePath = input.path?.trim();
-  if (!filePath) throw new Error('path is required.');
-  if (typeof input.content !== 'string') throw new Error('content is required.');
-
-  const cwd = readCwd(ctx);
-  const target = resolveInsideCwd(cwd, filePath);
-  const existed = existsSync(target);
-  const oldContent = existed ? readFileSync(target, 'utf-8') : '';
-  ensureParent(target);
-  writeFileSync(target, input.content, 'utf-8');
-
-  const additions = countLines(input.content);
-  const deletions = existed ? countLines(oldContent) : 0;
-  const fileChange: FileChangeMetadata = {
-    path: filePath,
-    status: existed ? 'modified' : 'added',
-    additions,
-    deletions,
-    ...maybePatch({ path: filePath, oldContent, newContent: input.content }),
-  };
-
-  return {
-    text: `Successfully wrote ${input.content.length} bytes to ${filePath}`,
-    details: { fileChanges: [fileChange] },
-  };
 }

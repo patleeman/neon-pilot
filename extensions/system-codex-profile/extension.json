@@ -14,16 +14,6 @@
         "id": "applyPatch",
         "handler": "applyPatch",
         "title": "Apply Patch"
-      },
-      {
-        "id": "applyPatchEdit",
-        "handler": "applyPatchEdit",
-        "title": "Patch Edit"
-      },
-      {
-        "id": "writeFile",
-        "handler": "writeFile",
-        "title": "Write file"
       }
     ]
   },
@@ -58,68 +48,6 @@
             }
           },
           "required": ["patch"],
-          "additionalProperties": false
-        }
-      },
-      {
-        "id": "write-file",
-        "title": "Write",
-        "description": "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
-        "action": "writeFile",
-        "replaces": "write",
-        "promptSnippet": "Create or overwrite files",
-        "promptGuidelines": ["Use write only for new files or complete rewrites."],
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "path": { "type": "string", "description": "Path to the file to write (relative or absolute)" },
-            "content": { "type": "string", "description": "Content to write to the file" }
-          },
-          "required": ["path", "content"],
-          "additionalProperties": false
-        }
-      },
-      {
-        "id": "apply-patch-edit",
-        "title": "Edit",
-        "description": "OpenAI-only patch-based replacement for the built-in edit tool. Accepts either { patch } or the legacy { path, edits } shape.",
-        "action": "applyPatchEdit",
-        "replaces": "edit",
-        "when": {
-          "providers": ["openai", "openai-codex"]
-        },
-        "promptSnippet": "edit: patch-based file edits; prefer a complete patch string for multi-line changes.",
-        "promptGuidelines": [
-          "This edit tool accepts Codex-style patches via the patch field; prefer that over exact oldText replacement for non-trivial changes."
-        ],
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "patch": {
-              "type": "string",
-              "description": "Codex-style patch text."
-            },
-            "path": {
-              "type": "string",
-              "description": "Legacy edit path. Used only with edits."
-            },
-            "edits": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "oldText": {
-                    "type": "string"
-                  },
-                  "newText": {
-                    "type": "string"
-                  }
-                },
-                "required": ["oldText", "newText"],
-                "additionalProperties": false
-              }
-            }
-          },
           "additionalProperties": false
         }
       }

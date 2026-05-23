@@ -173,9 +173,9 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
    * setup, not override at runtime.
    *
    * Tool registration is stable for the life of a session. Extensions may use
-   * ctx.setActiveTools from session_start/model_select handlers for
-   * session-scoped model profile behavior; this only changes the active
-   * allowlist over already-registered tools.
+   * ctx.addActiveTools/removeActiveTools from session_start/model_select
+   * handlers for session-scoped model profile behavior; this only mutates the
+   * active set over already-registered tools.
    */
   function guardExtensionApi(factory: ExtensionFactory): ExtensionFactory {
     const warnedAmbiguousProfileRefs = new Set<string>();
@@ -205,9 +205,11 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
       const guardedPi = new Proxy(apiWithProcessWrappers, {
         get(target, prop, receiver) {
-          if (prop === 'setActiveTools') {
+          if (prop === 'setActiveTools' || prop === 'addActiveTools' || prop === 'removeActiveTools') {
             return () => {
-              throw new Error('pi.setActiveTools is unsupported. Use ctx.setActiveTools from session_start or model_select handlers.');
+              throw new Error(
+                'Global active tool mutation is unsupported. Use ctx.addActiveTools/removeActiveTools from session_start or model_select handlers.',
+              );
             };
           }
           if (prop === 'on') {
@@ -223,6 +225,15 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
                     modelProfile: resolveLifecycleModelProfile(ctx as Record<string, unknown>),
                     getActiveTools: () => target.getActiveTools(),
                     setActiveTools: (toolNames: string[]) => target.setActiveTools(toolNames),
+                    addActiveTools: (toolNames: string[]) => {
+                      const active = new Set(target.getActiveTools());
+                      for (const toolName of toolNames) active.add(toolName);
+                      target.setActiveTools([...active]);
+                    },
+                    removeActiveTools: (toolNames: string[]) => {
+                      const removed = new Set(toolNames);
+                      target.setActiveTools(target.getActiveTools().filter((toolName) => !removed.has(toolName)));
+                    },
                   },
                   ...args.slice(2),
                 ];

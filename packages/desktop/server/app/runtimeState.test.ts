@@ -175,9 +175,11 @@ describe('createRuntimeState', () => {
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
   });
 
-  it('blocks global active tool mutation but allows lifecycle-scoped active tools', () => {
+  it('blocks global active tool mutation but allows lifecycle-scoped active tool changes', () => {
     let guardedPi: {
       setActiveTools: (tools: string[]) => void;
+      addActiveTools: (tools: string[]) => void;
+      removeActiveTools: (tools: string[]) => void;
       on: (event: string, handler: (...args: unknown[]) => unknown) => void;
     } | null = null;
     createManifestAgentExtensionsMock.mockReturnValueOnce({
@@ -185,6 +187,8 @@ describe('createRuntimeState', () => {
         vi.fn((pi) => {
           guardedPi = pi as {
             setActiveTools: (tools: string[]) => void;
+            addActiveTools: (tools: string[]) => void;
+            removeActiveTools: (tools: string[]) => void;
             on: (event: string, handler: (...args: unknown[]) => unknown) => void;
           };
         }),
@@ -199,26 +203,42 @@ describe('createRuntimeState', () => {
     });
 
     const [factory] = state.buildLiveSessionExtensionFactories();
+    let activeTools = ['read', 'write', 'edit'];
     const pi = {
-      setActiveTools: vi.fn(),
+      getActiveTools: vi.fn(() => activeTools),
+      setActiveTools: vi.fn((tools: string[]) => {
+        activeTools = tools;
+      }),
       on: vi.fn(),
     };
 
     factory?.(pi as never);
 
     expect(guardedPi).not.toBeNull();
-    expect(() => guardedPi?.setActiveTools(['read'])).toThrow('pi.setActiveTools is unsupported');
+    expect(() => guardedPi?.setActiveTools(['read'])).toThrow('Global active tool mutation is unsupported');
+    expect(() => guardedPi?.addActiveTools(['apply_patch'])).toThrow('Global active tool mutation is unsupported');
+    expect(() => guardedPi?.removeActiveTools(['edit'])).toThrow('Global active tool mutation is unsupported');
+
     guardedPi?.on(
       'session_start',
-      (_event, ctx: { setActiveTools?: (tools: string[]) => void; modelProfile?: { modelRef: string | null } }) => {
+      (
+        _event,
+        ctx: {
+          addActiveTools?: (tools: string[]) => void;
+          removeActiveTools?: (tools: string[]) => void;
+          modelProfile?: { modelRef: string | null };
+        },
+      ) => {
         expect(ctx.modelProfile?.modelRef).toBe('test/model');
-        ctx.setActiveTools?.(['read']);
+        ctx.addActiveTools?.(['apply_patch']);
+        ctx.removeActiveTools?.(['write', 'edit']);
       },
     );
     const registered = pi.on.mock.calls[0];
     expect(registered?.[0]).toBe('session_start');
     (registered?.[1] as (...args: unknown[]) => unknown)({}, { model: { provider: 'test', id: 'model' } });
-    expect(pi.setActiveTools).toHaveBeenCalledWith(['read']);
+    expect(pi.setActiveTools).toHaveBeenNthCalledWith(1, ['read', 'write', 'edit', 'apply_patch']);
+    expect(pi.setActiveTools).toHaveBeenNthCalledWith(2, ['read', 'apply_patch']);
   });
 
   it('adds extension skill directories to live session resources', () => {
