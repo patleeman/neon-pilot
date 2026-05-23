@@ -192,6 +192,7 @@ import {
   resolvePreviousWorkspaceCwd,
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
@@ -1005,22 +1006,13 @@ export async function updateDesktopModelPreferences(input: {
   const models = (await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
   persistSettingsWrite(
     (settingsFile) => {
-      writeSavedModelPreferences(
-        {
-          model: input.model,
-          visionModel: input.visionModel,
-          thinkingLevel: input.thinkingLevel,
-          serviceTier: input.serviceTier,
-        },
-        settingsFile,
-        models,
-      );
+      writeSavedModelPreferences(buildSavedModelPreferencePatch(input), settingsFile, models);
     },
     {
       runtimeSettingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
     },
   );
-  return { ok: true as const };
+  return buildDesktopMutationOkResponse();
 }
 
 export async function readDesktopDefaultCwd() {
