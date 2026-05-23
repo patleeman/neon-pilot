@@ -176,6 +176,7 @@ import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
+import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTasks.js';
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
@@ -1281,11 +1282,7 @@ export async function createDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, {
-    ...input,
-    title: input.title ?? '',
-    prompt: input.prompt ?? '',
-  });
+  return createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, normalizeDesktopScheduledTaskCreateInput(input));
 }
 
 export async function updateDesktopScheduledTask(input: {
