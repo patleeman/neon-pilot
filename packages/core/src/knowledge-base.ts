@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { dirname, join, resolve } from 'node:path';
 
 import { backupKnowledgeBaseWorkingTree, cleanupKnowledgeBaseBackup, restoreKnowledgeBaseWorkingTree } from './knowledge-base-backup.js';
+import { type PathChangeResolution, resolveKnowledgeBaseChangedPaths } from './knowledge-base-change-resolution.js';
 import { buildKnowledgeBaseCheckoutRemoteCommands, planKnowledgeBaseCheckoutPreparation } from './knowledge-base-checkout.js';
 import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
@@ -89,15 +90,6 @@ interface RuntimeSyncState {
   lastSyncAt?: string;
   lastError?: string;
   recoveredEntryCount: number;
-}
-
-interface PathChangeResolution {
-  path: string;
-  winner: 'local' | 'remote';
-  localExists: boolean;
-  remoteExists: boolean;
-  localChanged: boolean;
-  remoteChanged: boolean;
 }
 
 const SYNC_COMMIT_AUTHOR_NAME = 'Neon Pilot';
@@ -660,56 +652,14 @@ export class KnowledgeBaseManager {
     workingSnapshot: Snapshot,
     remoteSnapshot: Snapshot,
   ): PathChangeResolution[] {
-    const changedPaths = new Set<string>();
-    for (const path of Object.keys(baseSnapshot)) {
-      if (!snapshotsEqual(baseSnapshot[path], workingSnapshot[path]) || !snapshotsEqual(baseSnapshot[path], remoteSnapshot[path])) {
-        changedPaths.add(path);
-      }
-    }
-    for (const path of Object.keys(workingSnapshot)) {
-      if (!snapshotsEqual(baseSnapshot[path], workingSnapshot[path]) || !snapshotsEqual(baseSnapshot[path], remoteSnapshot[path])) {
-        changedPaths.add(path);
-      }
-    }
-    for (const path of Object.keys(remoteSnapshot)) {
-      if (!snapshotsEqual(baseSnapshot[path], remoteSnapshot[path]) || !snapshotsEqual(baseSnapshot[path], workingSnapshot[path])) {
-        changedPaths.add(path);
-      }
-    }
-
-    const resolutions: PathChangeResolution[] = [];
-    for (const path of [...changedPaths].sort((left, right) => left.localeCompare(right))) {
-      const localExists = Boolean(workingSnapshot[path]);
-      const remoteExists = Boolean(remoteSnapshot[path]);
-      const localChanged = !snapshotsEqual(baseSnapshot[path], workingSnapshot[path]);
-      const remoteChanged = !snapshotsEqual(baseSnapshot[path], remoteSnapshot[path]);
-
-      if (!localChanged && !remoteChanged) {
-        continue;
-      }
-
-      if (localChanged && !remoteChanged) {
-        resolutions.push({ path, winner: 'local', localExists, remoteExists, localChanged, remoteChanged });
-        continue;
-      }
-
-      if (!localChanged && remoteChanged) {
-        resolutions.push({ path, winner: 'remote', localExists, remoteExists, localChanged, remoteChanged });
-        continue;
-      }
-
-      if (!localExists && !remoteExists) {
-        resolutions.push({ path, winner: 'remote', localExists, remoteExists, localChanged, remoteChanged });
-        continue;
-      }
-
-      const localTimestampMs = readLocalPathTimestampMs(root, path, localExists);
-      const remoteTimestampMs = readRemotePathTimestampMs(root, branch, path, remoteExists);
-      const winner = localTimestampMs >= remoteTimestampMs ? 'local' : 'remote';
-      resolutions.push({ path, winner, localExists, remoteExists, localChanged, remoteChanged });
-    }
-
-    return resolutions;
+    return resolveKnowledgeBaseChangedPaths({
+      baseSnapshot,
+      workingSnapshot,
+      remoteSnapshot,
+      snapshotsEqual,
+      readLocalPathTimestampMs: (path, existsInLocal) => readLocalPathTimestampMs(root, path, existsInLocal),
+      readRemotePathTimestampMs: (path, existsInRemote) => readRemotePathTimestampMs(root, branch, path, existsInRemote),
+    });
   }
 
   syncNow(previousStateInput?: KnowledgeBaseState): KnowledgeBaseState {
