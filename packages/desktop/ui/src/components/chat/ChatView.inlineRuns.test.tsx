@@ -63,6 +63,34 @@ function createRunRecord(): DurableRunRecord {
   };
 }
 
+function createShellRunRecord(): DurableRunRecord {
+  return {
+    ...createRunRecord(),
+    manifest: {
+      version: 1,
+      id: RUN_ID,
+      kind: 'raw-shell',
+      resumePolicy: 'manual',
+      createdAt: '2026-04-14T01:23:19.371Z',
+      spec: {
+        target: {
+          type: 'shell',
+          command: 'for i in {1..3}; do echo tick-$i; done',
+          cwd: '/tmp/worktree',
+        },
+        metadata: {
+          taskSlug: 'ui-preview-check',
+          cwd: '/tmp/worktree',
+        },
+      },
+      source: {
+        type: 'tool',
+        id: 'conv-123',
+      },
+    },
+  };
+}
+
 function createMessages(): MessageBlock[] {
   return [
     {
@@ -148,6 +176,10 @@ async function flushAsyncWork() {
   await Promise.resolve();
   await Promise.resolve();
   await new Promise((resolve) => window.setTimeout(resolve, 0));
+}
+
+async function flushAnimationFrames() {
+  await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
 }
 
 describe('ChatView inline run cards', () => {
@@ -331,5 +363,96 @@ describe('ChatView inline run cards', () => {
     const runButtons = findInlineRunButtons(container);
     expect(runButtons).toHaveLength(0);
     expect(apiMocks.durableRun).not.toHaveBeenCalled();
+  });
+
+  it('renders background bash output inline with the tool chrome instead of generic JSON', async () => {
+    apiMocks.durableRun.mockResolvedValue({
+      scannedAt: '2026-03-11T18:00:10.000Z',
+      runsRoot: '/tmp/runs',
+      run: createShellRunRecord(),
+    });
+    apiMocks.durableRunLog.mockResolvedValue({
+      path: `/tmp/runs/${RUN_ID}/output.log`,
+      log: 'tick-1\ntick-2\ntick-3',
+    });
+
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: {
+            command: 'for i in {1..3}; do echo tick-$i; done',
+            background: true,
+          },
+          output: `Started background command ${RUN_ID} for ui-preview-check.`,
+          status: 'ok',
+          details: { action: 'start', runId: RUN_ID },
+        },
+      ],
+      { listedRuns: [createShellRunRecord()] },
+    );
+
+    expect(container.textContent).toContain('bash');
+    expect(container.textContent).toContain('background task');
+    expect(container.textContent).not.toContain('"background"');
+    expect(container.textContent).not.toContain('INPUT');
+    expect(container.textContent).not.toContain('OUTPUT');
+
+    const clusterButton = container.querySelector('button[aria-expanded]') as HTMLButtonElement | null;
+    expect(clusterButton?.textContent).toContain('Internal work');
+    await act(async () => {
+      clusterButton?.click();
+      await flushAsyncWork();
+    });
+    const toolButton = container.querySelector('[data-background-run-id]') as HTMLElement | null;
+    await act(async () => {
+      toolButton?.click();
+      await flushAsyncWork();
+    });
+
+    expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
+    expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
+    expect(container.textContent).toContain('$ for i in {1..3}; do echo tick-$i; done');
+    expect(container.textContent).toContain('tick-1');
+    expect(container.textContent).toContain('tick-3');
+  });
+
+  it('focuses a background bash run event by expanding and scrolling to the inline tool item', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: { command: 'echo background', background: true },
+          output: `Started background command ${RUN_ID} for ui-preview-check.`,
+          status: 'ok',
+          details: { action: 'start', runId: RUN_ID },
+        },
+      ],
+      { listedRuns: [createShellRunRecord()] },
+    );
+
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('[data-trace-cluster-start-index="0"]')).not.toBeNull();
+
+    await act(async () => {
+      await flushAsyncWork();
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId: RUN_ID } }));
+      await flushAsyncWork();
+      await flushAnimationFrames();
+      await flushAsyncWork();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('$ echo background');
   });
 });

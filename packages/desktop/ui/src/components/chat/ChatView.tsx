@@ -203,7 +203,8 @@ export const ChatView = memo(function ChatView({
 
   useEffect(() => {
     function handleFocusBackgroundRun(event: Event) {
-      const runId = event instanceof CustomEvent && typeof event.detail?.runId === 'string' ? event.detail.runId.trim() : '';
+      const detail = 'detail' in event && event.detail && typeof event.detail === 'object' ? (event.detail as { runId?: unknown }) : null;
+      const runId = typeof detail?.runId === 'string' ? detail.runId.trim() : '';
       if (!runId) return;
 
       const item = renderItems.find(
@@ -217,6 +218,9 @@ export const ChatView = memo(function ChatView({
         const node = document.querySelector(`[data-trace-cluster-start-index="${messageIndexOffset + item.startIndex}"]`);
         node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         node?.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click();
+        window.requestAnimationFrame(() => {
+          node?.querySelector<HTMLElement>(`[data-background-run-id="${runId}"]`)?.click();
+        });
       });
     }
 

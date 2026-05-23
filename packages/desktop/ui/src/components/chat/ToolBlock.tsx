@@ -135,7 +135,8 @@ export function ToolBlock({
   useEffect(() => {
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
   }, [diffDisclosureMode]);
-  const open = resolveDisclosureOpen(autoOpen, preference);
+  const backgroundShellStart = isBackgroundShellStart(block);
+  const open = backgroundShellStart ? true : resolveDisclosureOpen(autoOpen, preference);
   const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();
   const { tasks, sessions, runs } = useAppData();
@@ -151,7 +152,6 @@ export function ToolBlock({
     }
     return null;
   }, [block.tool, extensionRegistry.extensions]);
-  const backgroundShellStart = isBackgroundShellStart(block);
   const agentBashTool = block.tool === 'bash' && !backgroundShellStart;
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
@@ -255,6 +255,7 @@ export function ToolBlock({
       <div
         role="button"
         tabIndex={0}
+        data-background-run-id={backgroundRunId}
         onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
