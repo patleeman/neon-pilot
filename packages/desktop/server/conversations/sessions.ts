@@ -95,6 +95,7 @@ import {
   resolveRelatedConversationPointersDetail,
   resolveRelatedThreadsSummaryDetail,
 } from './sessionRelatedContext.js';
+import { buildSessionSearchTextCacheKey, normalizeSessionSearchMaxCharacters } from './sessionSearchCacheKey.js';
 import { appendSessionSearchSegment, buildSessionSearchTextFromEntries } from './sessionSearchText.js';
 import {
   buildSuppressedTranscriptError,
@@ -1812,8 +1813,8 @@ export function readKnownSessionIdByFilePath(filePath: string): string | null {
 }
 
 function readSessionSearchTextByFile(filePath: string, maxCharacters: number): string | null {
-  const normalizedMaxCharacters = Math.max(0, maxCharacters);
-  const cacheKey = `${filePath}:${normalizedMaxCharacters}`;
+  const normalizedMaxCharacters = normalizeSessionSearchMaxCharacters(maxCharacters);
+  const cacheKey = buildSessionSearchTextCacheKey(filePath, normalizedMaxCharacters);
   const signature = getFileSignature(filePath);
   if (!signature) {
     sessionSearchTextCache.delete(cacheKey);
