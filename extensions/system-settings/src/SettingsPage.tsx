@@ -2989,37 +2989,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         {savingPreference === 'model' ? 'Saving default model...' : formatModelSummary(selectedModel, 'No model selected.')}
                       </p>
 
-                      <label className="ui-card-meta pt-1" htmlFor="settings-vision-model">
-                        Vision model
-                      </label>
-                      <select
-                        id="settings-vision-model"
-                        value={modelState.currentVisionModel}
-                        onChange={(event) => {
-                          void handleModelPreferenceChange({ visionModel: event.target.value }, 'visionModel');
-                        }}
-                        disabled={savingPreference !== null || imageCapableModels.length === 0}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="">Not configured</option>
-                        {groupedImageCapableModels.map(([provider, models]) => (
-                          <optgroup key={provider} label={provider}>
-                            {models.map((model) => (
-                              <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
-                                {model.name} · {formatContextWindowLabel(model.context)} ctx
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <p className="ui-card-meta">
-                        {savingPreference === 'visionModel'
-                          ? 'Saving vision model…'
-                          : modelState.currentVisionModel
-                            ? `Image probing uses ${formatModelSummary(selectedVisionModel, modelState.currentVisionModel)}.`
-                            : 'Required before inspecting uploaded images with the current model.'}
-                      </p>
-
                       <label className="ui-card-meta pt-1" htmlFor="settings-thinking">
                         Thinking level
                       </label>
@@ -3221,6 +3190,49 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                   ) : null}
 
                   {instructionFilesSaveError && <p className="text-[12px] text-danger">{instructionFilesSaveError}</p>}
+                </SettingsPanel>
+
+                <SettingsPanel title="Image Probe" description="Configure the vision model used by the image inspection tool.">
+                  {modelsLoading && !modelState ? (
+                    <p className="ui-card-meta">Loading models…</p>
+                  ) : modelsError && !modelState ? (
+                    <p className="text-[12px] text-danger">Failed to load models: {modelsError}</p>
+                  ) : modelState ? (
+                    <>
+                      <label className="ui-card-meta" htmlFor="settings-vision-model">
+                        Vision model
+                      </label>
+                      <select
+                        id="settings-vision-model"
+                        value={modelState.currentVisionModel}
+                        onChange={(event) => {
+                          void handleModelPreferenceChange({ visionModel: event.target.value }, 'visionModel');
+                        }}
+                        disabled={savingPreference !== null || imageCapableModels.length === 0}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="">Not configured</option>
+                        {groupedImageCapableModels.map(([provider, models]) => (
+                          <optgroup key={provider} label={provider}>
+                            {models.map((model) => (
+                              <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
+                                {model.name} · {formatContextWindowLabel(model.context)} ctx
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                      <p className="ui-card-meta">
+                        {savingPreference === 'visionModel'
+                          ? 'Saving vision model…'
+                          : modelState.currentVisionModel
+                            ? `Image probing uses ${formatModelSummary(selectedVisionModel, modelState.currentVisionModel)}.`
+                            : 'Required before inspecting uploaded images with the current model.'}
+                      </p>
+                    </>
+                  ) : null}
+
+                  {modelError && <p className="text-[12px] text-danger">{modelError}</p>}
                 </SettingsPanel>
               </div>
 
