@@ -11,6 +11,7 @@ import {
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
+import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
   EXTENSION_HOST_VIEW_COMPONENTS,
@@ -462,25 +463,7 @@ function readExtensionFailureRecords(stateRoot: string = getStateRoot()): Record
   const path = getExtensionFailurePath(stateRoot);
   if (!existsSync(path)) return {};
   try {
-    const parsed = JSON.parse(readFileSync(path, 'utf-8')) as unknown;
-    if (!isRecord(parsed)) return {};
-    return Object.fromEntries(
-      Object.entries(parsed).flatMap(([id, records]) => {
-        if (!Array.isArray(records)) return [];
-        return [
-          [
-            id,
-            records.filter(
-              (record): record is ExtensionFailureRecord =>
-                isRecord(record) &&
-                typeof record.at === 'string' &&
-                typeof record.operation === 'string' &&
-                typeof record.error === 'string',
-            ),
-          ],
-        ];
-      }),
-    );
+    return normalizeExtensionFailureRecords(JSON.parse(readFileSync(path, 'utf-8')) as unknown);
   } catch {
     return {};
   }

@@ -1,8 +1,6 @@
-export interface ExtensionFailureRecord {
-  at: string;
-  operation: string;
-  error: string;
-}
+import type { ExtensionFailureRecord } from './extensionFailureRecords.js';
+
+export type { ExtensionFailureRecord } from './extensionFailureRecords.js';
 
 export interface ExtensionQuarantineEntry {
   reason: string;
