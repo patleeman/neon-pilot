@@ -21,6 +21,7 @@ import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-age
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
 import {
   type ConversationOffshootKind,
@@ -1330,10 +1331,6 @@ export function buildDisplayBlocksFromEntries(messages: DisplayMessageEntryLike[
   return buildDisplayBlocksInternal(messages);
 }
 
-function buildSessionUserImagePath(sessionId: string, blockId: string, imageIndex: number): string {
-  return `/api/sessions/${encodeURIComponent(sessionId)}/blocks/${encodeURIComponent(blockId)}/images/${imageIndex}`;
-}
-
 function rewriteIndexedBlockId(blockId: string, kind: 'm' | 't' | 'x' | 'c' | 'e' | 'i', absoluteIndex: number): string {
   return blockId.replace(new RegExp(`-${kind}\\d+$`), `-${kind}${absoluteIndex}`);
 }
@@ -1365,31 +1362,8 @@ function rebaseDisplayBlockIds(blocks: DisplayBlock[], blockOffset: number): Dis
   });
 }
 
-function buildSessionBlockImagePath(sessionId: string, blockId: string): string {
-  return `/api/sessions/${encodeURIComponent(sessionId)}/blocks/${encodeURIComponent(blockId)}/image`;
-}
-
 function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): DisplayBlock[] {
-  return blocks.map((block) => {
-    if (block.type === 'user' && block.images?.length) {
-      return {
-        ...block,
-        images: block.images.map((image, imageIndex) => ({
-          ...image,
-          src: buildSessionUserImagePath(sessionId, block.id, imageIndex),
-        })),
-      };
-    }
-
-    if (block.type === 'image') {
-      return {
-        ...block,
-        src: buildSessionBlockImagePath(sessionId, block.id),
-      };
-    }
-
-    return block;
-  });
+  return decorateSessionAssetUrlsForBlocks(blocks, sessionId) as DisplayBlock[];
 }
 
 function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[] {
