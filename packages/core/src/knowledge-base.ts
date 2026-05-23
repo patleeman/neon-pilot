@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
+import { backupKnowledgeBaseWorkingTree, cleanupKnowledgeBaseBackup, restoreKnowledgeBaseWorkingTree } from './knowledge-base-backup.js';
 import { buildKnowledgeBaseCheckoutRemoteCommands, planKnowledgeBaseCheckoutPreparation } from './knowledge-base-checkout.js';
 import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
@@ -551,43 +551,17 @@ export class KnowledgeBaseManager {
   }
 
   private backupWorkingTree(root: string, snapshot: Snapshot): string {
-    const backupDir = mkdtempSync(join(tmpdir(), SYNC_BACKUP_PREFIX));
+    const backupDir = backupKnowledgeBaseWorkingTree({ root, snapshot, backupPrefix: SYNC_BACKUP_PREFIX, ensureParentDirectory });
     this.syncBackupDir = backupDir;
-
-    for (const relativePath of Object.keys(snapshot)) {
-      const sourcePath = join(root, relativePath);
-      if (!existsSync(sourcePath)) {
-        continue;
-      }
-      const destPath = join(backupDir, relativePath);
-      ensureParentDirectory(destPath);
-      writeFileSync(destPath, readFileSync(sourcePath));
-    }
-
     return backupDir;
   }
 
   private restoreWorkingTree(backupDir: string, root: string, snapshot: Snapshot): void {
-    for (const relativePath of Object.keys(snapshot)) {
-      const sourcePath = join(backupDir, relativePath);
-      if (!existsSync(sourcePath)) {
-        continue;
-      }
-      const destPath = join(root, relativePath);
-      ensureParentDirectory(destPath);
-      writeFileSync(destPath, readFileSync(sourcePath));
-    }
+    restoreKnowledgeBaseWorkingTree({ backupDir, root, snapshot, ensureParentDirectory });
   }
 
   private cleanupSyncBackup(): void {
-    if (this.syncBackupDir) {
-      try {
-        rmSync(this.syncBackupDir, { recursive: true, force: true });
-      } catch {
-        // best-effort cleanup
-      }
-      this.syncBackupDir = null;
-    }
+    this.syncBackupDir = cleanupKnowledgeBaseBackup(this.syncBackupDir);
   }
 
   private validateSyncResult(baseSnapshot: Snapshot, finalPaths: Set<string>): { valid: boolean; reason?: string } {
