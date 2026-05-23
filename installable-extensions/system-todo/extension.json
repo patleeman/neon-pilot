@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 2,
+  "id": "system-todo",
+  "name": "Todos",
+  "packageType": "system",
+  "defaultEnabled": false,
+  "description": "Conversation-scoped execution todos for agents and users.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "getState", "handler": "getState", "title": "Get Todos" },
+      { "id": "addItem", "handler": "addItem", "title": "Add Todo" },
+      { "id": "updateItem", "handler": "updateItem", "title": "Update Todo" },
+      { "id": "deleteItem", "handler": "deleteItem", "title": "Delete Todo" },
+      { "id": "clearItems", "handler": "clearItems", "title": "Clear Todos" },
+      { "id": "todoTool", "handler": "todoTool", "title": "Todo tool" },
+      { "id": "provideTurnContext", "handler": "provideTurnContext", "title": "Todo turn context" }
+    ]
+  },
+  "contributes": {
+    "composerShelves": [
+      {
+        "id": "todos",
+        "title": "Todos",
+        "component": "TodoShelf",
+        "placement": "bottom"
+      }
+    ],
+    "tools": [
+      {
+        "id": "todo",
+        "name": "todo",
+        "title": "Manage Todos",
+        "description": "Manage the conversation todo list. Use for short-lived execution plans; do not replace the active goal for subtasks.",
+        "action": "todoTool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": { "type": "string", "enum": ["list", "add", "update", "delete", "clear"] },
+            "id": { "type": "string", "description": "Required for update and delete." },
+            "text": { "type": "string", "description": "Required for add; optional for update." },
+            "status": { "type": "string", "enum": ["todo", "doing", "done", "blocked"], "description": "Optional status for update." },
+            "note": { "type": "string", "description": "Optional note for update." },
+            "scope": { "type": "string", "enum": ["done", "all"], "description": "Clear only done todos or all todos." }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": [
+          "Use todo for short-lived execution plans and progress tracking within the current conversation.",
+          "Do not use todo as a durable project manager, scheduler, or knowledge base.",
+          "Do not replace the active goal for temporary subtasks; add or update todos instead."
+        ]
+      }
+    ],
+    "turnContextProviders": [
+      {
+        "id": "todos",
+        "handler": "provideTurnContext",
+        "title": "Todos",
+        "priority": 70,
+        "scope": ["conversation"]
+      }
+    ]
+  },
+  "permissions": ["conversations:readwrite"]
+}
