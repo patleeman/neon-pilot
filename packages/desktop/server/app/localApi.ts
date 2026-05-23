@@ -196,6 +196,7 @@ import {
   resolvePreviousWorkspaceCwd,
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import { buildLiveSessionContextResponse } from './localApiLiveSessionContextResponse.js';
 import {
   assertLiveConversationExists,
@@ -1807,7 +1808,7 @@ export async function createDesktopLiveSession(input: {
   const created = await createLiveSessionCapability(input, context);
   const createdAtMs = performance.now();
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
-  if (prompt.trim().length > 0 || (input.images?.length ?? 0) > 0) {
+  if (shouldDispatchInitialLiveSessionPrompt({ prompt, imageCount: input.images?.length })) {
     const dispatchTimer = setTimeout(() => {
       void submitLiveSessionPromptCapability(
         {
@@ -1832,12 +1833,13 @@ export async function createDesktopLiveSession(input: {
   }
   return {
     ...created,
-    perf: {
-      contextMs: Math.round(contextReadyAtMs - startedAtMs),
-      createCapabilityMs: Math.round(createdAtMs - contextReadyAtMs),
-      totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
-      ...(created.perf ? Object.fromEntries(Object.entries(created.perf).map(([key, value]) => [`capability.${key}`, value])) : {}),
-    },
+    perf: buildCreateLiveSessionPerf({
+      startedAtMs,
+      contextReadyAtMs,
+      createdAtMs,
+      returnedAtMs: performance.now(),
+      capabilityPerf: created.perf,
+    }),
   };
 }
 
