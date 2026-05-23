@@ -124,6 +124,13 @@ import {
   shouldResetPendingInitialPromptFailureSession,
 } from '../conversation/conversationPendingInitialPrompt';
 import {
+  resolveSelectedModelNotice,
+  shouldClearComposerForModelSelection,
+  shouldEnsureControlForPreferenceSave,
+  shouldSkipModelPreferenceSave,
+  shouldSkipThinkingPreferenceSave,
+} from '../conversation/conversationPreferenceSaving';
+import {
   buildComposerQuestionAnswersStorageKey,
   EMPTY_ASK_USER_ANSWERS,
   hasAskUserQuestionAnswers,
@@ -3491,7 +3498,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
 
   async function saveModelPreference(modelId: string) {
-    if (!modelId || modelId === currentModel || savingPreference !== null) {
+    if (shouldSkipModelPreferenceSave({ modelId, currentModel, savingPreference })) {
       return;
     }
 
@@ -3506,7 +3513,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         }
         setCurrentModel(update.currentModel);
       } else if (id) {
-        if (isLiveSession && !ensureConversationCanControl('change the model')) {
+        if (
+          shouldEnsureControlForPreferenceSave({ isLiveSession, conversationId: id }) &&
+          !ensureConversationCanControl('change the model')
+        ) {
           return;
         }
 
@@ -3517,9 +3527,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         setHasExplicitServiceTier(next.hasExplicitServiceTier);
       }
 
-      const selectedModel = models.find((candidate) => candidate.id === modelId);
-      if (selectedModel) {
-        showNotice('accent', `Model set to ${selectedModel.name} for this conversation.`);
+      const selectedModelNotice = resolveSelectedModelNotice(models, modelId);
+      if (selectedModelNotice) {
+        showNotice('accent', selectedModelNotice);
       }
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
@@ -3529,7 +3539,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }
 
   async function saveThinkingLevelPreference(thinkingLevel: string) {
-    if (thinkingLevel === currentThinkingLevel || savingPreference !== null) {
+    if (shouldSkipThinkingPreferenceSave({ thinkingLevel, currentThinkingLevel, savingPreference })) {
       return;
     }
 
@@ -3547,7 +3557,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         setCurrentThinkingLevel(update.currentThinkingLevel);
         savedThinkingLevel = update.currentThinkingLevel;
       } else if (id) {
-        if (isLiveSession && !ensureConversationCanControl('change the thinking level')) {
+        if (
+          shouldEnsureControlForPreferenceSave({ isLiveSession, conversationId: id }) &&
+          !ensureConversationCanControl('change the thinking level')
+        ) {
           return;
         }
 
@@ -3568,7 +3581,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }
 
   function selectModel(modelId: string) {
-    if (showModelPicker) {
+    if (shouldClearComposerForModelSelection(showModelPicker)) {
       composerController.clear();
     }
     setModelIdx(0);
