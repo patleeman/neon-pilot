@@ -136,6 +136,7 @@ import {
 import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from '../conversation/conversationSessionLifecycle';
 import { findConversationSessionById } from '../conversation/conversationSessionSelection';
 import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
+import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import { buildAvailableDraftWorkspacePaths, resolveConversationCurrentCwd } from '../conversation/conversationWorkspaceState';
@@ -5078,18 +5079,19 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [composerShelves],
   );
   const suggestedContextShelfState = useMemo(
-    () => ({
-      query: debouncedRelatedThreadsQuery,
-      results: visibleRelatedThreadResults,
-      selectedSessionIds: selectedRelatedThreadIds,
-      autoSelectedSessionIds: autoSelectedRelatedThreadIds,
-      loading: relatedThreadSearchLoading,
-      busy: preparingRelatedThreadContext,
-      error: relatedThreadSearchError,
-      maxSelections: MAX_RELATED_THREAD_SELECTIONS,
-      hotkeyLimit: MAX_RELATED_THREAD_HOTKEYS,
-      onToggle: toggleRelatedThreadSelection,
-    }),
+    () =>
+      buildSuggestedContextShelfState({
+        query: debouncedRelatedThreadsQuery,
+        results: visibleRelatedThreadResults,
+        selectedSessionIds: selectedRelatedThreadIds,
+        autoSelectedSessionIds: autoSelectedRelatedThreadIds,
+        loading: relatedThreadSearchLoading,
+        busy: preparingRelatedThreadContext,
+        error: relatedThreadSearchError,
+        maxSelections: MAX_RELATED_THREAD_SELECTIONS,
+        hotkeyLimit: MAX_RELATED_THREAD_HOTKEYS,
+        onToggle: toggleRelatedThreadSelection,
+      }),
     [
       autoSelectedRelatedThreadIds,
       debouncedRelatedThreadsQuery,
