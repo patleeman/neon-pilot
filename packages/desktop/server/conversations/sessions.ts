@@ -63,6 +63,11 @@ import {
 } from './sessionRelatedContext.js';
 import { appendSessionSearchSegment, buildSessionSearchTextFromEntries } from './sessionSearchText.js';
 import {
+  buildSuppressedTranscriptError,
+  collectSuppressedTranscriptEntryIds,
+  shouldSuppressTranscriptDescendants,
+} from './sessionSuppression.js';
+import {
   decorateSessionParentIds as decorateSessionParentIdsForMetas,
   readSourceRunIdFromSessionFilePath as readSourceRunIdFromSessionPath,
   resolveSessionIdByFile as resolveSessionIdByFileFromMap,
@@ -828,63 +833,12 @@ function buildSessionSearchText(entries: SessionEntry[], maxCharacters: number):
   return buildSessionSearchTextFromEntries(entries, maxCharacters, extractSearchTextFromMessage);
 }
 
-function shouldSuppressTranscriptDescendants(_message: DisplayMessageEntryLike['message']): boolean {
-  // Transcript transparency rule: persisted transcript entries should remain visible in the chat.
-  // Legacy stale-turn markers may still exist in old session files, but the reader must not
-  // suppress them or their descendants.
-  return false;
-}
-
-function collectSuppressedTranscriptEntryIds(messages: DisplayMessageEntryLike[]): Set<string> {
-  const suppressedRoots = new Set(
-    messages.filter((message) => shouldSuppressTranscriptDescendants(message.message)).map((message) => message.id),
-  );
-  if (suppressedRoots.size === 0) {
-    return new Set();
-  }
-
-  const parentById = new Map(messages.map((message) => [message.id, message.parentId ?? null] as const));
-  const messageById = new Map(messages.map((message) => [message.id, message.message] as const));
-  const suppressedById = new Map<string, boolean>();
-
-  const isSuppressed = (id: string | undefined): boolean => {
-    if (!id) {
-      return false;
-    }
-    if (suppressedById.has(id)) {
-      return suppressedById.get(id) ?? false;
-    }
-
-    const message = messageById.get(id);
-    if (message?.role === 'user') {
-      suppressedById.set(id, false);
-      return false;
-    }
-
-    if (suppressedRoots.has(id)) {
-      suppressedById.set(id, true);
-      return true;
-    }
-
-    const parentId = parentById.get(id) ?? null;
-    const suppressed = parentId ? isSuppressed(parentId) : false;
-    suppressedById.set(id, suppressed);
-    return suppressed;
-  };
-
-  return new Set(messages.filter((message) => isSuppressed(message.id)).map((message) => message.id));
-}
-
 function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAnchorIndexById?: Map<string, number>): DisplayBlock[] {
   const blocks: DisplayBlock[] = [];
   const toolCallIndex = new Map<string, number>();
   const suppressedTranscriptEntryIds = collectSuppressedTranscriptEntryIds(messages);
   if (suppressedTranscriptEntryIds.size > 0) {
-    throw new Error(
-      `Transcript transparency violation: ${suppressedTranscriptEntryIds.size} persisted transcript entr${
-        suppressedTranscriptEntryIds.size === 1 ? 'y was' : 'ies were'
-      } suppressed from chat rendering.`,
-    );
+    throw buildSuppressedTranscriptError(suppressedTranscriptEntryIds.size);
   }
 
   for (const [messageIndex, msg] of messages.entries()) {
