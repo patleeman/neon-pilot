@@ -34,6 +34,11 @@ import { parseWholeLineBashCommand } from '../conversation/conversationBashComma
 import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
 import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
 import {
+  isConversationComposerDisabled,
+  shouldClearDraftPendingPrompt,
+  shouldClearPendingAssistantStatus,
+} from '../conversation/conversationComposerDisabled';
+import {
   canNavigateComposerHistoryValue,
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
@@ -1655,7 +1660,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [id, pendingInitialPrompt]);
 
   useEffect(() => {
-    if (!draft) {
+    if (shouldClearDraftPendingPrompt(draft)) {
       setDraftPendingPrompt(null);
     }
   }, [draft, id]);
@@ -1666,7 +1671,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
   const { executions: activeConversationBackgroundExecutions, refresh: refreshActiveConversationBackgroundExecutions } =
     useConversationActiveExecutions(draft ? null : id);
-  const composerDisabled = conversationNeedsTakeover || preparingRelatedThreadContext || wholeLineBashRunning;
+  const composerDisabled = isConversationComposerDisabled({
+    conversationNeedsTakeover,
+    preparingRelatedThreadContext,
+    wholeLineBashRunning,
+  });
 
   useEffect(() => {
     setPendingAssistantStatusLabel(null);
@@ -1674,7 +1683,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [id]);
 
   useEffect(() => {
-    if (!stream.isStreaming) {
+    if (!shouldClearPendingAssistantStatus(stream.isStreaming)) {
       return;
     }
 
