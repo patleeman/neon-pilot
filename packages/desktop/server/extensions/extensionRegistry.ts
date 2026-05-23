@@ -26,6 +26,7 @@ import {
 } from './extensionCircuitBreaker.js';
 import { buildExtensionAutoCommandRegistrations } from './extensionCommandAutoRegistrations.js';
 import { buildExtensionContributedCommandRegistrations } from './extensionCommandContributedRegistrations.js';
+import { findExtensionCommandRegistration as findExtensionCommandRegistrationValue } from './extensionCommandLookup.js';
 import {
   validateActivityTreeItemActionContributions,
   validateComposerAttachmentProviderContributions,
@@ -1206,9 +1207,7 @@ export function listExtensionKeybindingRegistrations(stateRoot: string = getStat
 }
 
 export function findExtensionCommandRegistration(commandId: string): ExtensionCommandRegistration | undefined {
-  return listExtensionCommandRegistrations().find(
-    (command) => `${command.extensionId}.${command.surfaceId}` === commandId || command.surfaceId === commandId,
-  );
+  return findExtensionCommandRegistrationValue(listExtensionCommandRegistrations(), commandId);
 }
 
 export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandRegistration[] {
