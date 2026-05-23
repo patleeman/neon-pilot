@@ -99,6 +99,7 @@ import {
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
 import { buildExtensionSkillRegistrations as buildExtensionSkillRegistrationsValue } from './extensionSkillRegistrations.js';
+import { buildExtensionStartupGuardResult, buildExtensionStartupMarker } from './extensionStartupMarker.js';
 import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import {
@@ -703,8 +704,8 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
     writeExtensionRegistryConfig(plan.config, stateRoot);
   }
   mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
-  writeFileSync(markerPath, `${JSON.stringify({ startedAt: new Date().toISOString() }, null, 2)}\n`);
-  return { safeMode, disabledIds };
+  writeFileSync(markerPath, buildExtensionStartupMarker(new Date().toISOString()));
+  return buildExtensionStartupGuardResult({ safeMode, disabledIds });
 }
 
 export function completeExtensionStartupGuard(stateRoot: string = getStateRoot()): void {
