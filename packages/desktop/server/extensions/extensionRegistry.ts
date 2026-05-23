@@ -3,6 +3,12 @@ import { join, resolve } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import {
+  validateActivityTreeItemElementContributions,
+  validateActivityTreeItemStyleContributions,
+  validateStatusBarItemContributions,
+  validateThreadHeaderActionContributions,
+} from './extensionActivityContributionValidation.js';
 import { validateExtensionBackendContribution } from './extensionBackendValidation.js';
 import {
   validateCommandContributions,
@@ -943,27 +949,11 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.threadHeaderActions !== undefined) {
-    for (const [index, action] of assertRecordArray(contributes.threadHeaderActions, 'contributes.threadHeaderActions').entries()) {
-      requireString(action.id, `contributes.threadHeaderActions[${index}].id`);
-      requireString(action.component, `contributes.threadHeaderActions[${index}].component`);
-      validateOptionalString(action.title, `contributes.threadHeaderActions[${index}].title`);
-      if (action.priority !== undefined && (typeof action.priority !== 'number' || !Number.isInteger(action.priority))) {
-        throw new Error(`Extension manifest contributes.threadHeaderActions[${index}].priority must be an integer.`);
-      }
-    }
+    validateThreadHeaderActionContributions(contributes.threadHeaderActions);
   }
 
   if (contributes.statusBarItems !== undefined) {
-    for (const [index, item] of assertRecordArray(contributes.statusBarItems, 'contributes.statusBarItems').entries()) {
-      requireString(item.id, `contributes.statusBarItems[${index}].id`);
-      requireString(item.label, `contributes.statusBarItems[${index}].label`);
-      validateOptionalString(item.action, `contributes.statusBarItems[${index}].action`);
-      validateOptionalString(item.component, `contributes.statusBarItems[${index}].component`);
-      if (item.alignment !== undefined) validateEnum(item.alignment, ['left', 'right'], `contributes.statusBarItems[${index}].alignment`);
-      if (item.priority !== undefined && (typeof item.priority !== 'number' || !Number.isInteger(item.priority))) {
-        throw new Error(`Extension manifest contributes.statusBarItems[${index}].priority must be an integer.`);
-      }
-    }
+    validateStatusBarItemContributions(contributes.statusBarItems);
   }
 
   if (contributes.conversationHeaderElements !== undefined) {
@@ -975,31 +965,11 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.activityTreeItemElements !== undefined) {
-    for (const [index, element] of assertRecordArray(
-      contributes.activityTreeItemElements,
-      'contributes.activityTreeItemElements',
-    ).entries()) {
-      requireString(element.id, `contributes.activityTreeItemElements[${index}].id`);
-      requireString(element.component, `contributes.activityTreeItemElements[${index}].component`);
-      validateEnum(
-        element.slot,
-        ['leading', 'before-title', 'after-title', 'subtitle', 'trailing'],
-        `contributes.activityTreeItemElements[${index}].slot`,
-      );
-      if (element.priority !== undefined && (typeof element.priority !== 'number' || !Number.isInteger(element.priority))) {
-        throw new Error(`Extension manifest contributes.activityTreeItemElements[${index}].priority must be an integer.`);
-      }
-    }
+    validateActivityTreeItemElementContributions(contributes.activityTreeItemElements);
   }
 
   if (contributes.activityTreeItemStyles !== undefined) {
-    for (const [index, style] of assertRecordArray(contributes.activityTreeItemStyles, 'contributes.activityTreeItemStyles').entries()) {
-      requireString(style.id, `contributes.activityTreeItemStyles[${index}].id`);
-      requireString(style.provider, `contributes.activityTreeItemStyles[${index}].provider`);
-      if (style.priority !== undefined && (typeof style.priority !== 'number' || !Number.isInteger(style.priority))) {
-        throw new Error(`Extension manifest contributes.activityTreeItemStyles[${index}].priority must be an integer.`);
-      }
-    }
+    validateActivityTreeItemStyleContributions(contributes.activityTreeItemStyles);
   }
 
   if (contributes.conversationLifecycle !== undefined) {
