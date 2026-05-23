@@ -8,6 +8,13 @@ import {
 
 describe('knowledge-base-maintenance', () => {
   const parseTimestampMs = (value: string | null | undefined) => (value ? Date.parse(value) : null);
+  const storedState = (timestamps: { lastMaintenanceAt?: string; lastFullMaintenanceAt?: string }) => ({
+    version: 1 as const,
+    repoUrl: 'https://example.com/repo.git',
+    branch: 'main',
+    snapshot: {},
+    ...timestamps,
+  });
 
   it('plans auto, full, or no maintenance from stored timestamps', () => {
     const timestamp = '2026-05-23T12:00:00.000Z';
@@ -27,7 +34,7 @@ describe('knowledge-base-maintenance', () => {
 
     expect(
       planKnowledgeBaseRepositoryMaintenance({
-        storedState: { version: 1, files: {}, lastMaintenanceAt: timestamp, lastFullMaintenanceAt: '2026-05-23T11:58:00.000Z' },
+        storedState: storedState({ lastMaintenanceAt: timestamp, lastFullMaintenanceAt: '2026-05-23T11:58:00.000Z' }),
         timestamp,
         nowMs,
         parseTimestampMs,
@@ -38,7 +45,7 @@ describe('knowledge-base-maintenance', () => {
 
     expect(
       planKnowledgeBaseRepositoryMaintenance({
-        storedState: { version: 1, files: {}, lastMaintenanceAt: timestamp, lastFullMaintenanceAt: timestamp },
+        storedState: storedState({ lastMaintenanceAt: timestamp, lastFullMaintenanceAt: timestamp }),
         timestamp,
         nowMs,
         parseTimestampMs,
@@ -57,7 +64,7 @@ describe('knowledge-base-maintenance', () => {
       buildKnowledgeBaseMaintenanceState({
         task: 'auto',
         timestamp: 'now',
-        storedState: { version: 1, files: {}, lastFullMaintenanceAt: 'before' },
+        storedState: storedState({ lastFullMaintenanceAt: 'before' }),
       }),
     ).toEqual({ lastMaintenanceAt: 'now', lastFullMaintenanceAt: 'before' });
   });

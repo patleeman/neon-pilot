@@ -2,7 +2,7 @@ export function toKnowledgeBaseIsoTimestamp(value: number | Date = Date.now()): 
   return new Date(value).toISOString();
 }
 
-export function parseKnowledgeBaseTimestampMs(value: string | undefined): number | null {
+export function parseKnowledgeBaseTimestampMs(value: string | null | undefined): number | null {
   if (!value) {
     return null;
   }
