@@ -196,6 +196,11 @@ import {
   resolvePreviousWorkspaceCwd,
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import {
+  assertLiveConversationExists,
+  buildDesktopLiveSessionResponse,
+  normalizeRequiredLiveConversationId,
+} from './localApiLiveSessionResponse.js';
 import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
@@ -1650,26 +1655,24 @@ export async function updateDesktopConversationModelPreferences(input: {
 export async function readDesktopLiveSession(conversationId: string) {
   await getLocalRoutes();
 
-  const normalizedConversationId = conversationId.trim();
-  if (!normalizedConversationId || !isLiveSession(normalizedConversationId)) {
-    throw new Error('404 Not Found');
-  }
+  const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, '404 Not Found');
+  assertLiveConversationExists(
+    { conversationId: normalizedConversationId, isLive: isLiveSession(normalizedConversationId) },
+    '404 Not Found',
+  );
 
   const entry = getLocalLiveSessions().find((session) => session.id === normalizedConversationId);
   if (!entry) {
     throw new Error('404 Not Found');
   }
 
-  return { live: true as const, ...entry };
+  return buildDesktopLiveSessionResponse(entry);
 }
 
 export async function readDesktopLiveSessionForkEntries(conversationId: string): Promise<Array<{ entryId: string; text: string }>> {
   await getLocalRoutes();
 
-  const normalizedConversationId = conversationId.trim();
-  if (!normalizedConversationId) {
-    throw new Error('Session not live');
-  }
+  const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, 'Session not live');
 
   const entries = getLiveSessionForkEntries(normalizedConversationId);
   if (!entries) {
@@ -1682,10 +1685,7 @@ export async function readDesktopLiveSessionForkEntries(conversationId: string):
 export async function readDesktopLiveSessionContext(conversationId: string) {
   await getLocalRoutes();
 
-  const normalizedConversationId = conversationId.trim();
-  if (!normalizedConversationId) {
-    throw new Error('Session not found');
-  }
+  const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, 'Session not found');
 
   const liveEntry = liveRegistry.get(normalizedConversationId);
   const storedSession = !liveEntry ? readSessionMeta(normalizedConversationId) : null;
