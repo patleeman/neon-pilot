@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFile } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -25,6 +25,10 @@ import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailRes
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
 import { rebaseDisplayBlockIds as rebaseDisplayBlockIdsForOffset } from './sessionBlockIds.js';
+import {
+  readExecutionWrappers as readExecutionWrappersValue,
+  resolveCompactionSummarySupplement as resolveCompactionSummarySupplementValue,
+} from './sessionCompactionSummary.js';
 import { normalizeContent, normalizeTimestamp } from './sessionContent.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
 import {
@@ -41,7 +45,10 @@ import {
   trimSessionDetailCache as trimSessionDetailCacheMap,
 } from './sessionDetailCache.js';
 import { buildPromptCacheMissMetadata, buildSessionDetailTelemetry } from './sessionDetailTelemetry.js';
-import { buildDisplayMessageEntryFromRawLine as buildDisplayMessageEntryFromRawLineValue } from './sessionDisplayEntry.js';
+import {
+  buildDisplayMessageEntryFromRawLine as buildDisplayMessageEntryFromRawLineValue,
+  type SessionDisplayRawLine,
+} from './sessionDisplayEntry.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import {
   listSessionFiles as listSessionFilesFromDir,
@@ -454,7 +461,7 @@ function readFileLinesReverse(filePath: string, visit: (line: string) => boolean
 }
 
 function buildDisplayMessageEntryFromRawLine(line: RawDisplayLine): DisplayMessageEntryLike {
-  return buildDisplayMessageEntryFromRawLineValue(line) as DisplayMessageEntryLike;
+  return buildDisplayMessageEntryFromRawLineValue(line as SessionDisplayRawLine) as DisplayMessageEntryLike;
 }
 
 function summarizeTailScanEntry(rawLine: string): TailScanEntrySummary | null {
@@ -664,48 +671,12 @@ function extractUserContent(content: unknown): { text: string; images: DisplayIm
   return { text, images };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readExecutionWrappers(details: unknown): Array<{ id: string; label?: string }> {
-  if (!isRecord(details) || !Array.isArray(details.executionWrappers)) {
-    return [];
-  }
-
-  return details.executionWrappers.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const id = typeof item.id === 'string' && item.id.trim().length > 0 ? item.id.trim() : '';
-    if (!id) return [];
-    const label = typeof item.label === 'string' && item.label.trim().length > 0 ? item.label.trim() : undefined;
-    return [{ id, ...(label ? { label } : {}) }];
-  });
-}
-
-function resolveProviderCompactionLabel(details: unknown): string | undefined {
-  if (!isRecord(details)) {
-    return undefined;
-  }
-
-  const nativeDetails = isRecord(details.nativeCompaction) ? details.nativeCompaction : details;
-  if (!isRecord(nativeDetails) || nativeDetails.provider !== 'openai-responses-compact') {
-    return undefined;
-  }
-
-  const modelKey = typeof nativeDetails.modelKey === 'string' ? nativeDetails.modelKey.trim() : '';
-  if (modelKey.startsWith('openai-codex:')) {
-    return 'Codex compaction';
-  }
-  if (modelKey.startsWith('openai:')) {
-    return 'OpenAI compaction';
-  }
-
-  return 'Provider compaction';
+  return readExecutionWrappersValue(details);
 }
 
 function resolveCompactionSummarySupplement(details: unknown): string | undefined {
-  const label = resolveProviderCompactionLabel(details);
-  return label ? `This used ${label} under the hood. Pi kept the text summary for display and portability.` : undefined;
+  return resolveCompactionSummarySupplementValue(details);
 }
 
 export function getAssistantErrorDisplayMessage(message: { stopReason?: string; errorMessage?: string }): string | null {
@@ -746,7 +717,9 @@ function extractSearchTextFromMessage(message: { role: string; content?: unknown
 }
 
 function buildSessionSearchText(entries: SessionEntry[], maxCharacters: number): string {
-  return buildSessionSearchTextFromEntries(entries, maxCharacters, extractSearchTextFromMessage);
+  return buildSessionSearchTextFromEntries(entries, maxCharacters, (message) =>
+    extractSearchTextFromMessage(message as { role: string; content?: unknown }),
+  );
 }
 
 function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAnchorIndexById?: Map<string, number>): DisplayBlock[] {
