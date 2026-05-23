@@ -6,8 +6,6 @@ export declare const ConversationArtifactRailContent: HostComponent;
 export declare const ConversationArtifactWorkbenchPane: HostComponent;
 export declare const ConversationCheckpointWorkbenchPane: HostComponent;
 export declare const ConversationDiffRailContent: HostComponent;
-export declare const ConversationRunsRailContent: HostComponent;
-export declare const ConversationRunWorkbenchPane: HostComponent;
 export declare const WorkbenchBrowserTab: HostComponent;
 export declare const WorkspaceExplorer: HostComponent;
 export declare const WorkspaceFileDocument: HostComponent;

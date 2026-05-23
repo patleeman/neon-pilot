@@ -5,7 +5,6 @@ import { useAppData, useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
-import { getConversationRunIdFromSearch } from '../conversation/conversationRuns';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
@@ -57,9 +56,6 @@ const ConversationArtifactRailContent = lazyRouteWithRecovery('layout-artifact-r
 );
 const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact-workbench', () =>
   import('./ConversationArtifactWorkbench').then((module) => ({ default: module.ConversationArtifactWorkbenchPane })),
-);
-const ConversationBackgroundWorkWorkbenchPane = lazyRouteWithRecovery('layout-background-work-workbench', () =>
-  import('./ConversationBackgroundWorkWorkbench').then((module) => ({ default: module.ConversationBackgroundWorkWorkbenchPane })),
 );
 const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
 const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
@@ -502,28 +498,17 @@ function getActiveConversationId(pathname: string): string | null {
 function WorkbenchDocumentPane({
   conversationId,
   artifactId,
-  runId,
   activeTool,
   workspaceCwd,
   extensionWorkbenchSurface,
 }: {
   conversationId: string | null;
   artifactId: string | null;
-  runId: string | null;
   activeTool: WorkbenchRailMode;
   workspaceCwd?: string | null;
   extensionWorkbenchSurface: NativeExtensionViewSummary | null;
 }) {
   const location = useLocation();
-  const { sessions, tasks } = useAppData();
-
-  if (conversationId && runId) {
-    return (
-      <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading background work…</div>}>
-        <ConversationBackgroundWorkWorkbenchPane conversationId={conversationId} runId={runId} lookups={{ sessions, tasks }} />
-      </Suspense>
-    );
-  }
 
   if (isArtifactsRailMode(activeTool) && conversationId && artifactId) {
     return (
@@ -945,7 +930,6 @@ export function Layout() {
     showWorkbench && activeConversationId
       ? (getConversationArtifactIdFromSearch(location.search) ?? selectedArtifactByConversation[activeConversationId] ?? null)
       : null;
-  const activeWorkbenchRunId = showWorkbench && activeConversationId ? getConversationRunIdFromSearch(location.search) : null;
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const activeWorkspaceCwd = resolveActiveWorkspaceCwd(sessions, activeConversationId);
   const clearActiveWorkspaceFile = useCallback(() => undefined, []);
@@ -1556,7 +1540,6 @@ export function Layout() {
                         activeWorkbenchKnowledgeFileId ||
                         activeWorkbenchWorkspaceFileId ||
                         activeWorkbenchArtifactId ||
-                        activeWorkbenchRunId ||
                         activeWorkbenchTool === 'browser' ||
                         activeExtensionWorkbenchSurface
                           ? 'true'
@@ -1566,7 +1549,6 @@ export function Layout() {
                       <WorkbenchDocumentPane
                         conversationId={activeConversationId}
                         artifactId={activeWorkbenchArtifactId}
-                        runId={activeWorkbenchRunId}
                         activeTool={activeWorkbenchTool}
                         workspaceCwd={activeWorkspaceCwd}
                         extensionWorkbenchSurface={activeExtensionWorkbenchSurface}

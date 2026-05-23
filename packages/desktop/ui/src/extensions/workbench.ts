@@ -5,12 +5,6 @@ export {
   useConversationArtifactSummaries,
 } from '../components/ConversationArtifactWorkbench';
 export {
-  ConversationBackgroundWorkRailContent,
-  ConversationBackgroundWorkWorkbenchPane,
-  ConversationBackgroundWorkRailContent as ConversationRunsRailContent,
-  ConversationBackgroundWorkWorkbenchPane as ConversationRunWorkbenchPane,
-} from '../components/ConversationBackgroundWorkWorkbench';
-export {
   ConversationCheckpointWorkbenchPane,
   ConversationDiffRailContent,
   useConversationCheckpointSummaries,
