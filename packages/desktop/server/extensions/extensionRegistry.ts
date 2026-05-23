@@ -77,6 +77,7 @@ import {
   validateRuntimeProviderContributions,
   validateTurnContextProviderContributions,
 } from './extensionProviderContributionValidation.js';
+import { buildExtensionRegistrationContext } from './extensionRegistrationContext.js';
 import {
   type ExtensionRegistryConfig,
   isRecord,
@@ -563,40 +564,35 @@ function buildExtensionSkillRegistrations(entry: ExtensionRegistryEntry): Extens
 
 function buildExtensionMentionRegistrations(entry: ExtensionRegistryEntry): ExtensionMentionRegistration[] {
   return buildExtensionMentionContributionRegistrations({
-    extensionId: entry.manifest.id,
-    packageType: entry.manifest.packageType ?? 'user',
+    ...buildExtensionRegistrationContext(entry),
     mentions: entry.manifest.contributes?.mentions,
   });
 }
 
 function buildExtensionSettingsRegistrations(entry: ExtensionRegistryEntry): ExtensionSettingsRegistration[] {
   return buildExtensionSettingsContributionRegistrations({
-    extensionId: entry.manifest.id,
-    packageType: entry.manifest.packageType ?? 'user',
+    ...buildExtensionRegistrationContext(entry),
     settings: entry.manifest.contributes?.settings,
   });
 }
 
 function buildExtensionSecretRegistrations(entry: ExtensionRegistryEntry): ExtensionSecretRegistration[] {
   return buildExtensionSecretContributionRegistrations({
-    extensionId: entry.manifest.id,
-    packageType: entry.manifest.packageType ?? 'user',
+    ...buildExtensionRegistrationContext(entry),
     secrets: entry.manifest.contributes?.secrets,
   });
 }
 
 function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): ExtensionToolRegistration[] {
   return buildExtensionToolContributionRegistrations({
-    extensionId: entry.manifest.id,
-    packageType: entry.manifest.packageType ?? 'user',
+    ...buildExtensionRegistrationContext(entry),
     tools: entry.manifest.contributes?.tools,
   });
 }
 
 function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry): ExtensionModelProfileRegistration[] {
   return buildExtensionModelProfileContributionRegistrations({
-    extensionId: entry.manifest.id,
-    packageType: entry.manifest.packageType ?? 'user',
+    ...buildExtensionRegistrationContext(entry),
     profiles: entry.manifest.contributes?.modelProfiles,
   });
 }
