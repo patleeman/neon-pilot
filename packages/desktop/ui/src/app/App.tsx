@@ -111,16 +111,12 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
 }
 
 function ConversationsRouteRedirect() {
-  const { openIds, pinnedIds, layoutHydrating } = useConversations();
+  const { openIds, pinnedIds } = useConversations();
   const hasDraft =
     readDraftConversationComposer().trim().length > 0 ||
     readDraftConversationCwd().trim().length > 0 ||
     hasDraftConversationAttachments() ||
     hasDraftConversationContextDocs();
-
-  if (layoutHydrating && !hasDraft) {
-    return <div className="flex h-full items-center justify-center px-6 text-[12px] text-dim">Loading conversations…</div>;
-  }
 
   const redirectPath = resolveConversationIndexRedirect({
     openIds,
@@ -372,44 +368,42 @@ export function App() {
         // Keep waiting for SSE or a later retry.
       });
 
-    window.setTimeout(() => {
-      void api
-        .tasks()
-        .then((items) => {
-          setTasks(items);
-        })
-        .catch(() => {
-          // Keep waiting for SSE or a later retry.
-        });
+    void api
+      .tasks()
+      .then((items) => {
+        setTasks(items);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
 
-      void api
-        .runs()
-        .then((result) => {
-          setRuns(result);
-        })
-        .catch(() => {
-          // Keep waiting for SSE or a later retry.
-        });
+    void api
+      .runs()
+      .then((result) => {
+        setRuns(result);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
 
-      void api
-        .executions()
-        .then((result) => {
-          setExecutions(result);
-        })
-        .catch(() => {
-          // Keep waiting for SSE or a later retry.
-        });
+    void api
+      .executions()
+      .then((result) => {
+        setExecutions(result);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
 
-      void api
-        .daemon()
-        .then((state) => {
-          setDaemon(state);
-        })
-        .catch(() => {
-          // Keep waiting for SSE or a later retry.
-        });
-    }, 15_000);
-  }, [setDaemon, setRuns, setSessions, setTasks]);
+    void api
+      .daemon()
+      .then((state) => {
+        setDaemon(state);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [setDaemon, setExecutions, setRuns, setSessions, setTasks]);
 
   // Track the latest subscription so we don't re-subscribe after a fresh mount.
   const subscriptionGenerationRef = useRef(0);
@@ -508,17 +502,10 @@ export function App() {
   }, [bootstrapSnapshots, handleDesktopAppEvent]);
 
   useEffect(() => {
-    let cleanup = () => {};
-    const bootstrapTimer = window.setTimeout(() => {
-      void bootstrapSnapshots();
-    }, 500);
-    const subscribeTimer = window.setTimeout(() => {
-      cleanup = subscribe();
-    }, 5_000);
+    void bootstrapSnapshots();
+    const cleanup = subscribe();
 
     return () => {
-      window.clearTimeout(bootstrapTimer);
-      window.clearTimeout(subscribeTimer);
       cleanup();
     };
   }, [bootstrapSnapshots, subscribe]);
