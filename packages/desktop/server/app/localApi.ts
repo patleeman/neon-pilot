@@ -221,6 +221,7 @@ import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from '
 import { resolveLocalApiRepoRoot } from './localApiPaths.js';
 import { normalizeRequiredProviderOAuthLoginId, shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
+import { normalizeLocalApiRequestHeaders, readLocalApiRequestHeader } from './localApiRequestHeaders.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
 import {
   buildUnchangedSessionDetailResponse,
@@ -401,7 +402,7 @@ function createLocalApiRequest(input: {
   headers?: Record<string, string>;
 }): LocalApiRequest {
   const request = new EventEmitter() as LocalApiRequest;
-  const normalizedHeaders = Object.fromEntries(Object.entries(input.headers ?? {}).map(([key, value]) => [key.toLowerCase(), value]));
+  const normalizedHeaders = normalizeLocalApiRequestHeaders(input.headers);
   request.method = input.method;
   request.path = input.url.pathname;
   request.url = `${input.url.pathname}${input.url.search}`;
@@ -413,7 +414,7 @@ function createLocalApiRequest(input: {
   request.protocol = 'desktop';
   request.ip = '127.0.0.1';
   request.socket = { remoteAddress: '127.0.0.1' };
-  request.get = (name: string) => normalizedHeaders[name.toLowerCase()];
+  request.get = (name: string) => readLocalApiRequestHeader(normalizedHeaders, name);
   return request;
 }
 
