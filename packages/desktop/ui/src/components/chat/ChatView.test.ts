@@ -1161,6 +1161,28 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-message-card-assistant');
   });
 
+  it('renders workspace changes as quiet lifecycle markers', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        messages: [
+          {
+            type: 'context',
+            ts: '2026-03-11T18:00:00.000Z',
+            customType: 'conversation_workspace_change',
+            text: 'Working directory changed from Chats to /Users/patrick/workingdir/personal-agent.',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('data-lifecycle-marker="workspace-change"');
+    expect(html).toContain('Workspace changed');
+    expect(html).not.toContain('<details');
+    expect(html).not.toContain('Working directory changed from Chats');
+    expect(html).not.toContain('Context');
+    expect(html).not.toContain('ui-message-card-assistant');
+  });
+
   it('marks the transcript container as a selection context-menu surface', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

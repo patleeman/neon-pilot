@@ -63,8 +63,14 @@ const AUTO_RESUME_CONTEXT_TYPES = new Set([
   'after_turn_auto_resume',
 ]);
 
+const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'conversation_workspace_change']);
+
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
   return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
+}
+
+function isQuietLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
+  return block.type === 'context' && QUIET_LIFECYCLE_CONTEXT_TYPES.has(block.customType ?? '');
 }
 
 function autoResumeLifecycleText(blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]): string {
@@ -87,6 +93,29 @@ function autoResumeLifecycleText(blocks: Extract<MessageBlock, { type: 'context'
   if (deferredCount === 1) return 'Scheduled wakeup fired';
   if (afterTurnCount === 1) return 'After-turn wakeup fired';
   return 'Resumed automatically';
+}
+
+function quietLifecycleText(blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]): string {
+  const workspaceCount = blocks.filter((block) => block.type === 'context' && block.customType === 'conversation_workspace_change').length;
+  if (workspaceCount > 0 && workspaceCount === blocks.length) {
+    return workspaceCount === 1 ? 'Workspace changed' : `Workspace changed · ${workspaceCount} times`;
+  }
+  return autoResumeLifecycleText(blocks);
+}
+
+function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]; marker: string }) {
+  const lastTs = blocks[blocks.length - 1]?.ts;
+  return (
+    <div
+      className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
+      data-context-shelf="1"
+      data-lifecycle-marker={marker}
+    >
+      <span aria-hidden="true">↻</span>
+      <span className="min-w-0 truncate">{quietLifecycleText(blocks)}</span>
+      {lastTs ? <span className="ui-message-meta shrink-0 opacity-60">{timeAgo(lastTs)}</span> : null}
+    </div>
+  );
 }
 
 function summarizeSystemEventText(text: string): string {
@@ -215,19 +244,9 @@ export const ContextShelf = memo(function ContextShelf({
     .join(' · ');
   const totalItemCount = nonTopologyBlocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
 
-  if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isAutoResumeLifecycleContext)) {
-    const lastTs = blocks[blocks.length - 1]?.ts;
-    return (
-      <div
-        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
-        data-context-shelf="1"
-        data-lifecycle-marker="auto-resume"
-      >
-        <span aria-hidden="true">↻</span>
-        <span className="min-w-0 truncate">{autoResumeLifecycleText(blocks)}</span>
-        {lastTs ? <span className="ui-message-meta shrink-0 opacity-60">{timeAgo(lastTs)}</span> : null}
-      </div>
-    );
+  if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isQuietLifecycleContext)) {
+    const marker = blocks.every(isAutoResumeLifecycleContext) ? 'auto-resume' : 'workspace-change';
+    return <QuietLifecycleMarker blocks={blocks} marker={marker} />;
   }
 
   const topologyBlocks = blocks.filter((b) => isTopologyBlock(b));
