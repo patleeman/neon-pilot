@@ -183,6 +183,7 @@ import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTas
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -717,10 +718,7 @@ export async function subscribeDesktopConversationState(
   onEvent: (event: DesktopConversationStateBridgeEvent) => void,
 ): Promise<() => void> {
   const capabilityContext = await getLocalLiveSessionCapabilityContext();
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) {
-    throw new Error('conversationId required');
-  }
+  const conversationId = readRequiredConversationId(input.conversationId);
   const tailBlocks = normalizeDesktopLocalApiTailBlocks(input.tailBlocks);
 
   let closed = false;
@@ -1379,15 +1377,8 @@ export async function renameDesktopConversation(input: {
 }): Promise<{ ok: true; title: string }> {
   await getLocalRoutes();
 
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) {
-    throw new Error('conversationId required');
-  }
-
-  const nextName = input.name.trim();
-  if (!nextName) {
-    throw new Error('name required');
-  }
+  const conversationId = readRequiredConversationId(input.conversationId);
+  const nextName = readRequiredConversationName(input.name);
 
   if (isLiveSession(conversationId)) {
     renameSession(conversationId, nextName);
@@ -1839,10 +1830,7 @@ function resolveDesktopConversationSource(conversationId: string): {
   cwd: string;
   live: boolean;
 } {
-  const trimmedConversationId = conversationId.trim();
-  if (!trimmedConversationId) {
-    throw new Error('conversationId required');
-  }
+  const trimmedConversationId = readRequiredConversationId(conversationId);
 
   const liveEntry = liveRegistry.get(trimmedConversationId);
   const liveSessionFile = liveEntry?.session.sessionFile?.trim();
