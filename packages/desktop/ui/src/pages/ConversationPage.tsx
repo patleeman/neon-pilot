@@ -29,7 +29,7 @@ import {
 } from '../conversation/browserContextMessages';
 import { appendComposerHistory, readComposerHistory } from '../conversation/composerHistory';
 import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
-import { appendIfPresent, shouldAddDroppedFiles } from '../conversation/conversationAttachments';
+import { appendIfPresent } from '../conversation/conversationAttachments';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
 import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
 import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
@@ -61,6 +61,11 @@ import {
   shouldShowQuestionSubmitAsPrimaryComposerAction,
 } from '../conversation/conversationComposerSubmit';
 import { formatConversationCwdLabel, hasDraftConversationCwd } from '../conversation/conversationCwdPresentation';
+import {
+  nextDragOverStateForDragEnd,
+  nextDragOverStateForDragOver,
+  shouldHandleDroppedComposerFiles,
+} from '../conversation/conversationDragDrop';
 import { buildBackgroundExecutionIndicatorText } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import {
@@ -4946,17 +4951,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // Drag-and-drop
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
-    setDragOver(true);
+    setDragOver(nextDragOverStateForDragOver());
   }
   function handleDragLeave() {
-    setDragOver(false);
+    setDragOver(nextDragOverStateForDragEnd());
   }
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
-    setDragOver(false);
+    setDragOver(nextDragOverStateForDragEnd());
 
     const files = readComposerTransferFiles(e.dataTransfer.files);
-    if (shouldAddDroppedFiles(files)) {
+    if (shouldHandleDroppedComposerFiles(files)) {
       void addComposerFiles(files);
     }
   }
