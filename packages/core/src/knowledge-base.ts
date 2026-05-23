@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -16,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
+import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
 import {
   readStoredKnowledgeBaseState,
   type Snapshot,
@@ -100,7 +100,6 @@ const SYNC_LOCK_DIR_NAME = 'sync.lock';
 const SYNC_LOCK_METADATA_FILE_NAME = 'metadata.json';
 const SNAPSHOT_VERSION = 1;
 const SOURCE_ENV_VAR = 'NEON_PILOT_VAULT_ROOT';
-const SKIPPED_RECOVERY_PATH_SEGMENTS = new Set(['', '.', '..']);
 const managerRegistry = new Map<string, KnowledgeBaseManager>();
 
 type KnowledgeBaseStateListener = (state: KnowledgeBaseState) => void;
@@ -115,7 +114,7 @@ function normalizeBranch(value: string | null | undefined): string {
 }
 
 function computeRecoveryEntryId(relativePath: string, timestamp: string): string {
-  return createHash('sha1').update(`${timestamp}:${relativePath}`).digest('hex');
+  return computeKnowledgeBaseRecoveryEntryId(relativePath, timestamp);
 }
 
 function ensureParentDirectory(path: string): void {
@@ -351,8 +350,7 @@ function readSyncLockMetadata(filePath: string): SyncLockMetadata | null {
 }
 
 function sanitizeRecoveryRelativePath(relativePath: string): string {
-  const segments = relativePath.split('/').filter((segment) => !SKIPPED_RECOVERY_PATH_SEGMENTS.has(segment));
-  return segments.length > 0 ? segments.join('/') : 'recovered-file';
+  return sanitizeKnowledgeBaseRecoveryRelativePath(relativePath);
 }
 
 function readStoredState(filePath: string): StoredKnowledgeBaseState | null {
