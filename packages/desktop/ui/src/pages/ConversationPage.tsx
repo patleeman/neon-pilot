@@ -3388,7 +3388,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           if (entryId) {
             target =
               clickedBlock.type === 'user'
-                ? { entryId, beforeEntry: true, promptDraft: clickedBlock.text }
+                ? { entryId, beforeEntry: false, promptDraft: null }
                 : { entryId, beforeEntry: false, promptDraft: null };
           }
         }

@@ -139,8 +139,8 @@ export function resolveRewindTargetForMessage(
 
   return {
     entryId: entry.entryId,
-    beforeEntry: true,
-    promptDraft: entry.text,
+    beforeEntry: false,
+    promptDraft: null,
   };
 }
 

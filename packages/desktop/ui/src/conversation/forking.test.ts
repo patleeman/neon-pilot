@@ -197,7 +197,7 @@ describe('resolveRewindTargetForMessage', () => {
     });
   });
 
-  it('rewinds before the selected user prompt and preserves it as a draft', () => {
+  it('rewinds through the selected user prompt so the new conversation is not blank', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-11T18:00:00.000Z', text: 'First prompt' },
       { type: 'text', ts: '2026-03-11T18:00:01.000Z', text: 'First reply' },
@@ -211,8 +211,8 @@ describe('resolveRewindTargetForMessage', () => {
       ]),
     ).toEqual({
       entryId: 'entry-2',
-      beforeEntry: true,
-      promptDraft: 'Second prompt',
+      beforeEntry: false,
+      promptDraft: null,
     });
   });
 });
