@@ -404,7 +404,7 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   if (!entry) {
     throw new Error('Extension not found.');
   }
-  if (entry.packageType === 'system' || entry.manifest.packageType === 'system') {
+  if (entry.manifest.packageType === 'system') {
     throw new Error('Packaged system extensions cannot be deleted.');
   }
   if (!entry.packageRoot) {
