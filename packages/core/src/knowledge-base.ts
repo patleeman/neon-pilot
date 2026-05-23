@@ -7,10 +7,14 @@ import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
 import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
 import {
+  hasRecentLocalChanges as hasRecentLocalSnapshotChanges,
+  readLocalPathTimestampMs as readLocalSnapshotPathTimestampMs,
+  snapshotsEqual,
+} from './knowledge-base-snapshots.js';
+import {
   readStoredKnowledgeBaseState,
   type Snapshot,
   type StoredKnowledgeBaseState,
-  type WorkingSnapshotEntry,
   writeStoredKnowledgeBaseState,
 } from './knowledge-base-state.js';
 import { readKnowledgeBaseSyncLockMetadata, type SyncLockMetadata } from './knowledge-base-sync-lock.js';
@@ -249,18 +253,6 @@ function listWorkingSnapshot(cwd: string): Snapshot {
   return snapshot;
 }
 
-function snapshotsEqual(left: WorkingSnapshotEntry | undefined, right: WorkingSnapshotEntry | undefined): boolean {
-  if (!left && !right) {
-    return true;
-  }
-
-  if (!left || !right) {
-    return false;
-  }
-
-  return left.blobHash === right.blobHash;
-}
-
 function readGitRemoteUrl(cwd: string): string {
   return runGitText(cwd, ['remote', 'get-url', 'origin'], { allowFailure: true }).trim();
 }
@@ -390,33 +382,11 @@ function readRemotePathTimestampMs(cwd: string, branch: string, relativePath: st
 }
 
 function readLocalPathTimestampMs(root: string, relativePath: string, existsInLocal: boolean): number {
-  if (!existsInLocal) {
-    return Date.now();
-  }
-
-  try {
-    return statSync(join(root, relativePath)).mtimeMs;
-  } catch {
-    return Date.now();
-  }
+  return readLocalSnapshotPathTimestampMs(root, relativePath, existsInLocal);
 }
 
 function hasRecentLocalChanges(root: string, baseSnapshot: Snapshot, workingSnapshot: Snapshot, nowMs: number): boolean {
-  const changedPaths = new Set<string>([...Object.keys(baseSnapshot), ...Object.keys(workingSnapshot)]);
-
-  for (const path of changedPaths) {
-    if (snapshotsEqual(baseSnapshot[path], workingSnapshot[path])) {
-      continue;
-    }
-
-    const existsInLocal = Boolean(workingSnapshot[path]);
-    const localTimestampMs = readLocalPathTimestampMs(root, path, existsInLocal);
-    if (nowMs - localTimestampMs < KNOWLEDGE_BASE_LOCAL_CHANGE_QUIET_MS) {
-      return true;
-    }
-  }
-
-  return false;
+  return hasRecentLocalSnapshotChanges({ root, baseSnapshot, workingSnapshot, nowMs, quietMs: KNOWLEDGE_BASE_LOCAL_CHANGE_QUIET_MS });
 }
 
 function tryRunGitCommand(cwd: string, args: string[]): boolean {
