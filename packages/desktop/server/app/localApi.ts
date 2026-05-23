@@ -186,6 +186,7 @@ import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } 
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
+import { assertConversationBootstrapFound } from './localApiConversationBootstrapResponse.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
 import {
   buildChangedConversationCwdResponse,
@@ -1351,9 +1352,7 @@ export async function readDesktopConversationBootstrap(input: {
     ...input,
     profile: context.getRuntimeScope(),
   });
-  if (isMissingConversationBootstrapState(bootstrap.state)) {
-    throw new Error('Conversation not found');
-  }
+  assertConversationBootstrapFound(isMissingConversationBootstrapState(bootstrap.state));
 
   return inlineConversationBootstrapAssetsCapability(bootstrap.state);
 }
