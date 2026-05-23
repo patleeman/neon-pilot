@@ -98,6 +98,7 @@ import {
   normalizeExtensionRegistryConfig,
   serializeExtensionRegistryConfig,
 } from './extensionRegistryConfig.js';
+import { buildExtensionRuntimeProviderRegistrations } from './extensionRuntimeProviderRegistrations.js';
 import {
   buildExtensionSecretRegistrations as buildExtensionSecretContributionRegistrations,
   buildExtensionSettingsRegistrations as buildExtensionSettingsContributionRegistrations,
@@ -1199,24 +1200,7 @@ export function listExtensionPromptContextProviderRegistrations(
 }
 
 export function listExtensionRuntimeProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionRuntimeProviderRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap((entry) =>
-    (entry.manifest.contributes?.runtimeProviders ?? []).flatMap((provider): ExtensionRuntimeProviderRegistration[] => {
-      const id = provider.id.trim();
-      const handler = provider.handler.trim();
-      const title = provider.title.trim();
-      if (!id || !handler || !title) return [];
-      return [
-        {
-          extensionId: entry.manifest.id,
-          id,
-          packageType: entry.manifest.packageType ?? 'user',
-          handler,
-          title,
-          ...(provider.description ? { description: provider.description } : {}),
-        },
-      ];
-    }),
-  );
+  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionRuntimeProviderRegistrations);
 }
 
 export function listExtensionAssemblyProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionAssemblyProviderRegistration[] {
