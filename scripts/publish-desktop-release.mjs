@@ -730,7 +730,17 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     console.log('Running full desktop performance smoke test against the built app...');
     run(
       'node',
-      [perfSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-ready-ms=15000', '--max-cpu=130'],
+      [
+        perfSmokeScriptPath,
+        `--app=${appPath}`,
+        '--seconds=30',
+        '--sessions=2500',
+        '--blocks=80',
+        '--max-ready-ms=15000',
+        '--max-cpu=130',
+        '--max-draft-submit-visible-ms=15000',
+        '--max-long-transcript-open-ms=8000',
+      ],
       {
         cwd: buildRoot,
         env,

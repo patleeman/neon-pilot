@@ -27,6 +27,7 @@ const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
+const maxLongTranscriptOpenMs = Number(arg('max-long-transcript-open-ms', '2500')) || 2500;
 const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
@@ -384,7 +385,8 @@ async function main() {
     if (cpuAvg > maxCpu || cpuPeak > maxCpu * 3)
       failures.push(`idleCpu peak=${cpuPeak.toFixed(1)} avg=${cpuAvg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
-    if (longTranscriptOpenMs > 2500) failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > 2500`);
+    if (longTranscriptOpenMs > maxLongTranscriptOpenMs)
+      failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > ${maxLongTranscriptOpenMs}`);
     if (draftSubmitVisibleMs > maxDraftSubmitVisibleMs)
       failures.push(`draftSubmitVisibleMs ${draftSubmitVisibleMs} > ${maxDraftSubmitVisibleMs}`);
     if (failures.length)
