@@ -32,6 +32,11 @@ import {
   readConversationOffshootMetadata as readConversationOffshootMetadataFromCustomEntry,
   readConversationWorkspaceMetadata as readConversationWorkspaceMetadataFromCustomEntry,
 } from './sessionCustomMetadata.js';
+import {
+  buildSessionDetailCacheKey as buildSessionDetailCacheKeyValue,
+  normalizeTailBlockRequest as normalizeTailBlockRequestValue,
+  trimSessionDetailCache as trimSessionDetailCacheMap,
+} from './sessionDetailCache.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import {
   listSessionFiles as listSessionFilesFromDir,
@@ -2356,24 +2361,15 @@ function resolveTailBlockLimit(tailBlocks: number | undefined, totalBlocks: numb
 const MAX_SESSION_DETAIL_TAIL_BLOCKS = 10000;
 
 function normalizeTailBlockRequest(tailBlocks: number | undefined): number | undefined {
-  return typeof tailBlocks === 'number' && Number.isSafeInteger(tailBlocks) && tailBlocks > 0
-    ? Math.min(MAX_SESSION_DETAIL_TAIL_BLOCKS, tailBlocks)
-    : undefined;
+  return normalizeTailBlockRequestValue({ tailBlocks, maxTailBlocks: MAX_SESSION_DETAIL_TAIL_BLOCKS });
 }
 
 function buildSessionDetailCacheKey(filePath: string, tailBlocks?: number): string {
-  return `${filePath}::${tailBlocks ?? 'all'}`;
+  return buildSessionDetailCacheKeyValue(filePath, tailBlocks);
 }
 
 function trimSessionDetailCache(): void {
-  while (sessionDetailCache.size > MAX_SESSION_DETAIL_CACHE_ENTRIES) {
-    const oldestKey = sessionDetailCache.keys().next().value;
-    if (!oldestKey) {
-      break;
-    }
-
-    sessionDetailCache.delete(oldestKey);
-  }
+  trimSessionDetailCacheMap(sessionDetailCache, MAX_SESSION_DETAIL_CACHE_ENTRIES);
 }
 
 export function readSessionBlocksByFileWithTelemetry(
