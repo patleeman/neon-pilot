@@ -173,6 +173,7 @@ import { pickFolderCapability, readVaultFilesCapability } from '../workspace/wor
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { shouldRefreshDesktopConversationStateForAppEvent } from './localApiConversationEvents.js';
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
+import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
@@ -992,14 +993,7 @@ export async function updateDesktopModelPreferences(input: {
   thinkingLevel?: string | null;
   serviceTier?: string | null;
 }) {
-  if (
-    typeof input.model !== 'string' &&
-    typeof input.visionModel !== 'string' &&
-    typeof input.thinkingLevel !== 'string' &&
-    typeof input.serviceTier !== 'string'
-  ) {
-    throw new Error('model, visionModel, thinkingLevel, or serviceTier required');
-  }
+  validateDesktopModelPreferenceUpdate(input);
 
   const models = (await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
   persistSettingsWrite(
