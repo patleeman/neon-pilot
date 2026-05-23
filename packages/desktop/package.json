@@ -1,6 +1,6 @@
 {
   "name": "@neon-pilot/desktop",
-  "version": "0.9.1-rc.1",
+  "version": "0.9.1-rc.2",
   "license": "MIT",
   "description": "Neon Pilot Electron desktop shell",
   "repository": "github:patleeman/neon-pilot",

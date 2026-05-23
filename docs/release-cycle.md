@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1-rc.1** — current repo version. Published successfully.
+**v0.9.1-rc.2** — current repo version. Preparing for publish.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.1
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.2
 
 Highlights in this train:
 
-- Moves optional/experimental extensions into an installable catalog with packaged release bundles.
-- Tightens Extension settings so install, delete, filtering, and package-type actions are clearer and safer.
-- Speeds up desktop startup by deferring heavy conversation chrome, sidebar, layout overlays, and composer metadata work.
-- Improves first-chat reliability by preserving draft surfaces and sending initial prompts after navigation without reload regressions.
-- Backfills broad runtime, live-session, gateway, MCP, dictation, and extension protocol coverage ahead of the RC.
+- Makes agent bash output render like an inline terminal while preserving the normal tool chrome and command preview.
+- Streams foreground bash output into the transcript as commands run, so long loops show progress instead of waiting for completion.
+- Moves background bash logs inline with the background task tool item and removes the old right-workbench run detail panes.
+- Changes background task shelf links to focus and expand the inline task output instead of opening a separate run panel.
+- Adds focused coverage for inline background bash rendering, run focus behavior, and linked-run collection.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

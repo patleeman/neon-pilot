@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.2 — 2026-05-23
+
+### Highlights
+
+- Makes agent bash output render like an inline terminal while preserving the normal tool chrome and command preview.
+- Streams foreground bash output into the transcript as commands run, so long loops show progress instead of waiting for completion.
+- Moves background bash logs inline with the background task tool item and removes the old right-workbench run detail panes.
+- Changes background task shelf links to focus and expand the inline task output instead of opening a separate run panel.
+- Adds focused coverage for inline background bash rendering, run focus behavior, and linked-run collection.
+
+### Notes
+
+- 12 commits since the previous release.
+
 ## 0.9.1-rc.1 — 2026-05-23
 
 ### Highlights
