@@ -10,6 +10,7 @@ import {
   planStartupGuardQuarantines,
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
+import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import type {
   ExtensionManifest,
   ExtensionMentionContribution,
@@ -560,24 +561,14 @@ function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRe
   writeFileSync(getExtensionFailurePath(stateRoot), `${JSON.stringify(records, null, 2)}\n`);
 }
 
-function normalizeExtensionDependency(dependency: string | { id: string; optional?: boolean; version?: string }): {
-  id: string;
-  optional: boolean;
-} {
-  return typeof dependency === 'string'
-    ? { id: dependency, optional: false }
-    : { id: dependency.id, optional: Boolean(dependency.optional) };
-}
-
 function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry): string[] {
   const skillDiagnostics = (entry.manifest.contributes?.skills ?? [])
     .map((skill) => validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill }))
     .filter((diagnostic): diagnostic is string => diagnostic !== null);
-  const installed = new Set(listExtensionEntries().map((candidate) => candidate.manifest.id));
-  const dependencyDiagnostics = (entry.manifest.dependsOn ?? [])
-    .map(normalizeExtensionDependency)
-    .filter((dependency) => !dependency.optional && !installed.has(dependency.id))
-    .map((dependency) => `Missing required extension dependency: ${dependency.id}`);
+  const dependencyDiagnostics = listMissingRequiredExtensionDependencies(
+    entry.manifest.dependsOn ?? [],
+    listExtensionEntries().map((candidate) => candidate.manifest.id),
+  );
   return [...skillDiagnostics, ...dependencyDiagnostics];
 }
 
