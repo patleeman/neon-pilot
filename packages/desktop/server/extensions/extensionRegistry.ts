@@ -43,6 +43,11 @@ import {
 import { validateThemeTokens, validateViewComponent } from './extensionManifestViewValidation.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
+  validateDynamicProviderContributions,
+  validateRuntimeProviderContributions,
+  validateTurnContextProviderContributions,
+} from './extensionProviderContributionValidation.js';
+import {
   type ExtensionRegistryConfig,
   isRecord,
   normalizeExtensionRegistryConfig,
@@ -767,45 +772,14 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.turnContextProviders !== undefined) {
-    for (const [index, provider] of assertRecordArray(contributes.turnContextProviders, 'contributes.turnContextProviders').entries()) {
-      requireString(provider.id, `contributes.turnContextProviders[${index}].id`);
-      requireString(provider.handler, `contributes.turnContextProviders[${index}].handler`);
-      validateOptionalString(provider.title, `contributes.turnContextProviders[${index}].title`);
-      if (provider.priority !== undefined && (typeof provider.priority !== 'number' || !Number.isInteger(provider.priority))) {
-        throw new Error(`Extension manifest contributes.turnContextProviders[${index}].priority must be an integer.`);
-      }
-      if (provider.scope !== undefined) {
-        for (const [scopeIndex, scope] of requireStringArray(
-          provider.scope,
-          `contributes.turnContextProviders[${index}].scope`,
-        ).entries()) {
-          validateEnum(scope, ['global', 'workspace', 'conversation'], `contributes.turnContextProviders[${index}].scope[${scopeIndex}]`);
-        }
-      }
-    }
+    validateTurnContextProviderContributions(contributes.turnContextProviders);
   }
 
   if (contributes.runtimeProviders !== undefined) {
-    for (const [index, provider] of assertRecordArray(contributes.runtimeProviders, 'contributes.runtimeProviders').entries()) {
-      requireString(provider.id, `contributes.runtimeProviders[${index}].id`);
-      requireString(provider.handler, `contributes.runtimeProviders[${index}].handler`);
-      requireString(provider.title, `contributes.runtimeProviders[${index}].title`);
-      validateOptionalString(provider.description, `contributes.runtimeProviders[${index}].description`);
-    }
+    validateRuntimeProviderContributions(contributes.runtimeProviders);
   }
 
-  for (const providerField of ['skillProviders', 'toolProviders', 'promptTemplateProviders', 'instructionProviders'] as const) {
-    if (contributes[providerField] !== undefined) {
-      for (const [index, provider] of assertRecordArray(contributes[providerField], `contributes.${providerField}`).entries()) {
-        requireString(provider.id, `contributes.${providerField}[${index}].id`);
-        requireString(provider.handler, `contributes.${providerField}[${index}].handler`);
-        validateOptionalString(provider.title, `contributes.${providerField}[${index}].title`);
-        if (provider.priority !== undefined && !Number.isInteger(provider.priority)) {
-          throw new Error(`Extension manifest contributes.${providerField}[${index}].priority must be an integer.`);
-        }
-      }
-    }
-  }
+  validateDynamicProviderContributions(contributes, ['skillProviders', 'toolProviders', 'promptTemplateProviders', 'instructionProviders']);
 
   if (contributes.promptAssemblyHooks !== undefined) {
     for (const [index, hook] of assertRecordArray(contributes.promptAssemblyHooks, 'contributes.promptAssemblyHooks').entries()) {
