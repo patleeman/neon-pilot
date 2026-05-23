@@ -185,6 +185,7 @@ import { buildFastConversationContentSearchResponse } from './localApiSearch.js'
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
+import { buildConversationCheckpointRecordInput } from './localApiCheckpointRecord.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertConversationBootstrapFound } from './localApiConversationBootstrapResponse.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
@@ -1477,23 +1478,9 @@ export async function createDesktopConversationCheckpoint(input: { conversationI
   const message = readRequiredCheckpointString(input.message, 'message');
   const paths = normalizeCheckpointPaths(cwd, input.paths);
   const created = createConversationCheckpointCommit({ cwd, message, paths });
-  const record = saveConversationCommitCheckpoint({
-    profile: context.getRuntimeScope(),
-    conversationId,
-    checkpointId: created.metadata.commitSha,
-    title: created.metadata.subject,
-    cwd,
-    commitSha: created.metadata.commitSha,
-    shortSha: created.metadata.shortSha,
-    subject: created.metadata.subject,
-    body: created.metadata.body,
-    authorName: created.metadata.authorName,
-    authorEmail: created.metadata.authorEmail,
-    committedAt: created.metadata.committedAt,
-    files: created.files,
-    linesAdded: created.linesAdded,
-    linesDeleted: created.linesDeleted,
-  });
+  const record = saveConversationCommitCheckpoint(
+    buildConversationCheckpointRecordInput({ profile: context.getRuntimeScope(), conversationId, cwd, created }),
+  );
   invalidateAppTopics('checkpoints', 'sessions');
   return record;
 }
