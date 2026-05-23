@@ -39,6 +39,7 @@ import {
   normalizeTailBlockRequest as normalizeTailBlockRequestValue,
   trimSessionDetailCache as trimSessionDetailCacheMap,
 } from './sessionDetailCache.js';
+import { buildPromptCacheMissMetadata, buildSessionDetailTelemetry } from './sessionDetailTelemetry.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import {
   listSessionFiles as listSessionFilesFromDir,
@@ -2279,13 +2280,15 @@ export function readSessionBlocksByFileWithTelemetry(
     return {
       detail: detailWithFreshTopology.signature === signature ? detailWithFreshTopology : { ...detailWithFreshTopology, signature },
       telemetry: {
-        cache: 'hit',
-        loader: detailWithFreshTopology.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
-        durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-        ...(typeof requestedTailBlocks === 'number' ? { requestedTailBlocks } : {}),
-        totalBlocks: detailWithFreshTopology.totalBlocks,
-        blockOffset: detailWithFreshTopology.blockOffset,
-        contextUsageIncluded: detailWithFreshTopology.contextUsage !== null,
+        ...buildSessionDetailTelemetry({
+          cache: 'hit',
+          loader: detailWithFreshTopology.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
+          startedAt,
+          requestedTailBlocks,
+          totalBlocks: detailWithFreshTopology.totalBlocks,
+          blockOffset: detailWithFreshTopology.blockOffset,
+          contextUsageIncluded: detailWithFreshTopology.contextUsage !== null,
+        }),
       },
     };
   }
@@ -2315,16 +2318,14 @@ export function readSessionBlocksByFileWithTelemetry(
           source: 'server',
           category: 'session_integrity',
           name: 'prompt_cache_miss',
-          metadata: {
+          metadata: buildPromptCacheMissMetadata({
             filePath,
             oldSignature: cachedDetail.signature,
             newSignature: signature,
             oldSize,
             newSize,
-            oldMtime: Number(cachedDetail.signature.split(':')[1] ?? 0),
-            newMtime: Number(signature.split(':')[1] ?? 0),
             cacheLoader: typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
-          },
+          }),
         });
       }
     }
@@ -2348,14 +2349,16 @@ export function readSessionBlocksByFileWithTelemetry(
     return {
       detail,
       telemetry: {
-        cache: 'miss',
-        loader: 'fast-tail',
-        durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-        ...(typeof requestedTailBlocks === 'number' ? { requestedTailBlocks } : {}),
-        totalBlocks: detail.totalBlocks,
-        blockOffset: detail.blockOffset,
-        contextUsageIncluded: false,
-        ...(telemetryModificationDetected ? { modificationDetected: true } : {}),
+        ...buildSessionDetailTelemetry({
+          cache: 'miss',
+          loader: 'fast-tail',
+          startedAt,
+          requestedTailBlocks,
+          totalBlocks: detail.totalBlocks,
+          blockOffset: detail.blockOffset,
+          contextUsageIncluded: false,
+          modificationDetected: telemetryModificationDetected,
+        }),
       },
     };
   }
@@ -2390,14 +2393,16 @@ export function readSessionBlocksByFileWithTelemetry(
   return {
     detail,
     telemetry: {
-      cache: 'miss',
-      loader: 'full',
-      durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-      ...(typeof requestedTailBlocks === 'number' ? { requestedTailBlocks } : {}),
-      totalBlocks: detail.totalBlocks,
-      blockOffset: detail.blockOffset,
-      contextUsageIncluded: true,
-      ...(telemetryModificationDetected ? { modificationDetected: true } : {}),
+      ...buildSessionDetailTelemetry({
+        cache: 'miss',
+        loader: 'full',
+        startedAt,
+        requestedTailBlocks,
+        totalBlocks: detail.totalBlocks,
+        blockOffset: detail.blockOffset,
+        contextUsageIncluded: true,
+        modificationDetected: telemetryModificationDetected,
+      }),
     },
   };
 }
