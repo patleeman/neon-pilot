@@ -33,6 +33,7 @@ import { appendIfPresent } from '../conversation/conversationAttachments';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
 import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
 import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
+import { shouldHandlePastedComposerFiles } from '../conversation/conversationClipboard';
 import {
   isConversationComposerDisabled,
   shouldClearDraftPendingPrompt,
@@ -4756,7 +4757,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
     const files = readComposerTransferFiles(e.clipboardData.files);
-    if (files.length === 0) {
+    if (!shouldHandlePastedComposerFiles(files)) {
       return;
     }
 
