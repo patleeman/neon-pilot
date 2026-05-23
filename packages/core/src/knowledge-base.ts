@@ -33,6 +33,12 @@ import {
   writeStoredKnowledgeBaseState,
 } from './knowledge-base-state.js';
 import { readKnowledgeBaseSyncLockMetadata, type SyncLockMetadata } from './knowledge-base-sync-lock.js';
+import {
+  isKnowledgeBaseSyncLockStale,
+  removeKnowledgeBaseSyncLock,
+  shouldReleaseKnowledgeBaseSyncLock,
+  tryCreateKnowledgeBaseSyncLock,
+} from './knowledge-base-sync-lock-runtime.js';
 import { parseKnowledgeBaseTimestampMs, toKnowledgeBaseIsoTimestamp } from './knowledge-base-time.js';
 import {
   type MachineConfigOptions,
@@ -618,18 +624,15 @@ export class KnowledgeBaseManager {
     ensureParentDirectory(this.syncLockMetadataPath);
 
     const acquire = (): boolean => {
-      try {
-        mkdirSync(this.syncLockDir);
-      } catch (error) {
-        const errorCode =
-          typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-        if (errorCode === 'EEXIST') {
-          return false;
-        }
-        throw error;
+      const acquired = tryCreateKnowledgeBaseSyncLock({
+        syncLockDir: this.syncLockDir,
+        syncLockMetadataPath: this.syncLockMetadataPath,
+        timestamp,
+        pid: process.pid,
+      });
+      if (!acquired) {
+        return false;
       }
-
-      writeFileSync(this.syncLockMetadataPath, `${JSON.stringify({ pid: process.pid, acquiredAt: timestamp }, null, 2)}\n`);
       this.activeSyncLockTimestamp = timestamp;
       return true;
     };
@@ -642,14 +645,18 @@ export class KnowledgeBaseManager {
     const lockAcquiredAtMs = parseTimestampMs(existingLock?.acquiredAt);
     // Corrupted metadata (non-null lock with null/invalid acquiredAt) is treated
     // as stale so the lock can be broken rather than held indefinitely.
-    const metadataCorrupt = existingLock && lockAcquiredAtMs === null;
-    const staleByAge = lockAcquiredAtMs !== null && Date.now() - lockAcquiredAtMs > KNOWLEDGE_BASE_SYNC_LOCK_STALE_MS;
-    const stale = !existingLock || metadataCorrupt || !isProcessAlive(existingLock.pid) || staleByAge;
+    const stale = isKnowledgeBaseSyncLockStale({
+      existingLock,
+      lockAcquiredAtMs,
+      nowMs: Date.now(),
+      staleMs: KNOWLEDGE_BASE_SYNC_LOCK_STALE_MS,
+      isProcessAlive,
+    });
     if (!stale) {
       return false;
     }
 
-    rmSync(this.syncLockDir, { recursive: true, force: true });
+    removeKnowledgeBaseSyncLock(this.syncLockDir);
     return acquire();
   }
 
@@ -663,11 +670,11 @@ export class KnowledgeBaseManager {
     }
 
     const existingLock = readSyncLockMetadata(this.syncLockMetadataPath);
-    if (!existingLock || existingLock.pid !== process.pid || existingLock.acquiredAt !== activeTimestamp) {
+    if (!shouldReleaseKnowledgeBaseSyncLock({ activeTimestamp, existingLock, pid: process.pid })) {
       return;
     }
 
-    rmSync(this.syncLockDir, { recursive: true, force: true });
+    removeKnowledgeBaseSyncLock(this.syncLockDir);
   }
 
   private stageAndCommitIfNeeded(root: string, branch: string, timestamp: string): void {
