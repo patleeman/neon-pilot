@@ -105,6 +105,7 @@ import {
   resolveSessionIdByFile as resolveSessionIdByFileFromMap,
 } from './sessionTopologyMetadata.js';
 import { extractUserContent as extractUserContentValue } from './sessionUserContent.js';
+import { buildWorkspaceChangeContent, resolveWorkspaceChangeLabels } from './sessionWorkspaceChangeEntry.js';
 import {
   isNeutralChatWorkspaceCwd as isNeutralChatWorkspaceCwdForRuntime,
   type LegacyToolWorkspaceMetadata,
@@ -1359,9 +1360,12 @@ export function appendConversationWorkspaceMetadata(input: {
     return;
   }
 
-  const previousLabel =
-    input.previousWorkspaceCwd === null ? 'Chats' : input.previousCwd?.trim() || input.previousWorkspaceCwd?.trim() || 'previous workspace';
-  const nextLabel = input.workspaceCwd === null ? 'Chats' : cwd || workspaceCwd || 'new workspace';
+  const workspaceChangeLabels = resolveWorkspaceChangeLabels({
+    cwd,
+    workspaceCwd,
+    previousCwd: input.previousCwd,
+    previousWorkspaceCwd: input.previousWorkspaceCwd,
+  });
 
   appendFileSync(
     input.sessionFile,
@@ -1371,7 +1375,7 @@ export function appendConversationWorkspaceMetadata(input: {
       parentId: metadataId,
       timestamp,
       customType: CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
-      content: `Working directory changed from ${previousLabel} to ${nextLabel}.`,
+      content: buildWorkspaceChangeContent(workspaceChangeLabels),
       details: {
         ...(input.previousCwd ? { previousCwd: input.previousCwd } : {}),
         ...(input.previousWorkspaceCwd !== undefined ? { previousWorkspaceCwd: input.previousWorkspaceCwd } : {}),
