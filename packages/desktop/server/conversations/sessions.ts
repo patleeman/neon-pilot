@@ -61,7 +61,7 @@ import {
   resolveTailBlockLimit as resolveTailBlockLimitValue,
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
-import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
+import { buildSessionImageAssets } from './sessionImages.js';
 import {
   buildPersistentSessionIndexDocument as buildPersistentSessionIndexDocumentFromCache,
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
@@ -102,6 +102,7 @@ import {
   readSourceRunIdFromSessionFilePath as readSourceRunIdFromSessionPath,
   resolveSessionIdByFile as resolveSessionIdByFileFromMap,
 } from './sessionTopologyMetadata.js';
+import { extractUserContent as extractUserContentValue } from './sessionUserContent.js';
 import {
   isNeutralChatWorkspaceCwd as isNeutralChatWorkspaceCwdForRuntime,
   type LegacyToolWorkspaceMetadata,
@@ -650,31 +651,7 @@ export interface DisplayMessageEntryLike {
 }
 
 function extractUserContent(content: unknown): { text: string; images: DisplayImage[] } {
-  const blocks = normalizeContent(content);
-  const text = blocks
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text ?? '')
-    .join('\n')
-    .trim();
-  const images = blocks
-    .filter((block) => block.type === 'image')
-    .flatMap((block) => {
-      const src = imageSrc(block);
-      const mimeType = imageMimeType(block);
-      if (!src || !mimeType) {
-        return [];
-      }
-
-      return [
-        {
-          alt: typeof block.name === 'string' && block.name.trim().length > 0 ? `Attached image: ${block.name.trim()}` : 'Attached image',
-          src,
-          mimeType,
-          ...(typeof block.name === 'string' && block.name.trim().length > 0 ? { caption: block.name.trim() } : {}),
-        },
-      ];
-    });
-  return { text, images };
+  return extractUserContentValue(content) as { text: string; images: DisplayImage[] };
 }
 
 function readExecutionWrappers(details: unknown): Array<{ id: string; label?: string }> {
