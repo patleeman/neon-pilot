@@ -63,7 +63,13 @@ import {
   EXTENSION_ROUTE_CAPABILITIES,
   EXTENSION_SURFACE_KINDS,
 } from './extensionManifest.js';
-import { assertArray, requireString, requireStringArray, validateOptionalString } from './extensionManifestValidation.js';
+import {
+  assertExtensionManifestRecord,
+  validateExtensionManifestBasics,
+  validateExtensionManifestDependencies,
+  validateExtensionManifestFrontend,
+} from './extensionManifestCoreValidation.js';
+import { requireStringArray } from './extensionManifestValidation.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
   validateDynamicProviderContributions,
@@ -948,37 +954,13 @@ function validateExtensionSurfaces(surfaces: unknown): void {
 }
 
 export function parseExtensionManifest(value: unknown): ExtensionManifest {
-  if (!isRecord(value)) {
-    throw new Error('Extension manifest must be an object.');
-  }
-  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
-    throw new Error('Extension manifest schemaVersion must be 1 or 2.');
-  }
-  requireString(value.id, 'id');
-  requireString(value.name, 'name');
-  if (value.defaultEnabled !== undefined && typeof value.defaultEnabled !== 'boolean') {
-    throw new Error('Extension manifest defaultEnabled must be a boolean.');
-  }
-  validateOptionalString(value.description, 'description');
-  validateOptionalString(value.version, 'version');
+  assertExtensionManifestRecord(value);
+  validateExtensionManifestBasics(value);
   if (value.dependsOn !== undefined) {
-    for (const [index, dependency] of assertArray(value.dependsOn, 'dependsOn').entries()) {
-      if (typeof dependency === 'string') {
-        requireString(dependency, `dependsOn[${index}]`);
-        continue;
-      }
-      if (!isRecord(dependency)) throw new Error(`Extension manifest dependsOn[${index}] must be a string or object.`);
-      requireString(dependency.id, `dependsOn[${index}].id`);
-      if (dependency.optional !== undefined && typeof dependency.optional !== 'boolean') {
-        throw new Error(`Extension manifest dependsOn[${index}].optional must be a boolean.`);
-      }
-      validateOptionalString(dependency.version, `dependsOn[${index}].version`);
-    }
+    validateExtensionManifestDependencies(value.dependsOn);
   }
   if (value.frontend !== undefined) {
-    if (!isRecord(value.frontend)) throw new Error('Extension manifest frontend must be an object.');
-    requireString(value.frontend.entry, 'frontend.entry');
-    if (value.frontend.styles !== undefined) requireStringArray(value.frontend.styles, 'frontend.styles');
+    validateExtensionManifestFrontend(value.frontend);
   }
   if (value.contributes !== undefined) {
     if (!isRecord(value.contributes)) throw new Error('Extension manifest contributes must be an object.');
