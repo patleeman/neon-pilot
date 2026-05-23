@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fs = vi.hoisted(() => ({ existsSync: vi.fn(() => true), readFileSync: vi.fn((path: string) => `content:${path}`) }));
+const template = vi.hoisted(() => ({ renderSystemPromptTemplate: vi.fn(() => 'generated template') }));
 const core = vi.hoisted(() => ({
+  renderSystemPromptTemplate: template.renderSystemPromptTemplate,
   getDurableAgentFilePath: vi.fn((vaultRoot: string) => `${vaultRoot}/AGENTS.md`),
   getDurableSkillsDir: vi.fn((vaultRoot: string) => `${vaultRoot}/skills`),
   getDurableTasksDir: vi.fn((syncRoot: string) => `${syncRoot}/tasks`),
@@ -15,7 +17,6 @@ const core = vi.hoisted(() => ({
     appendSystemFiles: ['/repo/APPEND.md'],
   })),
 }));
-const template = vi.hoisted(() => ({ renderSystemPromptTemplate: vi.fn(() => 'generated template') }));
 const registry = vi.hoisted(() => ({ listExtensionAssemblyProviderRegistrations: vi.fn(() => []) }));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
@@ -25,7 +26,6 @@ const runtimeScope = vi.hoisted(() => ({ getAssemblyRuntimeScope: vi.fn(() => 's
 
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
-vi.mock('../../../core/src/system-prompt-template.js', () => template);
 vi.mock('../extensions/extensionRegistry.js', () => registry);
 vi.mock('./providerRuntime.js', () => providerRuntime);
 vi.mock('./runtimeScope.js', () => runtimeScope);

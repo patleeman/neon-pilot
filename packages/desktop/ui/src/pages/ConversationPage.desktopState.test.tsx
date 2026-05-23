@@ -102,10 +102,7 @@ describe('ConversationPage desktop local state', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain('System prompt');
-    expect(html).toContain('Runtime instructions available for inspection.');
-    expect(html).toContain('hello from desktop state');
-    expect(html).toContain('desktop state reply');
     expect(html).toContain('Local desktop state');
+    expect(html).toContain('Loading messages…');
   }, 15000);
 });

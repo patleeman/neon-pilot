@@ -4,16 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1-rc.0** — current repo version. Published successfully.
+**v0.9.1-rc.1** — current repo version. Published successfully.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.1
 
 Highlights in this train:
 
-- Keeps installed RC apps on the RC runtime channel even after they consume a stable-semver update.
-- Adds a desktop Settings update-path selector so users can choose stable releases only or opt into test/RC builds.
-- Defaults fresh RC runtime profiles to the test update path while keeping stable profiles on stable releases.
-- Validates the release-channel fix with focused runtime-channel, updater, desktop-config, and Settings UI coverage.
+- Moves optional/experimental extensions into an installable catalog with packaged release bundles.
+- Tightens Extension settings so install, delete, filtering, and package-type actions are clearer and safer.
+- Speeds up desktop startup by deferring heavy conversation chrome, sidebar, layout overlays, and composer metadata work.
+- Improves first-chat reliability by preserving draft surfaces and sending initial prompts after navigation without reload regressions.
+- Backfills broad runtime, live-session, gateway, MCP, dictation, and extension protocol coverage ahead of the RC.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
@@ -62,7 +63,7 @@ Users can choose **Settings → App behavior → Update path** to follow either 
 
 Each release command performs these steps in order:
 
-1. **Supply-chain audit** — runs `scfw audit npm` against installed packages; blocks the release if any critical/malicious findings are reported. Requires [`scfw`](https://github.com/DataDog/supply-chain-firewall) installed via `pipx install scfw`. Bypassable with `NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1` in emergencies.
+1. **Supply-chain audit** — runs `scfw audit npm` through `scripts/scfw-pnpm-npm-adapter.mjs`, which presents the pnpm lockfile as npm list JSON; blocks the release if any critical/malicious findings are reported. Requires [`scfw`](https://github.com/DataDog/supply-chain-firewall) installed via `pipx install scfw`. Bypassable with `NEON_PILOT_RELEASE_SKIP_SCFW_AUDIT=1` in emergencies.
 2. **Version bump** — `pnpm version` bumps the version following semver
 3. **Pi update** — refreshes the direct Pi runtime packages to the latest published version
 4. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`

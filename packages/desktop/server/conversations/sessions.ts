@@ -2229,11 +2229,15 @@ function persistSessionIndex(): void {
   persistedIndexJson = nextJson;
   sessionCacheDirty = false;
   mkdirSync(dirname(indexFile), { recursive: true });
-  pendingIndexWrite = new Promise<void>((resolve) => {
-    writeFile(indexFile, nextJson, () => {
-      resolve(); // Ignore write failures — in-memory cache is the source of truth.
-    });
-  });
+  const previousIndexWrite = pendingIndexWrite;
+  pendingIndexWrite = (previousIndexWrite ?? Promise.resolve()).then(
+    () =>
+      new Promise<void>((resolve) => {
+        writeFile(indexFile, nextJson, () => {
+          resolve(); // Ignore write failures — in-memory cache is the source of truth.
+        });
+      }),
+  );
 }
 
 function resolveSessionFileCwdSlug(filePath: string): string {

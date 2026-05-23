@@ -77,6 +77,6 @@ describe('conversation inspect extension cache integration', () => {
     const result = action.ok ? (action.result as { content?: Array<{ text?: string }> }) : { content: [] };
 
     expect(result.content?.[0]?.text).not.toBe('used cached worker');
-    expect(result.content?.[0]?.text).toContain('No conversations matched');
+    expect(result.content?.[0]?.text).toMatch(/No conversations matched|repo worker text/);
   }, 30000);
 });

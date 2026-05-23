@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.1 — 2026-05-23
+
+### Highlights
+
+- Moves optional/experimental extensions into an installable catalog with packaged release bundles.
+- Tightens Extension settings so install, delete, filtering, and package-type actions are clearer and safer.
+- Speeds up desktop startup by deferring heavy conversation chrome, sidebar, layout overlays, and composer metadata work.
+- Improves first-chat reliability by preserving draft surfaces and sending initial prompts after navigation without reload regressions.
+- Backfills broad runtime, live-session, gateway, MCP, dictation, and extension protocol coverage ahead of the RC.
+
+### Notes
+
+- 227 commits since the previous release.
+
 ## 0.9.1-rc.0 — 2026-05-22
 
 ### Highlights

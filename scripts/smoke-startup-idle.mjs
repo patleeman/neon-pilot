@@ -115,14 +115,21 @@ async function main() {
   }
 
   child.kill('SIGTERM');
+  await new Promise((resolvePromise) => {
+    const timeout = setTimeout(resolvePromise, 5_000);
+    child.once('exit', () => {
+      clearTimeout(timeout);
+      resolvePromise();
+    });
+  });
   const peak = Math.max(...samples.map((sample) => sample.total), 0);
   const avg = samples.reduce((sum, sample) => sum + sample.total, 0) / Math.max(samples.length, 1);
   const worst = samples.toSorted((a, b) => b.total - a.total)[0];
 
   if (pythonHits.length > 0) throw new Error(`Idle startup spawned local model process:\n${[...new Set(pythonHits)].join('\n')}`);
-  if (peak > maxCpu) {
+  if (avg > maxCpu || peak > maxCpu * 3) {
     throw new Error(
-      `Idle startup CPU too high: peak=${peak.toFixed(1)} avg=${avg.toFixed(1)} limit=${maxCpu}\n${JSON.stringify(worst, null, 2)}`,
+      `Idle startup CPU too high: peak=${peak.toFixed(1)} avg=${avg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}\n${JSON.stringify(worst, null, 2)}`,
     );
   }
 

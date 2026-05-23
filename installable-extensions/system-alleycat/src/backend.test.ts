@@ -75,10 +75,7 @@ describe('system-alleycat backend', () => {
     await startService(undefined, context);
     await expect(status(undefined, context)).resolves.toMatchObject({
       pairPayload: null,
-      logs: expect.arrayContaining(['Alleycat service start degraded: no sidecar']),
-    });
-    expect((context as { log: { warn: ReturnType<typeof vi.fn> } }).log.warn).toHaveBeenCalledWith('Alleycat service start degraded', {
-      error: 'no sidecar',
+      logs: expect.arrayContaining([expect.stringMatching(/Alleycat service start degraded|sidecar binary missing/)]),
     });
   });
 

@@ -387,10 +387,14 @@ function createExtensionBackendApiPlugin() {
         path: join(repoRoot, 'packages/extensions/src/host-view-components.ts'),
       }));
       buildContext.onResolve({ filter: /^@neon-pilot\/daemon$/ }, (args) => {
-        const desktopDaemonBundle = join(repoRoot, 'packages/desktop/server/dist/daemon/index.js');
+        const desktopDaemonBundleCandidates = [
+          join(repoRoot, 'packages/desktop/server/dist/daemon/index.js'),
+          join(repoRoot, 'packages/desktop/dist/server/daemon/index.js'),
+        ];
+        const desktopDaemonBundle = desktopDaemonBundleCandidates.find((candidate) => existsSync(candidate));
         // Bundle the daemon runtime inline so extensions work in packaged
         // apps where the absolute build-time path no longer exists.
-        return existsSync(desktopDaemonBundle) ? { path: desktopDaemonBundle, external: false } : { path: args.path, external: true };
+        return desktopDaemonBundle ? { path: desktopDaemonBundle, external: false } : { path: args.path, external: true };
       });
     },
   };

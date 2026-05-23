@@ -9,8 +9,8 @@ import {
   getSyncRoot,
   resolveRuntimeResources,
 } from '@neon-pilot/core';
+import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from '@neon-pilot/core';
 
-import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from '../../../core/src/system-prompt-template.js';
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
 import { getAssemblyRuntimeScope } from './runtimeScope.js';

@@ -276,7 +276,8 @@ function ensureSupplyChainAudit() {
   }
 
   console.log('Running supply-chain audit on installed npm packages...');
-  const audit = tryCapture('scfw', ['audit', 'npm']);
+  const npmAuditExecutable = resolve(repoRoot, 'scripts', 'scfw-pnpm-npm-adapter.mjs');
+  const audit = tryCapture('scfw', ['audit', '--executable', npmAuditExecutable, 'npm']);
   const output = `${audit.stdout}${audit.stderr}`.trim();
   if (output) {
     console.log(output);
