@@ -3,14 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { SessionMeta } from '../shared/types';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
-  isArtifactsRailMode,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
-  resolveActiveExtensionWorkbenchSurface,
   resolveActiveWorkspaceCwd,
-  resolveWorkbenchRailMode,
   shouldResetEmptyArtifactsRail,
 } from './Layout';
+import { isArtifactsRailMode, resolveActiveExtensionWorkbenchSurface, resolveWorkbenchRailMode } from './layout/workbenchRailModel';
 import { shouldRenderExtensionToolPanelInWorkbenchNav } from './workbenchNav';
 
 function createSession(overrides: Partial<SessionMeta>): SessionMeta {
