@@ -371,6 +371,15 @@ function collectReleaseFiles(releaseDir, version) {
   return files;
 }
 
+function collectInstallableExtensionFiles(buildRoot) {
+  const extensionDir = resolve(buildRoot, 'dist', 'installable-extensions');
+  if (!existsSync(extensionDir)) return [];
+  return readdirSync(extensionDir)
+    .filter((name) => name.endsWith('.neon-extension.zip'))
+    .sort((left, right) => left.localeCompare(right))
+    .map((name) => resolve(extensionDir, name));
+}
+
 function collectPackagedAppPath(releaseDir) {
   const macOutputDir = resolve(releaseDir, 'mac-arm64');
   if (!existsSync(macOutputDir)) {
@@ -772,6 +781,7 @@ rmSync(releaseDir, { recursive: true, force: true });
 console.log(`Building signed desktop artifacts for ${tag} from the clean snapshot...`);
 run('pnpm', ['run', 'check:release'], { cwd: buildRoot, env });
 run('pnpm', ['run', 'desktop:dist'], { cwd: buildRoot, env });
+run('pnpm', ['run', 'extension:pack:installable'], { cwd: buildRoot, env });
 validatePackagedAutoUpdateConfig(releaseDir, releaseRepo);
 validatePackagedRuntimeDependencies(buildRoot, releaseDir);
 const packagedAppForExtensionCheck = collectPackagedAppPath(releaseDir);
@@ -780,8 +790,13 @@ if (!packagedAppForExtensionCheck) {
 }
 run('node', ['scripts/check-packaged-extensions.mjs', packagedAppForExtensionCheck], { cwd: buildRoot, env });
 
-const files = collectReleaseFiles(releaseDir, version);
-notarizeDistributionContainers(env, files);
+const desktopReleaseFiles = collectReleaseFiles(releaseDir, version);
+const installableExtensionFiles = collectInstallableExtensionFiles(buildRoot);
+if (installableExtensionFiles.length === 0) {
+  fail('No installable extension bundles were produced; expected dist/installable-extensions/*.neon-extension.zip.');
+}
+const files = [...desktopReleaseFiles, ...installableExtensionFiles];
+notarizeDistributionContainers(env, desktopReleaseFiles);
 requireSmokeTestApproval(env, releaseDir, buildRoot);
 
 console.log(`Pushing ${tag} to GitHub...`);
