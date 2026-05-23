@@ -187,6 +187,7 @@ export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -1373,12 +1374,14 @@ export async function renameDesktopConversation(input: {
 
   if (isLiveSession(conversationId)) {
     renameSession(conversationId, nextName);
-    return { ok: true, title: nextName };
+    return buildRenameDesktopConversationResult({ title: nextName });
   }
 
   const renamed = renameStoredSession(conversationId, nextName);
   publishConversationSessionMetaChanged(conversationId);
-  return { ok: true, title: renamed.title };
+  return buildRenameDesktopConversationResult({
+    title: resolveRenamedStoredConversationTitle({ renamedTitle: renamed.title, fallbackTitle: nextName }),
+  });
 }
 
 export async function changeDesktopConversationCwd(input: {
