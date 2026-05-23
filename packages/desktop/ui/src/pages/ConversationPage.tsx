@@ -29,6 +29,7 @@ import {
 } from '../conversation/browserContextMessages';
 import { appendComposerHistory, readComposerHistory } from '../conversation/composerHistory';
 import { getConversationArtifactIdFromSearch, readArtifactPresentation } from '../conversation/conversationArtifacts';
+import { appendIfPresent, shouldAddDroppedFiles } from '../conversation/conversationAttachments';
 import { parseWholeLineBashCommand } from '../conversation/conversationBashCommand';
 import { hasBlockingOverlayOpen } from '../conversation/conversationBlockingOverlay';
 import { getConversationCheckpointIdFromSearch } from '../conversation/conversationCheckpoints';
@@ -3568,9 +3569,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }
 
   function addImageAttachments(imageAttachments: ComposerImageAttachment[]) {
-    if (imageAttachments.length > 0) {
-      setAttachments((prev) => [...prev, ...imageAttachments]);
-    }
+    setAttachments((prev) => appendIfPresent(prev, imageAttachments));
   }
 
   async function addComposerFiles(files: File[]) {
@@ -3587,7 +3586,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
 
     if (nextDrawingAttachments.length > 0) {
-      setDrawingAttachments((current) => [...current, ...nextDrawingAttachments]);
+      setDrawingAttachments((current) => appendIfPresent(current, nextDrawingAttachments));
     }
 
     for (const notice of buildComposerFilePreparationNotices({
@@ -4927,7 +4926,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setDragOver(false);
 
     const files = readComposerTransferFiles(e.dataTransfer.files);
-    if (files.length > 0) {
+    if (shouldAddDroppedFiles(files)) {
       void addComposerFiles(files);
     }
   }
