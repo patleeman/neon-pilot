@@ -75,6 +75,7 @@ import {
   PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
 } from './sessionInjectedContext.js';
 import { isRawDisplayLineType, parseJsonLine as parseJsonLineValue } from './sessionJsonLines.js';
+import { resolveKnownSessionIdFromCache } from './sessionKnownIdResolution.js';
 export { GOAL_STATE_CUSTOM_TYPE, readGoalFromEntries, type ThreadGoal } from './sessionGoalState.js';
 import { readFileLinesReverse as readFileLinesReverseValue } from './reverseFileLines.js';
 import {
@@ -1800,7 +1801,7 @@ function readSessionIdFromSessionRecord(filePath: string): string | null {
 export function readKnownSessionIdByFilePath(filePath: string): string | null {
   ensurePersistentIndexLoaded();
 
-  const cachedSessionId = sessionMetaCache.get(filePath)?.meta.id?.trim();
+  const cachedSessionId = resolveKnownSessionIdFromCache(sessionMetaCache.get(filePath)?.meta.id);
   if (cachedSessionId) {
     return cachedSessionId;
   }
