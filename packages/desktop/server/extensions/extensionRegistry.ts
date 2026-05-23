@@ -46,6 +46,7 @@ import {
   validateQuickOpenContributions,
   validateSearchProviderContributions,
 } from './extensionDiscoveryContributionValidation.js';
+import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_EXTENSION_IDS } from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
 import {
@@ -615,33 +616,10 @@ export function isExtensionEnabled(extensionId: string, stateRoot: string = getS
   return true;
 }
 
-const LOCKED_EXTENSION_IDS = ['system-extension-manager', 'system-prompt-assembly', 'system-runs', 'system-settings'];
-
 export function setExtensionEnabled(extensionId: string, enabled: boolean, stateRoot: string = getStateRoot()): void {
-  if (!enabled && LOCKED_EXTENSION_IDS.includes(extensionId)) {
-    throw new Error(`Cannot disable ${extensionId}: this extension is required by the application.`);
-  }
+  assertCanSetExtensionEnabled({ extensionId, enabled, lockedExtensionIds: LOCKED_EXTENSION_IDS });
   const config = readExtensionRegistryConfig(stateRoot);
-  const disabledIds = new Set(config.disabledIds ?? []);
-  const enabledIds = new Set(config.enabledIds ?? []);
-  const quarantined = { ...(config.quarantined ?? {}) };
-  if (enabled) {
-    disabledIds.delete(extensionId);
-    enabledIds.add(extensionId);
-    delete quarantined[extensionId];
-  } else {
-    disabledIds.add(extensionId);
-    enabledIds.delete(extensionId);
-  }
-  writeExtensionRegistryConfig(
-    {
-      ...config,
-      disabledIds: [...disabledIds].sort((left, right) => left.localeCompare(right)),
-      enabledIds: [...enabledIds].sort((left, right) => left.localeCompare(right)),
-      quarantined,
-    },
-    stateRoot,
-  );
+  writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot);
 }
 
 export function recordExtensionFailure(input: { extensionId: string; operation: string; error: string; stateRoot?: string }): {
