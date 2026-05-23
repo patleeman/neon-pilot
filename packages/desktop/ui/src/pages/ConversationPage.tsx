@@ -55,7 +55,7 @@ import {
   resolveConversationComposerSubmitState,
   shouldShowQuestionSubmitAsPrimaryComposerAction,
 } from '../conversation/conversationComposerSubmit';
-import { truncateConversationCwdFromFront } from '../conversation/conversationCwdHistory';
+import { formatConversationCwdLabel, hasDraftConversationCwd } from '../conversation/conversationCwdPresentation';
 import { buildBackgroundExecutionIndicatorText } from '../conversation/conversationExecutionActivity';
 import {
   applyGoalModeToggleAction,
@@ -1973,8 +1973,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }),
     [draft, draftCwdValue, liveSessionContext?.cwd, currentSessionMeta?.cwd],
   );
-  const currentCwdLabel = useMemo(() => (currentCwd ? truncateConversationCwdFromFront(currentCwd) : ''), [currentCwd]);
-  const hasDraftCwd = draftCwdValue.length > 0;
+  const currentCwdLabel = useMemo(() => formatConversationCwdLabel(currentCwd), [currentCwd]);
+  const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
   const availableDraftWorkspacePaths = useMemo(
     () => buildAvailableDraftWorkspacePaths({ draftCwdValue, savedWorkspacePaths }),
     [draftCwdValue, savedWorkspacePaths],
