@@ -22,6 +22,7 @@ import {
   type WorkingSnapshotEntry,
   writeStoredKnowledgeBaseState,
 } from './knowledge-base-state.js';
+import { parseKnowledgeBaseTimestampMs, toKnowledgeBaseIsoTimestamp } from './knowledge-base-time.js';
 import {
   DEFAULT_MACHINE_KNOWLEDGE_BASE_BRANCH,
   type MachineConfigOptions,
@@ -124,18 +125,8 @@ function ensureParentDirectory(path: string): void {
   mkdirSync(dirname(path), { recursive: true });
 }
 
-function toIsoTimestamp(value: number | Date = Date.now()): string {
-  return new Date(value).toISOString();
-}
-
-function parseTimestampMs(value: string | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+const toIsoTimestamp = toKnowledgeBaseIsoTimestamp;
+const parseTimestampMs = parseKnowledgeBaseTimestampMs;
 
 function runGitCommand(
   cwd: string,
