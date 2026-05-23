@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
+import { buildKnowledgeBaseCheckoutRemoteCommands, planKnowledgeBaseCheckoutPreparation } from './knowledge-base-checkout.js';
 import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
 import {
@@ -433,17 +434,22 @@ export class KnowledgeBaseManager {
 
   private ensureRepoCheckout(config: MachineKnowledgeBaseState): string {
     const root = getManagedKnowledgeBaseRoot(this.stateRoot);
-    const currentRemoteUrl = existsSync(join(root, '.git')) ? readGitRemoteUrl(root) : '';
-    const needsReset = currentRemoteUrl.length > 0 && currentRemoteUrl !== config.repoUrl;
-    if (needsReset) {
-      this.archiveManagedRoot(`repo-change-${config.repoUrl}`);
+    const gitDirExists = existsSync(join(root, '.git'));
+    const preparation = planKnowledgeBaseCheckoutPreparation({
+      repoUrl: config.repoUrl,
+      currentRemoteUrl: gitDirExists ? readGitRemoteUrl(root) : '',
+      gitDirExists,
+      rootHasEntries: directoryHasEntries(root),
+    });
+    if (preparation.action === 'archive-for-repo-change') {
+      this.archiveManagedRoot(preparation.reason);
       clearStoredState(this.localStateFilePath);
     }
 
     if (!existsSync(join(root, '.git'))) {
-      if (directoryHasEntries(root)) {
-        this.archiveManagedRoot(`non-git-root-${config.repoUrl}`);
-      } else {
+      if (preparation.action === 'archive-non-git-root') {
+        this.archiveManagedRoot(preparation.reason);
+      } else if (preparation.action === 'remove-empty-root') {
         rmSync(root, { recursive: true, force: true });
       }
       mkdirSync(dirname(root), { recursive: true });
@@ -458,21 +464,10 @@ export class KnowledgeBaseManager {
   }
 
   private checkoutRemoteBase(root: string, branch: string, remoteExists: boolean): void {
-    if (remoteExists) {
-      const remoteRef = getRemoteRef(branch);
-      runGitText(root, ['checkout', '-B', branch, remoteRef]);
-      runGitText(root, ['reset', '--hard', remoteRef]);
-      normalizeBranchTracking(root, branch);
-      return;
+    const commands = buildKnowledgeBaseCheckoutRemoteCommands({ branch, remoteExists, headExists: headExists(root), getRemoteRef });
+    for (const command of commands) {
+      runGitText(root, command.args, command.allowFailure ? { allowFailure: true } : undefined);
     }
-
-    if (headExists(root)) {
-      runGitText(root, ['checkout', '-B', branch]);
-      normalizeBranchTracking(root, branch);
-      return;
-    }
-
-    runGitText(root, ['checkout', '--orphan', branch], { allowFailure: true });
     normalizeBranchTracking(root, branch);
   }
 
