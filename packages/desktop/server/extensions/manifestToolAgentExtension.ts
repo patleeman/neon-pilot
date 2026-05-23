@@ -23,16 +23,6 @@ export interface ManifestToolFactoryOptions {
  * while still allowing well-intentioned overrides of the primary coding tools.
  */
 const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web_fetch', 'web_search']);
-const PRESENTATION_DETAIL_KEYS = new Set([
-  'displayMode',
-  'command',
-  'exitCode',
-  'cancelled',
-  'truncated',
-  'fullOutputPath',
-  'excludeFromContext',
-  'executionWrappers',
-]);
 
 type ModelDefinition = Awaited<ReturnType<typeof listModelDefinitions>>[number];
 
@@ -98,11 +88,6 @@ function normalizeUpdateContent(content: Array<{ type: string; text: string }> |
   return (content ?? []).map((item) => ({ type: 'text' as const, text: item.text }));
 }
 
-function readPresentationDetails(details: unknown): Record<string, unknown> {
-  if (!details || typeof details !== 'object' || Array.isArray(details)) return {};
-  return Object.fromEntries(Object.entries(details as Record<string, unknown>).filter(([key]) => PRESENTATION_DETAIL_KEYS.has(key)));
-}
-
 export function createManifestToolAgentExtensions(options: ManifestToolFactoryOptions): Array<(pi: ExtensionAPI) => void> {
   const currentModelRef = options.getCurrentModelRef?.() ?? '';
   const activeToolIds = new Set(
@@ -151,7 +136,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
                 onUpdate: (update) => {
                   onUpdate?.({
                     content: normalizeUpdateContent(update.content),
-                    details: update.details,
+                    details: undefined,
                   });
                 },
               },
@@ -200,7 +185,6 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
                 toolId: tool.id,
                 action: tool.action,
                 result: extensionResult?.details ?? invokeResult.result,
-                ...readPresentationDetails(extensionResult?.details),
               },
               ...(extensionResult?.isError === true ? ({ isError: true } as const) : {}),
               ...(extensionResult?.terminate === true ? ({ terminate: true } as const) : {}),

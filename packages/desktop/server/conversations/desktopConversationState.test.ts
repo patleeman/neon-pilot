@@ -117,9 +117,8 @@ describe('desktopConversationState reducer', () => {
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_update',
       toolCallId: 'tool-1',
-      partialResult: { content: [{ type: 'text', text: 'partial output' }], details: { displayMode: 'terminal' } },
+      partialResult: 'partial output',
     } as never);
-    expect(state.blocks.at(-1)).toMatchObject({ output: 'partial output', details: { displayMode: 'terminal' } });
     state = applyDesktopConversationStreamEvent(state, {
       type: 'tool_end',
       toolCallId: 'tool-1',

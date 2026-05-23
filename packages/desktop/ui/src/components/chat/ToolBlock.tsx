@@ -115,7 +115,8 @@ export function ToolBlock({
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
   }, [diffDisclosureMode]);
   const open = resolveDisclosureOpen(autoOpen, preference);
-  const terminalBashBlock = isTerminalBashToolBlock(block);
+  const backgroundShellStart = isBackgroundShellStart(block);
+  const terminalBashBlock = isTerminalBashToolBlock(block) || (block.tool === 'bash' && !backgroundShellStart);
   const extensionRegistry = useExtensionRegistry();
   const { tasks, sessions, runs } = useAppData();
   const runLookups = useMemo<RunPresentationLookups>(() => ({ tasks, sessions }), [tasks, sessions]);
@@ -130,7 +131,6 @@ export function ToolBlock({
     }
     return null;
   }, [block.tool, extensionRegistry.extensions]);
-  const backgroundShellStart = isBackgroundShellStart(block);
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);

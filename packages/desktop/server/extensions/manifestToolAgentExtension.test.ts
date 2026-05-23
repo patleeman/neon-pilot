@@ -150,16 +150,10 @@ describe('manifestToolAgentExtension', () => {
           { type: 'text', text: 'progress' },
           { type: 'image', text: 'ignored' },
         ],
-        details: { displayMode: 'terminal' },
       });
       return {
         ok: true,
-        result: {
-          content: [{ type: 'image', data: 'abc', mimeType: 'image/png' }],
-          details: { d: 1, displayMode: 'terminal' },
-          isError: true,
-          terminate: true,
-        },
+        result: { content: [{ type: 'image', data: 'abc', mimeType: 'image/png' }], details: { d: 1 }, isError: true, terminate: true },
       };
     });
     const registered = registerTools();
@@ -169,13 +163,7 @@ describe('manifestToolAgentExtension', () => {
       registered[0].execute?.('call', {}, undefined, onUpdate, { sessionManager: { getSessionId: () => 'c' } }),
     ).resolves.toEqual({
       content: [{ type: 'image', data: 'abc', mimeType: 'image/png' }],
-      details: {
-        extensionId: 'ext',
-        toolId: 'tool',
-        action: 'doThing',
-        result: { d: 1, displayMode: 'terminal' },
-        displayMode: 'terminal',
-      },
+      details: { extensionId: 'ext', toolId: 'tool', action: 'doThing', result: { d: 1 } },
       isError: true,
       terminate: true,
     });
@@ -184,7 +172,7 @@ describe('manifestToolAgentExtension', () => {
         { type: 'text', text: 'progress' },
         { type: 'text', text: 'ignored' },
       ],
-      details: { displayMode: 'terminal' },
+      details: undefined,
     });
   });
 
