@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { DeferredResumeSummary, ExecutionRecord } from '../../shared/types';
+import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { ConversationActivityShelf } from './ConversationActivityShelf';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -26,6 +26,20 @@ const resume: DeferredResumeSummary = {
   createdAt: '2026-04-01T09:00:00.000Z',
   attempts: 1,
   status: 'scheduled',
+};
+
+const scheduledTask: ScheduledTaskSummary = {
+  id: 'task-1',
+  title: 'Continue maintainability hardening',
+  scheduleType: 'cron',
+  running: false,
+  enabled: true,
+  cron: '*/15 * * * *',
+  prompt: 'continue',
+  threadMode: 'existing',
+  threadConversationId: 'conv-1',
+  lastStatus: 'success',
+  lastRunAt: '2026-04-01T08:30:00.000Z',
 };
 
 describe('ConversationActivityShelf', () => {
@@ -120,5 +134,39 @@ describe('ConversationActivityShelf', () => {
     expect(html).toContain('fire now');
     expect(html).toContain('cancel');
     expect(html).toContain('retries 1');
+  });
+
+  it('renders linked scheduled task summary and expanded actions', () => {
+    const html = renderToString(
+      <ConversationActivityShelf
+        backgroundExecutions={[]}
+        backgroundExecutionIndicatorText=""
+        showBackgroundRunDetails={false}
+        onToggleBackgroundRunDetails={vi.fn()}
+        scheduledTasks={[scheduledTask]}
+        scheduledTaskIndicatorText="enabled · Continue maintainability hardening"
+        showScheduledTaskDetails
+        onToggleScheduledTaskDetails={vi.fn()}
+        onRunScheduledTaskNow={vi.fn()}
+        onOpenScheduledTask={vi.fn()}
+        deferredResumes={[]}
+        deferredResumeIndicatorText="none"
+        deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+        hasReadyDeferredResumes={false}
+        isLiveSession={false}
+        deferredResumesBusy={false}
+        showDeferredResumeDetails={false}
+        onContinueDeferredResumesNow={vi.fn()}
+        onToggleDeferredResumeDetails={vi.fn()}
+        onFireDeferredResumeNow={vi.fn()}
+        onCancelDeferredResume={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('Automations');
+    expect(html).toContain('Continue maintainability hardening');
+    expect(html).toContain('*/15 * * * *');
+    expect(html).toContain('run now');
+    expect(html).toContain('open');
   });
 });

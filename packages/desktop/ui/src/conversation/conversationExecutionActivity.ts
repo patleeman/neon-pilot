@@ -39,6 +39,34 @@ export function buildBackgroundExecutionIndicatorText(executions: ExecutionRecor
   return `${executions.length} active · latest ${latest.title}`;
 }
 
+export function selectConversationScheduledTasks(input: {
+  conversationId: string | null | undefined;
+  tasks?: ScheduledTaskSummary[] | null;
+}): ScheduledTaskSummary[] {
+  const conversationId = input.conversationId?.trim();
+  if (!conversationId) return [];
+
+  return [...(input.tasks ?? [])]
+    .filter((task) => task.threadConversationId === conversationId)
+    .sort((left, right) => {
+      if (left.enabled !== right.enabled) return left.enabled ? -1 : 1;
+      if (left.running !== right.running) return left.running ? -1 : 1;
+      return (right.lastRunAt ?? '').localeCompare(left.lastRunAt ?? '');
+    });
+}
+
+export function buildScheduledTaskIndicatorText(tasks: ScheduledTaskSummary[]): string {
+  if (tasks.length === 0) return 'No automations';
+  const runningCount = tasks.filter((task) => task.running).length;
+  const enabledCount = tasks.filter((task) => task.enabled).length;
+  if (runningCount > 0) return `${runningCount} running · ${enabledCount} enabled`;
+  if (tasks.length === 1) {
+    const task = tasks[0];
+    return `${task.enabled ? 'enabled' : 'disabled'} · ${task.title || task.id}`;
+  }
+  return `${enabledCount} enabled · ${tasks.length} linked`;
+}
+
 function buildAutomationRunningLookups(tasks: ScheduledTaskSummary[] | null | undefined): {
   byTaskId: Map<string, boolean>;
   byConversationId: Map<string, boolean>;

@@ -182,6 +182,38 @@ describe('runTaskInIsolatedPi', () => {
     expect(log).not.toContain('command=pi');
   });
 
+  it('keeps watching after turn_end and fails when the conversation emits a delayed error', async () => {
+    vi.useFakeTimers();
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    let listener: ((event: unknown) => void) | undefined;
+    const runtime = createRuntime({
+      readConversationBootstrap: vi.fn().mockResolvedValue({ sessionMeta: { id: 'conv-nightly', isRunning: true } }),
+      subscribeConversation: vi.fn().mockImplementation(async (_input, onEvent) => {
+        listener = onEvent;
+        return vi.fn();
+      }),
+      promptConversation: vi.fn().mockImplementation(async () => {
+        queueMicrotask(() => {
+          listener?.({ type: 'agent_start' });
+          listener?.({ type: 'turn_end' });
+          setTimeout(() => listener?.({ type: 'error', message: 'context_length_exceeded' }), 10);
+        });
+        return { ok: true, accepted: true, delivery: 'started' };
+      }),
+    });
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const resultPromise = runTaskInIsolatedPi({ task: createTask(), attempt: 1, runsRoot });
+    await vi.advanceTimersByTimeAsync(1020);
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      success: false,
+      exitCode: 1,
+      error: 'context_length_exceeded',
+    });
+  });
+
   it('creates a conversation for threadless automations instead of shelling out to a CLI', async () => {
     const runsRoot = createTempDir('tasks-runner-runs-');
     const runtime = createRuntime();

@@ -1,6 +1,20 @@
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
-import type { DeferredResumeSummary, ExecutionRecord } from '../../shared/types';
+import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
+import { timeAgo } from '../../shared/utils';
 import { cx } from '../ui';
+
+function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
+  if (task.scheduleType === 'cron' && task.cron) return task.cron;
+  if (task.at) return `at ${task.at}`;
+  return task.scheduleType;
+}
+
+function formatScheduledTaskStatus(task: ScheduledTaskSummary): string {
+  if (task.running) return 'running';
+  if (!task.enabled) return 'disabled';
+  if (task.lastStatus === 'failed') return 'failed';
+  return 'enabled';
+}
 
 function formatExecutionStatusLabel(status: string | undefined): string {
   if (status === 'queued') return 'queued';
@@ -39,6 +53,12 @@ export function ConversationActivityShelf({
   onToggleDeferredResumeDetails,
   onFireDeferredResumeNow,
   onCancelDeferredResume,
+  scheduledTasks = [],
+  scheduledTaskIndicatorText = 'No automations',
+  showScheduledTaskDetails,
+  onToggleScheduledTaskDetails,
+  onRunScheduledTaskNow,
+  onOpenScheduledTask,
 }: {
   backgroundExecutions: ExecutionRecord[];
   backgroundExecutionIndicatorText: string;
@@ -58,9 +78,84 @@ export function ConversationActivityShelf({
   onToggleDeferredResumeDetails: () => void;
   onFireDeferredResumeNow: (resumeId: string) => void;
   onCancelDeferredResume: (resumeId: string) => void;
+  scheduledTasks?: ScheduledTaskSummary[];
+  scheduledTaskIndicatorText?: string;
+  showScheduledTaskDetails?: boolean;
+  onToggleScheduledTaskDetails?: () => void;
+  onRunScheduledTaskNow?: (taskId: string) => void;
+  onOpenScheduledTask?: (taskId: string) => void;
 }) {
   return (
     <>
+      {scheduledTasks.length > 0 && (
+        <>
+          <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="shrink-0 text-accent">↻</span>
+              <span className="shrink-0 text-secondary">Automations</span>
+              <span className="truncate text-dim">{scheduledTaskIndicatorText}</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-3 text-[11px]">
+              {onToggleScheduledTaskDetails && (
+                <button type="button" onClick={onToggleScheduledTaskDetails} className="text-dim transition-colors hover:text-primary">
+                  {showScheduledTaskDetails ? 'hide' : 'details'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showScheduledTaskDetails && (
+            <div className="flex flex-col gap-2 border-b border-border-subtle px-3 pt-2.5 pb-2.5">
+              {scheduledTasks.map((task) => {
+                const status = formatScheduledTaskStatus(task);
+                return (
+                  <div key={task.id} className="flex items-start gap-3 text-[12px]">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={cx(
+                            'shrink-0 font-medium',
+                            status === 'failed' ? 'text-danger' : task.running ? 'text-accent' : 'text-secondary',
+                          )}
+                        >
+                          {status}
+                        </span>
+                        <span className="truncate text-primary">{task.title || task.id}</span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-dim">
+                        {formatScheduledTaskSchedule(task)}
+                        {task.lastRunAt ? ` · last run ${timeAgo(task.lastRunAt)}` : ''}
+                        {task.lastStatus ? ` · ${task.lastStatus}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {onRunScheduledTaskNow && task.enabled && !task.running && (
+                        <button
+                          type="button"
+                          onClick={() => onRunScheduledTaskNow(task.id)}
+                          className="text-[11px] text-accent transition-colors hover:text-accent/80"
+                        >
+                          run now
+                        </button>
+                      )}
+                      {onOpenScheduledTask && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenScheduledTask(task.id)}
+                          className="text-[11px] text-dim transition-colors hover:text-primary"
+                        >
+                          open
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
       {backgroundExecutions.length > 0 && (
         <>
           <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">

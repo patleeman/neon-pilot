@@ -290,7 +290,7 @@ async function waitForConversationCompletion(input: {
         }
 
         if (isRecord(event) && (event.type === 'turn_end' || event.type === 'agent_end') && started) {
-          finish({ completed: true });
+          completed = true;
         }
       },
     );
@@ -319,7 +319,7 @@ async function waitForConversationCompletion(input: {
 
       const bootstrap = await runtime.readConversationBootstrap({ conversationId, tailBlocks: 5 }).catch(() => null);
       const running = extractIsRunning(bootstrap);
-      if (started && running === false) {
+      if (completed && running === false) {
         finish({ completed: true });
       }
     }

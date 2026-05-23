@@ -67,7 +67,11 @@ import {
   nextDragOverStateForDragOver,
   shouldHandleDroppedComposerFiles,
 } from '../conversation/conversationDragDrop';
-import { buildBackgroundExecutionIndicatorText } from '../conversation/conversationExecutionActivity';
+import {
+  buildBackgroundExecutionIndicatorText,
+  buildScheduledTaskIndicatorText,
+  selectConversationScheduledTasks,
+} from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import {
   applyGoalModeToggleAction,
@@ -411,7 +415,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
   const { versions } = useAppEvents();
-  const { tasks, sessions, runs, setRuns, setSessions } = useAppData();
+  const { tasks, sessions, runs, setRuns, setSessions, setTasks } = useAppData();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
   useEffect(() => {
@@ -450,6 +454,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const openRun = useCallback((runId: string) => {
     window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId } }));
   }, []);
+
+  const openScheduledTask = useCallback(
+    (taskId: string) => {
+      navigate(`/automations/${encodeURIComponent(taskId)}`);
+    },
+    [navigate],
+  );
 
   const openWorkbenchBrowser = useCallback(() => {
     window.dispatchEvent(new CustomEvent(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT));
@@ -1707,6 +1718,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [deferredResumes, setDeferredResumes] = useState<DeferredResumeSummary[]>([]);
   const [deferredResumesBusy, setDeferredResumesBusy] = useState(false);
   const [showDeferredResumeDetails, setShowDeferredResumeDetails] = useState(false);
+  const [showScheduledTaskDetails, setShowScheduledTaskDetails] = useState(false);
   const [cancellingBackgroundRunIds, setCancellingBackgroundRunIds] = useState<Set<string>>(() => new Set());
   const [deferredResumeNowMs, setDeferredResumeNowMs] = useState(() => Date.now());
 
@@ -2345,6 +2357,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
+  const conversationScheduledTasks = useMemo(() => selectConversationScheduledTasks({ conversationId: id, tasks }), [id, tasks]);
+  const scheduledTaskIndicatorText = buildScheduledTaskIndicatorText(conversationScheduledTasks);
+  const runScheduledTaskFromShelf = useCallback(
+    async (taskId: string) => {
+      await api.runTaskNow(taskId);
+      const nextTasks = await api.tasks();
+      setTasks(nextTasks);
+    },
+    [setTasks],
+  );
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -5855,6 +5877,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         }}
                         onCancelBackgroundRun={cancelBackgroundRunFromShelf}
                         onOpenBackgroundRun={openRun}
+                        scheduledTasks={conversationScheduledTasks}
+                        scheduledTaskIndicatorText={scheduledTaskIndicatorText}
+                        showScheduledTaskDetails={showScheduledTaskDetails}
+                        onToggleScheduledTaskDetails={() => {
+                          setShowScheduledTaskDetails((open) => !open);
+                        }}
+                        onRunScheduledTaskNow={(taskId) => {
+                          void runScheduledTaskFromShelf(taskId);
+                        }}
+                        onOpenScheduledTask={openScheduledTask}
                         deferredResumes={orderedDeferredResumes}
                         deferredResumeIndicatorText={deferredResumeIndicatorText}
                         deferredResumeNowMs={deferredResumeNowMs}
