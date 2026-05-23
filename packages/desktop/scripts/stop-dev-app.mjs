@@ -1,10 +1,16 @@
 /* eslint-env node */
 
 import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const productName = 'Neon Pilot Testing';
 const processNeedle = '/dist/dev-desktop/Neon Pilot Testing.app/Contents/MacOS/Neon Pilot Testing';
 const timeoutMs = 5_000;
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(currentDir, '..', '..', '..');
+const extensionWatcherPidFile = resolve(repoRoot, 'dist', 'dev-desktop', 'extension-watch.pid');
 
 function run(command, args) {
   try {
@@ -23,6 +29,21 @@ function listDevAppPids() {
     .map((line) => Number(line.split(/\s+/, 1)[0]))
     .filter((pid) => Number.isInteger(pid) && pid > 0);
 }
+
+function stopExtensionWatcher() {
+  if (!existsSync(extensionWatcherPidFile)) return;
+  const pid = Number(readFileSync(extensionWatcherPidFile, 'utf8').trim());
+  if (Number.isInteger(pid) && pid > 0) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // Already exited.
+    }
+  }
+  rmSync(extensionWatcherPidFile, { force: true });
+}
+
+stopExtensionWatcher();
 
 async function waitForExit() {
   const start = Date.now();

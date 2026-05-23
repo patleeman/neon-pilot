@@ -2,7 +2,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,10 +16,12 @@ const electronPackageJsonPath = desktopRequire.resolve('electron/package.json');
 const electronPackageDir = dirname(electronPackageJsonPath);
 const electronCliPath = resolve(electronPackageDir, 'cli.js');
 const desktopMainFile = resolve(packageDir, 'dist', 'main.js');
+const extensionWatcherFile = resolve(packageDir, 'scripts', 'watch-system-extensions.mjs');
 const desktopPackageJson = resolve(packageDir, 'package.json');
 const desktopIconFile = resolve(packageDir, 'assets', 'icon.icns');
 const sourceMacAppBundle = resolve(electronPackageDir, 'dist', 'Electron.app');
 const macDevAppDir = resolve(repoRoot, 'dist', 'dev-desktop');
+const extensionWatcherLogFile = resolve(macDevAppDir, 'extension-watch.log');
 const desktopVariant = 'testing';
 const testingProductSuffix = ' Testing';
 const desktopLaunchArgs = process.argv.slice(2);
@@ -175,6 +177,18 @@ function ensureMacDevAppBundle() {
   };
 }
 
+function startExtensionWatcher() {
+  mkdirSync(macDevAppDir, { recursive: true });
+  const out = openSync(extensionWatcherLogFile, 'a');
+  const child = spawn(process.execPath, [extensionWatcherFile], {
+    stdio: ['ignore', out, out],
+    cwd: repoRoot,
+    env: buildDesktopLaunchEnv(process.env, desktopLaunchArgs),
+    detached: true,
+  });
+  child.unref();
+}
+
 async function waitForDetachedLaunch(child) {
   return new Promise((resolveExitCode) => {
     const startupWindowMs = 3_000;
@@ -215,6 +229,7 @@ async function waitForDetachedLaunch(child) {
 
 async function launchMacDevApp() {
   const { executablePath } = ensureMacDevAppBundle();
+  startExtensionWatcher();
   const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
   const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...appArgs], {
     stdio: 'ignore',
@@ -234,6 +249,7 @@ if (process.platform === 'darwin') {
 }
 
 const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
+startExtensionWatcher();
 const result = spawnSync(process.execPath, [electronCliPath, ...electronSwitches, desktopMainFile, ...appArgs], {
   stdio: 'inherit',
   cwd: packageDir,
