@@ -127,6 +127,7 @@ import {
   shouldShowScrollToBottomControl,
 } from '../conversation/conversationScroll';
 import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from '../conversation/conversationSessionLifecycle';
+import { findConversationSessionById } from '../conversation/conversationSessionSelection';
 import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
@@ -484,7 +485,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, id]);
 
   // ── Live session detection ─────────────────────────────────────────────────
-  const rawSessionSnapshot = useMemo(() => (id ? (sessions?.find((session) => session.id === id) ?? null) : null), [id, sessions]);
+  const rawSessionSnapshot = useMemo(() => findConversationSessionById(sessions, id), [id, sessions]);
   const sessionSnapshot = rawSessionSnapshot;
 
   const sessionsLoaded = sessions !== null;
