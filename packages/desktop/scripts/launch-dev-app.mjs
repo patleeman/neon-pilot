@@ -177,10 +177,11 @@ function ensureMacDevAppBundle() {
   };
 }
 
-function startExtensionWatcher() {
+function startExtensionWatcher(ownerPid) {
   mkdirSync(macDevAppDir, { recursive: true });
   const out = openSync(extensionWatcherLogFile, 'a');
-  const child = spawn(process.execPath, [extensionWatcherFile], {
+  const args = ownerPid ? [extensionWatcherFile, `--owner-pid=${ownerPid}`] : [extensionWatcherFile];
+  const child = spawn(process.execPath, args, {
     stdio: ['ignore', out, out],
     cwd: repoRoot,
     env: buildDesktopLaunchEnv(process.env, desktopLaunchArgs),
@@ -229,7 +230,6 @@ async function waitForDetachedLaunch(child) {
 
 async function launchMacDevApp() {
   const { executablePath } = ensureMacDevAppBundle();
-  startExtensionWatcher();
   const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
   const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...appArgs], {
     stdio: 'ignore',
@@ -240,6 +240,7 @@ async function launchMacDevApp() {
     },
     detached: true,
   });
+  startExtensionWatcher(child.pid);
 
   process.exit(await waitForDetachedLaunch(child));
 }
@@ -249,11 +250,13 @@ if (process.platform === 'darwin') {
 }
 
 const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
-startExtensionWatcher();
-const result = spawnSync(process.execPath, [electronCliPath, ...electronSwitches, desktopMainFile, ...appArgs], {
+const child = spawn(process.execPath, [electronCliPath, ...electronSwitches, desktopMainFile, ...appArgs], {
   stdio: 'inherit',
   cwd: packageDir,
   env: buildDesktopLaunchEnv(process.env, desktopLaunchArgs),
 });
+startExtensionWatcher(child.pid);
 
-process.exit(result.status ?? 1);
+child.once('exit', (code) => {
+  process.exit(code ?? 1);
+});

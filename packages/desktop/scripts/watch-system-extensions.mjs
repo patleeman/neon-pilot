@@ -14,11 +14,27 @@ const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 const stateDir = join(repoRoot, 'dist', 'dev-desktop');
 const pidFile = join(stateDir, 'extension-watch.pid');
 const debounceMs = 150;
+const ownerPid = readOwnerPid(process.argv.slice(2));
 
 const timers = new Map();
 const running = new Set();
 const pending = new Set();
 const watchers = [];
+
+function readOwnerPid(args) {
+  const arg = args.find((candidate) => candidate.startsWith('--owner-pid='));
+  const value = arg ? Number(arg.slice('--owner-pid='.length)) : NaN;
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function processExists(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 mkdirSync(stateDir, { recursive: true });
 writeFileSync(pidFile, `${process.pid}\n`);
@@ -150,6 +166,16 @@ if (!existsSync(extensionsRoot)) {
 
 watchDirectory(extensionsRoot);
 log(`Watching ${listSystemExtensionDirs().length} system extensions.`);
+
+if (ownerPid !== null) {
+  const timer = setInterval(() => {
+    if (!processExists(ownerPid)) {
+      log(`Owner process ${ownerPid} exited; stopping.`);
+      process.exit(0);
+    }
+  }, 1_000);
+  timer.unref();
+}
 
 process.on('SIGTERM', () => process.exit(0));
 process.on('SIGINT', () => process.exit(0));
