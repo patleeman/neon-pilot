@@ -244,6 +244,7 @@ import {
 } from './localApiSessionDetailResponse.js';
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { appendMappedSnapshotEvent, shouldBuildTopicEvents } from './localApiTopicEvents.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
@@ -671,17 +672,13 @@ async function buildDesktopAppEventsForTopics(topics: readonly string[]): Promis
   const seen = new Set<string>();
 
   for (const topic of topics) {
-    if (seen.has(topic)) {
+    if (!shouldBuildTopicEvents({ topic, seenTopics: seen })) {
       continue;
     }
 
-    seen.add(topic);
     const snapshotEvents = await buildSnapshotEventsForTopic(topic as Parameters<typeof buildSnapshotEventsForTopic>[0]);
     for (const snapshotEvent of snapshotEvents) {
-      const mappedEvent = mapSnapshotEventToDesktopAppEvent(snapshotEvent);
-      if (mappedEvent) {
-        events.push(mappedEvent);
-      }
+      appendMappedSnapshotEvent({ events, snapshotEvent, mapSnapshotEvent: mapSnapshotEventToDesktopAppEvent });
     }
   }
 
