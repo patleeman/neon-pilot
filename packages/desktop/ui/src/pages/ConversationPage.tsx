@@ -121,6 +121,7 @@ import {
   EMPTY_ASK_USER_ANSWERS,
   hasAskUserQuestionAnswers,
 } from '../conversation/conversationQuestionAnswers';
+import { resolveRelatedThreadResults, selectDraftRelatedThreadCandidates } from '../conversation/conversationRelatedThreadPanel';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
 import {
@@ -202,19 +203,12 @@ import {
   restoreComposerImageFiles,
   restoreQueuedImageFiles,
 } from '../conversation/promptAttachments';
+import { type RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
 import {
-  listRecentConversationResults,
-  rankRelatedConversationSessions,
-  type RelatedConversationSearchResult,
-  selectRecentConversationCandidates,
-} from '../conversation/relatedConversationSearch';
-import {
-  buildRelatedThreadCandidateLookup,
   pruneRelatedThreadSelectionIds,
   resolveRelatedThreadPreselectionUpdate,
   selectMissingRelatedThreadSearchIndexIds,
   selectMissingRelatedThreadSummaryIds,
-  selectVisibleRelatedThreadResults,
   toggleRelatedThreadSelectionIds,
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
@@ -1989,49 +1983,22 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   const relatedThreadCandidates = useMemo(
     () =>
-      draft
-        ? selectRecentConversationCandidates(sessions, {
-            workspaceCwd: draftCwdValue || null,
-            recentWindowDays: RELATED_THREAD_RECENT_WINDOW_DAYS,
-            limit: MAX_RELATED_THREAD_CANDIDATES,
-            closedOnly: true,
-          })
-        : [],
+      selectDraftRelatedThreadCandidates({
+        draft,
+        sessions,
+        workspaceCwd: draftCwdValue || null,
+        recentWindowDays: RELATED_THREAD_RECENT_WINDOW_DAYS,
+        limit: MAX_RELATED_THREAD_CANDIDATES,
+      }),
     [draft, draftCwdValue, sessions],
   );
-  const relatedThreadCandidateLookup = useMemo(() => buildRelatedThreadCandidateLookup(relatedThreadCandidates), [relatedThreadCandidates]);
-  const relatedThreadCandidateById = relatedThreadCandidateLookup.candidateById;
-  const relatedThreadCandidateIds = relatedThreadCandidateLookup.candidateIds;
-  const relatedThreadSearchResults = useMemo(
-    () =>
-      rankRelatedConversationSessions({
-        sessions: relatedThreadCandidates,
-        searchIndex: relatedThreadSearchIndex,
-        summaries: relatedThreadSummaries,
-        query: debouncedRelatedThreadsQuery,
-        workspaceCwd: draftCwdValue || null,
-        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
-      }),
-    [debouncedRelatedThreadsQuery, draftCwdValue, relatedThreadCandidates, relatedThreadSearchIndex, relatedThreadSummaries],
-  );
-  const recentClosedThreadResults = useMemo(
-    () =>
-      listRecentConversationResults(relatedThreadCandidates, {
-        workspaceCwd: draftCwdValue || null,
-        summaries: relatedThreadSummaries,
-        recentWindowDays: null,
-        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
-      }),
-    [draftCwdValue, relatedThreadCandidates, relatedThreadSummaries],
-  );
+  const relatedThreadCandidateIds = useMemo(() => relatedThreadCandidates.map((candidate) => candidate.id), [relatedThreadCandidates]);
   const visibleRelatedThreadResults = useMemo<RelatedConversationSearchResult[]>(
     () =>
-      selectVisibleRelatedThreadResults({
+      resolveRelatedThreadResults({
         selectedRelatedThreadIds,
         query: debouncedRelatedThreadsQuery,
-        searchResults: relatedThreadSearchResults,
-        recentResults: recentClosedThreadResults,
-        candidateById: relatedThreadCandidateById,
+        candidates: relatedThreadCandidates,
         searchIndex: relatedThreadSearchIndex,
         summaries: relatedThreadSummaries,
         workspaceCwd: draftCwdValue || null,
@@ -2040,10 +2007,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [
       debouncedRelatedThreadsQuery,
       draftCwdValue,
-      recentClosedThreadResults,
-      relatedThreadCandidateById,
+      relatedThreadCandidates,
       relatedThreadSearchIndex,
-      relatedThreadSearchResults,
       relatedThreadSummaries,
       selectedRelatedThreadIds,
     ],
