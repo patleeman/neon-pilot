@@ -11,13 +11,7 @@ import {
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
-import type {
-  ExtensionManifest,
-  ExtensionPackageType,
-  ExtensionSurface,
-  ExtensionToolContribution,
-  ExtensionViewContribution,
-} from './extensionManifest.js';
+import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
   EXTENSION_HOST_VIEW_COMPONENTS,
   EXTENSION_ICON_NAMES,
@@ -40,7 +34,7 @@ import {
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
-import { buildExtensionToolRegistrationName } from './extensionToolNames.js';
+import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
 // Per-extension health errors stored in memory. Cleared on successful load/reload.
@@ -630,36 +624,10 @@ function buildExtensionSecretRegistrations(entry: ExtensionRegistryEntry): Exten
 }
 
 function buildExtensionToolRegistrations(entry: ExtensionRegistryEntry): ExtensionToolRegistration[] {
-  return (entry.manifest.contributes?.tools ?? []).flatMap((tool: ExtensionToolContribution): ExtensionToolRegistration[] => {
-    const id = tool.id.trim();
-    if (!id || !tool.description?.trim()) {
-      return [];
-    }
-    const explicitName = typeof tool.name === 'string' ? tool.name.trim() : '';
-    const replaces = typeof tool.replaces === 'string' ? tool.replaces.trim() : '';
-    const name = buildExtensionToolRegistrationName({ extensionId: entry.manifest.id, toolId: id, explicitName, replaces });
-    if (!name) {
-      return [];
-    }
-    return [
-      {
-        extensionId: entry.manifest.id,
-        packageType: entry.manifest.packageType ?? 'user',
-        id,
-        name,
-        action: tool.action ?? tool.handler ?? id,
-        ...(tool.title ? { title: tool.title } : {}),
-        ...(tool.label ? { label: tool.label } : {}),
-        description: tool.description,
-        inputSchema: tool.inputSchema ?? { type: 'object', properties: {}, additionalProperties: false },
-        ...(tool.promptSnippet ? { promptSnippet: tool.promptSnippet } : {}),
-        ...(tool.promptGuidelines ? { promptGuidelines: tool.promptGuidelines } : {}),
-        ...(Number.isInteger(tool.priority) ? { priority: tool.priority } : {}),
-        ...(tool.when ? { when: tool.when } : {}),
-        ...(replaces ? { replaces } : {}),
-        ...(tool.nativeRegistration ? { nativeRegistration: true } : {}),
-      },
-    ];
+  return buildExtensionToolContributionRegistrations({
+    extensionId: entry.manifest.id,
+    packageType: entry.manifest.packageType ?? 'user',
+    tools: entry.manifest.contributes?.tools,
   });
 }
 
