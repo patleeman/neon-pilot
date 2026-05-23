@@ -63,6 +63,7 @@ import {
 import { buildInvalidExtensionInstallSummary } from './extensionInvalidInstallSummary.js';
 import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
 import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
+import { buildDeclaredExtensionKeybindingRegistrations } from './extensionKeybindingDeclaredRegistrations.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
   EXTENSION_ICON_NAMES,
@@ -1157,32 +1158,7 @@ export function listExtensionKeybindingRegistrations(stateRoot: string = getStat
   const disabledKeybindings = new Set(config.disabledKeybindings ?? []);
   const keybindingOverrides = config.keybindingOverrides ?? {};
   const declared = snapshot.extensions.flatMap((extension) =>
-    (extension.contributes?.keybindings ?? []).flatMap((keybinding) => {
-      const id = keybinding.id.trim();
-      const title = keybinding.title.trim();
-      const command = keybinding.command.trim();
-      const registryKey = `${extension.id}:${id}`;
-      const defaultKeys = keybinding.keys.map((key) => key.trim()).filter(Boolean);
-      const keys = keybindingOverrides[registryKey] ?? defaultKeys;
-      if (!id || !title || !command || keys.length === 0) {
-        return [];
-      }
-      return [
-        {
-          extensionId: extension.id,
-          surfaceId: id,
-          packageType: extension.packageType ?? 'user',
-          title,
-          keys,
-          command,
-          ...(keybinding.args !== undefined ? { args: keybinding.args } : {}),
-          ...(keybinding.when ? { when: keybinding.when } : {}),
-          scope: keybinding.scope ?? 'global',
-          defaultKeys,
-          enabled: !disabledKeybindings.has(registryKey),
-        },
-      ];
-    }),
+    buildDeclaredExtensionKeybindingRegistrations({ extension, disabledKeybindings, keybindingOverrides }),
   );
   const declaredKeys = new Set(declared.map((keybinding) => `${keybinding.extensionId}:${keybinding.surfaceId}`));
   const custom = Object.entries(config.commandKeybindings ?? {}).flatMap(([registryKey, keybinding]) => {
