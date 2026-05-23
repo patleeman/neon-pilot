@@ -36,6 +36,7 @@ import {
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
 } from '../conversation/conversationComposerEditing';
+import { shouldShowConversationComposerMeta } from '../conversation/conversationComposerMetaVisibility';
 import {
   appendMentionedConversationContextDocs,
   dedupeConversationContextDocs,
@@ -2259,12 +2260,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [draft, draftWorkspaceGit, liveSessionContext?.git],
   );
   const hasGitSummary = gitSummaryPresentation.kind !== 'none';
-  const showComposerMeta = draft
-    ? Boolean(draftCwdValue)
-    : Boolean(sessionTokens) ||
-      Boolean(currentCwd || conversationCwdEditorOpen || conversationCwdError) ||
-      Boolean(branchLabel) ||
-      hasGitSummary;
+  const showComposerMeta = shouldShowConversationComposerMeta({
+    draft,
+    draftCwdValue,
+    sessionTokens,
+    currentCwd,
+    conversationCwdEditorOpen,
+    conversationCwdError,
+    branchLabel,
+    hasGitSummary,
+  });
 
   useEffect(() => {
     const nextSessions = replaceConversationMetaInSessionList(sessions, id, currentSessionMeta);
