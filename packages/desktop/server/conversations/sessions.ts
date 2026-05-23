@@ -69,6 +69,7 @@ import {
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
   serializePersistentSessionIndex,
 } from './sessionIndexPersistence.js';
+import { didSessionIndexJsonChange, shouldPersistSessionIndex } from './sessionIndexPersistenceDecision.js';
 import {
   CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
   CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE,
@@ -1599,14 +1600,14 @@ function persistSessionIndex(): void {
   // the last persist. This is called on every listSessions() which fires in tight
   // loops (e.g. the search indexer batch loop), so avoiding redundant work here
   // is critical for performance with large session counts.
-  if (!sessionCacheDirty) {
+  if (!shouldPersistSessionIndex({ sessionCacheDirty })) {
     return;
   }
 
   const sessionsDir = resolveSessionsDir();
   const indexFile = resolveSessionsIndexFile();
   const nextJson = serializePersistentSessionIndex(buildPersistentSessionIndexDocument(sessionsDir));
-  if (nextJson === persistedIndexJson) {
+  if (!didSessionIndexJsonChange({ nextJson, persistedIndexJson })) {
     sessionCacheDirty = false;
     return;
   }
