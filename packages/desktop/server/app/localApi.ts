@@ -198,6 +198,7 @@ import {
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { assertConversationFound, assertSessionFound } from './localApiConversationNotFound.js';
+import { buildDesktopConversationSource, normalizeResolvedSessionFile } from './localApiConversationSource.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
@@ -1768,26 +1769,18 @@ function resolveDesktopConversationSource(conversationId: string): {
   const trimmedConversationId = readRequiredConversationId(conversationId);
 
   const liveEntry = liveRegistry.get(trimmedConversationId);
-  const liveSessionFile = liveEntry?.session.sessionFile?.trim();
+  const liveSessionFile = normalizeResolvedSessionFile(liveEntry?.session.sessionFile);
   if (liveEntry && liveSessionFile) {
-    return {
-      sessionFile: liveSessionFile,
-      cwd: liveEntry.cwd,
-      live: true,
-    };
+    return buildDesktopConversationSource({ sessionFile: liveSessionFile, cwd: liveEntry.cwd, live: true });
   }
 
-  const sessionFile = resolveConversationSessionFile(trimmedConversationId)?.trim();
+  const sessionFile = normalizeResolvedSessionFile(resolveConversationSessionFile(trimmedConversationId));
   if (!sessionFile || !existsSync(sessionFile)) {
     throw new Error('Conversation not found');
   }
 
   const sessionManager = SessionManager.open(sessionFile);
-  return {
-    sessionFile,
-    cwd: sessionManager.getCwd(),
-    live: false,
-  };
+  return buildDesktopConversationSource({ sessionFile, cwd: sessionManager.getCwd(), live: false });
 }
 
 export async function createDesktopLiveSession(input: {
