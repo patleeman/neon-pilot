@@ -80,6 +80,11 @@ import {
   buildExtensionSettingsRegistrations as buildExtensionSettingsContributionRegistrations,
 } from './extensionSettingsContributions.js';
 import {
+  validateSecretContributions,
+  validateSettingsComponentContribution,
+  validateSettingsContributions,
+} from './extensionSettingsContributionValidation.js';
+import {
   buildExtensionMentionRegistrations as buildExtensionMentionContributionRegistrations,
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
@@ -1016,54 +1021,15 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.settingsComponent !== undefined) {
-    if (!isRecord(contributes.settingsComponent)) {
-      throw new Error('Extension manifest contributes.settingsComponent must be an object.');
-    }
-    const panel = contributes.settingsComponent as Record<string, unknown>;
-    requireString(panel.id, 'contributes.settingsComponent.id');
-    requireString(panel.component, 'contributes.settingsComponent.component');
-    requireString(panel.sectionId, 'contributes.settingsComponent.sectionId');
-    requireString(panel.label, 'contributes.settingsComponent.label');
-    validateOptionalString(panel.description, 'contributes.settingsComponent.description');
-    if (panel.order !== undefined && (typeof panel.order !== 'number' || !Number.isInteger(panel.order))) {
-      throw new Error('Extension manifest contributes.settingsComponent.order must be an integer.');
-    }
+    validateSettingsComponentContribution(contributes.settingsComponent);
   }
 
   if (contributes.settings !== undefined) {
-    if (!isRecord(contributes.settings)) {
-      throw new Error('Extension manifest contributes.settings must be an object.');
-    }
-    for (const [key, setting] of Object.entries(contributes.settings)) {
-      if (!isRecord(setting)) {
-        throw new Error(`Extension manifest contributes.settings.${key} must be an object.`);
-      }
-      const allowedTypes = ['string', 'boolean', 'number', 'select'];
-      if (typeof setting.type === 'string' && !allowedTypes.includes(setting.type)) {
-        throw new Error(`Extension manifest contributes.settings.${key}.type must be one of: ${allowedTypes.join(', ')}.`);
-      }
-      if (setting.enum !== undefined && !Array.isArray(setting.enum)) {
-        throw new Error(`Extension manifest contributes.settings.${key}.enum must be an array.`);
-      }
-    }
+    validateSettingsContributions(contributes.settings);
   }
 
   if (contributes.secrets !== undefined) {
-    if (!isRecord(contributes.secrets)) {
-      throw new Error('Extension manifest contributes.secrets must be an object.');
-    }
-    for (const [key, secret] of Object.entries(contributes.secrets)) {
-      if (!isRecord(secret)) {
-        throw new Error(`Extension manifest contributes.secrets.${key} must be an object.`);
-      }
-      requireString(secret.label, `contributes.secrets.${key}.label`);
-      validateOptionalString(secret.description, `contributes.secrets.${key}.description`);
-      validateOptionalString(secret.env, `contributes.secrets.${key}.env`);
-      validateOptionalString(secret.placeholder, `contributes.secrets.${key}.placeholder`);
-      if (secret.order !== undefined && !Number.isInteger(secret.order)) {
-        throw new Error(`Extension manifest contributes.secrets.${key}.order must be an integer.`);
-      }
-    }
+    validateSecretContributions(contributes.secrets);
   }
 
   if (contributes.secretBackends !== undefined) {
