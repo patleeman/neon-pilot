@@ -184,17 +184,18 @@ export function ToolBlock({
   const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
   const checkpointAction =
     block.tool === 'checkpoint' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
+  const useExtensionRenderer = extensionRenderer && !(block.tool === 'checkpoint' && checkpointAction === 'list');
   const pinnedCheckpoint = block.tool === 'checkpoint' && checkpointAction === 'save' && !isRunning && !isError;
   const pinnedArtifact = isDurableArtifactTool(block);
   const pinnedVisual = isPinnedVisualTool(block);
   const pinnedFileChange = isFileChangingTool(block, fileChanges);
   const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual || pinnedFileChange;
 
-  if (extensionRenderer && pinnedCheckpoint) {
+  if (useExtensionRenderer && pinnedCheckpoint) {
     return (
       <NativeExtensionToolBlockHost
-        extension={extensionRenderer.extension}
-        renderer={extensionRenderer.renderer}
+        extension={useExtensionRenderer.extension}
+        renderer={useExtensionRenderer.renderer}
         block={block}
         context={{
           onOpenCheckpoint,
@@ -208,12 +209,12 @@ export function ToolBlock({
     );
   }
 
-  if (extensionRenderer && !pinnedTool) {
+  if (useExtensionRenderer && !pinnedTool) {
     return (
       <>
         <NativeExtensionToolBlockHost
-          extension={extensionRenderer.extension}
-          renderer={extensionRenderer.renderer}
+          extension={useExtensionRenderer.extension}
+          renderer={useExtensionRenderer.renderer}
           block={block}
           context={{
             onOpenArtifact,
