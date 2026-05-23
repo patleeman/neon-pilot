@@ -5,7 +5,7 @@ const MAX_ITEM_TEXT_LENGTH = 500;
 const MAX_NOTE_LENGTH = 500;
 const MAX_ITEMS = 200;
 
-type TodoStatus = 'todo' | 'doing' | 'done' | 'blocked';
+type TodoStatus = 'todo' | 'done';
 
 interface TodoItem {
   id: string;
@@ -42,7 +42,9 @@ function conversationIdFrom(input: unknown, ctx: ExtensionBackendContext): strin
 }
 
 function normalizeStatus(value: unknown, fallback: TodoStatus = 'todo'): TodoStatus {
-  return value === 'todo' || value === 'doing' || value === 'done' || value === 'blocked' ? value : fallback;
+  if (value === 'done') return 'done';
+  if (value === 'todo' || value === 'doing' || value === 'blocked') return 'todo';
+  return fallback;
 }
 
 function normalizeState(value: unknown): TodoState {
@@ -202,9 +204,9 @@ export async function provideTurnContext(
       {
         title: 'Todos',
         content: [
-          'Conversation todos are short-lived execution state. Use `todo` to add, update, complete, block, delete, or list items. Do not replace the active goal for temporary subtasks.',
+          'Conversation todos are short-lived execution state. Use `todo` to add, update, complete, delete, or list items. Do not replace the active goal for temporary subtasks.',
           '',
-          ...openItems.map((item) => `- ${item.id} [${item.status}]: ${item.text}${item.note ? ` — ${item.note}` : ''}`),
+          ...openItems.map((item) => `- ${item.id}: ${item.text}${item.note ? ` — ${item.note}` : ''}`),
         ].join('\n'),
       },
     ],

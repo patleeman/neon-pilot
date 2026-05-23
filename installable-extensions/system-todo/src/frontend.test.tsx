@@ -40,6 +40,8 @@ describe('TodoShelf', () => {
     expect(screen.getByText('1 open · 1 done')).toBeTruthy();
     expect(screen.getByText('Open todo')).toBeTruthy();
     expect(screen.getByText('Done todo')).toBeTruthy();
+    expect(screen.queryByText('Doing')).toBeNull();
+    expect(screen.queryByText('Block')).toBeNull();
   });
 
   it('marks open items done and can clear completed items', async () => {

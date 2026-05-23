@@ -24,8 +24,8 @@ describe('system-todo backend', () => {
   it('adds, updates, deletes, and clears conversation todos', async () => {
     const ctx = createCtx();
 
-    let state = await addItem({ text: 'Fix goal mode', status: 'doing' }, ctx);
-    expect(state.items).toMatchObject([{ text: 'Fix goal mode', status: 'doing' }]);
+    let state = await addItem({ text: 'Fix goal mode', status: 'todo' }, ctx);
+    expect(state.items).toMatchObject([{ text: 'Fix goal mode', status: 'todo' }]);
     const id = state.items[0]!.id;
 
     state = await updateItem({ id, status: 'done', note: 'Validated' }, ctx);
@@ -43,16 +43,25 @@ describe('system-todo backend', () => {
 
   it('provides turn context for open todos only', async () => {
     const ctx = createCtx();
-    const open = await addItem({ text: 'Open work' }, ctx);
-    await updateItem({ id: open.items[0]!.id, status: 'blocked', note: 'Waiting' }, ctx);
+    await addItem({ text: 'Open work', note: 'Waiting' }, ctx);
     const done = await addItem({ text: 'Done work' }, ctx);
     await updateItem({ id: done.items[0]!.id, status: 'done' }, ctx);
 
     const context = await provideTurnContext({}, ctx);
     expect(context.blocks).toHaveLength(1);
     expect(context.blocks[0]!.content).toContain('Open work');
-    expect(context.blocks[0]!.content).toContain('[blocked]');
+    expect(context.blocks[0]!.content).toContain('Waiting');
     expect(context.blocks[0]!.content).not.toContain('Done work');
+  });
+
+  it('migrates legacy doing and blocked statuses back to open todos', async () => {
+    const ctx = createCtx();
+
+    await expect(addItem({ text: 'Legacy doing', status: 'doing' }, ctx)).resolves.toMatchObject({
+      items: [expect.objectContaining({ status: 'todo' })],
+    });
+    const state = await addItem({ text: 'Legacy blocked', status: 'blocked' }, ctx);
+    expect(state.items.map((item) => item.status)).toEqual(['todo', 'todo']);
   });
 
   it('supports the todo tool action surface', async () => {

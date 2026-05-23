@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-type TodoStatus = 'todo' | 'doing' | 'done' | 'blocked';
+type TodoStatus = 'todo' | 'done';
 
 interface TodoItem {
   id: string;
@@ -18,13 +18,6 @@ interface TodoState {
 }
 
 const EMPTY_STATE: TodoState = { schemaVersion: 1, updatedAt: new Date(0).toISOString(), items: [] };
-
-function statusLabel(status: TodoStatus): string {
-  if (status === 'doing') return 'doing';
-  if (status === 'blocked') return 'blocked';
-  if (status === 'done') return 'done';
-  return 'todo';
-}
 
 function isDone(item: TodoItem): boolean {
   return item.status === 'done';
@@ -161,34 +154,9 @@ export function TodoShelf({
               </button>
               <div className="min-w-0">
                 <div className={`truncate ${isDone(item) ? 'text-dim line-through' : 'text-primary'}`}>{item.text}</div>
-                {item.status !== 'todo' || item.note ? (
-                  <div className="truncate text-[10px] text-dim">
-                    {statusLabel(item.status)}
-                    {item.note ? ` · ${item.note}` : ''}
-                  </div>
-                ) : null}
+                {item.note ? <div className="truncate text-[10px] text-dim">{item.note}</div> : null}
               </div>
               <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                {!isDone(item) && item.status !== 'doing' ? (
-                  <button
-                    type="button"
-                    className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-surface hover:text-primary"
-                    disabled={Boolean(busyId)}
-                    onClick={() => void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: 'doing' }))}
-                  >
-                    Doing
-                  </button>
-                ) : null}
-                {!isDone(item) && item.status !== 'blocked' ? (
-                  <button
-                    type="button"
-                    className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-surface hover:text-warning"
-                    disabled={Boolean(busyId)}
-                    onClick={() => void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: 'blocked' }))}
-                  >
-                    Block
-                  </button>
-                ) : null}
                 <button
                   type="button"
                   className="rounded-md px-1.5 py-0.5 text-[12px] text-secondary hover:bg-surface hover:text-danger"
