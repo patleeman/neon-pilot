@@ -184,6 +184,7 @@ import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTas
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
 import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
 import {
@@ -1309,14 +1310,12 @@ export async function markDesktopConversationAttention(input: { conversationId: 
   const updated = toggleConversationAttention({
     profile: context.getRuntimeScope(),
     conversationId: input.conversationId,
-    read: input.read !== false,
+    read: resolveAttentionReadValue(input.read),
   });
-  if (!updated) {
-    throw new Error('Conversation not found');
-  }
+  assertAttentionTargetUpdated(updated, 'Conversation not found');
 
   invalidateAppTopics('sessions');
-  return { ok: true as const };
+  return buildDesktopOkResponse();
 }
 
 export async function readDesktopDurableRuns() {
