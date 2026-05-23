@@ -175,6 +175,8 @@ import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
+export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
+import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
@@ -725,14 +727,6 @@ function shouldRefreshDesktopConversationStateForAppEvent(
   }
 
   return false;
-}
-
-const MAX_DESKTOP_LOCAL_API_TAIL_BLOCKS = 10000;
-
-export function normalizeDesktopLocalApiTailBlocks(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
-    ? Math.min(MAX_DESKTOP_LOCAL_API_TAIL_BLOCKS, value)
-    : undefined;
 }
 
 export async function subscribeDesktopConversationState(
