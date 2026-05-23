@@ -1,10 +1,12 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildCustomExtensionKeybindingRegistrations(input: {
   commandKeybindings?: Record<
     string,
     {
       extensionId: string;
       surfaceId: string;
-      packageType?: string;
+      packageType?: ExtensionPackageType;
       title: string;
       command: string;
       args?: unknown;
@@ -29,7 +31,7 @@ export function buildCustomExtensionKeybindingRegistrations(input: {
         keys,
         command: keybinding.command,
         ...(keybinding.args !== undefined ? { args: keybinding.args } : {}),
-        scope: keybinding.scope ?? 'global',
+        scope: (keybinding.scope === 'surface' ? 'surface' : 'global') as 'surface' | 'global',
         defaultKeys: keybinding.defaultKeys ?? [],
         enabled: !disabledKeybindings.has(registryKey),
       },

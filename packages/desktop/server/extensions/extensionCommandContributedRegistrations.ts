@@ -1,6 +1,8 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildExtensionContributedCommandRegistrations(extension: {
   id: string;
-  packageType?: string;
+  packageType?: ExtensionPackageType;
   contributes?: {
     commands?: Array<{
       id: string;

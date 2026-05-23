@@ -1,7 +1,9 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildInvalidExtensionInstallSummary(entry: {
   id: string;
   name: string;
-  packageType: string;
+  packageType: ExtensionPackageType;
   errors: string[];
   packageRoot?: string;
 }) {

@@ -1,7 +1,9 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildExtensionRuntimeProviderRegistrations(entry: {
   manifest: {
     id: string;
-    packageType?: string;
+    packageType?: ExtensionPackageType;
     contributes?: {
       runtimeProviders?: Array<{
         id: string;

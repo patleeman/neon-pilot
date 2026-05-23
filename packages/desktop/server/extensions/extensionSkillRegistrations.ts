@@ -1,19 +1,20 @@
 import { resolve } from 'node:path';
 
+import { type ExtensionPackageType, type ExtensionSkillContribution } from './extensionManifest.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
 
 export interface ExtensionSkillRegistryEntryLike {
   packageRoot?: string;
   manifest: {
     id: string;
-    packageType?: string;
-    contributes?: { skills?: unknown[] };
+    packageType?: ExtensionPackageType;
+    contributes?: { skills?: Array<string | ExtensionSkillContribution> };
   };
 }
 
 export interface ExtensionSkillRegistrationLike {
   extensionId: string;
-  packageType: string;
+  packageType: ExtensionPackageType;
   id: string;
   name: string;
   title?: string;
@@ -27,13 +28,14 @@ export function buildExtensionSkillRegistrations(entry: ExtensionSkillRegistryEn
     return [];
   }
 
+  const packageRoot = entry.packageRoot;
   return (entry.manifest.contributes?.skills ?? []).flatMap((skill): ExtensionSkillRegistrationLike[] => {
     const normalized = normalizeExtensionSkillContribution(skill);
-    if (validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill: normalized })) {
+    if (validateExtensionSkillContribution({ packageRoot, skill: normalized })) {
       return [];
     }
 
-    const skillPath = resolve(entry.packageRoot, normalized.path);
+    const skillPath = resolve(packageRoot, normalized.path);
     const frontmatter = readSkillFrontmatterFields(skillPath);
     const id = normalized.id.trim();
     const name = `${entry.manifest.id}/${id}`;
@@ -46,7 +48,7 @@ export function buildExtensionSkillRegistrations(entry: ExtensionSkillRegistryEn
         title: normalized.title ?? frontmatter?.name,
         description: normalized.description ?? frontmatter?.description,
         path: skillPath,
-        packageRoot: entry.packageRoot,
+        packageRoot,
       },
     ];
   });

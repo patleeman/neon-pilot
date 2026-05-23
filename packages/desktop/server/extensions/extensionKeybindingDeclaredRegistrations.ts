@@ -1,7 +1,9 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildDeclaredExtensionKeybindingRegistrations(input: {
   extension: {
     id: string;
-    packageType?: string;
+    packageType?: ExtensionPackageType;
     contributes?: {
       keybindings?: Array<{
         id: string;
@@ -38,7 +40,7 @@ export function buildDeclaredExtensionKeybindingRegistrations(input: {
         command,
         ...(keybinding.args !== undefined ? { args: keybinding.args } : {}),
         ...(keybinding.when ? { when: keybinding.when } : {}),
-        scope: keybinding.scope ?? 'global',
+        scope: (keybinding.scope === 'surface' ? 'surface' : 'global') as 'surface' | 'global',
         defaultKeys,
         enabled: !disabledKeybindings.has(registryKey),
       },

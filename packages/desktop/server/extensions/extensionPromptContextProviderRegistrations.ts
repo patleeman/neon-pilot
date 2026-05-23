@@ -1,7 +1,9 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildExtensionPromptContextProviderRegistrations(entry: {
   manifest: {
     id: string;
-    packageType?: string;
+    packageType?: ExtensionPackageType;
     contributes?: {
       promptContextProviders?: Array<PromptContextProviderContribution>;
       turnContextProviders?: Array<PromptContextProviderContribution>;

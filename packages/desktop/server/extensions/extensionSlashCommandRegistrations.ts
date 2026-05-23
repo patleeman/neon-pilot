@@ -1,23 +1,25 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildLegacyExtensionSlashCommandRegistrations(
   surfaces: Array<{
     kind: string;
     extensionId: string;
     id: string;
-    packageType: string;
+    packageType: ExtensionPackageType;
     name?: string;
     description?: string;
     action?: string;
   }>,
 ) {
   return surfaces.flatMap((surface) =>
-    surface.kind === 'slashCommand'
+    surface.kind === 'slashCommand' && surface.name && surface.action
       ? [
           {
             extensionId: surface.extensionId,
             surfaceId: surface.id,
             packageType: surface.packageType,
             name: surface.name,
-            description: surface.description,
+            description: surface.description ?? '',
             action: surface.action,
           },
         ]
@@ -28,7 +30,7 @@ export function buildLegacyExtensionSlashCommandRegistrations(
 export function buildNativeExtensionSlashCommandRegistrations(
   extensions: Array<{
     id: string;
-    packageType?: string;
+    packageType?: ExtensionPackageType;
     contributes?: { slashCommands?: Array<{ name: string; description: string; action: string }> };
   }>,
 ) {

@@ -1,7 +1,9 @@
+import { type ExtensionPackageType } from './extensionManifest.js';
+
 export function buildExtensionAutoCommandRegistrations(extension: {
   id: string;
   name: string;
-  packageType?: string;
+  packageType?: ExtensionPackageType;
   contributes?: {
     commands?: Array<{ id: string }>;
     nav?: Array<{ id: string; label: string; route: string; icon?: string }>;

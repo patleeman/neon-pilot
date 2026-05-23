@@ -1,3 +1,5 @@
+import { type ConversationCommitCheckpointFile } from '@neon-pilot/core';
+
 export interface CreatedConversationCheckpointLike {
   metadata: {
     commitSha: string;
@@ -8,7 +10,7 @@ export interface CreatedConversationCheckpointLike {
     authorEmail?: string;
     committedAt?: string;
   };
-  files: string[];
+  files: ConversationCommitCheckpointFile[];
   linesAdded: number;
   linesDeleted: number;
 }
@@ -29,9 +31,9 @@ export function buildConversationCheckpointRecordInput(input: {
     shortSha: input.created.metadata.shortSha,
     subject: input.created.metadata.subject,
     body: input.created.metadata.body,
-    authorName: input.created.metadata.authorName,
+    authorName: input.created.metadata.authorName ?? 'Unknown',
     authorEmail: input.created.metadata.authorEmail,
-    committedAt: input.created.metadata.committedAt,
+    committedAt: input.created.metadata.committedAt ?? new Date().toISOString(),
     files: input.created.files,
     linesAdded: input.created.linesAdded,
     linesDeleted: input.created.linesDeleted,

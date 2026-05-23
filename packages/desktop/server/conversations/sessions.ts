@@ -62,7 +62,7 @@ import {
   resolveTailBlockLimit as resolveTailBlockLimitValue,
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
-import { buildSessionImageAssets } from './sessionImages.js';
+import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
 import { buildSessionIndexKey, shouldReloadPersistentSessionIndex } from './sessionIndexKey.js';
 import {
   buildPersistentSessionIndexDocument as buildPersistentSessionIndexDocumentFromCache,

@@ -1723,8 +1723,9 @@ export async function readDesktopSessionDetail(input: {
   const context = await getLocalLiveSessionCapabilityContext();
   const sessionId = input.sessionId.trim();
   const currentSessionSignature = readConversationSessionSignature(sessionId);
-  if (shouldReturnUnchangedSessionDetail({ knownSessionSignature: input.knownSessionSignature, currentSessionSignature })) {
-    return buildUnchangedSessionDetailResponse({ sessionId, signature: currentSessionSignature });
+  const unchangedSessionCheck = { knownSessionSignature: input.knownSessionSignature, currentSessionSignature };
+  if (shouldReturnUnchangedSessionDetail(unchangedSessionCheck)) {
+    return buildUnchangedSessionDetailResponse({ sessionId, signature: unchangedSessionCheck.currentSessionSignature });
   }
 
   const { sessionRead } = await readSessionDetailForRoute({
