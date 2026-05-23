@@ -10,7 +10,6 @@ import { timeAgo } from '../../shared/utils';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
-import { DiffActionButton } from './DiffActionButton.js';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import { INLINE_RUN_LOG_TAIL_LINES, INLINE_RUN_POLL_INTERVAL_MS, usePolledDurableRunSnapshot } from './linkedRunPolling.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
@@ -327,17 +326,6 @@ export function ToolBlock({
           >
             View
           </button>
-        ) : null}
-        {pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError ? (
-          <DiffActionButton
-            className="shrink-0 text-[10px]"
-            onClick={(event) => {
-              event.stopPropagation();
-              setPinnedDiffOpen((current) => !current);
-            }}
-          >
-            {pinnedDiffOpen ? 'Hide diff' : 'View diff'}
-          </DiffActionButton>
         ) : null}
         {block.durationMs && !isRunning && !pinnedTool && (
           <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
