@@ -171,6 +171,7 @@ import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPrefere
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
+import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -335,51 +336,6 @@ function resolveDaemonRoot(): string {
   return resolveDaemonPaths(loadDaemonConfig().ipc.socketPath).root;
 }
 
-function buildRoutePattern(path: string): { pattern: RegExp; keys: string[] } {
-  const keys: string[] = [];
-  const escaped = path
-    .split('/')
-    .map((segment) => {
-      if (!segment) {
-        return '';
-      }
-
-      if (segment === '*') {
-        keys.push('0');
-        return '(.+)';
-      }
-
-      if (segment.startsWith(':')) {
-        keys.push(segment.slice(1));
-        return '([^/]+)';
-      }
-
-      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    })
-    .join('/');
-
-  return {
-    pattern: new RegExp(`^${escaped}$`),
-    keys,
-  };
-}
-
-function buildQueryObject(searchParams: URLSearchParams): Record<string, string | string[]> {
-  const query: Record<string, string | string[]> = {};
-
-  for (const [key, value] of searchParams.entries()) {
-    const existing = query[key];
-    if (existing === undefined) {
-      query[key] = value;
-      continue;
-    }
-
-    query[key] = Array.isArray(existing) ? [...existing, value] : [existing, value];
-  }
-
-  return query;
-}
-
 function createLocalApiRequest(input: {
   method: string;
   url: URL;
@@ -393,7 +349,7 @@ function createLocalApiRequest(input: {
   request.path = input.url.pathname;
   request.url = `${input.url.pathname}${input.url.search}`;
   request.originalUrl = request.url;
-  request.query = buildQueryObject(input.url.searchParams);
+  request.query = buildLocalApiQueryObject(input.url.searchParams);
   request.params = input.params;
   request.body = input.body;
   request.headers = normalizedHeaders;
@@ -418,7 +374,7 @@ function createRouteCollector(
         return;
       }
 
-      const { pattern, keys } = buildRoutePattern(path);
+      const { pattern, keys } = buildLocalApiRoutePattern(path);
       routes.push({ method, path, pattern, keys, handler });
     };
 
