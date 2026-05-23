@@ -185,11 +185,6 @@ async function smokeAgentFactory(exportName) {
 }
 
 const smokes = {
-  async 'system-agent-browser'() {
-    const result = await module.runAgentBrowser({ command: 'snapshot', args: ['-i'] }, ctx);
-    assert(result.content?.[0]?.text?.includes('ok'), 'agent_browser smoke did not execute shell stub');
-    assert(result.details?.command?.[0] === 'agent-browser', 'agent_browser did not report command');
-  },
   async 'system-artifacts'() {
     const result = await module.artifact({ action: 'list' }, ctx);
     assert(result.action === 'list', 'artifact list did not return list action');

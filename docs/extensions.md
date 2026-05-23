@@ -1625,6 +1625,7 @@ State is SQLite-backed and survives app restarts.
 See bundled system extensions in `extensions/` and optional installable extensions in `installable-extensions/` for practical examples:
 
 - **`system-artifacts`** — Tools + views + transcript renderer + skills
+- **`system-agent-browser`** — agent-browser CLI tool integration (`installable-extensions/system-agent-browser`)
 - **`system-browser`** — Experimental browser automation tool + views (`installable-extensions/system-browser`)
 - **`system-automations`** — Scheduled tasks, follow-up queues, and the Automations page
 - **`system-images`** — Experimental image generation tool (`installable-extensions/system-images`)

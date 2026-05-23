@@ -50,6 +50,7 @@ System extensions are bundled under `extensions/system-*`. Installable extension
 Feature-specific documentation lives beside the owning extension package:
 
 - [ACP Protocol](../installable-extensions/system-acp/README.md)
+- [Agent Browser](../installable-extensions/system-agent-browser/README.md)
 - [Artifacts](../extensions/system-artifacts/README.md)
 - [Auto Mode](../extensions/system-auto-mode/README.md)
 - [Automations](../extensions/system-automations/README.md)

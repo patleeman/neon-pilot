@@ -32,6 +32,7 @@ Installable extensions are deliberately not included in packaged app resources a
 Current installable extensions:
 
 - `system-acp` — ACP protocol experiments.
+- `system-agent-browser` — agent-browser CLI tool integration for autonomous browser/app automation.
 - `system-alleycat` — mobile pairing bridge for Kitty Litter clients.
 - `system-browser` — browser automation tool and Workbench browser views.
 - `system-clean-room-spec` — generate sanitized specs from untrusted extension source.
