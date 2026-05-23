@@ -24,6 +24,7 @@ import {
   planStartupGuardQuarantines,
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
+import { buildExtensionAutoCommandRegistrations } from './extensionCommandAutoRegistrations.js';
 import {
   validateActivityTreeItemActionContributions,
   validateComposerAttachmentProviderContributions,
@@ -1141,7 +1142,6 @@ export function listExtensionCommandRegistrations(): ExtensionCommandRegistratio
       : [],
   );
   const native = snapshot.extensions.flatMap((extension) => {
-    const explicitCommandIds = new Set((extension.contributes?.commands ?? []).map((command) => command.id));
     const contributed = (extension.contributes?.commands ?? []).map((command) => ({
       extensionId: extension.id,
       surfaceId: command.id,
@@ -1155,30 +1155,7 @@ export function listExtensionCommandRegistrations(): ExtensionCommandRegistratio
       ...(command.description ? { description: command.description } : {}),
       ...(command.enablement ? { enablement: command.enablement } : {}),
     }));
-    const autoCommands = [
-      ...(extension.contributes?.nav ?? []).map((nav) => ({
-        extensionId: extension.id,
-        surfaceId: `open-${nav.id}`,
-        packageType: extension.packageType ?? 'user',
-        title: `Open ${nav.label}`,
-        action: 'app.navigate',
-        args: { to: nav.route },
-        ...(nav.icon ? { icon: nav.icon } : {}),
-        category: extension.name,
-      })),
-      ...(extension.contributes?.views ?? [])
-        .filter((view) => view.location === 'rightRail')
-        .map((view) => ({
-          extensionId: extension.id,
-          surfaceId: `open-${view.id}`,
-          packageType: extension.packageType ?? 'user',
-          title: `Open ${view.title}`,
-          action: 'rail.open',
-          args: { extensionId: extension.id, surfaceId: view.id },
-          ...(view.icon ? { icon: view.icon } : {}),
-          category: extension.name,
-        })),
-    ].filter((command) => !explicitCommandIds.has(command.surfaceId));
+    const autoCommands = buildExtensionAutoCommandRegistrations(extension);
     return [...contributed, ...autoCommands];
   });
   return [...legacy, ...native];
