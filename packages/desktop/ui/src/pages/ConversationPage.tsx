@@ -47,6 +47,7 @@ import {
   resolveConversationGitSummaryPresentation,
   selectUnattachedMentionItems,
 } from '../conversation/conversationComposerPresentation';
+import { hasConversationComposerShelfContent, splitComposerShelvesByPlacement } from '../conversation/conversationComposerShelves';
 import {
   normalizeConversationComposerBehavior,
   resolveConversationComposerSubmitState,
@@ -5068,8 +5069,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       stream.isCompacting,
     ],
   );
-  const composerShelvesTop = useMemo(() => composerShelves.filter((shelf) => shelf.placement === 'top'), [composerShelves]);
-  const composerShelvesBottom = useMemo(() => composerShelves.filter((shelf) => shelf.placement === 'bottom'), [composerShelves]);
+  const { top: composerShelvesTop, bottom: composerShelvesBottom } = useMemo(
+    () => splitComposerShelvesByPlacement(composerShelves),
+    [composerShelves],
+  );
   const suggestedContextShelfState = useMemo(
     () => ({
       query: debouncedRelatedThreadsQuery,
@@ -5109,16 +5112,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }),
     [id, suggestedContextShelfState],
   );
-  const hasComposerShelfContent =
-    composerShelvesTop.length > 0 ||
-    composerShelvesBottom.length > 0 ||
-    attachedContextDocs.length > 0 ||
-    draftMentionItems.length > 0 ||
-    pendingQueue.length > 0 ||
-    visibleActiveConversationBackgroundExecutions.length > 0 ||
-    (!draft && orderedDeferredResumes.length > 0) ||
-    pendingBrowserComments.length > 0 ||
-    Boolean(pendingAskUserQuestion && composerActiveQuestion);
+  const hasComposerShelfContent = hasConversationComposerShelfContent({
+    composerShelvesTopCount: composerShelvesTop.length,
+    composerShelvesBottomCount: composerShelvesBottom.length,
+    attachedContextDocsCount: attachedContextDocs.length,
+    draftMentionItemsCount: draftMentionItems.length,
+    pendingQueueCount: pendingQueue.length,
+    visibleBackgroundExecutionsCount: visibleActiveConversationBackgroundExecutions.length,
+    draft,
+    orderedDeferredResumesCount: orderedDeferredResumes.length,
+    pendingBrowserCommentsCount: pendingBrowserComments.length,
+    hasActiveQuestion: Boolean(pendingAskUserQuestion && composerActiveQuestion),
+  });
   const composerAttachmentProviders = extensionRegistry.composerAttachmentProviders;
   const composerAttachmentProviderClientsRef = useRef<Map<string, ReturnType<typeof createNativeExtensionClient>>>(new Map());
   const invokeComposerAttachmentProvider = useCallback(
