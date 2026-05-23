@@ -129,7 +129,7 @@ describe('chat transcript items', () => {
     expect(items.every((item) => item.type === 'message')).toBe(true);
   });
 
-  it('keeps ask_user tool blocks visible when extension marks them standalone', () => {
+  it('keeps ask_user tool blocks inside internal-work even when extension marks them standalone', () => {
     const standaloneTools = new Set(['ask_user']);
     const messages: MessageBlock[] = [
       { type: 'text', ts: '2026-03-12T18:00:00.000Z', text: 'I need one clarification.' },
@@ -147,7 +147,15 @@ describe('chat transcript items', () => {
 
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ type: 'message', index: 0 });
-    expect(items[1]).toMatchObject({ type: 'message', index: 1, block: { type: 'tool_use', tool: 'ask_user' } });
+    expect(items[1]).toMatchObject({
+      type: 'trace_cluster',
+      startIndex: 1,
+      endIndex: 1,
+      summary: {
+        stepCount: 1,
+        categories: [{ key: 'tool:ask_user', kind: 'tool', label: 'ask_user', tool: 'ask_user', count: 1 }],
+      },
+    });
   });
 
   it('summarizes trace categories, duration, and running/error state inside trace clusters', () => {

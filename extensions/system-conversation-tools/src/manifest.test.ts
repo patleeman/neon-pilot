@@ -46,7 +46,7 @@ describe('system-conversation-tools manifest', () => {
     );
   });
 
-  it('renders question prompts standalone while keeping normal bash tool calls grouped', () => {
+  it('keeps question prompts and normal bash tool calls grouped into internal work', () => {
     expect(manifest.contributes.transcriptRenderers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'ask-user-question-tool-block', tool: 'ask_user' }),
@@ -57,7 +57,7 @@ describe('system-conversation-tools manifest', () => {
     const askRenderer = manifest.contributes.transcriptRenderers.find(
       (renderer: { id: string }) => renderer.id === 'ask-user-question-tool-block',
     );
-    expect(askRenderer).toHaveProperty('standalone', true);
+    expect(askRenderer).not.toHaveProperty('standalone');
 
     const bashRenderer = manifest.contributes.transcriptRenderers.find(
       (renderer: { id: string }) => renderer.id === 'terminal-bash-tool-block',
