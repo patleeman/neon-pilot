@@ -170,7 +170,14 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
               </div>
               <div className="max-h-56 overflow-auto px-2 py-2">
                 {hasOutput ? (
-                  <pre className="whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-primary">
+                  <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-primary">
+                    {runIsShell && targetCommand ? (
+                      <>
+                        <span className="text-dim">$ </span>
+                        {targetCommand}
+                        {'\n'}
+                      </>
+                    ) : null}
                     {snapshot.log?.log}
                   </pre>
                 ) : (
