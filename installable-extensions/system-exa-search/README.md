@@ -1,12 +1,12 @@
 # Exa Search Extension
 
-This extension owns the `web_search` agent tool and the Exa API key secret.
+This installable extension owns the `web_search` agent web search tool and the Exa API key secret.
 
 ## Tool
 
 | Tool         | Parameters                          | Description                         |
 | ------------ | ----------------------------------- | ----------------------------------- |
-| `web_search` | `query`, `count?` (max 20), `page?` | Search Exa and return web snippets. |
+| `web_search` | `query`, `count?` (max 20), `page?` | Agent web search using Exa results. |
 
 ## Configuration
 

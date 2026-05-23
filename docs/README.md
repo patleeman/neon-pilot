@@ -63,7 +63,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Context Usage](../extensions/system-context-usage/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
 - [Diffs](../extensions/system-diffs/README.md)
-- [DuckDuckGo Search](../extensions/system-duckduckgo-search/README.md)
+- [DuckDuckGo Search](../installable-extensions/system-duckduckgo-search/README.md)
 - [Exa Search](../installable-extensions/system-exa-search/README.md)
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md)
 - [Extension Manager](../extensions/system-extension-manager/README.md)

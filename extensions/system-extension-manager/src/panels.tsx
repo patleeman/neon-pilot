@@ -206,14 +206,7 @@ function ExtensionActionsMenu({
   );
 }
 
-const LOCKED_EXTENSION_IDS = [
-  'system-conversation-tools',
-  'system-extension-manager',
-  'system-model-picker',
-  'system-prompt-assembly',
-  'system-runs',
-  'system-settings',
-];
+const LOCKED_EXTENSION_IDS = ['system-extension-manager', 'system-prompt-assembly', 'system-runs', 'system-settings'];
 
 function isLocked(extension: ExtensionInstallSummary): boolean {
   return LOCKED_EXTENSION_IDS.includes(extension.id);

@@ -36,6 +36,11 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Generate sanitized specs from untrusted extension source.',
   },
   {
+    id: 'system-duckduckgo-search',
+    name: 'DuckDuckGo Search',
+    description: 'Agent tool for DuckDuckGo web search.',
+  },
+  {
     id: 'system-exa-search',
     name: 'Exa Search',
     description: 'Agent tool for Exa web search.',

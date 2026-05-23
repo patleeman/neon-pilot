@@ -663,7 +663,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
   it('no duplicate tool names', () => {
     const tools = listExtensionToolRegistrations();
     const conflicts = findAllStringConflicts(tools.map((t) => [t.name, `${t.extensionId}/${t.id}`]));
-    // Some tool names are intentionally shared across extensions and resolved by priority
+    // Some installable tool names are intentionally shared across extensions and resolved by priority
     // at the toolInventory layer (e.g. web_search provided by both duckduckgo and exa).
     const ALLOWED_SHARED_NAMES = new Set(['web_search']);
     for (const name of ALLOWED_SHARED_NAMES) conflicts.delete(name);
@@ -675,7 +675,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of ['web_search', 'web_fetch', 'background_bash', 'subagent']) {
+    for (const expected of ['web_fetch', 'background_bash', 'subagent']) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);

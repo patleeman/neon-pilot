@@ -36,6 +36,7 @@ Current installable extensions:
 - `system-alleycat` — mobile pairing bridge for Kitty Litter clients.
 - `system-browser` — browser automation tool and Workbench browser views.
 - `system-clean-room-spec` — generate sanitized specs from untrusted extension source.
+- `system-duckduckgo-search` — agent tool for DuckDuckGo web search.
 - `system-exa-search` — agent tool for Exa web search.
 - `system-gateways` — Telegram gateway UI/runtime while gateway routing is still experimental.
 - `system-images` — image generation tooling while provider behavior and UX are still experimental.
