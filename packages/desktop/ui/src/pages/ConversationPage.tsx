@@ -128,6 +128,7 @@ import {
   shouldLoadConversationRun as resolveShouldLoadConversationRun,
 } from '../conversation/conversationRunLoading';
 import { createConversationLiveRunId, getConversationRunIdFromSearch } from '../conversation/conversationRuns';
+import { shouldRefetchSavedWorkspacePaths, syncSavedWorkspacePathValues } from '../conversation/conversationSavedWorkspaces';
 import {
   getConversationInitialScrollKey,
   getConversationTailBlockKey,
@@ -2454,14 +2455,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [liveSessionContext, refetchLiveSessionContext, shouldFetchLiveSessionGitContext]);
 
   const syncSavedWorkspacePaths = useCallback((workspacePaths: string[]) => {
-    const normalized = normalizeWorkspacePaths(workspacePaths);
+    const normalized = syncSavedWorkspacePathValues(workspacePaths);
     setSavedWorkspacePaths(normalized);
     writeStoredWorkspacePaths(normalized);
     return normalized;
   }, []);
 
   const refetchSavedWorkspacePaths = useCallback(async () => {
-    if (!draft) {
+    if (!shouldRefetchSavedWorkspacePaths(draft)) {
       return [] as string[];
     }
 
