@@ -34,6 +34,15 @@ import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, w
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { DesktopTopBar } from './DesktopTopBar';
+import {
+  extensionToolPanelMode,
+  findExtensionToolPanelBySlot,
+  inferSurfaceToolSlot,
+  isArtifactsRailMode,
+  parseExtensionToolPanelMode,
+  resolveActiveExtensionWorkbenchSurface,
+  type WorkbenchRailMode,
+} from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { NotificationProvider } from './notifications/notificationStore';
 import { cx } from './ui';
@@ -81,79 +90,6 @@ type DesktopLayoutShortcutAction =
   | 'toggle-layout-mode'
   | 'show-conversation-mode'
   | 'show-workbench-mode';
-
-type BuiltInWorkbenchRailMode = 'files' | 'artifacts' | 'browser';
-type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
-type WorkbenchRailMode = BuiltInWorkbenchRailMode | ExtensionWorkbenchRailMode;
-
-function getSurfaceToolSlot(
-  surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary,
-): string | undefined {
-  return 'toolSlot' in surface ? ((surface as Record<string, unknown>).toolSlot as string | undefined) : undefined;
-}
-
-function inferSurfaceToolSlot(
-  surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary,
-): string | undefined {
-  const explicitSlot = getSurfaceToolSlot(surface);
-  if (explicitSlot) return explicitSlot;
-  if (surface.extensionId === 'system-files') return 'files';
-  if (surface.extensionId === 'system-artifacts') return 'artifacts';
-  if (surface.extensionId === 'system-browser') return 'browser';
-  return undefined;
-}
-
-function extensionToolPanelMode(
-  surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary,
-): WorkbenchRailMode {
-  const slot = inferSurfaceToolSlot(surface);
-  return slot ?? `extension:${surface.extensionId}:${surface.id}`;
-}
-
-export function resolveWorkbenchRailMode(
-  builtInMode: BuiltInWorkbenchRailMode,
-  surface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null | undefined,
-): WorkbenchRailMode {
-  return surface ? extensionToolPanelMode(surface) : builtInMode;
-}
-
-function parseExtensionToolPanelMode(mode: WorkbenchRailMode): { extensionId: string; surfaceId: string } | null {
-  if (!mode.startsWith('extension:')) return null;
-  const [, extensionId, surfaceId] = mode.split(':');
-  return extensionId && surfaceId ? { extensionId, surfaceId } : null;
-}
-
-function findExtensionToolPanelBySlot(
-  panels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>,
-  slot: string,
-): (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary | null {
-  return panels.find((p) => inferSurfaceToolSlot(p) === slot) ?? null;
-}
-
-export function resolveActiveExtensionWorkbenchSurface({
-  activeWorkbenchTool,
-  extensionRightToolPanels,
-  extensionWorkbenchSurfaces,
-}: {
-  activeWorkbenchTool: WorkbenchRailMode;
-  extensionRightToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
-  extensionWorkbenchSurfaces: NativeExtensionViewSummary[];
-}): NativeExtensionViewSummary | null {
-  const parsed = parseExtensionToolPanelMode(activeWorkbenchTool);
-  const activeRailSurface = parsed
-    ? extensionRightToolPanels.find((surface) => surface.extensionId === parsed.extensionId && surface.id === parsed.surfaceId)
-    : findExtensionToolPanelBySlot(extensionRightToolPanels, activeWorkbenchTool);
-  if (!activeRailSurface || !('detailView' in activeRailSurface) || typeof activeRailSurface.detailView !== 'string') return null;
-  return (
-    extensionWorkbenchSurfaces.find(
-      (surface) => surface.extensionId === activeRailSurface.extensionId && surface.id === activeRailSurface.detailView,
-    ) ?? null
-  );
-}
-
-export function isArtifactsRailMode(mode: WorkbenchRailMode): boolean {
-  return mode === 'artifacts' || mode.startsWith('extension:system-artifacts:');
-}
 
 function isDesktopLayoutShortcutAction(value: unknown): value is DesktopLayoutShortcutAction {
   return (

@@ -608,6 +608,111 @@ function resolveDurableModelsFiles(_runtimeScope: string, options: ResolveResour
   return dedupe(output);
 }
 
+function buildResourceLayers(input: {
+  repoDefaultsAgentDir: string | undefined;
+  durableAgentFiles: string[];
+  durableSettingsFiles: string[];
+  durableModelsFiles: string[];
+  durableSkillDirs: string[];
+  runtimeScope: string;
+  vaultRoot: string;
+  options: ResolveResourceOptions;
+}): ResourceLayer[] {
+  const layers: ResourceLayer[] = [];
+
+  if (input.repoDefaultsAgentDir) {
+    layers.push({ name: 'defaults', agentDir: input.repoDefaultsAgentDir });
+  }
+
+  if (
+    input.durableAgentFiles.length > 0 ||
+    input.durableSettingsFiles.length > 0 ||
+    input.durableModelsFiles.length > 0 ||
+    input.durableSkillDirs.length > 0 ||
+    existsSync(getRuntimeConfigDir(input.runtimeScope, input.options)) ||
+    input.runtimeScope === 'shared'
+  ) {
+    layers.push({ name: 'durable', agentDir: input.vaultRoot });
+  }
+
+  const localBase = resolveLocalProfileDir(input.options);
+  const localAgentDir = existingDir(join(localBase, 'agent')) ?? existingDir(localBase);
+  if (localAgentDir) {
+    layers.push({ name: 'local', agentDir: localAgentDir });
+  }
+
+  return layers;
+}
+
+function resolveExtensionResources(
+  localLayers: ResourceLayer[],
+  options: ResolveResourceOptions,
+): { extensionDirs: string[]; extensionEntries: string[] } {
+  const extensionDirs =
+    options.extensionDirs !== undefined ? options.extensionDirs : dedupe([...collectLayerDirs(localLayers, 'extensions')]);
+  return {
+    extensionDirs,
+    extensionEntries:
+      options.extensionEntries !== undefined
+        ? options.extensionEntries
+        : dedupe(extensionDirs.flatMap((dir) => discoverExtensionEntries(dir))),
+  };
+}
+
+function resolvePromptThemeResources(localLayers: ResourceLayer[]): {
+  promptDirs: string[];
+  promptEntries: string[];
+  themeDirs: string[];
+  themeEntries: string[];
+} {
+  const promptDirs = collectLayerDirs(localLayers, 'prompts');
+  const themeDirs = dedupe([...collectLayerDirs(localLayers, 'themes')]);
+
+  return {
+    promptDirs,
+    promptEntries: dedupe(promptDirs.flatMap((dir) => discoverFilesWithExtensions(dir, ['.md']))),
+    themeDirs,
+    themeEntries: dedupe(themeDirs.flatMap((dir) => discoverFilesWithExtensions(dir, ['.json']))),
+  };
+}
+
+function resolveInstructionFiles(input: {
+  repoDefaultsAgentDir: string | undefined;
+  durableAgentFiles: string[];
+  repoRoot: string;
+  cwd: string | undefined;
+  localLayers: ResourceLayer[];
+}): string[] {
+  return dedupe([
+    ...collectLayerFiles(input.repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: input.repoDefaultsAgentDir }] : [], 'AGENTS.md'),
+    ...input.durableAgentFiles,
+    ...resolveConfiguredInstructionFiles(),
+    ...collectProjectInstructionFiles(input.repoRoot, input.cwd ?? process.cwd()),
+    ...collectLayerFiles(input.localLayers, 'AGENTS.md'),
+  ]);
+}
+
+function resolveSettingsModelFiles(input: {
+  repoDefaultsAgentDir: string | undefined;
+  durableSettingsFiles: string[];
+  durableModelsFiles: string[];
+  localLayers: ResourceLayer[];
+}): { settingsFiles: string[]; modelsFiles: string[] } {
+  const defaultsLayer = input.repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: input.repoDefaultsAgentDir }] : [];
+  return {
+    settingsFiles: dedupe([
+      ...collectLayerFiles(defaultsLayer, 'settings.json'),
+      ...input.durableSettingsFiles,
+      ...collectLayerFiles(input.localLayers, 'settings.json'),
+    ]),
+    modelsFiles: dedupe([
+      ...collectLayerFiles(defaultsLayer, 'models.json'),
+      ...input.durableModelsFiles,
+      ...collectLayerFiles(input.localLayers, 'models.json'),
+    ]),
+  };
+}
+
 export function resolveRuntimeResources(name: string, options: ResolveResourceOptions = {}): ResolvedRuntimeResources {
   validateRuntimeScopeName(name || 'shared');
   const runtimeScope = 'shared';
@@ -617,37 +722,23 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const runtimeConfigRoot = resolveRuntimeConfigRoot(options);
 
   const repoDefaultsAgentDir = existingDir(getRepoDefaultsAgentDir(repoRoot));
-  const localBase = resolveLocalProfileDir(options);
-  const localAgentDir = existingDir(join(localBase, 'agent')) ?? existingDir(localBase);
 
   const durableAgentFiles = resolveDurableAgentFiles(runtimeScope, options);
-  const configuredInstructionFiles = resolveConfiguredInstructionFiles();
-  const projectInstructionFiles = collectProjectInstructionFiles(repoRoot, options.cwd ?? process.cwd());
   const configuredSkillDirs = resolveConfiguredSkillDirs();
   const durableSettingsFiles = resolveDurableSettingsFiles(runtimeScope, options);
   const durableModelsFiles = resolveDurableModelsFiles(runtimeScope, options);
   const durableSkillDirs = listUnifiedSkillNodeDirs(runtimeScope, { vaultRoot });
 
-  const layers: ResourceLayer[] = [];
-
-  if (repoDefaultsAgentDir) {
-    layers.push({ name: 'defaults', agentDir: repoDefaultsAgentDir });
-  }
-
-  if (
-    durableAgentFiles.length > 0 ||
-    durableSettingsFiles.length > 0 ||
-    durableModelsFiles.length > 0 ||
-    durableSkillDirs.length > 0 ||
-    existsSync(getRuntimeConfigDir(runtimeScope, options)) ||
-    runtimeScope === 'shared'
-  ) {
-    layers.push({ name: 'durable', agentDir: vaultRoot });
-  }
-
-  if (localAgentDir) {
-    layers.push({ name: 'local', agentDir: localAgentDir });
-  }
+  const layers = buildResourceLayers({
+    repoDefaultsAgentDir,
+    durableAgentFiles,
+    durableSettingsFiles,
+    durableModelsFiles,
+    durableSkillDirs,
+    runtimeScope,
+    vaultRoot,
+    options,
+  });
 
   if (layers.length === 0) {
     throw new Error(`Shared defaults not found. Checked ${getRepoDefaultsAgentDir(repoRoot)} and ${vaultRoot}`);
@@ -660,18 +751,15 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
     .find((file): file is string => file !== undefined);
 
   // Extensions: use host-provided entries if supplied, otherwise auto-discover from layers
-  const extensionDirs =
-    options.extensionDirs !== undefined ? options.extensionDirs : dedupe([...collectLayerDirs(localLayers, 'extensions')]);
-  const extensionEntries =
-    options.extensionEntries !== undefined
-      ? options.extensionEntries
-      : dedupe(extensionDirs.flatMap((dir) => discoverExtensionEntries(dir)));
+  const { extensionDirs, extensionEntries } = resolveExtensionResources(localLayers, options);
   const skillDirs = dedupe([...durableSkillDirs, ...configuredSkillDirs, ...collectLayerDirs(localLayers, 'skills')]);
-  const promptDirs = collectLayerDirs(localLayers, 'prompts');
-  const themeDirs = dedupe([...collectLayerDirs(localLayers, 'themes')]);
-
-  const promptEntries = dedupe(promptDirs.flatMap((dir) => discoverFilesWithExtensions(dir, ['.md'])));
-  const themeEntries = dedupe(themeDirs.flatMap((dir) => discoverFilesWithExtensions(dir, ['.json'])));
+  const { promptDirs, promptEntries, themeDirs, themeEntries } = resolvePromptThemeResources(localLayers);
+  const { settingsFiles, modelsFiles } = resolveSettingsModelFiles({
+    repoDefaultsAgentDir,
+    durableSettingsFiles,
+    durableModelsFiles,
+    localLayers,
+  });
 
   return {
     name: runtimeScope,
@@ -686,28 +774,14 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
     promptEntries,
     themeDirs,
     themeEntries,
-    agentsFiles: dedupe([
-      ...collectLayerFiles(repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: repoDefaultsAgentDir }] : [], 'AGENTS.md'),
-      ...durableAgentFiles,
-      ...configuredInstructionFiles,
-      ...projectInstructionFiles,
-      ...collectLayerFiles(localLayers, 'AGENTS.md'),
-    ]),
+    agentsFiles: resolveInstructionFiles({ repoDefaultsAgentDir, durableAgentFiles, repoRoot, cwd: options.cwd, localLayers }),
     appendSystemFiles: collectLayerFiles(
       layers.filter((layer) => layer.name !== 'durable'),
       'APPEND_SYSTEM.md',
     ),
     systemPromptFile,
-    settingsFiles: dedupe([
-      ...collectLayerFiles(repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: repoDefaultsAgentDir }] : [], 'settings.json'),
-      ...durableSettingsFiles,
-      ...collectLayerFiles(localLayers, 'settings.json'),
-    ]),
-    modelsFiles: dedupe([
-      ...collectLayerFiles(repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: repoDefaultsAgentDir }] : [], 'models.json'),
-      ...durableModelsFiles,
-      ...collectLayerFiles(localLayers, 'models.json'),
-    ]),
+    settingsFiles,
+    modelsFiles,
   };
 }
 

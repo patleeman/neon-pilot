@@ -798,6 +798,47 @@ function formatMcpOperationError(error: unknown, server?: McpServerConfig): stri
   return message;
 }
 
+async function withMcpOperation<T>(
+  server: McpServerConfig,
+  options: {
+    configPath: string;
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    timeoutMs: number;
+    log?: (message: string) => void;
+  },
+  operation: (connection: Awaited<ReturnType<typeof openMcpClient>>) => Promise<McpOperationResult<T>>,
+): Promise<McpOperationResult<T>> {
+  const stderrLogs: string[] = [];
+
+  try {
+    const connection = await openMcpClient(server, {
+      ...options,
+      log: (message) => {
+        stderrLogs.push(message);
+        options.log?.(message);
+      },
+    });
+
+    try {
+      const result = await operation(connection);
+      return {
+        ...result,
+        stderr: [connection.stderr(), ...stderrLogs, result.stderr].filter(Boolean).join('\n').trim(),
+      };
+    } finally {
+      await connection.close();
+    }
+  } catch (error) {
+    return {
+      stdout: '',
+      stderr: stderrLogs.join('\n'),
+      exitCode: 1,
+      error: formatMcpOperationError(error, server),
+    };
+  }
+}
+
 export async function inspectMcpServer(
   serverName: string,
   options: {
@@ -814,64 +855,38 @@ export async function inspectMcpServer(
   const env = options.env ?? process.env;
   const config = readMcpConfig({ cwd, configPath: options.configPath, env });
   const server = findServer(config, serverName);
-  const stderrLogs: string[] = [];
-
-  try {
-    const connection = await openMcpClient(server, {
-      configPath: config.path,
-      cwd,
-      env,
-      timeoutMs,
-      log: (message) => {
-        stderrLogs.push(message);
-        options.log?.(message);
-      },
-    });
-
-    try {
-      const toolsResult = await withTimeout(connection.client.listTools(), timeoutMs, `Listing tools for ${server.name}`);
-      const tools = toolsResult.tools
-        .filter((tool) => includeTool(server.ignoreTools, tool.name))
-        .map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-        }));
-      const commandLine = resolveServerCommandLine(server);
-      const transport = server.transport === 'remote' ? connection.transportName : 'stdio';
-      const info: McpServerInfo = {
+  return withMcpOperation(server, { configPath: config.path, cwd, env, timeoutMs, log: options.log }, async (connection) => {
+    const toolsResult = await withTimeout(connection.client.listTools(), timeoutMs, `Listing tools for ${server.name}`);
+    const tools = toolsResult.tools
+      .filter((tool) => includeTool(server.ignoreTools, tool.name))
+      .map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      }));
+    const commandLine = resolveServerCommandLine(server);
+    const transport = server.transport === 'remote' ? connection.transportName : 'stdio';
+    const info: McpServerInfo = {
+      server: server.name,
+      transport,
+      commandLine,
+      toolCount: tools.length,
+      tools: tools.map((tool) => ({ name: tool.name, description: tool.description })),
+      rawOutput: formatMcpServerOutput({
         server: server.name,
         transport,
         commandLine,
-        toolCount: tools.length,
-        tools: tools.map((tool) => ({ name: tool.name, description: tool.description })),
-        rawOutput: formatMcpServerOutput({
-          server: server.name,
-          transport,
-          commandLine,
-          tools,
-          withDescriptions: options.withDescriptions,
-        }),
-      };
-
-      const stderr = [connection.stderr(), ...stderrLogs].filter(Boolean).join('\n').trim();
-      return {
-        stdout: info.rawOutput,
-        stderr,
-        exitCode: 0,
-        data: info,
-      };
-    } finally {
-      await connection.close();
-    }
-  } catch (error) {
-    return {
-      stdout: '',
-      stderr: stderrLogs.join('\n'),
-      exitCode: 1,
-      error: formatMcpOperationError(error, server),
+        tools,
+        withDescriptions: options.withDescriptions,
+      }),
     };
-  }
+    return {
+      stdout: info.rawOutput,
+      stderr: '',
+      exitCode: 0,
+      data: info,
+    };
+  });
 }
 
 export async function inspectMcpTool(
@@ -890,59 +905,33 @@ export async function inspectMcpTool(
   const env = options.env ?? process.env;
   const config = readMcpConfig({ cwd, configPath: options.configPath, env });
   const server = findServer(config, serverName);
-  const stderrLogs: string[] = [];
+  return withMcpOperation(server, { configPath: config.path, cwd, env, timeoutMs, log: options.log }, async (connection) => {
+    const toolsResult = await withTimeout(connection.client.listTools(), timeoutMs, `Listing tools for ${server.name}`);
+    const tool = toolsResult.tools.find((candidate) => candidate.name === toolName && includeTool(server.ignoreTools, candidate.name));
+    if (!tool) {
+      throw new Error(`Tool not found: ${serverName}/${toolName}`);
+    }
 
-  try {
-    const connection = await openMcpClient(server, {
-      configPath: config.path,
-      cwd,
-      env,
-      timeoutMs,
-      log: (message) => {
-        stderrLogs.push(message);
-        options.log?.(message);
-      },
-    });
-
-    try {
-      const toolsResult = await withTimeout(connection.client.listTools(), timeoutMs, `Listing tools for ${server.name}`);
-      const tool = toolsResult.tools.find((candidate) => candidate.name === toolName && includeTool(server.ignoreTools, candidate.name));
-      if (!tool) {
-        throw new Error(`Tool not found: ${serverName}/${toolName}`);
-      }
-
-      const schema = isRecord(tool.inputSchema) ? tool.inputSchema : {};
-      const info: McpToolInfo = {
+    const schema = isRecord(tool.inputSchema) ? tool.inputSchema : {};
+    const info: McpToolInfo = {
+      server: serverName,
+      tool: toolName,
+      description: tool.description,
+      schema,
+      rawOutput: formatMcpToolOutput({
         server: serverName,
         tool: toolName,
         description: tool.description,
         schema,
-        rawOutput: formatMcpToolOutput({
-          server: serverName,
-          tool: toolName,
-          description: tool.description,
-          schema,
-        }),
-      };
-
-      const stderr = [connection.stderr(), ...stderrLogs].filter(Boolean).join('\n').trim();
-      return {
-        stdout: info.rawOutput,
-        stderr,
-        exitCode: 0,
-        data: info,
-      };
-    } finally {
-      await connection.close();
-    }
-  } catch (error) {
-    return {
-      stdout: '',
-      stderr: stderrLogs.join('\n'),
-      exitCode: 1,
-      error: formatMcpOperationError(error, server),
+      }),
     };
-  }
+    return {
+      stdout: info.rawOutput,
+      stderr: '',
+      exitCode: 0,
+      data: info,
+    };
+  });
 }
 
 async function callMcpToolWithServerConfig(
@@ -957,52 +946,27 @@ async function callMcpToolWithServerConfig(
     log?: (message: string) => void;
   },
 ): Promise<McpOperationResult<McpToolCallResult>> {
-  const stderrLogs: string[] = [];
+  return withMcpOperation(server, options, async (connection) => {
+    const result = await withTimeout(
+      connection.client.callTool({
+        name: toolName,
+        arguments: isRecord(input) ? input : {},
+      }),
+      options.timeoutMs,
+      `Calling ${server.name}/${toolName}`,
+    );
+    const rawOutput = `${JSON.stringify(result, null, 2)}\n`;
 
-  try {
-    const connection = await openMcpClient(server, {
-      configPath: options.configPath,
-      cwd: options.cwd,
-      env: options.env,
-      timeoutMs: options.timeoutMs,
-      log: (message) => {
-        stderrLogs.push(message);
-        options.log?.(message);
-      },
-    });
-
-    try {
-      const result = await withTimeout(
-        connection.client.callTool({
-          name: toolName,
-          arguments: isRecord(input) ? input : {},
-        }),
-        options.timeoutMs,
-        `Calling ${server.name}/${toolName}`,
-      );
-      const rawOutput = `${JSON.stringify(result, null, 2)}\n`;
-      const stderr = [connection.stderr(), ...stderrLogs].filter(Boolean).join('\n').trim();
-
-      return {
-        stdout: rawOutput,
-        stderr,
-        exitCode: 0,
-        data: {
-          parsed: result,
-          rawOutput,
-        },
-      };
-    } finally {
-      await connection.close();
-    }
-  } catch (error) {
     return {
-      stdout: '',
-      stderr: stderrLogs.join('\n'),
-      exitCode: 1,
-      error: formatMcpOperationError(error, server),
+      stdout: rawOutput,
+      stderr: '',
+      exitCode: 0,
+      data: {
+        parsed: result,
+        rawOutput,
+      },
     };
-  }
+  });
 }
 
 export interface McpClientConnection {

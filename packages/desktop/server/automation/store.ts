@@ -16,8 +16,21 @@ import { loadDaemonConfig } from '../config.js';
 import { resolveDaemonPaths } from '../paths.js';
 import { resolveRuntimeDbPath } from '../runs/store.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
+import {
+  appendAutomationActivityEntryToDb,
+  type AutomationActivityEntry,
+  type AutomationActivityEntryInput,
+  listAutomationActivityEntriesFromDb,
+} from './activity-store.js';
 import { parseCronExpression, type ParsedTaskDefinition, type ParsedTaskSchedule, parseTaskDefinition } from './tasks/tasks-parser.js';
 import { loadTaskState, type TaskRuntimeState } from './tasks/tasks-store.js';
+
+export type {
+  AutomationActivityEntry,
+  AutomationActivityEntryInput,
+  AutomationActivityKind,
+  AutomationActivityOutcome,
+} from './activity-store.js';
 
 export type AutomationThreadMode = 'dedicated' | 'existing' | 'none';
 export type AutomationTargetType = 'background-agent' | 'conversation';
@@ -241,34 +254,6 @@ export interface AutomationSchedulerState {
   lastEvaluatedAt?: string;
 }
 
-export type AutomationActivityKind = 'missed' | 'run-failed';
-export type AutomationActivityOutcome = 'skipped' | 'catch-up-started';
-
-interface AutomationMissedActivityEntry {
-  id: string;
-  automationId: string;
-  kind: 'missed';
-  createdAt: string;
-  count: number;
-  firstScheduledAt: string;
-  lastScheduledAt: string;
-  exampleScheduledAt: string[];
-  outcome: AutomationActivityOutcome;
-}
-
-interface AutomationRunFailedActivityEntry {
-  id: string;
-  automationId: string;
-  kind: 'run-failed';
-  createdAt: string;
-  message: string;
-}
-
-export type AutomationActivityEntry = AutomationMissedActivityEntry | AutomationRunFailedActivityEntry;
-export type AutomationActivityEntryInput =
-  | Omit<AutomationMissedActivityEntry, 'id' | 'automationId'>
-  | Omit<AutomationRunFailedActivityEntry, 'id' | 'automationId'>;
-
 type StoredAutomationRow = {
   id: string;
   runtime_scope: string;
@@ -312,16 +297,7 @@ type AutomationStateRow = {
   one_time_completed_at: string | null;
 };
 
-type AutomationActivityRow = {
-  seq: number;
-  automation_id: string;
-  kind: string;
-  created_at: string;
-  payload_json: string | null;
-};
-
 const LEGACY_TASK_FILE_SUFFIX = '.task.md';
-const AUTOMATION_ACTIVITY_RETENTION_LIMIT = 100;
 const dbCache = new Map<string, SqliteDatabase>();
 
 /** Run a PASSIVE WAL checkpoint on all cached automation databases (non-blocking). */
@@ -372,35 +348,12 @@ function normalizeIsoTimestamp(raw: string): string | undefined {
   return normalized === raw || normalized === raw.replace('Z', '.000Z') ? normalized : undefined;
 }
 
-function readAutomationActivityTimestamp(value: string | null | undefined, label: string): string {
-  const raw = readRequiredString(value, label);
-  const normalized = normalizeIsoTimestamp(raw);
-  if (!normalized) {
-    throw new Error(`Automation activity ${label} must be a valid timestamp.`);
-  }
-
-  return normalized;
-}
-
 function readOptionalPositiveInteger(value: number | null | undefined, max = Number.MAX_SAFE_INTEGER): number | undefined {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
     return undefined;
   }
 
   return value > 0 && value <= max ? value : undefined;
-}
-
-function parseJsonRecord(value: string | null | undefined): Record<string, unknown> | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function buildSyntheticAutomationFilePath(id: string): string {
@@ -665,59 +618,6 @@ function rowToRuntimeState(row: AutomationStateRow): TaskRuntimeState {
     oneTimeResolvedAt: readOptionalTimestamp(row.one_time_resolved_at),
     oneTimeResolvedStatus: readOneTimeResolvedStatus(row.one_time_resolved_status),
     oneTimeCompletedAt: readOptionalTimestamp(row.one_time_completed_at),
-  };
-}
-
-function rowToAutomationActivityEntry(row: AutomationActivityRow): AutomationActivityEntry | undefined {
-  const payload = parseJsonRecord(row.payload_json);
-  const createdAt = normalizeIsoTimestamp(row.created_at);
-  if (!createdAt) {
-    return undefined;
-  }
-
-  if (row.kind === 'run-failed') {
-    const message = typeof payload?.message === 'string' ? readOptionalString(payload.message) : undefined;
-    if (!message) {
-      return undefined;
-    }
-
-    return {
-      id: `${row.automation_id}:${row.seq}`,
-      automationId: row.automation_id,
-      kind: 'run-failed',
-      createdAt,
-      message,
-    };
-  }
-
-  const count = typeof payload?.count === 'number' && Number.isSafeInteger(payload.count) && payload.count > 0 ? payload.count : undefined;
-  const firstScheduledAt = typeof payload?.firstScheduledAt === 'string' ? normalizeIsoTimestamp(payload.firstScheduledAt) : undefined;
-  const lastScheduledAt = typeof payload?.lastScheduledAt === 'string' ? normalizeIsoTimestamp(payload.lastScheduledAt) : undefined;
-  const exampleScheduledAt = Array.isArray(payload?.exampleScheduledAt)
-    ? payload.exampleScheduledAt.flatMap((value): string[] => {
-        if (typeof value !== 'string') {
-          return [];
-        }
-        const normalized = normalizeIsoTimestamp(value);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const outcome = payload?.outcome === 'catch-up-started' || payload?.outcome === 'skipped' ? payload.outcome : undefined;
-
-  if (row.kind !== 'missed' || !count || !firstScheduledAt || !lastScheduledAt || !outcome) {
-    return undefined;
-  }
-
-  return {
-    id: `${row.automation_id}:${row.seq}`,
-    automationId: row.automation_id,
-    kind: 'missed',
-    createdAt,
-    count,
-    firstScheduledAt,
-    lastScheduledAt,
-    exampleScheduledAt,
-    outcome,
   };
 }
 
@@ -1163,23 +1063,8 @@ export function listAutomationActivityEntries(
   automationId: string,
   options: { limit?: number; dbPath?: string } = {},
 ): AutomationActivityEntry[] {
-  const normalizedAutomationId = readRequiredString(automationId, 'automationId');
   const db = openAutomationDb(options.dbPath);
-  const limit =
-    typeof options.limit === 'number' && Number.isSafeInteger(options.limit) && options.limit > 0 ? Math.min(200, options.limit) : 20;
-  const rows = db
-    .prepare(
-      `
-    SELECT seq, automation_id, kind, created_at, payload_json
-    FROM automation_activity
-    WHERE automation_id = ?
-    ORDER BY created_at DESC, seq DESC
-    LIMIT ?
-  `,
-    )
-    .all(normalizedAutomationId, limit) as AutomationActivityRow[];
-
-  return rows.map((row) => rowToAutomationActivityEntry(row)).filter((entry): entry is AutomationActivityEntry => entry !== undefined);
+  return listAutomationActivityEntriesFromDb(db, automationId, { limit: options.limit });
 }
 
 export function appendAutomationActivityEntry(
@@ -1187,125 +1072,8 @@ export function appendAutomationActivityEntry(
   input: AutomationActivityEntryInput,
   options: { dbPath?: string } = {},
 ): AutomationActivityEntry {
-  const normalizedAutomationId = readRequiredString(automationId, 'automationId');
-  const existing = getStoredAutomation(normalizedAutomationId, { dbPath: options.dbPath });
-  if (!existing) {
-    throw new Error(`Automation not found: ${normalizedAutomationId}`);
-  }
-
-  const createdAt = readAutomationActivityTimestamp(input.createdAt, 'createdAt');
-  if (input.kind === 'run-failed') {
-    const message = readRequiredString(input.message, 'message');
-    const db = openAutomationDb(options.dbPath);
-    let insertedSeq: number | bigint | undefined;
-    db.transaction(() => {
-      const insertResult = db
-        .prepare(
-          `
-          INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
-          VALUES (?, ?, ?, ?)
-        `,
-        )
-        .run(normalizedAutomationId, 'run-failed', createdAt, JSON.stringify({ message })) as { lastInsertRowid?: number | bigint };
-      insertedSeq = insertResult.lastInsertRowid;
-      db.prepare(
-        `
-        DELETE FROM automation_activity
-        WHERE automation_id = ?
-          AND seq NOT IN (
-            SELECT seq
-            FROM automation_activity
-            WHERE automation_id = ?
-            ORDER BY created_at DESC, seq DESC
-            LIMIT ?
-          )
-      `,
-      ).run(normalizedAutomationId, normalizedAutomationId, AUTOMATION_ACTIVITY_RETENTION_LIMIT);
-    })();
-
-    const row = db
-      .prepare(
-        `
-        SELECT seq, automation_id, kind, created_at, payload_json
-        FROM automation_activity
-        WHERE seq = ?
-      `,
-      )
-      .get(insertedSeq) as AutomationActivityRow | undefined;
-    const entry = row ? rowToAutomationActivityEntry(row) : undefined;
-    if (!entry) {
-      throw new Error('Failed to read automation activity entry after insert.');
-    }
-    return entry;
-  }
-
-  if (!Number.isSafeInteger(input.count) || input.count <= 0) {
-    throw new Error('Automation activity count must be a positive integer.');
-  }
-
-  const firstScheduledAt = readAutomationActivityTimestamp(input.firstScheduledAt, 'firstScheduledAt');
-  const lastScheduledAt = readAutomationActivityTimestamp(input.lastScheduledAt, 'lastScheduledAt');
-  const exampleScheduledAt = input.exampleScheduledAt.flatMap((value) =>
-    typeof value === 'string' ? (normalizeIsoTimestamp(value) ?? []) : [],
-  );
-  if (input.outcome !== 'skipped' && input.outcome !== 'catch-up-started') {
-    throw new Error(`Unsupported automation activity outcome: ${input.outcome}`);
-  }
-
   const db = openAutomationDb(options.dbPath);
-  const insert = db.prepare(`
-    INSERT INTO automation_activity (automation_id, kind, created_at, payload_json)
-    VALUES (?, ?, ?, ?)
-  `);
-  const trim = db.prepare(`
-    DELETE FROM automation_activity
-    WHERE automation_id = ?
-      AND seq NOT IN (
-        SELECT seq
-        FROM automation_activity
-        WHERE automation_id = ?
-        ORDER BY created_at DESC, seq DESC
-        LIMIT ?
-      )
-  `);
-
-  let insertedSeq: number | bigint | undefined;
-  db.transaction(() => {
-    const insertResult = insert.run(
-      normalizedAutomationId,
-      'missed',
-      createdAt,
-      JSON.stringify({
-        count: input.count,
-        firstScheduledAt,
-        lastScheduledAt,
-        exampleScheduledAt,
-        outcome: input.outcome,
-      }),
-    ) as { lastInsertRowid?: number | bigint };
-    insertedSeq = insertResult.lastInsertRowid;
-    trim.run(normalizedAutomationId, normalizedAutomationId, AUTOMATION_ACTIVITY_RETENTION_LIMIT);
-  })();
-
-  if (insertedSeq === undefined) {
-    throw new Error('Failed to allocate automation activity entry id.');
-  }
-
-  const row = db
-    .prepare(
-      `
-    SELECT seq, automation_id, kind, created_at, payload_json
-    FROM automation_activity
-    WHERE seq = ?
-  `,
-    )
-    .get(insertedSeq) as AutomationActivityRow | undefined;
-  const entry = row ? rowToAutomationActivityEntry(row) : undefined;
-  if (!entry) {
-    throw new Error('Failed to read automation activity entry after insert.');
-  }
-
-  return entry;
+  return appendAutomationActivityEntryToDb(db, automationId, input);
 }
 
 export function ensureLegacyTaskImports(options: {

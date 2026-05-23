@@ -34,6 +34,7 @@ import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
 import { cx, EmptyState, LoadingState, Pill } from '../ui';
+import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 
 interface WorkspaceExplorerProps {
   cwd: string | null;
@@ -60,9 +61,6 @@ interface DiffDecorationSpec {
 
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
-const WORKSPACE_OPEN_FILES_KEY_PREFIX = 'pa:workspace-open-files:';
-const WORKSPACE_OPEN_FILES_CHANGED_EVENT = 'pa:workspace-open-files-changed';
-const MAX_WORKSPACE_OPEN_FILES = 24;
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -365,44 +363,6 @@ function buildWorkspaceBreadcrumbs(path: string): string[] {
   }
 
   return ['…', ...parts.slice(-3)];
-}
-
-function workspaceOpenFilesKey(cwd: string, scope?: string | null): string {
-  return `${WORKSPACE_OPEN_FILES_KEY_PREFIX}${scope ? `${scope}:` : ''}${cwd}`;
-}
-
-function readWorkspaceOpenFiles(cwd: string | null, scope?: string | null): string[] {
-  if (!cwd) return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(workspaceOpenFilesKey(cwd, scope)) ?? '[]');
-    return Array.isArray(parsed)
-      ? parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_WORKSPACE_OPEN_FILES)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeWorkspaceOpenFiles(cwd: string | null, paths: readonly string[], scope?: string | null): void {
-  if (!cwd) return;
-  const nextPaths = [...new Set(paths)].slice(0, MAX_WORKSPACE_OPEN_FILES);
-  try {
-    localStorage.setItem(workspaceOpenFilesKey(cwd, scope), JSON.stringify(nextPaths));
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new CustomEvent(WORKSPACE_OPEN_FILES_CHANGED_EVENT, { detail: { cwd, paths: nextPaths } }));
-}
-
-function addWorkspaceOpenFile(paths: readonly string[], path: string): string[] {
-  if (paths.includes(path)) {
-    return [...paths];
-  }
-  return [path, ...paths].slice(0, MAX_WORKSPACE_OPEN_FILES);
-}
-
-function removeWorkspaceOpenFile(paths: readonly string[], path: string): string[] {
-  return paths.filter((value) => value !== path);
 }
 
 function parentDirectory(path: string): string {
