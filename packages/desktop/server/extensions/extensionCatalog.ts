@@ -61,11 +61,6 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Local MLX and GGUF model management UI.',
   },
   {
-    id: 'system-loose-ends',
-    name: 'Loose Ends',
-    description: 'Conversation-scoped notes for assumptions, risks, and follow-ups.',
-  },
-  {
     id: 'system-self-preservation',
     name: 'Self Preservation',
     description: 'Agent self-preservation instruction and context hooks.',

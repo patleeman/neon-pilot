@@ -76,7 +76,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Knowledge](../extensions/system-knowledge/README.md)
 - [Local Dictation](../extensions/system-local-dictation/README.md)
 - [Local Models](../installable-extensions/system-local-models/README.md)
-- [Loose Ends](../installable-extensions/system-loose-ends/README.md)
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow

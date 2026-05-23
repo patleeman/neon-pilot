@@ -160,13 +160,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Test navigation, address entry, tabs, close/reopen, page load errors, snapshots with element list, screenshots, CDP single/batched commands, invalid CDP, tab targeting, shared-browser warning boundary vs agent-browser.
 - Skill: `browser`.
 
-### Loose Ends (`system-loose-ends`, default disabled)
-
-- View: Loose Ends right rail.
-- Agent tool/action: `loose_ends` with `list`, `add`, `update`, `delete` style operations via `action`, `id`, `text`, `status`.
-- Actions: `getState`, `setEnabled`, `addItem`, `updateItem`, `deleteItem`, `looseEndsTool`, `provideTurnContext`.
-- Test enable/disable, add/update/delete, context injection, completed vs open state.
-
 ## Composer and inline extension features
 
 ### Model Picker (`system-model-picker`)
@@ -435,13 +428,6 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - composerButtons: dictation
 - settingsComponent: dictation
 - backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile
-
-### system-loose-ends — Loose Ends (default disabled)
-
-- tools: loose-ends/loose_ends
-- views: loose-ends
-- turnContextProviders: loose-ends
-- backend actions: getState, setEnabled, addItem, updateItem, deleteItem, looseEndsTool, provideTurnContext
 
 ### system-mcp — MCP
 

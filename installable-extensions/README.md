@@ -41,7 +41,6 @@ Current installable extensions:
 - `system-gateways` — Telegram gateway UI/runtime while gateway routing is still experimental.
 - `system-images` — image generation tooling while provider behavior and UX are still experimental.
 - `system-local-models` — local MLX and GGUF model management UI. Runtime implementation lives in `shared/local-model-runtimes`.
-- `system-loose-ends` — conversation-scoped notes for assumptions, risks, and follow-ups.
 - `system-self-preservation` — agent self-preservation instruction and context hooks.
 - `system-session-exchange` — import/export flow for conversation session handoff experiments.
 - `system-speechmike` — SpeechMike hardware integration.

@@ -268,10 +268,6 @@ const smokes = {
     const result = await module.readSettings({}, ctx);
     assert(result && typeof result === 'object', 'readSettings failed');
   },
-  async 'system-loose-ends'() {
-    const result = await module.getState({}, ctx);
-    assert(result.schemaVersion === 1 && Array.isArray(result.items), 'loose ends getState failed');
-  },
   async 'system-mcp'() {
     const result = module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
