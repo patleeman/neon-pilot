@@ -75,6 +75,11 @@ import {
 } from '../conversation/conversationInitialState';
 import { shouldSwitchToWorkbenchForSelectedRun } from '../conversation/conversationLayoutMode';
 import {
+  shouldFetchConversationAttachmentsNow as resolveShouldFetchConversationAttachmentsNow,
+  shouldFetchLiveSessionGitContextNow,
+  shouldLoadConversationModelsAfterMetadataReady,
+} from '../conversation/conversationLazyLoadDecisions';
+import {
   buildConversationLifecycleContext,
   filterConversationLifecycleElements,
   resolveConversationLifecycleEvent,
@@ -106,9 +111,6 @@ import {
   resolveConversationVisibleScrollBinding,
   resolveDisplayedConversationPendingStatusLabel,
   shouldDeferConversationFileRefresh,
-  shouldFetchConversationAttachments,
-  shouldFetchConversationLiveSessionGitContext,
-  shouldLoadConversationModels,
   shouldShowConversationBootstrapLoadingState,
   shouldShowConversationInitialHistoricalWarmupLoader,
   shouldShowConversationInlineLoadingState,
@@ -207,7 +209,7 @@ import {
   restoreComposerImageFiles,
   restoreQueuedImageFiles,
 } from '../conversation/promptAttachments';
-import { type RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
+import { rankRelatedConversationSessions, type RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
 import {
   pruneRelatedThreadSelectionIds,
   resolveRelatedThreadPreselectionUpdate,
@@ -1093,13 +1095,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => window.clearTimeout(timeout);
   }, [draft, id]);
 
-  const shouldLoadModels =
-    nonCriticalComposerMetadataReady &&
-    shouldLoadConversationModels({
-      draft,
-      hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
-      hasPendingInitialPromptInFlight,
-    });
+  const shouldLoadModels = shouldLoadConversationModelsAfterMetadataReady({
+    metadataReady: nonCriticalComposerMetadataReady,
+    draft,
+    hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
+    hasPendingInitialPromptInFlight,
+  });
 
   // Model
   const { models, defaultModel, defaultVisionModel, defaultThinkingLevel, defaultServiceTier } = useConversationModels(shouldLoadModels);
@@ -2006,6 +2007,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [draft, draftCwdValue, sessions],
   );
   const relatedThreadCandidateIds = useMemo(() => relatedThreadCandidates.map((candidate) => candidate.id), [relatedThreadCandidates]);
+  const relatedThreadCandidateById = useMemo(
+    () => new Map(relatedThreadCandidates.map((candidate) => [candidate.id, candidate] as const)),
+    [relatedThreadCandidates],
+  );
   const visibleRelatedThreadResults = useMemo<RelatedConversationSearchResult[]>(
     () =>
       resolveRelatedThreadResults({
@@ -2025,6 +2030,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       relatedThreadSummaries,
       selectedRelatedThreadIds,
     ],
+  );
+  const relatedThreadSearchResults = useMemo(
+    () =>
+      rankRelatedConversationSessions({
+        sessions: relatedThreadCandidates,
+        searchIndex: relatedThreadSearchIndex,
+        summaries: relatedThreadSummaries,
+        query: debouncedRelatedThreadsQuery,
+        workspaceCwd: draftCwdValue || null,
+        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
+      }),
+    [debouncedRelatedThreadsQuery, draftCwdValue, relatedThreadCandidates, relatedThreadSearchIndex, relatedThreadSummaries],
   );
   const toggleRelatedThreadSelection = useCallback(
     (sessionId: string) => {
@@ -2379,13 +2396,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setConversationAttachments(data.attachments);
     return data.attachments;
   }, [id]);
-  const shouldFetchConversationAttachmentsNow = shouldFetchConversationAttachments({
+  const shouldFetchConversationAttachmentsNow = resolveShouldFetchConversationAttachmentsNow({
     draft,
     conversationId: id,
     drawingsPickerOpen,
   });
 
-  const shouldFetchLiveSessionGitContext = shouldFetchConversationLiveSessionGitContext({
+  const shouldFetchLiveSessionGitContext = shouldFetchLiveSessionGitContextNow({
     draft,
     conversationId: id,
     conversationLiveDecision,
