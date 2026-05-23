@@ -112,4 +112,12 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Export')).toBeNull();
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
+
+  it('defaults to user extensions and exposes available as a filter, not commands', async () => {
+    renderPage();
+
+    await screen.findByText('Menu Test');
+    expect(screen.getByRole('button', { name: 'available' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
 });

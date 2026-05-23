@@ -834,7 +834,14 @@ export function isExtensionEnabled(extensionId: string, stateRoot: string = getS
   return true;
 }
 
-const LOCKED_EXTENSION_IDS = ['system-extension-manager'];
+const LOCKED_EXTENSION_IDS = [
+  'system-conversation-tools',
+  'system-extension-manager',
+  'system-model-picker',
+  'system-prompt-assembly',
+  'system-runs',
+  'system-settings',
+];
 
 export function setExtensionEnabled(extensionId: string, enabled: boolean, stateRoot: string = getStateRoot()): void {
   if (!enabled && LOCKED_EXTENSION_IDS.includes(extensionId)) {

@@ -24,13 +24,12 @@ describe('system-extension-manager manifest', () => {
     expect(manifest.frontend.entry).toBe('dist/frontend.js');
   });
 
-  it('declares the expected view contribution', () => {
-    expect(manifest.contributes.views).toBeDefined();
-    const pageView = manifest.contributes.views.find((v: { id: string }) => v.id === 'page');
-    expect(pageView).toBeDefined();
-    expect(pageView.location).toBe('main');
-    expect(pageView.route).toBe('/extensions');
-    expect(pageView.component).toBe('ExtensionManagerPage');
+  it('contributes extension management to settings instead of a standalone route', () => {
+    expect(manifest.contributes.views).toEqual([]);
+    expect(manifest.contributes.settingsComponent).toMatchObject({
+      sectionId: 'settings-extensions',
+      component: 'ExtensionManagerSettingsPanel',
+    });
   });
 
   it('declares required permissions', () => {

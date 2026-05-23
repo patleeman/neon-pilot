@@ -206,10 +206,21 @@ function ExtensionActionsMenu({
   );
 }
 
-const LOCKED_EXTENSION_IDS = ['system-extension-manager'];
+const LOCKED_EXTENSION_IDS = [
+  'system-conversation-tools',
+  'system-extension-manager',
+  'system-model-picker',
+  'system-prompt-assembly',
+  'system-runs',
+  'system-settings',
+];
 
 function isLocked(extension: ExtensionInstallSummary): boolean {
   return LOCKED_EXTENSION_IDS.includes(extension.id);
+}
+
+function isQuarantined(extension: ExtensionInstallSummary): boolean {
+  return Boolean(extension.diagnostics?.some((message) => message.toLowerCase().includes('disabled by circuit breaker')));
 }
 
 function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
@@ -251,6 +262,7 @@ function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInsta
 function HealthStatus({ extension }: { extension: ExtensionInstallSummary }) {
   if (isLocked(extension)) return <span className="text-[12px] text-secondary">Required</span>;
   if (extension.status === 'invalid') return <span className="text-[12px] text-danger">Invalid</span>;
+  if (isQuarantined(extension)) return <span className="text-[12px] text-danger">Quarantined</span>;
   if (extension.healthError || extension.buildError || extension.diagnostics?.length) {
     return (
       <span className="text-[12px] text-danger" title={extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}>
@@ -468,7 +480,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'system' | 'user' | 'enabled' | 'disabled'>('all');
+  const [filter, setFilter] = useState<'user' | 'available' | 'all' | 'system' | 'enabled' | 'disabled'>('user');
   const [query, setQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -679,7 +691,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const items = catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id)) return false;
-      if (filter !== 'all' && filter !== 'disabled') return false;
+      if (filter !== 'all' && filter !== 'available') return false;
       if (!normalizedQuery) return true;
       return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
     });
@@ -824,9 +836,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
           <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
             <th className="py-2 pr-4 font-semibold">Name</th>
-            <th className="py-2 px-3 font-semibold">Metadata</th>
+            <th className="px-3 py-2 font-semibold">Capabilities</th>
             <th className="py-2 px-3 font-semibold">Health</th>
-            <th className="py-2 px-3 font-semibold">Status</th>
+            <th className="py-2 px-3 font-semibold">Enabled</th>
             <th className="py-2 pl-3 text-right font-semibold">Actions</th>
           </tr>
         </thead>
@@ -865,7 +877,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-                  {(['all', 'system', 'user', 'enabled', 'disabled'] as const).map((nextFilter) => (
+                  {(['user', 'available', 'all', 'system', 'enabled', 'disabled'] as const).map((nextFilter) => (
                     <button
                       key={nextFilter}
                       type="button"
@@ -1122,6 +1134,14 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
                   />
                 </div>
                 <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-secondary">
+                  <span className="rounded-md bg-surface px-2 py-1">{extension.packageType ?? 'user'}</span>
+                  <span className="rounded-md bg-surface px-2 py-1">{extension.enabled ? 'Enabled' : 'Disabled'}</span>
+                  <span className="rounded-md bg-surface px-2 py-1">
+                    {isLocked(extension) ? 'Required' : isQuarantined(extension) ? 'Quarantined' : (extension.status ?? 'loaded')}
+                  </span>
+                  {extension.version ? <span className="rounded-md bg-surface px-2 py-1">v{extension.version}</span> : null}
+                </div>
                 {extension.description ? <p className="mt-3 text-[13px] leading-6 text-secondary">{extension.description}</p> : null}
               </div>
 

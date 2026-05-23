@@ -9,6 +9,7 @@ import {
   completeExtensionStartupGuard,
   isExtensionEnabled,
   listExtensionAssemblyProviderRegistrations,
+  listExtensionCommandRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
   listExtensionKeybindingRegistrations,
@@ -85,6 +86,34 @@ describe('extension registry', () => {
     ).toThrow('Cannot create keybinding for unknown command: palette.open');
 
     rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('does not expose backend actions as commands', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'backend-only');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'backend-only',
+        name: 'Backend Only',
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'plumbing', title: 'Plumbing', handler: 'plumbing' }] },
+        contributes: { commands: [{ id: 'visible', title: 'Visible', action: 'visible' }] },
+      }),
+    );
+    setExtensionEnabled('backend-only', true, stateRoot);
+
+    const commands = listExtensionCommandRegistrations().filter((command) => command.extensionId === 'backend-only');
+    expect(commands.map((command) => command.surfaceId)).toEqual(['visible']);
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('does not expose the extension manager as a standalone /extensions route', () => {
+    const routes = readExtensionRegistrySnapshot().routes;
+    expect(routes).not.toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/extensions' }));
   });
 
   it('resolves enabled model profiles by provider/model glob and priority', () => {
