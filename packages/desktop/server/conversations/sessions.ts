@@ -33,6 +33,14 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
+import {
+  type ConversationOffshootKind,
+  type ConversationOffshootMetadata,
+  type ConversationWorkspaceMetadata,
+  normalizeOptionalPath,
+  readConversationOffshootMetadata as readConversationOffshootMetadataFromCustomEntry,
+  readConversationWorkspaceMetadata as readConversationWorkspaceMetadataFromCustomEntry,
+} from './sessionCustomMetadata.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
 import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
@@ -51,18 +59,6 @@ interface RawSessionRecord {
   cwd: string;
   version?: number;
   parentSession?: string;
-}
-
-export type ConversationOffshootKind = 'fork' | 'rewind' | 'subagent' | 'duplicate' | 'side';
-
-interface ConversationOffshootMetadata {
-  kind?: ConversationOffshootKind;
-  detached?: boolean;
-  timestamp?: string;
-  parentSessionFile?: string;
-  parentSessionId?: string;
-  parentMessageId?: string;
-  sourceRunId?: string;
 }
 
 interface RawModelChange {
@@ -216,11 +212,6 @@ export interface SessionMeta {
 
 export const CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE = 'personal_agent_conversation_workspace';
 export const CONVERSATION_WORKSPACE_CHANGE_CUSTOM_TYPE = 'conversation_workspace_change';
-
-interface ConversationWorkspaceMetadata {
-  cwd?: string;
-  workspaceCwd?: string | null;
-}
 
 interface LegacyToolWorkspaceMetadata {
   cwd: string;
@@ -1624,11 +1615,6 @@ function slugToCwd(slug: string): string {
   return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
 }
 
-function normalizeOptionalPath(value: string | undefined): string | undefined {
-  const normalized = value?.trim();
-  return normalized && normalized.length > 0 ? normalized : undefined;
-}
-
 function isNeutralChatWorkspaceCwd(cwd: string): boolean {
   const normalized = cwd.trim();
   if (!normalized) {
@@ -1639,56 +1625,12 @@ function isNeutralChatWorkspaceCwd(cwd: string): boolean {
   return normalized === chatWorkspacesRoot || normalized.startsWith(`${chatWorkspacesRoot}${sep}`);
 }
 
-function normalizeWorkspaceCwdValue(value: unknown): string | null | undefined {
-  if (value === null) {
-    return null;
-  }
-
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWorkspaceMetadata | null {
-  if (line.customType !== CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE || !line.data || typeof line.data !== 'object') {
-    return null;
-  }
-
-  const data = line.data as Record<string, unknown>;
-  const cwd = typeof data.cwd === 'string' && data.cwd.trim().length > 0 ? data.cwd.trim() : undefined;
-  const workspaceCwd = normalizeWorkspaceCwdValue(data.workspaceCwd);
-
-  if (cwd === undefined && workspaceCwd === undefined) {
-    return null;
-  }
-
-  return {
-    ...(cwd !== undefined ? { cwd } : {}),
-    ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
-  };
+  return readConversationWorkspaceMetadataFromCustomEntry(line, CONVERSATION_WORKSPACE_METADATA_CUSTOM_TYPE);
 }
 
 function readConversationOffshootMetadata(line: RawCustomEntry): ConversationOffshootMetadata | null {
-  if (line.customType !== CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE || !line.data || typeof line.data !== 'object') return null;
-  const data = line.data as Record<string, unknown>;
-  if (data.detached === true) return { detached: true };
-  const kind = typeof data.kind === 'string' ? data.kind.trim() : '';
-  if (!['fork', 'rewind', 'subagent', 'duplicate', 'side'].includes(kind)) return null;
-  const parentSessionFile = typeof data.parentSessionFile === 'string' ? normalizeOptionalPath(data.parentSessionFile) : undefined;
-  const parentSessionId = typeof data.parentSessionId === 'string' && data.parentSessionId.trim() ? data.parentSessionId.trim() : undefined;
-  const parentMessageId = typeof data.parentMessageId === 'string' && data.parentMessageId.trim() ? data.parentMessageId.trim() : undefined;
-  const sourceRunId = typeof data.sourceRunId === 'string' && data.sourceRunId.trim() ? data.sourceRunId.trim() : undefined;
-  return {
-    kind: kind as ConversationOffshootKind,
-    ...(typeof line.timestamp === 'string' && line.timestamp.trim() ? { timestamp: line.timestamp.trim() } : {}),
-    ...(parentSessionFile ? { parentSessionFile } : {}),
-    ...(parentSessionId ? { parentSessionId } : {}),
-    ...(parentMessageId ? { parentMessageId } : {}),
-    ...(sourceRunId ? { sourceRunId } : {}),
-  };
+  return readConversationOffshootMetadataFromCustomEntry(line, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE);
 }
 
 export function appendConversationOffshootDetachedMetadata(input: { sessionFile: string }): void {
