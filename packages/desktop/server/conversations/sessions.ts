@@ -1484,14 +1484,11 @@ function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): Display
   return [...merged, ...remainingTopologyBlocks];
 }
 
-function isTopologyBlock(block: DisplayBlock): boolean {
-  return (
-    block.type === 'context' &&
-    (block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE || block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE)
-  );
-}
-
 function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+  if (blocks.some((block) => block.type === 'context' && block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE)) {
+    return blocks;
+  }
+
   const parentId = meta.parentSessionId?.trim() || (meta.parentSessionFile ? resolveSessionIdByFile(meta.parentSessionFile) : undefined);
   if (!parentId) return blocks;
   const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
@@ -1544,7 +1541,9 @@ function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBl
 }
 
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
-  const blocksWithoutTopology = detail.blocks.filter((block) => !isTopologyBlock(block));
+  const blocksWithoutTopology = detail.blocks.filter(
+    (block) => !(block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE),
+  );
   const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
   const blocks = addParentConversationBacklink(
     mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithoutTopology, detail.meta), detail.meta),
@@ -1834,6 +1833,36 @@ export function appendConversationOffshootMetadata(input: {
         ...(input.parentMessageId ? { parentMessageId: input.parentMessageId } : {}),
         ...(input.sourceRunId ? { sourceRunId: input.sourceRunId } : {}),
       },
+    })}\n`,
+    'utf-8',
+  );
+  clearSessionCaches();
+}
+
+export function appendParentConversationBacklinkEntry(input: {
+  sessionFile: string;
+  kind: ConversationOffshootKind;
+  parentSessionFile?: string;
+  parentSessionId?: string;
+  parentMessageId?: string;
+}): void {
+  const parentId = input.parentSessionId?.trim() || (input.parentSessionFile ? resolveSessionIdByFile(input.parentSessionFile) : undefined);
+  if (!parentId) return;
+
+  const parentMeta = input.parentSessionFile ? readSessionMetaByFile(input.parentSessionFile) : readSessionMeta(parentId);
+  const parentTitle = parentMeta?.title?.trim() || parentId;
+  const label = input.kind === 'subagent' ? 'Subagent' : input.kind.charAt(0).toUpperCase() + input.kind.slice(1);
+  const leafId = readCurrentSessionLeafId(input.sessionFile);
+
+  appendFileSync(
+    input.sessionFile,
+    `${JSON.stringify({
+      type: 'custom_message',
+      id: randomUUID(),
+      parentId: leafId,
+      timestamp: new Date().toISOString(),
+      customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+      content: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}`,
     })}\n`,
     'utf-8',
   );

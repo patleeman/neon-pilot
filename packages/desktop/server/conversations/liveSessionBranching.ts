@@ -1,7 +1,11 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
 import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
-import { appendChildConversationTopologyEntry, appendConversationOffshootMetadata } from './sessions.js';
+import {
+  appendChildConversationTopologyEntry,
+  appendConversationOffshootMetadata,
+  appendParentConversationBacklinkEntry,
+} from './sessions.js';
 
 export interface LiveSessionBranchHost {
   sessionId: string;
@@ -43,6 +47,13 @@ export async function branchLiveSession(
   // the branch chain. If appended after, the SDK's leafId doesn't include the
   // metadata entry and new messages bypass it — orphaning the metadata on reload.
   appendConversationOffshootMetadata({
+    sessionFile: branchedSessionFile,
+    kind: 'fork',
+    parentSessionFile: sourceSessionFile,
+    parentSessionId: entry.sessionId,
+    parentMessageId: entryId,
+  });
+  appendParentConversationBacklinkEntry({
     sessionFile: branchedSessionFile,
     kind: 'fork',
     parentSessionFile: sourceSessionFile,
@@ -112,6 +123,13 @@ export async function forkLiveSession(
       parentSessionId: entry.sessionId,
       parentMessageId: entryId,
     });
+    appendParentConversationBacklinkEntry({
+      sessionFile: created.sessionFile,
+      kind: 'rewind',
+      parentSessionFile: sourceSessionFile,
+      parentSessionId: entry.sessionId,
+      parentMessageId: entryId,
+    });
 
     // Write tombstone to source (only when source is kept)
     if (preserveSource) {
@@ -139,6 +157,13 @@ export async function forkLiveSession(
   // the branch chain. If appended after, the SDK's leafId doesn't include the
   // metadata entry and new messages bypass it — orphaning the metadata on reload.
   appendConversationOffshootMetadata({
+    sessionFile: forkedSessionFile,
+    kind: beforeEntry ? 'rewind' : 'fork',
+    parentSessionFile: sourceSessionFile,
+    parentSessionId: entry.sessionId,
+    parentMessageId: entryId,
+  });
+  appendParentConversationBacklinkEntry({
     sessionFile: forkedSessionFile,
     kind: beforeEntry ? 'rewind' : 'fork',
     parentSessionFile: sourceSessionFile,

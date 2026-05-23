@@ -6,7 +6,11 @@ const agent = vi.hoisted(() => ({
     open: vi.fn((sessionFile: string) => agent.managers.get(sessionFile)),
   },
 }));
-const sessions = vi.hoisted(() => ({ appendChildConversationTopologyEntry: vi.fn(), appendConversationOffshootMetadata: vi.fn() }));
+const sessions = vi.hoisted(() => ({
+  appendChildConversationTopologyEntry: vi.fn(),
+  appendConversationOffshootMetadata: vi.fn(),
+  appendParentConversationBacklinkEntry: vi.fn(),
+}));
 
 vi.mock('@earendil-works/pi-coding-agent', () => ({ SessionManager: agent.SessionManager }));
 vi.mock('./sessions.js', () => sessions);
@@ -46,6 +50,13 @@ describe('live session branching', () => {
     expect(sourceManager.getEntry).toHaveBeenCalledWith('entry-1');
     expect(sourceManager.createBranchedSession).toHaveBeenCalledWith('entry-1');
     expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith({
+      sessionFile: '/sessions/branch.jsonl',
+      kind: 'fork',
+      parentSessionFile: '/sessions/source.jsonl',
+      parentSessionId: 'source-id',
+      parentMessageId: 'entry-1',
+    });
+    expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith({
       sessionFile: '/sessions/branch.jsonl',
       kind: 'fork',
       parentSessionFile: '/sessions/source.jsonl',
@@ -99,6 +110,9 @@ describe('live session branching', () => {
     expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith(
       expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind' }),
     );
+    expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind', parentMessageId: 'root' }),
+    );
     expect(sessions.appendChildConversationTopologyEntry).not.toHaveBeenCalled();
   });
 
@@ -127,6 +141,9 @@ describe('live session branching', () => {
     expect(sourceManager.createBranchedSession).toHaveBeenCalledWith('parent-1');
     expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'rewind', parentMessageId: 'entry-1' }),
+    );
+    expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionFile: '/sessions/forked.jsonl', kind: 'rewind', parentMessageId: 'entry-1' }),
     );
     expect(callbacks.resumeSession).toHaveBeenCalledWith('/sessions/forked.jsonl', { initialModel: 'explicit', cwdOverride: '/repo' });
     expect(sessions.appendChildConversationTopologyEntry).toHaveBeenCalledWith({

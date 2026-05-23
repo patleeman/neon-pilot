@@ -10,6 +10,7 @@ import {
   appendConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
+  appendParentConversationBacklinkEntry,
   buildAppendOnlySessionDetailResponse,
   buildDisplayBlocksFromEntries,
   clearSessionCaches,
@@ -2359,6 +2360,47 @@ describe('sessions', () => {
     expect(sourceIndex).toBe(-1);
     expect(backlinkIndex).toBeGreaterThanOrEqual(0);
     expect(backlinkIndex).toBeLessThan(laterReplyIndex);
+  });
+
+  it('preserves a persisted child parent-backlink entry instead of synthesizing a duplicate', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'persisted-backlink-parent',
+      title: 'Persisted backlink parent',
+      assistantTexts: ['Parent reply'],
+    });
+    const sourceManager = SessionManager.open(parentSessionFile);
+    const parentMessageId = sourceManager.getLeafId();
+    expect(parentMessageId).toBeTruthy();
+    const childSessionFile = sourceManager.createBranchedSession(parentMessageId!);
+    expect(childSessionFile).toBeTruthy();
+    const childSessionId = SessionManager.open(childSessionFile!).getSessionId();
+    expect(childSessionId).toBeTruthy();
+
+    appendConversationOffshootMetadata({
+      sessionFile: childSessionFile!,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'persisted-backlink-parent',
+      parentMessageId: parentMessageId!,
+    });
+    appendParentConversationBacklinkEntry({
+      sessionFile: childSessionFile!,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'persisted-backlink-parent',
+      parentMessageId: parentMessageId!,
+    });
+
+    const childBlocks = readSessionBlocks(childSessionId!)?.blocks ?? [];
+    const backlinks = childBlocks.filter((block) => block.type === 'context' && block.customType === 'parent_conversation_backlink');
+    expect(backlinks).toHaveLength(1);
+    expect(backlinks[0]).toEqual(
+      expect.objectContaining({ text: expect.stringContaining('Fork conversation from parent: Persisted backlink parent') }),
+    );
   });
 
   it('anchors tombstone when parentMessageId is the bare entry id (assistant block suffix stripped)', () => {
