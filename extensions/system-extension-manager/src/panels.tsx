@@ -477,7 +477,7 @@ function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string 
   );
 }
 
-export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
+export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceProps & { embedded?: boolean }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -967,23 +967,33 @@ export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps) {
 
   return (
     <>
-      <div className="h-full overflow-y-auto">
-        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
-          <AppPageIntro
-            title="Extensions"
-            summary="Install, enable, and inspect local product modules."
-            actions={
-              activeTab === 'extensions' ? (
-                <div className="flex flex-wrap gap-2">
-                  <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
-                  <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
-                  <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
-                    ↻
-                  </IconButton>
-                </div>
-              ) : null
-            }
-          />
+      <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
+        <AppPageLayout shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[72rem]'} contentClassName="space-y-10">
+          {!embedded ? (
+            <AppPageIntro
+              title="Extensions"
+              summary="Install, enable, and inspect local product modules."
+              actions={
+                activeTab === 'extensions' ? (
+                  <div className="flex flex-wrap gap-2">
+                    <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
+                    <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
+                    <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
+                      ↻
+                    </IconButton>
+                  </div>
+                ) : null
+              }
+            />
+          ) : activeTab === 'extensions' ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
+              <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
+              <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
+                ↻
+              </IconButton>
+            </div>
+          ) : null}
 
           {notice ? (
             <div className="sticky top-0 z-20 border-b border-border-subtle/60 bg-base/95 py-2 text-[13px] text-secondary backdrop-blur">
@@ -1870,5 +1880,5 @@ function ImportWarningModal({
 }
 
 export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
-  return <ExtensionManagerPage pa={pa as ExtensionSurfaceProps['pa']} />;
+  return <ExtensionManagerPage pa={pa as ExtensionSurfaceProps['pa']} embedded />;
 }

@@ -32,7 +32,7 @@
       "id": "extension-search-paths",
       "component": "ExtensionManagerSettingsPanel",
       "sectionId": "settings-extensions",
-      "label": "Extensions",
+      "label": "Installed and available",
       "description": "Install, enable, inspect, and manage extensions.",
       "order": 35
     },
