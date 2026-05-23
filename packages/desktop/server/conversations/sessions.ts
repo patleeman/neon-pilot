@@ -63,6 +63,7 @@ import {
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets } from './sessionImages.js';
+import { buildSessionIndexKey, shouldReloadPersistentSessionIndex } from './sessionIndexKey.js';
 import {
   buildPersistentSessionIndexDocument as buildPersistentSessionIndexDocumentFromCache,
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
@@ -1545,9 +1546,9 @@ function loadPersistentSessionIndexEntry(value: unknown): PersistentSessionIndex
 function ensurePersistentIndexLoaded(): void {
   const sessionsDir = resolveSessionsDir();
   const indexFile = resolveSessionsIndexFile();
-  const indexKey = `${sessionsDir}::${indexFile}`;
+  const indexKey = buildSessionIndexKey({ sessionsDir, indexFile });
 
-  if (loadedPersistentIndexKey === indexKey) {
+  if (!shouldReloadPersistentSessionIndex({ loadedIndexKey: loadedPersistentIndexKey, nextIndexKey: indexKey })) {
     return;
   }
 
