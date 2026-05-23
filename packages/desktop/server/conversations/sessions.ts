@@ -14,19 +14,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import {
-  appendFileSync,
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  readSync,
-  statSync,
-  writeFile,
-} from 'node:fs';
-import { basename, dirname, join, relative, sep } from 'node:path';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFile } from 'node:fs';
+import { dirname, join, relative, sep } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -42,6 +31,11 @@ import {
   readConversationWorkspaceMetadata as readConversationWorkspaceMetadataFromCustomEntry,
 } from './sessionCustomMetadata.js';
 import { computeFileContentHash, computeFilePrefixHash, getFileSignature, parseSignatureSize } from './sessionFileHashes.js';
+import {
+  listSessionFiles as listSessionFilesFromDir,
+  resolveSessionFileCwdSlug as resolveSessionFileCwdSlugFromDir,
+  slugToCwd,
+} from './sessionFiles.js';
 import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
@@ -1610,11 +1604,6 @@ function extractTitleFromMessage(message: RawMessage['message']): string | null 
   return buildUserMessageTitle({ text, imageCount: images.length });
 }
 
-function slugToCwd(slug: string): string {
-  // slug: --Users-user-personal-neon-pilot-- → /Users/user/personal/neon-pilot
-  return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
-}
-
 function isNeutralChatWorkspaceCwd(cwd: string): boolean {
   const normalized = cwd.trim();
   if (!normalized) {
@@ -2194,46 +2183,11 @@ function persistSessionIndex(): void {
 }
 
 function resolveSessionFileCwdSlug(filePath: string): string {
-  const sessionsDir = resolveSessionsDir();
-  return dirname(filePath) === sessionsDir ? '' : basename(dirname(filePath));
+  return resolveSessionFileCwdSlugFromDir(filePath, resolveSessionsDir());
 }
 
 function listSessionFiles(sessionsDir: string): Array<{ filePath: string; cwdSlug: string }> {
-  const files: Array<{ filePath: string; cwdSlug: string }> = [];
-  const pendingDirs = [sessionsDir];
-
-  while (pendingDirs.length > 0) {
-    const currentDir = pendingDirs.pop() as string;
-    let entryNames: string[];
-
-    try {
-      entryNames = readdirSync(currentDir);
-    } catch {
-      continue;
-    }
-
-    for (const entryName of entryNames) {
-      const entryPath = join(currentDir, entryName);
-
-      try {
-        const stats = statSync(entryPath);
-        if (stats.isFile()) {
-          if (entryName.endsWith('.jsonl')) {
-            files.push({ filePath: entryPath, cwdSlug: resolveSessionFileCwdSlug(entryPath) });
-          }
-          continue;
-        }
-
-        if (stats.isDirectory()) {
-          pendingDirs.push(entryPath);
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  return files;
+  return listSessionFilesFromDir(sessionsDir);
 }
 
 function readCachedSessionMeta(filePath: string, cwdSlug: string): SessionMeta | null {
