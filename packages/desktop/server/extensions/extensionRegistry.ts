@@ -3,6 +3,13 @@ import { join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import {
+  applyExtensionQuarantine,
+  buildFailureRecord,
+  type ExtensionFailureRecord,
+  planStartupGuardQuarantines,
+  pruneRecentFailureRecords,
+} from './extensionCircuitBreaker.js';
 import type {
   ExtensionManifest,
   ExtensionMentionContribution,
@@ -431,12 +438,6 @@ interface ExtensionRegistryConfig {
     }
   >;
   quarantined?: Record<string, { reason: string; at: string; failures: number }>;
-}
-
-interface ExtensionFailureRecord {
-  at: string;
-  operation: string;
-  error: string;
 }
 
 const EXTENSION_FAILURE_WINDOW_MS = 10 * 60 * 1000;
@@ -873,11 +874,8 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
   const records = readExtensionFailureRecords(stateRoot);
   const existing = records[input.extensionId] ?? [];
   const next = [
-    ...existing.filter((record) => {
-      const at = Date.parse(record.at);
-      return Number.isFinite(at) && at >= cutoff;
-    }),
-    { at: new Date(now).toISOString(), operation: input.operation, error: input.error },
+    ...pruneRecentFailureRecords(existing, cutoff),
+    buildFailureRecord({ operation: input.operation, error: input.error, now }),
   ];
   records[input.extensionId] = next;
   writeExtensionFailureRecords(records, stateRoot);
@@ -885,20 +883,13 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
   if (next.length < EXTENSION_FAILURE_THRESHOLD) return { quarantined: false, failures: next.length };
 
   const config = readExtensionRegistryConfig(stateRoot);
-  const disabledIds = new Set(config.disabledIds ?? []);
-  const enabledIds = new Set(config.enabledIds ?? []);
-  disabledIds.add(input.extensionId);
-  enabledIds.delete(input.extensionId);
   writeExtensionRegistryConfig(
-    {
-      ...config,
-      disabledIds: [...disabledIds].sort((left, right) => left.localeCompare(right)),
-      enabledIds: [...enabledIds].sort((left, right) => left.localeCompare(right)),
-      quarantined: {
-        ...(config.quarantined ?? {}),
-        [input.extensionId]: { reason: input.error, at: new Date(now).toISOString(), failures: next.length },
-      },
-    },
+    applyExtensionQuarantine(config, {
+      extensionId: input.extensionId,
+      reason: input.error,
+      at: new Date(now).toISOString(),
+      failures: next.length,
+    }),
     stateRoot,
   );
   return { quarantined: true, failures: next.length };
@@ -917,28 +908,18 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
   const disabledIds: string[] = [];
   if (safeMode) {
     const config = readExtensionRegistryConfig(stateRoot);
-    const disabled = new Set(config.disabledIds ?? []);
-    const enabled = new Set(config.enabledIds ?? []);
-    const quarantined = { ...(config.quarantined ?? {}) };
     const at = new Date().toISOString();
-    for (const entry of listExtensionEntries(stateRoot)) {
-      if (entry.source !== 'runtime') continue;
-      const id = entry.manifest.id;
-      if (!isExtensionEnabled(id, stateRoot)) continue;
-      disabled.add(id);
-      enabled.delete(id);
-      quarantined[id] = { reason: 'Disabled by extension safe mode after an unclean startup.', at, failures: 0 };
-      disabledIds.push(id);
-    }
-    writeExtensionRegistryConfig(
-      {
-        ...config,
-        disabledIds: [...disabled].sort((left, right) => left.localeCompare(right)),
-        enabledIds: [...enabled].sort((left, right) => left.localeCompare(right)),
-        quarantined,
-      },
-      stateRoot,
+    const plan = planStartupGuardQuarantines(
+      config,
+      listExtensionEntries(stateRoot).map((entry) => ({
+        id: entry.manifest.id,
+        source: entry.source,
+        enabled: isExtensionEnabled(entry.manifest.id, stateRoot),
+      })),
+      at,
     );
+    disabledIds.push(...plan.disabledIds);
+    writeExtensionRegistryConfig(plan.config, stateRoot);
   }
   mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
   writeFileSync(markerPath, `${JSON.stringify({ startedAt: new Date().toISOString() }, null, 2)}\n`);
