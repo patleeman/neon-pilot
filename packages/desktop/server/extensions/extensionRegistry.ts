@@ -63,6 +63,7 @@ import {
 import { buildInvalidExtensionInstallSummary } from './extensionInvalidInstallSummary.js';
 import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
 import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
+import { buildCustomExtensionKeybindingRegistrations } from './extensionKeybindingCustomRegistrations.js';
 import { buildDeclaredExtensionKeybindingRegistrations } from './extensionKeybindingDeclaredRegistrations.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
@@ -1161,23 +1162,11 @@ export function listExtensionKeybindingRegistrations(stateRoot: string = getStat
     buildDeclaredExtensionKeybindingRegistrations({ extension, disabledKeybindings, keybindingOverrides }),
   );
   const declaredKeys = new Set(declared.map((keybinding) => `${keybinding.extensionId}:${keybinding.surfaceId}`));
-  const custom = Object.entries(config.commandKeybindings ?? {}).flatMap(([registryKey, keybinding]) => {
-    if (declaredKeys.has(registryKey)) return [];
-    const keys = keybindingOverrides[registryKey] ?? keybinding.defaultKeys ?? [];
-    return [
-      {
-        extensionId: keybinding.extensionId,
-        surfaceId: keybinding.surfaceId,
-        packageType: keybinding.packageType ?? (keybinding.extensionId === 'host' ? 'system' : 'user'),
-        title: keybinding.title,
-        keys,
-        command: keybinding.command,
-        ...(keybinding.args !== undefined ? { args: keybinding.args } : {}),
-        scope: keybinding.scope ?? 'global',
-        defaultKeys: keybinding.defaultKeys ?? [],
-        enabled: !disabledKeybindings.has(registryKey),
-      },
-    ];
+  const custom = buildCustomExtensionKeybindingRegistrations({
+    commandKeybindings: config.commandKeybindings,
+    declaredKeys,
+    disabledKeybindings,
+    keybindingOverrides,
   });
   return [...declared, ...custom];
 }
