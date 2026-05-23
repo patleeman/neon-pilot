@@ -132,6 +132,7 @@ import { findConversationSessionById } from '../conversation/conversationSession
 import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
+import { buildAvailableDraftWorkspacePaths, resolveConversationCurrentCwd } from '../conversation/conversationWorkspaceState';
 import {
   beginDraftConversationAttachmentsMutation,
   buildDraftConversationComposerStorageKey,
@@ -1963,13 +1964,19 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setAttachedContextDocs(currentSessionMeta?.attachedContextDocs ?? []);
   }, [currentSessionMeta?.attachedContextDocs, draft, id]);
   const currentCwd = useMemo(
-    () => (draft ? draftCwdValue || null : (liveSessionContext?.cwd ?? currentSessionMeta?.cwd ?? null)),
+    () =>
+      resolveConversationCurrentCwd({
+        draft,
+        draftCwdValue,
+        liveSessionCwd: liveSessionContext?.cwd,
+        sessionCwd: currentSessionMeta?.cwd,
+      }),
     [draft, draftCwdValue, liveSessionContext?.cwd, currentSessionMeta?.cwd],
   );
   const currentCwdLabel = useMemo(() => (currentCwd ? truncateConversationCwdFromFront(currentCwd) : ''), [currentCwd]);
   const hasDraftCwd = draftCwdValue.length > 0;
   const availableDraftWorkspacePaths = useMemo(
-    () => normalizeWorkspacePaths(draftCwdValue ? [draftCwdValue, ...savedWorkspacePaths] : savedWorkspacePaths),
+    () => buildAvailableDraftWorkspacePaths({ draftCwdValue, savedWorkspacePaths }),
     [draftCwdValue, savedWorkspacePaths],
   );
   const relatedThreadCandidates = useMemo(
