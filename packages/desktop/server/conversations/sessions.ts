@@ -81,7 +81,7 @@ import {
   sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
 } from './sessionLineSanitizers.js';
 import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } from './sessionMessageSearchText.js';
-import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
+import { buildSessionInfoRecord, normalizeSessionName } from './sessionNaming.js';
 import {
   resolveSessionsDir as resolveSessionsDirValue,
   resolveSessionsIndexFile as resolveSessionsIndexFileValue,
@@ -98,6 +98,7 @@ import {
   collectSuppressedTranscriptEntryIds,
   shouldSuppressTranscriptDescendants,
 } from './sessionSuppression.js';
+import { extractTitleFromMessage as extractTitleFromMessageValue } from './sessionTitleExtraction.js';
 import {
   decorateSessionParentIds as decorateSessionParentIdsForMetas,
   readSourceRunIdFromSessionFilePath as readSourceRunIdFromSessionPath,
@@ -1185,12 +1186,7 @@ function deferHeavyBlockContent(blocks: DisplayBlock[], blockOffset: number, tot
 }
 
 function extractTitleFromMessage(message: RawMessage['message']): string | null {
-  if (message.role !== 'user') {
-    return null;
-  }
-
-  const { text, images } = extractUserContent(message.content);
-  return buildUserMessageTitle({ text, imageCount: images.length });
+  return extractTitleFromMessageValue(message);
 }
 
 function isNeutralChatWorkspaceCwd(cwd: string): boolean {
