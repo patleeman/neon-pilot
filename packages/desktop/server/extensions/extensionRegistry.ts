@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
@@ -16,7 +16,6 @@ import type {
   ExtensionModelProfileContribution,
   ExtensionPackageType,
   ExtensionSecretContribution,
-  ExtensionSkillContribution,
   ExtensionSurface,
   ExtensionToolContribution,
   ExtensionViewContribution,
@@ -34,6 +33,7 @@ import {
   getHostViewComponentDefinition,
 } from './extensionManifest.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
+import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
 import { buildExtensionToolRegistrationName } from './extensionToolNames.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
@@ -560,65 +560,6 @@ function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRe
   writeFileSync(getExtensionFailurePath(stateRoot), `${JSON.stringify(records, null, 2)}\n`);
 }
 
-function assertInside(root: string, candidate: string): void {
-  const resolvedRoot = resolve(root);
-  const resolvedCandidate = resolve(candidate);
-  if (resolvedCandidate !== resolvedRoot && !resolvedCandidate.startsWith(`${resolvedRoot}${sep}`)) {
-    throw new Error('Path escapes extension root.');
-  }
-}
-
-function normalizeExtensionSkillContribution(skill: string | ExtensionSkillContribution): ExtensionSkillContribution {
-  if (typeof skill === 'string') {
-    const segments = skill.split(/[\\/]/).filter(Boolean);
-    const parent = segments.length > 1 ? segments[segments.length - 2] : undefined;
-    const basename = segments.at(-1)?.replace(/\.md$/i, '') ?? 'skill';
-    return { id: parent && basename.toUpperCase() === 'SKILL' ? parent : basename, path: skill };
-  }
-  return skill;
-}
-
-function readSkillFrontmatterFields(skillPath: string): { name?: string; description?: string } | null {
-  const raw = readFileSync(skillPath, 'utf-8').replace(/\r\n/g, '\n');
-  if (!raw.startsWith('---\n')) return null;
-  const endIndex = raw.indexOf('\n---', 4);
-  if (endIndex === -1) return null;
-  const frontmatter = raw.slice(4, endIndex);
-  const name = frontmatter.match(/^name:\s*(.+)$/m)?.[1]?.trim();
-  const description = frontmatter.match(/^description:\s*(.+)$/m)?.[1]?.trim();
-  return { ...(name ? { name } : {}), ...(description ? { description } : {}) };
-}
-
-function validateExtensionSkillContribution(entry: ExtensionRegistryEntry, skill: string | ExtensionSkillContribution): string | null {
-  if (!entry.packageRoot) {
-    return 'Extension skill contributions require a package root.';
-  }
-  const normalized = normalizeExtensionSkillContribution(skill);
-  if (!normalized.id?.trim()) {
-    return 'Extension skill contribution is missing an id.';
-  }
-  if (!normalized.path?.trim()) {
-    return `Extension skill ${normalized.id} is missing a path.`;
-  }
-  const skillPath = resolve(entry.packageRoot, normalized.path);
-  try {
-    assertInside(entry.packageRoot, skillPath);
-  } catch {
-    return `Extension skill ${normalized.id} path must stay inside the extension package.`;
-  }
-  if (!existsSync(skillPath)) {
-    return `Extension skill ${normalized.id} path does not exist: ${normalized.path}`;
-  }
-  if (!normalized.path.endsWith('/SKILL.md') && normalized.path !== 'SKILL.md') {
-    return `Extension skill ${normalized.id} should use the Agent Skills file name SKILL.md.`;
-  }
-  const frontmatter = readSkillFrontmatterFields(skillPath);
-  if (!frontmatter?.name || !frontmatter.description) {
-    return `Extension skill ${normalized.id} must use Agent Skills frontmatter with name and description.`;
-  }
-  return null;
-}
-
 function normalizeExtensionDependency(dependency: string | { id: string; optional?: boolean; version?: string }): {
   id: string;
   optional: boolean;
@@ -630,7 +571,7 @@ function normalizeExtensionDependency(dependency: string | { id: string; optiona
 
 function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry): string[] {
   const skillDiagnostics = (entry.manifest.contributes?.skills ?? [])
-    .map((skill) => validateExtensionSkillContribution(entry, skill))
+    .map((skill) => validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill }))
     .filter((diagnostic): diagnostic is string => diagnostic !== null);
   const installed = new Set(listExtensionEntries().map((candidate) => candidate.manifest.id));
   const dependencyDiagnostics = (entry.manifest.dependsOn ?? [])
@@ -646,7 +587,7 @@ function buildExtensionSkillRegistrations(entry: ExtensionRegistryEntry): Extens
   }
   return (entry.manifest.contributes?.skills ?? []).flatMap((skill): ExtensionSkillRegistration[] => {
     const normalized = normalizeExtensionSkillContribution(skill);
-    if (validateExtensionSkillContribution(entry, normalized)) {
+    if (validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill: normalized })) {
       return [];
     }
     const skillPath = resolve(entry.packageRoot!, normalized.path);

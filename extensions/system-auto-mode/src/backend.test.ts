@@ -517,6 +517,20 @@ describe('system-goal-mode extension', () => {
     expect(appendEntry).toHaveBeenCalledWith('conversation-goal', expect.objectContaining({ status: 'active', noProgressTurns: 0 }));
   });
 
+  it('does not disable goal mode after repeated errored no-tool turns', async () => {
+    const { turnEnd, appendEntry, ctx } = createHarness([activeGoal('ship it', 1)]);
+
+    await turnEnd({ toolResults: [], errorMessage: 'context_length_exceeded' }, ctx);
+    await turnEnd({ toolResults: [], status: 'failed' }, ctx);
+    await flushTimers();
+
+    expect(appendEntry).toHaveBeenCalledWith('conversation-goal', expect.objectContaining({ status: 'active', noProgressTurns: 0 }));
+    expect(appendEntry).not.toHaveBeenCalledWith(
+      'conversation-goal',
+      expect.objectContaining({ objective: '', status: 'complete', stopReason: 'no progress' }),
+    );
+  });
+
   it('slash command clear disables goal mode through the same canonical state', async () => {
     const { appendEntry, sendUserMessage, registeredCommands, ctx } = createHarness([activeGoal('ship it')]);
 

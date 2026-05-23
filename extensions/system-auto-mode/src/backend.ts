@@ -119,7 +119,26 @@ function buildContinuationPrompt(state: GoalState): string {
   ].join('\n');
 }
 
-function isNoProgressGoalTurn(toolResults: Array<{ toolName?: string }>): boolean {
+function hasTurnError(event: unknown): boolean {
+  if (!isRecord(event)) {
+    return false;
+  }
+  if (typeof event.errorMessage === 'string' && event.errorMessage.trim().length > 0) {
+    return true;
+  }
+  if (typeof event.error === 'string' && event.error.trim().length > 0) {
+    return true;
+  }
+  if (isRecord(event.error)) {
+    return true;
+  }
+  return event.status === 'error' || event.status === 'failed';
+}
+
+function isNoProgressGoalTurn(event: unknown, toolResults: Array<{ toolName?: string }>): boolean {
+  if (hasTurnError(event)) {
+    return false;
+  }
   return toolResults.length === 0;
 }
 
@@ -375,7 +394,7 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       }
 
       const toolResults = Array.isArray(event.toolResults) ? event.toolResults : [];
-      const noProgressTurns = isNoProgressGoalTurn(toolResults) ? state.noProgressTurns + 1 : 0;
+      const noProgressTurns = isNoProgressGoalTurn(event, toolResults) ? state.noProgressTurns + 1 : 0;
       if (noProgressTurns >= 2) {
         const stopped = createCompleteGoalState('no progress');
         writeGoalState(pi, stopped);
