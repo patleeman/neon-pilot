@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFile } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -66,6 +66,10 @@ import {
   sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
 } from './sessionLineSanitizers.js';
 import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
+import {
+  resolveSessionsDir as resolveSessionsDirValue,
+  resolveSessionsIndexFile as resolveSessionsIndexFileValue,
+} from './sessionPaths.js';
 import {
   formatRelatedConversationPointersText,
   formatRelatedThreadsSummaryText,
@@ -415,19 +419,15 @@ const MAX_SESSION_DETAIL_CACHE_ENTRIES = 24;
 // ── Parsing ────────────────────────────────────────────────────────────────────
 
 function resolveSessionsDir(): string {
-  return process.env.PA_SESSIONS_DIR ?? DEFAULT_SESSIONS_DIR;
+  return resolveSessionsDirValue({ envSessionsDir: process.env.PA_SESSIONS_DIR, defaultSessionsDir: DEFAULT_SESSIONS_DIR });
 }
 
 function resolveSessionsIndexFile(): string {
-  if (process.env.PA_SESSIONS_INDEX_FILE) {
-    return process.env.PA_SESSIONS_INDEX_FILE;
-  }
-
-  if (process.env.PA_SESSIONS_DIR) {
-    return join(dirname(process.env.PA_SESSIONS_DIR), 'session-meta-index.json');
-  }
-
-  return DEFAULT_SESSIONS_INDEX_FILE;
+  return resolveSessionsIndexFileValue({
+    envSessionsIndexFile: process.env.PA_SESSIONS_INDEX_FILE,
+    envSessionsDir: process.env.PA_SESSIONS_DIR,
+    defaultSessionsIndexFile: DEFAULT_SESSIONS_INDEX_FILE,
+  });
 }
 
 function parseJsonLine(rawLine: string): RawLine | null {
