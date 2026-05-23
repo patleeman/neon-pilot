@@ -141,7 +141,7 @@ export function ToolBlock({
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
   }, [diffDisclosureMode]);
   const backgroundShellStart = isBackgroundShellStart(block);
-  const open = backgroundShellStart ? true : resolveDisclosureOpen(autoOpen, preference);
+  const open = resolveDisclosureOpen(autoOpen, preference);
   const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();
   const { tasks, sessions, runs } = useAppData();
