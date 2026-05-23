@@ -57,6 +57,7 @@ import {
 } from '../conversation/conversationComposerSubmit';
 import { formatConversationCwdLabel, hasDraftConversationCwd } from '../conversation/conversationCwdPresentation';
 import { buildBackgroundExecutionIndicatorText } from '../conversation/conversationExecutionActivity';
+import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import {
   applyGoalModeToggleAction,
   buildMissionAutoModeInputFromDraft,
@@ -5101,18 +5102,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     ],
   );
   const composerShelfContext = useMemo(
-    () => ({
-      conversationId: id ?? '',
-      isStreaming: conversationRunningForPage,
-      isLive: isLiveSession,
-    }),
+    () => buildComposerShelfContext({ conversationId: id, isStreaming: conversationRunningForPage, isLive: isLiveSession }),
     [conversationRunningForPage, id, isLiveSession],
   );
   const newConversationPanelContext = useMemo(
-    () => ({
-      conversationId: id ?? '',
-      suggestedContext: suggestedContextShelfState,
-    }),
+    () => buildNewConversationPanelContext({ conversationId: id, suggestedContext: suggestedContextShelfState }),
     [id, suggestedContextShelfState],
   );
   const hasComposerShelfContent = hasConversationComposerShelfContent({
