@@ -225,6 +225,7 @@ import { buildLocalApiRequestSocket, LOCAL_API_LOOPBACK_IP, LOCAL_API_REQUEST_PR
 import { normalizeLocalApiRequestHeaders, readLocalApiRequestHeader } from './localApiRequestHeaders.js';
 import { buildLocalApiRequestUrl } from './localApiRequestUrl.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
+import { noopLocalApiUse, shouldRegisterLocalApiRoute } from './localApiRouteCollector.js';
 import {
   buildUnchangedSessionDetailResponse,
   shouldBuildAppendOnlySessionDetail,
@@ -430,7 +431,7 @@ function createRouteCollector(
     (method: RegisteredRoute['method']) =>
     (path: string, ...handlers: RouteHandler[]) => {
       const handler = handlers[handlers.length - 1];
-      if (!handler) {
+      if (!shouldRegisterLocalApiRoute(handler)) {
         return;
       }
 
@@ -444,9 +445,7 @@ function createRouteCollector(
     post: register('POST'),
     patch: register('PATCH'),
     delete: register('DELETE'),
-    use: () => {
-      // Local desktop routes bypass HTTP auth middleware and other Express-only app.use chains.
-    },
+    use: noopLocalApiUse,
   };
 }
 
