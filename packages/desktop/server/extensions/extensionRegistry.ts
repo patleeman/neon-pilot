@@ -25,6 +25,7 @@ import {
   pruneRecentFailureRecords,
 } from './extensionCircuitBreaker.js';
 import { buildExtensionAutoCommandRegistrations } from './extensionCommandAutoRegistrations.js';
+import { buildExtensionContributedCommandRegistrations } from './extensionCommandContributedRegistrations.js';
 import {
   validateActivityTreeItemActionContributions,
   validateComposerAttachmentProviderContributions,
@@ -1142,19 +1143,7 @@ export function listExtensionCommandRegistrations(): ExtensionCommandRegistratio
       : [],
   );
   const native = snapshot.extensions.flatMap((extension) => {
-    const contributed = (extension.contributes?.commands ?? []).map((command) => ({
-      extensionId: extension.id,
-      surfaceId: command.id,
-      packageType: extension.packageType ?? 'user',
-      title: command.title,
-      action: command.action,
-      ...(command.args !== undefined ? { args: command.args } : {}),
-      ...(command.argsSchema !== undefined ? { argsSchema: command.argsSchema } : {}),
-      ...(command.icon ? { icon: command.icon } : {}),
-      ...(command.category ? { category: command.category } : {}),
-      ...(command.description ? { description: command.description } : {}),
-      ...(command.enablement ? { enablement: command.enablement } : {}),
-    }));
+    const contributed = buildExtensionContributedCommandRegistrations(extension);
     const autoCommands = buildExtensionAutoCommandRegistrations(extension);
     return [...contributed, ...autoCommands];
   });
