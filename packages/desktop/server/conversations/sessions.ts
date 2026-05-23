@@ -45,6 +45,7 @@ import {
   slugToCwd,
 } from './sessionFiles.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
+import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
 import {
   buildPersistentSessionIndexDocument as buildPersistentSessionIndexDocumentFromCache,
   loadPersistentSessionIndexEntry as loadPersistentSessionIndexEntryFromValue,
@@ -734,37 +735,6 @@ function hasValidIsoDateParts(match: RegExpMatchArray): boolean {
     date.getUTCSeconds() === second &&
     date.getUTCMilliseconds() === millisecond
   );
-}
-
-function imageMimeType(block: RawContentBlock): string | undefined {
-  const mimeType = block.mimeType ?? block.mediaType;
-  if (typeof mimeType !== 'string') {
-    return undefined;
-  }
-
-  const normalized = mimeType.trim();
-  return normalized.toLowerCase().startsWith('image/') ? normalized : undefined;
-}
-
-function normalizeBase64ImageData(data: unknown): string | undefined {
-  if (typeof data !== 'string') {
-    return undefined;
-  }
-
-  const normalized = data.trim();
-  if (!normalized || normalized.length % 4 === 1 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
-    return undefined;
-  }
-
-  const decoded = Buffer.from(normalized, 'base64');
-  return decoded.length > 0 ? normalized : undefined;
-}
-
-function imageSrc(block: RawContentBlock): string | undefined {
-  const mimeType = imageMimeType(block);
-  const data = normalizeBase64ImageData(block.data);
-  if (!mimeType || !data) return undefined;
-  return `data:${mimeType};base64,${data}`;
 }
 
 function extractUserContent(content: unknown): { text: string; images: DisplayImage[] } {
@@ -2506,33 +2476,6 @@ export function readSessionBlock(sessionId: string, blockId: string): DisplayBlo
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
   const blocks = decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), sessionId);
   return blocks.find((block) => block.id === blockId) ?? null;
-}
-
-function buildSessionImageAsset(block: RawContentBlock): { mimeType: string; data: Buffer; fileName?: string } | null {
-  const mimeType = imageMimeType(block);
-  const data = normalizeBase64ImageData(block.data);
-  if (!mimeType || !data) {
-    return null;
-  }
-
-  return {
-    mimeType,
-    data: Buffer.from(data, 'base64'),
-    fileName: typeof block.name === 'string' && block.name.trim().length > 0 ? block.name.trim() : undefined,
-  };
-}
-
-function buildSessionImageAssets(
-  blocks: RawContentBlock[],
-): Array<{ block: RawContentBlock; asset: { mimeType: string; data: Buffer; fileName?: string } }> {
-  return blocks.flatMap((block) => {
-    if (block.type !== 'image') {
-      return [];
-    }
-
-    const asset = buildSessionImageAsset(block);
-    return asset ? [{ block, asset }] : [];
-  });
 }
 
 export function readSessionImageAsset(
