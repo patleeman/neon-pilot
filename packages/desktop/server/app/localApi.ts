@@ -242,6 +242,7 @@ import {
   shouldBuildAppendOnlySessionDetail,
   shouldReturnUnchangedSessionDetail,
 } from './localApiSessionDetailResponse.js';
+import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -743,13 +744,13 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
   });
 
   return () => {
-    if (closed) {
+    if (!shouldCloseSubscription(closed)) {
       return;
     }
 
-    closed = true;
+    closed = markSubscriptionClosed();
     unsubscribe();
-    onEvent({ type: 'close' });
+    onEvent(buildDesktopCloseEvent());
   };
 }
 
@@ -896,15 +897,15 @@ export async function subscribeDesktopConversationState(
   });
 
   return () => {
-    if (closed) {
+    if (!shouldCloseSubscription(closed)) {
       return;
     }
 
-    closed = true;
+    closed = markSubscriptionClosed();
     closeLiveSubscription();
     appUnsubscribe?.();
     appUnsubscribe = null;
-    onEvent({ type: 'close' });
+    onEvent(buildDesktopCloseEvent());
   };
 }
 
