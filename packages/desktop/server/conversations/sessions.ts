@@ -33,6 +33,7 @@ import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { readSessionContextUsageFromEntries, type SessionContextUsageSnapshot } from './sessionContextUsage.js';
+import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
 const DEFAULT_SESSIONS_DIR = getDurableSessionsDir();
@@ -1614,31 +1615,7 @@ function extractTitleFromMessage(message: RawMessage['message']): string | null 
   }
 
   const { text, images } = extractUserContent(message.content);
-  if (text) {
-    return text.slice(0, 80).replace(/\n/g, ' ').trim();
-  }
-  if (images.length > 0) {
-    return images.length === 1 ? '(image attachment)' : `(${images.length} image attachments)`;
-  }
-
-  return null;
-}
-
-function normalizeSessionName(name: unknown): string | null {
-  if (typeof name !== 'string') {
-    return null;
-  }
-
-  const normalized = name.replace(/\s+/g, ' ').trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function buildSessionInfoRecord(name: string): string {
-  return JSON.stringify({
-    type: 'session_info',
-    timestamp: new Date().toISOString(),
-    name,
-  });
+  return buildUserMessageTitle({ text, imageCount: images.length });
 }
 
 function slugToCwd(slug: string): string {
