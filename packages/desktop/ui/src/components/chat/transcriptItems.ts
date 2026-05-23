@@ -49,13 +49,16 @@ function addSummaryCategory(categories: Map<string, TraceClusterSummaryCategory>
   categories.set(category.key, { ...category, count: 1 });
 }
 
-function isTraceConversationBlock(block: MessageBlock, _standaloneTools: Set<string>): block is TraceConversationBlock {
+function isTraceConversationBlock(block: MessageBlock, standaloneTools: Set<string>): block is TraceConversationBlock {
   switch (block.type) {
     case 'thinking':
     case 'subagent':
     case 'error':
       return true;
     case 'tool_use':
+      if (block.tool === 'ask_user' && standaloneTools.has(block.tool)) {
+        return false;
+      }
       return !isTerminalBashToolBlock(block);
     default:
       return false;

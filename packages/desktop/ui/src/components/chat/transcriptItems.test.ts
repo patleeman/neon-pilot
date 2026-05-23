@@ -129,14 +129,14 @@ describe('chat transcript items', () => {
     expect(items.every((item) => item.type === 'message')).toBe(true);
   });
 
-  it('keeps ask_user_question tool blocks inside internal-work even when extension marks them standalone', () => {
-    const standaloneTools = new Set(['ask_user_question']);
+  it('keeps ask_user tool blocks visible when extension marks them standalone', () => {
+    const standaloneTools = new Set(['ask_user']);
     const messages: MessageBlock[] = [
       { type: 'text', ts: '2026-03-12T18:00:00.000Z', text: 'I need one clarification.' },
       {
         type: 'tool_use',
         ts: '2026-03-12T18:00:01.000Z',
-        tool: 'ask_user_question',
+        tool: 'ask_user',
         input: { question: 'Which environment should I use?', options: ['staging', 'prod'] },
         output: 'Asked the user: Which environment should I use?',
         status: 'ok',
@@ -147,15 +147,7 @@ describe('chat transcript items', () => {
 
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ type: 'message', index: 0 });
-    expect(items[1]).toMatchObject({
-      type: 'trace_cluster',
-      startIndex: 1,
-      endIndex: 1,
-      summary: {
-        stepCount: 1,
-        categories: [{ key: 'tool:ask_user_question', kind: 'tool', label: 'ask_user_question', tool: 'ask_user_question', count: 1 }],
-      },
-    });
+    expect(items[1]).toMatchObject({ type: 'message', index: 1, block: { type: 'tool_use', tool: 'ask_user' } });
   });
 
   it('summarizes trace categories, duration, and running/error state inside trace clusters', () => {

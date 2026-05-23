@@ -258,6 +258,12 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const message = excerpt('message') ?? read('checkpointId');
       return [action, message].filter(Boolean).join(' ');
     }
+    case 'subagent': {
+      const action = read('action');
+      const task = read('taskSlug') ?? read('task');
+      const prompt = excerpt('prompt');
+      return [action, task ?? prompt].filter(Boolean).join(' ');
+    }
     case 'goal':
       return excerpt('objective') ?? excerpt('status') ?? '';
     case 'write':
@@ -283,7 +289,7 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       return excerpt('title') ?? '';
     case 'change_working_directory':
       return excerpt('cwd') ?? '';
-    case 'ask_user_question':
+    case 'ask_user':
       return summarizeAskUserQuestion(input);
     case 'mcp': {
       const server = read('server');

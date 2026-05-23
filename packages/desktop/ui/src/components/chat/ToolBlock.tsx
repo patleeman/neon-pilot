@@ -7,6 +7,7 @@ import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionTo
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import type { DurableRunListResult, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
+import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
@@ -19,6 +20,7 @@ import {
   type DisclosurePreference,
   isBackgroundShellStart,
   resolveDisclosureOpen,
+  stripAnsiForTranscript,
   toggleDisclosurePreference,
   toolMeta,
 } from './toolPresentation.js';
@@ -31,10 +33,14 @@ function BackgroundBashInlineOutput({ runId, command }: { runId: string; command
     pollIntervalMs: INLINE_RUN_POLL_INTERVAL_MS,
   });
   const running = isRunActive(snapshot.detail?.run ?? null);
-  const log = snapshot.log?.log ?? '';
+  const log = stripAnsiForTranscript(snapshot.log?.log ?? '');
 
   return (
-    <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2">
+    <div
+      className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2"
+      tabIndex={-1}
+      {...transcriptTargetAttributes({ kind: 'background_run', runId })}
+    >
       <span className="sr-only">input</span>
       <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
         <span className="opacity-60">$ </span>
@@ -97,7 +103,7 @@ function isFileChangingTool(block: Extract<MessageBlock, { type: 'tool_use' }>, 
 
 function isCheckpointFailureOutput(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
   if (block.tool !== 'checkpoint') return false;
-  const output = block.output ?? '';
+  const output = stripAnsiForTranscript(block.output ?? '');
   return /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
 }
 
@@ -136,6 +142,7 @@ export function ToolBlock({
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllRuns, setShowAllRuns] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [pinnedDiffOpen, setPinnedDiffOpen] = useState(() => diffDisclosureMode === 'expanded');
   useEffect(() => {
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
@@ -176,13 +183,15 @@ export function ToolBlock({
   const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
   const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
   const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
-  const pinnedCheckpoint = block.tool === 'checkpoint';
+  const checkpointAction =
+    block.tool === 'checkpoint' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
+  const pinnedCheckpoint = block.tool === 'checkpoint' && checkpointAction === 'save' && !isRunning && !isError;
   const pinnedArtifact = isDurableArtifactTool(block);
   const pinnedVisual = isPinnedVisualTool(block);
   const pinnedFileChange = isFileChangingTool(block, fileChanges);
   const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual || pinnedFileChange;
 
-  if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && block.tool === 'checkpoint') {
+  if (extensionRenderer && pinnedCheckpoint) {
     return (
       <NativeExtensionToolBlockHost
         extension={extensionRenderer.extension}
@@ -200,9 +209,7 @@ export function ToolBlock({
     );
   }
 
-  if (extensionRenderer && extensionRenderer.renderer.tool !== 'ask_user_question' && !pinnedTool) {
-    // ask_user_question is handled as a local fallback below so the question
-    // submit callback stays wired even when the extension isn't loaded yet.
+  if (extensionRenderer && !pinnedTool) {
     return (
       <>
         <NativeExtensionToolBlockHost
@@ -229,7 +236,7 @@ export function ToolBlock({
   }
 
   // Normalise tool state across streamed and persisted entries.
-  const output = block.output ?? '';
+  const output = stripAnsiForTranscript(block.output ?? '');
   const blockId = block.id?.trim();
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
@@ -277,6 +284,7 @@ export function ToolBlock({
         role="button"
         tabIndex={0}
         data-background-run-id={backgroundRunId}
+        {...(backgroundRunId ? transcriptTargetAttributes({ kind: 'background_run', runId: backgroundRunId }) : {})}
         onClick={toggleHeaderDisclosure}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -437,12 +445,6 @@ export function ToolBlock({
 
       {open && !pinnedTool && !agentBashTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70">
-          <div className="px-2.5 py-2 bg-black/5">
-            <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">input</p>
-            <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-75">
-              {JSON.stringify(block.input, null, 2)}
-            </pre>
-          </div>
           {(isRunning || output || outputDeferred) && (
             <div className={cx('px-2.5 py-2', isRunning && output && 'max-h-40 overflow-y-auto')}>
               <div className="mb-1 flex items-center gap-2">
@@ -471,6 +473,23 @@ export function ToolBlock({
               ) : null}
             </div>
           )}
+          <div className="border-t border-border-subtle/50 px-2.5 py-1.5">
+            <button
+              type="button"
+              onClick={() => setShowDetails((current) => !current)}
+              className="text-[10px] uppercase tracking-wider text-dim transition-colors hover:text-secondary"
+            >
+              {showDetails ? 'hide details' : 'show details'}
+            </button>
+          </div>
+          {showDetails ? (
+            <div className="border-t border-border-subtle/50 bg-black/5 px-2.5 py-2">
+              <p className="mb-1 text-[10px] uppercase tracking-wider opacity-40">input</p>
+              <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-75">
+                {JSON.stringify(block.input, null, 2)}
+              </pre>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

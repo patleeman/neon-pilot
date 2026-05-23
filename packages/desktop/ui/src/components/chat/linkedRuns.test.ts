@@ -78,7 +78,9 @@ describe('linkedRuns', () => {
     expect(buildToolPreview({ ...base, tool: 'checkpoint', input: { action: 'save', message: 'fix goal tool preview' } })).toBe(
       'save fix goal tool preview',
     );
-    expect(buildToolPreview({ ...base, tool: 'ask_user_question', input: { question: 'Which deployment target?' } })).toBe(
+    expect(buildToolPreview({ ...base, tool: 'subagent', input: { action: 'list' } })).toBe('list');
+    expect(buildToolPreview({ ...base, tool: 'subagent', input: { action: 'start', taskSlug: 'reviewer' } })).toBe('start reviewer');
+    expect(buildToolPreview({ ...base, tool: 'ask_user', input: { question: 'Which deployment target?' } })).toBe(
       'Which deployment target?',
     );
     expect(buildToolPreview({ ...base, tool: 'set_conversation_title', input: { title: 'Tool Preview Polish' } })).toBe(

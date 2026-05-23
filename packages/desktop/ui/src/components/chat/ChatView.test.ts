@@ -679,14 +679,14 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('~4.0 tok/s');
   });
 
-  it('renders a single-item trace cluster for ask_user_question when no extension renders them', () => {
+  it('renders a single-item trace cluster for ask_user when no extension renders them', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
           {
             type: 'tool_use',
             ts: '2026-03-11T18:00:00.000Z',
-            tool: 'ask_user_question',
+            tool: 'ask_user',
             input: { question: 'Which environment should I use?', options: ['staging', 'prod'] },
             output: 'Asked the user 2 questions.',
             status: 'ok',
@@ -700,14 +700,14 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('1 step');
   });
 
-  it('renders pending ask_user_question tool calls as generic tool blocks in composer mode', () => {
+  it('renders pending ask_user tool calls as generic tool blocks in composer mode', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
           {
             type: 'tool_use',
             ts: '2026-03-11T18:00:00.000Z',
-            tool: 'ask_user_question',
+            tool: 'ask_user',
             input: { question: 'Which environment should I use?', options: ['staging', 'prod'] },
             output: 'Asked the user 2 questions.',
             status: 'ok',
@@ -718,17 +718,17 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('question');
+    expect(html).toContain('Which environment should I use?');
   });
 
-  it('renders check-style ask_user_question options as generic tool blocks', () => {
+  it('renders check-style ask_user options as generic tool blocks', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
           {
             type: 'tool_use',
             ts: '2026-03-11T18:00:00.000Z',
-            tool: 'ask_user_question',
+            tool: 'ask_user',
             input: { question: 'Which notifications should I enable?', options: ['Email', 'Telegram'] },
             output: 'Asked the user a question.',
             status: 'ok',
@@ -738,17 +738,17 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('question');
+    expect(html).toContain('Which notifications should I enable?');
   });
 
-  it('renders multi-question ask_user_question calls as generic tool blocks', () => {
+  it('renders multi-question ask_user calls as generic tool blocks', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
           {
             type: 'tool_use',
             ts: '2026-03-11T18:00:00.000Z',
-            tool: 'ask_user_question',
+            tool: 'ask_user',
             input: {
               question: 'Which notifications should I enable?',
               options: ['Email', 'Telegram'],
@@ -761,17 +761,17 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('question');
+    expect(html).toContain('Which notifications should I enable?');
   });
 
-  it('shows user reply after ask_user_question tool blocks', () => {
+  it('shows user reply after ask_user tool blocks', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
           {
             type: 'tool_use',
             ts: '2026-03-11T18:00:00.000Z',
-            tool: 'ask_user_question',
+            tool: 'ask_user',
             input: {
               question: 'Which environment should I use?',
             },
@@ -1177,8 +1177,8 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('data-lifecycle-marker="workspace-change"');
     expect(html).toContain('Workspace changed');
+    expect(html).toContain('title="Working directory changed from Chats to /Users/patrick/workingdir/personal-agent."');
     expect(html).not.toContain('<details');
-    expect(html).not.toContain('Working directory changed from Chats');
     expect(html).not.toContain('Context');
     expect(html).not.toContain('ui-message-card-assistant');
   });

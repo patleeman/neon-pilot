@@ -21,7 +21,7 @@ describe('ask user questions', () => {
     const block: Extract<MessageBlock, { type: 'tool_use' }> = {
       type: 'tool_use',
       ts: '2026-03-21T00:00:00.000Z',
-      tool: 'ask_user_question',
+      tool: 'ask_user',
       input: {
         question: ' Which environment should I use? ',
         details: ' Pick one target. ',
@@ -47,16 +47,37 @@ describe('ask user questions', () => {
     });
   });
 
+  it('normalizes the current ask_user tool name', () => {
+    expect(
+      readAskUserQuestionPresentation({
+        type: 'tool_use',
+        ts: '2026-04-26T00:00:00.000Z',
+        tool: 'ask_user',
+        input: { question: 'Continue?', options: ['Yes', 'No'] },
+      }),
+    ).toMatchObject({
+      questions: [
+        {
+          label: 'Continue?',
+          options: [
+            { label: 'Yes', value: 'Yes' },
+            { label: 'No', value: 'No' },
+          ],
+        },
+      ],
+    });
+  });
+
   it('normalizes structured multi-question payloads with radio and check styles', () => {
     const block: Extract<MessageBlock, { type: 'tool_use' }> = {
       type: 'tool_use',
       ts: '2026-03-21T00:00:00.000Z',
-      tool: 'ask_user_question',
+      tool: 'ask_user',
       input: {},
       output: '',
       status: 'ok',
       details: {
-        action: 'ask_user_question',
+        action: 'ask_user',
         conversationId: 'conv-123',
         details: 'Answer these before I continue.',
         questions: [
@@ -108,7 +129,7 @@ describe('ask user questions', () => {
       {
         type: 'tool_use',
         ts: '2026-03-21T00:00:00.000Z',
-        tool: 'ask_user_question',
+        tool: 'ask_user',
         input: { question: 'First?', options: ['A', 'B'] },
         output: '',
         status: 'ok',
@@ -116,7 +137,7 @@ describe('ask user questions', () => {
       {
         type: 'tool_use',
         ts: '2026-03-21T00:00:01.000Z',
-        tool: 'ask_user_question',
+        tool: 'ask_user',
         input: { question: 'Second?', options: ['C', 'D'] },
         output: '',
         status: 'ok',
@@ -130,7 +151,7 @@ describe('ask user questions', () => {
         {
           type: 'tool_use',
           ts: '2026-03-21T00:00:00.000Z',
-          tool: 'ask_user_question',
+          tool: 'ask_user',
           input: { question: 'Answered?', options: ['Yes', 'No'] },
           output: '',
           status: 'ok',
@@ -150,7 +171,7 @@ describe('ask user questions', () => {
         type: 'tool_use',
         id: 'block-1',
         ts: '2026-03-21T00:00:00.000Z',
-        tool: 'ask_user_question',
+        tool: 'ask_user',
         input: {
           questions: [
             { id: 'target', label: 'Target?', options: ['A'] },

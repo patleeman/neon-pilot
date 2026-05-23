@@ -6,7 +6,7 @@ import { describeAskUserQuestionState, summarizeAskUserQuestionAnswer } from './
 const askBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
   type: 'tool_use',
   ts: '2026-04-26T00:00:00.000Z',
-  tool: 'ask_user_question',
+  tool: 'ask_user',
   input: {},
   output: '',
 };

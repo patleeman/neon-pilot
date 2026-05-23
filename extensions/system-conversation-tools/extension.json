@@ -12,24 +12,16 @@
   "contributes": {
     "tools": [
       {
-        "id": "conversation",
-        "name": "conversation",
-        "title": "Conversation",
-        "description": "Ask the user, inspect conversations, set the title, change working directory, or schedule a deferred resume for this conversation.",
-        "action": "conversationTool",
-        "promptSnippet": "Use conversation for conversation/session state, questions, inspection, title, cwd changes, and deferred resumes.",
-        "promptGuidelines": [
-          "Use action=\"deferred_resume\" for wait-then-continue; do not run sleep in bash.",
-          "Ask the user only when blocked on a real decision or approval."
-        ],
+        "id": "ask_user",
+        "name": "ask_user",
+        "title": "Ask User",
+        "description": "Ask the user one or more focused questions in the desktop UI.",
+        "action": "askUser",
+        "promptSnippet": "Ask the user structured questions with buttons, radio choices, or checkboxes.",
+        "promptGuidelines": ["Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."],
         "inputSchema": {
           "type": "object",
           "properties": {
-            "action": {
-              "type": "string",
-              "enum": ["ask", "inspect", "set_title", "change_working_directory", "deferred_resume"],
-              "description": "Operation to perform."
-            },
             "question": {
               "type": "string",
               "description": "Legacy single-question form. Use questions[] for multiple questions or check-style questions."
@@ -40,7 +32,10 @@
             },
             "options": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "maxItems": 6,
               "description": "Legacy quick-reply options for a single-question prompt."
             },
@@ -52,10 +47,22 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "id": { "type": "string", "description": "Optional stable question id." },
-                  "label": { "type": "string", "description": "User-facing question label." },
-                  "question": { "type": "string", "description": "Alias for label." },
-                  "details": { "type": "string", "description": "Optional supporting context for this question." },
+                  "id": {
+                    "type": "string",
+                    "description": "Optional stable question id."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "User-facing question label."
+                  },
+                  "question": {
+                    "type": "string",
+                    "description": "Alias for label."
+                  },
+                  "details": {
+                    "type": "string",
+                    "description": "Optional supporting context for this question."
+                  },
                   "style": {
                     "type": "string",
                     "enum": ["radio", "check", "checkbox"],
@@ -68,13 +75,26 @@
                     "description": "Available answers for this question.",
                     "items": {
                       "oneOf": [
-                        { "type": "string", "minLength": 1 },
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
                         {
                           "type": "object",
                           "properties": {
-                            "value": { "type": "string", "minLength": 1, "description": "Stable value sent back when selected." },
-                            "label": { "type": "string", "description": "User-facing option label. Defaults to value." },
-                            "details": { "type": "string", "description": "Optional supporting text shown under the option." }
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Stable value sent back when selected."
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "User-facing option label. Defaults to value."
+                            },
+                            "details": {
+                              "type": "string",
+                              "description": "Optional supporting text shown under the option."
+                            }
                           },
                           "required": ["value"]
                         }
@@ -84,17 +104,37 @@
                 },
                 "required": ["options"]
               }
-            },
-            "inspectAction": {
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "conversation_inspect",
+        "name": "conversation_inspect",
+        "title": "Conversation Inspect",
+        "description": "List, search, query, outline, read windows, and diff conversation transcripts.",
+        "action": "conversationInspect",
+        "promptSnippet": "Inspect other conversations through read-only transcript queries.",
+        "promptGuidelines": [
+          "Read-only cross-conversation inspection: list first, then query/outline/read_window/diff with conversationId."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
               "type": "string",
               "enum": ["list", "search", "query", "diff", "outline", "read_window"],
-              "description": "Action to perform for inspect. Valid values: list, search, query, diff, outline, read_window."
+              "description": "Inspect operation to perform."
             },
             "conversationId": {
               "type": "string",
               "description": "Required conversation id for query, outline, read_window, and diff actions."
             },
-            "scope": { "type": "string", "description": "List scope. Valid values: all, live, running, archived." },
+            "scope": {
+              "type": "string",
+              "description": "List scope. Valid values: all, live, running, archived."
+            },
             "cwd": {
               "type": "string",
               "description": "Target working directory or optional cwd filter for list actions. Relative paths resolve from the current conversation cwd."
@@ -109,34 +149,71 @@
             },
             "types": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional structural transcript block types to include. Valid values: user, text, context, summary, tool_use, image, error."
             },
             "roles": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional conversational roles to include. Valid values: user, assistant, tool, context, summary, image, error."
             },
             "tools": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional tool names to match for tool_use/error blocks."
             },
-            "text": { "type": "string", "description": "Case-insensitive transcript text filter." },
+            "text": {
+              "type": "string",
+              "description": "Case-insensitive transcript text filter."
+            },
             "searchMode": {
               "type": "string",
               "description": "How query/text matching works. Valid values: phrase, allTerms, anyTerm. Default phrase."
             },
-            "afterBlockId": { "type": "string", "description": "Only include transcript blocks after this block id." },
-            "beforeBlockId": { "type": "string", "description": "Only include transcript blocks before this block id." },
-            "aroundBlockId": { "type": "string", "description": "Restrict query results to a context window around this block id." },
-            "knownSignature": { "type": "string", "description": "Last seen conversation signature for diff checks." },
-            "order": { "type": "string", "description": "Block order for query results. Valid values: asc, desc." },
-            "limit": { "type": "number", "minimum": 1, "maximum": 200, "description": "Maximum items to return." },
-            "window": { "type": "number", "minimum": 1, "maximum": 50, "description": "Context window size for aroundBlockId queries." },
+            "afterBlockId": {
+              "type": "string",
+              "description": "Only include transcript blocks after this block id."
+            },
+            "beforeBlockId": {
+              "type": "string",
+              "description": "Only include transcript blocks before this block id."
+            },
+            "aroundBlockId": {
+              "type": "string",
+              "description": "Restrict query results to a context window around this block id."
+            },
+            "knownSignature": {
+              "type": "string",
+              "description": "Last seen conversation signature for diff checks."
+            },
+            "order": {
+              "type": "string",
+              "description": "Block order for query results. Valid values: asc, desc."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Maximum items to return."
+            },
+            "window": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Context window size for aroundBlockId queries."
+            },
             "includeAroundMatches": {
               "type": "boolean",
               "description": "Include surrounding context blocks around each match using window."
@@ -152,26 +229,100 @@
               "minimum": 1,
               "maximum": 2000,
               "description": "Character cap per returned search snippet."
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "conversation_title",
+        "name": "conversation_title",
+        "title": "Conversation Title",
+        "description": "Set the current conversation title.",
+        "action": "conversationTitle",
+        "promptSnippet": "Set a short, specific conversation title once the user intent is clear.",
+        "promptGuidelines": ["Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
+            }
+          },
+          "required": ["title"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "conversation_cwd",
+        "name": "conversation_cwd",
+        "title": "Conversation CWD",
+        "description": "Change the current conversation working directory after this turn.",
+        "action": "conversationCwd",
+        "promptSnippet": "Change the current conversation working directory to target a different repo or folder.",
+        "promptGuidelines": [
+          "Switch to a target repo root before modifying it so its AGENTS.md loads; the change applies after this turn, so stop or use continuePrompt to resume there."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cwd": {
+              "type": "string",
+              "description": "Target working directory. Relative paths resolve from the current conversation cwd."
+            },
+            "continuePrompt": {
+              "type": "string",
+              "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
+            }
+          },
+          "required": ["cwd"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "deferred_resume",
+        "name": "deferred_resume",
+        "title": "Deferred Resume",
+        "description": "Add, list, or cancel delayed callbacks for this conversation.",
+        "action": "deferredResume",
+        "promptSnippet": "Schedule or manage delayed conversation resumes; do not run sleep in bash.",
+        "promptGuidelines": [
+          "Use for wait-then-continue; do not run sleep in bash. Do not schedule polling wakeups for background runs that already deliver completion."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["add", "list", "cancel"],
+              "description": "Deferred resume operation to perform."
+            },
+            "id": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "trigger": {
+              "type": "string",
+              "enum": ["after_turn", "delay", "at"]
+            },
+            "delay": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "deliverAs": {
+              "type": "string",
+              "enum": ["steer", "followUp"]
             },
             "title": {
               "type": "string",
               "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
             },
-            "continuePrompt": {
-              "type": "string",
-              "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
-            },
-            "deferredAction": {
-              "type": "string",
-              "enum": ["add", "list", "cancel"],
-              "description": "Deferred resume operation to perform."
-            },
-            "id": { "type": "string" },
-            "prompt": { "type": "string" },
-            "trigger": { "type": "string", "enum": ["after_turn", "delay", "at"] },
-            "delay": { "type": "string" },
-            "at": { "type": "string" },
-            "deliverAs": { "type": "string", "enum": ["steer", "followUp"] },
             "reason": {
               "type": "string",
               "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
@@ -185,8 +336,9 @@
     "transcriptRenderers": [
       {
         "id": "ask-user-question-tool-block",
-        "tool": "ask_user_question",
-        "component": "AskUserQuestionTranscriptRenderer"
+        "tool": "ask_user",
+        "component": "AskUserQuestionTranscriptRenderer",
+        "standalone": true
       },
       {
         "id": "terminal-bash-tool-block",
@@ -221,8 +373,22 @@
       }
     ],
     "commands": [
-      { "id": "open-thread-palette", "title": "Open thread palette", "action": "palette.open", "args": { "scope": "threads" } },
-      { "id": "open-command-palette", "title": "Open command palette", "action": "palette.open", "args": { "scope": "commands" } }
+      {
+        "id": "open-thread-palette",
+        "title": "Open thread palette",
+        "action": "palette.open",
+        "args": {
+          "scope": "threads"
+        }
+      },
+      {
+        "id": "open-command-palette",
+        "title": "Open command palette",
+        "action": "palette.open",
+        "args": {
+          "scope": "commands"
+        }
+      }
     ],
     "keybindings": [
       {
@@ -230,14 +396,18 @@
         "title": "Open thread palette",
         "keys": ["mod+k"],
         "command": "palette.open",
-        "args": { "scope": "threads" }
+        "args": {
+          "scope": "threads"
+        }
       },
       {
         "id": "open-command-palette",
         "title": "Open command palette",
         "keys": ["mod+shift+p"],
         "command": "palette.open",
-        "args": { "scope": "commands" }
+        "args": {
+          "scope": "commands"
+        }
       }
     ]
   },
@@ -245,9 +415,29 @@
     "entry": "src/backend.ts",
     "actions": [
       {
-        "id": "conversationTool",
-        "handler": "conversationTool",
-        "title": "Conversation tool"
+        "id": "askUser",
+        "handler": "askUser",
+        "title": "Ask user"
+      },
+      {
+        "id": "conversationInspect",
+        "handler": "conversationInspect",
+        "title": "Conversation inspect"
+      },
+      {
+        "id": "conversationTitle",
+        "handler": "conversationTitle",
+        "title": "Conversation title"
+      },
+      {
+        "id": "conversationCwd",
+        "handler": "conversationCwd",
+        "title": "Conversation cwd"
+      },
+      {
+        "id": "deferredResume",
+        "handler": "deferredResumeTool",
+        "title": "Deferred resume"
       },
       {
         "id": "duplicateConversation",

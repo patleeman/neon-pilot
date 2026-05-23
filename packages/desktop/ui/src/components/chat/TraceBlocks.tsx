@@ -179,7 +179,7 @@ function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<Mes
       block.tool === 'edit' ||
       block.tool === 'apply_patch' ||
       readFileChangesForToolBlock(block).length > 0 ||
-      block.tool === 'ask_user_question' ||
+      block.tool === 'ask_user' ||
       block.tool === 'image' ||
       block.tool === 'browser_screenshot' ||
       block.tool === 'screenshot' ||

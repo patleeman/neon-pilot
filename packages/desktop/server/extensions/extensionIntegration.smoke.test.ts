@@ -675,7 +675,16 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of ['web_fetch', 'background_bash', 'subagent']) {
+    for (const expected of [
+      'web_fetch',
+      'background_bash',
+      'subagent',
+      'ask_user',
+      'conversation_inspect',
+      'conversation_title',
+      'conversation_cwd',
+      'deferred_resume',
+    ]) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);
@@ -683,10 +692,9 @@ describe('extension manifests - cross-extension conflict detection', () => {
       'web.search',
       'web.fetch',
       'ask_user_question',
-      'conversation_inspect',
       'set_conversation_title',
       'change_working_directory',
-      'deferred_resume',
+      'conversation',
       'background_command',
       'local_models_status',
     ]) {

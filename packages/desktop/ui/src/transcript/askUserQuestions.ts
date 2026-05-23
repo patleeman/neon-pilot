@@ -197,9 +197,7 @@ function normalizeStructuredQuestions(source: Record<string, unknown>): AskUserQ
 }
 
 function isAskUserQuestionToolBlock(block: Extract<MessageBlock, { type: 'tool_use' }>): boolean {
-  if (block.tool === 'ask_user_question') return true;
-  if (block.tool !== 'conversation' || !isRecord(block.input)) return false;
-  return block.input.action === 'ask';
+  return block.tool === 'ask_user';
 }
 
 export function readAskUserQuestionPresentation(block: Extract<MessageBlock, { type: 'tool_use' }>): AskUserQuestionPresentation | null {

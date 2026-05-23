@@ -46,10 +46,10 @@ describe('system-conversation-tools manifest', () => {
     );
   });
 
-  it('keeps question prompts and normal bash tool calls grouped into internal work', () => {
+  it('renders question prompts standalone while keeping normal bash tool calls grouped', () => {
     expect(manifest.contributes.transcriptRenderers).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'ask-user-question-tool-block', tool: 'ask_user_question' }),
+        expect.objectContaining({ id: 'ask-user-question-tool-block', tool: 'ask_user' }),
         expect.objectContaining({ id: 'terminal-bash-tool-block', tool: 'bash', component: 'TerminalBashTranscriptRenderer' }),
       ]),
     );
@@ -57,7 +57,7 @@ describe('system-conversation-tools manifest', () => {
     const askRenderer = manifest.contributes.transcriptRenderers.find(
       (renderer: { id: string }) => renderer.id === 'ask-user-question-tool-block',
     );
-    expect(askRenderer).not.toHaveProperty('standalone');
+    expect(askRenderer).toHaveProperty('standalone', true);
 
     const bashRenderer = manifest.contributes.transcriptRenderers.find(
       (renderer: { id: string }) => renderer.id === 'terminal-bash-tool-block',
@@ -65,18 +65,18 @@ describe('system-conversation-tools manifest', () => {
     expect(bashRenderer).not.toHaveProperty('standalone');
   });
 
-  it('declares the consolidated conversation tool in contributes.tools', () => {
+  it('declares focused conversation tools in contributes.tools', () => {
     const toolNames = (manifest.contributes.tools ?? []).map((t: { name?: string }) => t.name);
-    expect(toolNames).toContain('conversation');
-    expect(toolNames).not.toContain('ask_user_question');
-    expect(toolNames).not.toContain('conversation_inspect');
-    expect(toolNames).not.toContain('set_conversation_title');
-    expect(toolNames).not.toContain('change_working_directory');
+    expect(toolNames).toEqual(['ask_user', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']);
+    expect(toolNames).not.toContain('conversation');
   });
 
-  it('declares backend action for the conversation tool', () => {
+  it('declares backend actions for the focused conversation tools', () => {
     const actionIds = (manifest.backend.actions ?? []).map((a: { id: string }) => a.id);
-    expect(actionIds).toContain('conversationTool');
+    expect(actionIds).toEqual(
+      expect.arrayContaining(['askUser', 'conversationInspect', 'conversationTitle', 'conversationCwd', 'deferredResume']),
+    );
+    expect(actionIds).not.toContain('conversationTool');
   });
 
   it('does not use an agentExtension for conversation tools', () => {

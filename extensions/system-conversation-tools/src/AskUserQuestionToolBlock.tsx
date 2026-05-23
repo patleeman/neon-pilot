@@ -31,7 +31,7 @@ export function describeAskUserQuestionState(messages: MessageBlock[] | undefine
       return { status: 'answered', answerBlock: candidate };
     }
 
-    if (candidate.type === 'tool_use' && candidate.tool === 'ask_user_question') {
+    if (candidate.type === 'tool_use' && candidate.tool === 'ask_user') {
       return { status: 'superseded' };
     }
   }

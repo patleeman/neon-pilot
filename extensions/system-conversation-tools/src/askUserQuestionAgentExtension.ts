@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { Type } from '@sinclair/typebox';
 
-const ASK_USER_QUESTION_LEGACY_MAX_OPTIONS = 6;
-const ASK_USER_QUESTION_MAX_QUESTIONS = 8;
-const ASK_USER_QUESTION_MAX_OPTIONS_PER_QUESTION = 12;
+const ASK_USER_LEGACY_MAX_OPTIONS = 6;
+const ASK_USER_MAX_QUESTIONS = 8;
+const ASK_USER_MAX_OPTIONS_PER_QUESTION = 12;
 
 const AskUserQuestionOptionParams = Type.Object({
   value: Type.String({ minLength: 1, description: 'Stable value sent back when this option is selected.' }),
@@ -23,7 +23,7 @@ const AskUserQuestionPromptParams = Type.Object({
   ),
   options: Type.Array(Type.Union([Type.String({ minLength: 1 }), AskUserQuestionOptionParams]), {
     minItems: 1,
-    maxItems: ASK_USER_QUESTION_MAX_OPTIONS_PER_QUESTION,
+    maxItems: ASK_USER_MAX_OPTIONS_PER_QUESTION,
     description: 'Available answers for this question.',
   }),
 });
@@ -42,13 +42,13 @@ export const AskUserQuestionToolParams = Type.Object({
   options: Type.Optional(
     Type.Array(Type.String({ minLength: 1 }), {
       description: 'Legacy quick-reply options for a single-question prompt.',
-      maxItems: ASK_USER_QUESTION_LEGACY_MAX_OPTIONS,
+      maxItems: ASK_USER_LEGACY_MAX_OPTIONS,
     }),
   ),
   questions: Type.Optional(
     Type.Array(AskUserQuestionPromptParams, {
       minItems: 1,
-      maxItems: ASK_USER_QUESTION_MAX_QUESTIONS,
+      maxItems: ASK_USER_MAX_QUESTIONS,
       description: 'Structured questions to render in the desktop UI. Prefer this for multiple questions and radio/check layouts.',
     }),
   ),
@@ -222,8 +222,8 @@ function normalizePayload(params: {
   questions?: unknown;
 }): AskUserQuestionPayload {
   if (Array.isArray(params.questions) && params.questions.length > 0) {
-    if (params.questions.length > ASK_USER_QUESTION_MAX_QUESTIONS) {
-      throw new Error(`ask_user_question supports at most ${ASK_USER_QUESTION_MAX_QUESTIONS} questions.`);
+    if (params.questions.length > ASK_USER_MAX_QUESTIONS) {
+      throw new Error(`ask_user supports at most ${ASK_USER_MAX_QUESTIONS} questions.`);
     }
     const questions = dedupeQuestionIds(params.questions.map((question, index) => normalizeStructuredPrompt(question, index)));
     const details = readOptionalString(params.details);
@@ -270,7 +270,7 @@ export async function executeAskUserQuestion(params: unknown, ctx: { sessionMana
       },
     ],
     details: {
-      action: 'ask_user_question',
+      action: 'ask_user',
       conversationId,
       ...(payload.details ? { details: payload.details } : {}),
       questions: payload.questions,
@@ -282,8 +282,8 @@ export async function executeAskUserQuestion(params: unknown, ctx: { sessionMana
 export function createAskUserQuestionAgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     pi.registerTool({
-      name: 'ask_user_question',
-      label: 'Ask User Question',
+      name: 'ask_user',
+      label: 'Ask User',
       description: 'Ask one or more focused questions in the desktop UI and wait for the user to answer or skip with a normal prompt.',
       promptSnippet: 'Ask one or more focused questions in the desktop UI.',
       promptGuidelines: [

@@ -106,7 +106,7 @@ describe('ask user question agent extension', () => {
     expect(result.content[0]?.text).toContain('[radio] Which environment should I deploy to?');
     expect(result.content[0]?.text).toContain('[check] Which notifications should I enable?');
     expect(result.details).toMatchObject({
-      action: 'ask_user_question',
+      action: 'ask_user',
       conversationId: 'conv-123',
       details: 'Ask these before continuing.',
       questions: [
@@ -204,6 +204,6 @@ describe('ask user question agent extension', () => {
         undefined,
         ctx,
       ),
-    ).rejects.toThrow('ask_user_question supports at most 8 questions.');
+    ).rejects.toThrow('ask_user supports at most 8 questions.');
   });
 });
