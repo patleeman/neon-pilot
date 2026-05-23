@@ -70,6 +70,7 @@ import {
   validateExtensionManifestFrontend,
 } from './extensionManifestCoreValidation.js';
 import { requireStringArray } from './extensionManifestValidation.js';
+import { type ExtensionModelProfileResolution, resolveExtensionModelProfileFromRegistrations } from './extensionModelProfileResolution.js';
 import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 import {
   validateDynamicProviderContributions,
@@ -1784,33 +1785,15 @@ export function listExtensionModelProfileRegistrations(stateRoot: string = getSt
   return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionModelProfileRegistrations);
 }
 
-function globMatches(pattern: string, value: string): boolean {
-  const escaped = pattern
-    .toLowerCase()
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*');
-  return new RegExp(`^${escaped}$`).test(value.toLowerCase());
-}
-
-export type ExtensionModelProfileResolution =
-  | { kind: 'none' }
-  | { kind: 'resolved'; profile: ExtensionModelProfileRegistration }
-  | { kind: 'ambiguous'; profiles: ExtensionModelProfileRegistration[] };
-
 export function resolveExtensionModelProfile(
   input: { provider: string; model: string },
   stateRoot: string = getStateRoot(),
-): ExtensionModelProfileResolution {
-  const modelRef = `${input.provider}/${input.model}`;
-  const matches = listExtensionModelProfileRegistrations(stateRoot).filter((profile) =>
-    profile.match.some((pattern) => globMatches(pattern, modelRef)),
-  );
-  if (matches.length === 0) return { kind: 'none' };
-  const sorted = [...matches].sort((left, right) => right.priority - left.priority || left.extensionId.localeCompare(right.extensionId));
-  const topPriority = sorted[0]?.priority ?? 0;
-  const top = sorted.filter((profile) => profile.priority === topPriority);
-  if (top.length > 1) return { kind: 'ambiguous', profiles: top };
-  return { kind: 'resolved', profile: top[0]! };
+): ExtensionModelProfileResolution<ExtensionModelProfileRegistration> {
+  return resolveExtensionModelProfileFromRegistrations({
+    provider: input.provider,
+    model: input.model,
+    profiles: listExtensionModelProfileRegistrations(stateRoot),
+  });
 }
 
 export function listExtensionAgentRegistrations(stateRoot: string = getStateRoot()): ExtensionAgentRegistration[] {
