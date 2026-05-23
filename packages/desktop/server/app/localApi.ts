@@ -221,6 +221,7 @@ import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from '
 import { resolveLocalApiRepoRoot } from './localApiPaths.js';
 import { normalizeRequiredProviderOAuthLoginId, shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
+import { buildLocalApiRequestSocket, LOCAL_API_LOOPBACK_IP, LOCAL_API_REQUEST_PROTOCOL } from './localApiRequestDefaults.js';
 import { normalizeLocalApiRequestHeaders, readLocalApiRequestHeader } from './localApiRequestHeaders.js';
 import { buildLocalApiRequestUrl } from './localApiRequestUrl.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
@@ -412,9 +413,9 @@ function createLocalApiRequest(input: {
   request.params = input.params;
   request.body = input.body;
   request.headers = normalizedHeaders;
-  request.protocol = 'desktop';
-  request.ip = '127.0.0.1';
-  request.socket = { remoteAddress: '127.0.0.1' };
+  request.protocol = LOCAL_API_REQUEST_PROTOCOL;
+  request.ip = LOCAL_API_LOOPBACK_IP;
+  request.socket = buildLocalApiRequestSocket();
   request.get = (name: string) => readLocalApiRequestHeader(normalizedHeaders, name);
   return request;
 }
