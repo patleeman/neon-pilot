@@ -102,6 +102,7 @@ import {
 } from './sessionRelatedContext.js';
 import { buildMissingSessionRenameError, buildReloadSessionAfterRenameError, resolveStoredSessionRename } from './sessionRename.js';
 import { buildSessionSearchTextCacheKey, normalizeSessionSearchMaxCharacters } from './sessionSearchCacheKey.js';
+import { shouldUseSessionSearchFallback } from './sessionSearchFallback.js';
 import { appendSessionSearchSegment, buildSessionSearchTextFromEntries } from './sessionSearchText.js';
 import {
   buildSuppressedTranscriptError,
@@ -1860,7 +1861,7 @@ function readSessionSearchTextByFile(filePath: string, maxCharacters: number): s
 
 export function readSessionSearchTextForMeta(meta: Pick<SessionMeta, 'file'>, maxCharacters = 12_000): string | null {
   const indexedText = readSessionSearchTextByFile(meta.file, maxCharacters);
-  if (indexedText !== null) {
+  if (!shouldUseSessionSearchFallback(indexedText)) {
     return indexedText;
   }
 
