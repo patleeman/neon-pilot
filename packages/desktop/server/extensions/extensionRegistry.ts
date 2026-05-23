@@ -12,6 +12,7 @@ import {
 } from './extensionCircuitBreaker.js';
 import { listMissingRequiredExtensionDependencies } from './extensionDependencies.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
+import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
 import {
   EXTENSION_HOST_VIEW_COMPONENTS,
@@ -1518,10 +1519,6 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
   return value as unknown as ExtensionManifest;
 }
 
-function fallbackInvalidExtensionId(packageRoot: string): string {
-  return packageRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? 'invalid-extension';
-}
-
 export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateRoot()): InvalidExtensionEntry[] {
   return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
     .filter((entry) => entry.source === 'external')
@@ -1531,17 +1528,7 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
         parseExtensionManifest(JSON.parse(readFileSync(manifestPath, 'utf-8')));
         return [];
       } catch (error) {
-        let id = fallbackInvalidExtensionId(entry.packageRoot);
-        let name = id;
-        try {
-          const raw = JSON.parse(readFileSync(manifestPath, 'utf-8')) as unknown;
-          if (isRecord(raw)) {
-            if (typeof raw.id === 'string' && raw.id.trim()) id = raw.id.trim();
-            if (typeof raw.name === 'string' && raw.name.trim()) name = raw.name.trim();
-          }
-        } catch {
-          // Keep path-derived fallback metadata.
-        }
+        const { id, name } = readInvalidExtensionManifestMetadata(manifestPath, entry.packageRoot);
         return [
           {
             id,
