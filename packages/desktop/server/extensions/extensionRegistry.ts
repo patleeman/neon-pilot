@@ -68,6 +68,16 @@ import {
 } from './extensionSimpleContributions.js';
 import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
+import {
+  validateComposerButtonContributions,
+  validateComposerControlContributions,
+  validateComposerInputToolContributions,
+  validateComposerShelfContributions,
+  validateMessageActionContributions,
+  validateNewConversationPanelContributions,
+  validateToolbarActionContributions,
+  validateTopBarElementContributions,
+} from './extensionUiContributionValidation.js';
 import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 
 // Per-extension health errors stored in memory. Cleared on successful load/reload.
@@ -861,95 +871,35 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.topBarElements !== undefined) {
-    for (const [index, element] of assertRecordArray(contributes.topBarElements, 'contributes.topBarElements').entries()) {
-      requireString(element.id, `contributes.topBarElements[${index}].id`);
-      requireString(element.component, `contributes.topBarElements[${index}].component`);
-      validateOptionalString(element.label, `contributes.topBarElements[${index}].label`);
-    }
+    validateTopBarElementContributions(contributes.topBarElements);
   }
 
   if (contributes.messageActions !== undefined) {
-    for (const [index, action] of assertRecordArray(contributes.messageActions, 'contributes.messageActions').entries()) {
-      requireString(action.id, `contributes.messageActions[${index}].id`);
-      requireString(action.title, `contributes.messageActions[${index}].title`);
-      requireString(action.action, `contributes.messageActions[${index}].action`);
-      validateOptionalString(action.when, `contributes.messageActions[${index}].when`);
-      if (action.priority !== undefined && (typeof action.priority !== 'number' || !Number.isInteger(action.priority))) {
-        throw new Error(`Extension manifest contributes.messageActions[${index}].priority must be an integer.`);
-      }
-    }
+    validateMessageActionContributions(contributes.messageActions);
   }
 
   if (contributes.composerShelves !== undefined) {
-    for (const [index, shelf] of assertRecordArray(contributes.composerShelves, 'contributes.composerShelves').entries()) {
-      requireString(shelf.id, `contributes.composerShelves[${index}].id`);
-      requireString(shelf.component, `contributes.composerShelves[${index}].component`);
-      validateOptionalString(shelf.title, `contributes.composerShelves[${index}].title`);
-      if (shelf.placement !== undefined)
-        validateEnum(shelf.placement, ['top', 'bottom'], `contributes.composerShelves[${index}].placement`);
-    }
+    validateComposerShelfContributions(contributes.composerShelves);
   }
 
   if (contributes.newConversationPanels !== undefined) {
-    for (const [index, panel] of assertRecordArray(contributes.newConversationPanels, 'contributes.newConversationPanels').entries()) {
-      requireString(panel.id, `contributes.newConversationPanels[${index}].id`);
-      requireString(panel.component, `contributes.newConversationPanels[${index}].component`);
-      validateOptionalString(panel.title, `contributes.newConversationPanels[${index}].title`);
-      if (panel.priority !== undefined && (typeof panel.priority !== 'number' || !Number.isInteger(panel.priority))) {
-        throw new Error(`Extension manifest contributes.newConversationPanels[${index}].priority must be an integer.`);
-      }
-    }
+    validateNewConversationPanelContributions(contributes.newConversationPanels);
   }
 
   if (contributes.composerControls !== undefined) {
-    for (const [index, control] of assertRecordArray(contributes.composerControls, 'contributes.composerControls').entries()) {
-      requireString(control.id, `contributes.composerControls[${index}].id`);
-      requireString(control.component, `contributes.composerControls[${index}].component`);
-      validateOptionalString(control.title, `contributes.composerControls[${index}].title`);
-      validateOptionalString(control.when, `contributes.composerControls[${index}].when`);
-      if (control.slot !== undefined)
-        validateEnum(control.slot, ['leading', 'preferences', 'actions'], `contributes.composerControls[${index}].slot`);
-      if (control.priority !== undefined && (typeof control.priority !== 'number' || !Number.isInteger(control.priority))) {
-        throw new Error(`Extension manifest contributes.composerControls[${index}].priority must be an integer.`);
-      }
-    }
+    validateComposerControlContributions(contributes.composerControls);
   }
 
   if (contributes.composerButtons !== undefined) {
-    for (const [index, button] of assertRecordArray(contributes.composerButtons, 'contributes.composerButtons').entries()) {
-      requireString(button.id, `contributes.composerButtons[${index}].id`);
-      requireString(button.component, `contributes.composerButtons[${index}].component`);
-      validateOptionalString(button.title, `contributes.composerButtons[${index}].title`);
-      validateOptionalString(button.when, `contributes.composerButtons[${index}].when`);
-      if (button.priority !== undefined && (typeof button.priority !== 'number' || !Number.isInteger(button.priority))) {
-        throw new Error(`Extension manifest contributes.composerButtons[${index}].priority must be an integer.`);
-      }
-    }
+    validateComposerButtonContributions(contributes.composerButtons);
   }
 
   if (contributes.composerInputTools !== undefined) {
-    for (const [index, tool] of assertRecordArray(contributes.composerInputTools, 'contributes.composerInputTools').entries()) {
-      requireString(tool.id, `contributes.composerInputTools[${index}].id`);
-      requireString(tool.component, `contributes.composerInputTools[${index}].component`);
-      validateOptionalString(tool.title, `contributes.composerInputTools[${index}].title`);
-      validateOptionalString(tool.when, `contributes.composerInputTools[${index}].when`);
-      if (tool.priority !== undefined && (typeof tool.priority !== 'number' || !Number.isInteger(tool.priority))) {
-        throw new Error(`Extension manifest contributes.composerInputTools[${index}].priority must be an integer.`);
-      }
-    }
+    validateComposerInputToolContributions(contributes.composerInputTools);
   }
 
   if (contributes.toolbarActions !== undefined) {
-    for (const [index, action] of assertRecordArray(contributes.toolbarActions, 'contributes.toolbarActions').entries()) {
-      requireString(action.id, `contributes.toolbarActions[${index}].id`);
-      requireString(action.title, `contributes.toolbarActions[${index}].title`);
-      validateEnum(action.icon, EXTENSION_ICON_NAMES, `contributes.toolbarActions[${index}].icon`);
-      requireString(action.action, `contributes.toolbarActions[${index}].action`);
-      validateOptionalString(action.when, `contributes.toolbarActions[${index}].when`);
-      if (action.priority !== undefined && (typeof action.priority !== 'number' || !Number.isInteger(action.priority))) {
-        throw new Error(`Extension manifest contributes.toolbarActions[${index}].priority must be an integer.`);
-      }
-    }
+    validateToolbarActionContributions(contributes.toolbarActions);
   }
 
   if (contributes.contextMenus !== undefined) {
