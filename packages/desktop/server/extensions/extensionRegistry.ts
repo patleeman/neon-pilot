@@ -47,6 +47,7 @@ import {
   validateSearchProviderContributions,
 } from './extensionDiscoveryContributionValidation.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
+import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
 import {
   validateContextMenuContributions,
   validateSelectionActionContributions,
@@ -658,7 +659,9 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
   records[input.extensionId] = next;
   writeExtensionFailureRecords(records, stateRoot);
 
-  if (next.length < EXTENSION_FAILURE_THRESHOLD) return { quarantined: false, failures: next.length };
+  if (!shouldQuarantineExtensionFailure({ failureCount: next.length, threshold: EXTENSION_FAILURE_THRESHOLD })) {
+    return buildExtensionFailureResponse({ quarantined: false, failures: next.length });
+  }
 
   const config = readExtensionRegistryConfig(stateRoot);
   writeExtensionRegistryConfig(
@@ -670,7 +673,7 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
     }),
     stateRoot,
   );
-  return { quarantined: true, failures: next.length };
+  return buildExtensionFailureResponse({ quarantined: true, failures: next.length });
 }
 
 export function clearExtensionFailureRecords(extensionId: string, stateRoot: string = getStateRoot()): void {
