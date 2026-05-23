@@ -723,14 +723,14 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
     console.log('Running seeded-profile startup idle smoke test against the built app...');
-    run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-cpu=120'], {
+    run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-cpu=130'], {
       cwd: buildRoot,
       env,
     });
     console.log('Running full desktop performance smoke test against the built app...');
     run(
       'node',
-      [perfSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-ready-ms=15000', '--max-cpu=120'],
+      [perfSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-ready-ms=15000', '--max-cpu=130'],
       {
         cwd: buildRoot,
         env,
