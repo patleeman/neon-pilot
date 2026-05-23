@@ -1,19 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
+import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
 import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
 import {
@@ -366,42 +356,12 @@ function clearStoredState(filePath: string): void {
   rmSync(filePath, { force: true });
 }
 
-function directoryHasEntries(path: string): boolean {
-  try {
-    return existsSync(path) && readdirSync(path).length > 0;
-  } catch {
-    return false;
-  }
-}
-
 function readRecoveryIndex(filePath: string): string[] {
   return readKnowledgeBaseRecoveryIndex(filePath);
 }
 
 function appendRecoveryIndex(filePath: string, entryId: string): number {
   return appendKnowledgeBaseRecoveryIndex(filePath, entryId, ensureParentDirectory);
-}
-
-function removeEmptyParentDirectories(root: string, filePath: string): void {
-  let current = dirname(filePath);
-  const resolvedRoot = resolve(root);
-  while (current.startsWith(resolvedRoot) && current !== resolvedRoot) {
-    try {
-      rmSync(current, { force: true, recursive: false });
-    } catch {
-      break;
-    }
-    current = dirname(current);
-  }
-}
-
-function deleteFileIfExists(filePath: string, root: string): void {
-  if (!existsSync(filePath)) {
-    return;
-  }
-
-  unlinkSync(filePath);
-  removeEmptyParentDirectories(root, filePath);
 }
 
 function readRemoteFileBuffer(cwd: string, branch: string, relativePath: string): Buffer | null {
