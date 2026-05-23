@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
@@ -96,7 +96,7 @@ import {
   buildExtensionMentionRegistrations as buildExtensionMentionContributionRegistrations,
   buildExtensionModelProfileRegistrations as buildExtensionModelProfileContributionRegistrations,
 } from './extensionSimpleContributions.js';
-import { normalizeExtensionSkillContribution, readSkillFrontmatterFields, validateExtensionSkillContribution } from './extensionSkills.js';
+import { buildExtensionSkillRegistrations as buildExtensionSkillRegistrationsValue } from './extensionSkillRegistrations.js';
 import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import {
@@ -558,31 +558,7 @@ function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry): st
 }
 
 function buildExtensionSkillRegistrations(entry: ExtensionRegistryEntry): ExtensionSkillRegistration[] {
-  if (!entry.packageRoot) {
-    return [];
-  }
-  return (entry.manifest.contributes?.skills ?? []).flatMap((skill): ExtensionSkillRegistration[] => {
-    const normalized = normalizeExtensionSkillContribution(skill);
-    if (validateExtensionSkillContribution({ packageRoot: entry.packageRoot, skill: normalized })) {
-      return [];
-    }
-    const skillPath = resolve(entry.packageRoot!, normalized.path);
-    const frontmatter = readSkillFrontmatterFields(skillPath);
-    const id = normalized.id.trim();
-    const name = `${entry.manifest.id}/${id}`;
-    return [
-      {
-        extensionId: entry.manifest.id,
-        packageType: entry.manifest.packageType ?? 'user',
-        id,
-        name,
-        title: normalized.title ?? frontmatter?.name,
-        description: normalized.description ?? frontmatter?.description,
-        path: skillPath,
-        packageRoot: entry.packageRoot!,
-      },
-    ];
-  });
+  return buildExtensionSkillRegistrationsValue(entry) as ExtensionSkillRegistration[];
 }
 
 function buildExtensionMentionRegistrations(entry: ExtensionRegistryEntry): ExtensionMentionRegistration[] {
