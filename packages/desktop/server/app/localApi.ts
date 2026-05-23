@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainThread } from 'node:worker_threads';
@@ -184,6 +184,7 @@ import { buildFastConversationContentSearchResponse } from './localApiSearch.js'
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { readRequiredConversationId, readRequiredConversationName } from './localApiConversationBasics.js';
+import { assertDesktopConversationCwdDirectory, resolveDesktopConversationNextCwd } from './localApiConversationCwd.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
@@ -1399,10 +1400,7 @@ export async function changeDesktopConversationCwd(input: {
 }) {
   await getLocalRoutes();
 
-  const conversationId = input.conversationId.trim();
-  if (!conversationId) {
-    throw new Error('conversationId required');
-  }
+  const conversationId = readRequiredConversationId(input.conversationId);
 
   const liveEntry = liveRegistry.get(conversationId);
   const sessionDetail = readSessionBlocks(conversationId);
@@ -1418,25 +1416,20 @@ export async function changeDesktopConversationCwd(input: {
   }
 
   const context = await getLocalLiveSessionCapabilityContext();
-  const movingToNeutralChats = input.workspaceCwd === null;
-  const nextCwd = movingToNeutralChats ? resolveNeutralChatCwd(context.getRuntimeScope()) : resolveRequestedCwd(input.cwd, currentCwd);
-  if (!nextCwd) {
-    throw new Error('cwd required');
-  }
-
-  if (!existsSync(nextCwd)) {
-    throw new Error(`Directory does not exist: ${nextCwd}`);
-  }
-
-  if (!statSync(nextCwd).isDirectory()) {
-    throw new Error(`Not a directory: ${nextCwd}`);
-  }
+  const { nextCwd, nextWorkspaceCwd } = resolveDesktopConversationNextCwd({
+    cwd: input.cwd,
+    workspaceCwd: input.workspaceCwd,
+    currentCwd,
+    runtimeScope: context.getRuntimeScope(),
+    resolveNeutralChatCwd,
+    resolveRequestedCwd,
+  });
+  assertDesktopConversationCwdDirectory(nextCwd);
 
   if (nextCwd === currentCwd) {
     return { id: conversationId, sessionFile: sourceSessionFile, cwd: currentCwd, changed: false };
   }
 
-  const nextWorkspaceCwd = movingToNeutralChats ? null : nextCwd;
   const result = await createSessionFromExisting(sourceSessionFile, nextCwd, {
     ...context.buildLiveSessionResourceOptions(context.getRuntimeScope()),
     extensionFactories: context.buildLiveSessionExtensionFactories(),
