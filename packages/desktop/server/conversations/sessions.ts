@@ -82,6 +82,7 @@ import {
 } from './sessionLineSanitizers.js';
 import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } from './sessionMessageSearchText.js';
 import { buildSessionInfoRecord, normalizeSessionName } from './sessionNaming.js';
+import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
 import {
   resolveSessionsDir as resolveSessionsDirValue,
@@ -672,8 +673,6 @@ export function getAssistantErrorDisplayMessage(message: { stopReason?: string; 
 
 const RELATED_THREADS_CONTEXT_CUSTOM_TYPE = 'related_threads_context';
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
-const CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE = 'conversation_offshoot_metadata';
-
 function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): boolean {
   return isInjectedContextMessageValue(message);
 }
@@ -1220,7 +1219,7 @@ export function appendConversationOffshootDetachedMetadata(input: { sessionFile:
       parentId: leafId,
       timestamp: new Date().toISOString(),
       customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
-      data: { detached: true },
+      data: buildConversationOffshootMetadataData({ detached: true }),
     })}\n`,
     'utf-8',
   );
@@ -1255,13 +1254,13 @@ export function appendConversationOffshootMetadata(input: {
       parentId: leafId,
       timestamp: new Date().toISOString(),
       customType: CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE,
-      data: {
+      data: buildConversationOffshootMetadataData({
         kind: input.kind,
-        ...(input.parentSessionFile ? { parentSessionFile: input.parentSessionFile } : {}),
-        ...(input.parentSessionId ? { parentSessionId: input.parentSessionId } : {}),
-        ...(input.parentMessageId ? { parentMessageId: input.parentMessageId } : {}),
-        ...(input.sourceRunId ? { sourceRunId: input.sourceRunId } : {}),
-      },
+        parentSessionFile: input.parentSessionFile,
+        parentSessionId: input.parentSessionId,
+        parentMessageId: input.parentMessageId,
+        sourceRunId: input.sourceRunId,
+      }),
     })}\n`,
     'utf-8',
   );
