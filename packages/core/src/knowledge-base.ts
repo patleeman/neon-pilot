@@ -20,6 +20,7 @@ import {
 } from './knowledge-base-maintenance.js';
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
 import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
+import { applyKnowledgeBaseRuntimeStateUpdate, knowledgeBaseStatesEqual } from './knowledge-base-runtime-state.js';
 import {
   hasRecentLocalChanges as hasRecentLocalSnapshotChanges,
   readLocalPathTimestampMs as readLocalSnapshotPathTimestampMs,
@@ -348,41 +349,11 @@ function maybeRunRepositoryMaintenance(
 }
 
 function knowledgeBaseStateEquals(left: KnowledgeBaseState, right: KnowledgeBaseState): boolean {
-  const leftGit = left.gitStatus ?? null;
-  const rightGit = right.gitStatus ?? null;
-  return (
-    left.repoUrl === right.repoUrl &&
-    left.branch === right.branch &&
-    left.configured === right.configured &&
-    left.effectiveRoot === right.effectiveRoot &&
-    left.managedRoot === right.managedRoot &&
-    left.usesManagedRoot === right.usesManagedRoot &&
-    left.syncStatus === right.syncStatus &&
-    left.lastError === right.lastError &&
-    left.recoveredEntryCount === right.recoveredEntryCount &&
-    left.recoveryDir === right.recoveryDir &&
-    (leftGit === null
-      ? rightGit === null
-      : rightGit !== null &&
-        leftGit.localChangeCount === rightGit.localChangeCount &&
-        leftGit.aheadCount === rightGit.aheadCount &&
-        leftGit.behindCount === rightGit.behindCount)
-  );
+  return knowledgeBaseStatesEqual(left, right);
 }
 
 function setRuntimeState(runtimeState: RuntimeSyncState, input: Partial<RuntimeSyncState>): void {
-  if (input.syncStatus) {
-    runtimeState.syncStatus = input.syncStatus;
-  }
-  if (Object.prototype.hasOwnProperty.call(input, 'lastSyncAt')) {
-    runtimeState.lastSyncAt = input.lastSyncAt;
-  }
-  if (Object.prototype.hasOwnProperty.call(input, 'lastError')) {
-    runtimeState.lastError = input.lastError;
-  }
-  if (typeof input.recoveredEntryCount === 'number') {
-    runtimeState.recoveredEntryCount = input.recoveredEntryCount;
-  }
+  applyKnowledgeBaseRuntimeStateUpdate(runtimeState, input);
 }
 
 export class KnowledgeBaseManager {
