@@ -2,29 +2,12 @@ import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/e
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
 import { SettingsField, type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
-import {
-  AppPageIntro,
-  AppPageLayout,
-  cx,
-  EmptyState,
-  ErrorState,
-  IconButton,
-  LoadingState,
-  ToolbarButton,
-} from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
-
-type ExtensionTemplate = 'main-page' | 'right-rail' | 'workbench-detail';
-
-interface ExtensionCreateDraft {
-  name: string;
-  id: string;
-  template: ExtensionTemplate;
-}
 
 interface CommandInspectorEntry {
   id?: string;
@@ -449,15 +432,6 @@ function formatFrontendSummary(extension: ExtensionInstallSummary): string {
   return extension.manifest?.frontend?.entry ?? 'None';
 }
 
-function slugifyExtensionId(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 63);
-}
-
 function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string {
   return JSON.stringify(
     {
@@ -489,8 +463,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const location = useLocation();
   const navigate = useNavigate();
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
-  const [createDraft, setCreateDraft] = useState<ExtensionCreateDraft | null>(null);
-  const [importDraft, setImportDraft] = useState(false);
   const [commands, setCommands] = useState<CommandInspectorEntry[]>([]);
   const [keybindings, setKeybindings] = useState<KeybindingInspectorEntry[]>([]);
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
@@ -565,7 +537,15 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       loadCatalog();
     };
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
-    return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const interval = window.setInterval(refresh, 5_000);
+    return () => {
+      window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      window.clearInterval(interval);
+    };
   }, [load, loadCatalog, loadCommandInspector]);
 
   const executeInspectorCommand = useCallback(
@@ -634,69 +614,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     },
     [loadCommandInspector, showActionError],
   );
-
-  const reload = useCallback(() => {
-    setNotice(null);
-    pa.extensions
-      .callAction('system-extension-manager', 'reloadExtensions', {})
-      .then((result) => {
-        setNotice((result as { message?: string }).message ?? 'Extension registry reloaded.');
-        notifyExtensionRegistryChanged();
-        load();
-      })
-      .catch((err: Error) => setError(err.message));
-  }, [load, pa]);
-
-  const createExtension = useCallback(() => {
-    setCreateDraft({ name: '', id: '', template: 'main-page' });
-  }, []);
-
-  const submitCreateExtension = useCallback(
-    async (draft: ExtensionCreateDraft) => {
-      setCreateDraft(null);
-      setNotice(null);
-      try {
-        const result = await api.createExtension({
-          id: draft.id.trim(),
-          name: draft.name.trim(),
-          template: draft.template,
-        });
-        setNotice(`Created ${result.packageRoot}`);
-        notifyExtensionRegistryChanged();
-        await load();
-        setNotice(`Created extension at ${result.packageRoot}. Build it outside the app, then reload.`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    },
-    [load],
-  );
-
-  const [importWarningZip, setImportWarningZip] = useState<string | null>(null);
-
-  const importExtension = useCallback(() => {
-    setImportDraft(true);
-  }, []);
-
-  const confirmImport = useCallback(
-    async (zipPath: string) => {
-      setImportWarningZip(null);
-      setNotice(null);
-      try {
-        const result = await api.importExtension({ zipPath });
-        setNotice(`Imported ${result.packageRoot}`);
-        notifyExtensionRegistryChanged();
-        await load();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    },
-    [load],
-  );
-
-  const cancelImport = useCallback(() => {
-    setImportWarningZip(null);
-  }, []);
 
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
@@ -969,31 +886,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     <>
       <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
         <AppPageLayout shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[72rem]'} contentClassName="space-y-10">
-          {!embedded ? (
-            <AppPageIntro
-              title="Extensions"
-              summary="Install, enable, and inspect local product modules."
-              actions={
-                activeTab === 'extensions' ? (
-                  <div className="flex flex-wrap gap-2">
-                    <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
-                    <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
-                    <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
-                      ↻
-                    </IconButton>
-                  </div>
-                ) : null
-              }
-            />
-          ) : activeTab === 'extensions' ? (
-            <div className="flex flex-wrap justify-end gap-2">
-              <ToolbarButton onClick={createExtension}>Create</ToolbarButton>
-              <ToolbarButton onClick={importExtension}>Import</ToolbarButton>
-              <IconButton title="Reload all extensions" aria-label="Reload all extensions" onClick={reload}>
-                ↻
-              </IconButton>
-            </div>
-          ) : null}
+          {!embedded ? <AppPageIntro title="Extensions" summary="Install, enable, and inspect local product modules." /> : null}
 
           {notice ? (
             <div className="sticky top-0 z-20 border-b border-border-subtle/60 bg-base/95 py-2 text-[13px] text-secondary backdrop-blur">
@@ -1161,22 +1054,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       </div>
 
       {detailsExtensionId ? <ExtensionDetailsModal extensionId={detailsExtensionId} onClose={() => setDetailsExtensionId(null)} /> : null}
-      {createDraft ? (
-        <CreateExtensionModal draft={createDraft} onCancel={() => setCreateDraft(null)} onSubmit={submitCreateExtension} />
-      ) : null}
-      {importDraft ? (
-        <ExtensionTextInputModal
-          title="Import extension"
-          label="Path to extension .zip bundle"
-          confirmLabel="Review import"
-          onCancel={() => setImportDraft(false)}
-          onSubmit={(zipPath) => {
-            setImportDraft(false);
-            setImportWarningZip(zipPath.trim());
-          }}
-        />
-      ) : null}
-      {importWarningZip ? <ImportWarningModal zipPath={importWarningZip} onConfirm={confirmImport} onCancel={cancelImport} /> : null}
     </>
   );
 }
@@ -1354,7 +1231,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
   const extension = extensions.find((e) => e.id === extensionId) ?? null;
 
   const handleBackdropClick = useCallback(
-    (event: React.MouseEvent) => {
+    (event: ReactMouseEvent<HTMLDivElement>) => {
       if (event.target === event.currentTarget) {
         onClose();
       }
@@ -1582,299 +1459,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-dim">{label}</dt>
       <dd className="mt-0.5 break-words text-secondary">{value}</dd>
-    </div>
-  );
-}
-
-function ExtensionTextInputModal({
-  title,
-  label,
-  initialValue = '',
-  confirmLabel = 'Continue',
-  onCancel,
-  onSubmit,
-}: {
-  title: string;
-  label: string;
-  initialValue?: string;
-  confirmLabel?: string;
-  onCancel: () => void;
-  onSubmit: (value: string) => void;
-}) {
-  const [value, setValue] = useState(initialValue);
-  const trimmed = value.trim();
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-8 backdrop-blur-sm" onClick={onCancel}>
-      <form
-        className="w-full max-w-md rounded-2xl border border-border-subtle bg-base p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (trimmed) onSubmit(value);
-        }}
-      >
-        <h2 className="text-[16px] font-semibold text-primary">{title}</h2>
-        <label className="mt-4 block text-[12px] font-medium text-secondary">
-          {label}
-          <input
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-            autoFocus
-          />
-        </label>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-xl px-4 py-2 text-[13px] text-secondary hover:bg-surface hover:text-primary"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!trimmed}
-            className="rounded-xl border border-accent/50 bg-accent/15 px-4 py-2 text-[13px] font-semibold text-accent disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function CreateExtensionModal({
-  draft,
-  onCancel,
-  onSubmit,
-}: {
-  draft: ExtensionCreateDraft;
-  onCancel: () => void;
-  onSubmit: (draft: ExtensionCreateDraft) => void;
-}) {
-  const [name, setName] = useState(draft.name);
-  const [id, setId] = useState(draft.id);
-  const [template, setTemplate] = useState<ExtensionTemplate>(draft.template);
-  const normalizedName = name.trim();
-  const normalizedId = id.trim() || slugifyExtensionId(normalizedName);
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-8 backdrop-blur-sm" onClick={onCancel}>
-      <form
-        className="w-full max-w-md rounded-2xl border border-border-subtle bg-base p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (normalizedName && normalizedId) onSubmit({ name: normalizedName, id: normalizedId, template });
-        }}
-      >
-        <h2 className="text-[16px] font-semibold text-primary">Create extension</h2>
-        <label className="mt-4 block text-[12px] font-medium text-secondary">
-          Extension name
-          <input
-            value={name}
-            onChange={(event) => {
-              const nextName = event.target.value;
-              setName(nextName);
-              setId((current) => (current.trim() ? current : slugifyExtensionId(nextName)));
-            }}
-            className="mt-2 w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent/50"
-            autoFocus
-          />
-        </label>
-        <label className="mt-3 block text-[12px] font-medium text-secondary">
-          Extension id
-          <input
-            value={id}
-            onChange={(event) => setId(event.target.value)}
-            placeholder={slugifyExtensionId(name) || 'my-extension'}
-            className="mt-2 w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent/50"
-          />
-        </label>
-        <label className="mt-3 block text-[12px] font-medium text-secondary">
-          Template
-          <select
-            value={template}
-            onChange={(event) => setTemplate(event.target.value as ExtensionTemplate)}
-            className="mt-2 w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent/50"
-          >
-            <option value="main-page">Main page</option>
-            <option value="right-rail">Right rail</option>
-            <option value="workbench-detail">Workbench detail</option>
-          </select>
-        </label>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-xl px-4 py-2 text-[13px] text-secondary hover:bg-surface hover:text-primary"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!normalizedName || !normalizedId}
-            className="rounded-xl border border-accent/50 bg-accent/15 px-4 py-2 text-[13px] font-semibold text-accent disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Create
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function ImportWarningModal({
-  zipPath,
-  onConfirm,
-  onCancel,
-}: {
-  zipPath: string;
-  onConfirm: (zipPath: string) => void;
-  onCancel: () => void;
-}) {
-  const [confirmText, setConfirmText] = useState('');
-  const [cleanRoomStatus, setCleanRoomStatus] = useState<'idle' | 'starting' | 'started' | 'error'>('idle');
-  const [cleanRoomRunId, setCleanRoomRunId] = useState<string | null>(null);
-  const [cleanRoomError, setCleanRoomError] = useState<string | null>(null);
-  const confirmed = confirmText === 'I UNDERSTAND THE RISKS';
-
-  const handleBackdropClick = useCallback(
-    (event: React.MouseEvent) => {
-      if (event.target === event.currentTarget) {
-        onCancel();
-      }
-    },
-    [onCancel],
-  );
-
-  const startCleanRoomAnalysis = useCallback(async () => {
-    setCleanRoomStatus('starting');
-    setCleanRoomError(null);
-    try {
-      const result = await api.cleanRoomImport({ zipPath });
-      setCleanRoomRunId(result.runId);
-      setCleanRoomStatus('started');
-    } catch (err) {
-      setCleanRoomError(err instanceof Error ? err.message : String(err));
-      setCleanRoomStatus('error');
-    }
-  }, [zipPath]);
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/60 px-4 py-10 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-label="Dangerous import warning"
-        className="relative w-full max-w-lg rounded-3xl border-2 border-danger/60 bg-base shadow-2xl shadow-danger/10"
-      >
-        {/* Top danger bar */}
-        <div className="flex items-center gap-2.5 rounded-t-3xl border-b border-danger/30 bg-danger/15 px-6 py-4">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-danger/20 text-[15px] font-bold text-danger">!</span>
-          <h2 className="text-[16px] font-bold tracking-tight text-danger">DANGEROUS OPERATION</h2>
-        </div>
-
-        <div className="space-y-5 px-6 py-5">
-          <div className="space-y-3">
-            <p className="text-[13px] font-semibold leading-6 text-primary">
-              You are about to import a pre-built extension from:{' '}
-              <code className="break-all font-mono text-[12px] text-secondary">{zipPath}</code>
-            </p>
-
-            <div className="rounded-xl border border-danger/30 bg-danger/[0.07] px-4 py-3">
-              <p className="text-[13px] font-semibold leading-6 text-danger">Why this is dangerous</p>
-              <ul className="mt-2 space-y-1.5 text-[12px] leading-5 text-secondary">
-                <li>
-                  Extensions have full access to your agent&apos;s tools, including file system read/write, shell execution, network access,
-                  and AI model invocation.
-                </li>
-                <li>
-                  An imported extension could exfiltrate data, modify your knowledge base, inject prompts, or spawn background processes —
-                  all without your knowledge.
-                </li>
-                <li>There is no sandbox. The code runs with the same privileges as your agent runtime.</li>
-              </ul>
-            </div>
-
-            <div className="rounded-xl border border-accent/30 bg-accent/[0.06] px-4 py-3">
-              <p className="text-[13px] font-semibold leading-6 text-accent">Recommended alternative</p>
-              <p className="mt-1.5 text-[12px] leading-5 text-secondary">
-                Instead of importing an untrusted binary bundle, ask an agent to do a <strong>clean-room re-implementation</strong>. A
-                stripped-down agent with only web tools can fetch the plugin&apos;s repository, generate a specification from the source,
-                and scan that spec for vulnerabilities. The sanitized spec can then be handed to a full agent for implementation — no blind
-                code execution.
-              </p>
-            </div>
-          </div>
-
-          {cleanRoomStatus === 'starting' ? (
-            <div className="rounded-xl border border-accent/30 bg-accent/[0.06] px-4 py-3">
-              <p className="text-[13px] text-accent">Starting clean-room analysis…</p>
-            </div>
-          ) : cleanRoomStatus === 'started' ? (
-            <div className="rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3">
-              <p className="text-[13px] font-medium text-success">Clean-room analysis started</p>
-              <p className="mt-1 text-[12px] text-secondary">
-                Run ID: <code className="font-mono">{cleanRoomRunId}</code>
-              </p>
-              <p className="mt-1 text-[12px] text-secondary">
-                Track progress from the inline background work cards. The analysis agent will generate a specification with security
-                findings.
-              </p>
-            </div>
-          ) : cleanRoomStatus === 'error' ? (
-            <div className="rounded-xl border border-danger/30 bg-danger/[0.07] px-4 py-3">
-              <p className="text-[13px] font-semibold text-danger">Failed to start analysis</p>
-              <p className="mt-1 text-[12px] text-secondary">{cleanRoomError}</p>
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-danger">
-              Type <span className="font-mono">I UNDERSTAND THE RISKS</span> to confirm
-            </label>
-            <input
-              value={confirmText}
-              onChange={(event) => setConfirmText(event.target.value)}
-              placeholder="Type I UNDERSTAND THE RISKS to enable import"
-              className="w-full rounded-xl border border-danger/40 bg-base px-4 py-2.5 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-danger"
-              autoFocus
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-border-subtle pt-4">
-            <button
-              type="button"
-              className="rounded-xl px-4 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary"
-              onClick={onCancel}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-accent/60 bg-accent/15 px-4 py-2 text-[13px] font-semibold text-accent transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={cleanRoomStatus === 'starting' || cleanRoomStatus === 'started'}
-              onClick={startCleanRoomAnalysis}
-            >
-              {cleanRoomStatus === 'starting' ? 'Starting…' : cleanRoomStatus === 'started' ? 'Analysis running' : 'Clean-room analysis'}
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-danger/60 bg-danger/15 px-5 py-2 text-[13px] font-semibold text-danger transition-colors hover:bg-danger/25 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={!confirmed}
-              onClick={() => onConfirm(zipPath)}
-            >
-              {confirmed ? 'Import anyway' : 'Confirm to enable'}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
