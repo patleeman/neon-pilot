@@ -86,6 +86,7 @@ import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } fro
 import { normalizeSessionName } from './sessionNaming.js';
 import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
+import { mergeResolvedParentSessionMetadata } from './sessionParentMetadata.js';
 import {
   resolveSessionsDir as resolveSessionsDirValue,
   resolveSessionsIndexFile as resolveSessionsIndexFileValue,
@@ -1892,15 +1893,7 @@ export function readSessionMetaByFile(filePath: string): SessionMeta | null {
 
   const parentSessionFile = normalizeOptionalPath(meta.parentSessionFile);
   const parentSessionId = parentSessionFile ? resolveSessionIdByFile(parentSessionFile) : undefined;
-  if (meta.parentSessionFile === parentSessionFile && meta.parentSessionId === parentSessionId) {
-    return meta;
-  }
-
-  return {
-    ...meta,
-    ...(parentSessionFile ? { parentSessionFile } : {}),
-    ...(parentSessionId ? { parentSessionId } : {}),
-  };
+  return mergeResolvedParentSessionMetadata(meta, { parentSessionFile, parentSessionId });
 }
 
 export function renameStoredSession(sessionId: string, name: string): SessionMeta {
