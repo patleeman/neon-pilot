@@ -59,6 +59,10 @@ import {
   serializePersistentSessionIndex,
 } from './sessionIndexPersistence.js';
 export { GOAL_STATE_CUSTOM_TYPE, readGoalFromEntries, type ThreadGoal } from './sessionGoalState.js';
+import {
+  sanitizeSessionLineForSearch as sanitizeSessionLineForSearchValue,
+  sanitizeSessionLineForSummary as sanitizeSessionLineForSummaryValue,
+} from './sessionLineSanitizers.js';
 import { buildSessionInfoRecord, buildUserMessageTitle, normalizeSessionName } from './sessionNaming.js';
 import {
   formatRelatedConversationPointersText,
@@ -436,22 +440,14 @@ function isRawDisplayLine(line: RawLine): line is RawDisplayLine {
   return line.type === 'message' || line.type === 'custom_message' || line.type === 'compaction' || line.type === 'branch_summary';
 }
 
-const SESSION_SUMMARY_SANITIZE_PATTERN = /"(content|data|text|thinking|summary|errorMessage)":"((?:\\.|[^"\\])*)"/g;
-const SESSION_SEARCH_SANITIZE_PATTERN = /"(data|thinking)":"((?:\\.|[^"\\])*)"/g;
 const REVERSE_READ_CHUNK_BYTES = 64 * 1024;
 
 function sanitizeSessionLineForSummary(rawLine: string): string {
-  return rawLine.replace(SESSION_SUMMARY_SANITIZE_PATTERN, (_match, field: string, value: string) => {
-    if (field === 'data') {
-      return `"${field}":""`;
-    }
-
-    return `"${field}":"${value.length > 0 ? 'x' : ''}"`;
-  });
+  return sanitizeSessionLineForSummaryValue(rawLine);
 }
 
 function sanitizeSessionLineForSearch(rawLine: string): string {
-  return rawLine.replace(SESSION_SEARCH_SANITIZE_PATTERN, (_match, field: string) => `"${field}":""`);
+  return sanitizeSessionLineForSearchValue(rawLine);
 }
 
 function readFileLinesReverse(filePath: string, visit: (line: string) => boolean | void): void {
