@@ -196,6 +196,7 @@ import {
   resolvePreviousWorkspaceCwd,
 } from './localApiConversationCwdPresentation.js';
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
+import { buildLiveSessionContextResponse } from './localApiLiveSessionContextResponse.js';
 import {
   assertLiveConversationExists,
   buildDesktopLiveSessionResponse,
@@ -1695,21 +1696,7 @@ export async function readDesktopLiveSessionContext(conversationId: string) {
   }
 
   const gitSummary = readGitStatusSummaryWithTelemetry(cwd).summary;
-  return {
-    cwd,
-    branch: gitSummary?.branch ?? null,
-    git: gitSummary
-      ? {
-          changeCount: gitSummary.changeCount,
-          linesAdded: gitSummary.linesAdded,
-          linesDeleted: gitSummary.linesDeleted,
-          changes: gitSummary.changes.map((change) => ({
-            relativePath: change.relativePath,
-            change: change.change,
-          })),
-        }
-      : null,
-  };
+  return buildLiveSessionContextResponse({ cwd, gitSummary });
 }
 
 export async function readDesktopSessionDetail(input: {
