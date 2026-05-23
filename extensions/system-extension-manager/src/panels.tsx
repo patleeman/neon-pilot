@@ -803,10 +803,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               </div>
             </div>
           </td>
-          <td className="px-3 py-3 align-middle text-[12px] text-secondary">
-            <span title={item.bundleUrl}>{item.tag}</span>
-            <span className="ml-2">{item.defaultEnabled === false ? 'disabled after install' : null}</span>
-          </td>
+          <td className="px-3 py-3 align-middle text-[12px] text-secondary" />
           <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">Available</td>
           <td className="whitespace-nowrap px-3 py-3 align-middle">
             <button
