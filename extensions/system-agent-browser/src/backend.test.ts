@@ -4,7 +4,7 @@ import { runAgentBrowser } from './backend.js';
 
 describe('system-agent-browser backend', () => {
   const exec = vi.fn();
-  const ctx = { shell: { exec }, agentToolContext: { signal: new AbortController().signal } } as never;
+  const ctx = { shell: { exec }, agentToolContext: { signal: new AbortController().signal, conversationId: 'conversation/1' } } as never;
 
   beforeEach(() => {
     exec.mockReset().mockResolvedValue({ stdout: 'ok\n', stderr: '', executionWrappers: [{ id: 'sandbox' }] });
@@ -35,7 +35,7 @@ describe('system-agent-browser backend', () => {
   it('omits native for non-navigation commands unless requested and clamps timeout', async () => {
     await runAgentBrowser({ command: 'click', native: true, timeoutSeconds: 999 }, ctx);
 
-    expect(exec.mock.calls[0][0].args).toEqual(['--native', 'click']);
+    expect(exec.mock.calls[0][0].args).toEqual(['--native', '--session', 'neon-pilot-conversation-1', 'click']);
     expect(exec.mock.calls[0][0].timeoutMs).toBe(300_000);
   });
 
@@ -58,7 +58,7 @@ describe('system-agent-browser backend', () => {
     await expect(runAgentBrowser({ command: 'snapshot' }, ctx)).resolves.toEqual({
       content: [{ type: 'text', text: 'boom' }],
       isError: true,
-      details: { command: ['agent-browser', 'snapshot'] },
+      details: { command: ['agent-browser', '--session', 'neon-pilot-conversation-1', 'snapshot'] },
     });
   });
 

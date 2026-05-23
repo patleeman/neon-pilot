@@ -32,7 +32,21 @@ const child = spawn(command, args, {
   env: process.env,
 });
 
+const forwardSignal = (signal) => {
+  if (!child.killed) child.kill(signal);
+};
+const killChildOnExit = () => {
+  if (!child.killed) child.kill('SIGTERM');
+};
+
+process.on('SIGINT', forwardSignal);
+process.on('SIGTERM', forwardSignal);
+process.on('exit', killChildOnExit);
+
 child.on('exit', (code, signal) => {
+  process.off('SIGINT', forwardSignal);
+  process.off('SIGTERM', forwardSignal);
+  process.off('exit', killChildOnExit);
   if (signal) {
     process.kill(process.pid, signal);
     return;

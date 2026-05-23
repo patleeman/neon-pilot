@@ -637,8 +637,13 @@ export async function runAcpProtocol(input: unknown, ctx: ExtensionProtocolConte
   const protocolInput = parseProtocolInput(input);
   const stream = acp.ndJsonStream(Writable.toWeb(ctx.stdio.stdout), Readable.toWeb(ctx.stdio.stdin));
   const connection = new acp.AgentSideConnection((agentConnection) => new NeonPilotAcpAgent(agentConnection, ctx, protocolInput), stream);
+  const stdinClosed = new Promise<void>((resolve) => {
+    ctx.stdio.stdin.once('close', resolve);
+    ctx.stdio.stdin.once('end', resolve);
+  });
   await Promise.race([
     connection.closed,
+    stdinClosed,
     new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve(), { once: true })),
   ]);
 }

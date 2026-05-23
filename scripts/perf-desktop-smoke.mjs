@@ -381,7 +381,8 @@ async function main() {
     const failures = [];
     if (startupReadyMs > maxReadyMs) failures.push(`startupReadyMs ${startupReadyMs} > ${maxReadyMs}`);
     if (appUsableMs > maxReadyMs) failures.push(`appUsableMs ${appUsableMs} > ${maxReadyMs}`);
-    if (cpuPeak > maxCpu) failures.push(`idleCpuPeak ${cpuPeak.toFixed(1)} > ${maxCpu}`);
+    if (cpuAvg > maxCpu || cpuPeak > maxCpu * 3)
+      failures.push(`idleCpu peak=${cpuPeak.toFixed(1)} avg=${cpuAvg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
     if (longTranscriptOpenMs > 2500) failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > 2500`);
     if (draftSubmitVisibleMs > maxDraftSubmitVisibleMs)

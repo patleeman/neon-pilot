@@ -1,3 +1,7 @@
+import { readdir, readFile, rm, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 interface AgentBrowserInput {
@@ -13,6 +17,8 @@ interface AgentBrowserInput {
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 300_000;
 const MAX_OUTPUT_CHARS = 60_000;
+const STALE_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+const AGENT_BROWSER_DIR = join(homedir(), '.agent-browser');
 const COMMAND_PATTERN = /^[a-z][a-z0-9:-]*$/i;
 
 function readInput(input: unknown): AgentBrowserInput {
@@ -39,6 +45,59 @@ function shouldUseNative(input: AgentBrowserInput): boolean {
   return ['open', 'goto', 'navigate', 'connect', 'device', 'session'].includes(input.command);
 }
 
+function isPidAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function removeIfPresent(path: string): Promise<void> {
+  await rm(path, { force: true }).catch(() => undefined);
+}
+
+async function cleanupStaleAgentBrowserSessions(ctx: ExtensionBackendContext, ttlMs = STALE_SESSION_TTL_MS): Promise<void> {
+  if (ttlMs <= 0) return;
+  const entries = (await readdir(AGENT_BROWSER_DIR).catch(() => [])).filter((entry) => entry.endsWith('.pid'));
+  const now = Date.now();
+  await Promise.all(
+    entries.map(async (entry) => {
+      const session = entry.slice(0, -4);
+      const pidPath = join(AGENT_BROWSER_DIR, entry);
+      const sockPath = join(AGENT_BROWSER_DIR, `${session}.sock`);
+      const stats = await stat(pidPath).catch(() => null);
+      if (!stats || now - stats.mtimeMs < ttlMs) return;
+
+      const pid = Number.parseInt((await readFile(pidPath, 'utf8').catch(() => '')).trim(), 10);
+      if (!isPidAlive(pid)) {
+        await removeIfPresent(pidPath);
+        await removeIfPresent(sockPath);
+        return;
+      }
+
+      await ctx.shell
+        .exec({ command: 'agent-browser', args: ['--session', session, 'close'], timeoutMs: 5_000, signal: ctx.agentToolContext?.signal })
+        .catch(() => undefined);
+      if (isPidAlive(pid)) process.kill(pid, 'SIGTERM');
+      await removeIfPresent(pidPath);
+      await removeIfPresent(sockPath);
+    }),
+  );
+}
+
+function resolveDefaultSession(ctx: ExtensionBackendContext): string {
+  const rawContext = ctx.agentToolContext;
+  const record = rawContext && typeof rawContext === 'object' && !Array.isArray(rawContext) ? (rawContext as Record<string, unknown>) : {};
+  const toolContext =
+    record.toolContext && typeof record.toolContext === 'object' ? (record.toolContext as Record<string, unknown>) : record;
+  const conversationId = typeof toolContext.conversationId === 'string' ? toolContext.conversationId : '';
+  const suffix = conversationId.trim() ? conversationId.replace(/[^a-z0-9._-]/gi, '-').slice(0, 48) : 'default';
+  return `neon-pilot-${suffix}`;
+}
+
 function truncateOutput(text: string): { text: string; truncated: boolean } {
   if (text.length <= MAX_OUTPUT_CHARS) return { text, truncated: false };
   return {
@@ -50,15 +109,17 @@ function truncateOutput(text: string): { text: string; truncated: boolean } {
 export async function runAgentBrowser(input: unknown, ctx: ExtensionBackendContext) {
   const parsed = readInput(input);
   const args: string[] = [];
+  const session = parsed.session?.trim() || resolveDefaultSession(ctx);
   if (shouldUseNative(parsed)) args.push('--native');
   if (parsed.headed) args.push('--headed');
-  if (parsed.session) args.push('--session', parsed.session);
+  args.push('--session', session);
   if (parsed.platform) args.push('-p', parsed.platform);
   args.push(parsed.command, ...(parsed.args ?? []));
 
   const timeoutMs = Math.min(Math.max((parsed.timeoutSeconds ?? DEFAULT_TIMEOUT_MS / 1000) * 1000, 1_000), MAX_TIMEOUT_MS);
 
   try {
+    await cleanupStaleAgentBrowserSessions(ctx);
     const result = await ctx.shell.exec({
       command: 'agent-browser',
       args,

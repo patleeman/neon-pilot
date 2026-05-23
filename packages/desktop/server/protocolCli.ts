@@ -54,7 +54,13 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     return PROTOCOL_CLI_EXIT_CODES.usage;
   }
 
-  const signal = options?.signal ?? new AbortController().signal;
+  const stdinCloseController = new AbortController();
+  const signal = options?.signal ?? stdinCloseController.signal;
+  const abortOnStdinClose = () => stdinCloseController.abort();
+  if (!options?.signal) {
+    process.stdin.once('close', abortOnStdinClose);
+    process.stdin.once('end', abortOnStdinClose);
+  }
 
   try {
     await invokeExtensionProtocolEntrypoint(
@@ -75,6 +81,11 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}\n`);
     return classifyError(error);
+  } finally {
+    if (!options?.signal) {
+      process.stdin.off('close', abortOnStdinClose);
+      process.stdin.off('end', abortOnStdinClose);
+    }
   }
 }
 

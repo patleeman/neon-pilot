@@ -67,6 +67,17 @@ async function main() {
     stdio: ['pipe', 'pipe', 'inherit'],
   });
 
+  const cleanupChild = () => {
+    if (!child.killed) child.kill('SIGTERM');
+  };
+  const forwardSignal = (signal) => {
+    cleanupChild();
+    process.kill(process.pid, signal);
+  };
+  process.once('SIGINT', forwardSignal);
+  process.once('SIGTERM', forwardSignal);
+  process.once('exit', cleanupChild);
+
   const client = new SmokeClient();
   const connection = new acp.ClientSideConnection(
     () => client,
@@ -116,7 +127,10 @@ async function main() {
       ),
     );
   } finally {
-    child.kill();
+    cleanupChild();
+    process.off('SIGINT', forwardSignal);
+    process.off('SIGTERM', forwardSignal);
+    process.off('exit', cleanupChild);
     if (!args.keepState) {
       await rm(stateRoot, { recursive: true, force: true });
     }

@@ -8,6 +8,14 @@ vi.mock('node:child_process', () => ({
 
 import { readGitRepoInfo, readGitStatusSummaryWithTelemetry } from './gitStatus.js';
 
+function normalizeGitArgs(args: readonly string[]): string[] {
+  const gitArgs = [...args];
+  if (gitArgs[0] === '-c' && gitArgs[1] === 'core.fsmonitor=false') {
+    return gitArgs.slice(2);
+  }
+  return gitArgs;
+}
+
 function createGitTimeoutError(stdout = ''): Error & { stdout?: string; status?: number | null; code?: string } {
   const error = new Error('spawnSync git ETIMEDOUT') as Error & { stdout?: string; status?: number | null; code?: string };
   error.stdout = stdout;
@@ -29,7 +37,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-timeout';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = [...args];
+      const gitArgs = normalizeGitArgs(args);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
@@ -83,7 +91,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-status-timeout';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = [...args];
+      const gitArgs = normalizeGitArgs(args);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
@@ -111,7 +119,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-untracked-failure';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = [...args];
+      const gitArgs = normalizeGitArgs(args);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
@@ -160,7 +168,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-no-head';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = [...args];
+      const gitArgs = normalizeGitArgs(args);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
@@ -209,7 +217,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/not-a-repo';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      expect([...args].join(' ')).toBe('rev-parse --is-inside-work-tree');
+      expect(normalizeGitArgs(args).join(' ')).toBe('rev-parse --is-inside-work-tree');
       return 'false\n';
     });
 
@@ -224,7 +232,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-root-slash';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const joined = [...args].join(' ');
+      const joined = normalizeGitArgs(args).join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
       }
@@ -244,7 +252,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     vi.spyOn(Date, 'now').mockImplementation(() => nowValues.shift() ?? 6_000);
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const joined = [...args].join(' ');
+      const joined = normalizeGitArgs(args).join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
       }
@@ -262,7 +270,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
       hasRepo: true,
       degraded: true,
     });
-    expect(execFileSyncMock.mock.calls.map(([, args]) => (args as string[]).join(' '))).toEqual([
+    expect(execFileSyncMock.mock.calls.map(([, args]) => normalizeGitArgs(args as string[]).join(' '))).toEqual([
       'rev-parse --is-inside-work-tree',
       'rev-parse --show-toplevel',
     ]);
@@ -272,7 +280,7 @@ describe('readGitStatusSummaryWithTelemetry timeout handling', () => {
     const cwd = '/mock/repo-untracked-timeout';
 
     execFileSyncMock.mockImplementation((_command: string, args: readonly string[]) => {
-      const gitArgs = [...args];
+      const gitArgs = normalizeGitArgs(args);
       const joined = gitArgs.join(' ');
       if (joined === 'rev-parse --is-inside-work-tree') {
         return 'true\n';
