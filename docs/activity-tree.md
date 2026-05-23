@@ -19,14 +19,14 @@ The adapter lives at `packages/desktop/ui/src/activity/activityTree.ts` and curr
 
 - working directory group items
 - conversation items
-- conversation lineage via `parentSessionId`, rendered as expandable branches under the parent conversation
+- conversation lineage metadata remains available to transcript/topology views, but the left sidebar intentionally renders conversations as flat rows under their working directory group
 - execution items projected by `packages/desktop/server/executions/executionService.ts`
 - execution nesting via `execution.conversationId`
 - normalized status values: `idle`, `running`, `queued`, `failed`, `done`
 
-`packages/desktop/ui/src/activity/activityTreePaths.ts` converts activity items into stable tree paths, and `ActivityTreeView.tsx` is the reusable native React renderer. The left sidebar renders working directory groups, conversations, child conversation branches, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes working directory actions plus conversation actions for open, parent navigation, pin/unpin, close, archive, copy, duplicate, and extension-provided conversation-list context menu items.
+`packages/desktop/ui/src/activity/activityTreePaths.ts` converts activity items into stable tree paths, and `ActivityTreeView.tsx` is the reusable native React renderer. The left sidebar renders working directory groups, flat conversation rows, and linked execution records through the shared tree, decorates running/failed/done rows, and exposes working directory actions plus conversation actions for open, pin/unpin, close, archive, copy, duplicate, and extension-provided conversation-list context menu items.
 
-Conversation branches are shown shallowly in the existing left sidebar. Parent conversations with children get a compact expander; selected descendants auto-reveal through the current tree path, while collapsed parents show a small child count so branchy conversations stay discoverable without eating horizontal space. Child rows are labeled by offshoot kind when known (`fork:`, `rewind:`, `subagent:`, `duplicate:`). Detailed topology belongs in the transcript itself: explicit branch actions render as timeline landmarks, while tool-created side work (subagents, artifacts, checkpoints, prompts, and visual captures) is pinned inside internal-work shelves instead of becoming loose transcript cards.
+Do not nest conversation rows in the sidebar. Parent/child branch topology belongs in the transcript itself: explicit branch actions render as timeline landmarks, while tool-created side work (subagents, artifacts, checkpoints, prompts, and visual captures) is pinned inside internal-work shelves instead of becoming loose transcript cards. Sidebar interactions should stay one-row-in/one-row-out: closing, dragging, archiving, and reordering a conversation must not implicitly act on its children or parent.
 
 ## Execution boundary
 

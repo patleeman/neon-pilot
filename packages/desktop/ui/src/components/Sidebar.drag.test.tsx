@@ -31,7 +31,6 @@ vi.mock('../client/api', () => ({
 
 const mountedRoots: Root[] = [];
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
-const THREADS_DETACHED_CHILDREN_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-detached-children');
 
 function createStorage() {
   const map = new Map<string, string>();
@@ -384,12 +383,12 @@ describe('Sidebar group drag reordering', () => {
     expect(container.textContent).toContain('Moved conversation to Chats.');
   });
 
-  it('detaches a child thread from parent lineage when dragged as a top-level thread', async () => {
+  it('renders child threads as normal flat draggable rows', async () => {
     const projectPath = '/tmp/project-worktree';
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child', 'sibling']));
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'sibling', 'child']));
     localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([projectPath]));
     apiMocks.openConversationTabs.mockResolvedValue({
-      sessionIds: ['parent', 'child', 'sibling'],
+      sessionIds: ['parent', 'sibling', 'child'],
       pinnedSessionIds: [],
       archivedSessionIds: [],
       workspacePaths: [projectPath],
@@ -414,22 +413,12 @@ describe('Sidebar group drag reordering', () => {
     await flushAsyncWork();
 
     const childRow = container.querySelector<HTMLElement>('[data-sidebar-session-id="child"]');
-    const siblingRow = container.querySelector<HTMLElement>('[data-sidebar-session-id="sibling"]');
-    if (!childRow || !siblingRow) {
-      throw new Error('Missing child or sibling row');
+    if (!childRow) {
+      throw new Error('Missing child row');
     }
-    setDragBounds(childRow);
-    setDragBounds(siblingRow);
 
-    const dataTransfer = new TestDataTransfer();
-    await act(async () => {
-      childRow.dispatchEvent(createDragEvent('dragstart', dataTransfer, 75));
-      siblingRow.dispatchEvent(createDragEvent('dragover', dataTransfer, 10));
-      siblingRow.dispatchEvent(createDragEvent('drop', dataTransfer, 10));
-    });
-    await flushAsyncWork();
-
-    expect(JSON.parse(localStorage.getItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY) ?? '[]')).toEqual(['child']);
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['parent', 'child', 'sibling']);
+    expect(childRow.getAttribute('draggable')).toBe('true');
+    expect(childRow.textContent).toContain('Child branch');
+    expect(childRow.textContent).not.toContain('fork:');
   });
 });

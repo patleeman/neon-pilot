@@ -100,7 +100,7 @@ function readJsonList(key: string): string[] {
   return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];
 }
 
-describe('Sidebar nested conversation interactions', () => {
+describe('Sidebar branch conversation interactions', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
@@ -122,7 +122,7 @@ describe('Sidebar nested conversation interactions', () => {
     vi.clearAllMocks();
   });
 
-  it('archiving a parent keeps open child branches visible but turns the parent into non-closable lineage', async () => {
+  it('archiving a parent removes only that row while open child branches stay flat and closable', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent', 'child']));
     const container = renderSidebar('/conversations/child', [
       session({ id: 'parent', title: 'Parent thread' }),
@@ -135,13 +135,13 @@ describe('Sidebar nested conversation interactions', () => {
 
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
-    expect(row(container, 'parent').textContent).toContain('Parent thread');
-    expect(row(container, 'child').textContent).toContain('fork: Child branch');
-    expect(row(container, 'parent').querySelector('[aria-label="Archive thread"]')).toBeNull();
+    expect(() => row(container, 'parent')).toThrow();
+    expect(row(container, 'child').textContent).toContain('Child branch');
+    expect(row(container, 'child').textContent).not.toContain('fork:');
     expect(row(container, 'child').querySelector('[aria-label="Archive thread"]')).not.toBeNull();
   });
 
-  it('hides subagent child conversations from the sidebar even when open and running', async () => {
+  it('shows open child conversations as flat rows without pulling in subagent descendants', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['grandparent', 'parent', 'grandchild']));
     const container = renderSidebar('/conversations/parent', [
       session({ id: 'grandparent', title: 'Grandparent thread' }),
@@ -151,7 +151,8 @@ describe('Sidebar nested conversation interactions', () => {
     await flush();
 
     expect(row(container, 'grandparent').textContent).toContain('Grandparent thread');
-    expect(row(container, 'parent').textContent).toContain('fork: Parent branch');
+    expect(row(container, 'parent').textContent).toContain('Parent branch');
+    expect(row(container, 'parent').textContent).not.toContain('fork:');
     expect(() => row(container, 'grandchild')).toThrow();
   });
 

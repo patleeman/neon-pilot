@@ -153,7 +153,6 @@ const THREADS_ORGANIZE_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-o
 const THREADS_FILTER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-filter');
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
 const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-manual-group-order');
-const THREADS_DETACHED_CHILDREN_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-detached-children');
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
@@ -219,31 +218,6 @@ type SidebarConversationGroup = {
 
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
   return session.offshootKind !== 'subagent' && !session.sourceRunId;
-}
-
-function readDetachedChildConversationIds(): string[] {
-  if (typeof localStorage === 'undefined') return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY) ?? '[]') as unknown;
-    return Array.isArray(parsed) ? normalizeStoredStringList(parsed) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeDetachedChildConversationIds(ids: readonly string[]): string[] {
-  const normalized = normalizeStoredStringList(ids);
-  if (typeof localStorage === 'undefined') return normalized;
-  try {
-    if (normalized.length > 0) {
-      localStorage.setItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY, JSON.stringify(normalized));
-    } else {
-      localStorage.removeItem(THREADS_DETACHED_CHILDREN_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore storage failures.
-  }
-  return normalized;
 }
 
 type PointerPosition = { x: number; y: number };
@@ -1918,7 +1892,6 @@ export function Sidebar() {
   const [threadsFilterMode, setThreadsFilterMode] = useState<ThreadsFilterMode>(() => readThreadsFilterMode());
   const [threadsSortMode, setThreadsSortMode] = useState<ThreadsSortMode>(() => readThreadsSortMode());
   const [manualConversationGroupOrder, setManualConversationGroupOrder] = useState(() => readManualConversationGroupOrder());
-  const [detachedChildConversationIds, setDetachedChildConversationIds] = useState(() => readDetachedChildConversationIds());
   const [collapsedConversationGroupKeys, setCollapsedConversationGroupKeys] = useState(() => readCollapsedConversationGroupKeys());
   const [conversationGroupLabelOverrides, setConversationGroupLabelOverrides] = useState(() => readConversationGroupLabelOverrides());
   const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
@@ -2062,21 +2035,6 @@ export function Sidebar() {
     setManualConversationGroupOrder(normalized);
     return normalized;
   }, []);
-  const detachChildConversation = useCallback((conversationId: string) => {
-    const normalizedConversationId = conversationId.trim();
-    if (!normalizedConversationId) {
-      return;
-    }
-
-    setDetachedChildConversationIds((current) => {
-      if (current.includes(normalizedConversationId)) {
-        return current;
-      }
-
-      return writeDetachedChildConversationIds([...current, normalizedConversationId]);
-    });
-  }, []);
-
   const loadSavedWorkspacePaths = useCallback(async () => {
     try {
       const { sessionIds, pinnedSessionIds, workspacePaths } = await api.openConversationTabs();
@@ -2355,58 +2313,23 @@ export function Sidebar() {
     [renderedConversationItems],
   );
   const activityTreeSessions = useMemo(() => {
-    const byId = new Map<string, SessionMeta>();
-    const detachedChildConversationIdSet = new Set(detachedChildConversationIds);
-    const allConversationSessions = (sessions ?? []).map((session) => {
+    return renderedConversationItems.map(({ session }) => {
       const liveTitle = liveTitles.get(session.id);
       const titledSession = liveTitle && liveTitle !== session.title ? { ...session, title: liveTitle } : session;
-      return detachedChildConversationIdSet.has(session.id) ? { ...titledSession, parentSessionId: undefined } : titledSession;
+
+      // Sidebar nesting has proven too brittle: parent/child lineage is transcript
+      // topology, not list hierarchy. Keep every open thread as a flat row under
+      // its workspace group so close, archive, drag, and reorder semantics stay
+      // one-row-in/one-row-out.
+      return {
+        ...titledSession,
+        parentSessionId: undefined,
+        parentSessionFile: undefined,
+        parentMessageId: undefined,
+        offshootKind: undefined,
+      };
     });
-    const allSessionsById = new Map(allConversationSessions.map((session) => [session.id, session] as const));
-    const archivedConversationIdSet = new Set(archivedConversationIds);
-    const childSessionIdsByParentId = new Map<string, string[]>();
-    for (const session of allConversationSessions) {
-      if (!session.parentSessionId) continue;
-      const childIds = childSessionIdsByParentId.get(session.parentSessionId) ?? [];
-      childIds.push(session.id);
-      childSessionIdsByParentId.set(session.parentSessionId, childIds);
-    }
-
-    const includeSessionAndLineage = (session: SessionMeta) => {
-      if (byId.has(session.id)) return;
-      byId.set(session.id, session);
-
-      const seenAncestors = new Set<string>([session.id]);
-      let parentSessionId = session.parentSessionId;
-      while (parentSessionId && !seenAncestors.has(parentSessionId)) {
-        seenAncestors.add(parentSessionId);
-        const parent = allSessionsById.get(parentSessionId);
-        if (!parent) break;
-        byId.set(parent.id, parent);
-        parentSessionId = parent.parentSessionId;
-      }
-
-      const descendantQueue = [...(childSessionIdsByParentId.get(session.id) ?? [])];
-      const seenDescendants = new Set<string>([session.id]);
-      while (descendantQueue.length > 0) {
-        const childId = descendantQueue.shift();
-        if (!childId || seenDescendants.has(childId)) continue;
-        seenDescendants.add(childId);
-        const child = allSessionsById.get(childId);
-        if (!child) continue;
-        if (archivedConversationIdSet.has(child.id)) continue;
-        if (!isSidebarVisibleConversation(child)) continue;
-        byId.set(child.id, child);
-        descendantQueue.push(...(childSessionIdsByParentId.get(child.id) ?? []));
-      }
-    };
-
-    for (const item of renderedConversationItems) {
-      includeSessionAndLineage(item.session);
-    }
-
-    return [...byId.values()];
-  }, [archivedConversationIds, detachedChildConversationIds, liveTitles, renderedConversationItems, sessions]);
+  }, [liveTitles, renderedConversationItems]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
     const flatItems = buildActivityTreeItems({
@@ -2655,13 +2578,6 @@ export function Sidebar() {
     setConversationCwdDropTargetGroupKey(null);
   }
 
-  function detachDraggedChildConversationIfNeeded(sessionId: string) {
-    const session = (sessions ?? []).find((candidate) => candidate.id === sessionId);
-    if (session?.parentSessionId) {
-      detachChildConversation(sessionId);
-    }
-  }
-
   function getDropPosition(event: DragEvent<HTMLElement>): OpenConversationDropPosition {
     const bounds = event.currentTarget.getBoundingClientRect();
     return event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
@@ -2864,7 +2780,6 @@ export function Sidebar() {
       writeThreadsSortMode('manual');
     }
 
-    detachDraggedChildConversationIfNeeded(draggingSessionId);
     moveSession(draggingSessionId, targetSection, targetSessionId, position);
     clearDragState();
   }
@@ -3052,7 +2967,6 @@ export function Sidebar() {
     if (draggedConversationId) {
       const targetGroupKey = getActivityTreeGroupKey(targetItem);
       if (targetGroupKey) {
-        detachDraggedChildConversationIfNeeded(draggedConversationId);
         void handleConversationCwdDrop(targetGroupKey, event);
         return;
       }
@@ -3066,13 +2980,11 @@ export function Sidebar() {
         !canDropConversationOnSession(draggedConversationId, targetConversationId) &&
         canDropConversationOnGroup(draggedConversationId, targetConversationGroupKey)
       ) {
-        detachDraggedChildConversationIfNeeded(draggedConversationId);
         void handleConversationCwdDrop(targetConversationGroupKey, event);
         return;
       }
 
       if (targetConversationId && targetSection) {
-        detachDraggedChildConversationIfNeeded(draggedConversationId);
         handleConversationDrop(targetSection, targetConversationId, position);
       } else {
         clearDragState();

@@ -740,7 +740,7 @@ describe('Sidebar', () => {
     expect(html).not.toContain('move between pinned and open conversations');
   });
 
-  it('nests active child conversations under their parent conversation', () => {
+  it('renders active child conversations as flat draggable rows', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child-1', 'conv-123']));
 
     const html = renderSidebar('/conversations/child-1', {
@@ -755,9 +755,10 @@ describe('Sidebar', () => {
       ],
     });
 
-    expect(html.indexOf('Parent conversation')).toBeLessThan(html.indexOf('Child subagent conversation'));
-    expect(html).toContain('aria-label="Collapse Parent conversation"');
-    expect(html).toContain('style="padding-left:1rem"');
+    expect(html).toContain('Parent conversation');
+    expect(html).toContain('Child subagent conversation');
+    expect(html).not.toContain('aria-label="Collapse Parent conversation"');
+    expect(html).not.toContain('style="padding-left:1rem"');
   });
 
   it('hides archived child conversations even when their parent remains visible', () => {
