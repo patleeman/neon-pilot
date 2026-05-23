@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainThread } from 'node:worker_threads';
@@ -177,6 +177,7 @@ import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
+import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
 import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTasks.js';
 import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
@@ -335,8 +336,6 @@ let localLiveSessionCapabilityContext: LiveSessionCapabilityContext | null = nul
 let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | null = null;
 
 const LOCAL_API_DEFERRED_RESUME_POLL_MS = 3_000;
-const MAX_DESKTOP_ROLLBACK_TURNS = 100;
-
 function resolveRepoRoot(): string {
   const defaultRepoRoot = fileURLToPath(new URL('../../..', import.meta.url));
   return process.env.NEON_PILOT_REPO_ROOT ?? process.env.NEON_PILOT_RESOURCES_ROOT ?? defaultRepoRoot;
@@ -1868,64 +1867,6 @@ function resolveDesktopConversationSource(conversationId: string): {
   };
 }
 
-function resolveRollbackLeafId(sessionFile: string, numTurns: number): string | null {
-  const sessionManager = SessionManager.open(sessionFile);
-  const branch = sessionManager.getBranch();
-  const userMessageEntries = branch.filter((entry) => entry.type === 'message' && entry.message.role === 'user');
-
-  if (userMessageEntries.length === 0) {
-    throw new Error('No user turns are available to roll back.');
-  }
-
-  if (numTurns >= userMessageEntries.length) {
-    return null;
-  }
-
-  const firstRemovedTurn = userMessageEntries[userMessageEntries.length - numTurns];
-  if (!firstRemovedTurn) {
-    throw new Error('Could not resolve rollback target.');
-  }
-
-  return firstRemovedTurn.parentId ?? null;
-}
-
-function rewriteConversationSessionToLeaf(sessionFile: string, leafId: string | null): void {
-  const sessionManager = SessionManager.open(sessionFile);
-  const header = sessionManager.getHeader();
-  if (!header) {
-    throw new Error('Conversation session header is missing.');
-  }
-
-  if (leafId === null) {
-    writeFileSync(sessionFile, `${JSON.stringify(header)}\n`, 'utf-8');
-    return;
-  }
-
-  const branchedSessionFile = sessionManager.createBranchedSession(leafId);
-  if (!branchedSessionFile || !existsSync(branchedSessionFile)) {
-    throw new Error('Unable to create rollback snapshot.');
-  }
-
-  try {
-    const lines = readFileSync(branchedSessionFile, 'utf-8')
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0);
-
-    if (lines.length === 0) {
-      throw new Error('Rollback snapshot was empty.');
-    }
-
-    lines[0] = JSON.stringify(header);
-    writeFileSync(sessionFile, `${lines.join('\n')}\n`, 'utf-8');
-  } finally {
-    try {
-      unlinkSync(branchedSessionFile);
-    } catch {
-      // Ignore temporary rollback snapshot cleanup failures.
-    }
-  }
-}
-
 export async function createDesktopLiveSession(input: {
   cwd?: string;
   workspaceCwd?: string | null;
@@ -2123,9 +2064,7 @@ export async function rollbackDesktopConversation(input: {
   conversationId: string;
   numTurns: number;
 }): Promise<{ id: string; sessionFile: string }> {
-  if (!Number.isSafeInteger(input.numTurns) || input.numTurns <= 0 || input.numTurns > MAX_DESKTOP_ROLLBACK_TURNS) {
-    throw new Error('numTurns must be a positive integer.');
-  }
+  validateDesktopRollbackTurns(input.numTurns);
 
   const conversationId = input.conversationId.trim();
   const source = resolveDesktopConversationSource(conversationId);
