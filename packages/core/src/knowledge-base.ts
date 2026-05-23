@@ -23,6 +23,7 @@ import {
   type WorkingSnapshotEntry,
   writeStoredKnowledgeBaseState,
 } from './knowledge-base-state.js';
+import { readKnowledgeBaseSyncLockMetadata, type SyncLockMetadata } from './knowledge-base-sync-lock.js';
 import { parseKnowledgeBaseTimestampMs, toKnowledgeBaseIsoTimestamp } from './knowledge-base-time.js';
 import {
   DEFAULT_MACHINE_KNOWLEDGE_BASE_BRANCH,
@@ -72,11 +73,6 @@ interface RuntimeSyncState {
   lastSyncAt?: string;
   lastError?: string;
   recoveredEntryCount: number;
-}
-
-interface SyncLockMetadata {
-  pid: number;
-  acquiredAt: string;
 }
 
 interface PathChangeResolution {
@@ -351,25 +347,7 @@ function isProcessAlive(pid: number): boolean {
 }
 
 function readSyncLockMetadata(filePath: string): SyncLockMetadata | null {
-  if (!existsSync(filePath)) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<SyncLockMetadata>;
-    const pid = parsed.pid;
-    const acquiredAt = parsed.acquiredAt;
-    if (typeof pid !== 'number' || !Number.isInteger(pid) || typeof acquiredAt !== 'string' || acquiredAt.trim().length === 0) {
-      return null;
-    }
-
-    return {
-      pid,
-      acquiredAt: acquiredAt.trim(),
-    };
-  } catch {
-    return null;
-  }
+  return readKnowledgeBaseSyncLockMetadata(filePath);
 }
 
 function sanitizeRecoveryRelativePath(relativePath: string): string {
