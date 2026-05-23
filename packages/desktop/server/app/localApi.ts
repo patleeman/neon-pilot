@@ -210,6 +210,11 @@ import {
   shouldEmitConversationState,
   shouldRecoverConversationState,
 } from './localApiConversationStateEvents.js';
+import {
+  buildConversationStateSubscriptionSurface,
+  shouldIgnoreConversationStateLiveEvent,
+  shouldSubscribeConversationStateLiveEvents,
+} from './localApiConversationStateSubscription.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
@@ -814,14 +819,14 @@ export async function subscribeDesktopConversationState(
   const syncLiveSubscription = () => {
     closeLiveSubscription();
 
-    if (!currentState.liveSession.live) {
+    if (!shouldSubscribeConversationStateLiveEvents(currentState.liveSession.live)) {
       return;
     }
 
     liveUnsubscribe = subscribeLiveSession(
       conversationId,
       (event) => {
-        if (closed) {
+        if (shouldIgnoreConversationStateLiveEvent(closed)) {
           return;
         }
 
@@ -850,7 +855,7 @@ export async function subscribeDesktopConversationState(
       },
       {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-        ...(input.surfaceId && input.surfaceType ? { surface: { surfaceId: input.surfaceId, surfaceType: input.surfaceType } } : {}),
+        ...buildConversationStateSubscriptionSurface(input),
       },
     );
   };
