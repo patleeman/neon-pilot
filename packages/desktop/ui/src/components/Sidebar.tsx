@@ -60,7 +60,12 @@ import { buildSidebarNavSectionStorageKey } from '../local/localSettings';
 import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspacePaths } from '../local/savedWorkspacePaths';
 import { routeIsKnowledge, routeMatchesPrefix } from '../navigation/routeRegistry';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
-import { type ConversationShelf, type OpenConversationDropPosition, replaceConversationLayout } from '../session/sessionTabs';
+import {
+  type ConversationShelf,
+  type OpenConversationDropPosition,
+  readConversationLayout,
+  replaceConversationLayout,
+} from '../session/sessionTabs';
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
 import { ConversationStatusText } from './ConversationStatusText';
@@ -2801,10 +2806,13 @@ export function Sidebar() {
     try {
       const result = await api.changeConversationCwd(draggedConversationId, targetGroup.cwd, conversationSurfaceId);
       if (result.changed && result.id !== draggedConversationId) {
+        const nextActiveSessionId =
+          activeConversationSurfaceId === draggedConversationId ? result.id : readConversationLayout().activeSessionId;
         replaceConversationLayout({
           sessionIds: openIds.map((id) => (id === draggedConversationId ? result.id : id)),
           pinnedSessionIds: pinnedIds.map((id) => (id === draggedConversationId ? result.id : id)),
           archivedSessionIds: archivedConversationIds,
+          activeSessionId: nextActiveSessionId,
         });
 
         if (activeConversationSurfaceId === draggedConversationId) {

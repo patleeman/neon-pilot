@@ -363,12 +363,13 @@ export function useConversations() {
       ...automationThreadTitleBySessionId.keys(),
     ]);
 
-    // During the local-write grace window, protect the active conversation from being
-    // pruned. A fork/branch adds the new session to openIds synchronously, but the
-    // server sessions list updates asynchronously. Without this guard the orphan cleanup
-    // fires between those two events and removes the fork.
-    if (activeId && isWithinLocalWriteGrace()) {
-      knownSessionIds.add(activeId);
+    // During the local-write grace window, protect locally-open conversations from
+    // being pruned. Fork/branch/cwd-change flows can add a replacement session id
+    // synchronously before the server sessions list catches up.
+    if (isWithinLocalWriteGrace()) {
+      for (const id of [...openIds, ...pinnedIds, ...(activeId ? [activeId] : [])]) {
+        knownSessionIds.add(id);
+      }
     }
 
     const nextOpenIds = openIds.filter((id) => knownSessionIds.has(id));

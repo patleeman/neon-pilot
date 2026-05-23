@@ -280,7 +280,7 @@ describe('Sidebar group drag reordering', () => {
 
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-alpha', betaPath, expect.any(String));
     expect(apiMocks.sessions).toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-beta']);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-alpha-moved', 'conv-beta']);
     expect(container.textContent).toContain('Moved conversation to beta-worktree.');
   });
 
