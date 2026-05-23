@@ -39,6 +39,7 @@ import {
   shouldReleaseKnowledgeBaseSyncLock,
   tryCreateKnowledgeBaseSyncLock,
 } from './knowledge-base-sync-lock-runtime.js';
+import { validateKnowledgeBaseSyncResult } from './knowledge-base-sync-validation.js';
 import { parseKnowledgeBaseTimestampMs, toKnowledgeBaseIsoTimestamp } from './knowledge-base-time.js';
 import {
   type MachineConfigOptions,
@@ -595,29 +596,11 @@ export class KnowledgeBaseManager {
   }
 
   private validateSyncResult(baseSnapshot: Snapshot, finalPaths: Set<string>): { valid: boolean; reason?: string } {
-    const baseFileCount = Object.keys(baseSnapshot).length;
-    const resultFileCount = finalPaths.size;
-
-    if (baseFileCount === 0) {
-      return { valid: true };
-    }
-
-    if (resultFileCount === 0) {
-      return {
-        valid: false,
-        reason: `Sync would produce an empty working tree (${resultFileCount} files) from a base with ${baseFileCount} files. Aborting sync to prevent data loss.`,
-      };
-    }
-
-    const ratio = resultFileCount / baseFileCount;
-    if (ratio < KNOWLEDGE_BASE_MIN_FILE_RATIO) {
-      return {
-        valid: false,
-        reason: `Sync would drop ${baseFileCount - resultFileCount} of ${baseFileCount} files (ratio ${ratio.toFixed(3)} < minimum ${KNOWLEDGE_BASE_MIN_FILE_RATIO}). Aborting sync to prevent data loss.`,
-      };
-    }
-
-    return { valid: true };
+    return validateKnowledgeBaseSyncResult({
+      baseFileCount: Object.keys(baseSnapshot).length,
+      resultFileCount: finalPaths.size,
+      minFileRatio: KNOWLEDGE_BASE_MIN_FILE_RATIO,
+    });
   }
 
   private tryAcquireSyncLock(timestamp: string): boolean {
