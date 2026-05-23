@@ -213,6 +213,7 @@ import {
   normalizeRequiredLiveConversationId,
 } from './localApiLiveSessionResponse.js';
 import { buildDesktopMutationOkResponse, buildSavedModelPreferencePatch } from './localApiModelPreferenceResponse.js';
+import { normalizeRequiredProviderOAuthLoginId, shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
 import {
@@ -1205,10 +1206,7 @@ export async function cancelDesktopProviderOAuthLogin(loginId: string) {
 
 export async function subscribeDesktopProviderOAuthLogin(loginId: string, onState: (state: unknown) => void): Promise<() => void> {
   await getLocalRoutes();
-  const normalizedLoginId = loginId.trim();
-  if (!normalizedLoginId) {
-    throw new Error('loginId required');
-  }
+  const normalizedLoginId = normalizeRequiredProviderOAuthLoginId(loginId);
 
   let closed = false;
   let unsubscribe = () => {};
@@ -1218,12 +1216,9 @@ export async function subscribeDesktopProviderOAuthLogin(loginId: string, onStat
     }
 
     onState(state);
-    if (state && typeof state === 'object' && 'status' in state) {
-      const status = typeof state.status === 'string' ? state.status : '';
-      if (status === 'completed' || status === 'failed' || status === 'cancelled') {
-        closed = true;
-        unsubscribe();
-      }
+    if (shouldCloseProviderOAuthSubscription(state)) {
+      closed = true;
+      unsubscribe();
     }
   };
 
