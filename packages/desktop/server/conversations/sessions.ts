@@ -82,6 +82,7 @@ import {
 } from './sessionLineSanitizers.js';
 import { extractSearchTextFromMessage as extractSearchTextFromMessageValue } from './sessionMessageSearchText.js';
 import { buildSessionInfoRecord, normalizeSessionName } from './sessionNaming.js';
+import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
 import {
   resolveSessionsDir as resolveSessionsDirValue,
   resolveSessionsIndexFile as resolveSessionsIndexFileValue,
@@ -1279,7 +1280,7 @@ export function appendParentConversationBacklinkEntry(input: {
 
   const parentMeta = input.parentSessionFile ? readSessionMetaByFile(input.parentSessionFile) : readSessionMeta(parentId);
   const parentTitle = parentMeta?.title?.trim() || parentId;
-  const label = input.kind === 'subagent' ? 'Subagent' : input.kind.charAt(0).toUpperCase() + input.kind.slice(1);
+  const label = resolveParentBacklinkLabel(input.kind);
   const leafId = readCurrentSessionLeafId(input.sessionFile);
 
   appendFileSync(
@@ -1290,7 +1291,7 @@ export function appendParentConversationBacklinkEntry(input: {
       parentId: leafId,
       timestamp: new Date().toISOString(),
       customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
-      content: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}`,
+      content: buildParentBacklinkContent({ label, parentTitle, parentId, parentMessageId: input.parentMessageId }),
     })}\n`,
     'utf-8',
   );
