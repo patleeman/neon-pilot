@@ -176,6 +176,7 @@ import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput
 import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
+import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
@@ -1067,14 +1068,7 @@ export async function readDesktopConversationPlansWorkspace() {
 export async function readDesktopOpenConversationTabs() {
   const context = await getLocalServerRouteContext();
   const saved = readSavedUiPreferences(context.getSettingsFile());
-  return {
-    sessionIds: saved.openConversationIds,
-    pinnedSessionIds: saved.pinnedConversationIds,
-    archivedSessionIds: saved.archivedConversationIds,
-    activeConversationId: saved.activeConversationId ?? null,
-    workspacePaths: saved.workspacePaths,
-    remoteControlledConversationIds: saved.remoteControlledConversationIds,
-  };
+  return buildDesktopOpenConversationTabsResponse(saved);
 }
 
 export async function updateDesktopOpenConversationTabs(input: {
@@ -1108,12 +1102,7 @@ export async function updateDesktopOpenConversationTabs(input: {
   }
   return {
     ok: true as const,
-    sessionIds: saved.openConversationIds,
-    pinnedSessionIds: saved.pinnedConversationIds,
-    archivedSessionIds: saved.archivedConversationIds,
-    activeConversationId: saved.activeConversationId ?? null,
-    workspacePaths: saved.workspacePaths,
-    remoteControlledConversationIds: saved.remoteControlledConversationIds,
+    ...buildDesktopOpenConversationTabsResponse(saved),
   };
 }
 
