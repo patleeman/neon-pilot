@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFile } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -62,6 +62,11 @@ import {
   resolveRelatedThreadsSummaryDetail,
 } from './sessionRelatedContext.js';
 import { appendSessionSearchSegment, buildSessionSearchTextFromEntries } from './sessionSearchText.js';
+import {
+  decorateSessionParentIds as decorateSessionParentIdsForMetas,
+  readSourceRunIdFromSessionFilePath as readSourceRunIdFromSessionPath,
+  resolveSessionIdByFile as resolveSessionIdByFileFromMap,
+} from './sessionTopologyMetadata.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
 const DEFAULT_SESSIONS_DIR = getDurableSessionsDir();
@@ -1642,46 +1647,15 @@ export function appendConversationWorkspaceMetadata(input: {
 }
 
 function readSourceRunIdFromSessionFilePath(filePath: string): string | undefined {
-  const sessionsDir = resolveSessionsDir();
-  const relativePath = relative(sessionsDir, filePath).replace(/\\/g, '/');
-  const segments = relativePath.split('/').filter((segment) => segment.length > 0);
-  if (segments.length < 3 || segments[0] !== '__runs') {
-    return undefined;
-  }
-
-  return segments[1];
+  return readSourceRunIdFromSessionPath({ sessionsDir: resolveSessionsDir(), filePath });
 }
 
 function decorateSessionParentIds(metas: SessionMeta[]): SessionMeta[] {
-  const sessionIdByFile = new Map(metas.map((meta) => [meta.file, meta.id] as const));
-
-  return metas.map((meta) => {
-    const parentSessionFile = normalizeOptionalPath(meta.parentSessionFile);
-    const parentSessionId = parentSessionFile ? sessionIdByFile.get(parentSessionFile) : undefined;
-
-    if (meta.parentSessionFile === parentSessionFile && meta.parentSessionId === parentSessionId) {
-      return meta;
-    }
-
-    return {
-      ...meta,
-      ...(parentSessionFile ? { parentSessionFile } : {}),
-      ...(parentSessionId ? { parentSessionId } : {}),
-    };
-  });
+  return decorateSessionParentIdsForMetas(metas, normalizeOptionalPath) as SessionMeta[];
 }
 
 function resolveSessionIdByFile(filePath: string): string | undefined {
-  const normalizedFilePath = normalizeOptionalPath(filePath);
-  if (!normalizedFilePath) return undefined;
-
-  for (const [sessionId, sessionFile] of sessionFileById.entries()) {
-    if (normalizeOptionalPath(sessionFile) === normalizedFilePath) {
-      return sessionId;
-    }
-  }
-
-  return undefined;
+  return resolveSessionIdByFileFromMap({ filePath, sessionFileById, normalizeOptionalPath });
 }
 
 function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta | null {
