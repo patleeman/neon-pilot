@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
@@ -147,6 +147,27 @@ describe('unified nodes', () => {
         { vaultRoot },
       ),
     ).toThrow('Invalid node createdAt');
+  });
+
+  it('creates notes, projects, and skills in their canonical paths', () => {
+    const stateRoot = createTempStateRoot();
+    const vaultRoot = join(stateRoot, 'sync');
+
+    const note = createUnifiedNode({ id: 'note-a', title: 'Note A', summary: 'Note summary.', tags: ['type:note'] }, { vaultRoot });
+    const project = createUnifiedNode(
+      { id: 'project-a', title: 'Project A', summary: 'Project summary.', tags: ['type:project'] },
+      { vaultRoot },
+    );
+    const skill = createUnifiedNode(
+      { id: 'skill-a', title: 'Skill A', summary: 'Skill summary.', tags: ['type:skill', 'profile:assistant'] },
+      { vaultRoot },
+    );
+
+    expect(note.node.filePath).toBe(join(vaultRoot, 'notes', 'note-a.md'));
+    expect(project.node.filePath).toBe(join(vaultRoot, 'projects', 'project-a', 'project.md'));
+    expect(skill.node.filePath).toBe(join(vaultRoot, 'skills', 'skill-a', 'SKILL.md'));
+    expect(skill.node.tags).toContain('profile:assistant');
+    expect(readFileSync(skill.node.filePath, 'utf-8')).toContain('profiles:\n  - assistant');
   });
 
   it('loads notes, skills, and projects from the canonical vault layout', () => {

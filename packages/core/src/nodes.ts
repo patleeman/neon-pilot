@@ -1004,6 +1004,79 @@ export function findUnifiedNodes(nodes: UnifiedNodeRecord[], query?: string): Un
   return nodes.filter((node) => matchesUnifiedNodeQuery(node, query));
 }
 
+interface NormalizedCreateUnifiedNodeInput {
+  id: string;
+  title: string;
+  summary: string;
+  description?: string;
+  status: string;
+  tags: string[];
+  body: string;
+  createdAt?: string;
+  updatedAt: string;
+  createdBy?: string;
+  parent?: string;
+  related?: string[];
+  relationships?: UnifiedNodeRelationship[];
+}
+
+interface UnifiedNodeKindWriter {
+  targetPath: (vaultRoot: string, input: NormalizedCreateUnifiedNodeInput) => string;
+  write: (targetPath: string, input: NormalizedCreateUnifiedNodeInput) => UnifiedNodeRecord;
+}
+
+function writeFrontmatterBackedNode(targetPath: string, input: NormalizedCreateUnifiedNodeInput): UnifiedNodeRecord {
+  return writeUnifiedNode(
+    targetPath,
+    buildNodeFrontmatter({
+      id: input.id,
+      title: input.title,
+      summary: input.summary,
+      description: input.description,
+      status: input.status,
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt,
+      createdBy: input.createdBy,
+      tags: input.tags,
+      parent: input.parent,
+      related: input.related,
+      relationships: input.relationships,
+    }),
+    input.body,
+  );
+}
+
+const CREATE_UNIFIED_NODE_WRITERS: Record<string, UnifiedNodeKindWriter> = {
+  project: {
+    targetPath: (vaultRoot, input) => join(getDurableProjectsDir(vaultRoot), input.id, 'project.md'),
+    write: writeFrontmatterBackedNode,
+  },
+  skill: {
+    targetPath: (vaultRoot, input) => join(getDurableSkillsDir(vaultRoot), input.id, 'SKILL.md'),
+    write: (targetPath, input) =>
+      writeSkillNode(targetPath, {
+        id: input.id,
+        title: input.title,
+        summary: input.summary,
+        description: input.description,
+        status: input.status,
+        profiles: collectTagValues(input.tags, 'profile'),
+        body: input.body,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt,
+        createdBy: input.createdBy,
+      }),
+  },
+  note: {
+    targetPath: (vaultRoot, input) => join(getDurableNotesDir(vaultRoot), `${input.id}.md`),
+    write: writeFrontmatterBackedNode,
+  },
+};
+
+function resolveCreateUnifiedNodeWriter(primaryKind: string): UnifiedNodeKindWriter {
+  return CREATE_UNIFIED_NODE_WRITERS[primaryKind] ?? CREATE_UNIFIED_NODE_WRITERS.note;
+}
+
 export function createUnifiedNode(input: CreateUnifiedNodeInput, options: ResolveNodesOptions = {}): CreateUnifiedNodeResult {
   validateUnifiedNodeId(input.id);
   const id = input.id.trim().toLowerCase();
@@ -1026,73 +1099,27 @@ export function createUnifiedNode(input: CreateUnifiedNodeInput, options: Resolv
   const status = input.status?.trim() || 'active';
   const updatedAt = input.updatedAt ?? new Date().toISOString();
 
-  let targetPath: string;
-  let node: UnifiedNodeRecord;
-
-  if (primaryKind === 'project') {
-    targetPath = join(getDurableProjectsDir(vaultRoot), id, 'project.md');
-    if (existsSync(targetPath) && !overwrite) {
-      throw new Error(`Node already exists at ${targetPath}. Pass force=true to overwrite.`);
-    }
-    node = writeUnifiedNode(
-      targetPath,
-      buildNodeFrontmatter({
-        id,
-        title,
-        summary,
-        description,
-        status,
-        createdAt: input.createdAt,
-        updatedAt,
-        createdBy: input.createdBy,
-        tags,
-        parent: input.parent?.trim() || undefined,
-        related: input.related,
-        relationships: input.relationships,
-      }),
-      body,
-    );
-  } else if (primaryKind === 'skill') {
-    targetPath = join(getDurableSkillsDir(vaultRoot), id, 'SKILL.md');
-    if (existsSync(targetPath) && !overwrite) {
-      throw new Error(`Node already exists at ${targetPath}. Pass force=true to overwrite.`);
-    }
-    node = writeSkillNode(targetPath, {
-      id,
-      title,
-      summary,
-      description,
-      status,
-      profiles: collectTagValues(tags, 'profile'),
-      body,
-      createdAt: input.createdAt,
-      updatedAt,
-      createdBy: input.createdBy,
-    });
-  } else {
-    targetPath = join(getDurableNotesDir(vaultRoot), `${id}.md`);
-    if (existsSync(targetPath) && !overwrite) {
-      throw new Error(`Node already exists at ${targetPath}. Pass force=true to overwrite.`);
-    }
-    node = writeUnifiedNode(
-      targetPath,
-      buildNodeFrontmatter({
-        id,
-        title,
-        summary,
-        description,
-        status,
-        createdAt: input.createdAt,
-        updatedAt,
-        createdBy: input.createdBy,
-        tags,
-        parent: input.parent?.trim() || undefined,
-        related: input.related,
-        relationships: input.relationships,
-      }),
-      body,
-    );
+  const normalized: NormalizedCreateUnifiedNodeInput = {
+    id,
+    title,
+    summary,
+    description,
+    status,
+    tags,
+    body,
+    createdAt: input.createdAt,
+    updatedAt,
+    createdBy: input.createdBy,
+    parent: input.parent?.trim() || undefined,
+    related: input.related,
+    relationships: input.relationships,
+  };
+  const writer = resolveCreateUnifiedNodeWriter(primaryKind);
+  const targetPath = writer.targetPath(vaultRoot, normalized);
+  if (existsSync(targetPath) && !overwrite) {
+    throw new Error(`Node already exists at ${targetPath}. Pass force=true to overwrite.`);
   }
+  const node = writer.write(targetPath, normalized);
 
   return { nodesDir: resolveUnifiedNodesDir({ vaultRoot }), node, overwritten: overwrite };
 }
