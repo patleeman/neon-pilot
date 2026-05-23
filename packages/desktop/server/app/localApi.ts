@@ -222,6 +222,7 @@ import { resolveLocalApiRepoRoot } from './localApiPaths.js';
 import { normalizeRequiredProviderOAuthLoginId, shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 import { buildRenameDesktopConversationResult, resolveRenamedStoredConversationTitle } from './localApiRenameConversation.js';
 import { normalizeLocalApiRequestHeaders, readLocalApiRequestHeader } from './localApiRequestHeaders.js';
+import { buildLocalApiRequestUrl } from './localApiRequestUrl.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
 import {
   buildUnchangedSessionDetailResponse,
@@ -405,7 +406,7 @@ function createLocalApiRequest(input: {
   const normalizedHeaders = normalizeLocalApiRequestHeaders(input.headers);
   request.method = input.method;
   request.path = input.url.pathname;
-  request.url = `${input.url.pathname}${input.url.search}`;
+  request.url = buildLocalApiRequestUrl(input.url.pathname, input.url.search);
   request.originalUrl = request.url;
   request.query = buildLocalApiQueryObject(input.url.searchParams);
   request.params = input.params;
