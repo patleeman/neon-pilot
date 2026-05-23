@@ -24,6 +24,12 @@ import {
   validateSearchProviderContributions,
 } from './extensionDiscoveryContributionValidation.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
+import {
+  validateContextMenuContributions,
+  validateSelectionActionContributions,
+  validateSubscriptionContributions,
+  validateTranscriptBlockContributions,
+} from './extensionInteractionContributionValidation.js';
 import { readInvalidExtensionManifestMetadata } from './extensionInvalidManifests.js';
 import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig.js';
 import type { ExtensionManifest, ExtensionPackageType, ExtensionSurface, ExtensionViewContribution } from './extensionManifest.js';
@@ -903,63 +909,19 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 
   if (contributes.contextMenus !== undefined) {
-    for (const [index, menu] of assertRecordArray(contributes.contextMenus, 'contributes.contextMenus').entries()) {
-      requireString(menu.id, `contributes.contextMenus[${index}].id`);
-      requireString(menu.title, `contributes.contextMenus[${index}].title`);
-      requireString(menu.action, `contributes.contextMenus[${index}].action`);
-      validateEnum(
-        menu.surface,
-        ['message', 'conversationList', 'selection', 'fileSelection', 'transcriptSelection'],
-        `contributes.contextMenus[${index}].surface`,
-      );
-      if (menu.separator !== undefined && typeof menu.separator !== 'boolean') {
-        throw new Error(`Extension manifest contributes.contextMenus[${index}].separator must be a boolean.`);
-      }
-      validateOptionalString(menu.when, `contributes.contextMenus[${index}].when`);
-    }
+    validateContextMenuContributions(contributes.contextMenus);
   }
 
   if (contributes.selectionActions !== undefined) {
-    for (const [index, action] of assertRecordArray(contributes.selectionActions, 'contributes.selectionActions').entries()) {
-      requireString(action.id, `contributes.selectionActions[${index}].id`);
-      requireString(action.title, `contributes.selectionActions[${index}].title`);
-      requireString(action.action, `contributes.selectionActions[${index}].action`);
-      const kinds = requireStringArray(action.kinds, `contributes.selectionActions[${index}].kinds`);
-      for (const [kindIndex, kind] of kinds.entries()) {
-        validateEnum(kind, ['text', 'messages', 'files', 'transcriptRange'], `contributes.selectionActions[${index}].kinds[${kindIndex}]`);
-      }
-      validateOptionalString(action.icon, `contributes.selectionActions[${index}].icon`);
-      validateOptionalString(action.when, `contributes.selectionActions[${index}].when`);
-      if (action.priority !== undefined && (typeof action.priority !== 'number' || !Number.isInteger(action.priority))) {
-        throw new Error(`Extension manifest contributes.selectionActions[${index}].priority must be an integer.`);
-      }
-    }
+    validateSelectionActionContributions(contributes.selectionActions);
   }
 
   if (contributes.transcriptBlocks !== undefined) {
-    for (const [index, block] of assertRecordArray(contributes.transcriptBlocks, 'contributes.transcriptBlocks').entries()) {
-      requireString(block.id, `contributes.transcriptBlocks[${index}].id`);
-      requireString(block.component, `contributes.transcriptBlocks[${index}].component`);
-      validateOptionalString(block.title, `contributes.transcriptBlocks[${index}].title`);
-      if (block.schemaVersion !== undefined && (typeof block.schemaVersion !== 'number' || !Number.isInteger(block.schemaVersion))) {
-        throw new Error(`Extension manifest contributes.transcriptBlocks[${index}].schemaVersion must be an integer.`);
-      }
-    }
+    validateTranscriptBlockContributions(contributes.transcriptBlocks);
   }
 
   if (contributes.subscriptions !== undefined) {
-    for (const [index, subscription] of assertRecordArray(contributes.subscriptions, 'contributes.subscriptions').entries()) {
-      requireString(subscription.id, `contributes.subscriptions[${index}].id`);
-      requireString(subscription.handler, `contributes.subscriptions[${index}].handler`);
-      requireString(subscription.source, `contributes.subscriptions[${index}].source`);
-      validateOptionalString(subscription.pattern, `contributes.subscriptions[${index}].pattern`);
-      if (
-        subscription.debounceMs !== undefined &&
-        (typeof subscription.debounceMs !== 'number' || !Number.isInteger(subscription.debounceMs))
-      ) {
-        throw new Error(`Extension manifest contributes.subscriptions[${index}].debounceMs must be an integer.`);
-      }
-    }
+    validateSubscriptionContributions(contributes.subscriptions);
   }
 
   if (contributes.threadHeaderActions !== undefined) {
