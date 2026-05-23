@@ -685,6 +685,18 @@ export function registerExtensionRoutes(
     }
   });
 
+  router.delete('/api/extensions/:id', async (req, res) => {
+    try {
+      const { deleteRuntimeExtension } = await import('../extensions/extensionLifecycle.js');
+      res.json(await deleteRuntimeExtension(req.params.id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status = /not found/i.test(message) ? 404 : /packaged system|package root|path escapes/i.test(message) ? 400 : 500;
+      logError('extension delete error', { message, stack: err instanceof Error ? err.stack : undefined });
+      res.status(status).json({ error: message });
+    }
+  });
+
   router.post('/api/extensions/reload', (_req, res) => {
     res.json({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
   });

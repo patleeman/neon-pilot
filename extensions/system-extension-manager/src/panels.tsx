@@ -148,10 +148,12 @@ function ExtensionActionsMenu({
   extension,
   busy,
   onOpenFolder,
+  onDelete,
 }: {
   extension: ExtensionInstallSummary;
   busy: boolean;
   onOpenFolder: () => void;
+  onDelete: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -176,6 +178,7 @@ function ExtensionActionsMenu({
   }, []);
   const menuButtonClass =
     'w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50';
+  const canDelete = extension.packageType !== 'system';
 
   return (
     <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
@@ -199,6 +202,15 @@ function ExtensionActionsMenu({
           {extension.packageRoot ? (
             <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
               Open folder
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              className={`${menuButtonClass} text-danger hover:text-danger`}
+              disabled={busy}
+              onClick={(event) => run(event, onDelete)}
+            >
+              Delete
             </button>
           ) : null}
         </div>
@@ -675,6 +687,29 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     [load, location.pathname, navigate],
   );
 
+  const deleteExtension = useCallback(
+    async (extension: ExtensionInstallSummary) => {
+      if (extension.packageType === 'system') return;
+      const confirmed = window.confirm(`Delete ${extension.name}? This removes the extension package from disk.`);
+      if (!confirmed) return;
+      setBusyId(extension.id);
+      setNotice(null);
+      try {
+        await api.deleteExtension(extension.id);
+        setExtensions((items) => items.filter((item) => item.id !== extension.id));
+        notifyExtensionRegistryChanged();
+        if (extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))) {
+          navigate('/extensions', { replace: true });
+        }
+      } catch (err) {
+        showActionError(`Failed to delete ${extension.name}`, err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [location.pathname, navigate, showActionError],
+  );
+
   const openFolder = useCallback((extension: ExtensionInstallSummary) => {
     if (!extension.packageRoot) return;
     const bridge = getDesktopBridge();
@@ -851,7 +886,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               >
                 <DetailsIcon />
               </button>
-              <ExtensionActionsMenu extension={extension} busy={busy} onOpenFolder={() => openFolder(extension)} />
+              <ExtensionActionsMenu
+                extension={extension}
+                busy={busy}
+                onOpenFolder={() => openFolder(extension)}
+                onDelete={() => void deleteExtension(extension)}
+              />
             </div>
           </td>
         </tr>

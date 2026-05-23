@@ -385,6 +385,8 @@ export const api = {
       `/extensions/${encodeURIComponent(extensionId)}`,
       input,
     ),
+  deleteExtension: async (extensionId: string) =>
+    extensionDelete<{ ok: true; extensionId: string; deleted: boolean }>(`/extensions/${encodeURIComponent(extensionId)}`),
   buildExtension: async (extensionId: string) =>
     extensionPost<{ ok: true; extensionId: string; outputs: string[] }>(`/extensions/${encodeURIComponent(extensionId)}/build`),
   validateExtension: async (extensionId: string) =>

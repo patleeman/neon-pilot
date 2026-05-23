@@ -397,3 +397,30 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
     rmSync(extractRoot, { recursive: true, force: true });
   }
 }
+
+export async function deleteRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
+  const id = normalizeExtensionId(extensionId);
+  const entry = findExtensionEntry(id);
+  if (!entry) {
+    throw new Error('Extension not found.');
+  }
+  if (entry.packageType === 'system' || entry.manifest.packageType === 'system') {
+    throw new Error('Packaged system extensions cannot be deleted.');
+  }
+  if (!entry.packageRoot) {
+    throw new Error('Extension package root is unavailable.');
+  }
+
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+  assertInside(runtimeRoot, entry.packageRoot);
+
+  const { stopExtensionServices } = await import('./extensionServices.js');
+  await stopExtensionServices(id);
+  const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
+  unregisterBashProcessWrapper(id);
+  const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
+  uninstallExtensionSubscriptions(id);
+
+  rmSync(entry.packageRoot, { recursive: true, force: true });
+  return { ok: true as const, extensionId: id, deleted: true };
+}
