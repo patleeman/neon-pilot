@@ -171,6 +171,7 @@ import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPrefere
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
+import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern } from './localApiRouting.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 import { createServerRouteContext } from './routeContext.js';
@@ -654,45 +655,6 @@ function findMatchingRoute(
   pathname: string,
 ): RegisteredRoute | undefined {
   return routes.find((candidate) => candidate.method === method && candidate.pattern.test(pathname));
-}
-
-function mapSnapshotEventToDesktopAppEvent(event: unknown): unknown | null {
-  if (!event || typeof event !== 'object') {
-    return null;
-  }
-
-  const typedEvent = event as {
-    type?: string;
-    sessions?: unknown;
-    tasks?: unknown;
-    result?: unknown;
-    state?: unknown;
-  };
-
-  switch (typedEvent.type) {
-    case 'sessions_snapshot':
-      return {
-        type: 'sessions',
-        sessions: Array.isArray(typedEvent.sessions) ? typedEvent.sessions : [],
-      };
-    case 'tasks_snapshot':
-      return {
-        type: 'tasks',
-        tasks: Array.isArray(typedEvent.tasks) ? typedEvent.tasks : [],
-      };
-    case 'runs_snapshot':
-      return {
-        type: 'runs',
-        result: typedEvent.result ?? null,
-      };
-    case 'daemon_snapshot':
-      return {
-        type: 'daemon',
-        state: typedEvent.state ?? null,
-      };
-    default:
-      return null;
-  }
 }
 
 async function buildDesktopAppEventsForTopics(topics: readonly string[]): Promise<unknown[]> {
