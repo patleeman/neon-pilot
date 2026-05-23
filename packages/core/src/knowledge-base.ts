@@ -5,6 +5,11 @@ import { dirname, join, resolve } from 'node:path';
 
 import { normalizeKnowledgeBaseBranch, normalizeKnowledgeBaseRepoUrl, safeKnowledgeBaseSlug } from './knowledge-base-config.js';
 import { deleteFileIfExists, directoryHasEntries } from './knowledge-base-files.js';
+import {
+  buildKnowledgeBaseMaintenanceState,
+  planKnowledgeBaseRepositoryMaintenance,
+  runKnowledgeBaseRepositoryMaintenance,
+} from './knowledge-base-maintenance.js';
 import { appendKnowledgeBaseRecoveryIndex, readKnowledgeBaseRecoveryIndex } from './knowledge-base-recovery-index.js';
 import { computeKnowledgeBaseRecoveryEntryId, sanitizeKnowledgeBaseRecoveryRelativePath } from './knowledge-base-recovery-paths.js';
 import {
@@ -381,29 +386,8 @@ function hasRecentLocalChanges(root: string, baseSnapshot: Snapshot, workingSnap
   return hasRecentLocalSnapshotChanges({ root, baseSnapshot, workingSnapshot, nowMs, quietMs: KNOWLEDGE_BASE_LOCAL_CHANGE_QUIET_MS });
 }
 
-function tryRunGitCommand(cwd: string, args: string[]): boolean {
-  try {
-    runGitText(cwd, args);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function runRepositoryMaintenance(root: string, task: 'auto' | 'gc'): boolean {
-  if (task === 'gc') {
-    if (tryRunGitCommand(root, ['maintenance', 'run', '--task=gc', '--quiet'])) {
-      return true;
-    }
-
-    return tryRunGitCommand(root, ['gc', '--quiet']);
-  }
-
-  if (tryRunGitCommand(root, ['maintenance', 'run', '--auto', '--quiet'])) {
-    return true;
-  }
-
-  return tryRunGitCommand(root, ['gc', '--auto', '--quiet']);
+  return runKnowledgeBaseRepositoryMaintenance((cwd, args) => runGitText(cwd, args), root, task);
 }
 
 function normalizeBranchTracking(root: string, branch: string, remoteName = 'origin'): void {
@@ -417,31 +401,20 @@ function maybeRunRepositoryMaintenance(
   timestamp: string,
 ): Pick<StoredKnowledgeBaseState, 'lastMaintenanceAt' | 'lastFullMaintenanceAt'> {
   const nowMs = parseTimestampMs(timestamp) ?? Date.now();
-  const lastMaintenanceAtMs = parseTimestampMs(storedState?.lastMaintenanceAt);
-  const lastFullMaintenanceAtMs = parseTimestampMs(storedState?.lastFullMaintenanceAt);
+  const plan = planKnowledgeBaseRepositoryMaintenance({
+    storedState,
+    timestamp,
+    nowMs,
+    parseTimestampMs,
+    autoMaintenanceIntervalMs: KNOWLEDGE_BASE_AUTO_MAINTENANCE_INTERVAL_MS,
+    fullMaintenanceIntervalMs: KNOWLEDGE_BASE_FULL_MAINTENANCE_INTERVAL_MS,
+  });
 
-  const shouldRunFullMaintenance =
-    lastFullMaintenanceAtMs !== null && nowMs - lastFullMaintenanceAtMs >= KNOWLEDGE_BASE_FULL_MAINTENANCE_INTERVAL_MS;
-  if (shouldRunFullMaintenance && runRepositoryMaintenance(root, 'gc')) {
-    return {
-      lastMaintenanceAt: timestamp,
-      lastFullMaintenanceAt: timestamp,
-    };
+  if (plan.task && runRepositoryMaintenance(root, plan.task)) {
+    return buildKnowledgeBaseMaintenanceState({ task: plan.task, timestamp, storedState });
   }
 
-  const shouldRunAutoMaintenance =
-    lastMaintenanceAtMs === null || nowMs - lastMaintenanceAtMs >= KNOWLEDGE_BASE_AUTO_MAINTENANCE_INTERVAL_MS;
-  if (shouldRunAutoMaintenance && runRepositoryMaintenance(root, 'auto')) {
-    return {
-      lastMaintenanceAt: timestamp,
-      ...(storedState?.lastFullMaintenanceAt ? { lastFullMaintenanceAt: storedState.lastFullMaintenanceAt } : {}),
-    };
-  }
-
-  return {
-    ...(storedState?.lastMaintenanceAt ? { lastMaintenanceAt: storedState.lastMaintenanceAt } : {}),
-    ...(storedState?.lastFullMaintenanceAt ? { lastFullMaintenanceAt: storedState.lastFullMaintenanceAt } : {}),
-  };
+  return plan.previousState;
 }
 
 function knowledgeBaseStateEquals(left: KnowledgeBaseState, right: KnowledgeBaseState): boolean {
