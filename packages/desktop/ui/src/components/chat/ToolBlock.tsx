@@ -115,8 +115,7 @@ export function ToolBlock({
     setPinnedDiffOpen(diffDisclosureMode === 'expanded');
   }, [diffDisclosureMode]);
   const open = resolveDisclosureOpen(autoOpen, preference);
-  const backgroundShellStart = isBackgroundShellStart(block);
-  const terminalBashBlock = isTerminalBashToolBlock(block) || (block.tool === 'bash' && !backgroundShellStart);
+  const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();
   const { tasks, sessions, runs } = useAppData();
   const runLookups = useMemo<RunPresentationLookups>(() => ({ tasks, sessions }), [tasks, sessions]);
@@ -131,6 +130,8 @@ export function ToolBlock({
     }
     return null;
   }, [block.tool, extensionRegistry.extensions]);
+  const backgroundShellStart = isBackgroundShellStart(block);
+  const agentBashTool = block.tool === 'bash' && !backgroundShellStart;
   const meta = backgroundShellStart ? toolMeta('bash') : toolMeta(block.tool);
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
@@ -362,7 +363,36 @@ export function ToolBlock({
         <FileChangesToolDiff fileChanges={fileChanges} />
       ) : null}
 
-      {open && !pinnedTool && (
+      {open && !pinnedTool && agentBashTool && (
+        <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2">
+          <span className="sr-only">input</span>
+          <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-80">
+            <span className="opacity-60">$ </span>
+            {readToolInputString(block.input, 'command') ?? preview}
+            {output
+              ? `\n${output}`
+              : isRunning
+                ? '\nWaiting for output…'
+                : outputDeferred
+                  ? '\nOlder tool output is available on demand.'
+                  : ''}
+          </pre>
+          {outputDeferred && blockId && (
+            <button
+              type="button"
+              onClick={() => {
+                void onHydrateMessage?.(blockId);
+              }}
+              disabled={hydratingDeferredOutput}
+              className="ui-action-button mt-2 text-[10px]"
+            >
+              {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {open && !pinnedTool && !agentBashTool && (
         <div className="border-t border-border-subtle/70">
           <div className="px-2.5 py-2 bg-black/5">
             <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">input</p>

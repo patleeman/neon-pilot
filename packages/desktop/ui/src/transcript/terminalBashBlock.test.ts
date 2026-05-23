@@ -3,22 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { readTerminalBashToolPresentation } from './terminalBashBlock.js';
 
 describe('terminalBashBlock', () => {
-  it('reads normal agent bash tool calls as terminal presentations', () => {
-    expect(
-      readTerminalBashToolPresentation(
-        {
-          type: 'tool_use',
-          id: 'tool-1',
-          tool: 'bash',
-          input: { command: 'rg foo' },
-          output: 'src/app.ts:foo',
-          status: 'done',
-        } as never,
-        { requireDisplayMode: false },
-      )?.command,
-    ).toBe('rg foo');
-  });
-
   it('reads execution wrapper metadata', () => {
     expect(
       readTerminalBashToolPresentation({

@@ -19,7 +19,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
 }) {
-  const presentation = readTerminalBashToolPresentation(block, { requireDisplayMode: false });
+  const presentation = readTerminalBashToolPresentation(block);
   if (!presentation) {
     return null;
   }
@@ -42,7 +42,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   } else if (presentation.exitCode !== undefined) {
     footerBits.push(`exit ${presentation.exitCode}`);
   } else if (isRunning) {
-    footerBits.push('running…');
+    footerBits.push('running');
   }
 
   if (presentation.truncated) {
@@ -57,7 +57,6 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
     <div className="group space-y-1.5">
       <div className={cx('ui-terminal-block', isError ? 'border-danger/35' : null)}>
         <div className="ui-terminal-block__chrome flex items-center gap-2 border-b px-3 py-2 text-[11px]">
-          <span className="sr-only">input</span>
           <span className="min-w-0 flex-1 break-all text-primary">{presentation.command}</span>
           {presentation.executionWrappers.map((wrapper) => (
             <Pill key={wrapper.id} tone="accent" mono>
