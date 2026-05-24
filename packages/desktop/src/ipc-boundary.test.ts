@@ -70,9 +70,12 @@ describe('desktop IPC protocol boundary', () => {
       'unsubscribe-api-stream',
       'subscribe-provider-oauth-login',
       'unsubscribe-provider-oauth-login',
+      'subscribe-conversation-state',
+      'unsubscribe-conversation-state',
       'neon-pilot-desktop-app-events',
       'neon-pilot-desktop-api-stream',
       'neon-pilot-desktop-provider-oauth-login',
+      'neon-pilot-desktop-conversation-state',
       'read-session-search-index',
       'read-vault-files',
       'read-scheduled-task-log',
@@ -107,6 +110,8 @@ describe('desktop IPC protocol boundary', () => {
       'restoreQueuedLiveSessionMessage',
       'clearQueuedLiveSessionMessages',
       'executeLiveSessionBash',
+      'subscribeConversationState',
+      'unsubscribeConversationState',
     ]) {
       expect(exposedRendererBridge, forbidden).not.toContain(forbidden);
     }
