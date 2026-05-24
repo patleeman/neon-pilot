@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { normalize, relative, resolve } from 'node:path';
 
 import { readGitRepoInfo, readGitStatusSummary } from '../workspace/gitStatus.js';
+import { readConversationSessionMetaByFilePath, readTranscriptBackedConversationDetailByFile } from './conversationTranscriptOps.js';
 import type { DisplayBlock } from './conversationTypes.js';
 import { extractTextFromMessageContent, getStableForkBranchEntries, type StableForkBranchEntry } from './liveSessionForking.js';
 import {
@@ -12,7 +13,6 @@ import {
   truncateParallelPreviewText,
   writePersistedParallelJobs,
 } from './liveSessionParallelJobs.js';
-import { readSessionBlocksByFile, readSessionMetaByFile } from './sessions.js';
 
 const PARALLEL_RESULT_CUSTOM_TYPE = 'parallel_result';
 
@@ -235,7 +235,7 @@ function isParallelSideEffectBlock(block: Extract<DisplayBlock, { type: 'tool_us
 }
 
 function readParallelSideEffectsFromSessionFile(sessionFile: string): string[] {
-  const detail = readSessionBlocksByFile(sessionFile);
+  const detail = readTranscriptBackedConversationDetailByFile(sessionFile);
   const blocks = detail?.blocks ?? [];
   const seen = new Set<string>();
   const sideEffects: string[] = [];
@@ -371,7 +371,7 @@ export function reconcileParallelPromptJob(
   job: ParallelPromptJob,
   resolveChildSession: ResolveParallelChildSession = () => undefined,
 ): ParallelPromptJob {
-  const parentMeta = readSessionMetaByFile(sessionFile);
+  const parentMeta = readConversationSessionMetaByFilePath(sessionFile);
   const sourceCwd = parentMeta?.cwd ?? '';
   const repoRoot = sourceCwd ? job.repoRoot?.trim() || readGitRepoInfo(sourceCwd)?.root : job.repoRoot?.trim();
   const childSession = resolveChildSession(job.childConversationId);

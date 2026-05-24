@@ -12,8 +12,6 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationTranscriptOps.ts',
   'packages/desktop/server/conversations/conversationTypes.ts',
   'packages/desktop/server/conversations/conversationService.ts',
-  'packages/desktop/server/conversations/liveSessionParallelReconciliation.ts',
-  'packages/desktop/server/conversations/liveSessionStateSnapshot.ts',
 ]);
 
 const output = execFileSync(

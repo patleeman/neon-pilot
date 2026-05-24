@@ -5,6 +5,7 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 import type { ExtensionModelProfileResolution } from '../extensions/extensionModelProfileResolution.js';
 import type { ExtensionModelProfileRegistration } from '../extensions/extensionRegistry.js';
 import { resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
+import { readTranscriptBackedConversationDetailByFile } from './conversationTranscriptOps.js';
 import type { ThreadGoal } from './conversationTypes.js';
 import type { DisplayBlock } from './conversationTypes.js';
 import type { LiveContextUsage, LiveSessionToolDefinition } from './liveSessionEvents.js';
@@ -15,7 +16,6 @@ import { hasQueuedOrActiveStaleTurn } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 import { applyLatestCompactionSummaryTitle, buildLiveStateBlocks, mergeConversationHistoryBlocks } from './liveSessionTranscript.js';
 import { readGoalFromEntries } from './sessionGoalState.js';
-import { readSessionBlocksByFile } from './sessions.js';
 
 const DEFAULT_LIVE_SNAPSHOT_TAIL_BLOCKS = 400;
 const MAX_LIVE_SNAPSHOT_TAIL_BLOCKS = 10000;
@@ -91,7 +91,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
     };
   }
 
-  const persisted = readSessionBlocksByFile(sessionFile, { tailBlocks: normalizeLiveSnapshotTailBlocks(tailBlocks) });
+  const persisted = readTranscriptBackedConversationDetailByFile(sessionFile, { tailBlocks: normalizeLiveSnapshotTailBlocks(tailBlocks) });
   if (!persisted || persisted.blocks.length === 0) {
     return {
       blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),

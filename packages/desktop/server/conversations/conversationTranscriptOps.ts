@@ -1,4 +1,4 @@
-import type { SessionMeta } from './conversationTypes.js';
+import type { SessionDetail, SessionMeta } from './conversationTypes.js';
 import {
   appendChildConversationTopologyEntry as appendSessionChildConversationTopologyEntry,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
@@ -6,12 +6,17 @@ import {
   appendParentConversationBacklinkEntry as appendSessionParentConversationBacklinkEntry,
   clearSessionCaches,
   listSessions,
+  readSessionBlocksByFile,
   readSessionMetaByFile,
   readSessionSearchText,
 } from './sessions.js';
 
 export function readConversationSessionMetaByFilePath(filePath: string) {
   return readSessionMetaByFile(filePath);
+}
+
+export function readTranscriptBackedConversationDetailByFile(filePath: string, options?: { tailBlocks?: number }): SessionDetail | null {
+  return readSessionBlocksByFile(filePath, options);
 }
 
 export function listTranscriptBackedConversationSessions(): SessionMeta[] {
