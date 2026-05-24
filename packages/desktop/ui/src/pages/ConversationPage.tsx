@@ -374,8 +374,8 @@ interface ExcalidrawEditorSavePayload {
   previewUrl: string;
 }
 
-const INITIAL_HISTORICAL_TAIL_BLOCKS = 60;
-const HISTORICAL_TAIL_BLOCKS_STEP = 200;
+const INITIAL_HISTORICAL_TAIL_BLOCKS = 24;
+const HISTORICAL_TAIL_BLOCKS_STEP = 120;
 const HISTORICAL_TAIL_BLOCKS_STEP_PERCENT = 10;
 const MAX_RELATED_THREAD_SELECTIONS = 5;
 const MAX_VISIBLE_RELATED_THREAD_RESULTS = 10;
@@ -383,10 +383,8 @@ const RELATED_THREAD_RECENT_WINDOW_DAYS = 3;
 const MAX_RELATED_THREAD_CANDIDATES = 24;
 
 const HISTORICAL_TAIL_BLOCKS_JUMP_PADDING = 40;
-const MAX_AUTOMATIC_HISTORICAL_TAIL_BLOCKS = 200;
 const MAX_RENDERED_BLOCKS = 300;
 const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 1400;
-const HISTORICAL_BACKGROUND_PREFETCH_DELAY_MS = 1500;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
 
@@ -1920,7 +1918,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [id, realMessages, scrollToBottom, showInitialHistoricalWarmupLoader]);
 
   const loadOlderMessages = useCallback(
-    (targetMessageIndex?: number, options?: { automatic?: boolean; tailBlockStep?: number }) => {
+    (targetMessageIndex?: number, options?: { tailBlockStep?: number }) => {
       if (!id || sessionLoading || historicalTotalBlocks <= 0) {
         return;
       }
@@ -1932,10 +1930,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const tailBlockStep = Math.max(1, Math.ceil(options?.tailBlockStep ?? HISTORICAL_TAIL_BLOCKS_STEP));
 
       setHistoricalTailBlocks((currentTailBlocks) => {
-        if (options?.automatic && currentTailBlocks >= Math.min(historicalTotalBlocks, MAX_AUTOMATIC_HISTORICAL_TAIL_BLOCKS)) {
-          return currentTailBlocks;
-        }
-
         const minimumTailBlocks =
           typeof targetMessageIndex === 'number'
             ? Math.max(currentTailBlocks + tailBlockStep, historicalTotalBlocks - targetMessageIndex + HISTORICAL_TAIL_BLOCKS_JUMP_PADDING)
@@ -2901,38 +2895,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
-
-  useEffect(() => {
-    if (
-      !id ||
-      sessionLoading ||
-      !historicalHasOlderBlocks ||
-      historicalTailBlocks >= Math.min(historicalTotalBlocks, MAX_AUTOMATIC_HISTORICAL_TAIL_BLOCKS)
-    ) {
-      return;
-    }
-
-    if (isLiveSession && stream.isStreaming) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      loadOlderMessages(undefined, { automatic: true });
-    }, HISTORICAL_BACKGROUND_PREFETCH_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [
-    historicalHasOlderBlocks,
-    historicalTailBlocks,
-    historicalTotalBlocks,
-    id,
-    isLiveSession,
-    loadOlderMessages,
-    sessionLoading,
-    stream.isStreaming,
-  ]);
 
   useEscapeAbortStream({
     isStreaming: stream.isStreaming,
