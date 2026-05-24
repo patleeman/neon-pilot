@@ -261,6 +261,7 @@ function createDesktopProtocolHandler(options?: {
   dispatchReadonlyLocalApiRequest?: typeof dispatchReadonlyLocalApiRequest;
   hostManager?: HostManager;
   hostId?: string;
+  sessionReady?: Promise<void>;
 }) {
   const loadLocalApi = options?.loadLocalApiModule ?? loadLocalApiModule;
   const dispatchReadonlyRequest = options?.dispatchReadonlyLocalApiRequest ?? dispatchReadonlyLocalApiRequest;
@@ -348,6 +349,10 @@ function createDesktopProtocolHandler(options?: {
       }
     }
 
+    if (options?.sessionReady) {
+      await options.sessionReady;
+    }
+
     const filePath = resolveStaticFilePath(url.pathname);
     const fallbackPath = resolveStaticFilePath('/index.html');
     const targetPath = url.pathname.startsWith('/assets/') || url.pathname === '/favicon.ico' ? filePath : fallbackPath;
@@ -368,25 +373,36 @@ function createDesktopProtocolHandler(options?: {
 }
 
 const registeredDesktopProtocolPartitions = new Set<string>();
+const desktopProtocolSessionReady = new Map<string, Promise<void>>();
 
-function configureDesktopProtocolSession(partitionSession: ElectronSession, hostId: string): void {
+function configureDesktopProtocolSession(partitionSession: ElectronSession, hostId: string): Promise<void> {
+  const setup: Promise<unknown>[] = [];
+
   // The local desktop app only serves internal app routes from this partition.
   // Forcing direct proxy mode avoids repeated system proxy/PAC resolution work
   // on macOS, which can show up as browser-process stalls while clicking around.
   if (hostId === 'local') {
-    void partitionSession.setProxy({ mode: 'direct' }).catch(() => {
-      // Keep the desktop shell usable even if Chromium rejects a proxy update.
-    });
+    setup.push(
+      partitionSession.setProxy({ mode: 'direct' }).catch(() => {
+        // Keep the desktop shell usable even if Chromium rejects a proxy update.
+      }),
+    );
 
     // App shell asset URLs are content-hashed, but Chromium can keep a stale
     // neon-pilot://app main bundle across app updates. That stale bundle can
     // then try to dynamically import extension chunks that no longer exist,
-    // blanking every extension-owned page. Clear only the desktop shell session;
+    // blanking every extension-owned page. Static asset requests wait for this
+    // repair before serving the shell so the first load after an update cannot
+    // win the race with cache clearing. Clear only the desktop shell session;
     // browser/workbench web sessions use their own partitions.
-    void partitionSession.clearCache().catch(() => {
-      // Cache clearing is a repair path, not a startup blocker.
-    });
+    setup.push(
+      partitionSession.clearCache().catch(() => {
+        // Cache clearing is a repair path, not a startup blocker.
+      }),
+    );
   }
+
+  return Promise.all(setup).then(() => undefined);
 }
 
 export function ensureDesktopAppProtocolForHost(hostManager: HostManager, hostId: string): void {
@@ -396,24 +412,29 @@ export function ensureDesktopAppProtocolForHost(hostManager: HostManager, hostId
   }
 
   const partitionSession = session.fromPartition(partition);
-  configureDesktopProtocolSession(partitionSession, hostId);
+  const sessionReady = configureDesktopProtocolSession(partitionSession, hostId);
+  desktopProtocolSessionReady.set(partition, sessionReady);
   partitionSession.protocol.handle(
     DESKTOP_APP_SCHEME,
     createDesktopProtocolHandler({
       hostManager,
       hostId,
+      sessionReady,
     }),
   );
   registeredDesktopProtocolPartitions.add(partition);
 }
 
 export function registerDesktopAppProtocol(hostManager: HostManager): void {
+  ensureDesktopAppProtocolForHost(hostManager, 'local');
+  const localPartition = getHostBrowserPartition('local');
+  const sessionReady = desktopProtocolSessionReady.get(localPartition);
   protocol.handle(
     DESKTOP_APP_SCHEME,
     createDesktopProtocolHandler({
       hostManager,
       hostId: 'local',
+      sessionReady,
     }),
   );
-  ensureDesktopAppProtocolForHost(hostManager, 'local');
 }
