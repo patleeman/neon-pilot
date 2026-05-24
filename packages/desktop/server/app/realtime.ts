@@ -17,9 +17,7 @@ type RealtimeServerMessage =
   | { type: 'stream'; subscriptionId: string; event: DesktopLocalApiStreamEvent }
   | { type: 'error'; id?: string; message: string };
 
-type RealtimeClientMessage =
-  | { type: 'subscribe'; id?: string; path?: string }
-  | { type: 'unsubscribe'; id?: string; subscriptionId?: string };
+type RealtimeClientMessage = { type?: string; id?: string; path?: string; subscriptionId?: string };
 
 function writeRealtimeMessage(socket: WebSocket, message: RealtimeServerMessage): void {
   if (socket.readyState !== socket.OPEN) return;
