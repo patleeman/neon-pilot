@@ -83,8 +83,8 @@ describe('api desktop transport', () => {
     expect(tools.cwd).toBe('/repo');
   });
 
-  it('routes extension APIs through the desktop local API bridge when available', async () => {
-    const fetchMock = vi.fn();
+  it('routes extension APIs through HTTP instead of the desktop local API bridge', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, result: 'pong' }));
     vi.stubGlobal('fetch', fetchMock);
     const getEnvironment = vi.fn().mockResolvedValue({
       isElectron: true,
@@ -93,7 +93,7 @@ describe('api desktop transport', () => {
       activeHostKind: 'local',
       activeHostSummary: 'Local backend is healthy.',
     });
-    const invokeLocalApi = vi.fn().mockResolvedValue({ ok: true, result: 'pong' });
+    const invokeLocalApi = vi.fn();
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment,
@@ -105,12 +105,12 @@ describe('api desktop transport', () => {
     const result = await api.invokeExtensionAction('agent-board', 'ping', { hello: true });
 
     expect(result).toEqual({ ok: true, result: 'pong' });
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(invokeLocalApi).toHaveBeenCalledWith({
+    expect(fetchMock).toHaveBeenCalledWith('/api/extensions/agent-board/actions/ping', {
       method: 'POST',
-      path: '/api/extensions/agent-board/actions/ping',
-      body: { hello: true },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hello: true }),
     });
+    expect(invokeLocalApi).not.toHaveBeenCalled();
   });
 
   it('restores queued messages through the local desktop bridge', async () => {
@@ -477,6 +477,42 @@ describe('api desktop transport', () => {
         abortLiveSession,
         destroyLiveSession,
       },
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/status') return createJsonResponse(await readAppStatus());
+      if (path === '/api/daemon') return createJsonResponse(await readDaemonState());
+      if (path === '/api/sessions') return createJsonResponse(await readSessions());
+      if (path === '/api/sessions/conversation-1/meta') return createJsonResponse(await readSessionMeta('conversation-1'));
+      if (path === '/api/sessions/search-index')
+        return createJsonResponse(await readSessionSearchIndex(JSON.parse(String(init?.body)).sessionIds));
+      if (path === '/api/models') return createJsonResponse(await readModels());
+      if (path === '/api/model-providers') return createJsonResponse(await readModelProviders());
+      if (path === '/api/provider-auth') return createJsonResponse(await readProviderAuth());
+      if (path === '/api/provider-auth/oauth/login-1') return createJsonResponse(await readProviderOAuthLogin('login-1'));
+      if (path === '/api/tasks') {
+        if (init?.method === 'POST') return createJsonResponse(await createScheduledTask(JSON.parse(String(init.body))));
+        return createJsonResponse(await readScheduledTasks());
+      }
+      if (path === '/api/tasks/task-1') {
+        if (init?.method === 'PATCH')
+          return createJsonResponse(await updateScheduledTask({ taskId: 'task-1', ...JSON.parse(String(init.body)) }));
+        return createJsonResponse(await readScheduledTaskDetail('task-1'));
+      }
+      if (path === '/api/tasks/task-1/log') return createJsonResponse(await readScheduledTaskLog('task-1'));
+      if (path === '/api/tasks/task-1/run') return createJsonResponse(await runScheduledTask('task-1'));
+      if (path === '/api/runs') return createJsonResponse(await readDurableRuns());
+      if (path === '/api/runs/run-1') return createJsonResponse(await readDurableRun('run-1'));
+      if (path === '/api/runs/run-1/log?tail=25') return createJsonResponse(await readDurableRunLog({ runId: 'run-1', tail: 25 }));
+      if (path === '/api/runs/run-1/attention')
+        return createJsonResponse(await markDurableRunAttention({ runId: 'run-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/runs/run-1/cancel') return createJsonResponse(await cancelDurableRun('run-1'));
+      if (path.startsWith('/api/sessions/live-1?'))
+        return createJsonResponse(await readSessionDetail({ sessionId: 'live-1', tailBlocks: 24 }));
+      if (path === '/api/sessions/live-1/blocks/block-1')
+        return createJsonResponse(await readSessionBlock({ sessionId: 'live-1', blockId: 'block-1' }));
+      return createJsonResponse({});
     });
 
     const { api } = await import('./api');
@@ -963,8 +999,14 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('uses dedicated desktop operator settings bridges on the local Electron host', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}));
+  it('uses HTTP for product operator settings and IPC for native folder picking', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/default-cwd' && init?.method === 'PATCH')
+        return createJsonResponse({ currentCwd: './repo', effectiveCwd: '/repo' });
+      if (path === '/api/default-cwd') return createJsonResponse({ currentCwd: '', effectiveCwd: '/repo' });
+      return createJsonResponse({});
+    });
     vi.stubGlobal('fetch', fetchMock);
     const readDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: '', effectiveCwd: '/repo' });
     const updateDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: './repo', effectiveCwd: '/repo' });
@@ -988,9 +1030,9 @@ describe('api desktop transport', () => {
     const defaultCwd = await api.defaultCwd();
     const savedDefaultCwd = await api.updateDefaultCwd('./repo');
 
-    expect(readDefaultCwd).toHaveBeenCalledTimes(1);
+    expect(readDefaultCwd).not.toHaveBeenCalled();
     expect(updateDefaultCwd).toHaveBeenCalledWith('./repo');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/default-cwd', { method: 'GET', cache: 'no-store' });
     expect(defaultCwd).toEqual({ currentCwd: '', effectiveCwd: '/repo' });
     expect(savedDefaultCwd).toEqual({ currentCwd: './repo', effectiveCwd: '/repo' });
   });
@@ -1057,8 +1099,28 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('uses dedicated desktop open-conversation bridges on the local Electron host', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}));
+  it('uses HTTP for open-conversation layout product state', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/ui/open-conversations' && init?.method === 'PATCH') {
+        return createJsonResponse({
+          ok: true,
+          sessionIds: ['conversation-4'],
+          pinnedSessionIds: ['conversation-5'],
+          archivedSessionIds: ['conversation-6'],
+          workspacePaths: ['/tmp/beta'],
+        });
+      }
+      if (path === '/api/ui/open-conversations') {
+        return createJsonResponse({
+          sessionIds: ['conversation-1'],
+          pinnedSessionIds: ['conversation-2'],
+          archivedSessionIds: ['conversation-3'],
+          workspacePaths: ['/tmp/alpha'],
+        });
+      }
+      return createJsonResponse({});
+    });
     vi.stubGlobal('fetch', fetchMock);
     const readOpenConversationTabs = vi.fn().mockResolvedValue({
       sessionIds: ['conversation-1'],
@@ -1091,13 +1153,9 @@ describe('api desktop transport', () => {
     const layout = await api.openConversationTabs();
     const savedLayout = await api.setOpenConversationTabs(['conversation-4'], ['conversation-5'], ['conversation-6']);
 
-    expect(readOpenConversationTabs).toHaveBeenCalledTimes(1);
-    expect(updateOpenConversationTabs).toHaveBeenCalledWith({
-      sessionIds: ['conversation-4'],
-      pinnedSessionIds: ['conversation-5'],
-      archivedSessionIds: ['conversation-6'],
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(readOpenConversationTabs).not.toHaveBeenCalled();
+    expect(updateOpenConversationTabs).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/ui/open-conversations', { method: 'GET', cache: 'no-store' });
     expect(layout).toEqual({
       sessionIds: ['conversation-1'],
       pinnedSessionIds: ['conversation-2'],

@@ -875,19 +875,153 @@ function dispatchFastConversationContentSearch(input: { body?: unknown }): Deskt
   };
 }
 
+function createDesktopLocalApiJsonResponse(value: unknown): DesktopLocalApiDispatchResult {
+  return {
+    statusCode: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: new TextEncoder().encode(JSON.stringify(value)),
+  };
+}
+
+async function dispatchDesktopLocalProductApiRequest(input: {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: URL;
+  body?: unknown;
+}): Promise<DesktopLocalApiDispatchResult | null> {
+  const path = input.url.pathname;
+  const method = input.method;
+
+  if (method === 'GET' && path === '/api/status') return createDesktopLocalApiJsonResponse(await readDesktopAppStatus());
+  if (method === 'GET' && path === '/api/daemon') return createDesktopLocalApiJsonResponse(await readDesktopDaemonState());
+  if (method === 'GET' && path === '/api/sessions') return createDesktopLocalApiJsonResponse(await readDesktopSessions());
+  if (method === 'POST' && path === '/api/sessions/search-index') {
+    const body = input.body as { sessionIds?: string[] } | undefined;
+    return createDesktopLocalApiJsonResponse(await readDesktopSessionSearchIndex(body?.sessionIds ?? []));
+  }
+
+  const sessionMetaMatch = /^\/api\/sessions\/([^/]+)\/meta$/.exec(path);
+  if (method === 'GET' && sessionMetaMatch) {
+    return createDesktopLocalApiJsonResponse(await readDesktopSessionMeta(decodeURIComponent(sessionMetaMatch[1] ?? '')));
+  }
+  const sessionBlockMatch = /^\/api\/sessions\/([^/]+)\/blocks\/([^/]+)$/.exec(path);
+  if (method === 'GET' && sessionBlockMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopSessionBlock({
+        sessionId: decodeURIComponent(sessionBlockMatch[1] ?? ''),
+        blockId: decodeURIComponent(sessionBlockMatch[2] ?? ''),
+      }),
+    );
+  }
+  const sessionDetailMatch = /^\/api\/sessions\/([^/]+)$/.exec(path);
+  if (method === 'GET' && sessionDetailMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopSessionDetail({
+        sessionId: decodeURIComponent(sessionDetailMatch[1] ?? ''),
+        tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
+        knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
+          ? Number(input.url.searchParams.get('knownBlockOffset'))
+          : undefined,
+        knownTotalBlocks: input.url.searchParams.has('knownTotalBlocks')
+          ? Number(input.url.searchParams.get('knownTotalBlocks'))
+          : undefined,
+        knownLastBlockId: input.url.searchParams.get('knownLastBlockId') ?? undefined,
+      }),
+    );
+  }
+
+  if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
+  if (method === 'GET' && path === '/api/model-providers') return createDesktopLocalApiJsonResponse(await readDesktopModelProviders());
+  if (method === 'GET' && path === '/api/default-cwd') return createDesktopLocalApiJsonResponse(await readDesktopDefaultCwd());
+  if (method === 'GET' && path === '/api/provider-auth') return createDesktopLocalApiJsonResponse(await readDesktopProviderAuth());
+  const providerOAuthMatch = /^\/api\/provider-auth\/oauth\/([^/]+)$/.exec(path);
+  if (method === 'GET' && providerOAuthMatch) {
+    return createDesktopLocalApiJsonResponse(await readDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthMatch[1] ?? '')));
+  }
+  if (method === 'GET' && path === '/api/ui/open-conversations') {
+    return createDesktopLocalApiJsonResponse(await readDesktopOpenConversationTabs());
+  }
+  if (method === 'PATCH' && path === '/api/ui/open-conversations') {
+    return createDesktopLocalApiJsonResponse(
+      await updateDesktopOpenConversationTabs(input.body as Parameters<typeof updateDesktopOpenConversationTabs>[0]),
+    );
+  }
+
+  if (method === 'GET' && path === '/api/tasks') return createDesktopLocalApiJsonResponse(await readDesktopScheduledTasks());
+  if (method === 'GET' && path === '/api/tasks/scheduler/health') {
+    return createDesktopLocalApiJsonResponse(await readDesktopScheduledTaskSchedulerHealth());
+  }
+  if (method === 'POST' && path === '/api/tasks') {
+    return createDesktopLocalApiJsonResponse(
+      await createDesktopScheduledTask(input.body as Parameters<typeof createDesktopScheduledTask>[0]),
+    );
+  }
+  const taskLogMatch = /^\/api\/tasks\/([^/]+)\/log$/.exec(path);
+  if (method === 'GET' && taskLogMatch) {
+    return createDesktopLocalApiJsonResponse(await readDesktopScheduledTaskLog(decodeURIComponent(taskLogMatch[1] ?? '')));
+  }
+  const taskRunMatch = /^\/api\/tasks\/([^/]+)\/run$/.exec(path);
+  if (method === 'POST' && taskRunMatch) {
+    return createDesktopLocalApiJsonResponse(await runDesktopScheduledTask(decodeURIComponent(taskRunMatch[1] ?? '')));
+  }
+  const taskMatch = /^\/api\/tasks\/([^/]+)$/.exec(path);
+  if (taskMatch) {
+    const taskId = decodeURIComponent(taskMatch[1] ?? '');
+    if (method === 'GET') return createDesktopLocalApiJsonResponse(await readDesktopScheduledTaskDetail(taskId));
+    if (method === 'PATCH') {
+      return createDesktopLocalApiJsonResponse(
+        await updateDesktopScheduledTask({ taskId, ...(input.body && typeof input.body === 'object' ? (input.body as object) : {}) }),
+      );
+    }
+    if (method === 'DELETE') return createDesktopLocalApiJsonResponse(await deleteDesktopScheduledTask(taskId));
+  }
+
+  if (method === 'GET' && path === '/api/runs') return createDesktopLocalApiJsonResponse(await readDesktopDurableRuns());
+  const runLogMatch = /^\/api\/runs\/([^/]+)\/log$/.exec(path);
+  if (method === 'GET' && runLogMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopDurableRunLog({
+        runId: decodeURIComponent(runLogMatch[1] ?? ''),
+        tail: input.url.searchParams.has('tail') ? Number(input.url.searchParams.get('tail')) : undefined,
+      }),
+    );
+  }
+  const runCancelMatch = /^\/api\/runs\/([^/]+)\/cancel$/.exec(path);
+  if (method === 'POST' && runCancelMatch) {
+    return createDesktopLocalApiJsonResponse(await cancelDesktopDurableRun(decodeURIComponent(runCancelMatch[1] ?? '')));
+  }
+  const runAttentionMatch = /^\/api\/runs\/([^/]+)\/attention$/.exec(path);
+  if (method === 'POST' && runAttentionMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await markDesktopDurableRunAttention({
+        runId: decodeURIComponent(runAttentionMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as { read?: boolean }),
+      }),
+    );
+  }
+  const runMatch = /^\/api\/runs\/([^/]+)$/.exec(path);
+  if (method === 'GET' && runMatch)
+    return createDesktopLocalApiJsonResponse(await readDesktopDurableRun(decodeURIComponent(runMatch[1] ?? '')));
+
+  return null;
+}
+
 export async function dispatchDesktopLocalApiRequest(input: {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   body?: unknown;
   headers?: Record<string, string>;
 }): Promise<DesktopLocalApiDispatchResult> {
-  if (input.method === 'POST' && new URL(input.path, 'http://desktop.local').pathname === '/api/sessions/search') {
+  const url = new URL(input.path, 'http://desktop.local');
+  const productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body });
+  if (productResponse) return productResponse;
+
+  if (input.method === 'POST' && url.pathname === '/api/sessions/search') {
     const fastResponse = dispatchFastConversationContentSearch({ body: input.body });
     if (fastResponse) return fastResponse;
   }
 
   const routes = await getLocalRoutes();
-  const url = new URL(input.path, 'http://desktop.local');
   const route = findMatchingLocalApiRoute(routes, input.method, url.pathname);
 
   if (!route) {
