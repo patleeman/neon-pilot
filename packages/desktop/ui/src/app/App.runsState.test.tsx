@@ -96,6 +96,14 @@ async function emitDesktopEvent(event: DesktopAppEvent) {
   });
 }
 
+async function flushInvalidationRefresh() {
+  await act(async () => {
+    vi.advanceTimersByTime(150);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe('App execution state integration', () => {
   let root: Root | null = null;
   let container: HTMLDivElement | null = null;
@@ -175,6 +183,7 @@ describe('App execution state integration', () => {
     });
 
     await emitDesktopEvent({ type: 'invalidate', topics: ['executions'] });
+    await flushInvalidationRefresh();
 
     expect(apiExecutionsMock).toHaveBeenCalledTimes(1);
     expect(container.textContent).toContain('executions version 1');

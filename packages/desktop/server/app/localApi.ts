@@ -158,7 +158,6 @@ import {
 } from '../models/providerDesktopCapability.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
-import { buildSnapshotEventsForTopic, INITIAL_APP_EVENT_TOPICS } from '../routes/system.js';
 import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import { logError } from '../shared/logging.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
@@ -170,7 +169,6 @@ import { pickFolderCapability, readVaultFilesCapability } from '../workspace/wor
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { shouldRefreshDesktopConversationStateForAppEvent } from './localApiConversationEvents.js';
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
-import { mapSnapshotEventToDesktopAppEvent } from './localApiEvents.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
@@ -181,7 +179,7 @@ import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTas
 import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
-import { buildDesktopAppBridgeError, buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
+import { buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
 import { buildAttachmentAssetResponse } from './localApiAttachmentAssetResponse.js';
 import { assertAttentionTargetUpdated, buildDesktopOkResponse, resolveAttentionReadValue } from './localApiAttentionResponse.js';
 import { buildExecuteLiveSessionBashResponse } from './localApiBashResponse.js';
@@ -241,7 +239,6 @@ import {
 } from './localApiSessionDetailResponse.js';
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
 import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
-import { appendMappedSnapshotEvent, shouldBuildTopicEvents } from './localApiTopicEvents.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
@@ -664,30 +661,10 @@ if (process.env.NEON_PILOT_DESKTOP_RUNTIME !== '1') {
   startKnowledgeBaseSyncLoop();
 }
 
-async function buildDesktopAppEventsForTopics(topics: readonly string[]): Promise<unknown[]> {
-  const events: unknown[] = [];
-  const seen = new Set<string>();
-
-  for (const topic of topics) {
-    if (!shouldBuildTopicEvents({ topic, seenTopics: seen })) {
-      continue;
-    }
-
-    const snapshotEvents = await buildSnapshotEventsForTopic(topic as Parameters<typeof buildSnapshotEventsForTopic>[0]);
-    for (const snapshotEvent of snapshotEvents) {
-      appendMappedSnapshotEvent({ events, snapshotEvent, mapSnapshotEvent: mapSnapshotEventToDesktopAppEvent });
-    }
-  }
-
-  return events;
-}
-
 export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void> {
   await getLocalRoutes();
 
   let closed = false;
-  let writeQueue = Promise.resolve();
-
   const emitEvent = (event: unknown) => {
     if (!shouldProcessDesktopAppEvent(closed)) {
       return;
@@ -696,44 +673,9 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
     onEvent(buildDesktopAppBridgeEvent(event));
   };
 
-  const enqueueWrite = (task: () => Promise<void> | void) => {
-    writeQueue = writeQueue
-      .then(async () => {
-        if (closed) {
-          return;
-        }
-
-        await task();
-      })
-      .catch((error) => {
-        if (!shouldProcessDesktopAppEvent(closed)) {
-          return;
-        }
-
-        onEvent(buildDesktopAppBridgeError(error));
-      });
-  };
-
   onEvent({ type: 'open' });
-  enqueueWrite(async () => {
-    const bootstrapEvents = await buildDesktopAppEventsForTopics(INITIAL_APP_EVENT_TOPICS);
-    for (const event of bootstrapEvents) {
-      emitEvent(event);
-    }
-  });
 
   const unsubscribe = subscribeAppEvents((event) => {
-    if (event.type === 'invalidate') {
-      enqueueWrite(async () => {
-        const mappedEvents = await buildDesktopAppEventsForTopics(event.topics);
-        for (const mappedEvent of mappedEvents) {
-          emitEvent(mappedEvent);
-        }
-        emitEvent(event);
-      });
-      return;
-    }
-
     emitEvent(event);
   });
 

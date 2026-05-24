@@ -24,7 +24,7 @@ import {
 } from '../session/sessionListState';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { openConversationTab } from '../session/sessionTabs';
-import type { DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { ThemeProvider } from '../ui-state/theme';
 import {
   AppDataContext,
@@ -249,6 +249,66 @@ export function App() {
     setDaemonState(state);
   }, []);
 
+  const refreshInvalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingInvalidationTopicsRef = useRef(new Set<AppEventTopic>());
+
+  const refreshInvalidatedSnapshots = useCallback(
+    (topics: readonly AppEventTopic[]) => {
+      for (const topic of topics) {
+        pendingInvalidationTopicsRef.current.add(topic);
+      }
+
+      if (refreshInvalidationTimerRef.current !== null) {
+        return;
+      }
+
+      refreshInvalidationTimerRef.current = window.setTimeout(() => {
+        refreshInvalidationTimerRef.current = null;
+        const pendingTopics = pendingInvalidationTopicsRef.current;
+        pendingInvalidationTopicsRef.current = new Set<AppEventTopic>();
+
+        if (pendingTopics.has('sessions')) {
+          void fetchSessionsSnapshot()
+            .then((items) => {
+              setSessions(items);
+            })
+            .catch(() => undefined);
+        }
+        if (pendingTopics.has('tasks')) {
+          void api
+            .tasks()
+            .then((items) => {
+              setTasks(items);
+            })
+            .catch(() => undefined);
+        }
+        if (pendingTopics.has('runs') || pendingTopics.has('executions')) {
+          void api
+            .runs()
+            .then((result) => {
+              setRuns(result);
+            })
+            .catch(() => undefined);
+          void api
+            .executions()
+            .then((result) => {
+              setExecutions(result);
+            })
+            .catch(() => undefined);
+        }
+        if (pendingTopics.has('daemon')) {
+          void api
+            .daemon()
+            .then((state) => {
+              setDaemon(state);
+            })
+            .catch(() => undefined);
+        }
+      }, 150);
+    },
+    [setDaemon, setExecutions, setRuns, setSessions, setTasks],
+  );
+
   const handleDesktopAppEvent = useCallback(
     (payload: DesktopAppEvent) => {
       switch (payload.type) {
@@ -321,26 +381,7 @@ export function App() {
           );
           return;
         case 'invalidate':
-          if (payload.topics.includes('runs')) {
-            void api
-              .runs()
-              .then((result) => {
-                setRuns(result);
-              })
-              .catch(() => {
-                // Keep the last known snapshot until the next app event or manual refresh.
-              });
-          }
-          if (payload.topics.includes('executions')) {
-            void api
-              .executions()
-              .then((result) => {
-                setExecutions(result);
-              })
-              .catch(() => {
-                // Keep the last known snapshot until the next app event or manual refresh.
-              });
-          }
+          refreshInvalidatedSnapshots(payload.topics);
           setEventVersions((prev) => {
             const next = { ...prev };
             for (const topic of payload.topics) {
@@ -356,7 +397,17 @@ export function App() {
           return;
       }
     },
-    [bumpConversationVersion, refreshSessionMeta, setDaemon, setExecutions, setSessions, setTasks, setTitle],
+    [
+      bumpConversationVersion,
+      refreshInvalidatedSnapshots,
+      refreshSessionMeta,
+      setDaemon,
+      setExecutions,
+      setRuns,
+      setSessions,
+      setTasks,
+      setTitle,
+    ],
   );
 
   const bootstrapSnapshots = useCallback(() => {
@@ -496,6 +547,11 @@ export function App() {
       if (reconnectTimer !== null) {
         window.clearTimeout(reconnectTimer);
       }
+      if (refreshInvalidationTimerRef.current !== null) {
+        window.clearTimeout(refreshInvalidationTimerRef.current);
+        refreshInvalidationTimerRef.current = null;
+      }
+      pendingInvalidationTopicsRef.current.clear();
       cleanup();
       setSseStatus('offline');
     };
