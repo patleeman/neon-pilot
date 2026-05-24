@@ -2,12 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import type {
-  DesktopApiStreamEvent,
-  DesktopConversationStateBridgeEvent,
-  DesktopConversationStateSubscriptionRequest,
-  DesktopLiveSessionQueueRestoreResult,
-} from './hosts/types.js';
+import type { DesktopApiStreamEvent, DesktopLiveSessionQueueRestoreResult } from './hosts/types.js';
 import { LocalApiWorkerClient } from './local-api-worker-client.js';
 
 type DesktopAppBridgeEvent = { type: 'open' } | { type: 'event'; event: unknown } | { type: 'error'; message: string } | { type: 'close' };
@@ -276,10 +271,6 @@ export interface LocalApiModule {
     excludeFromContext?: boolean;
   }): Promise<{ ok: true; result: unknown }>;
   abortDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
-  subscribeDesktopConversationState(
-    input: DesktopConversationStateSubscriptionRequest,
-    onEvent: (event: DesktopConversationStateBridgeEvent) => void,
-  ): Promise<() => void>;
   subscribeDesktopLocalApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
   subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void>;
   setDesktopWorkbenchBrowserToolHost?(
@@ -299,7 +290,6 @@ let localApiModulePromise: Promise<LocalApiModule> | null = null;
 let workerBackedLocalApiModule: LocalApiModule | null = null;
 
 const MAIN_PROCESS_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
-  'subscribeDesktopConversationState',
   'subscribeDesktopLocalApiStream',
   'subscribeDesktopAppEvents',
   'subscribeDesktopProviderOAuthLogin',
