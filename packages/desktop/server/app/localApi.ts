@@ -1061,6 +1061,22 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && runMatch)
     return createDesktopLocalApiJsonResponse(await readDesktopDurableRun(decodeURIComponent(runMatch[1] ?? '')));
 
+  const conversationCheckpointMatch = /^\/api\/conversations\/([^/]+)\/checkpoints\/([^/]+)$/.exec(path);
+  if (method === 'GET' && conversationCheckpointMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationCheckpoint({
+        conversationId: decodeURIComponent(conversationCheckpointMatch[1] ?? ''),
+        checkpointId: decodeURIComponent(conversationCheckpointMatch[2] ?? ''),
+      }),
+    );
+  }
+  const conversationCheckpointsMatch = /^\/api\/conversations\/([^/]+)\/checkpoints$/.exec(path);
+  if (method === 'GET' && conversationCheckpointsMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationCheckpoints(decodeURIComponent(conversationCheckpointsMatch[1] ?? '')),
+    );
+  }
+
   return null;
 }
 
