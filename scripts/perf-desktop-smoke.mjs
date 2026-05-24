@@ -334,7 +334,12 @@ async function main() {
     const longTranscriptOpenMs = (
       await measure('long transcript', async () => {
         await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${longId}` });
-        await waitBody(cdp, child);
+        await waitForExpression(
+          cdp,
+          child,
+          `location.pathname === ${JSON.stringify(`/conversations/${longId}`)} && document.body.innerText.includes('Long transcript message 4999')`,
+          45_000,
+        );
       })
     ).durationMs;
     await cdp.send('Page.navigate', { url: 'neon-pilot://app/conversations/new' });
