@@ -1262,6 +1262,21 @@ await ctx.conversations.appendTranscriptBlock({ conversationId, blockType: 'appr
 await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockType: 'approval', data: { status: 'approved' } });
 ```
 
+Frontend extension components can mark and spotlight transcript targets without depending on host DOM internals. Use `pa.transcript.targetProps(...)` on the element that should receive focus, and `pa.transcript.spotlight(...)` to scroll it into view and flash a temporary border.
+
+```tsx
+function ApprovalBlock({ pa, approvalId }) {
+  const target = { kind: 'extension', extensionId: 'my-extension', targetId: approvalId };
+  return (
+    <button {...pa.transcript.targetProps(target)} onClick={() => pa.transcript.spotlight(target)}>
+      Review approval
+    </button>
+  );
+}
+```
+
+Supported spotlight targets are `block`, `tool_call`, `background_run`, and `extension`.
+
 Long-lived backend services are declared under `backend.services` so the host can own lifecycle, health, and restart policy. Enabled extension services are started during extension startup; a service handler may return a stop function that the host calls on shutdown, disable, reload, or restart. Extension Manager shows declared services plus live runtime state (`running`, `stopped`, start time) from the host.
 
 ```json

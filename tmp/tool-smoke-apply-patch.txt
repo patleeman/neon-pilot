@@ -1,0 +1,2 @@
+apply_patch tool works
+apply_patch update works too

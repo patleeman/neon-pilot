@@ -48,6 +48,20 @@ describe('CheckpointTranscriptRenderer', () => {
     expect(html).toContain('Commit checkpoints for conversation conv-1:');
   });
 
+  it('strips ANSI escapes from fallback checkpoint output', () => {
+    readCheckpointPresentationMock.mockReturnValueOnce(null);
+
+    const html = renderToStaticMarkup(
+      <CheckpointTranscriptRenderer
+        block={{ status: 'ok', input: { action: 'save' }, output: '\u001B[32m✓\u001B[0m formatting passed' }}
+        context={{}}
+      />,
+    );
+
+    expect(html).toContain('✓ formatting passed');
+    expect(html).not.toContain('[32m');
+  });
+
   it('renders the checkpoint-specific card when presentation data is available', () => {
     readCheckpointPresentationMock.mockReturnValueOnce({
       action: 'save',

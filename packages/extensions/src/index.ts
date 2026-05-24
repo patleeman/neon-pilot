@@ -116,6 +116,11 @@ export interface NativeExtensionClient {
     set(selection: unknown): void;
     subscribe(handler: (selection: unknown) => void): { unsubscribe: () => void };
   };
+  /** Transcript navigation helpers. */
+  transcript: {
+    spotlight(target: ExtensionTranscriptSpotlightTarget): void;
+    targetProps(target: ExtensionTranscriptSpotlightTarget): Record<string, string>;
+  };
   /** UI utilities. */
   ui: {
     toast(message: string, type?: 'info' | 'warning' | 'error'): void;
@@ -131,6 +136,12 @@ export interface NativeExtensionClient {
   };
   [capability: string]: unknown;
 }
+
+export type ExtensionTranscriptSpotlightTarget =
+  | { kind: 'block'; blockId: string }
+  | { kind: 'tool_call'; blockId: string }
+  | { kind: 'background_run'; runId: string }
+  | { kind: 'extension'; extensionId: string; targetId: string };
 
 export const EXTENSION_MANIFEST_VERSION = 2;
 
@@ -1001,6 +1012,10 @@ export interface NeonPilotClient {
     get(): ExtensionSelectionState | null;
     set(selection: Omit<ExtensionSelectionState, 'updatedAt'> | null): void;
     subscribe(handler: (selection: ExtensionSelectionState | null) => void): { unsubscribe: () => void };
+  };
+  transcript: {
+    spotlight(target: ExtensionTranscriptSpotlightTarget): void;
+    targetProps(target: ExtensionTranscriptSpotlightTarget): Record<string, string>;
   };
   /** List and call actions on other extensions. */
   extensions: {

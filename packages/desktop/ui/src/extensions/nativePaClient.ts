@@ -1,5 +1,6 @@
 import { api } from '../client/api';
 import { type DesktopWorkbenchBrowserState, getDesktopBridge } from '../desktop/desktopBridge';
+import { dispatchTranscriptSpotlight, type TranscriptSpotlightTarget, transcriptTargetAttributes } from '../transcript/spotlight';
 import { listHostCommands, setExtensionCommandContext } from './commands';
 import { type ExtensionSelectionState, readExtensionSelection, setExtensionSelection, subscribeExtensionSelection } from './selection';
 
@@ -90,6 +91,10 @@ export interface NativeExtensionClient {
     get(): ExtensionSelectionState | null;
     set(selection: Omit<ExtensionSelectionState, 'updatedAt'> | null): void;
     subscribe(handler: (selection: ExtensionSelectionState | null) => void): { unsubscribe: () => void };
+  };
+  transcript: {
+    spotlight(target: TranscriptSpotlightTarget): void;
+    targetProps(target: TranscriptSpotlightTarget): Record<string, string>;
   };
   ui: {
     toast(message: string, type?: 'info' | 'warning' | 'error'): void;
@@ -315,6 +320,14 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
       get: readExtensionSelection,
       set: setExtensionSelection,
       subscribe: subscribeExtensionSelection,
+    },
+    transcript: {
+      spotlight(target) {
+        dispatchTranscriptSpotlight(target);
+      },
+      targetProps(target) {
+        return transcriptTargetAttributes(target);
+      },
     },
     ui: {
       toast(message, type) {

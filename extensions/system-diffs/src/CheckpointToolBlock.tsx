@@ -3,6 +3,15 @@ import { CheckpointInlineDiff, cx, Pill, SurfacePanel } from '@neon-pilot/extens
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo } from 'react';
 
+function stripAnsiForTranscript(value: string): string {
+  const escape = String.fromCharCode(27);
+  const bell = String.fromCharCode(7);
+  const oscPattern = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'gu');
+  const csiPattern = new RegExp(`${escape}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, 'gu');
+
+  return value.replace(oscPattern, '').replace(csiPattern, '');
+}
+
 const CheckpointToolBlock = memo(function CheckpointToolBlock({
   block,
   checkpoint,
@@ -13,10 +22,11 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
   activeCheckpointId?: string | null;
 }) {
   const isRunning = block.status === 'running' || !!block.running;
+  const output = stripAnsiForTranscript(block.output ?? '');
   const isError =
     block.status === 'error' ||
     !!block.error ||
-    /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(block.output ?? '');
+    /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
   const commentCount = (checkpoint as { commentCount?: number }).commentCount;
 
   return (
@@ -53,7 +63,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
             ) : null}
             {checkpoint.updatedAt && <span className="text-dim">updated {timeAgo(checkpoint.updatedAt)}</span>}
           </div>
-          {isError && block.output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{block.output}</p>}
+          {isError && output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{output}</p>}
           {isRunning ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
               <span className="inline-flex items-center gap-1.5 text-dim">

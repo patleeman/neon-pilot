@@ -8,7 +8,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Ask User Question
 
-The `conversation` tool with action `ask` presents interactive prompts to the user through the desktop UI. It supports single questions with quick-reply options and multi-question forms with radio and checkbox styles.
+The `ask_user` tool presents interactive prompts to the user through the desktop UI. It supports single questions with quick-reply options and multi-question forms with radio and checkbox styles.
 
 ## Question Styles
 
@@ -136,7 +136,7 @@ The user must respond before the agent continues. The response is returned to th
 
 # Change Working Directory
 
-The `conversation` tool with action `conversation` action `change_working_directory` switches the conversation's working directory. After the change, all tool calls (file reads, shell commands, file writes) execute relative to the new directory.
+The `conversation_cwd` tool switches the conversation's working directory. After the change, all tool calls (file reads, shell commands, file writes) execute relative to the new directory.
 
 ## Parameters
 
@@ -187,11 +187,11 @@ The `conversation` tool with action `conversation` action `change_working_direct
 
 ## Compared to @ references
 
-|          | `conversation` action `change_working_directory` | `@` file reference          |
-| -------- | ------------------------------------------------ | --------------------------- |
-| Scope    | All subsequent tool calls                        | Single message              |
-| Cwd      | Permanently changed                              | Unchanged                   |
-| Use case | Working in a different part of the tree          | Referencing a specific file |
+|          | `conversation_cwd`                      | `@` file reference          |
+| -------- | --------------------------------------- | --------------------------- |
+| Scope    | All subsequent tool calls               | Single message              |
+| Cwd      | Permanently changed                     | Unchanged                   |
+| Use case | Working in a different part of the tree | Referencing a specific file |
 
 ---
 
@@ -199,7 +199,7 @@ The `conversation` tool with action `conversation` action `change_working_direct
 
 # Conversation Inspect
 
-The `conversation` tool with action `inspect` gives the agent read-only access to other conversation transcripts. It can list, search, query, outline, and diff conversations without modifying any state. Live and running scopes include other currently active conversations, not just persisted session files.
+The `conversation_inspect` tool gives the agent read-only access to other conversation transcripts. It can list, search, query, outline, and diff conversations without modifying any state. Live and running scopes include other currently active conversations, not just persisted session files.
 
 ## Actions
 

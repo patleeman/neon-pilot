@@ -50,9 +50,6 @@ export const BrowserToolBlock = memo(function BrowserToolBlock({
   return (
     <SurfacePanel muted className={cx('px-3.5 py-3 text-[12px] transition-colors', isError && 'border-danger/30 bg-danger/5')}>
       <div className="flex items-start gap-3">
-        <div className="ui-chat-avatar mt-0.5">
-          <span className="ui-chat-avatar-mark">◎</span>
-        </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="truncate text-[13px] font-medium text-primary">{title}</span>
@@ -72,12 +69,7 @@ export const BrowserToolBlock = memo(function BrowserToolBlock({
                 using browser…
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={() => onOpenBrowser?.()}
-                disabled={!onOpenBrowser}
-                className="text-accent transition-colors hover:text-accent/80 disabled:cursor-default disabled:text-dim"
-              >
+              <button type="button" onClick={() => onOpenBrowser?.()} disabled={!onOpenBrowser} className="ui-action-button text-[10px]">
                 Open browser
               </button>
             )}

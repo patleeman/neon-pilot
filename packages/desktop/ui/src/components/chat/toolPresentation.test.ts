@@ -8,6 +8,7 @@ import {
   resolveDisclosureOpen,
   shouldAutoOpenConversationBlock,
   shouldAutoOpenTraceCluster,
+  stripAnsiForTranscript,
   toggleDisclosurePreference,
   toolMeta,
 } from './toolPresentation.js';
@@ -16,6 +17,13 @@ describe('toolPresentation', () => {
   it('resolves known and unknown tool metadata', () => {
     expect(toolMeta('bash')).toMatchObject({ icon: '$', label: 'bash', tone: 'steel' });
     expect(toolMeta('custom_tool')).toMatchObject({ icon: '⚙', label: 'custom_tool', tone: 'muted' });
+  });
+
+  it('strips ANSI control sequences from transcript output', () => {
+    expect(stripAnsiForTranscript('\u001B[1m\u001B[46m RUN \u001B[49m\u001B[22m vitest\n\u001B[31mfailed\u001B[39m')).toBe(
+      ' RUN  vitest\nfailed',
+    );
+    expect(stripAnsiForTranscript('\u001B]8;;https://example.com\u0007link\u001B]8;;\u0007')).toBe('link');
   });
 
   it('resolves disclosure preferences over auto state', () => {

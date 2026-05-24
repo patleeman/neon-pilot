@@ -390,6 +390,12 @@
     color: rgb(var(--color-danger));
   }
 
+  .pa-transcript-spotlight {
+    outline: 2px solid rgb(var(--color-steel) / 0.9);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgb(var(--color-steel) / 0.16);
+  }
+
   .ui-message-action-button.text-accent,
   .ui-message-action-button.text-accent:hover,
   .ui-message-action-button.text-accent:focus-visible {

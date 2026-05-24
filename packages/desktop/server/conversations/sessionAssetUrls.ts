@@ -20,11 +20,12 @@ export function decorateSessionAssetUrls<T extends DisplayBlockWithAssets>(block
   return blocks.map((block) => {
     if (block.type === 'user' && typeof block.id === 'string' && Array.isArray(block.images) && block.images.length > 0) {
       const images = block.images;
+      const blockId = block.id;
       return {
         ...block,
         images: images.map((image, imageIndex) => ({
           ...image,
-          src: buildSessionUserImagePath(sessionId, block.id, imageIndex),
+          src: buildSessionUserImagePath(sessionId, blockId, imageIndex),
         })),
       } as T;
     }

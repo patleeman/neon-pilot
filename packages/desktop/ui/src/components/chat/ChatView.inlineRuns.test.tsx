@@ -453,7 +453,52 @@ describe('ChatView inline run cards', () => {
 
     expect(scrollIntoView).toHaveBeenCalled();
     expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector(`[data-transcript-target="background_run:${RUN_ID}"]`)).not.toBeNull();
     expect(container.textContent).toContain('echo background');
     expect(container.textContent).not.toContain('$ echo background');
+  });
+
+  it('lets background completion tombstones spotlight their originating run card', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: { command: 'echo background', background: true },
+          output: `Started background command ${RUN_ID} for ui-preview-check.`,
+          status: 'ok',
+          details: { action: 'start', runId: RUN_ID },
+        },
+        {
+          type: 'text',
+          ts: '2026-03-11T18:00:00.500Z',
+          text: 'Background task started.',
+        },
+        {
+          type: 'context',
+          ts: '2026-03-11T18:00:01.000Z',
+          customType: 'background_auto_resume',
+          text: `Background task ui-preview-check completed.\nRun ID: ${RUN_ID}`,
+        },
+      ],
+      { listedRuns: [createShellRunRecord()] },
+    );
+
+    const tombstone = container.querySelector('[data-lifecycle-marker="auto-resume"]') as HTMLButtonElement | null;
+    expect(tombstone?.tagName).toBe('BUTTON');
+
+    await act(async () => {
+      tombstone?.click();
+      await flushAsyncWork();
+      await flushAnimationFrames();
+      await flushAsyncWork();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(container.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector(`[data-transcript-target="background_run:${RUN_ID}"]`)).not.toBeNull();
   });
 });

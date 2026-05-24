@@ -6,6 +6,7 @@ import { type ExtensionSelectionActionRegistration, useExtensionRegistry } from 
 import { useApi } from '../../hooks/useApi';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
+import { spotlightTranscriptTarget, type TranscriptSpotlightTarget } from '../../transcript/spotlight';
 import { ChatRenderItemView } from './ChatRenderItemView.js';
 import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
@@ -202,6 +203,18 @@ export const ChatView = memo(function ChatView({
   const { isInlineRunExpanded, toggleInlineRun, expandInlineRun } = useInlineTraceRunExpansion(renderItems);
 
   useEffect(() => {
+    function handleTranscriptSpotlight(event: Event) {
+      const detail = 'detail' in event && event.detail && typeof event.detail === 'object' ? (event.detail as { target?: unknown }) : null;
+      const target = detail?.target as TranscriptSpotlightTarget | undefined;
+      if (!target || typeof target !== 'object' || !('kind' in target)) return;
+
+      if (spotlightTranscriptTarget(target)) return;
+
+      if (target.kind === 'background_run') {
+        window.dispatchEvent(new CustomEvent('pa:focus-background-run', { detail: { runId: target.runId } }));
+      }
+    }
+
     function handleFocusBackgroundRun(event: Event) {
       const detail = 'detail' in event && event.detail && typeof event.detail === 'object' ? (event.detail as { runId?: unknown }) : null;
       const runId = typeof detail?.runId === 'string' ? detail.runId.trim() : '';
@@ -218,14 +231,18 @@ export const ChatView = memo(function ChatView({
         const node = document.querySelector(`[data-trace-cluster-start-index="${messageIndexOffset + item.startIndex}"]`);
         node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         node?.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click();
-        window.requestAnimationFrame(() => {
-          node?.querySelector<HTMLElement>(`[data-background-run-id="${runId}"]`)?.click();
-        });
+        window.setTimeout(() => {
+          spotlightTranscriptTarget({ kind: 'background_run', runId });
+        }, 0);
       });
     }
 
+    window.addEventListener('pa:transcript-spotlight', handleTranscriptSpotlight);
     window.addEventListener('pa:focus-background-run', handleFocusBackgroundRun);
-    return () => window.removeEventListener('pa:focus-background-run', handleFocusBackgroundRun);
+    return () => {
+      window.removeEventListener('pa:transcript-spotlight', handleTranscriptSpotlight);
+      window.removeEventListener('pa:focus-background-run', handleFocusBackgroundRun);
+    };
   }, [expandInlineRun, messageIndexOffset, renderItems]);
 
   const streamingStatusLabel = isCompacting

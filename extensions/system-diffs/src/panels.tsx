@@ -20,8 +20,20 @@ function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function stripAnsiForTranscript(value: string): string {
+  const escape = String.fromCharCode(27);
+  const bell = String.fromCharCode(7);
+  const oscPattern = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'gu');
+  const csiPattern = new RegExp(`${escape}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, 'gu');
+
+  return value.replace(oscPattern, '').replace(csiPattern, '');
+}
+
 function isCheckpointFailureOutput(output: unknown): boolean {
-  return typeof output === 'string' && /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
+  return (
+    typeof output === 'string' &&
+    /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(stripAnsiForTranscript(output))
+  );
 }
 
 function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlock }) {
@@ -30,6 +42,7 @@ function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlo
   const input = readRecord(block.input);
   const action = readString(input.action) ?? 'checkpoint';
   const message = readString(input.message);
+  const output = stripAnsiForTranscript(block.output ?? '');
   const paths = Array.isArray(input.paths)
     ? input.paths.filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
     : [];
@@ -63,11 +76,11 @@ function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlo
           {message || paths.length > 0 ? (
             <p className="mt-2 text-[11px] leading-relaxed text-secondary">{message ?? paths.join(', ')}</p>
           ) : null}
-          {block.output ? (
+          {output ? (
             <pre
               className={cx('mt-2 whitespace-pre-wrap break-words text-[11px] leading-relaxed', isError ? 'text-danger/85' : 'text-dim')}
             >
-              {block.output}
+              {output}
             </pre>
           ) : null}
         </div>

@@ -130,3 +130,67 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
     }
   }
 }
+
+function toolSessionManagerCtx(ctx: ExtensionBackendContext) {
+  const toolCtx = ctx.toolContext;
+  const conversationId = toolCtx?.conversationId ?? toolCtx?.sessionId ?? '';
+
+  return {
+    conversationId,
+    sessionManagerCtx: {
+      sessionManager: {
+        getSessionId: () => conversationId,
+        getSessionFile: () => toolCtx?.sessionFile,
+        getCwd: () => toolCtx?.cwd,
+      },
+      cwd: toolCtx?.cwd,
+    },
+  };
+}
+
+export async function askUser(input: unknown, ctx: ExtensionBackendContext) {
+  const { sessionManagerCtx } = toolSessionManagerCtx(ctx);
+  return executeAskUserQuestion(input, sessionManagerCtx);
+}
+
+export async function conversationInspect(input: unknown, ctx: ExtensionBackendContext) {
+  const { sessionManagerCtx } = toolSessionManagerCtx(ctx);
+  return executeConversationInspectTool(input as Record<string, unknown>, sessionManagerCtx);
+}
+
+export async function conversationTitle(input: unknown, ctx: ExtensionBackendContext) {
+  const { conversationId, sessionManagerCtx } = toolSessionManagerCtx(ctx);
+  return executeSetConversationTitle(input as { title?: string }, sessionManagerCtx, (title) =>
+    ctx.conversations.setTitle(conversationId, title),
+  );
+}
+
+export async function conversationCwd(input: unknown, ctx: ExtensionBackendContext) {
+  const { sessionManagerCtx } = toolSessionManagerCtx(ctx);
+  return executeChangeWorkingDirectory(
+    input as { cwd?: string; continuePrompt?: string },
+    sessionManagerCtx,
+    (changeInput) =>
+      requestConversationWorkingDirectoryChange(changeInput, {
+        ...buildLiveSessionResourceOptionsForRuntime(),
+        extensionFactories: buildLiveSessionExtensionFactoriesForRuntime(),
+      }) as Promise<RequestConversationWorkingDirectoryChangeResult>,
+  );
+}
+
+export async function deferredResumeTool(input: unknown, ctx: ExtensionBackendContext) {
+  const toolCtx = ctx.toolContext;
+  const conversationId = toolCtx?.conversationId ?? toolCtx?.sessionId ?? '';
+  const result = await deferredResume(input as never, {
+    profile: ctx.profile,
+    toolContext: {
+      sessionId: conversationId,
+      sessionFile: toolCtx?.sessionFile,
+      cwd: toolCtx?.cwd,
+    },
+  });
+  return {
+    content: [{ type: 'text' as const, text: (result as { text: string }).text }],
+    details: result,
+  };
+}

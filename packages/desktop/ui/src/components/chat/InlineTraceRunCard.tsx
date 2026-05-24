@@ -16,6 +16,7 @@ import {
   type RunPresentationLookups,
 } from '../../automation/runPresentation';
 import { timeAgo } from '../../shared/utils';
+import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { cx, Pill } from '../ui';
 import { INLINE_RUN_LOG_TAIL_LINES, INLINE_RUN_POLL_INTERVAL_MS, usePolledDurableRunSnapshot } from './linkedRunPolling.js';
 import { resolveLinkedRunRecord } from './linkedRunResolution.js';
@@ -101,7 +102,12 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
   const pollingLabel = snapshot.unavailable ? 'Run record unavailable' : pollEnabled ? 'Polling live log' : 'Polling paused (off-screen)';
 
   return (
-    <div ref={cardRef} className="rounded-lg border border-border-subtle/70 bg-elevated/35 overflow-hidden">
+    <div
+      ref={cardRef}
+      className="rounded-lg border border-border-subtle/70 bg-elevated/35 overflow-hidden"
+      tabIndex={-1}
+      {...transcriptTargetAttributes({ kind: 'background_run', runId: resolvedRunId })}
+    >
       <div className="flex items-start gap-3 px-2.5 py-2 hover:bg-elevated/70 transition-colors">
         <button type="button" onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 text-left">
           <div className="flex min-w-0 flex-wrap items-center gap-2">

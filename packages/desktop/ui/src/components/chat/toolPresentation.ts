@@ -23,6 +23,18 @@ export function toolMeta(t: string) {
   return TOOL_META[t] ?? { icon: '⚙', label: t, color: 'text-secondary bg-elevated', tone: 'muted' as const };
 }
 
+// Tool output is plain transcript text, not a terminal emulator. Strip ANSI
+// control sequences so CLIs that force color (Vitest, pnpm, etc.) do not leak
+// raw escape codes like `[31m` into the chat view.
+export function stripAnsiForTranscript(value: string): string {
+  const escape = String.fromCharCode(27);
+  const bell = String.fromCharCode(7);
+  const oscPattern = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'gu');
+  const csiPattern = new RegExp(`${escape}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, 'gu');
+
+  return value.replace(oscPattern, '').replace(csiPattern, '');
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

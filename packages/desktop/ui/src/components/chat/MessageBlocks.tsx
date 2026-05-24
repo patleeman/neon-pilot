@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
+import { dispatchTranscriptSpotlight } from '../../transcript/spotlight.js';
 import { cx } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
@@ -103,17 +104,57 @@ function quietLifecycleText(blocks: Extract<MessageBlock, { type: 'context' | 's
   return autoResumeLifecycleText(blocks);
 }
 
+function quietLifecycleTooltip(blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]): string | undefined {
+  if (!blocks.every((block) => block.type === 'context' && block.customType === 'conversation_workspace_change')) {
+    return undefined;
+  }
+
+  const details = blocks
+    .map((block) => (block.type === 'context' ? block.text.trim() : ''))
+    .filter(Boolean)
+    .join('\n\n');
+  return details || undefined;
+}
+
 function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[]; marker: string }) {
   const lastTs = blocks[blocks.length - 1]?.ts;
+  const tooltip = quietLifecycleTooltip(blocks);
+  const backgroundRun = blocks
+    .filter((block) => block.type === 'context' && block.customType === 'background_auto_resume')
+    .flatMap((block) => readMentionedLinkedRunsFromText(block.text))
+    .at(0);
+  const content = (
+    <>
+      <span aria-hidden="true">↻</span>
+      <span className="min-w-0 truncate">{quietLifecycleText(blocks)}</span>
+      {lastTs ? <span className="ui-message-meta shrink-0 opacity-60">{timeAgo(lastTs)}</span> : null}
+    </>
+  );
+
+  if (backgroundRun) {
+    return (
+      <button
+        type="button"
+        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-left text-[11px] text-dim/75 transition-colors hover:text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base"
+        data-context-shelf="1"
+        data-lifecycle-marker={marker}
+        title={tooltip ?? backgroundRun.runId}
+        aria-label={`${quietLifecycleText(blocks)}: ${tooltip ?? backgroundRun.runId}`}
+        onClick={() => dispatchTranscriptSpotlight({ kind: 'background_run', runId: backgroundRun.runId })}
+      >
+        {content}
+      </button>
+    );
+  }
   return (
     <div
       className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
       data-context-shelf="1"
       data-lifecycle-marker={marker}
+      title={tooltip}
+      aria-label={tooltip ? `${quietLifecycleText(blocks)}: ${tooltip}` : quietLifecycleText(blocks)}
     >
-      <span aria-hidden="true">↻</span>
-      <span className="min-w-0 truncate">{quietLifecycleText(blocks)}</span>
-      {lastTs ? <span className="ui-message-meta shrink-0 opacity-60">{timeAgo(lastTs)}</span> : null}
+      {content}
     </div>
   );
 }

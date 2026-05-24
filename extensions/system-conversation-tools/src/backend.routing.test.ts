@@ -36,7 +36,18 @@ vi.mock('./conversationTitleAgentExtension.js', async (importOriginal) => ({
   ...title,
 }));
 
-import { conversationTool, copyConversationId, copyDeeplink, copyWorkingDirectory, duplicateConversation } from './backend.js';
+import {
+  askUser,
+  conversationCwd,
+  conversationInspect,
+  conversationTitle,
+  conversationTool,
+  copyConversationId,
+  copyDeeplink,
+  copyWorkingDirectory,
+  deferredResumeTool,
+  duplicateConversation,
+} from './backend.js';
 
 function ctx(overrides: Record<string, unknown> = {}) {
   return {
@@ -114,6 +125,44 @@ describe('system-conversation-tools backend routing', () => {
     expect(conversationsBackend.requestConversationWorkingDirectoryChange).toHaveBeenCalledWith(
       { conversationId: 'conv-1', cwd: '/next' },
       { resources: true, extensionFactories: ['factory'] },
+    );
+  });
+
+  it('exposes split tool handlers with focused payloads', async () => {
+    const context = ctx();
+
+    await askUser({ question: 'Proceed?' }, context);
+    expect(ask.executeAskUserQuestion).toHaveBeenLastCalledWith({ question: 'Proceed?' }, expect.objectContaining({ cwd: '/repo' }));
+
+    await conversationInspect({ action: 'query', conversationId: 'conv-2' }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'query', conversationId: 'conv-2' },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
+    await conversationTitle({ title: 'New Title' }, context);
+    const setTitleCallback = title.executeSetConversationTitle.mock.calls.at(-1)?.[2] as (nextTitle: string) => Promise<unknown>;
+    await setTitleCallback('New Title');
+    expect((context as { conversations: { setTitle: ReturnType<typeof vi.fn> } }).conversations.setTitle).toHaveBeenLastCalledWith(
+      'conv-1',
+      'New Title',
+    );
+
+    await conversationCwd({ cwd: '/next' }, context);
+    const changeCallback = cwd.executeChangeWorkingDirectory.mock.calls.at(-1)?.[2] as (input: unknown) => Promise<unknown>;
+    await changeCallback({ conversationId: 'conv-1', cwd: '/next' });
+    expect(conversationsBackend.requestConversationWorkingDirectoryChange).toHaveBeenLastCalledWith(
+      { conversationId: 'conv-1', cwd: '/next' },
+      { resources: true, extensionFactories: ['factory'] },
+    );
+
+    await expect(deferredResumeTool({ action: 'add', prompt: 'Continue' }, context)).resolves.toEqual({
+      content: [{ type: 'text', text: 'scheduled' }],
+      details: { text: 'scheduled', id: 'resume-1' },
+    });
+    expect(queue.deferredResume).toHaveBeenLastCalledWith(
+      { action: 'add', prompt: 'Continue' },
+      { profile: 'shared', toolContext: { sessionId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' } },
     );
   });
 
