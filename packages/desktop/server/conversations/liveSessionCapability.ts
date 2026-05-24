@@ -26,6 +26,7 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { buildAttachedConversationContextDocsContext, readConversationContextDocs } from './conversationContextDocs.js';
 import { resolveConversationCwd, resolveNeutralChatCwd } from './conversationCwd.js';
 import { syncWebLiveConversationRun } from './conversationRuns.js';
+import { readConversationSessionMeta, resolveConversationSessionFile } from './conversationService.js';
 import { queueConversationSummaryRefresh } from './conversationSummaries.js';
 import {
   abortSession as abortLocalSession,
@@ -47,7 +48,6 @@ import {
   submitPromptSession as submitLocalPromptSession,
   takeOverSessionControl,
 } from './liveSessions.js';
-import { readSessionBlocks, readSessionMeta } from './sessions.js';
 import { appendConversationWorkspaceMetadata } from './sessions.js';
 
 export interface LiveSessionCapabilityContext {
@@ -463,7 +463,7 @@ async function ensureConversationPromptTargetLive(conversationId: string, contex
     return conversationId;
   }
 
-  const sessionFile = readSessionBlocks(conversationId)?.meta.file;
+  const sessionFile = resolveConversationSessionFile(conversationId);
   if (!sessionFile || !existsSync(sessionFile)) {
     throw new Error(`Session ${conversationId} is not live`);
   }
@@ -999,7 +999,7 @@ export async function destroyLiveSessionCapability(input: DestroyLiveSessionCapa
   }
 
   destroyLiveSession(conversationId);
-  const meta = readSessionMeta(conversationId);
+  const meta = readConversationSessionMeta(conversationId);
   if (meta) {
     queueConversationSummaryRefresh(meta);
   }
