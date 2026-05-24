@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.4 — 2026-05-24
+
+### Highlights
+
+- Improves conversation reliability by moving transcript reads, metadata, assets, recovery, inspection, and local API flows behind the conversation service boundary.
+- Adds and backfills the conversations database read model so conversation lists, previews, and large profiles can load from cached details instead of scanning raw session files.
+- Strengthens conversation branching with chronological fork rendering, reanchored persisted backlinks, and clearer source links.
+- Refines transcript tool rendering with inline edit diffs, tighter checkpoint rows, collapsible checkpoint headers, and renderer fallbacks.
+- Fixes notification center lazy-loading and session preview guards that could crash or mis-render edge-case conversations.
+
+### Notes
+
+- 49 commits since the previous release.
+
 ## 0.9.1-rc.3 — 2026-05-24
 
 ### Highlights
