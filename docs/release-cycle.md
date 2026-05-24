@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1-rc.2** — current published RC.
+**v0.9.1-rc.3** — RC being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.3
 
 Highlights in this train:
 
-- Makes agent bash output render like an inline terminal while preserving the normal tool chrome and command preview.
-- Streams foreground bash output into the transcript as commands run, so long loops show progress instead of waiting for completion.
-- Moves background bash logs inline with the background task tool item and removes the old right-workbench run detail panes.
-- Changes background task shelf links to focus and expand the inline task output instead of opening a separate run panel.
-- Adds focused coverage for inline background bash rendering, run focus behavior, and linked-run collection.
+- Polishes transcript tool rendering for ask-user prompts, apply-patch previews, workspace-change markers, background tasks, checkpoint rows, and inline diffs.
+- Improves conversation branching and navigation by preserving rewind children, backlink subagents, active subagent sidebar state, and moved workspace conversations.
+- Hardens extension loading and contribution validation with extracted routing/provider boundaries, packaged-shape import checks, safer keybindings, and installable browser/todo extension packaging.
+- Strengthens conversation, knowledge-base, and local API reliability through smaller validated helpers, faster search/session paths, and additional focused coverage.
+- Updates the bundled Pi runtime packages to 0.75.5 and resolves desktop server TypeScript issues ahead of publishing.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

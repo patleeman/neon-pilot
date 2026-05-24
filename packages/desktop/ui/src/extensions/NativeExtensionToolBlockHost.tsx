@@ -64,6 +64,24 @@ export function NativeExtensionToolBlockHost({
   block,
   context,
 }: {
+  extension?: ExtensionInstallSummary | null;
+  renderer?: ExtensionTranscriptRendererContribution | null;
+  block: ToolBlock;
+  context: ExtensionToolBlockContext;
+}) {
+  if (!extension || !renderer) {
+    return <ErrorState message={`Extension renderer unavailable for ${block.tool}.`} />;
+  }
+
+  return <NativeExtensionToolBlockHostInner extension={extension} renderer={renderer} block={block} context={context} />;
+}
+
+function NativeExtensionToolBlockHostInner({
+  extension,
+  renderer,
+  block,
+  context,
+}: {
   extension: ExtensionInstallSummary;
   renderer: ExtensionTranscriptRendererContribution;
   block: ToolBlock;

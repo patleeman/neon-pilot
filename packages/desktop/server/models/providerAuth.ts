@@ -1,4 +1,4 @@
-import type { OAuthPrompt } from '@earendil-works/pi-ai';
+import type { OAuthDeviceCodeInfo, OAuthPrompt, OAuthSelectPrompt } from '@earendil-works/pi-ai';
 import { AuthStorage, type OAuthCredential } from '@earendil-works/pi-coding-agent';
 
 import { createModelRegistryForAuthFile } from './modelRegistry.js';
@@ -272,6 +272,38 @@ function toPromptState(prompt: OAuthPrompt, manualCode: boolean): ProviderOAuthP
   };
 }
 
+function formatDeviceCodeInstructions(info: OAuthDeviceCodeInfo): string {
+  const codeLine = info.userCode ? `Enter code: ${info.userCode}` : '';
+  const expiryLine = typeof info.expiresInSeconds === 'number' ? `Code expires in ${info.expiresInSeconds} seconds.` : '';
+  return ['Open the verification URL in your browser to continue OAuth login.', codeLine, expiryLine].filter(Boolean).join('\n');
+}
+
+function toSelectPromptState(prompt: OAuthSelectPrompt): ProviderOAuthPromptState {
+  const optionLines = prompt.options.map((option, index) => `${index + 1}. ${option.label} (${option.id})`);
+  return {
+    message: [prompt.message, ...optionLines].join('\n'),
+    placeholder: 'Enter an option number or id',
+    allowEmpty: true,
+    manualCode: false,
+  };
+}
+
+function normalizeSelectInput(prompt: OAuthSelectPrompt, input: string): string | undefined {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const numericIndex = Number(trimmed);
+  if (Number.isInteger(numericIndex) && numericIndex >= 1 && numericIndex <= prompt.options.length) {
+    return prompt.options[numericIndex - 1]?.id;
+  }
+
+  const normalized = trimmed.toLowerCase();
+  const match = prompt.options.find((option) => option.id.toLowerCase() === normalized || option.label.toLowerCase() === normalized);
+  return match?.id ?? trimmed;
+}
+
 function rejectPendingInput(run: ProviderOAuthLoginRun, reason: string): void {
   const pendingInput = run.pendingInput;
   run.pendingInput = null;
@@ -421,6 +453,12 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
         run.updatedAt = nowIso();
         notifyOAuthLoginListeners(run);
       },
+      onDeviceCode: (info) => {
+        run.authUrl = info.verificationUri;
+        run.authInstructions = formatDeviceCodeInstructions(info);
+        run.updatedAt = nowIso();
+        notifyOAuthLoginListeners(run);
+      },
       onPrompt: async (prompt) => {
         const state = toPromptState(prompt, false);
         return createPromptAwaiter(run, state);
@@ -428,6 +466,7 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
       onProgress: (message) => {
         appendProgress(run, message);
       },
+      onSelect: async (prompt) => normalizeSelectInput(prompt, await createPromptAwaiter(run, toSelectPromptState(prompt))),
       onManualCodeInput: async () =>
         createPromptAwaiter(run, {
           message: 'Paste redirect URL below, or complete login in your browser.',

@@ -36,7 +36,7 @@ describe('extensionKeybindingDeclaredRegistrations', () => {
         command: 'cmd.run',
         args: { ok: true },
         when: 'editor',
-        scope: 'conversation',
+        scope: 'global',
         defaultKeys: ['Ctrl+R'],
         enabled: false,
       },

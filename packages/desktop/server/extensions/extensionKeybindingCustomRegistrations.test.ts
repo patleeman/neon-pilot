@@ -32,7 +32,7 @@ describe('extensionKeybindingCustomRegistrations', () => {
         keys: ['Cmd+B'],
         command: 'cmd.custom',
         args: { ok: true },
-        scope: 'conversation',
+        scope: 'global',
         defaultKeys: ['B'],
         enabled: false,
       },

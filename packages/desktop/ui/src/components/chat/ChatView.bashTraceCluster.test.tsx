@@ -174,7 +174,9 @@ describe('ChatView bash trace clusters', () => {
     expect(container.textContent).toContain('View diff');
     expect(container.textContent).not.toContain('edited src/app.ts');
 
-    const viewDiffButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'View diff');
+    const viewDiffButton = Array.from(container.querySelectorAll('[role="button"]')).find((button) =>
+      button.textContent?.includes('View diff'),
+    );
     expect(viewDiffButton).toBeTruthy();
 
     act(() => {

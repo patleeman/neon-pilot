@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.3 — 2026-05-24
+
+### Highlights
+
+- Polishes transcript tool rendering for ask-user prompts, apply-patch previews, workspace-change markers, background tasks, checkpoint rows, and inline diffs.
+- Improves conversation branching and navigation by preserving rewind children, backlink subagents, active subagent sidebar state, and moved workspace conversations.
+- Hardens extension loading and contribution validation with extracted routing/provider boundaries, packaged-shape import checks, safer keybindings, and installable browser/todo extension packaging.
+- Strengthens conversation, knowledge-base, and local API reliability through smaller validated helpers, faster search/session paths, and additional focused coverage.
+- Updates the bundled Pi runtime packages to 0.75.5 and resolves desktop server TypeScript issues ahead of publishing.
+
+### Notes
+
+- 233 commits since the previous release.
+
 ## 0.9.1-rc.2 — 2026-05-23
 
 ### Highlights

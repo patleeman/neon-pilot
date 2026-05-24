@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -480,6 +480,42 @@ function sanitizeSessionLineForSearch(rawLine: string): string {
 
 function readFileLinesReverse(filePath: string, visit: (line: string) => boolean | void): void {
   readFileLinesReverseValue(filePath, visit);
+}
+
+function readFileLinesForward(filePath: string, visit: (line: string) => boolean | void): void {
+  const fd = openSync(filePath, 'r');
+  const buffer = Buffer.alloc(64 * 1024);
+  const decoder = new TextDecoder();
+  let pending = '';
+
+  try {
+    let bytesRead: number;
+    while ((bytesRead = readSync(fd, buffer, 0, buffer.length, null)) > 0) {
+      pending += decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
+
+      let lineStart = 0;
+      for (;;) {
+        const newlineIndex = pending.indexOf('\n', lineStart);
+        if (newlineIndex === -1) {
+          pending = pending.slice(lineStart);
+          break;
+        }
+
+        const line = pending.slice(lineStart, newlineIndex).replace(/\r$/, '');
+        if (visit(line) === false) {
+          return;
+        }
+        lineStart = newlineIndex + 1;
+      }
+    }
+
+    pending += decoder.decode();
+    if (pending && visit(pending.replace(/\r$/, '')) === false) {
+      return;
+    }
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function buildDisplayMessageEntryFromRawLine(line: RawDisplayLine): DisplayMessageEntryLike {
@@ -1415,7 +1451,6 @@ function resolveSessionIdByFile(filePath: string): string | undefined {
 }
 
 function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta | null {
-  const raw = readFileSync(filePath, 'utf-8');
   let sessionRecord: RawSessionRecord | null = null;
   let model = 'unknown';
   let fallbackTitle: string | null = null;
@@ -1426,10 +1461,10 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
   let offshootMetadata: ConversationOffshootMetadata | null = null;
   let legacyToolWorkspaceMetadata: LegacyToolWorkspaceMetadata | null = null;
 
-  for (const rawLine of raw.split('\n')) {
+  readFileLinesForward(filePath, (rawLine) => {
     const trimmedLine = rawLine.trim();
     if (!trimmedLine) {
-      continue;
+      return;
     }
 
     // Session list rendering is a startup-hot path. Avoid JSON.parse for every
@@ -1439,51 +1474,51 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     if (isMessageLine) {
       messageCount += 1;
       if (fallbackTitle !== null && legacyToolWorkspaceMetadata) {
-        continue;
+        return;
       }
 
       const line = parseJsonLine(trimmedLine);
       if (!line || line.type !== 'message') {
-        continue;
+        return;
       }
       const message = line as RawMessage;
       legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
       if (fallbackTitle === null) {
         fallbackTitle = extractTitleFromMessage(message.message);
       }
-      continue;
+      return;
     }
 
     if (trimmedLine.includes('"type":"custom_message"') || trimmedLine.includes('"type": "custom_message"')) {
       messageCount += 1;
-      continue;
+      return;
     }
 
     const line = parseJsonLine(trimmedLine);
-    if (!line) continue;
+    if (!line) return;
 
     if (line.type === 'session') {
       if (!sessionRecord) {
         sessionRecord = line as RawSessionRecord;
       }
-      continue;
+      return;
     }
 
     if (line.type === 'model_change' && model === 'unknown') {
       model = (line as RawModelChange).modelId ?? 'unknown';
-      continue;
+      return;
     }
 
     if (line.type === 'session_info') {
       sawSessionInfo = true;
       namedTitle = normalizeSessionName((line as RawSessionInfo).name);
-      continue;
+      return;
     }
 
     if (line.type === 'custom') {
       workspaceMetadata = readConversationWorkspaceMetadata(line as RawCustomEntry) ?? workspaceMetadata;
       offshootMetadata = readConversationOffshootMetadata(line as RawCustomEntry) ?? offshootMetadata;
-      continue;
+      return;
     }
 
     if (line.type === 'message') {
@@ -1492,38 +1527,42 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
       legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
       if (fallbackTitle === null) fallbackTitle = extractTitleFromMessage(message.message);
     }
-  }
+  });
 
-  if (!sessionRecord) {
+  const resolvedSessionRecord = sessionRecord as RawSessionRecord | null;
+  if (!resolvedSessionRecord) {
     return null;
   }
 
-  const parentSessionFile = offshootMetadata?.detached
+  const resolvedOffshootMetadata = offshootMetadata as ConversationOffshootMetadata | null;
+  const resolvedWorkspaceMetadata = workspaceMetadata as ConversationWorkspaceMetadata | null;
+  const resolvedLegacyToolWorkspaceMetadata = legacyToolWorkspaceMetadata as LegacyToolWorkspaceMetadata | null;
+  const parentSessionFile = resolvedOffshootMetadata?.detached
     ? undefined
-    : (offshootMetadata?.parentSessionFile ?? normalizeOptionalPath(sessionRecord.parentSession));
-  const sourceRunId = offshootMetadata?.detached
+    : (resolvedOffshootMetadata?.parentSessionFile ?? normalizeOptionalPath(resolvedSessionRecord.parentSession));
+  const sourceRunId = resolvedOffshootMetadata?.detached
     ? undefined
-    : (offshootMetadata?.sourceRunId ?? readSourceRunIdFromSessionFilePath(filePath));
-  const headerCwd = sessionRecord.cwd ?? slugToCwd(cwdSlug);
+    : (resolvedOffshootMetadata?.sourceRunId ?? readSourceRunIdFromSessionFilePath(filePath));
+  const headerCwd = resolvedSessionRecord.cwd ?? slugToCwd(cwdSlug);
   const inferredLegacyWorkspaceMetadata =
-    workspaceMetadata?.workspaceCwd === null && legacyToolWorkspaceMetadata ? legacyToolWorkspaceMetadata : null;
-  const cwd = inferredLegacyWorkspaceMetadata?.cwd ?? workspaceMetadata?.cwd ?? headerCwd;
+    resolvedWorkspaceMetadata?.workspaceCwd === null && resolvedLegacyToolWorkspaceMetadata ? resolvedLegacyToolWorkspaceMetadata : null;
+  const cwd = inferredLegacyWorkspaceMetadata?.cwd ?? resolvedWorkspaceMetadata?.cwd ?? headerCwd;
   const workspaceCwd =
     inferredLegacyWorkspaceMetadata?.workspaceCwd ??
-    (workspaceMetadata && 'workspaceCwd' in workspaceMetadata
-      ? workspaceMetadata.workspaceCwd === null
+    (resolvedWorkspaceMetadata && 'workspaceCwd' in resolvedWorkspaceMetadata
+      ? resolvedWorkspaceMetadata.workspaceCwd === null
         ? isNeutralChatWorkspaceCwd(cwd)
           ? null
           : undefined
-        : workspaceMetadata.workspaceCwd
+        : resolvedWorkspaceMetadata.workspaceCwd
       : isNeutralChatWorkspaceCwd(cwd)
         ? null
         : undefined);
 
   return {
-    id: sessionRecord.id,
+    id: resolvedSessionRecord.id,
     file: filePath,
-    timestamp: sessionRecord.timestamp,
+    timestamp: resolvedSessionRecord.timestamp,
     cwd,
     ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
     cwdSlug,
@@ -1531,10 +1570,14 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     title: (sawSessionInfo ? namedTitle : null) ?? fallbackTitle ?? 'New Conversation',
     messageCount,
     ...(parentSessionFile ? { parentSessionFile } : {}),
-    ...(offshootMetadata?.parentSessionId ? { parentSessionId: offshootMetadata.parentSessionId } : {}),
-    ...(offshootMetadata?.parentMessageId ? { parentMessageId: offshootMetadata.parentMessageId } : {}),
-    ...(offshootMetadata?.kind ? { offshootKind: offshootMetadata.kind } : sourceRunId ? { offshootKind: 'subagent' as const } : {}),
-    ...(offshootMetadata?.timestamp ? { offshootTimestamp: offshootMetadata.timestamp } : {}),
+    ...(resolvedOffshootMetadata?.parentSessionId ? { parentSessionId: resolvedOffshootMetadata.parentSessionId } : {}),
+    ...(resolvedOffshootMetadata?.parentMessageId ? { parentMessageId: resolvedOffshootMetadata.parentMessageId } : {}),
+    ...(resolvedOffshootMetadata?.kind
+      ? { offshootKind: resolvedOffshootMetadata.kind }
+      : sourceRunId
+        ? { offshootKind: 'subagent' as const }
+        : {}),
+    ...(resolvedOffshootMetadata?.timestamp ? { offshootTimestamp: resolvedOffshootMetadata.timestamp } : {}),
     ...(sourceRunId ? { sourceRunId } : {}),
   };
 }
