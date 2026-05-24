@@ -62,7 +62,7 @@ function res(): ResponseStub {
 
 describe('conversationState routes', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     live.registry.clear();
     fs.existsSync.mockReturnValue(true);
     service.resolveConversationSessionFile.mockReturnValue('/session.json');
@@ -126,6 +126,26 @@ describe('conversationState routes', () => {
     await handler({ params: { id: 'conv-1' }, body: { enabled: false } }, persistedRes);
     expect(autoMode.writeConversationAutoModeState).toHaveBeenCalledWith({ id: 'manager' }, { enabled: false });
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_file_changed', sessionId: 'conv-1' });
+  });
+
+  it('recovers conversations through the HTTP route', async () => {
+    const { routes, context } = setupRouter();
+    const handler = routes.get('POST /api/conversations/:id/recover')!;
+    recovery.recoverConversationCapability.mockResolvedValue({ conversationId: 'conv-1', live: true, recovered: true });
+    const response = res();
+
+    await handler({ params: { id: 'conv-1' } }, response);
+
+    expect(recovery.recoverConversationCapability).toHaveBeenCalledWith(
+      'conv-1',
+      expect.objectContaining({
+        getRuntimeScope: context.getRuntimeScope,
+        buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
+        buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
+        flushLiveDeferredResumes: context.flushLiveDeferredResumes,
+      }),
+    );
+    expect(response.json).toHaveBeenCalledWith({ conversationId: 'conv-1', live: true, recovered: true });
   });
 
   it('duplicates live or persisted conversations and records offshoot metadata', async () => {

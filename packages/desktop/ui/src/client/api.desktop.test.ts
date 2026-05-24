@@ -492,6 +492,7 @@ describe('api desktop transport', () => {
         );
       if (path === '/api/conversations/conversation-1/title')
         return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/conversations/conversation-1/recover') return createJsonResponse(await recoverConversation('conversation-1'));
       if (path === '/api/conversations/live-1/model-preferences')
         return createJsonResponse(await readConversationModelPreferences({ conversationId: 'live-1' }));
       if (path === '/api/live-sessions' && init?.method === 'POST')

@@ -138,6 +138,22 @@ export function registerConversationStateRoutes(
     }
   });
 
+  router.post('/api/conversations/:id/recover', async (req, res) => {
+    try {
+      const result = await recoverConversationCapability(req.params.id, {
+        getRuntimeScope: getRuntimeScopeFn,
+        buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
+        buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
+        flushLiveDeferredResumes: flushLiveDeferredResumesFn,
+      });
+      res.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logError('request handler error', { message, stack: err instanceof Error ? err.stack : undefined });
+      res.status(500).json({ error: message });
+    }
+  });
+
   router.post('/api/conversations/:id/duplicate', async (req, res) => {
     try {
       const conversationId = req.params.id;

@@ -873,7 +873,13 @@ export const api = {
     });
   },
   recoverConversation: async (id: string) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Recovering conversations')).recoverConversation(id);
+    return post<{
+      conversationId: string;
+      live: boolean;
+      recovered: boolean;
+      replayedPendingOperation?: boolean;
+      usedFallbackPrompt?: boolean;
+    }>(`/conversations/${encodeURIComponent(id)}/recover`);
   },
   createLiveSession: async (
     cwd?: string,
