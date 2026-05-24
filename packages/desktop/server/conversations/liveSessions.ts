@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { AgentSession } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
+import { publishAppEvent } from '../shared/appEvents.js';
 import { persistTraceStats } from '../traces/tracePersistence.js';
 import {
   type ConversationAutoModeState,
@@ -242,7 +242,6 @@ function publishSessionMetaChanged(sessionId: string): void {
     const running = computeLiveSessionRunning(entry);
     if (running !== entry.running) {
       entry.running = running;
-      invalidateAppTopics('sessions');
     }
     package_.running = running;
   }

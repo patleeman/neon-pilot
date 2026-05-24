@@ -89,7 +89,7 @@ describe('live session broadcasts', () => {
     publishRunningChange(e as never);
     expect(e.running).toBe(true);
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_meta_changed', sessionId: 's1', running: true });
-    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(appEvents.invalidateAppTopics).not.toHaveBeenCalled();
   });
 
   it('applies non-empty session titles and broadcasts title updates', () => {
