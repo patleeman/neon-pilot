@@ -34,7 +34,6 @@ const allowed = new Set([
   'packages/desktop/server/conversations/sessionExchange.ts',
   'packages/desktop/server/daemon/background-agent-runner.ts',
   'packages/desktop/server/routes/conversationState.ts',
-  'packages/desktop/server/shared/appEvents.ts',
 ]);
 
 const output = execFileSync(

@@ -30,7 +30,7 @@ import { readConversationModelPreferenceSnapshot, resolveConversationModelPrefer
 import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
 import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
-import { listSessions, readSessionBlocksWithTelemetry, readSessionMeta } from './sessions.js';
+import { listSessions, readKnownSessionIdByFilePath, readSessionBlocksWithTelemetry, readSessionMeta } from './sessions.js';
 
 let getRuntimeScopeFn: () => string = () => {
   throw new Error('getRuntimeScope not initialized for conversation service');
@@ -433,6 +433,10 @@ export function resolveConversationSessionFile(conversationId: string): string |
     .find((session) => session.id === conversationId)
     ?.file?.trim();
   return snapshotSessionFile || undefined;
+}
+
+export function readKnownConversationIdByFilePath(filePath: string): string | null {
+  return readKnownSessionIdByFilePath(filePath);
 }
 
 export function readConversationSessionSignature(conversationId: string): string | null {

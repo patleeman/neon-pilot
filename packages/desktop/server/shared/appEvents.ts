@@ -15,7 +15,7 @@ import {
 import { getDaemonConfigFilePath, loadDaemonConfig, resolveDaemonPaths, resolveDurableRunsRoot } from '@neon-pilot/daemon';
 
 import { clearDurableRunsListCache } from '../automation/durableRuns.js';
-import { readKnownSessionIdByFilePath } from '../conversations/sessions.js';
+import { readKnownConversationIdByFilePath } from '../conversations/conversationService.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { logWarn } from './logging.js';
 
@@ -557,7 +557,7 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
 
     const sessionIds = new Set<string>();
     for (const filePath of pendingConversationSessionFilePaths) {
-      const sessionId = readKnownSessionIdByFilePath(filePath)?.trim();
+      const sessionId = readKnownConversationIdByFilePath(filePath)?.trim();
       if (sessionId) {
         sessionIds.add(sessionId);
       }
