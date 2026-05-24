@@ -1,13 +1,15 @@
 import { sep } from 'node:path';
 
+import { readIndexedConversationSearchText } from './conversationSearchIndex.js';
 import {
   listConversationSessionsSnapshot,
+  readConversationSessionDetail,
   readConversationSessionMeta,
   readConversationSessionSignature,
   resolveConversationSessionFile,
 } from './conversationService.js';
 import { readConversationSummary } from './conversationSummaries.js';
-import { type DisplayBlock, readSessionBlocksByFile, readSessionSearchTextForMeta } from './sessions.js';
+import type { DisplayBlock } from './sessions.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
 export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;
@@ -733,7 +735,8 @@ function resolveConversationSession(
     throw new ConversationInspectCapabilityInputError(`Conversation ${conversationId} does not have a readable session file.`);
   }
 
-  const detail = readSessionBlocksByFile(sessionFile);
+  const sessionRead = readConversationSessionDetail({ conversationId });
+  const detail = sessionRead.detail;
   if (!detail) {
     throw new ConversationInspectCapabilityInputError(`Conversation ${conversationId} could not be read.`);
   }
@@ -928,13 +931,15 @@ export function searchConversationInspectSessions(
 
   const matches: SearchConversationInspectMatch[] = [];
 
+  const indexedSearchTextBySessionId = includeAroundMatches ? {} : readIndexedConversationSearchText(sessions.map((session) => session.id));
+
   for (const session of sessions) {
     if (stopAfterLimit && matches.length >= limit) {
       break;
     }
 
     if (!includeAroundMatches) {
-      const searchText = readSessionSearchTextForMeta(session);
+      const searchText = indexedSearchTextBySessionId[session.id] ?? '';
       if (searchText) {
         if (!matchesSearchText(searchText, query, mode)) {
           continue;
@@ -956,7 +961,8 @@ export function searchConversationInspectSessions(
       }
     }
 
-    const detail = readSessionBlocksByFile(session.file);
+    const sessionRead = readConversationSessionDetail({ conversationId: session.id });
+    const detail = sessionRead.detail;
     if (!detail) {
       continue;
     }

@@ -489,12 +489,16 @@ export function parseTailBlocksQuery(rawTailBlocks: unknown): number | undefined
   return Number.isSafeInteger(parsed) && (parsed as number) > 0 ? Math.min(MAX_SESSION_DETAIL_TAIL_BLOCKS, parsed as number) : undefined;
 }
 
+export function readConversationSessionDetail(input: { conversationId: string; tailBlocks?: number }): SessionDetailRouteReadResult {
+  const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
+  return readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+}
+
 export async function readSessionDetailForRoute(input: { conversationId: string; profile: string; tailBlocks?: number }): Promise<{
   sessionRead: SessionDetailRouteReadResult;
   remoteMirror: SessionDetailRouteRemoteMirrorTelemetry;
 }> {
-  const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
-  const sessionRead = readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+  const sessionRead = readConversationSessionDetail(input);
 
   return {
     sessionRead,

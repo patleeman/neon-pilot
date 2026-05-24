@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   listConversationSessionsSnapshotMock,
   readConversationSessionMetaMock,
+  readConversationSessionDetailMock,
   readConversationSessionSignatureMock,
   resolveConversationSessionFileMock,
   readSessionBlocksByFileMock,
@@ -10,6 +11,7 @@ const {
 } = vi.hoisted(() => ({
   listConversationSessionsSnapshotMock: vi.fn(),
   readConversationSessionMetaMock: vi.fn(),
+  readConversationSessionDetailMock: vi.fn(),
   readConversationSessionSignatureMock: vi.fn(),
   resolveConversationSessionFileMock: vi.fn(),
   readSessionBlocksByFileMock: vi.fn(),
@@ -18,9 +20,22 @@ const {
 
 vi.mock('./conversationService.js', () => ({
   listConversationSessionsSnapshot: listConversationSessionsSnapshotMock,
+  readConversationSessionDetail: readConversationSessionDetailMock,
   readConversationSessionMeta: readConversationSessionMetaMock,
   readConversationSessionSignature: readConversationSessionSignatureMock,
   resolveConversationSessionFile: resolveConversationSessionFileMock,
+}));
+
+vi.mock('./conversationSearchIndex.js', () => ({
+  readIndexedConversationSearchText: (sessionIds: string[]) => {
+    const sessions = listConversationSessionsSnapshotMock();
+    return Object.fromEntries(
+      sessionIds.map((sessionId) => {
+        const session = sessions.find((candidate: { id: string }) => candidate.id === sessionId) ?? { id: sessionId };
+        return [sessionId, readSessionSearchTextForMetaMock(session) ?? ''];
+      }),
+    );
+  },
 }));
 
 vi.mock('./sessions.js', () => ({
@@ -42,11 +57,17 @@ import {
 beforeEach(() => {
   listConversationSessionsSnapshotMock.mockReset();
   readConversationSessionMetaMock.mockReset();
+  readConversationSessionDetailMock.mockReset();
   readConversationSessionSignatureMock.mockReset();
   resolveConversationSessionFileMock.mockReset();
   readSessionBlocksByFileMock.mockReset();
   readSessionSearchTextForMetaMock.mockReset();
   readSessionSearchTextForMetaMock.mockReturnValue(null);
+  readConversationSessionDetailMock.mockImplementation(({ conversationId }: { conversationId: string }) => {
+    const sessions = listConversationSessionsSnapshotMock() ?? [];
+    const session = sessions.find((candidate: { id: string }) => candidate.id === conversationId);
+    return { detail: readSessionBlocksByFileMock(session?.file ?? `/sessions/${conversationId}.jsonl`) };
+  });
 });
 
 describe('conversationInspectCapability', () => {
