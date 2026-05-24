@@ -1,7 +1,7 @@
 import { type AgentSession } from '@earendil-works/pi-coding-agent';
 
+import { readConversationSessionMetaByFile } from './conversationService.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
-import { readSessionMetaByFile } from './sessions.js';
 
 function summarizeUserMessageContent(content: unknown): { text: string; imageCount: number } {
   const blocks = Array.isArray(content)
@@ -83,7 +83,7 @@ export function resolveStableSessionTitle(session: AgentSession): string {
 
   const sessionFile = resolveLiveSessionFile(session);
   if (sessionFile) {
-    const persistedTitle = readSessionMetaByFile(sessionFile)?.title?.trim();
+    const persistedTitle = readConversationSessionMetaByFile(sessionFile)?.title?.trim();
     if (persistedTitle && !isPlaceholderConversationTitle(persistedTitle)) {
       return persistedTitle;
     }

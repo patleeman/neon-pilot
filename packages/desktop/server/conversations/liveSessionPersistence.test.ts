@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { fs, readSessionMetaByFileMock, upsertConversationCatalogSessionMock } = vi.hoisted(() => ({
+const { fs, readConversationSessionMetaByFileMock, upsertConversationCatalogSessionMock } = vi.hoisted(() => ({
   fs: { appendFileSync: vi.fn(), existsSync: vi.fn(() => true) },
-  readSessionMetaByFileMock: vi.fn(),
+  readConversationSessionMetaByFileMock: vi.fn(),
   upsertConversationCatalogSessionMock: vi.fn(),
 }));
 vi.mock('node:fs', () => fs);
 
-vi.mock('./sessions.js', () => ({
-  readSessionMetaByFile: readSessionMetaByFileMock,
+vi.mock('./conversationService.js', () => ({
+  readConversationSessionMetaByFile: readConversationSessionMetaByFileMock,
 }));
 
 vi.mock('./conversationCatalog.js', () => ({
@@ -21,7 +21,7 @@ describe('live session persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fs.existsSync.mockReturnValue(true);
-    readSessionMetaByFileMock.mockReturnValue({ id: 's1', file: '/sessions/s1.jsonl' });
+    readConversationSessionMetaByFileMock.mockReturnValue({ id: 's1', file: '/sessions/s1.jsonl' });
   });
 
   it('patches session manager persistence to rewrite first and append later entries', () => {

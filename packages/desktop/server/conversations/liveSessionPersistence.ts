@@ -3,7 +3,7 @@ import { appendFileSync, existsSync } from 'node:fs';
 import { type AgentSession, type SessionManager } from '@earendil-works/pi-coding-agent';
 
 import { upsertConversationCatalogSession } from './conversationCatalog.js';
-import { readSessionMetaByFile } from './sessions.js';
+import { readConversationSessionMetaByFile } from './conversationService.js';
 
 interface PersistableSessionManager {
   persist?: boolean;
@@ -16,7 +16,7 @@ interface PersistableSessionManager {
 const SESSION_MANAGER_PERSISTENCE_PATCH = Symbol('pa.session-manager-persistence-patch');
 
 function updateConversationCatalogForSessionFile(sessionFile: string): void {
-  const meta = readSessionMetaByFile(sessionFile);
+  const meta = readConversationSessionMetaByFile(sessionFile);
   if (meta) {
     upsertConversationCatalogSession(meta);
   }

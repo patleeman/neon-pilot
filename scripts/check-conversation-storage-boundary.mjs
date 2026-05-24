@@ -14,13 +14,10 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationService.ts',
   'packages/desktop/server/conversations/conversationSummaries.ts',
   'packages/desktop/server/conversations/liveSessionBranching.ts',
-  'packages/desktop/server/conversations/liveSessionCreation.ts',
   'packages/desktop/server/conversations/liveSessionEvents.ts',
   'packages/desktop/server/conversations/liveSessionParallelReconciliation.ts',
-  'packages/desktop/server/conversations/liveSessionPersistence.ts',
   'packages/desktop/server/conversations/liveSessions.ts',
   'packages/desktop/server/conversations/liveSessionStateSnapshot.ts',
-  'packages/desktop/server/conversations/liveSessionTitle.ts',
   'packages/desktop/server/conversations/liveSessionTranscript.ts',
   'packages/desktop/server/conversations/sessionExchange.ts',
 ]);

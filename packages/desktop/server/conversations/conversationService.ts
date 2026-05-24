@@ -40,6 +40,7 @@ import {
   readSessionBlocksWithTelemetry,
   readSessionImageAsset,
   readSessionMeta,
+  readSessionMetaByFile,
   renameStoredSession as renameStoredConversationSession,
   type SessionImageAsset,
 } from './sessions.js';
@@ -449,6 +450,10 @@ export function resolveConversationSessionFile(conversationId: string): string |
 
 export function readKnownConversationIdByFilePath(filePath: string): string | null {
   return readKnownSessionIdByFilePath(filePath);
+}
+
+export function readConversationSessionMetaByFile(filePath: string) {
+  return readSessionMetaByFile(filePath);
 }
 
 export function appendConversationOffshootMetadata(input: Parameters<typeof appendSessionConversationOffshootMetadata>[0]): void {

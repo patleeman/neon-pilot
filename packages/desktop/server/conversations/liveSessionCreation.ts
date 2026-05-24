@@ -1,9 +1,9 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
+import { readConversationSessionMetaByFile } from './conversationService.js';
 import { createPreparedLiveAgentSession } from './liveSessionFactory.js';
 import { type LiveSessionLoaderOptions, queuePrewarmLiveSessionLoader } from './liveSessionLoader.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
-import { readSessionMetaByFile } from './sessions.js';
 
 export async function createLiveSession(input: {
   cwd: string;
@@ -91,7 +91,7 @@ export async function resumeLiveSession(input: {
   const { cwdOverride, ...loaderOptions } = input.options ?? {};
   const normalizedCwdOverride = typeof cwdOverride === 'string' && cwdOverride.trim().length > 0 ? cwdOverride.trim() : undefined;
 
-  const metadataCwd = readSessionMetaByFile(input.sessionFile)?.cwd;
+  const metadataCwd = readConversationSessionMetaByFile(input.sessionFile)?.cwd;
   const effectiveCwdOverride = normalizedCwdOverride ?? metadataCwd;
   const sessionManager = SessionManager.open(input.sessionFile, undefined, effectiveCwdOverride);
   const cwd = effectiveCwdOverride ?? sessionManager.getCwd();
