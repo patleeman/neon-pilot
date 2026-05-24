@@ -83,7 +83,7 @@ describe('prompt context inventory', () => {
     ]);
     extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: false, error: 'bad' }).mockRejectedValueOnce(new Error('boom'));
 
-    const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1' });
+    const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1', selectedSessionIds: ['related-1'] });
 
     expect(plan.blocks).toEqual([]);
     expect(plan.contextMessages).toEqual([]);

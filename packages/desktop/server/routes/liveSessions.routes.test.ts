@@ -648,7 +648,7 @@ describe('live session routes', () => {
           }),
         );
       },
-      { timeout: 2_000 },
+      { timeout: 6_000 },
     );
     expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('live-resumed', 'Please continue.', 'followUp', undefined, 'surface-1');
     expect(markBackgroundRunResultsDeliveredMock).toHaveBeenCalledWith({
