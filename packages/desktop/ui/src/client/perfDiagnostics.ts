@@ -1,3 +1,5 @@
+import { recordRendererTelemetry } from '../telemetry/appTelemetry';
+
 interface PerfApiSample {
   path: string;
   recordedAt: string;
@@ -28,6 +30,8 @@ interface ChatRenderSample {
   conversationId: string | null;
   route: string | null;
   recordedAt: string;
+  startTimeMs: number;
+  endTimeMs: number;
   durationMs: number;
   meta: Record<string, unknown>;
 }
@@ -35,7 +39,10 @@ interface ChatRenderSample {
 interface ClientPerfSample {
   name: string;
   recordedAt: string;
+  startTimeMs: number;
+  endTimeMs: number;
   durationMs: number;
+  route: string | null;
   meta?: Record<string, unknown>;
 }
 
@@ -114,11 +121,14 @@ export function recordChatRenderTiming(input: {
   startedAtMs: number;
   meta: Record<string, unknown>;
 }): void {
+  const endTimeMs = performance.now();
   const sample: ChatRenderSample = {
     conversationId: input.conversationId ?? null,
     route: input.route ?? null,
     recordedAt: new Date().toISOString(),
-    durationMs: Math.max(0, performance.now() - input.startedAtMs),
+    startTimeMs: Math.max(0, input.startedAtMs),
+    endTimeMs,
+    durationMs: Math.max(0, endTimeMs - input.startedAtMs),
     meta: input.meta,
   };
   appendSample(perfStore.chatRenderSamples, sample);
@@ -128,11 +138,25 @@ export function recordChatRenderTiming(input: {
   }
 }
 
-export function recordClientPerfTiming(input: { name: string; startedAtMs: number; meta?: Record<string, unknown> }): void {
+export function recordClientPerfTiming(input: {
+  name: string;
+  startedAtMs: number;
+  meta?: Record<string, unknown>;
+  minDurationMs?: number;
+}): void {
+  const endTimeMs = performance.now();
+  const durationMs = Math.max(0, endTimeMs - input.startedAtMs);
+  if (input.minDurationMs !== undefined && durationMs < input.minDurationMs) {
+    return;
+  }
+
   const sample: ClientPerfSample = {
     name: input.name,
     recordedAt: new Date().toISOString(),
-    durationMs: Math.max(0, performance.now() - input.startedAtMs),
+    startTimeMs: Math.max(0, input.startedAtMs),
+    endTimeMs,
+    durationMs,
+    route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
     ...(input.meta ? { meta: input.meta } : {}),
   };
   appendSample(perfStore.clientSamples, sample);
@@ -142,22 +166,86 @@ export function recordClientPerfTiming(input: { name: string; startedAtMs: numbe
   }
 }
 
+export function measureClientPerfTiming<T>(
+  input: { name: string; meta?: Record<string, unknown>; minDurationMs?: number },
+  fn: () => T,
+): T {
+  const startedAtMs = performance.now();
+  try {
+    return fn();
+  } finally {
+    recordClientPerfTiming({ ...input, startedAtMs });
+  }
+}
+
+function summarizeClientSample(sample: ClientPerfSample): Record<string, unknown> {
+  return {
+    name: sample.name,
+    startTimeMs: Math.round(sample.startTimeMs),
+    endTimeMs: Math.round(sample.endTimeMs),
+    durationMs: Math.round(sample.durationMs),
+    route: sample.route,
+    ...(sample.meta ? { meta: sample.meta } : {}),
+  };
+}
+
+function summarizeChatRenderSample(sample: ChatRenderSample): Record<string, unknown> {
+  return {
+    conversationId: sample.conversationId,
+    route: sample.route,
+    startTimeMs: Math.round(sample.startTimeMs),
+    endTimeMs: Math.round(sample.endTimeMs),
+    durationMs: Math.round(sample.durationMs),
+    meta: sample.meta,
+  };
+}
+
+function buildRendererBlockAttribution(startTimeMs: number, durationMs: number): Record<string, unknown> | null {
+  const blockEndTimeMs = startTimeMs + durationMs;
+  const recentClientSamples = perfStore.clientSamples
+    .filter((sample) => sample.endTimeMs >= startTimeMs - 5000 && sample.startTimeMs <= blockEndTimeMs + 250)
+    .slice(-8)
+    .map(summarizeClientSample);
+  const latestChatRenderSample = perfStore.chatRenderSamples.at(-1);
+  if (recentClientSamples.length === 0 && !latestChatRenderSample) {
+    return null;
+  }
+
+  return {
+    ...(recentClientSamples.length > 0 ? { recentClientSamples } : {}),
+    ...(latestChatRenderSample ? { latestChatRenderSample: summarizeChatRenderSample(latestChatRenderSample) } : {}),
+  };
+}
+
 function recordRendererLongTask(input: {
   source: RendererLongTaskSample['source'];
   startTimeMs: number;
   durationMs: number;
   meta?: Record<string, unknown>;
 }): void {
+  const startTimeMs = Math.max(0, input.startTimeMs);
+  const durationMs = Math.max(0, input.durationMs);
+  const attribution = buildRendererBlockAttribution(startTimeMs, durationMs);
   const sample: RendererLongTaskSample = {
     route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
     recordedAt: new Date().toISOString(),
-    startTimeMs: Math.max(0, input.startTimeMs),
-    durationMs: Math.max(0, input.durationMs),
+    startTimeMs,
+    durationMs,
     source: input.source,
-    ...(input.meta ? { meta: input.meta } : {}),
+    ...(input.meta || attribution ? { meta: { ...(input.meta ?? {}), ...(attribution ? { attribution } : {}) } } : {}),
   };
   appendSample(perfStore.longTaskSamples, sample);
   publishPerfStore();
+  recordRendererTelemetry({
+    category: 'renderer_performance',
+    name: sample.source,
+    route: sample.route,
+    durationMs: Math.round(sample.durationMs),
+    metadata: {
+      startTimeMs: Math.round(sample.startTimeMs),
+      ...sample.meta,
+    },
+  });
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][renderer-block]', sample);
   }
