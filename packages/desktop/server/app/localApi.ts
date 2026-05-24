@@ -713,6 +713,7 @@ export async function subscribeDesktopConversationState(
     tailBlocks,
   });
   let lastSerializedState = '';
+  let liveEmitTimer: ReturnType<typeof setTimeout> | null = null;
 
   const ensureCurrentStateIsLive = async () => {
     if (
@@ -739,7 +740,14 @@ export async function subscribeDesktopConversationState(
     });
   };
 
-  const emitState = (state: DesktopConversationState) => {
+  const emitState = (state: DesktopConversationState, options?: { skipDeepCompare?: boolean }) => {
+    if (options?.skipDeepCompare) {
+      if (!closed) {
+        onEvent(buildConversationStateBridgeEvent(state));
+      }
+      return;
+    }
+
     const serialized = JSON.stringify(state);
     if (!shouldEmitConversationState({ closed, serializedState: serialized, lastSerializedState })) {
       return;
@@ -747,6 +755,17 @@ export async function subscribeDesktopConversationState(
 
     lastSerializedState = serialized;
     onEvent(buildConversationStateBridgeEvent(state));
+  };
+
+  const scheduleLiveStateEmit = () => {
+    if (closed || liveEmitTimer) {
+      return;
+    }
+
+    liveEmitTimer = setTimeout(() => {
+      liveEmitTimer = null;
+      emitState(currentState, { skipDeepCompare: true });
+    }, 100);
   };
 
   const closeLiveSubscription = () => {
@@ -789,7 +808,7 @@ export async function subscribeDesktopConversationState(
           };
         }
 
-        emitState(currentState);
+        scheduleLiveStateEmit();
       },
       {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
@@ -839,6 +858,10 @@ export async function subscribeDesktopConversationState(
     }
 
     closed = markSubscriptionClosed();
+    if (liveEmitTimer) {
+      clearTimeout(liveEmitTimer);
+      liveEmitTimer = null;
+    }
     closeLiveSubscription();
     appUnsubscribe?.();
     appUnsubscribe = null;
