@@ -5,11 +5,8 @@ const { readSessionDetailForRouteMock, readSessionImageAssetMock } = vi.hoisted(
   readSessionImageAssetMock: vi.fn(),
 }));
 
-vi.mock('./sessions.js', () => ({
-  readSessionImageAsset: readSessionImageAssetMock,
-}));
-
 vi.mock('./conversationService.js', () => ({
+  readConversationSessionImageAsset: readSessionImageAssetMock,
   readSessionDetailForRoute: readSessionDetailForRouteMock,
 }));
 

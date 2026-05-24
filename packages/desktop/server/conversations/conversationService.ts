@@ -38,8 +38,10 @@ import {
   listSessions,
   readKnownSessionIdByFilePath,
   readSessionBlocksWithTelemetry,
+  readSessionImageAsset,
   readSessionMeta,
   renameStoredSession as renameStoredConversationSession,
+  type SessionImageAsset,
 } from './sessions.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -471,6 +473,10 @@ export function buildAppendOnlyConversationDetailResponse(
   input: Parameters<typeof buildSessionAppendOnlySessionDetailResponse>[0],
 ): ReturnType<typeof buildSessionAppendOnlySessionDetailResponse> {
   return buildSessionAppendOnlySessionDetailResponse(input);
+}
+
+export function readConversationSessionImageAsset(sessionId: string, blockId: string, imageIndex?: number): SessionImageAsset | null {
+  return typeof imageIndex === 'number' ? readSessionImageAsset(sessionId, blockId, imageIndex) : readSessionImageAsset(sessionId, blockId);
 }
 
 export function readConversationSessionSignature(conversationId: string): string | null {

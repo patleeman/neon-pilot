@@ -1,15 +1,15 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
-import { readSessionDetailForRoute } from './conversationService.js';
-import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse } from './conversationTypes.js';
-import type { SessionImageAsset } from './conversationTypes.js';
-import { readSessionImageAsset } from './sessions.js';
+import { readConversationSessionImageAsset, readSessionDetailForRoute } from './conversationService.js';
+import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse, SessionImageAsset } from './conversationTypes.js';
 
 export function readConversationSessionImageAssetCapability(
   sessionId: string,
   blockId: string,
   imageIndex?: number,
 ): SessionImageAsset | null {
-  return typeof imageIndex === 'number' ? readSessionImageAsset(sessionId, blockId, imageIndex) : readSessionImageAsset(sessionId, blockId);
+  return typeof imageIndex === 'number'
+    ? readConversationSessionImageAsset(sessionId, blockId, imageIndex)
+    : readConversationSessionImageAsset(sessionId, blockId);
 }
 
 function toDataUrl(mimeType: string, data: Buffer): string {

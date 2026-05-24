@@ -12,7 +12,6 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationRecovery.ts',
   'packages/desktop/server/conversations/conversationSearchIndex.ts',
   'packages/desktop/server/conversations/conversationService.ts',
-  'packages/desktop/server/conversations/conversationSessionAssetCapability.ts',
   'packages/desktop/server/conversations/conversationSummaries.ts',
   'packages/desktop/server/conversations/liveSessionBranching.ts',
   'packages/desktop/server/conversations/liveSessionCreation.ts',
