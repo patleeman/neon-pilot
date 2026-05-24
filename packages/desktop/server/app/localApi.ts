@@ -277,6 +277,7 @@ export interface DesktopLocalApiDispatchResult {
 export type DesktopConversationStateBridgeEvent =
   | { type: 'open' }
   | { type: 'state'; state: DesktopConversationState }
+  | { type: 'stream_state'; stream: DesktopConversationState['stream']; liveSession: DesktopConversationState['liveSession'] }
   | { type: 'error'; message: string }
   | { type: 'close' };
 
@@ -764,7 +765,9 @@ export async function subscribeDesktopConversationState(
 
     liveEmitTimer = setTimeout(() => {
       liveEmitTimer = null;
-      emitState(currentState, { skipDeepCompare: true });
+      if (!closed) {
+        onEvent({ type: 'stream_state', stream: currentState.stream, liveSession: currentState.liveSession });
+      }
     }, 100);
   };
 

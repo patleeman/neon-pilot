@@ -8,8 +8,10 @@ import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from 
 type DesktopConversationStateEnvelope = {
   subscriptionId: string;
   event: {
-    type: 'open' | 'state' | 'error' | 'close';
+    type: 'open' | 'state' | 'stream_state' | 'error' | 'close';
     state?: DesktopConversationState;
+    stream?: DesktopConversationState['stream'];
+    liveSession?: DesktopConversationState['liveSession'];
     message?: string;
   };
 };
@@ -101,6 +103,20 @@ export function useDesktopConversationState(conversationId: string | null, optio
         case 'state':
           if (detail.event.state) {
             setState((previous) => mergeDesktopConversationState(previous, detail.event.state as DesktopConversationState));
+            setError(null);
+          }
+          return;
+        case 'stream_state':
+          if (detail.event.stream && detail.event.liveSession) {
+            setState((previous) =>
+              previous
+                ? {
+                    ...previous,
+                    liveSession: detail.event.liveSession as DesktopConversationState['liveSession'],
+                    stream: detail.event.stream as DesktopConversationState['stream'],
+                  }
+                : previous,
+            );
             setError(null);
           }
           return;
