@@ -127,6 +127,7 @@ import {
   isLive as isLiveSession,
   registry as liveRegistry,
   renameSession,
+  type SseEvent,
   subscribe as subscribeLiveSession,
 } from '../conversations/liveSessions.js';
 import {
@@ -277,7 +278,7 @@ export interface DesktopLocalApiDispatchResult {
 export type DesktopConversationStateBridgeEvent =
   | { type: 'open' }
   | { type: 'state'; state: DesktopConversationState }
-  | { type: 'stream_state'; stream: DesktopConversationState['stream']; liveSession: DesktopConversationState['liveSession'] }
+  | { type: 'stream_events'; events: SseEvent[]; liveSession: DesktopConversationState['liveSession'] }
   | { type: 'error'; message: string }
   | { type: 'close' };
 
@@ -715,6 +716,7 @@ export async function subscribeDesktopConversationState(
   });
   let lastSerializedState = '';
   let liveEmitTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingLiveEvents: SseEvent[] = [];
 
   const ensureCurrentStateIsLive = async () => {
     if (
@@ -765,10 +767,12 @@ export async function subscribeDesktopConversationState(
 
     liveEmitTimer = setTimeout(() => {
       liveEmitTimer = null;
-      if (!closed) {
-        onEvent({ type: 'stream_state', stream: currentState.stream, liveSession: currentState.liveSession });
+      const events = pendingLiveEvents;
+      pendingLiveEvents = [];
+      if (!closed && events.length > 0) {
+        onEvent({ type: 'stream_events', events, liveSession: currentState.liveSession });
       }
-    }, 100);
+    }, 50);
   };
 
   const closeLiveSubscription = () => {
@@ -811,6 +815,7 @@ export async function subscribeDesktopConversationState(
           };
         }
 
+        pendingLiveEvents.push(event);
         scheduleLiveStateEmit();
       },
       {
@@ -865,6 +870,7 @@ export async function subscribeDesktopConversationState(
       clearTimeout(liveEmitTimer);
       liveEmitTimer = null;
     }
+    pendingLiveEvents = [];
     closeLiveSubscription();
     appUnsubscribe?.();
     appUnsubscribe = null;
