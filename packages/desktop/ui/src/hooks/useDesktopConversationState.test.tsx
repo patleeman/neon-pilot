@@ -4,7 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api.js';
-import { normalizeDesktopConversationStateTailBlocks, useDesktopConversationState } from './useDesktopConversationState.js';
+import {
+  applyDesktopConversationStreamEvent,
+  normalizeDesktopConversationStateTailBlocks,
+  useDesktopConversationState,
+} from './useDesktopConversationState.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -30,6 +34,58 @@ describe('normalizeDesktopConversationStateTailBlocks', () => {
 
   it('caps expensive desktop conversation tail block limits', () => {
     expect(normalizeDesktopConversationStateTailBlocks(50000)).toBe(10000);
+  });
+});
+
+describe('applyDesktopConversationStreamEvent', () => {
+  it('clears active goal state when the goal tool completes', () => {
+    const stream = {
+      blocks: [
+        {
+          type: 'tool_use' as const,
+          id: 'goal-1',
+          toolCallId: 'goal-1',
+          tool: 'goal',
+          input: {},
+          output: '',
+          ts: '2026-05-24T00:00:00.000Z',
+        },
+      ],
+      blockOffset: 0,
+      totalBlocks: 1,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: {
+        objective: 'Ship it',
+        status: 'active' as const,
+        tasks: [],
+        stopReason: null,
+        updatedAt: '2026-05-24T00:00:00.000Z',
+      },
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const next = applyDesktopConversationStreamEvent(stream, {
+      type: 'tool_end',
+      toolCallId: 'goal-1',
+      toolName: 'goal',
+      isError: false,
+      durationMs: 0,
+      output: 'Goal complete!',
+      details: { state: { objective: '', status: 'complete', stopReason: 'goal achieved', updatedAt: '2026-05-24T00:00:01.000Z' } },
+    });
+
+    expect(next.goalState).toBeNull();
   });
 });
 

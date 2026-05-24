@@ -3,7 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../client/api';
 import { getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
-import type { DesktopConversationState, DisplayBlock, PromptAttachmentRefInput, PromptImageInput, SseEvent } from '../shared/types';
+import type {
+  DesktopConversationState,
+  DisplayBlock,
+  PromptAttachmentRefInput,
+  PromptImageInput,
+  SseEvent,
+  ThreadGoal,
+} from '../shared/types';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
@@ -24,6 +31,38 @@ function findLastToolUseIndex(blocks: DisplayBlock[], toolCallId: string): numbe
   return -1;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizeGoalStatus(value: unknown): ThreadGoal['status'] {
+  if (typeof value === 'string' && ['active', 'paused', 'complete'].includes(value)) {
+    return value as ThreadGoal['status'];
+  }
+  return 'complete';
+}
+
+function readGoalStateFromToolDetails(toolName: string | undefined, details: unknown): ThreadGoal | null | undefined {
+  if (toolName !== 'goal' || !isRecord(details) || !isRecord(details.state)) {
+    return undefined;
+  }
+  const state = details.state;
+  if (typeof state.objective !== 'string') {
+    return undefined;
+  }
+  const status = normalizeGoalStatus(state.status);
+  if (!state.objective.trim() || status === 'complete') {
+    return null;
+  }
+  return {
+    objective: state.objective,
+    status,
+    tasks: [],
+    stopReason: typeof state.stopReason === 'string' ? state.stopReason : null,
+    updatedAt: typeof state.updatedAt === 'string' ? state.updatedAt : null,
+  };
+}
+
 function readPartialToolText(partialResult: unknown): string {
   if (typeof partialResult === 'string') return partialResult;
   if (partialResult && typeof partialResult === 'object' && 'content' in partialResult) {
@@ -38,7 +77,7 @@ function readPartialToolText(partialResult: unknown): string {
   return '';
 }
 
-function applyDesktopConversationStreamEvent(
+export function applyDesktopConversationStreamEvent(
   stream: DesktopConversationState['stream'],
   event: SseEvent,
 ): DesktopConversationState['stream'] {
@@ -116,7 +155,13 @@ function applyDesktopConversationStreamEvent(
         const block = blocks[index];
         blocks[index] = { ...block, output: event.output, durationMs: event.durationMs, details: event.details ?? block.details };
       }
-      return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
+      const goalState = readGoalStateFromToolDetails(event.toolName, event.details);
+      return {
+        ...stream,
+        blocks,
+        totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length),
+        ...(goalState !== undefined ? { goalState } : {}),
+      };
     }
     case 'queue_state':
       return { ...stream, pendingQueue: { steering: event.steering, followUp: event.followUp } };
