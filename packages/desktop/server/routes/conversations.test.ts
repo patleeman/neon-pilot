@@ -34,6 +34,7 @@ const {
   readSessionSearchTextForMetaMock,
   readSessionSearchTextMock,
   searchConversationInspectSessionsMock,
+  searchIndexedConversationContentMock,
   resolveConversationSessionFileMock,
   saveConversationAttachmentMock,
   addConversationCommitCheckpointCommentMock,
@@ -77,6 +78,7 @@ const {
   readSessionSearchTextForMetaMock: vi.fn(),
   readSessionSearchTextMock: vi.fn(),
   searchConversationInspectSessionsMock: vi.fn(),
+  searchIndexedConversationContentMock: vi.fn(),
   resolveConversationSessionFileMock: vi.fn(),
   saveConversationAttachmentMock: vi.fn(),
   addConversationCommitCheckpointCommentMock: vi.fn(),
@@ -144,6 +146,10 @@ vi.mock('../conversations/sessions.js', () => ({
 
 vi.mock('../conversations/conversationSessionCapability.js', () => ({
   readConversationSessionsCapability: listConversationSessionsSnapshotMock,
+}));
+
+vi.mock('../conversations/conversationSearchIndex.js', () => ({
+  searchIndexedConversationContent: searchIndexedConversationContentMock,
 }));
 
 vi.mock('../shared/httpHeaders.js', () => ({
@@ -427,9 +433,24 @@ describe('conversation routes', () => {
     expect(unsafeIndexedImageRes.status).toHaveBeenCalledWith(400);
     expect(unsafeIndexedImageRes.json).toHaveBeenCalledWith({ error: 'imageIndex must be a non-negative integer' });
 
+    searchIndexedConversationContentMock.mockReturnValueOnce([
+      {
+        conversationId: 'session-1',
+        title: 'Session 1',
+        cwd: '/repo',
+        lastActivityAt: '2026-05-22T00:00:00.000Z',
+        isLive: false,
+        isRunning: false,
+        blockId: 'search-index',
+        blockType: 'text',
+        blockIndex: 0,
+        snippet: 'needle found',
+      },
+    ]);
     const contentSearchRes = createResponse();
     postHandler('/api/sessions/search')(createRequest({ body: { query: 'needle', limit: 25 } }), contentSearchRes);
-    expect(readSessionSearchTextForMetaMock).toHaveBeenCalledWith(expect.objectContaining({ id: 'session-1' }));
+    expect(readSessionSearchTextForMetaMock).not.toHaveBeenCalled();
+    expect(searchIndexedConversationContentMock).toHaveBeenCalledWith({ terms: ['needle'], limit: 25 });
     expect(contentSearchRes.json).toHaveBeenCalledWith({
       query: 'needle',
       mode: 'allTerms',

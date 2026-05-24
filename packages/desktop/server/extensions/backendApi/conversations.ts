@@ -130,10 +130,29 @@ export async function importConversationSession(...args: unknown[]) {
   return callModuleExport('../../conversations/sessionExchange.js', 'importConversationSession', ...args);
 }
 
+export async function getConversationBlocks(conversationId: unknown, options: { profile?: string; tailBlocks?: number } = {}) {
+  const result = await callModuleExport<{ sessionRead?: { detail?: unknown } }>(
+    '../../conversations/conversationService.js',
+    'readSessionDetailForRoute',
+    {
+      conversationId,
+      profile: options.profile ?? 'shared',
+      tailBlocks: options.tailBlocks,
+    },
+  );
+  return result.sessionRead?.detail ?? null;
+}
+
+export async function getConversationMeta(conversationId: unknown) {
+  return callModuleExport('../../conversations/conversationSessionCapability.js', 'readConversationSessionMetaCapability', conversationId);
+}
+
+/** @deprecated Use getConversationBlocks/readSessionDetailForRoute. */
 export async function readSessionBlocks(...args: unknown[]) {
   return callModuleExport<Record<string, unknown> | undefined>('../../conversations/sessions.js', 'readSessionBlocks', ...args);
 }
 
+/** @deprecated Use getConversationMeta/readConversationSessionMetaCapability. */
 export async function readSessionMeta(...args: unknown[]) {
   return callModuleExport<Record<string, unknown> | undefined>('../../conversations/sessions.js', 'readSessionMeta', ...args);
 }

@@ -3,12 +3,13 @@ import { dirname, join } from 'node:path';
 
 import { type Api, completeSimple, type Model } from '@earendil-works/pi-ai';
 import { AuthStorage } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, type SqliteDatabase } from '@neon-pilot/core';
+import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { logWarn } from '../shared/logging.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { readConversationAutoTitleSettings } from './conversationAutoTitle.js';
+import { ensureConversationsDbFileMigrated, resolveAgentRuntimeDir } from './conversationDbPaths.js';
 import { readSessionSearchText, type SessionMeta } from './sessions.js';
 
 const SUMMARY_SCHEMA_VERSION = 2;
@@ -113,7 +114,7 @@ function getDb(): SqliteDatabase {
 }
 
 function resolveAgentDir(): string {
-  return getPiAgentRuntimeDir();
+  return resolveAgentRuntimeDir();
 }
 
 function resolveSettingsFile(): string {
@@ -121,7 +122,7 @@ function resolveSettingsFile(): string {
 }
 
 function resolveSummaryDbFile(): string {
-  return join(resolveAgentDir(), 'conversation-context.db');
+  return ensureConversationsDbFileMigrated();
 }
 
 function normalizeString(value: unknown, fallback = ''): string {

@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 
-import { getPiAgentRuntimeDir, type SqliteDatabase } from '@neon-pilot/core';
+import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
+import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
 import { readConversationSummary } from './conversationSummaries.js';
 import { listSessions, readSessionSearchText, type SessionMeta } from './sessions.js';
 
@@ -36,7 +37,7 @@ let indexingScheduled = false;
 let indexingActive = false;
 
 function resolveSearchDbFile(): string {
-  return join(getPiAgentRuntimeDir(), 'conversation-context.db');
+  return ensureConversationsDbFileMigrated();
 }
 
 function getDb(): SqliteDatabase {
@@ -294,6 +295,62 @@ export function searchIndexedConversationDocuments(input: {
       lastActivityAt: row.lastActivityAt,
       searchText: row.searchText,
     }));
+}
+
+export function searchIndexedConversationContent(input: { terms: string[]; limit: number }): Array<{
+  conversationId: string;
+  title: string;
+  cwd: string;
+  lastActivityAt: string;
+  isLive: boolean;
+  isRunning: boolean;
+  blockId: string;
+  blockType: string;
+  blockIndex: number;
+  snippet: string;
+}> {
+  const ftsQuery = buildFtsQuery(input.terms);
+  if (!ftsQuery) {
+    return [];
+  }
+
+  const limit = Number.isSafeInteger(input.limit) && input.limit > 0 ? Math.min(input.limit, 100) : 80;
+  const rows = getDb()
+    .prepare(
+      `
+    SELECT i.session_id AS conversationId,
+      i.title AS title,
+      i.cwd AS cwd,
+      i.last_activity_at AS lastActivityAt,
+      snippet(conversation_search_index_fts, 2, '…', '…', '…', 32) AS snippet
+    FROM conversation_search_index_fts f
+    JOIN conversation_search_index i ON i.session_id = f.session_id
+    WHERE conversation_search_index_fts MATCH ?
+    ORDER BY i.last_activity_at DESC,
+      bm25(conversation_search_index_fts)
+    LIMIT ?
+  `,
+    )
+    .all(ftsQuery, limit) as Array<{
+    conversationId: string;
+    title: string;
+    cwd: string;
+    lastActivityAt: string;
+    snippet: string;
+  }>;
+
+  return rows.map((row) => ({
+    conversationId: row.conversationId,
+    title: row.title,
+    cwd: row.cwd,
+    lastActivityAt: row.lastActivityAt,
+    isLive: false,
+    isRunning: false,
+    blockId: 'search-index',
+    blockType: 'text',
+    blockIndex: 0,
+    snippet: row.snippet || row.title,
+  }));
 }
 
 export function closeConversationSearchIndexDb(): void {

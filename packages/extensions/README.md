@@ -522,6 +522,8 @@ Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock
 
 Use `ctx.conversations.metadata` for small extension-owned facts attached to conversations. Metadata is namespaced by extension by default and can be queried by namespace, which is the right shape for board/task state, badges, and other lightweight conversation indexes. Store large documents in extension storage or a dedicated host document API instead.
 
+For conversation reads, prefer indexed conversation APIs such as `ctx.conversations.list()`, `ctx.conversations.getMeta(...)`, `ctx.conversations.getBlocks(...)`, and backend helpers `getConversationMeta(...)` / `getConversationBlocks(...)`. Raw session helpers are deprecated escape hatches; do not use transcript/session-file readers for global list, search, ranking, or startup paths.
+
 Use `ctx.conversations.getWorkspace()` and `ctx.conversations.updateWorkspace(...)` when an extension needs to mirror or control the shared conversation workspace. The workspace includes `openConversationIds`, `pinnedConversationIds`, `archivedConversationIds`, `activeConversationId`, and workspace paths. Workspace open/close/focus is presentation state; keep it separate from archive/unarchive lifecycle and live/running runtime state.
 
 Use `ctx.conversations.create({ allowedToolNames })` when an extension-created conversation needs a runtime-enforced tool allowlist instead of the normal default tool surface:

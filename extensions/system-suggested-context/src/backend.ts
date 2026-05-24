@@ -1,9 +1,9 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 import {
+  getConversationBlocks,
+  getConversationMeta,
   persistTraceSuggestedContext,
   readConversationSummary,
-  readSessionBlocks,
-  readSessionMeta,
   scheduleConversationSearchIndexing,
   searchIndexedConversationDocuments,
 } from '@neon-pilot/extensions/backend/conversations';
@@ -236,11 +236,7 @@ function scoreCandidate(input: {
 }
 
 async function resolveSessionMetaWithRetry(sessionId: string): Promise<SessionMeta | null> {
-  return (
-    ((await readSessionMeta(sessionId)) as SessionMeta | undefined) ??
-    ((await readSessionMeta(sessionId)) as SessionMeta | undefined) ??
-    null
-  );
+  return ((await getConversationMeta(sessionId)) as SessionMeta | undefined) ?? null;
 }
 
 async function buildPointer(input: {
@@ -329,7 +325,7 @@ function formatPointerContext(pointers: RelatedConversationPointer[]): string {
 }
 
 async function hasConversationTranscriptContent(conversationId: string): Promise<boolean> {
-  return (((await readSessionBlocks(conversationId, { tailBlocks: 1 })) as { totalBlocks?: number } | undefined)?.totalBlocks ?? 0) > 0;
+  return (((await getConversationBlocks(conversationId, { tailBlocks: 1 })) as { totalBlocks?: number } | undefined)?.totalBlocks ?? 0) > 0;
 }
 
 async function buildRelatedConversationPointers(input: {

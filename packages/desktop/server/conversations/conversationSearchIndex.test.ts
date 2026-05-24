@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -55,6 +55,11 @@ describe('conversationSearchIndex', () => {
 
     const mod = await import('./conversationSearchIndex.js');
     expect(mod.indexConversationSearchBatch({ maxSessions: 10, maxDurationMs: 1000 })).toEqual({ indexed: 1, remaining: 0 });
+    expect(
+      readdirSync(root, { recursive: true })
+        .map(String)
+        .some((entry) => entry.endsWith('conversations.db')),
+    ).toBe(true);
 
     expect(
       mod
@@ -67,6 +72,10 @@ describe('conversationSearchIndex', () => {
           limit: 5,
         })
         .map((candidate) => candidate.sessionId),
+    ).toEqual(['session-1']);
+
+    expect(
+      mod.searchIndexedConversationContent({ terms: ['notarization'], limit: 5 }).map((candidate) => candidate.conversationId),
     ).toEqual(['session-1']);
 
     expect(

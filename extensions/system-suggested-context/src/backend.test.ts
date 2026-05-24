@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   persistTraceSuggestedContext: vi.fn(),
   readConversationSummary: vi.fn(),
-  readSessionBlocks: vi.fn(),
-  readSessionMeta: vi.fn(),
+  getConversationBlocks: vi.fn(),
+  getConversationMeta: vi.fn(),
   scheduleConversationSearchIndexing: vi.fn(),
   searchIndexedConversationDocuments: vi.fn(),
 }));
@@ -17,8 +17,8 @@ vi.mock('stopword', () => ({
 vi.mock('@neon-pilot/extensions/backend/conversations', () => ({
   persistTraceSuggestedContext: mocks.persistTraceSuggestedContext,
   readConversationSummary: mocks.readConversationSummary,
-  readSessionBlocks: mocks.readSessionBlocks,
-  readSessionMeta: mocks.readSessionMeta,
+  getConversationBlocks: mocks.getConversationBlocks,
+  getConversationMeta: mocks.getConversationMeta,
   scheduleConversationSearchIndexing: mocks.scheduleConversationSearchIndexing,
   searchIndexedConversationDocuments: mocks.searchIndexedConversationDocuments,
 }));
@@ -31,7 +31,7 @@ describe('system-suggested-context backend', () => {
   });
 
   it('keeps warmed pointer caches isolated by profile', async () => {
-    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
     mocks.searchIndexedConversationDocuments
       .mockResolvedValueOnce([
         {
@@ -74,7 +74,7 @@ describe('system-suggested-context backend', () => {
   });
 
   it('deduplicates indexed pointer candidates before injecting context', async () => {
-    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
     mocks.searchIndexedConversationDocuments.mockResolvedValue([
       {
         sessionId: 'conv-related',
@@ -103,8 +103,8 @@ describe('system-suggested-context backend', () => {
   });
 
   it('injects compact one-line pointer previews without ranking internals', async () => {
-    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
-    mocks.readSessionMeta.mockResolvedValue({
+    mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.getConversationMeta.mockResolvedValue({
       id: 'conv-manual',
       title: 'Fix Stale Run Hourglass',
       cwd: '/repo',
@@ -139,7 +139,7 @@ describe('system-suggested-context backend', () => {
   });
 
   it('caps automatic pointer injection to three conversations by default', async () => {
-    mocks.readSessionBlocks.mockResolvedValue({ totalBlocks: 0 });
+    mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
     mocks.searchIndexedConversationDocuments.mockResolvedValue(
       [1, 2, 3, 4].map((index) => ({
         sessionId: `conv-auto-${index}`,
