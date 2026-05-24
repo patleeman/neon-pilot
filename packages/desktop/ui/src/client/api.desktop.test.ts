@@ -488,8 +488,26 @@ describe('api desktop transport', () => {
       if (path === '/api/sessions/search-index')
         return createJsonResponse(await readSessionSearchIndex(JSON.parse(String(init?.body)).sessionIds));
       if (path === '/api/models') return createJsonResponse(await readModels());
+      if (path === '/api/model-preferences') return createJsonResponse(await updateModelPreferences(JSON.parse(String(init?.body))));
       if (path === '/api/model-providers') return createJsonResponse(await readModelProviders());
+      if (path === '/api/model-providers/openrouter' && init?.method === 'PATCH')
+        return createJsonResponse(await saveModelProvider({ provider: 'openrouter', ...JSON.parse(String(init.body)) }));
+      if (path === '/api/model-providers/openrouter' && init?.method === 'DELETE')
+        return createJsonResponse(await deleteModelProvider('openrouter'));
+      if (path === '/api/model-providers/openrouter/models/model-a' && init?.method === 'PATCH')
+        return createJsonResponse(await saveModelProviderModel({ provider: 'openrouter', ...JSON.parse(String(init.body)) }));
+      if (path === '/api/model-providers/openrouter/models/model-a' && init?.method === 'DELETE')
+        return createJsonResponse(await deleteModelProviderModel({ provider: 'openrouter', modelId: 'model-a' }));
+      if (path === '/api/default-cwd' && init?.method === 'PATCH')
+        return createJsonResponse(await updateDefaultCwd(JSON.parse(String(init.body)).cwd));
       if (path === '/api/provider-auth') return createJsonResponse(await readProviderAuth());
+      if (path === '/api/provider-auth/openai/api-key')
+        return createJsonResponse(await setProviderApiKey({ provider: 'openai', apiKey: JSON.parse(String(init?.body)).apiKey }));
+      if (path === '/api/provider-auth/openai') return createJsonResponse(await removeProviderCredential('openai'));
+      if (path === '/api/provider-auth/openrouter/oauth') return createJsonResponse(await startProviderOAuthLogin('openrouter'));
+      if (path === '/api/provider-auth/oauth/login-1/input')
+        return createJsonResponse(await submitProviderOAuthLoginInput({ loginId: 'login-1', value: JSON.parse(String(init?.body)).value }));
+      if (path === '/api/provider-auth/oauth/login-1/cancel') return createJsonResponse(await cancelProviderOAuthLogin('login-1'));
       if (path === '/api/provider-auth/oauth/login-1') return createJsonResponse(await readProviderOAuthLogin('login-1'));
       if (path === '/api/tasks') {
         if (init?.method === 'POST') return createJsonResponse(await createScheduledTask(JSON.parse(String(init.body))));
@@ -1088,7 +1106,7 @@ describe('api desktop transport', () => {
     const savedDefaultCwd = await api.updateDefaultCwd('./repo');
 
     expect(readDefaultCwd).not.toHaveBeenCalled();
-    expect(updateDefaultCwd).toHaveBeenCalledWith('./repo');
+    expect(updateDefaultCwd).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledWith('/api/default-cwd', { method: 'GET', cache: 'no-store' });
     expect(defaultCwd).toEqual({ currentCwd: '', effectiveCwd: '/repo' });
     expect(savedDefaultCwd).toEqual({ currentCwd: './repo', effectiveCwd: '/repo' });

@@ -439,12 +439,8 @@ export const api = {
       compat?: Record<string, unknown>;
       modelOverrides?: Record<string, unknown>;
     },
-  ) => {
-    return (await requireLocalDesktopBridge('Saving model providers')).saveModelProvider({ provider, ...input });
-  },
-  deleteModelProvider: async (provider: string) => {
-    return (await requireLocalDesktopBridge('Deleting model providers')).deleteModelProvider(provider);
-  },
+  ) => patch<ModelProviderState>(`/model-providers/${encodeURIComponent(provider)}`, input),
+  deleteModelProvider: async (provider: string) => del<ModelProviderState>(`/model-providers/${encodeURIComponent(provider)}`),
   saveModelProviderModel: async (
     provider: string,
     input: {
@@ -465,40 +461,32 @@ export const api = {
       };
       compat?: Record<string, unknown>;
     },
-  ) => {
-    return (await requireLocalDesktopBridge('Saving model provider models')).saveModelProviderModel({ provider, ...input });
-  },
-  deleteModelProviderModel: async (provider: string, modelId: string) => {
-    return (await requireLocalDesktopBridge('Deleting model provider models')).deleteModelProviderModel({ provider, modelId });
-  },
+  ) => patch<ModelProviderState>(`/model-providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(input.modelId)}`, input),
+  deleteModelProviderModel: async (provider: string, modelId: string) =>
+    del<ModelProviderState>(`/model-providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}`),
   defaultCwd: async () => get<DefaultCwdState>('/default-cwd'),
   tools: async () => get<ToolsState>('/tools'),
-  setModel: async (model: string) => {
-    return (await requireLocalDesktopBridge('Updating model preferences')).updateModelPreferences({ model });
-  },
-  updateModelPreferences: async (input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string }) => {
-    return (await requireLocalDesktopBridge('Updating model preferences')).updateModelPreferences(input);
-  },
-  updateDefaultCwd: async (cwd: string | null) => {
-    return (await requireLocalDesktopBridge('Updating default cwd')).updateDefaultCwd(cwd);
-  },
+  setModel: async (model: string) =>
+    patch<{ currentModel: string | null; currentThinkingLevel?: string | null; currentServiceTier?: string | null }>('/model-preferences', {
+      model,
+    }),
+  updateModelPreferences: async (input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string }) =>
+    patch<{ currentModel: string | null; currentThinkingLevel?: string | null; currentServiceTier?: string | null }>(
+      '/model-preferences',
+      input,
+    ),
+  updateDefaultCwd: async (cwd: string | null) => patch<DefaultCwdState>('/default-cwd', { cwd }),
   providerAuth: async () => get<ProviderAuthState>('/provider-auth'),
-  setProviderApiKey: async (provider: string, apiKey: string) => {
-    return (await requireLocalDesktopBridge('Setting provider API keys')).setProviderApiKey({ provider, apiKey });
-  },
-  removeProviderCredential: async (provider: string) => {
-    return (await requireLocalDesktopBridge('Removing provider credentials')).removeProviderCredential(provider);
-  },
-  startProviderOAuthLogin: async (provider: string) => {
-    return (await requireLocalDesktopBridge('Starting provider OAuth login')).startProviderOAuthLogin(provider);
-  },
+  setProviderApiKey: async (provider: string, apiKey: string) =>
+    patch<ProviderAuthState>(`/provider-auth/${encodeURIComponent(provider)}/api-key`, { apiKey }),
+  removeProviderCredential: async (provider: string) => del<ProviderAuthState>(`/provider-auth/${encodeURIComponent(provider)}`),
+  startProviderOAuthLogin: async (provider: string) =>
+    post<ProviderOAuthLoginState>(`/provider-auth/${encodeURIComponent(provider)}/oauth`),
   providerOAuthLogin: async (loginId: string) => get<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}`),
-  submitProviderOAuthLoginInput: async (loginId: string, value: string) => {
-    return (await requireLocalDesktopBridge('Submitting provider OAuth input')).submitProviderOAuthLoginInput({ loginId, value });
-  },
-  cancelProviderOAuthLogin: async (loginId: string) => {
-    return (await requireLocalDesktopBridge('Cancelling provider OAuth login')).cancelProviderOAuthLogin(loginId);
-  },
+  submitProviderOAuthLoginInput: async (loginId: string, value: string) =>
+    post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/input`, { value }),
+  cancelProviderOAuthLogin: async (loginId: string) =>
+    post<ProviderOAuthLoginState>(`/provider-auth/oauth/${encodeURIComponent(loginId)}/cancel`),
   openConversationTabs: async () =>
     get<{
       sessionIds: string[];

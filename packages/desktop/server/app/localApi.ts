@@ -931,9 +931,67 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
+  if (method === 'PATCH' && path === '/api/model-preferences')
+    return createDesktopLocalApiJsonResponse(
+      await updateDesktopModelPreferences(input.body as Parameters<typeof updateDesktopModelPreferences>[0]),
+    );
   if (method === 'GET' && path === '/api/model-providers') return createDesktopLocalApiJsonResponse(await readDesktopModelProviders());
+  const modelProviderModelMatch = /^\/api\/model-providers\/([^/]+)\/models\/([^/]+)$/.exec(path);
+  if (modelProviderModelMatch) {
+    const provider = decodeURIComponent(modelProviderModelMatch[1] ?? '');
+    const modelId = decodeURIComponent(modelProviderModelMatch[2] ?? '');
+    if (method === 'PATCH')
+      return createDesktopLocalApiJsonResponse(
+        await saveDesktopModelProviderModel({
+          provider,
+          modelId,
+          ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        }),
+      );
+    if (method === 'DELETE') return createDesktopLocalApiJsonResponse(await deleteDesktopModelProviderModel({ provider, modelId }));
+  }
+  const modelProviderMatch = /^\/api\/model-providers\/([^/]+)$/.exec(path);
+  if (modelProviderMatch) {
+    const provider = decodeURIComponent(modelProviderMatch[1] ?? '');
+    if (method === 'PATCH')
+      return createDesktopLocalApiJsonResponse(
+        await saveDesktopModelProvider({ provider, ...((input.body && typeof input.body === 'object' ? input.body : {}) as object) }),
+      );
+    if (method === 'DELETE') return createDesktopLocalApiJsonResponse(await deleteDesktopModelProvider(provider));
+  }
   if (method === 'GET' && path === '/api/default-cwd') return createDesktopLocalApiJsonResponse(await readDesktopDefaultCwd());
+  if (method === 'PATCH' && path === '/api/default-cwd')
+    return createDesktopLocalApiJsonResponse(
+      await updateDesktopDefaultCwd(
+        ((input.body && typeof input.body === 'object' ? input.body : {}) as { cwd?: string | null }).cwd ?? null,
+      ),
+    );
   if (method === 'GET' && path === '/api/provider-auth') return createDesktopLocalApiJsonResponse(await readDesktopProviderAuth());
+  const providerApiKeyMatch = /^\/api\/provider-auth\/([^/]+)\/api-key$/.exec(path);
+  if (method === 'PATCH' && providerApiKeyMatch)
+    return createDesktopLocalApiJsonResponse(
+      await setDesktopProviderApiKey({
+        provider: decodeURIComponent(providerApiKeyMatch[1] ?? ''),
+        apiKey: ((input.body && typeof input.body === 'object' ? input.body : {}) as { apiKey?: string }).apiKey ?? '',
+      }),
+    );
+  const providerOAuthStartMatch = /^\/api\/provider-auth\/([^/]+)\/oauth$/.exec(path);
+  if (method === 'POST' && providerOAuthStartMatch)
+    return createDesktopLocalApiJsonResponse(await startDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthStartMatch[1] ?? '')));
+  const providerCredentialMatch = /^\/api\/provider-auth\/([^/]+)$/.exec(path);
+  if (method === 'DELETE' && providerCredentialMatch)
+    return createDesktopLocalApiJsonResponse(await removeDesktopProviderCredential(decodeURIComponent(providerCredentialMatch[1] ?? '')));
+  const providerOAuthInputMatch = /^\/api\/provider-auth\/oauth\/([^/]+)\/input$/.exec(path);
+  if (method === 'POST' && providerOAuthInputMatch)
+    return createDesktopLocalApiJsonResponse(
+      await submitDesktopProviderOAuthLoginInput({
+        loginId: decodeURIComponent(providerOAuthInputMatch[1] ?? ''),
+        value: ((input.body && typeof input.body === 'object' ? input.body : {}) as { value?: string }).value ?? '',
+      }),
+    );
+  const providerOAuthCancelMatch = /^\/api\/provider-auth\/oauth\/([^/]+)\/cancel$/.exec(path);
+  if (method === 'POST' && providerOAuthCancelMatch)
+    return createDesktopLocalApiJsonResponse(await cancelDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthCancelMatch[1] ?? '')));
   const providerOAuthMatch = /^\/api\/provider-auth\/oauth\/([^/]+)$/.exec(path);
   if (method === 'GET' && providerOAuthMatch) {
     return createDesktopLocalApiJsonResponse(await readDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthMatch[1] ?? '')));
