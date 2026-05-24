@@ -1246,15 +1246,65 @@ function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
 
 const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 80;
 const DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH = 600;
+const MAX_INITIAL_SESSION_DETAIL_BLOCK_BYTES = 768 * 1024;
 
 function deferHeavyBlockContent(blocks: DisplayBlock[], blockOffset: number, totalBlocks: number): DisplayBlock[] {
-  return deferHeavyBlockContentValue({
+  const deferredBlocks = deferHeavyBlockContentValue({
     blocks,
     blockOffset,
     totalBlocks,
     recentHeavyContentBlockCount: RECENT_HEAVY_CONTENT_BLOCK_COUNT,
     deferredToolOutputPreviewLength: DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH,
   }) as DisplayBlock[];
+  return deferSessionDetailBlocksToPayloadBudget(deferredBlocks, MAX_INITIAL_SESSION_DETAIL_BLOCK_BYTES);
+}
+
+function estimateBlockPayloadBytes(block: DisplayBlock): number {
+  return Buffer.byteLength(JSON.stringify(block), 'utf8');
+}
+
+function deferSessionDetailBlocksToPayloadBudget(blocks: DisplayBlock[], maxBlockBytes: number): DisplayBlock[] {
+  let totalBytes = blocks.reduce((sum, block) => sum + estimateBlockPayloadBytes(block), 0);
+  if (totalBytes <= maxBlockBytes) {
+    return blocks;
+  }
+
+  const candidates = blocks
+    .map((block, index) => ({ block, index, bytes: estimateBlockPayloadBytes(block) }))
+    .filter(({ block }) =>
+      Boolean(
+        (block.type === 'tool_use' &&
+          typeof block.output === 'string' &&
+          block.output.trim().length > DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH) ||
+        (block.type === 'user' && Array.isArray(block.images) && block.images.some((image) => image.src)) ||
+        (block.type === 'image' && block.src),
+      ),
+    )
+    .sort((left, right) => right.bytes - left.bytes);
+
+  if (candidates.length === 0) {
+    return blocks;
+  }
+
+  const nextBlocks = blocks.slice();
+  for (const candidate of candidates) {
+    if (totalBytes <= maxBlockBytes) {
+      break;
+    }
+
+    const beforeBytes = estimateBlockPayloadBytes(nextBlocks[candidate.index]!);
+    const deferred = deferHeavyBlockContentValue({
+      blocks: [nextBlocks[candidate.index]!],
+      blockOffset: 0,
+      totalBlocks: 1,
+      recentHeavyContentBlockCount: 0,
+      deferredToolOutputPreviewLength: DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH,
+    })[0] as DisplayBlock;
+    nextBlocks[candidate.index] = deferred;
+    totalBytes -= Math.max(0, beforeBytes - estimateBlockPayloadBytes(deferred));
+  }
+
+  return nextBlocks;
 }
 
 function extractTitleFromMessage(message: RawMessage['message']): string | null {
