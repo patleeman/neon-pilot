@@ -1379,6 +1379,27 @@ function readCurrentSessionLeafId(filePath: string): string | null {
   return readCurrentSessionLeafIdFromFile(filePath, parseJsonLine);
 }
 
+function readSessionEntryPreview(filePath: string, entryId: string): string | null {
+  try {
+    const entry = SessionManager.open(filePath).getEntry(entryId);
+    if (!entry || entry.type !== 'message' || !('message' in entry)) return null;
+    const content = entry.message.content;
+    const text =
+      typeof content === 'string'
+        ? content
+        : Array.isArray(content)
+          ? content
+              .map((part) => (part && typeof part === 'object' && 'text' in part && typeof part.text === 'string' ? part.text : ''))
+              .join(' ')
+          : '';
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (!normalized) return null;
+    return normalized.length > 48 ? `${normalized.slice(0, 45).trimEnd()}…` : normalized;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Append a chronological source-conversation topology event.
  *
@@ -1395,6 +1416,7 @@ export function appendChildConversationTopologyEntry(input: {
 }): void {
   const childMeta = readSessionMeta(input.childSessionId);
   const label = input.kind === 'subagent' ? 'Subagent' : input.kind.charAt(0).toUpperCase() + input.kind.slice(1);
+  const sourcePreview = input.parentMessageId ? readSessionEntryPreview(input.parentSessionFile, input.parentMessageId) : null;
   const leafId = readCurrentSessionLeafId(input.parentSessionFile);
   appendFileSync(
     input.parentSessionFile,
@@ -1404,7 +1426,7 @@ export function appendChildConversationTopologyEntry(input: {
         parentId: leafId,
         timestamp: new Date().toISOString(),
         customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
-        content: `${label} conversation created: ${input.childTitle?.trim() || childMeta?.title?.trim() || input.childSessionId}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}`,
+        content: `${label} conversation created: ${input.childTitle?.trim() || childMeta?.title?.trim() || input.childSessionId}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}${sourcePreview ? `\nSource preview: ${sourcePreview}` : ''}`,
       }),
     ),
     'utf-8',

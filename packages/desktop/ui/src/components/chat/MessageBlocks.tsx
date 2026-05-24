@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { dispatchTranscriptSpotlight } from '../../transcript/spotlight.js';
+import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
 import { cx } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
@@ -487,8 +487,10 @@ export const UserMessage = memo(function UserMessage({
     }
   }, [editDraft, editSaving, messageIndex, onEditMessage]);
 
+  const transcriptTargetAttrs = block.id ? transcriptTargetAttributes({ kind: 'block', blockId: block.id }) : {};
+
   return (
-    <div className="group flex flex-col items-end gap-1.5">
+    <div className="group flex flex-col items-end gap-1.5" {...transcriptTargetAttrs} tabIndex={block.id ? -1 : undefined}>
       <div className={layout === 'compact' ? 'min-w-0 max-w-[92%] sm:max-w-[88%]' : 'min-w-0 max-w-[86%]'}>
         <div className="ui-message-card-user space-y-2">
           {hasImages && (
@@ -634,8 +636,14 @@ export const AssistantMessage = memo(function AssistantMessage({
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
   const renderStreamingPlainText = shouldShowCursor && !showRawRunCallbackCard;
 
+  const transcriptTargetAttrs = blockId ? transcriptTargetAttributes({ kind: 'block', blockId }) : {};
+
   return (
-    <div className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5 pr-3 sm:pr-6' : 'gap-3 pr-8 sm:pr-14')}>
+    <div
+      className={cx('group flex items-start', layout === 'compact' ? 'gap-2.5 pr-3 sm:pr-6' : 'gap-3 pr-8 sm:pr-14')}
+      {...transcriptTargetAttrs}
+      tabIndex={blockId ? -1 : undefined}
+    >
       <div className="min-w-0 flex-1 space-y-1.5">
         <div {...replySelectionScopeProps} className="ui-message-card-assistant space-y-1 text-primary">
           {showRawRunCallbackCard ? (
@@ -900,6 +908,7 @@ function parseTopologyBlockText(text: string): {
   conversationId: string | null;
   kind: string;
   sourceMessageId: string | null;
+  sourcePreview: string | null;
 } {
   const lines = text.split('\n');
   const firstLine = lines[0] ?? '';
@@ -909,15 +918,17 @@ function parseTopologyBlockText(text: string): {
 
   const openLine = lines.find((l) => l.startsWith('Open: /conversations/') || l.startsWith('Open parent: /conversations/'));
   const sourceLine = lines.find((l) => l.startsWith('Source message: '));
+  const sourcePreviewLine = lines.find((l) => l.startsWith('Source preview: '));
   const conversationId = openLine?.replace(/^Open(?: parent)?: \/conversations\//, '').trim() || null;
   const sourceMessageId = sourceLine?.replace(/^Source message:\s*/, '').trim() || null;
-  return { title, conversationId, kind: parseTopologyBlockKind(firstLine), sourceMessageId };
+  const sourcePreview = sourcePreviewLine?.replace(/^Source preview:\s*/, '').trim() || null;
+  return { title, conversationId, kind: parseTopologyBlockKind(firstLine), sourceMessageId, sourcePreview };
 }
 
 export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
   const navigate = useNavigate();
   const isChild = block.customType === 'child_conversation_topology';
-  const { title, conversationId, kind, sourceMessageId } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
+  const { title, conversationId, kind, sourceMessageId, sourcePreview } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
 
   const handleClick = useCallback(() => {
     if (conversationId) {
@@ -946,9 +957,10 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
           <button
             type="button"
             onClick={spotlightSource}
-            className="shrink-0 text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+            className="max-w-[28rem] truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+            title={sourcePreview ?? sourceMessageId}
           >
-            source message
+            {sourcePreview ?? 'source message'}
           </button>
           <span className="shrink-0">to</span>
         </>

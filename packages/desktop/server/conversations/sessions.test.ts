@@ -2186,6 +2186,7 @@ describe('sessions', () => {
       }),
     );
     expect(blocks[blocks.length - 1]?.text).toContain(`Source message: ${parentMessageId}`);
+    expect(blocks[blocks.length - 1]?.text).toContain('Source preview: Chronological topology parent');
   });
 
   it('keeps child backlink anchored at the rewind point after later messages', () => {
