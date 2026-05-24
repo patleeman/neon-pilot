@@ -321,6 +321,29 @@ describe('appEvents mocked behavior', () => {
     unsubscribe();
   });
 
+  it('does not invalidate sessions for activity state churn', () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    const watchedActivityPaths = watchRegistrations.filter(
+      (registration) => registration.path.includes('/activity/') || registration.path.includes('/activity-links/'),
+    );
+    expect(watchedActivityPaths).toEqual([]);
+
+    expect(events).toEqual([]);
+    unsubscribe();
+  });
+
   it('logs refresh failures triggered by the profile config watcher', () => {
     let throwOnRefresh = false;
     startAppEventMonitor({

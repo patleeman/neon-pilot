@@ -5,8 +5,6 @@ import {
   getDurableTasksDir,
   resolveConversationAttentionStatePath,
   resolveDeferredResumeStateFile,
-  resolveProfileActivityConversationLinksDir,
-  resolveProfileActivityStateDir,
   resolveProfileAlertsStateFile,
   resolveProfileConversationArtifactsDir,
   resolveProfileConversationAttachmentsDir,
@@ -184,15 +182,10 @@ function readConversationIdFromSessionFilename(filePath: string): string | null 
 function createTopicSources(options: AppEventMonitorOptions, profile: string): TopicSources {
   const daemonConfig = loadDaemonConfig();
   const daemonPaths = resolveDaemonPaths(daemonConfig.ipc.socketPath);
-  const daemonRoot = daemonPaths.root;
-  const activityStateDirs = [
-    resolveProfileActivityStateDir({ profile }),
-    resolveProfileActivityStateDir({ stateRoot: daemonRoot, profile }),
-  ];
-  const activityConversationLinksDirs = [
-    resolveProfileActivityConversationLinksDir({ profile }),
-    resolveProfileActivityConversationLinksDir({ stateRoot: daemonRoot, profile }),
-  ];
+  // Activity state can update frequently while an agent is streaming. It is not
+  // part of the canonical conversation list, so do not wire it to the broad
+  // sessions invalidation topic; refreshes here trigger expensive list reads and
+  // renderer churn on the critical streaming path.
   const conversationArtifactsDir = resolveProfileConversationArtifactsDir({ profile });
   const conversationCommitCheckpointsDir = resolveProfileConversationCommitCheckpointsDir({ profile });
   const conversationAttachmentsDir = resolveProfileConversationAttachmentsDir({ profile });
@@ -202,17 +195,11 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
   const deferredResumeStateFile = resolveDeferredResumeStateFile();
   const alertsStateFile = resolveProfileAlertsStateFile({ profile });
 
-  const activitySources: AppEventWatchSource[] = [
-    ...activityStateDirs.map((path) => ({ path, kind: 'directory' as const })),
-    ...activityConversationLinksDirs.map((path) => ({ path, kind: 'directory' as const })),
-  ];
-
   return {
     sessions: [
       { path: conversationAttentionStateFile, kind: 'file' },
       { path: deferredResumeStateFile, kind: 'file' },
       { path: alertsStateFile, kind: 'file' },
-      ...activitySources,
     ],
     sessionFiles: [{ path: options.sessionsDir, kind: 'directory', eventKinds: ['change', 'rename'] }],
     artifacts: [{ path: conversationArtifactsDir, kind: 'directory' }],
