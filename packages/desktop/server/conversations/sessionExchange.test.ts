@@ -26,6 +26,9 @@ vi.mock('node:crypto', () => crypto);
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('../shared/appEvents.js', () => appEvents);
+vi.mock('./conversationService.js', () => ({
+  readConversationSessionMeta: sessions.readSessionMeta,
+}));
 vi.mock('./sessions.js', () => sessions);
 
 import { exportConversationSession, importConversationSession } from './sessionExchange.js';

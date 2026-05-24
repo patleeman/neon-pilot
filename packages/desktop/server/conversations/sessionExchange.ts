@@ -5,7 +5,8 @@ import { basename, dirname, extname, join } from 'node:path';
 import { getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
-import { clearSessionCaches, listSessions, readSessionMeta } from './sessions.js';
+import { readConversationSessionMeta } from './conversationService.js';
+import { clearSessionCaches, listSessions } from './sessions.js';
 
 interface RawSessionHeader {
   type?: unknown;
@@ -87,7 +88,7 @@ export function exportConversationSession(input: { conversationId?: unknown; ses
     throw new Error('Conversation id is required.');
   }
 
-  const meta = readSessionMeta(conversationId);
+  const meta = readConversationSessionMeta(conversationId);
   if (!meta) {
     throw new Error(`Conversation ${conversationId} not found.`);
   }
