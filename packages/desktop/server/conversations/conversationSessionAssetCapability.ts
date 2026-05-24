@@ -1,7 +1,15 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
 import { readSessionDetailForRoute } from './conversationService.js';
 import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse } from './sessions.js';
-import { readSessionImageAsset } from './sessions.js';
+import { readSessionImageAsset, type SessionImageAsset } from './sessions.js';
+
+export function readConversationSessionImageAssetCapability(
+  sessionId: string,
+  blockId: string,
+  imageIndex?: number,
+): SessionImageAsset | null {
+  return typeof imageIndex === 'number' ? readSessionImageAsset(sessionId, blockId, imageIndex) : readSessionImageAsset(sessionId, blockId);
+}
 
 function toDataUrl(mimeType: string, data: Buffer): string {
   return `data:${mimeType};base64,${data.toString('base64')}`;
@@ -22,7 +30,7 @@ function inlineSessionUserBlockImages(sessionId: string, block: Extract<DisplayB
       return image;
     }
 
-    const asset = readSessionImageAsset(sessionId, block.id, imageIndex);
+    const asset = readConversationSessionImageAssetCapability(sessionId, block.id, imageIndex);
     if (!asset) {
       return image;
     }
@@ -43,7 +51,7 @@ function inlineSessionImageBlock(sessionId: string, block: Extract<DisplayBlock,
     return block;
   }
 
-  const asset = readSessionImageAsset(sessionId, block.id);
+  const asset = readConversationSessionImageAssetCapability(sessionId, block.id);
   if (!asset) {
     return block;
   }

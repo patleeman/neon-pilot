@@ -11,9 +11,9 @@ import { readConversationContextDocs, writeConversationContextDocs } from '../co
 import { ConversationInspectCapabilityInputError } from '../conversations/conversationInspectCapability.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import { publishConversationSessionMetaChanged, setConversationServiceContext } from '../conversations/conversationService.js';
+import { readConversationSessionImageAssetCapability } from '../conversations/conversationSessionAssetCapability.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
-import { readSessionImageAsset } from '../conversations/sessions.js';
 import { logError } from '../middleware/index.js';
 import { buildContentDispositionHeader } from '../shared/httpHeaders.js';
 import type { ServerRouteContext } from './context.js';
@@ -91,7 +91,7 @@ function writeConversationAssetCapabilityError(
 function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
   router.get('/api/sessions/:id/blocks/:blockId/image', (req, res) => {
     try {
-      const asset = readSessionImageAsset(req.params.id, req.params.blockId);
+      const asset = readConversationSessionImageAssetCapability(req.params.id, req.params.blockId);
       if (!asset) {
         res.status(404).json({ error: 'Session image not found' });
         return;
@@ -118,7 +118,7 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
         res.status(400).json({ error: 'imageIndex must be a non-negative integer' });
         return;
       }
-      const asset = readSessionImageAsset(req.params.id, req.params.blockId, imageIndex);
+      const asset = readConversationSessionImageAssetCapability(req.params.id, req.params.blockId, imageIndex);
       if (!asset) {
         res.status(404).json({ error: 'Session image not found' });
         return;
