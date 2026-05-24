@@ -890,6 +890,18 @@ export async function subscribeDesktopConversationState(
   }
   syncLiveSubscription();
 
+  if (!shouldEmitInitialState && !shouldForwardStreamEvents) {
+    return () => {
+      if (!shouldCloseSubscription(closed)) {
+        return;
+      }
+
+      closed = markSubscriptionClosed();
+      closeLiveSubscription();
+      onEvent(buildDesktopCloseEvent());
+    };
+  }
+
   appUnsubscribe = subscribeAppEvents((event) => {
     if (
       !shouldRefreshDesktopConversationStateForAppEvent(conversationId, event as { type?: string; topics?: unknown; sessionId?: unknown })
