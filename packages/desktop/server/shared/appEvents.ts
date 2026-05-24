@@ -381,8 +381,11 @@ function startManualDirectoryTreeWatch(
 
       try {
         const watcher = watch(directory, { persistent: false }, (eventType, filename) => {
-          onEvent(eventType === 'rename' ? 'rename' : 'change', resolveWatchPath(directory, filename));
-          scheduleSync();
+          const eventKind = eventType === 'rename' ? 'rename' : 'change';
+          onEvent(eventKind, resolveWatchPath(directory, filename));
+          if (eventKind === 'rename') {
+            scheduleSync();
+          }
         });
         watchers.set(directory, watcher);
       } catch (error) {
