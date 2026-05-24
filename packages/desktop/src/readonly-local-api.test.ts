@@ -51,6 +51,25 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
     ).toBe(false);
   });
 
+  it('keeps product conversation reads on the main thread HTTP dispatcher', () => {
+    expect(
+      shouldDispatchReadonlyLocalApiInWorker({
+        method: 'GET',
+        path: '/api/conversations/session-1/model-preferences',
+        hostId: 'local',
+        ...workerAvailable,
+      }),
+    ).toBe(false);
+    expect(
+      shouldDispatchReadonlyLocalApiInWorker({
+        method: 'GET',
+        path: '/api/conversations/session-1/checkpoints/checkpoint-1/review-context',
+        hostId: 'local',
+        ...workerAvailable,
+      }),
+    ).toBe(false);
+  });
+
   it('keeps live-registry-only reads on the main thread', () => {
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/live-sessions/session-1', hostId: 'local', ...workerAvailable }),
