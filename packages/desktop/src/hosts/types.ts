@@ -293,6 +293,13 @@ export interface DesktopLiveSessionForkRequest {
   beforeEntry?: boolean;
 }
 
+/**
+ * HostController is the main-process backend abstraction, not the renderer IPC contract.
+ * Product/query/mutation methods stay here so the local host, remote hosts, companion,
+ * and HTTP/custom-protocol dispatchers can share one implementation. The renderer should
+ * reach those capabilities through HTTP product routes; only native/bootstrap/control
+ * capabilities should be exposed through preload IPC.
+ */
 export interface HostController {
   readonly id: string;
   readonly label: string;

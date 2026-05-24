@@ -10,6 +10,54 @@ function readRepoFile(path: string): string {
 }
 
 describe('desktop IPC protocol boundary', () => {
+  it('keeps registered IPC handlers limited to native/bootstrap/control channels', () => {
+    const ipcSource = readRepoFile('packages/desktop/src/ipc.ts');
+    const registeredChannels = Array.from(ipcSource.matchAll(/ipcMain\.handle\(`\$\{CHANNEL_PREFIX\}:([^`]+)`/g), (match) => match[1]);
+
+    expect(registeredChannels).toEqual([
+      'get-environment',
+      'get-navigation-state',
+      'open-new-conversation',
+      'open-conversation-popout',
+      'open-path',
+      'open-external-url',
+      'write-clipboard-text',
+      'read-desktop-app-preferences',
+      'update-desktop-app-preferences',
+      'check-for-updates',
+      'pick-folder',
+      'capture-screenshot',
+      'subscribe-conversation-state',
+      'unsubscribe-conversation-state',
+      'go-back',
+      'go-forward',
+      'workbench-browser-set-bounds',
+      'workbench-browser-state',
+      'workbench-browser-navigate',
+      'workbench-browser-back',
+      'workbench-browser-forward',
+      'workbench-browser-reload',
+      'workbench-browser-stop',
+      'workbench-browser-snapshot',
+    ]);
+  });
+
+  it('does not expose preload invoke channels without main-process handlers', () => {
+    const ipcSource = readRepoFile('packages/desktop/src/ipc.ts');
+    const preloadSource = readRepoFile('packages/desktop/src/preload.cts');
+    const registeredChannels = new Set(
+      Array.from(ipcSource.matchAll(/ipcMain\.handle\(`\$\{CHANNEL_PREFIX\}:([^`]+)`/g), (match) => match[1]),
+    );
+    const exposedInvokeChannels = Array.from(
+      preloadSource.matchAll(/ipcRenderer\.invoke\(`\$\{CHANNEL_PREFIX\}:([^`]+)`/g),
+      (match) => match[1],
+    );
+
+    for (const channel of exposedInvokeChannels) {
+      expect(registeredChannels, channel).toContain(channel);
+    }
+  });
+
   it('does not expose generic product API or realtime stream IPC channels', () => {
     const ipcSource = readRepoFile('packages/desktop/src/ipc.ts');
     const preloadSource = readRepoFile('packages/desktop/src/preload.cts');

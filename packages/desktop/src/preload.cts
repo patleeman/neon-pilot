@@ -27,46 +27,9 @@ const domGlobals = globalThis as typeof globalThis & {
 
 const desktopBridge = {
   getEnvironment: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:get-environment`),
-  getConnections: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:get-connections`),
   getNavigationState: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:get-navigation-state`),
-  saveHost: (host: unknown) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:save-host`, host),
-  deleteHost: (hostId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:delete-host`, hostId),
-  testSshConnection: (input: { sshTarget: string }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:test-ssh-connection`, input),
   openNewConversation: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:open-new-conversation`),
   openConversationPopout: (input: { conversationId: string }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:open-conversation-popout`, input),
-  showConversationContextMenu: (input: {
-    x: number;
-    y: number;
-    pinAction?: 'pin' | 'unpin' | null;
-    canArchive?: boolean;
-    canOpenInNewWindow?: boolean;
-    canDuplicate?: boolean;
-    canAttachToGateway?: boolean;
-    canCopyWorkingDirectory?: boolean;
-    canCopyId?: boolean;
-    canCopyDeeplink?: boolean;
-    busyAction?: 'duplicate' | 'summarize' | null;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:show-conversation-context-menu`, input),
-  showConversationCwdGroupContextMenu: (input: {
-    x: number;
-    y: number;
-    canOpenInFinder?: boolean;
-    canEditName?: boolean;
-    canArchiveThreads?: boolean;
-    canRemove?: boolean;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:show-conversation-cwd-group-context-menu`, input),
-  showKnowledgeEntryContextMenu: (input: {
-    x: number;
-    y: number;
-    canOpenInFinder?: boolean;
-    canCreateFile?: boolean;
-    canCreateFolder?: boolean;
-    canRename?: boolean;
-    canMove?: boolean;
-    canDelete?: boolean;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:show-knowledge-entry-context-menu`, input),
-  showSelectionContextMenu: (input: { x: number; y: number; canReply?: boolean; canCopy?: boolean }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:show-selection-context-menu`, input),
   openPath: (targetPath: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:open-path`, targetPath),
   openExternalUrl: (targetUrl: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:open-external-url`, targetUrl),
   writeClipboardText: (text: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:write-clipboard-text`, text),

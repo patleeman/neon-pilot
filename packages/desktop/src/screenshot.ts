@@ -29,6 +29,8 @@ interface CaptureDesktopScreenshotDeps {
   runInteractiveScreencapture: (outputPath: string) => Promise<ScreenshotCommandResult>;
 }
 
+export const MAX_DESKTOP_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+
 const defaultDeps: CaptureDesktopScreenshotDeps = {
   platform: process.platform,
   tmpdir,
@@ -57,6 +59,12 @@ export async function captureDesktopScreenshot(deps: CaptureDesktopScreenshotDep
     });
 
     if (imageBytes && imageBytes.length > 0) {
+      if (imageBytes.length > MAX_DESKTOP_SCREENSHOT_BYTES) {
+        throw new Error(
+          `Screenshot is too large to send through the native desktop bridge (${imageBytes.length} bytes; max ${MAX_DESKTOP_SCREENSHOT_BYTES} bytes). Capture a smaller region and try again.`,
+        );
+      }
+
       return {
         cancelled: false,
         image: {

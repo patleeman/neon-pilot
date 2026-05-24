@@ -53,6 +53,19 @@ describe('captureDesktopScreenshot', () => {
     expect(rm).toHaveBeenCalledWith('/tmp/neon-pilot-screenshot-cancelled', { recursive: true, force: true });
   });
 
+  it('rejects oversized screenshots before base64 encoding them over IPC', async () => {
+    await expect(
+      captureDesktopScreenshot({
+        platform: 'darwin',
+        tmpdir: () => '/tmp',
+        mkdtemp: vi.fn().mockResolvedValue('/tmp/neon-pilot-screenshot-large'),
+        readFile: vi.fn().mockResolvedValue(Buffer.alloc(8 * 1024 * 1024 + 1)),
+        rm: vi.fn().mockResolvedValue(undefined),
+        runInteractiveScreencapture: vi.fn().mockResolvedValue({ code: 0, signal: null, stderr: '' }),
+      }),
+    ).rejects.toThrow('Screenshot is too large to send through the native desktop bridge');
+  });
+
   it('surfaces a screen-recording permission hint when macOS rejects capture', async () => {
     await expect(
       captureDesktopScreenshot({
