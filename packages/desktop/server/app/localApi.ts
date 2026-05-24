@@ -878,7 +878,9 @@ export async function subscribeDesktopConversationState(
     });
     await ensureCurrentStateIsLive();
     syncLiveSubscription();
-    emitState(currentState);
+    if (shouldEmitInitialState) {
+      emitState(currentState);
+    }
   };
 
   onEvent({ type: 'open' });
