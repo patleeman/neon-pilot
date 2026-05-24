@@ -10,9 +10,6 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 const allowed = new Set([
   'packages/desktop/server/app/localApi.ts',
   'packages/desktop/server/app/localApiStreams.ts',
-  'packages/desktop/server/automation/scheduledTaskCapability.ts',
-  'packages/desktop/server/automation/scheduledTaskThreads.ts',
-  'packages/desktop/server/conversations/checkpointReview.ts',
   'packages/desktop/server/conversations/conversationAssetsCapability.ts',
   'packages/desktop/server/conversations/conversationBootstrap.ts',
   'packages/desktop/server/conversations/conversationCatalog.ts',
@@ -22,7 +19,6 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationService.ts',
   'packages/desktop/server/conversations/conversationSessionAssetCapability.ts',
   'packages/desktop/server/conversations/conversationSummaries.ts',
-  'packages/desktop/server/conversations/desktopConversationState.ts',
   'packages/desktop/server/conversations/liveSessionBranching.ts',
   'packages/desktop/server/conversations/liveSessionBroadcasts.ts',
   'packages/desktop/server/conversations/liveSessionCapability.ts',
@@ -39,11 +35,8 @@ const allowed = new Set([
   'packages/desktop/server/conversations/liveSessionTitle.ts',
   'packages/desktop/server/conversations/liveSessionTranscript.ts',
   'packages/desktop/server/conversations/sessionExchange.ts',
-  'packages/desktop/server/conversations/sessions.ts',
   'packages/desktop/server/daemon/background-agent-runner.ts',
   'packages/desktop/server/routes/conversationState.ts',
-  'packages/desktop/server/routes/conversations.ts',
-  'packages/desktop/server/routes/gateways.ts',
   'packages/desktop/server/shared/appEvents.ts',
 ]);
 
