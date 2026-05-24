@@ -1,4 +1,4 @@
-import { Component, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, type ReactNode, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents } from '../app/contexts';
@@ -1436,7 +1436,13 @@ export function Layout() {
             onToggleRail={activeRightRailControl?.toggleRail ?? (() => {})}
             layoutMode={appLayoutMode}
             onLayoutModeChange={handleAppLayoutModeChange}
-            trailingExtra={<NotificationBell onClick={() => setNotificationCenterOpen((open) => !open)} />}
+            trailingExtra={
+              <NotificationBell
+                onClick={() => {
+                  startTransition(() => setNotificationCenterOpen((open) => !open));
+                }}
+              />
+            }
           />
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {effectiveSidebarOpen ? (
@@ -1549,10 +1555,20 @@ export function Layout() {
         </div>
       </DesktopChromeContext.Provider>
 
-      <NotificationToaster />
-      {notificationCenterOpen && <NotificationCenter onClose={() => setNotificationCenterOpen(false)} />}
-      <ExtensionModalHost />
-      <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isElectron ?? isDesktopShell()} />
+      <Suspense fallback={null}>
+        <NotificationToaster />
+      </Suspense>
+      {notificationCenterOpen ? (
+        <Suspense fallback={null}>
+          <NotificationCenter onClose={() => setNotificationCenterOpen(false)} />
+        </Suspense>
+      ) : null}
+      <Suspense fallback={null}>
+        <ExtensionModalHost />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isElectron ?? isDesktopShell()} />
+      </Suspense>
       {commandPaletteMounted ? (
         <Suspense fallback={null}>
           <CommandPalette />

@@ -521,7 +521,7 @@ export function App() {
               <LiveTitlesContext.Provider value={{ titles: titleMap, setTitle }}>
                 <ThemeProvider>
                   <ExtensionRegistryProvider>
-                    <BrowserRouter>
+                    <BrowserRouter future={{ v7_startTransition: true }}>
                       <Routes>
                         <Route path="/" element={<Layout />}>
                           <Route index element={<Navigate to="/conversations/new" replace />} />
