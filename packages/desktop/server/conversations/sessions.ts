@@ -21,6 +21,7 @@ import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-age
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { readConversationDetailCache, writeConversationDetailCache } from './conversationCatalog.js';
 import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
@@ -1984,6 +1985,23 @@ export function readSessionBlocksByFileWithTelemetry(
   }
 
   const requestedTailBlocks = normalizeTailBlockRequest(options?.tailBlocks);
+  const cachedDbDetail = readConversationDetailCache(readKnownSessionIdByFilePath(filePath) ?? filePath, signature, {
+    tailBlocks: requestedTailBlocks,
+  });
+  if (cachedDbDetail) {
+    return {
+      detail: cachedDbDetail,
+      telemetry: buildSessionDetailTelemetry({
+        cache: 'hit',
+        loader: cachedDbDetail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
+        startedAt,
+        requestedTailBlocks,
+        totalBlocks: cachedDbDetail.totalBlocks,
+        blockOffset: cachedDbDetail.blockOffset,
+        contextUsageIncluded: cachedDbDetail.contextUsage !== null,
+      }),
+    };
+  }
   const cacheKey = buildSessionDetailCacheKey(filePath, requestedTailBlocks);
   const cachedDetail = sessionDetailCache.get(cacheKey);
 
@@ -2049,6 +2067,7 @@ export function readSessionBlocksByFileWithTelemetry(
       signature,
     } satisfies SessionDetail;
     sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
+    writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
     trimSessionDetailCache();
     return {
       detail,
@@ -2093,6 +2112,7 @@ export function readSessionBlocksByFileWithTelemetry(
   } satisfies SessionDetail;
 
   sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
+  writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
   trimSessionDetailCache();
   return {
     detail,

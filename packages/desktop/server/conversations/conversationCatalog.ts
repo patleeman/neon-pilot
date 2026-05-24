@@ -6,6 +6,7 @@ import { type SqliteDatabase } from '@neon-pilot/core';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
 import type { SessionMeta } from './sessions.js';
+import type { SessionDetail } from './sessions.js';
 
 interface ConversationCatalogRow {
   id: string;
@@ -59,6 +60,14 @@ function getDb(): SqliteDatabase {
     );
     CREATE INDEX IF NOT EXISTS conversations_last_activity_idx ON conversations(last_activity_at DESC, id DESC);
     CREATE INDEX IF NOT EXISTS conversations_cwd_idx ON conversations(cwd);
+    CREATE TABLE IF NOT EXISTS conversation_details (
+      conversation_id TEXT NOT NULL,
+      cache_key TEXT NOT NULL,
+      signature TEXT NOT NULL,
+      detail_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, cache_key)
+    );
   `);
   return db;
 }
@@ -174,6 +183,43 @@ export function readConversationCatalogSession(id: string): SessionMeta | null {
 export function hasConversationCatalogRows(): boolean {
   const row = getDb().prepare('SELECT 1 AS found FROM conversations LIMIT 1').get() as { found?: number } | undefined;
   return row?.found === 1;
+}
+
+function detailCacheKey(options?: { tailBlocks?: number }): string {
+  return Number.isSafeInteger(options?.tailBlocks) && typeof options?.tailBlocks === 'number' && options.tailBlocks > 0
+    ? `tail:${options.tailBlocks}`
+    : 'full';
+}
+
+export function readConversationDetailCache(
+  conversationId: string,
+  signature: string,
+  options?: { tailBlocks?: number },
+): SessionDetail | null {
+  const row = getDb()
+    .prepare('SELECT detail_json FROM conversation_details WHERE conversation_id = ? AND cache_key = ? AND signature = ?')
+    .get(conversationId, detailCacheKey(options), signature) as { detail_json: string } | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.detail_json) as SessionDetail;
+  } catch {
+    return null;
+  }
+}
+
+export function writeConversationDetailCache(conversationId: string, detail: SessionDetail, options?: { tailBlocks?: number }): void {
+  getDb()
+    .prepare(
+      `
+      INSERT INTO conversation_details (conversation_id, cache_key, signature, detail_json, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(conversation_id, cache_key) DO UPDATE SET
+        signature = excluded.signature,
+        detail_json = excluded.detail_json,
+        updated_at = excluded.updated_at
+    `,
+    )
+    .run(conversationId, detailCacheKey(options), detail.signature ?? '', JSON.stringify(detail), new Date().toISOString());
 }
 
 export function closeConversationCatalogDb(): void {
