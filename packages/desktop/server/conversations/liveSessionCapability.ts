@@ -801,7 +801,7 @@ export async function submitLiveSessionPromptCapability(
   const queuedContextAtMs = performance.now();
 
   if (recoveredLiveEntry?.session.sessionFile) {
-    await syncWebLiveConversationRun({
+    void syncWebLiveConversationRun({
       conversationId: liveConversationId,
       sessionFile: recoveredLiveEntry.session.sessionFile,
       cwd: recoveredLiveEntry.cwd,
@@ -820,6 +820,12 @@ export async function submitLiveSessionPromptCapability(
           : {}),
         enqueuedAt: new Date().toISOString(),
       },
+    }).catch((error) => {
+      logWarn('live prompt running-state sync failed', {
+        sessionId: liveConversationId,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     });
   }
 
