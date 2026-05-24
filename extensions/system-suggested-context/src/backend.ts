@@ -38,6 +38,7 @@ const AUTO_POINTER_RECENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 const POINTER_CACHE_TTL_MS = 60_000;
 const WARM_POINTER_BUDGET_MS = 150;
 const PROVIDE_PROMPT_CONTEXT_BUDGET_MS = 200;
+const TRANSCRIPT_CONTENT_CHECK_BUDGET_MS = 50;
 const PRODUCT_STOPWORDS = new Set([
   'actually',
   'agent',
@@ -359,6 +360,17 @@ async function hasConversationTranscriptContent(conversationId: string): Promise
   return (((await getConversationBlocks(conversationId, { tailBlocks: 1 })) as { totalBlocks?: number } | undefined)?.totalBlocks ?? 0) > 0;
 }
 
+async function hasConversationTranscriptContentWithinBudget(conversationId: string): Promise<boolean> {
+  try {
+    return await withPointerBudget(hasConversationTranscriptContent(conversationId), TRANSCRIPT_CONTENT_CHECK_BUDGET_MS);
+  } catch (error) {
+    if (error instanceof PointerBudgetExceeded) {
+      return true;
+    }
+    throw error;
+  }
+}
+
 async function buildRelatedConversationPointers(input: {
   prompt: string;
   currentConversationId?: string;
@@ -517,7 +529,7 @@ export async function providePromptContext(
 
   try {
     // Only inject pointers for brand-new conversations with no existing content
-    if (await hasConversationTranscriptContent(input.conversationId)) {
+    if (await hasConversationTranscriptContentWithinBudget(input.conversationId)) {
       return { contextMessages: [], warnings: [] };
     }
 
