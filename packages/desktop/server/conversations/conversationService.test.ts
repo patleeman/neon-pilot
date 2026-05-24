@@ -11,7 +11,9 @@ const {
   listDeferredResumeRecordsMock,
   listProfileActivityEntriesMock,
   hasConversationCatalogRowsMock,
+  isConversationCatalogCompleteMock,
   listConversationCatalogSessionsMock,
+  markConversationCatalogCompleteMock,
   listSessionsMock,
   readConversationCatalogSessionMock,
   liveSessionRegistry,
@@ -43,7 +45,9 @@ const {
   listDeferredResumeRecordsMock: vi.fn(),
   listProfileActivityEntriesMock: vi.fn(),
   hasConversationCatalogRowsMock: vi.fn(() => false),
+  isConversationCatalogCompleteMock: vi.fn(() => false),
   listConversationCatalogSessionsMock: vi.fn(() => []),
+  markConversationCatalogCompleteMock: vi.fn(),
   listSessionsMock: vi.fn(),
   readConversationCatalogSessionMock: vi.fn(() => null),
   liveSessionRegistry: new Map<string, unknown>(),
@@ -122,7 +126,9 @@ vi.mock('./sessions.js', () => ({
 
 vi.mock('./conversationCatalog.js', () => ({
   hasConversationCatalogRows: hasConversationCatalogRowsMock,
+  isConversationCatalogComplete: isConversationCatalogCompleteMock,
   listConversationCatalogSessions: listConversationCatalogSessionsMock,
+  markConversationCatalogComplete: markConversationCatalogCompleteMock,
   readConversationCatalogSession: readConversationCatalogSessionMock,
   upsertConversationCatalogSessions: upsertConversationCatalogSessionsMock,
 }));
@@ -177,7 +183,9 @@ describe('conversationService', () => {
     listDeferredResumeRecordsMock.mockReset();
     listProfileActivityEntriesMock.mockReset();
     hasConversationCatalogRowsMock.mockReset();
+    isConversationCatalogCompleteMock.mockReset();
     listConversationCatalogSessionsMock.mockReset();
+    markConversationCatalogCompleteMock.mockReset();
     listSessionsMock.mockReset();
     readConversationCatalogSessionMock.mockReset();
     upsertConversationCatalogSessionsMock.mockReset();
@@ -207,6 +215,7 @@ describe('conversationService', () => {
     listDeferredResumeRecordsMock.mockReturnValue([]);
     listProfileActivityEntriesMock.mockReturnValue([]);
     hasConversationCatalogRowsMock.mockReturnValue(false);
+    isConversationCatalogCompleteMock.mockReturnValue(false);
     listConversationCatalogSessionsMock.mockReturnValue([]);
     listSessionsMock.mockReturnValue([]);
     readConversationCatalogSessionMock.mockReturnValue(null);
@@ -370,6 +379,72 @@ describe('conversationService', () => {
     listSessionsMock.mockReturnValue([]);
     existsSyncMock.mockReturnValueOnce(false);
     expect(readConversationSessionSignature('conversation-1')).toBeNull();
+  });
+
+  it('falls back to transcript metadata when catalog is not marked complete', () => {
+    hasConversationCatalogRowsMock.mockReturnValue(true);
+    isConversationCatalogCompleteMock.mockReturnValue(false);
+    listConversationCatalogSessionsMock.mockReturnValue([
+      {
+        id: 'catalog-only',
+        file: '/sessions/catalog-only.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/catalog',
+        cwdSlug: '-repo-catalog',
+        model: 'gpt-5',
+        title: 'Catalog only',
+        messageCount: 1,
+      },
+    ]);
+    listSessionsMock.mockReturnValue([
+      {
+        id: 'conversation-1',
+        file: '/sessions/conversation-1.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/one',
+        cwdSlug: '-repo-one',
+        model: 'gpt-5',
+        title: 'Conversation one',
+        messageCount: 3,
+      },
+      {
+        id: 'conversation-2',
+        file: '/sessions/conversation-2.jsonl',
+        timestamp: '2026-04-09T11:00:00.000Z',
+        cwd: '/repo/two',
+        cwdSlug: '-repo-two',
+        model: 'gpt-5',
+        title: 'Conversation two',
+        messageCount: 4,
+      },
+    ]);
+
+    expect(listConversationSessionsSnapshot().map((session) => session.id)).toEqual(['conversation-1', 'conversation-2']);
+    expect(listConversationCatalogSessionsMock).not.toHaveBeenCalled();
+    expect(upsertConversationCatalogSessionsMock).toHaveBeenCalledWith(listSessionsMock.mock.results[0]?.value);
+    expect(markConversationCatalogCompleteMock).toHaveBeenCalledOnce();
+  });
+
+  it('uses catalog rows once the catalog is marked complete', () => {
+    hasConversationCatalogRowsMock.mockReturnValue(true);
+    isConversationCatalogCompleteMock.mockReturnValue(true);
+    listConversationCatalogSessionsMock.mockReturnValue([
+      {
+        id: 'catalog-1',
+        file: '/sessions/catalog-1.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/catalog',
+        cwdSlug: '-repo-catalog',
+        model: 'gpt-5',
+        title: 'Catalog one',
+        messageCount: 1,
+      },
+    ]);
+
+    expect(listConversationSessionsSnapshot().map((session) => session.id)).toEqual(['catalog-1']);
+    expect(listSessionsMock).not.toHaveBeenCalled();
+    expect(upsertConversationCatalogSessionsMock).not.toHaveBeenCalled();
+    expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
   });
 
   it('builds conversation snapshots from saved workspace state', () => {

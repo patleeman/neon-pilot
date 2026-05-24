@@ -21,7 +21,9 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE as SETTINGS_FILE } from '../ui/settingsPe
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
 import {
   hasConversationCatalogRows,
+  isConversationCatalogComplete,
   listConversationCatalogSessions,
+  markConversationCatalogComplete,
   readConversationCatalogSession,
   upsertConversationCatalogSessions,
 } from './conversationCatalog.js';
@@ -383,9 +385,11 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
 export function listConversationSessionsSnapshot(options: { includeLive?: boolean } = {}) {
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
-  const storedSessions = hasConversationCatalogRows() ? listConversationCatalogSessions() : listSessions();
-  if (storedSessions.length > 0 && !hasConversationCatalogRows()) {
+  const catalogComplete = isConversationCatalogComplete();
+  const storedSessions = catalogComplete && hasConversationCatalogRows() ? listConversationCatalogSessions() : listSessions();
+  if (!catalogComplete) {
     upsertConversationCatalogSessions(storedSessions);
+    markConversationCatalogComplete();
   }
   const jsonl = decorateSessionsWithAttention(profile, storedSessions, deferredResumesBySessionFile);
   const live = options.includeLive === false ? [] : listAllLiveSessions();

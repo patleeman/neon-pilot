@@ -81,6 +81,11 @@ function getDb(): SqliteDatabase {
       updated_at TEXT NOT NULL,
       PRIMARY KEY (conversation_id, block_id, image_index)
     );
+    CREATE TABLE IF NOT EXISTS conversation_catalog_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
   return db;
 }
@@ -196,6 +201,27 @@ export function readConversationCatalogSession(id: string): SessionMeta | null {
 export function hasConversationCatalogRows(): boolean {
   const row = getDb().prepare('SELECT 1 AS found FROM conversations LIMIT 1').get() as { found?: number } | undefined;
   return row?.found === 1;
+}
+
+export function isConversationCatalogComplete(): boolean {
+  const row = getDb().prepare('SELECT value FROM conversation_catalog_state WHERE key = ?').get('complete') as
+    | { value?: string }
+    | undefined;
+  return row?.value === 'true';
+}
+
+export function markConversationCatalogComplete(): void {
+  getDb()
+    .prepare(
+      `
+      INSERT INTO conversation_catalog_state (key, value, updated_at)
+      VALUES ('complete', 'true', ?)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = excluded.updated_at
+    `,
+    )
+    .run(new Date().toISOString());
 }
 
 function detailCacheKey(options?: { tailBlocks?: number }): string {
