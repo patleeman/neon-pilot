@@ -490,8 +490,8 @@ export const UserMessage = memo(function UserMessage({
   const transcriptTargetAttrs = block.id ? transcriptTargetAttributes({ kind: 'block', blockId: block.id }) : {};
 
   return (
-    <div className="group flex flex-col items-end gap-1.5" {...transcriptTargetAttrs} tabIndex={block.id ? -1 : undefined}>
-      <div className={layout === 'compact' ? 'min-w-0 max-w-[92%] sm:max-w-[88%]' : 'min-w-0 max-w-[86%]'}>
+    <div className="group flex w-full flex-col items-end gap-1.5" {...transcriptTargetAttrs} tabIndex={block.id ? -1 : undefined}>
+      <div className={layout === 'compact' ? 'ml-auto min-w-0 max-w-[92%] sm:max-w-[88%]' : 'ml-auto min-w-0 max-w-[86%]'}>
         <div className="ui-message-card-user space-y-2">
           {hasImages && (
             <div className="space-y-2">

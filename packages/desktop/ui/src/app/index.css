@@ -1466,6 +1466,9 @@ body {
   /* Use default browser scrollbar. The custom ConversationRail overlay that
      previously replaced it caused persistent scroll-position jumps. */
   overflow-anchor: auto;
+  /* Keep centered transcript content from shifting horizontally when overflow
+     appears/disappears during streaming or composer height changes. */
+  scrollbar-gutter: stable;
 }
 
 @keyframes notification-dropdown-in {
