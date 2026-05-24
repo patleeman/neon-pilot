@@ -319,6 +319,14 @@ async function main() {
         };
       })()`,
     );
+    const draftSubmitNavigateCalledMs = (() => {
+      const phase = postDraftPerfStore?.clientSamples
+        ?.filter(
+          (sample) => sample.name === 'conversation.submitComposer.phase' && sample.meta?.phase === 'afterNavigateCreatedConversation',
+        )
+        ?.at(-1);
+      return typeof phase?.durationMs === 'number' ? Math.round(phase.durationMs) : null;
+    })();
     const routeSettingsMs = (
       await measure('settings', async () => {
         await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
@@ -383,6 +391,7 @@ async function main() {
       draftSubmitSetupMs,
       draftSubmitVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
+      draftSubmitNavigateCalledMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
       createLiveSessionClientMs,
       createLiveSessionServerPerf,
