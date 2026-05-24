@@ -142,7 +142,12 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     };
   }
 
-  const completion = Promise.resolve().then(() => callbacks.runPromptOnLiveEntry(entry, text, behavior, images));
+  const completion = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      void callbacks.runPromptOnLiveEntry(entry, text, behavior, images).then(resolve, reject);
+    }, 0);
+    timer.unref?.();
+  });
   void completion.catch(() => {
     // Accepted prompts expose their eventual failure through the transcript and
     // higher-level callers also attach their own completion logging. Keep this

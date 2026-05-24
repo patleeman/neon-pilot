@@ -3737,6 +3737,13 @@ describe('submitPromptSession', () => {
     };
     let completionResolved = false;
 
+    const prompt = vi.fn(async () => {
+      await new Promise<void>((resolve) => {
+        resolvePrompt = resolve;
+      });
+      completionResolved = true;
+    });
+
     setLiveEntry('session-submit-started', {
       sessionId: 'session-submit-started',
       cwd: '/tmp/workspace',
@@ -3750,12 +3757,7 @@ describe('submitPromptSession', () => {
         getContextUsage: () => null,
         isStreaming: false,
         subscribe: () => () => {},
-        prompt: vi.fn(async () => {
-          await new Promise<void>((resolve) => {
-            resolvePrompt = resolve;
-          });
-          completionResolved = true;
-        }),
+        prompt,
       },
     });
 
@@ -3766,6 +3768,7 @@ describe('submitPromptSession', () => {
     });
     expect(completionResolved).toBe(false);
 
+    await vi.waitFor(() => expect(prompt).toHaveBeenCalledWith('hello there'));
     resolvePrompt();
     await submitted.completion;
     expect(completionResolved).toBe(true);
