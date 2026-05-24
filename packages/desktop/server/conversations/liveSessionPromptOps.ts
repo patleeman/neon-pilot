@@ -4,7 +4,6 @@ import { rememberImageProbeAttachments, type StoredImageProbeAttachment } from '
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import type { PromptImageAttachment } from './liveSessionQueue.js';
-import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
 export interface LiveSessionPromptHost {
   sessionId: string;
@@ -143,57 +142,13 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     };
   }
 
-  let settled = false;
-  let unsubscribe: (() => void) | null = null;
-  const accepted = new Promise<void>((resolve, reject) => {
-    const finish = (handler: () => void) => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      unsubscribe?.();
-      unsubscribe = null;
-      handler();
-    };
-
-    unsubscribe = entry.session.subscribe((event) => {
-      if (event.type === 'message_start' && event.message.role === 'user') {
-        finish(resolve);
-        return;
-      }
-
-      if (event.type === 'agent_start' || event.type === 'agent_end' || event.type === 'turn_end') {
-        finish(resolve);
-        return;
-      }
-
-      if (event.type === 'message_end' && event.message.role === 'assistant') {
-        const errorMessage = getAssistantErrorDisplayMessage(event.message);
-        if (errorMessage) {
-          finish(() => reject(new Error(errorMessage)));
-        }
-      }
-    });
+  const completion = Promise.resolve().then(() => callbacks.runPromptOnLiveEntry(entry, text, behavior, images));
+  void completion.catch(() => {
+    // Accepted prompts expose their eventual failure through the transcript and
+    // higher-level callers also attach their own completion logging. Keep this
+    // detached startup from becoming an unhandled rejection.
   });
 
-  const completion = callbacks.runPromptOnLiveEntry(entry, text, behavior, images);
-  void completion
-    .finally(() => {
-      if (!settled) {
-        settled = true;
-        unsubscribe?.();
-        unsubscribe = null;
-      }
-    })
-    .catch(() => {
-      // The caller observes prompt-start failures through the race below, and
-      // accepted prompts expose their eventual failure through the transcript.
-      // Do not let the detached completion cleanup promise become an unhandled
-      // rejection and take down the companion dev host.
-    });
-
-  await Promise.race([accepted, completion]);
   return {
     acceptedAs: 'started',
     completion,

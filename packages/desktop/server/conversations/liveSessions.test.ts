@@ -3731,8 +3731,7 @@ describe('appendVisibleCustomMessage', () => {
 });
 
 describe('submitPromptSession', () => {
-  it('returns after the prompt is accepted instead of waiting for full completion', async () => {
-    const listeners = new Set<(event: AgentSessionEvent) => void>();
+  it('returns immediately after scheduling the prompt instead of waiting for full completion', async () => {
     let resolvePrompt: () => void = () => {
       throw new Error('prompt resolver not set');
     };
@@ -3750,24 +3749,8 @@ describe('submitPromptSession', () => {
         state: { messages: [], streamingMessage: null },
         getContextUsage: () => null,
         isStreaming: false,
-        subscribe(listener: (event: AgentSessionEvent) => void) {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
+        subscribe: () => () => {},
         prompt: vi.fn(async () => {
-          listeners.forEach((listener) => {
-            listener(
-              asAgentSessionEvent({
-                type: 'message_start',
-                message: {
-                  role: 'user',
-                  content: [{ type: 'text', text: 'hello there' }],
-                  timestamp: 1,
-                },
-              }),
-            );
-          });
-
           await new Promise<void>((resolve) => {
             resolvePrompt = resolve;
           });
@@ -3855,9 +3838,7 @@ describe('submitPromptSession', () => {
     expect(followUp).toHaveBeenCalledWith('keep going');
   });
 
-  it('surfaces assistant prompt failures before the full prompt promise settles', async () => {
-    const listeners = new Set<(event: AgentSessionEvent) => void>();
-
+  it('returns prompt startup failures through the detached completion', async () => {
     setLiveEntry('session-submit-error', {
       sessionId: 'session-submit-error',
       cwd: '/tmp/workspace',
@@ -3870,30 +3851,15 @@ describe('submitPromptSession', () => {
         state: { messages: [], streamingMessage: null },
         getContextUsage: () => null,
         isStreaming: false,
-        subscribe(listener: (event: AgentSessionEvent) => void) {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
+        subscribe: () => () => {},
         prompt: vi.fn(async () => {
-          listeners.forEach((listener) => {
-            listener(
-              asAgentSessionEvent({
-                type: 'message_end',
-                message: {
-                  role: 'assistant',
-                  content: [],
-                  stopReason: 'error',
-                  errorMessage: 'Codex error: upstream overloaded',
-                  timestamp: 1,
-                },
-              }),
-            );
-          });
+          throw new Error('Codex error: upstream overloaded');
         }),
       },
     });
 
-    await expect(submitPromptSession('session-submit-error', 'hello there')).rejects.toThrow('Codex error: upstream overloaded');
+    const submitted = await submitPromptSession('session-submit-error', 'hello there');
+    await expect(submitted.completion).rejects.toThrow('Codex error: upstream overloaded');
   });
 });
 
