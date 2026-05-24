@@ -1,5 +1,6 @@
 import { buildDesktopWebSocketUrl } from '../client/endpoints';
 import type { DesktopAppEvent } from '../shared/types';
+import { createDesktopAwareEventSource } from './desktopEventSource';
 
 interface DesktopRealtimeListener {
   onopen?: () => void;
@@ -10,7 +11,25 @@ interface DesktopRealtimeListener {
 
 type DesktopRealtimeMessage = { type: 'connected' } | { type: 'app_event'; event: DesktopAppEvent } | { type: 'error'; message: string };
 
+function shouldUseDesktopEventStream(): boolean {
+  return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
+}
+
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
+  if (shouldUseDesktopEventStream()) {
+    const source = createDesktopAwareEventSource('/api/app-events/events');
+    source.onopen = () => listener.onopen?.();
+    source.onmessage = (event) => {
+      try {
+        listener.onevent?.(JSON.parse(event.data) as DesktopAppEvent);
+      } catch {
+        listener.onerror?.();
+      }
+    };
+    source.onerror = () => listener.onerror?.();
+    return () => source.close();
+  }
+
   const socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   let closed = false;
 

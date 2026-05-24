@@ -8,6 +8,7 @@ import { inlineConversationSessionSnapshotAssetsCapability } from '../conversati
 import type { DisplayBlock } from '../conversations/conversationTypes.js';
 import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
+import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
 
 const MAX_DESKTOP_LOCAL_API_STREAM_TAIL_BLOCKS = 10000;
@@ -390,6 +391,15 @@ async function subscribeDesktopWorkspaceEventsStream(url: URL, onEvent: (event: 
   return close;
 }
 
+async function subscribeDesktopAppEventsStream(_url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+  onEvent({ type: 'open' });
+  const unsubscribe = subscribeAppEvents((event) => emitStreamMessage(onEvent, event));
+  return () => {
+    unsubscribe();
+    onEvent({ type: 'close' });
+  };
+}
+
 async function subscribeDesktopVaultEventsStream(_url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
   const vaultRoot = getVaultRoot().trim();
   if (!vaultRoot) {
@@ -443,6 +453,10 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (/^\/api\/provider-auth\/oauth\/[^/]+\/events$/.test(url.pathname)) {
     return subscribeDesktopProviderOAuthStream(url, onEvent);
+  }
+
+  if (url.pathname === '/api/app-events/events') {
+    return subscribeDesktopAppEventsStream(url, onEvent);
   }
 
   if (url.pathname === '/api/vault/events') {
