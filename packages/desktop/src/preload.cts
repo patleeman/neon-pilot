@@ -80,43 +80,6 @@ const desktopBridge = {
   checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
   pickFolder: (input?: { cwd?: string | null; prompt?: string | null }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:pick-folder`, input),
   captureScreenshot: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-screenshot`),
-  createLiveSession: (input: {
-    cwd?: string;
-    workspaceCwd?: string | null;
-    model?: string | null;
-    thinkingLevel?: string | null;
-    serviceTier?: string | null;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:create-live-session`, input),
-  resumeLiveSession: (input: { sessionFile: string; cwd?: string }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:resume-live-session`, input),
-  takeOverLiveSession: (input: { conversationId: string; surfaceId: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:take-over-live-session`, input),
-  restoreQueuedLiveSessionMessage: (input: { conversationId: string; behavior: 'steer' | 'followUp'; index: number; previewId?: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:restore-queued-live-session-message`, input),
-  clearQueuedLiveSessionMessages: (input: { conversationId: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:clear-queued-live-session-messages`, input),
-  compactLiveSession: (input: { conversationId: string; customInstructions?: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:compact-live-session`, input),
-  exportLiveSession: (input: { conversationId: string; outputPath?: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:export-live-session`, input),
-  reloadLiveSession: (conversationId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:reload-live-session`, conversationId),
-  destroyLiveSession: (conversationId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:destroy-live-session`, conversationId),
-  branchLiveSession: (input: { conversationId: string; entryId: string }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:branch-live-session`, input),
-  forkLiveSession: (input: { conversationId: string; entryId: string; preserveSource?: boolean; beforeEntry?: boolean }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:fork-live-session`, input),
-  submitLiveSessionPrompt: (input: {
-    conversationId: string;
-    text?: string;
-    behavior?: 'steer' | 'followUp';
-    images?: Array<{ data: string; mimeType: string; name?: string }>;
-    attachmentRefs?: Array<{ attachmentId: string; revision?: number }>;
-    contextMessages?: Array<{ customType: string; content: string }>;
-    relatedConversationIds?: string[];
-    surfaceId?: string;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:submit-live-session-prompt`, input),
-  executeLiveSessionBash: (input: { conversationId: string; command: string; excludeFromContext?: boolean }) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:execute-live-session-bash`, input),
-  abortLiveSession: (conversationId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:abort-live-session`, conversationId),
   subscribeConversationState: (input: {
     conversationId: string;
     tailBlocks?: number;

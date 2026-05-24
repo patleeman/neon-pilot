@@ -110,120 +110,81 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('restores queued messages through the local desktop bridge', async () => {
-    const fetchMock = vi.fn();
+  it('restores queued messages through HTTP product routes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
-      activeHostId: 'local',
-      activeHostLabel: 'Local',
-      activeHostKind: 'local',
-      activeHostSummary: 'Local backend is healthy.',
-    });
-    const restoreQueuedLiveSessionMessage = vi.fn().mockResolvedValue({ ok: true, text: 'queued hello', images: [] });
-    Object.assign(window as { neonPilotDesktop?: unknown }, {
-      neonPilotDesktop: {
-        getEnvironment,
-        restoreQueuedLiveSessionMessage,
-      },
-    });
 
     const { api } = await import('./api');
     const restored = await api.restoreQueuedMessage('live-1', { behavior: 'followUp', index: 0, previewId: 'queue-1' }, 'surface-1');
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(restoreQueuedLiveSessionMessage).toHaveBeenCalledWith({
-      conversationId: 'live-1',
-      behavior: 'followUp',
-      index: 0,
-      previewId: 'queue-1',
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-sessions/live-1/restore-queued-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ behavior: 'followUp', index: 0, previewId: 'queue-1' }),
     });
     expect(restored).toEqual({ ok: true, text: 'queued hello', images: [] });
   });
 
-  it('clears queued messages through the local desktop bridge', async () => {
-    const fetchMock = vi.fn();
+  it('clears queued messages through HTTP product routes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createJsonResponse({ ok: true, items: [{ behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' }] }),
+      );
     vi.stubGlobal('fetch', fetchMock);
-    const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
-      activeHostId: 'local',
-      activeHostLabel: 'Local',
-      activeHostKind: 'local',
-      activeHostSummary: 'Local backend is healthy.',
-    });
-    const clearQueuedLiveSessionMessages = vi.fn().mockResolvedValue({
-      ok: true,
-      items: [{ behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' }],
-    });
-    Object.assign(window as { neonPilotDesktop?: unknown }, {
-      neonPilotDesktop: {
-        getEnvironment,
-        clearQueuedLiveSessionMessages,
-      },
-    });
 
     const { api } = await import('./api');
     const cleared = await api.clearQueuedMessages('live-1', 'surface-1');
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(clearQueuedLiveSessionMessages).toHaveBeenCalledWith({ conversationId: 'live-1' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-sessions/live-1/clear-queued-messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: undefined,
+    });
     expect(cleared).toEqual({
       ok: true,
       items: [{ behavior: 'followUp', text: 'Goal continuation.', images: [], author: 'agent' }],
     });
   });
 
-  it('executes live-session bash through the local desktop bridge', async () => {
-    const fetchMock = vi.fn();
+  it('executes live-session bash through HTTP product routes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, result: { exitCode: 0, output: 'ok' } }));
     vi.stubGlobal('fetch', fetchMock);
-    const executeLiveSessionBash = vi.fn().mockResolvedValue({ ok: true, result: { exitCode: 0, output: 'ok' } });
-    Object.assign(window as { neonPilotDesktop?: unknown }, {
-      neonPilotDesktop: {
-        getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
-          activeHostId: 'local',
-          activeHostLabel: 'Local',
-          activeHostKind: 'local',
-          activeHostSummary: 'Local backend is healthy.',
-        }),
-        executeLiveSessionBash,
-      },
-    });
 
     const { api } = await import('./api');
     const result = await api.executeLiveSessionBash('live-1', 'git status', { excludeFromContext: true });
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(executeLiveSessionBash).toHaveBeenCalledWith({ conversationId: 'live-1', command: 'git status', excludeFromContext: true });
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-sessions/live-1/execute-bash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'git status', excludeFromContext: true }),
+    });
     expect(result).toEqual({ ok: true, result: { exitCode: 0, output: 'ok' } });
   });
 
-  it('rejects queued message restore on non-local desktop hosts instead of falling back to HTTP', async () => {
+  it('uses HTTP for queued message restore on non-local desktop hosts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, text: 'queued hello', images: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
-      activeHostId: 'remote',
-      activeHostLabel: 'Remote',
-      activeHostKind: 'ssh',
-      activeHostSummary: 'Remote backend is healthy.',
-    });
-    const restoreQueuedLiveSessionMessage = vi.fn();
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
-        getEnvironment,
-        restoreQueuedLiveSessionMessage,
+        getEnvironment: vi.fn().mockResolvedValue({
+          isElectron: true,
+          activeHostId: 'remote',
+          activeHostLabel: 'Remote',
+          activeHostKind: 'ssh',
+          activeHostSummary: 'Remote backend is healthy.',
+        }),
       },
     });
 
     const { api } = await import('./api');
+    await expect(api.restoreQueuedMessage('live-1', { behavior: 'steer', index: 2, previewId: 'queue-2' }, 'surface-1')).resolves.toEqual({
+      ok: true,
+      text: 'queued hello',
+      images: [],
+    });
 
-    await expect(api.restoreQueuedMessage('live-1', { behavior: 'steer', index: 2, previewId: 'queue-2' }, 'surface-1')).rejects.toThrow(
-      'Restoring queued prompts requires the local desktop host.',
-    );
-
-    expect(restoreQueuedLiveSessionMessage).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it('uses dedicated desktop capability bridges on the local Electron host', async () => {
@@ -533,6 +494,27 @@ describe('api desktop transport', () => {
         return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
       if (path === '/api/conversations/live-1/model-preferences')
         return createJsonResponse(await readConversationModelPreferences({ conversationId: 'live-1' }));
+      if (path === '/api/live-sessions' && init?.method === 'POST')
+        return createJsonResponse(await createLiveSession(JSON.parse(String(init.body))));
+      if (path === '/api/live-sessions/resume' && init?.method === 'POST')
+        return createJsonResponse(await resumeLiveSession(JSON.parse(String(init.body))));
+      if (path === '/api/live-sessions/live-1/take-over')
+        return createJsonResponse(await takeOverLiveSession({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/prompt')
+        return createJsonResponse(await submitLiveSessionPrompt({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/restore-queued-message')
+        return createJsonResponse(await restoreQueuedLiveSessionMessage({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/compact')
+        return createJsonResponse(await compactLiveSession({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/export')
+        return createJsonResponse(await exportLiveSession({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/reload') return createJsonResponse(await reloadLiveSession('live-1'));
+      if (path === '/api/live-sessions/live-1/branch')
+        return createJsonResponse(await branchLiveSession({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/fork')
+        return createJsonResponse(await forkLiveSession({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/live-sessions/live-1/abort') return createJsonResponse(await abortLiveSession('live-1'));
+      if (path === '/api/live-sessions/conversation-1/destroy') return createJsonResponse(await destroyLiveSession('conversation-1'));
       if (path === '/api/live-sessions/live-1') return createJsonResponse(await readLiveSession('live-1'));
       if (path === '/api/live-sessions/live-1/context') return createJsonResponse(await readLiveSessionContext('live-1'));
       if (path === '/api/live-sessions/live-1/fork-entries') return createJsonResponse(await readLiveSessionForkEntries('live-1'));

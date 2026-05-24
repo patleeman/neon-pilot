@@ -26,6 +26,7 @@ import type {
   ConversationContentSearchResult,
   ConversationContextDocRef,
   ConversationSummaryRecord,
+  DesktopConversationState,
   DesktopEnvironmentState,
   FilePickerResult,
   GatewayProviderId,
@@ -33,7 +34,10 @@ import type {
   GatewayStatus,
   InjectedPromptMessage,
   InstructionFilesState,
+  LiveSessionCreateResult,
+  LiveSessionExportResult,
   LiveSessionMeta,
+  LiveSessionPresenceState,
   MemoryData,
   PromptAttachmentRefInput,
   PromptImageInput,
@@ -707,6 +711,12 @@ export const api = {
     const query = params.toString();
     return get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
   },
+  desktopConversationState: async (id: string, options?: { tailBlocks?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
+    const query = params.toString();
+    return get<DesktopConversationState>(`/conversations/${encodeURIComponent(id)}/state${query ? `?${query}` : ''}`);
+  },
   conversationPlansWorkspace: async () => get<ConversationAutomationWorkspaceState>('/conversation-plans/workspace'),
   conversationArtifacts: async (id: string) =>
     get<{ conversationId: string; artifacts: ConversationArtifactSummary[] }>(`/conversations/${encodeURIComponent(id)}/artifacts`),
@@ -881,9 +891,7 @@ export const api = {
     },
   ) => {
     const startedAtMs = performance.now();
-    const result = await (
-      await requireLocalDesktopBridge('Creating live sessions')
-    ).createLiveSession({
+    const result = await post<LiveSessionCreateResult>('/live-sessions', {
       cwd,
       ...(options?.workspaceCwd !== undefined ? { workspaceCwd: options.workspaceCwd } : {}),
       ...(options?.model !== undefined ? { model: options.model } : {}),
@@ -905,7 +913,7 @@ export const api = {
   },
 
   resumeSession: async (sessionFile: string, cwd?: string) => {
-    return (await requireLocalDesktopBridge('Resuming live sessions')).resumeLiveSession({ sessionFile, ...(cwd ? { cwd } : {}) });
+    return post<{ id: string }>('/live-sessions/resume', { sessionFile, ...(cwd ? { cwd } : {}) });
   },
 
   promptSession: async (
@@ -918,8 +926,16 @@ export const api = {
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
     relatedConversationIds?: string[],
   ) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Prompting live sessions')).submitLiveSessionPrompt({
-      conversationId: id,
+    return post<{
+      ok: true;
+      accepted: true;
+      delivery: 'started' | 'queued';
+      referencedTaskIds: string[];
+      referencedMemoryDocIds: string[];
+      referencedVaultFileIds: string[];
+      referencedAttachmentIds: string[];
+      relatedConversationPointerWarnings?: string[];
+    }>(`/live-sessions/${encodeURIComponent(id)}/prompt`, {
       text,
       behavior,
       ...(surfaceId ? { surfaceId } : {}),
@@ -936,63 +952,60 @@ export const api = {
     surfaceId?: string,
   ) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Restoring queued prompts')).restoreQueuedLiveSessionMessage({
-      conversationId: id,
-      behavior: input.behavior,
-      index: input.index,
-      ...(input.previewId ? { previewId: input.previewId } : {}),
-    });
+    return post<{ ok: true; text: string; images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }> }>(
+      `/live-sessions/${encodeURIComponent(id)}/restore-queued-message`,
+      {
+        behavior: input.behavior,
+        index: input.index,
+        ...(input.previewId ? { previewId: input.previewId } : {}),
+      },
+    );
   },
   clearQueuedMessages: async (id: string, surfaceId?: string) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Clearing queued conversation prompts')).clearQueuedLiveSessionMessages({
-      conversationId: id,
-    });
+    return post<{
+      ok: true;
+      items: Array<{
+        behavior: 'steer' | 'followUp';
+        text: string;
+        images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
+        author: 'user' | 'agent';
+      }>;
+    }>(`/live-sessions/${encodeURIComponent(id)}/clear-queued-messages`);
   },
   takeoverLiveSession: async (id: string, surfaceId: string) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Taking over live sessions')).takeOverLiveSession({
-      conversationId: id,
-      surfaceId,
-    });
+    return post<LiveSessionPresenceState>(`/live-sessions/${encodeURIComponent(id)}/take-over`, { surfaceId });
   },
   compactSession: async (id: string, customInstructions?: string, surfaceId?: string) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Compacting live sessions')).compactLiveSession({
-      conversationId: id,
-      customInstructions,
-    });
+    return post<{ ok: true; result: unknown }>(`/live-sessions/${encodeURIComponent(id)}/compact`, { customInstructions });
   },
   exportSession: async (id: string, outputPath?: string) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Exporting live sessions')).exportLiveSession({
-      conversationId: id,
-      outputPath,
-    });
+    return post<LiveSessionExportResult>(`/live-sessions/${encodeURIComponent(id)}/export`, { outputPath });
   },
   reloadSession: async (id: string, surfaceId?: string) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Reloading live sessions')).reloadLiveSession(id);
+    return post<{ ok: true }>(`/live-sessions/${encodeURIComponent(id)}/reload`);
   },
   abortSession: async (id: string, surfaceId?: string) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Stopping live sessions')).abortLiveSession(id);
+    return post<{ ok: true }>(`/live-sessions/${encodeURIComponent(id)}/abort`);
   },
 
   destroySession: async (id: string, surfaceId?: string) => {
     void surfaceId;
-    return (await requireLocalDesktopConversationBridge(id, 'Destroying live sessions')).destroyLiveSession(id);
+    return post<{ ok: true }>(`/live-sessions/${encodeURIComponent(id)}/destroy`);
   },
 
   forkEntries: async (id: string) => get<LiveSessionForkEntry[]>(`/live-sessions/${encodeURIComponent(id)}/fork-entries`),
   branchSession: async (id: string, entryId: string, surfaceId?: string) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Branching live sessions')).branchLiveSession({
-      conversationId: id,
+    return post<{ newSessionId: string; sessionFile: string }>(`/live-sessions/${encodeURIComponent(id)}/branch`, {
       entryId,
       ...(surfaceId ? { surfaceId } : {}),
     });
   },
   forkSession: async (id: string, entryId: string, options?: { preserveSource?: boolean; beforeEntry?: boolean }, surfaceId?: string) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Forking live sessions')).forkLiveSession({
-      conversationId: id,
+    return post<{ newSessionId: string; sessionFile: string }>(`/live-sessions/${encodeURIComponent(id)}/fork`, {
       entryId,
       preserveSource: options?.preserveSource,
       beforeEntry: options?.beforeEntry,
@@ -1001,8 +1014,7 @@ export const api = {
   },
 
   executeLiveSessionBash: async (id: string, command: string, options?: { excludeFromContext?: boolean }) =>
-    (await requireLocalDesktopConversationBridge(id, 'Running live-session bash commands')).executeLiveSessionBash({
-      conversationId: id,
+    post<{ ok: true; result: unknown }>(`/live-sessions/${encodeURIComponent(id)}/execute-bash`, {
       command,
       excludeFromContext: options?.excludeFromContext,
     }),

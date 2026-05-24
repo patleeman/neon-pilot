@@ -234,16 +234,6 @@ export function registerDesktopIpc(options: {
     return controller.readSessionMeta(sessionId);
   });
 
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-session-search-index`, async (event, sessionIds: string[]) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readSessionSearchIndex) {
-      throw new Error('Dedicated desktop session-search-index reads are only available for the local host.');
-    }
-
-    return controller.readSessionSearchIndex(sessionIds);
-  });
-
   ipcMain.handle(`${CHANNEL_PREFIX}:read-models`, async (event) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);
@@ -282,16 +272,6 @@ export function registerDesktopIpc(options: {
     }
 
     return controller.updateDefaultCwd(cwd);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-vault-files`, async (event) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readVaultFiles) {
-      throw new Error('Dedicated desktop vault-file reads are only available for the local host.');
-    }
-
-    return controller.readVaultFiles();
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:pick-folder`, async (event, input?: { cwd?: string | null; prompt?: string | null }) => {
@@ -513,16 +493,6 @@ export function registerDesktopIpc(options: {
     return controller.readScheduledTaskSchedulerHealth();
   });
 
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-scheduled-task-log`, async (event, taskId: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readScheduledTaskLog) {
-      throw new Error('Dedicated desktop task logs are only available for the local host.');
-    }
-
-    return controller.readScheduledTaskLog(taskId);
-  });
-
   ipcMain.handle(`${CHANNEL_PREFIX}:delete-scheduled-task`, async (event, taskId: string) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);
@@ -583,16 +553,6 @@ export function registerDesktopIpc(options: {
     return controller.readDurableRun(runId);
   });
 
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-durable-run-log`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readDurableRunLog) {
-      throw new Error('Dedicated desktop durable run logs are only available for the local host.');
-    }
-
-    return controller.readDurableRunLog(input);
-  });
-
   ipcMain.handle(`${CHANNEL_PREFIX}:cancel-durable-run`, async (event, runId: string) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);
@@ -611,16 +571,6 @@ export function registerDesktopIpc(options: {
     }
 
     return controller.markDurableRunAttention(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-conversation-bootstrap`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readConversationBootstrap) {
-      throw new Error('Dedicated desktop conversation bootstrap is only available for the local host.');
-    }
-
-    return controller.readConversationBootstrap(input);
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:rename-conversation`, async (event, input) => {
@@ -841,166 +791,6 @@ export function registerDesktopIpc(options: {
     }
 
     return controller.readLiveSessionContext(conversationId);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-session-detail`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readSessionDetail) {
-      throw new Error('Dedicated desktop session detail reads are only available for the local host.');
-    }
-
-    return controller.readSessionDetail(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:read-session-block`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.readSessionBlock) {
-      throw new Error('Dedicated desktop session block reads are only available for the local host.');
-    }
-
-    return controller.readSessionBlock(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:create-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.createLiveSession) {
-      throw new Error('Dedicated desktop live-session creation is only available for the local host.');
-    }
-
-    return controller.createLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:resume-live-session`, async (event, input: { sessionFile: string; cwd?: string }) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.resumeLiveSession) {
-      throw new Error('Dedicated desktop live-session resume is only available for the local host.');
-    }
-
-    return controller.resumeLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:take-over-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.takeOverLiveSession) {
-      throw new Error('Dedicated desktop live-session takeover is only available for the local host.');
-    }
-
-    return controller.takeOverLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:restore-queued-live-session-message`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.restoreQueuedLiveSessionMessage) {
-      throw new Error('Dedicated desktop queued prompt restore is only available for the local host.');
-    }
-
-    return controller.restoreQueuedLiveSessionMessage(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:clear-queued-live-session-messages`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.clearQueuedLiveSessionMessages) {
-      throw new Error('Dedicated desktop queued prompt clearing is only available for the local host.');
-    }
-
-    return controller.clearQueuedLiveSessionMessages(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:compact-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.compactLiveSession) {
-      throw new Error('Dedicated desktop live-session compaction is only available for the local host.');
-    }
-
-    return controller.compactLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:export-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.exportLiveSession) {
-      throw new Error('Dedicated desktop live-session export is only available for the local host.');
-    }
-
-    return controller.exportLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:reload-live-session`, async (event, conversationId: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.reloadLiveSession) {
-      throw new Error('Dedicated desktop live-session reload is only available for the local host.');
-    }
-
-    return controller.reloadLiveSession(conversationId);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:destroy-live-session`, async (event, conversationId: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.destroyLiveSession) {
-      throw new Error('Dedicated desktop live-session destroy is only available for the local host.');
-    }
-
-    return controller.destroyLiveSession(conversationId);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:branch-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.branchLiveSession) {
-      throw new Error('Dedicated desktop live-session branching is only available for the local host.');
-    }
-
-    return controller.branchLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:fork-live-session`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.forkLiveSession) {
-      throw new Error('Dedicated desktop live-session forking is only available for the local host.');
-    }
-
-    return controller.forkLiveSession(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:submit-live-session-prompt`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.submitLiveSessionPrompt) {
-      throw new Error('Dedicated desktop live-session prompt delivery is only available for the local host.');
-    }
-
-    return controller.submitLiveSessionPrompt(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:execute-live-session-bash`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.executeLiveSessionBash) {
-      throw new Error('Dedicated desktop live-session bash execution is only available for the local host.');
-    }
-
-    return controller.executeLiveSessionBash(input);
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:abort-live-session`, async (event, conversationId: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.abortLiveSession) {
-      throw new Error('Dedicated desktop live-session abort is only available for the local host.');
-    }
-
-    return controller.abortLiveSession(conversationId);
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-conversation-state`, async (event, input) => {

@@ -74,6 +74,7 @@ describe('useDesktopConversationState', () => {
       surfaceId: expect.any(String),
       surfaceType: 'desktop_web',
       streamEvents: false,
+      initialState: false,
     });
 
     await act(async () => {

@@ -70,6 +70,7 @@ export interface DesktopConversationStateSubscriptionRequest {
   surfaceId?: string;
   surfaceType?: 'desktop_web' | 'mobile_web';
   streamEvents?: boolean;
+  initialState?: boolean;
 }
 
 export interface DesktopConversationStateBridgeEvent {

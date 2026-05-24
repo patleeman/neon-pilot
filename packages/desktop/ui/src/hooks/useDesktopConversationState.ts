@@ -292,6 +292,20 @@ export function useDesktopConversationState(conversationId: string | null, optio
     window.addEventListener(DESKTOP_CONVERSATION_STATE_EVENT, handleStateEvent as EventListener);
 
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    void api
+      .desktopConversationState(conversationId, tailBlocks !== undefined ? { tailBlocks } : undefined)
+      .then((nextState) => {
+        if (!closed) {
+          setState((previous) => mergeDesktopConversationState(previous, nextState));
+          setError(null);
+        }
+      })
+      .catch((nextError) => {
+        if (!closed) {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        }
+      });
+
     void bridge
       .subscribeConversationState({
         conversationId,
@@ -299,6 +313,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         surfaceId,
         surfaceType,
         streamEvents: false,
+        initialState: false,
       })
       .then((result) => {
         if (closed) {

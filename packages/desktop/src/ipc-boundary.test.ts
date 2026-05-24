@@ -27,6 +27,18 @@ describe('desktop IPC protocol boundary', () => {
       'neon-pilot-desktop-app-events',
       'neon-pilot-desktop-api-stream',
       'neon-pilot-desktop-provider-oauth-login',
+      'read-session-search-index',
+      'read-vault-files',
+      'read-scheduled-task-log',
+      'read-durable-run-log',
+      'read-conversation-bootstrap',
+      'read-session-detail',
+      'read-session-block',
+      'create-live-session',
+      'resume-live-session',
+      'submit-live-session-prompt',
+      'restore-queued-live-session-message',
+      'clear-queued-live-session-messages',
     ]) {
       expect(combined, forbidden).not.toContain(forbidden);
     }
@@ -39,6 +51,16 @@ describe('desktop IPC protocol boundary', () => {
       'readScheduledTasks',
       'readDurableRuns',
       'readConversationArtifacts',
+      'readSessionSearchIndex',
+      'readVaultFiles',
+      'readScheduledTaskLog',
+      'readDurableRunLog',
+      'createLiveSession',
+      'resumeLiveSession',
+      'submitLiveSessionPrompt',
+      'restoreQueuedLiveSessionMessage',
+      'clearQueuedLiveSessionMessages',
+      'executeLiveSessionBash',
     ]) {
       expect(exposedRendererBridge, forbidden).not.toContain(forbidden);
     }

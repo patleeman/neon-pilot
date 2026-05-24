@@ -1,15 +1,4 @@
-import type {
-  DesktopAppPreferencesState,
-  DesktopEnvironmentState,
-  DesktopNavigationState,
-  FolderPickerResult,
-  InjectedPromptMessage,
-  LiveSessionCreateResult,
-  LiveSessionExportResult,
-  LiveSessionPresenceState,
-  PromptAttachmentRefInput,
-  PromptImageInput,
-} from '../shared/types';
+import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState, FolderPickerResult } from '../shared/types';
 
 export const DESKTOP_CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
 export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
@@ -84,83 +73,13 @@ export interface NeonPilotDesktopBridge {
   checkForUpdates(): Promise<DesktopAppPreferencesState>;
   pickFolder(input?: { cwd?: string | null; prompt?: string | null }): Promise<FolderPickerResult>;
   captureScreenshot(): Promise<DesktopScreenshotCaptureResult>;
-  createLiveSession(input: {
-    cwd?: string;
-    workspaceCwd?: string | null;
-    model?: string | null;
-    thinkingLevel?: string | null;
-    serviceTier?: string | null;
-    prompt?: string;
-    behavior?: 'steer' | 'followUp';
-    images?: Array<{ data: string; mimeType: string; name?: string }>;
-    attachmentRefs?: unknown;
-    contextMessages?: Array<{ customType: string; content: string }>;
-    relatedConversationIds?: unknown;
-  }): Promise<LiveSessionCreateResult>;
-  resumeLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }>;
-  takeOverLiveSession(input: { conversationId: string; surfaceId: string }): Promise<LiveSessionPresenceState>;
-  restoreQueuedLiveSessionMessage(input: {
-    conversationId: string;
-    behavior: 'steer' | 'followUp';
-    index: number;
-    previewId?: string;
-  }): Promise<{ ok: true; text: string; images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }> }>;
-  clearQueuedLiveSessionMessages(input: { conversationId: string }): Promise<{
-    ok: true;
-    items: Array<{
-      behavior: 'steer' | 'followUp';
-      text: string;
-      images: Array<{ type: 'image'; data: string; mimeType: string; name?: string }>;
-      author: 'user' | 'agent';
-    }>;
-  }>;
-  compactLiveSession(input: { conversationId: string; customInstructions?: string }): Promise<{ ok: true; result: unknown }>;
-  exportLiveSession(input: { conversationId: string; outputPath?: string }): Promise<LiveSessionExportResult>;
-  reloadLiveSession(conversationId: string): Promise<{ ok: true }>;
-  destroyLiveSession(conversationId: string): Promise<{ ok: true }>;
-  branchLiveSession(input: {
-    conversationId: string;
-    entryId: string;
-    surfaceId?: string;
-  }): Promise<{ newSessionId: string; sessionFile: string }>;
-  forkLiveSession(input: {
-    conversationId: string;
-    entryId: string;
-    preserveSource?: boolean;
-    beforeEntry?: boolean;
-    surfaceId?: string;
-  }): Promise<{ newSessionId: string; sessionFile: string }>;
-  submitLiveSessionPrompt(input: {
-    conversationId: string;
-    text?: string;
-    behavior?: 'steer' | 'followUp';
-    images?: PromptImageInput[];
-    attachmentRefs?: PromptAttachmentRefInput[];
-    contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>;
-    relatedConversationIds?: string[];
-    surfaceId?: string;
-  }): Promise<{
-    ok: true;
-    accepted: true;
-    delivery: 'started' | 'queued';
-    referencedTaskIds: string[];
-    referencedMemoryDocIds: string[];
-    referencedVaultFileIds: string[];
-    referencedAttachmentIds: string[];
-    relatedConversationPointerWarnings?: string[];
-  }>;
-  executeLiveSessionBash(input: {
-    conversationId: string;
-    command: string;
-    excludeFromContext?: boolean;
-  }): Promise<{ ok: true; result: unknown }>;
-  abortLiveSession(conversationId: string): Promise<{ ok: true }>;
   subscribeConversationState(input: {
     conversationId: string;
     tailBlocks?: number;
     surfaceId?: string;
     surfaceType?: 'desktop_web' | 'mobile_web';
     streamEvents?: boolean;
+    initialState?: boolean;
   }): Promise<{ subscriptionId: string }>;
   unsubscribeConversationState(subscriptionId: string): Promise<void>;
   goBack(): Promise<DesktopNavigationState>;

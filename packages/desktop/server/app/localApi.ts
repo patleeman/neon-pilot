@@ -700,6 +700,7 @@ export async function subscribeDesktopConversationState(
     surfaceId?: string;
     surfaceType?: 'desktop_web' | 'mobile_web';
     streamEvents?: boolean;
+    initialState?: boolean;
   },
   onEvent: (event: DesktopConversationStateBridgeEvent) => void,
 ): Promise<() => void> {
@@ -707,6 +708,7 @@ export async function subscribeDesktopConversationState(
   const conversationId = readRequiredConversationId(input.conversationId);
   const tailBlocks = normalizeDesktopLocalApiTailBlocks(input.tailBlocks);
   const shouldForwardStreamEvents = input.streamEvents !== false;
+  const shouldEmitInitialState = input.initialState !== false;
 
   let closed = false;
   let liveUnsubscribe: (() => void) | null = null;
@@ -881,7 +883,9 @@ export async function subscribeDesktopConversationState(
 
   onEvent({ type: 'open' });
   await ensureCurrentStateIsLive();
-  emitState(currentState);
+  if (shouldEmitInitialState) {
+    emitState(currentState);
+  }
   syncLiveSubscription();
 
   appUnsubscribe = subscribeAppEvents((event) => {
@@ -1137,6 +1141,65 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && runMatch)
     return createDesktopLocalApiJsonResponse(await readDesktopDurableRun(decodeURIComponent(runMatch[1] ?? '')));
 
+  if (method === 'POST' && path === '/api/live-sessions') {
+    return createDesktopLocalApiJsonResponse(
+      await createDesktopLiveSession((input.body ?? {}) as Parameters<typeof createDesktopLiveSession>[0]),
+    );
+  }
+  if (method === 'POST' && path === '/api/live-sessions/resume') {
+    return createDesktopLocalApiJsonResponse(
+      await resumeDesktopLiveSession((input.body ?? {}) as Parameters<typeof resumeDesktopLiveSession>[0]),
+    );
+  }
+  const liveSessionActionMatch =
+    /^\/api\/live-sessions\/([^/]+)\/(take-over|restore-queued-message|clear-queued-messages|compact|export|reload|destroy|branch|fork|prompt|execute-bash|abort)$/.exec(
+      path,
+    );
+  if (method === 'POST' && liveSessionActionMatch) {
+    const conversationId = decodeURIComponent(liveSessionActionMatch[1] ?? '');
+    const action = liveSessionActionMatch[2];
+    const body = (input.body && typeof input.body === 'object' ? input.body : {}) as object;
+    if (action === 'take-over')
+      return createDesktopLocalApiJsonResponse(
+        await takeOverDesktopLiveSession({ conversationId, ...body } as Parameters<typeof takeOverDesktopLiveSession>[0]),
+      );
+    if (action === 'restore-queued-message')
+      return createDesktopLocalApiJsonResponse(
+        await restoreDesktopQueuedLiveSessionMessage({ conversationId, ...body } as Parameters<
+          typeof restoreDesktopQueuedLiveSessionMessage
+        >[0]),
+      );
+    if (action === 'clear-queued-messages')
+      return createDesktopLocalApiJsonResponse(await clearDesktopQueuedLiveSessionMessages({ conversationId }));
+    if (action === 'compact')
+      return createDesktopLocalApiJsonResponse(
+        await compactDesktopLiveSession({ conversationId, ...body } as Parameters<typeof compactDesktopLiveSession>[0]),
+      );
+    if (action === 'export')
+      return createDesktopLocalApiJsonResponse(
+        await exportDesktopLiveSession({ conversationId, ...body } as Parameters<typeof exportDesktopLiveSession>[0]),
+      );
+    if (action === 'reload') return createDesktopLocalApiJsonResponse(await reloadDesktopLiveSession({ conversationId }));
+    if (action === 'destroy') return createDesktopLocalApiJsonResponse(await destroyDesktopLiveSession(conversationId));
+    if (action === 'branch')
+      return createDesktopLocalApiJsonResponse(
+        await branchDesktopLiveSession({ conversationId, ...body } as Parameters<typeof branchDesktopLiveSession>[0]),
+      );
+    if (action === 'fork')
+      return createDesktopLocalApiJsonResponse(
+        await forkDesktopLiveSession({ conversationId, ...body } as Parameters<typeof forkDesktopLiveSession>[0]),
+      );
+    if (action === 'prompt')
+      return createDesktopLocalApiJsonResponse(
+        await submitDesktopLiveSessionPrompt({ conversationId, ...body } as Parameters<typeof submitDesktopLiveSessionPrompt>[0]),
+      );
+    if (action === 'execute-bash')
+      return createDesktopLocalApiJsonResponse(
+        await executeDesktopLiveSessionBash({ conversationId, ...body } as Parameters<typeof executeDesktopLiveSessionBash>[0]),
+      );
+    if (action === 'abort') return createDesktopLocalApiJsonResponse(await abortDesktopLiveSession(conversationId));
+  }
+
   const liveSessionContextMatch = /^\/api\/live-sessions\/([^/]+)\/context$/.exec(path);
   if (method === 'GET' && liveSessionContextMatch) {
     return createDesktopLocalApiJsonResponse(await readDesktopLiveSessionContext(decodeURIComponent(liveSessionContextMatch[1] ?? '')));
@@ -1166,6 +1229,17 @@ async function dispatchDesktopLocalProductApiRequest(input: {
           ? Number(input.url.searchParams.get('knownTotalBlocks'))
           : undefined,
         knownLastBlockId: input.url.searchParams.get('knownLastBlockId') ?? undefined,
+      }),
+    );
+  }
+  const conversationStateMatch = /^\/api\/conversations\/([^/]+)\/state$/.exec(path);
+  if (method === 'GET' && conversationStateMatch) {
+    const capabilityContext = await getLocalLiveSessionCapabilityContext();
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationState({
+        conversationId: decodeURIComponent(conversationStateMatch[1] ?? ''),
+        profile: capabilityContext.getRuntimeScope(),
+        tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
       }),
     );
   }
