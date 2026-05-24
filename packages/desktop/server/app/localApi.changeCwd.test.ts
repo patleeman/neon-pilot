@@ -59,6 +59,7 @@ vi.mock('../conversations/conversationService.js', async () => {
   return {
     ...actual,
     publishConversationSessionMetaChanged: mocks.publishConversationSessionMetaChanged,
+    readConversationSessionMeta: (conversationId: string) => mocks.readSessionBlocks(conversationId)?.meta ?? null,
   };
 });
 

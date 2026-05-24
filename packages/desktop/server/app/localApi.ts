@@ -70,9 +70,11 @@ import {
 } from '../conversations/conversationDeferredResumeCapability.js';
 import { applyConversationModelPreferencesToSessionManager } from '../conversations/conversationModelPreferences.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
+import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import {
   publishConversationSessionMetaChanged,
   readConversationModelPreferenceStateById,
+  readConversationSessionMeta,
   readConversationSessionSignature,
   readSessionDetailForRoute,
   resolveConversationSessionFile,
@@ -132,9 +134,6 @@ import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
   buildAppendOnlySessionDetailResponse,
-  readSessionBlocks,
-  readSessionMeta,
-  readSessionSearchTextForMeta,
   renameStoredSession,
 } from '../conversations/sessions.js';
 import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
@@ -181,7 +180,7 @@ import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
 import { normalizeDesktopScheduledTaskCreateInput } from './localApiScheduledTasks.js';
-import { buildFastConversationContentSearchResponse } from './localApiSearch.js';
+import { normalizeFastConversationSearchLimit, normalizeFastConversationSearchTerms } from './localApiSearch.js';
 import { type DesktopLocalApiStreamEvent, subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 export { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { buildDesktopAppBridgeError, buildDesktopAppBridgeEvent, shouldProcessDesktopAppEvent } from './localApiAppEvents.js';
@@ -916,11 +915,24 @@ export async function subscribeDesktopLocalApiStream(
 }
 
 function dispatchFastConversationContentSearch(input: { body?: unknown }): DesktopLocalApiDispatchResult | null {
-  return buildFastConversationContentSearchResponse({
-    body: input.body,
-    sessions: readConversationSessionsCapability(),
-    readSearchText: readSessionSearchTextForMeta,
-  });
+  const body = input.body && typeof input.body === 'object' ? (input.body as { query?: unknown; limit?: unknown }) : {};
+  const terms = normalizeFastConversationSearchTerms(body.query);
+  if (!terms) return null;
+  const matches = searchIndexedConversationContent({ terms, limit: normalizeFastConversationSearchLimit(body.limit) });
+  return {
+    statusCode: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: new TextEncoder().encode(
+      JSON.stringify({
+        query: terms.join(' '),
+        mode: 'allTerms',
+        scope: 'all',
+        totalMatching: matches.length,
+        returnedCount: matches.length,
+        matches,
+      }),
+    ),
+  };
 }
 
 export async function dispatchDesktopLocalApiRequest(input: {
@@ -1415,9 +1427,9 @@ export async function changeDesktopConversationCwd(input: {
   const conversationId = readRequiredConversationId(input.conversationId);
 
   const liveEntry = liveRegistry.get(conversationId);
-  const sessionDetail = readSessionBlocks(conversationId);
-  const currentCwd = liveEntry?.cwd ?? sessionDetail?.meta.cwd;
-  const sourceSessionFile = liveEntry?.session.sessionFile ?? sessionDetail?.meta.file;
+  const storedMeta = readConversationSessionMeta(conversationId);
+  const currentCwd = liveEntry?.cwd ?? storedMeta?.cwd;
+  const sourceSessionFile = liveEntry?.session.sessionFile ?? storedMeta?.file;
 
   if (!currentCwd || !sourceSessionFile) {
     throw new Error('Conversation not found.');
@@ -1451,8 +1463,8 @@ export async function changeDesktopConversationCwd(input: {
     sessionFile: result.sessionFile,
     previousCwd: currentCwd,
     previousWorkspaceCwd: resolvePreviousWorkspaceCwd({
-      hasWorkspaceCwd: Boolean(sessionDetail?.meta && Object.prototype.hasOwnProperty.call(sessionDetail.meta, 'workspaceCwd')),
-      workspaceCwd: sessionDetail?.meta.workspaceCwd,
+      hasWorkspaceCwd: Boolean(storedMeta && Object.prototype.hasOwnProperty.call(storedMeta, 'workspaceCwd')),
+      workspaceCwd: storedMeta?.workspaceCwd,
       currentCwd,
     }),
     cwd: nextCwd,
@@ -1702,7 +1714,7 @@ export async function readDesktopLiveSessionContext(conversationId: string) {
   const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, 'Session not found');
 
   const liveEntry = liveRegistry.get(normalizedConversationId);
-  const storedSession = !liveEntry ? readSessionMeta(normalizedConversationId) : null;
+  const storedSession = !liveEntry ? readConversationSessionMeta(normalizedConversationId) : null;
   const cwd = liveEntry?.cwd ?? storedSession?.cwd;
   if (!cwd) {
     throw new Error('Session not found');
