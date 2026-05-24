@@ -9,13 +9,21 @@ vi.mock('electron', () => ({
   session: { fromPartition: () => ({ protocol: { handle: vi.fn() }, setProxy: setProxyMock, clearCache: clearCacheMock }) },
 }));
 
-import { ensureDesktopAppProtocolForHost, getDesktopAppBaseUrl } from './app-protocol.js';
+import { buildDesktopProtocolErrorResponse, ensureDesktopAppProtocolForHost, getDesktopAppBaseUrl } from './app-protocol.js';
 
 // ── app-protocol — helper functions ──────────────────────────────────────
 
 describe('getDesktopAppBaseUrl', () => {
   it('returns the neon-pilot://app/ base URL', () => {
     expect(getDesktopAppBaseUrl()).toBe('neon-pilot://app/');
+  });
+});
+
+describe('buildDesktopProtocolErrorResponse', () => {
+  it('maps missing durable runs to 404 so run polling does not retry as a server error', () => {
+    const response = buildDesktopProtocolErrorResponse(new Error('Run not found'));
+
+    expect(response.status).toBe(404);
   });
 });
 

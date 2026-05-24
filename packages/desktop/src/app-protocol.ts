@@ -157,11 +157,11 @@ async function readDesktopProtocolRequestBody(request: Request): Promise<unknown
   return bodyText;
 }
 
-function buildDesktopProtocolErrorResponse(error: unknown): Response {
+export function buildDesktopProtocolErrorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : String(error);
   const status = message.startsWith('No local API route for ')
     ? 404
-    : /(^|\b)(404 Not Found|Conversation not found|Session not found|Not a live session)(\b|\.?$)/i.test(message)
+    : /(^|\b)(404 Not Found|Conversation not found|Session not found|Run not found|Not a live session)(\b|\.?$)/i.test(message)
       ? 404
       : message.includes('requires subscribeDesktopLocalApiStream')
         ? 501
