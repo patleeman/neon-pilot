@@ -1,6 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const DESKTOP_API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
+class FakeWebSocket extends EventTarget {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSED = 3;
+  readyState = FakeWebSocket.CONNECTING;
+  sent: string[] = [];
+  constructor(readonly url: string) {
+    super();
+  }
+  send(payload: string): void {
+    this.sent.push(payload);
+  }
+  close(): void {
+    this.readyState = FakeWebSocket.CLOSED;
+  }
+  open(): void {
+    this.readyState = FakeWebSocket.OPEN;
+    this.dispatchEvent(new Event('open'));
+  }
+  receive(payload: unknown): void {
+    this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(payload) }));
+  }
+}
 
 describe('createDesktopAwareEventSource', () => {
   beforeEach(() => {
@@ -8,31 +30,18 @@ describe('createDesktopAwareEventSource', () => {
     vi.unstubAllGlobals();
   });
 
-  it('replays matching desktop API stream events that arrive before the subscription id is available', async () => {
-    const eventTarget = new EventTarget();
-    const fakeWindow = {
-      neonPilotDesktop: {
-        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
-        subscribeApiStream: vi.fn().mockImplementation(() => new Promise(() => {})),
-        unsubscribeApiStream: vi.fn().mockResolvedValue(undefined),
-      },
-      addEventListener: eventTarget.addEventListener.bind(eventTarget),
-      removeEventListener: eventTarget.removeEventListener.bind(eventTarget),
-      dispatchEvent: eventTarget.dispatchEvent.bind(eventTarget),
-    } as unknown as Window & typeof globalThis;
-
-    vi.stubGlobal('window', fakeWindow);
+  it('subscribes to stream paths over the realtime WebSocket', async () => {
+    const sockets: FakeWebSocket[] = [];
     vi.stubGlobal(
-      'CustomEvent',
-      class CustomEvent<T = unknown> extends Event {
-        readonly detail: T;
-
-        constructor(type: string, init?: { detail?: T }) {
-          super(type);
-          this.detail = init?.detail as T;
+      'WebSocket',
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          sockets.push(this);
         }
       },
     );
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
 
     const { createDesktopAwareEventSource } = await import('./desktopEventSource');
     const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
@@ -41,27 +50,23 @@ describe('createDesktopAwareEventSource', () => {
     source.onopen = onopen;
     source.onmessage = onmessage;
 
-    (source as unknown as { handleDesktopStreamEvent: (event: Event) => void }).handleDesktopStreamEvent(
-      new CustomEvent(DESKTOP_API_STREAM_EVENT, {
-        detail: { subscriptionId: 'stream-early', event: { type: 'open' } },
-      }),
-    );
-    (source as unknown as { handleDesktopStreamEvent: (event: Event) => void }).handleDesktopStreamEvent(
-      new CustomEvent(DESKTOP_API_STREAM_EVENT, {
-        detail: { subscriptionId: 'stream-early', event: { type: 'message', data: JSON.stringify({ type: 'snapshot', ok: true }) } },
-      }),
-    );
+    const socket = sockets[0];
+    expect(socket?.url).toBe('ws://127.0.0.1:3000/api/realtime');
+    socket?.open();
+    expect(JSON.parse(socket?.sent[0] ?? '{}')).toMatchObject({ type: 'subscribe', path: '/api/live-sessions/live-1/events' });
 
-    expect(onopen).not.toHaveBeenCalled();
-    expect(onmessage).not.toHaveBeenCalled();
-
-    (source as unknown as { subscriptionId: string | null }).subscriptionId = 'stream-early';
-    (source as unknown as { replayPendingDesktopEvents: () => void }).replayPendingDesktopEvents();
+    socket?.receive({ type: 'stream', subscriptionId: 'sub-1', event: { type: 'open' } });
+    socket?.receive({
+      type: 'stream',
+      subscriptionId: 'sub-1',
+      event: { type: 'message', data: JSON.stringify({ type: 'snapshot', ok: true }) },
+    });
 
     expect(onopen).toHaveBeenCalledTimes(1);
     expect(onmessage).toHaveBeenCalledTimes(1);
     expect(onmessage.mock.calls[0]?.[0]?.data).toBe(JSON.stringify({ type: 'snapshot', ok: true }));
 
     source.close();
+    expect(JSON.parse(socket?.sent.at(-1) ?? '{}')).toMatchObject({ type: 'unsubscribe', subscriptionId: 'sub-1' });
   });
 });

@@ -44,9 +44,7 @@ import type {
   VaultFileListResult,
 } from '../shared/types';
 
-export const DESKTOP_API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
 export const DESKTOP_CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
-export const DESKTOP_PROVIDER_OAUTH_EVENT = 'neon-pilot-desktop-provider-oauth-login';
 export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
 export const DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
@@ -191,8 +189,6 @@ export interface NeonPilotDesktopBridge {
   readProviderOAuthLogin(loginId: string): Promise<ProviderOAuthLoginState | null>;
   submitProviderOAuthLoginInput(input: { loginId: string; value: string }): Promise<ProviderOAuthLoginState>;
   cancelProviderOAuthLogin(loginId: string): Promise<ProviderOAuthLoginState>;
-  subscribeProviderOAuthLogin(loginId: string): Promise<{ subscriptionId: string }>;
-  unsubscribeProviderOAuthLogin(subscriptionId: string): Promise<void>;
   markConversationAttention(input: { conversationId: string; read?: boolean }): Promise<{ ok: true }>;
   readScheduledTasks(): Promise<ScheduledTaskSummary[]>;
   readScheduledTaskDetail(taskId: string): Promise<ScheduledTaskDetail>;
@@ -424,8 +420,6 @@ export interface NeonPilotDesktopBridge {
     surfaceType?: 'desktop_web' | 'mobile_web';
   }): Promise<{ subscriptionId: string }>;
   unsubscribeConversationState(subscriptionId: string): Promise<void>;
-  subscribeApiStream(path: string): Promise<{ subscriptionId: string }>;
-  unsubscribeApiStream(subscriptionId: string): Promise<void>;
   goBack(): Promise<DesktopNavigationState>;
   goForward(): Promise<DesktopNavigationState>;
   setWorkbenchBrowserBounds(input: {

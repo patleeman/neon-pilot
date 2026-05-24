@@ -5,9 +5,7 @@ import { captureDesktopScreenshot } from './screenshot.js';
 import type { DesktopWindowController } from './window.js';
 
 const CHANNEL_PREFIX = 'neon-pilot-desktop';
-const API_STREAM_CHANNEL = `${CHANNEL_PREFIX}:api-stream`;
 const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
-const PROVIDER_OAUTH_CHANNEL = `${CHANNEL_PREFIX}:provider-oauth-login`;
 
 export function registerDesktopIpc(options: {
   hostManager: HostManager;
@@ -22,9 +20,7 @@ export function registerDesktopIpc(options: {
     keyboardShortcuts?: Record<string, string>;
   }) => Promise<unknown> | unknown;
 }): void {
-  const streamSubscriptions = new Map<string, () => void>();
   const conversationStateSubscriptions = new Map<string, () => void>();
-  const providerOAuthSubscriptions = new Map<string, () => void>();
 
   const sendBufferedSubscriptionEvent = <T>(input: {
     sender: WebContents;
@@ -1007,23 +1003,6 @@ export function registerDesktopIpc(options: {
     return controller.abortLiveSession(conversationId);
   });
 
-  ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-api-stream`, async (event, path: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const subscriptionId = `${event.sender.id}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-    await sendBufferedSubscriptionEvent({
-      sender: event.sender,
-      channel: API_STREAM_CHANNEL,
-      subscriptionId,
-      store: streamSubscriptions,
-      subscribe: (emit) => options.hostManager.getHostController(hostId).subscribeApiStream(path, emit),
-    });
-    return { subscriptionId };
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-api-stream`, async (_event, subscriptionId: string) => {
-    streamSubscriptions.get(subscriptionId)?.();
-  });
-
   ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-conversation-state`, async (event, input) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);
@@ -1044,28 +1023,6 @@ export function registerDesktopIpc(options: {
 
   ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, async (_event, subscriptionId: string) => {
     conversationStateSubscriptions.get(subscriptionId)?.();
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-provider-oauth-login`, async (event, loginId: string) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.subscribeProviderOAuthLogin) {
-      throw new Error('Dedicated desktop provider OAuth subscriptions are only available for the local host.');
-    }
-
-    const subscriptionId = `${event.sender.id}:provider-oauth:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-    await sendBufferedSubscriptionEvent({
-      sender: event.sender,
-      channel: PROVIDER_OAUTH_CHANNEL,
-      subscriptionId,
-      store: providerOAuthSubscriptions,
-      subscribe: (emit) => controller.subscribeProviderOAuthLogin!(loginId, emit),
-    });
-    return { subscriptionId };
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-provider-oauth-login`, async (_event, subscriptionId: string) => {
-    providerOAuthSubscriptions.get(subscriptionId)?.();
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:go-back`, async (event) => {

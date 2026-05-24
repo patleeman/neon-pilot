@@ -1,4 +1,4 @@
-import { DESKTOP_API_STREAM_EVENT, getDesktopBridge } from './desktopBridge';
+import { buildDesktopWebSocketUrl } from '../client/endpoints';
 
 export interface EventSourceLike {
   onopen: ((event: Event) => void) | null;
@@ -8,35 +8,16 @@ export interface EventSourceLike {
   close(): void;
 }
 
-let desktopEnvironmentPromise: Promise<{ activeHostKind?: string } | null> | null = null;
+type RealtimeStreamEvent = { type: 'open' } | { type: 'message'; data?: string } | { type: 'error'; message?: string } | { type: 'close' };
 
-async function readDesktopEnvironment() {
-  const bridge = getDesktopBridge();
-  if (!bridge) {
-    return null;
-  }
+type RealtimeMessage =
+  | { type: 'connected' }
+  | { type: 'subscribed'; id?: string; subscriptionId: string }
+  | { type: 'unsubscribed'; id?: string; subscriptionId: string }
+  | { type: 'stream'; subscriptionId: string; event: RealtimeStreamEvent }
+  | { type: 'error'; id?: string; message: string };
 
-  if (!desktopEnvironmentPromise) {
-    desktopEnvironmentPromise = bridge.getEnvironment().catch(() => {
-      // Allow retry on next call instead of permanently caching the failure
-      desktopEnvironmentPromise = null;
-      return null;
-    });
-  }
-
-  return desktopEnvironmentPromise;
-}
-
-interface DesktopApiStreamEnvelope {
-  subscriptionId: string;
-  event: {
-    type: 'open' | 'message' | 'error' | 'close';
-    data?: string;
-    message?: string;
-  };
-}
-
-class DesktopApiEventSource implements EventSourceLike {
+class DesktopRealtimeEventSource implements EventSourceLike {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
@@ -44,147 +25,86 @@ class DesktopApiEventSource implements EventSourceLike {
   onopen: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
-  readyState = DesktopApiEventSource.CONNECTING;
+  readyState = DesktopRealtimeEventSource.CONNECTING;
 
-  private readonly bridge = getDesktopBridge();
+  private readonly socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
+  private readonly requestId = `stream:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
   private subscriptionId: string | null = null;
-  private nativeSource: EventSource | null = null;
   private closed = false;
-  private pendingDesktopEvents: DesktopApiStreamEnvelope[] = [];
-
-  private handleDesktopEnvelope(detail: DesktopApiStreamEnvelope): void {
-    switch (detail.event.type) {
-      case 'open':
-        this.readyState = DesktopApiEventSource.OPEN;
-        this.onopen?.(new Event('open'));
-        return;
-      case 'message':
-        this.onmessage?.(new MessageEvent('message', { data: detail.event.data ?? '' }));
-        return;
-      case 'error':
-        this.readyState = DesktopApiEventSource.CONNECTING;
-        this.onerror?.(new Event('error'));
-        return;
-      case 'close':
-        this.readyState = DesktopApiEventSource.CLOSED;
-        this.detachDesktopListener();
-        return;
-    }
-  }
-
-  private replayPendingDesktopEvents(): void {
-    if (!this.subscriptionId || this.pendingDesktopEvents.length === 0) {
-      this.pendingDesktopEvents = [];
-      return;
-    }
-
-    const queuedEvents = this.pendingDesktopEvents;
-    this.pendingDesktopEvents = [];
-    for (const detail of queuedEvents) {
-      if (detail.subscriptionId === this.subscriptionId) {
-        this.handleDesktopEnvelope(detail);
-      }
-    }
-  }
-
-  private readonly handleDesktopStreamEvent = (event: Event) => {
-    const customEvent = event as CustomEvent<DesktopApiStreamEnvelope>;
-    const detail = customEvent.detail;
-    if (!detail || this.closed) {
-      return;
-    }
-
-    if (!this.subscriptionId) {
-      this.pendingDesktopEvents.push(detail);
-      return;
-    }
-
-    if (detail.subscriptionId !== this.subscriptionId) {
-      return;
-    }
-
-    this.handleDesktopEnvelope(detail);
-  };
 
   constructor(private readonly path: string) {
-    void this.initialize();
+    this.socket.addEventListener('open', () => {
+      this.socket.send(JSON.stringify({ type: 'subscribe', id: this.requestId, path: this.path }));
+    });
+    this.socket.addEventListener('message', (event) => this.handleMessage(event));
+    this.socket.addEventListener('error', () => {
+      if (this.closed) return;
+      this.readyState = DesktopRealtimeEventSource.CONNECTING;
+      this.onerror?.(new Event('error'));
+    });
+    this.socket.addEventListener('close', () => {
+      if (this.closed) return;
+      this.readyState = DesktopRealtimeEventSource.CLOSED;
+      this.onerror?.(new Event('error'));
+    });
   }
 
   close(): void {
+    if (this.closed) return;
     this.closed = true;
-    this.readyState = DesktopApiEventSource.CLOSED;
-    this.pendingDesktopEvents = [];
-
-    if (this.nativeSource) {
-      this.nativeSource.close();
-      this.nativeSource = null;
+    this.readyState = DesktopRealtimeEventSource.CLOSED;
+    if (this.subscriptionId && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'unsubscribe', subscriptionId: this.subscriptionId }));
     }
-
-    this.detachDesktopListener();
-    if (this.subscriptionId && this.bridge) {
-      void this.bridge.unsubscribeApiStream(this.subscriptionId).catch(() => {
-        // Ignore best-effort stream teardown failures.
-      });
-    }
-    this.subscriptionId = null;
+    this.socket.close();
   }
 
-  private async initialize(): Promise<void> {
-    const environment = await readDesktopEnvironment();
-    if (this.closed) {
-      return;
-    }
+  private handleMessage(event: MessageEvent): void {
+    if (this.closed) return;
 
-    if (!this.bridge || environment?.activeHostKind !== 'local') {
-      this.attachNativeSource();
-      return;
-    }
-
-    this.attachDesktopListener();
+    let message: RealtimeMessage;
     try {
-      const { subscriptionId } = await this.bridge.subscribeApiStream(this.path);
-      if (this.closed) {
-        void this.bridge.unsubscribeApiStream(subscriptionId).catch(() => {
-          // Ignore best-effort stream teardown failures.
-        });
-        return;
-      }
-
-      this.subscriptionId = subscriptionId;
-      this.replayPendingDesktopEvents();
+      message = JSON.parse(String(event.data)) as RealtimeMessage;
     } catch {
-      this.pendingDesktopEvents = [];
-      this.readyState = DesktopApiEventSource.CONNECTING;
       this.onerror?.(new Event('error'));
+      return;
     }
-  }
 
-  private attachNativeSource(): void {
-    const nativeSource = new EventSource(this.path);
-    this.nativeSource = nativeSource;
-    nativeSource.onopen = (event) => {
-      this.readyState = nativeSource.readyState;
-      this.onopen?.(event);
-    };
-    nativeSource.onmessage = (event) => {
-      this.readyState = nativeSource.readyState;
-      this.onmessage?.(event as MessageEvent<string>);
-    };
-    nativeSource.onerror = (event) => {
-      this.readyState = nativeSource.readyState;
-      this.onerror?.(event);
-    };
-  }
+    if (message.type === 'subscribed' && message.id === this.requestId) {
+      this.subscriptionId = message.subscriptionId;
+      return;
+    }
 
-  private attachDesktopListener(): void {
-    window.addEventListener(DESKTOP_API_STREAM_EVENT, this.handleDesktopStreamEvent as EventListener);
-  }
+    if (message.type === 'error' && (!message.id || message.id === this.requestId)) {
+      this.readyState = DesktopRealtimeEventSource.CONNECTING;
+      this.onerror?.(new Event('error'));
+      return;
+    }
 
-  private detachDesktopListener(): void {
-    window.removeEventListener(DESKTOP_API_STREAM_EVENT, this.handleDesktopStreamEvent as EventListener);
+    if (message.type !== 'stream') return;
+    if (!this.subscriptionId) this.subscriptionId = message.subscriptionId;
+    if (message.subscriptionId !== this.subscriptionId) return;
+
+    switch (message.event.type) {
+      case 'open':
+        this.readyState = DesktopRealtimeEventSource.OPEN;
+        this.onopen?.(new Event('open'));
+        return;
+      case 'message':
+        this.onmessage?.(new MessageEvent('message', { data: message.event.data ?? '' }));
+        return;
+      case 'error':
+        this.readyState = DesktopRealtimeEventSource.CONNECTING;
+        this.onerror?.(new Event('error'));
+        return;
+      case 'close':
+        this.readyState = DesktopRealtimeEventSource.CLOSED;
+        this.close();
+        return;
+    }
   }
 }
 
 export function createDesktopAwareEventSource(path: string): EventSourceLike {
-  return new DesktopApiEventSource(path);
+  return new DesktopRealtimeEventSource(path);
 }
