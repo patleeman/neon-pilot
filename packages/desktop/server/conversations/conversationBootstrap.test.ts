@@ -15,14 +15,11 @@ const {
 }));
 
 vi.mock('./conversationService.js', () => ({
+  buildAppendOnlyConversationDetailResponse: buildAppendOnlySessionDetailResponseMock,
   listAllLiveSessions: listAllLiveSessionsMock,
   readConversationSessionSignature: readConversationSessionSignatureMock,
   readSessionDetailForRoute: readSessionDetailForRouteMock,
   toPublicLiveSessionMeta: toPublicLiveSessionMetaMock,
-}));
-
-vi.mock('./sessions.js', () => ({
-  buildAppendOnlySessionDetailResponse: buildAppendOnlySessionDetailResponseMock,
 }));
 
 import { isMissingConversationBootstrapState, readConversationBootstrapState } from './conversationBootstrap.js';

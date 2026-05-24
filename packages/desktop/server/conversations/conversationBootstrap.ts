@@ -1,10 +1,10 @@
 import {
+  buildAppendOnlyConversationDetailResponse,
   listAllLiveSessions,
   readConversationSessionSignature,
   readSessionDetailForRoute,
   toPublicLiveSessionMeta,
 } from './conversationService.js';
-import { buildAppendOnlySessionDetailResponse } from './sessions.js';
 
 type ConversationBootstrapRemoteMirrorTelemetry = Awaited<ReturnType<typeof readSessionDetailForRoute>>['remoteMirror'];
 type ConversationBootstrapSessionReadTelemetry = Awaited<ReturnType<typeof readSessionDetailForRoute>>['sessionRead']['telemetry'];
@@ -25,7 +25,7 @@ export interface ReadConversationBootstrapStateResult {
     sessionDetail: Awaited<ReturnType<typeof readSessionDetailForRoute>>['sessionRead']['detail'];
     sessionDetailSignature?: string | null;
     sessionDetailUnchanged?: boolean;
-    sessionDetailAppendOnly?: ReturnType<typeof buildAppendOnlySessionDetailResponse>;
+    sessionDetailAppendOnly?: ReturnType<typeof buildAppendOnlyConversationDetailResponse>;
     liveSession: ({ live: true } & ReturnType<typeof toPublicLiveSessionMeta>) | { live: false };
     integrityWarning?: boolean;
   };
@@ -63,7 +63,7 @@ export async function readConversationBootstrapState(
     input.knownSessionSignature &&
     sessionResult.sessionRead.detail?.signature &&
     input.knownSessionSignature !== sessionResult.sessionRead.detail.signature
-      ? buildAppendOnlySessionDetailResponse({
+      ? buildAppendOnlyConversationDetailResponse({
           detail: sessionResult.sessionRead.detail,
           knownBlockOffset: input.knownBlockOffset,
           knownTotalBlocks: input.knownTotalBlocks,
