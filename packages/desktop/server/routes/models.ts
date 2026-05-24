@@ -18,7 +18,7 @@ import {
 } from '@neon-pilot/core';
 import type { Express } from 'express';
 
-import { invalidateAppTopics, logError } from '../middleware/index.js';
+import { logError } from '../middleware/index.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import type { ServerRouteContext } from './context.js';
 
