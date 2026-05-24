@@ -37,6 +37,7 @@ const AUTO_POINTER_MIN_SCORE = 6;
 const AUTO_POINTER_RECENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 const POINTER_CACHE_TTL_MS = 60_000;
 const WARM_POINTER_BUDGET_MS = 150;
+const PROVIDE_PROMPT_CONTEXT_BUDGET_MS = 200;
 const PRODUCT_STOPWORDS = new Set([
   'actually',
   'agent',
@@ -192,6 +193,28 @@ function errorMessage(error: unknown): string {
 
 function errorStack(error: unknown): string | undefined {
   return error instanceof Error ? error.stack : undefined;
+}
+
+class PointerBudgetExceeded extends Error {
+  constructor() {
+    super('Related conversation pointer budget exceeded.');
+  }
+}
+
+function withPointerBudget<T>(promise: Promise<T>, budgetMs = PROVIDE_PROMPT_CONTEXT_BUDGET_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new PointerBudgetExceeded()), budgetMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 function parsePointerTimestamp(value: string | undefined): number {
@@ -498,27 +521,37 @@ export async function providePromptContext(
       return { contextMessages: [], warnings: [] };
     }
 
-    const pointers = hasSelectedIds
-      ? await buildRelatedConversationPointers({
-          prompt: input.prompt,
-          currentConversationId: input.conversationId,
-          currentCwd: input.currentCwd,
-          selectedSessionIds: input.relatedConversationIds,
-          includeAuto: false,
-        })
-      : (readCachedRelatedConversationPointers({
+    const cachedPointers = hasSelectedIds
+      ? null
+      : readCachedRelatedConversationPointers({
           profile: _ctx.profile,
           prompt: input.prompt,
           currentConversationId: input.conversationId,
           currentCwd: input.currentCwd,
-        }) ??
-        (await buildRelatedConversationPointers({
-          prompt: input.prompt,
-          currentConversationId: input.conversationId,
-          currentCwd: input.currentCwd,
-          selectedSessionIds: [],
-          includeAuto: true,
-        })));
+        });
+
+    const pointers = cachedPointers
+      ? cachedPointers
+      : hasSelectedIds
+        ? await withPointerBudget(
+            buildRelatedConversationPointers({
+              prompt: input.prompt,
+              currentConversationId: input.conversationId,
+              currentCwd: input.currentCwd,
+              selectedSessionIds: input.relatedConversationIds,
+              includeAuto: false,
+            }),
+          )
+        : { contextMessages: [], pointers: [], warnings: [] };
+
+    if (!hasSelectedIds && !cachedPointers) {
+      void warmRelatedConversationPointerCache({
+        profile: _ctx.profile,
+        prompt: input.prompt,
+        currentConversationId: input.conversationId,
+        currentCwd: input.currentCwd,
+      }).catch(() => undefined);
+    }
 
     if (pointers.pointers.length > 0) {
       // Fire-and-forget telemetry: persist which pointer IDs were used
