@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { readSessionBlockMock, readSessionImageAssetMock } = vi.hoisted(() => ({
-  readSessionBlockMock: vi.fn(),
+const { readSessionDetailForRouteMock, readSessionImageAssetMock } = vi.hoisted(() => ({
+  readSessionDetailForRouteMock: vi.fn(),
   readSessionImageAssetMock: vi.fn(),
 }));
 
 vi.mock('./sessions.js', () => ({
-  readSessionBlock: readSessionBlockMock,
   readSessionImageAsset: readSessionImageAssetMock,
+}));
+
+vi.mock('./conversationService.js', () => ({
+  readSessionDetailForRoute: readSessionDetailForRouteMock,
 }));
 
 import {
@@ -21,7 +24,7 @@ import {
 } from './conversationSessionAssetCapability.js';
 
 beforeEach(() => {
-  readSessionBlockMock.mockReset();
+  readSessionDetailForRouteMock.mockReset();
   readSessionImageAssetMock.mockReset();
 });
 
@@ -282,32 +285,40 @@ describe('conversationSessionAssetCapability', () => {
     });
   });
 
-  it('reads session blocks and inlines their assets for local desktop hydration', () => {
-    readSessionBlockMock.mockReturnValueOnce({
-      id: 'user-block-1',
-      type: 'user',
-      text: 'with images',
-      ts: '2026-04-10T12:00:00.000Z',
-      images: [{ alt: 'First', src: '/api/sessions/conversation-1/blocks/user-block-1/images/0' }],
+  it('reads session blocks and inlines their assets for local desktop hydration', async () => {
+    readSessionDetailForRouteMock.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          blocks: [
+            {
+              id: 'user-block-1',
+              type: 'user',
+              text: 'with images',
+              ts: '2026-04-10T12:00:00.000Z',
+              images: [{ alt: 'First', src: '/api/sessions/conversation-1/blocks/user-block-1/images/0' }],
+            },
+          ],
+        },
+      },
     });
     readSessionImageAssetMock.mockReturnValueOnce({ mimeType: 'image/png', data: Buffer.from('first-image') });
 
-    expect(readConversationSessionBlockWithInlineAssetsCapability(' conversation-1 ', ' user-block-1 ')).toEqual({
+    await expect(readConversationSessionBlockWithInlineAssetsCapability(' conversation-1 ', ' user-block-1 ')).resolves.toEqual({
       id: 'user-block-1',
       type: 'user',
       text: 'with images',
       ts: '2026-04-10T12:00:00.000Z',
       images: [{ alt: 'First', src: 'data:image/png;base64,Zmlyc3QtaW1hZ2U=', mimeType: 'image/png' }],
     });
-    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'user-block-1');
+    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', profile: 'shared' });
   });
 
-  it('returns null when the block id is blank or not found', () => {
-    readSessionBlockMock.mockReturnValueOnce(null);
+  it('returns null when the block id is blank or not found', async () => {
+    readSessionDetailForRouteMock.mockResolvedValueOnce({ sessionRead: { detail: null } });
 
-    expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', '   ')).toBeNull();
-    expect(readSessionBlockMock).not.toHaveBeenCalled();
-    expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', 'missing')).toBeNull();
-    expect(readSessionBlockMock).toHaveBeenCalledWith('conversation-1', 'missing');
+    await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', '   ')).resolves.toBeNull();
+    expect(readSessionDetailForRouteMock).not.toHaveBeenCalled();
+    await expect(readConversationSessionBlockWithInlineAssetsCapability('conversation-1', 'missing')).resolves.toBeNull();
+    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({ conversationId: 'conversation-1', profile: 'shared' });
   });
 });

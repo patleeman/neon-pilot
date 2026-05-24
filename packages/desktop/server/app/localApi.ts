@@ -1771,7 +1771,7 @@ export async function readDesktopSessionDetail(input: {
 export async function readDesktopSessionBlock(input: { sessionId: string; blockId: string }) {
   await getLocalRoutes();
 
-  const result = readConversationSessionBlockWithInlineAssetsCapability(input.sessionId, input.blockId);
+  const result = await readConversationSessionBlockWithInlineAssetsCapability(input.sessionId, input.blockId);
   assertSessionFound(Boolean(result), 'Session block not found');
 
   return result;

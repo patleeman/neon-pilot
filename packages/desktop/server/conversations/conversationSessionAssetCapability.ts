@@ -1,6 +1,7 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
+import { readSessionDetailForRoute } from './conversationService.js';
 import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse } from './sessions.js';
-import { readSessionBlock, readSessionImageAsset } from './sessions.js';
+import { readSessionImageAsset } from './sessions.js';
 
 function toDataUrl(mimeType: string, data: Buffer): string {
   return `data:${mimeType};base64,${data.toString('base64')}`;
@@ -125,14 +126,18 @@ export function inlineConversationSessionSnapshotAssetsCapability<
   return blocks === event.blocks ? event : { ...event, blocks };
 }
 
-export function readConversationSessionBlockWithInlineAssetsCapability(sessionId: string, blockId: string): DisplayBlock | null {
+export async function readConversationSessionBlockWithInlineAssetsCapability(
+  sessionId: string,
+  blockId: string,
+): Promise<DisplayBlock | null> {
   const normalizedSessionId = sessionId.trim();
   const normalizedBlockId = blockId.trim();
   if (!normalizedSessionId || !normalizedBlockId) {
     return null;
   }
 
-  const block = readSessionBlock(normalizedSessionId, normalizedBlockId);
+  const { sessionRead } = await readSessionDetailForRoute({ conversationId: normalizedSessionId, profile: 'shared' });
+  const block = sessionRead.detail?.blocks.find((candidate) => candidate.id === normalizedBlockId) ?? null;
   if (!block) {
     return null;
   }
