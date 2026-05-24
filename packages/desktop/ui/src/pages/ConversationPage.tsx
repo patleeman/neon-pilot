@@ -3,7 +3,12 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
-import { completeConversationOpenPhase, ensureConversationOpenStart, measureClientPerfTiming } from '../client/perfDiagnostics';
+import {
+  completeConversationOpenPhase,
+  ensureConversationOpenStart,
+  measureClientPerfTiming,
+  recordClientPerfTiming,
+} from '../client/perfDiagnostics';
 import { buildSlashMenuItems } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
@@ -4230,6 +4235,15 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
+    const submitStartedAtMs = performance.now();
+    const recordSubmitPhase = (phase: string, startedAtMs: number, meta?: Record<string, unknown>) => {
+      recordClientPerfTiming({
+        name: 'conversation.submitComposer.phase',
+        startedAtMs,
+        meta: { phase, draft, hasConversationId: Boolean(id), ...(meta ?? {}) },
+      });
+    };
+
     const inputSnapshot = input;
     const text = inputSnapshot.trim();
     const pendingImageAttachments = attachments;
@@ -4305,7 +4319,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const drawingPromptImages = pendingDrawingAttachments.map((drawing) => drawingAttachmentToPromptImage(drawing));
       const promptImages = [...filePromptImages, ...drawingPromptImages];
       const textToSend = slashTextToSend ?? text;
+      const browserContextStartedAtMs = performance.now();
       const browserChangedContextMessage = await readBrowserChangedContextMessage(id ?? 'draft');
+      recordSubmitPhase('browserContext', browserContextStartedAtMs, { hasMessage: Boolean(browserChangedContextMessage) });
       const browserContextMessages = mergeContextMessages(
         browserCommentContextMessages,
         browserChangedContextMessage ? [browserChangedContextMessage] : undefined,
@@ -4458,7 +4474,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         let createdSessionId: string | null = null;
         let navigatedToCreatedConversation = false;
         try {
+          const createStartedAtMs = performance.now();
           const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
+          recordSubmitPhase('createLiveSession', createStartedAtMs);
           createdSessionId = created.id;
           primeCreatedConversationOpenCaches(created, {
             tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
@@ -4479,6 +4497,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           rememberComposerInput(inputSnapshot, newId);
           setPendingInitialPrompt(initialPrompt);
           setPendingInitialPromptDispatchingState(true);
+          recordSubmitPhase('beforeNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
           navigate(`/conversations/${newId}`, {
             replace: true,
             state: {
@@ -4499,6 +4518,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               preserveConversationSurfaceKey: 'draft',
             },
           });
+          recordSubmitPhase('afterNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
           navigatedToCreatedConversation = true;
 
           window.setTimeout(() => {

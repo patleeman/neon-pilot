@@ -306,6 +306,19 @@ async function main() {
       cdp,
       `globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.filter(s=>s.name==='desktop.createLiveSession').at(-1)?.meta?.serverPerf ?? null`,
     );
+    const postDraftPerfStore = await evalJs(
+      cdp,
+      `(() => {
+        const perf = globalThis.__NEON_PILOT_APP_PERF__;
+        if (!perf) return null;
+        return {
+          clientSamples: perf.clientSamples ?? [],
+          apiSamples: perf.apiSamples ?? [],
+          chatRenderSamples: perf.chatRenderSamples ?? [],
+          longTaskSamples: perf.longTaskSamples ?? [],
+        };
+      })()`,
+    );
     const routeSettingsMs = (
       await measure('settings', async () => {
         await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
@@ -373,6 +386,7 @@ async function main() {
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
       createLiveSessionClientMs,
       createLiveSessionServerPerf,
+      postDraftPerfStore,
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
