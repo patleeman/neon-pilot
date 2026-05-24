@@ -1224,16 +1224,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => selectComposerModel(models, currentModel, defaultModel),
     [currentModel, defaultModel, models],
   );
-  useEffect(() => {
-    if (!isDraftConversation) {
-      return;
-    }
-
-    void api.prewarmLiveSession(draftCwdValue || undefined).catch(() => {
-      // Best-effort latency prewarm only; send still creates the session normally.
-    });
-  }, [draftCwdValue, isDraftConversation]);
-
   const createLiveSessionPreferenceInput = useMemo(
     () =>
       buildLiveSessionPreferenceInput({
@@ -1287,6 +1277,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [conversationCwdPickBusy, setConversationCwdPickBusy] = useState(false);
   const [conversationCwdBusy, setConversationCwdBusy] = useState(false);
   const [conversationCwdError, setConversationCwdError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!draft) {
+      return;
+    }
+
+    void api.prewarmLiveSession(draftCwdValue || undefined).catch(() => {
+      // Best-effort latency prewarm only; send still creates the session normally.
+    });
+  }, [draft, draftCwdValue]);
 
   useEffect(() => {
     if (!draft) {
