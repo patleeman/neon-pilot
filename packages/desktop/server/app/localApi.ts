@@ -96,11 +96,7 @@ import {
   readConversationSessionsCapability,
   readConversationSessionSearchIndexCapability,
 } from '../conversations/conversationSessionCapability.js';
-import {
-  applyDesktopConversationStreamEvent,
-  type DesktopConversationState,
-  readDesktopConversationState,
-} from '../conversations/desktopConversationState.js';
+import { readDesktopConversationState } from '../conversations/desktopConversationState.js';
 import { createAttentionEventFlusher } from '../conversations/liveDeferredResumes.js';
 import {
   abortLiveSessionCapability,
@@ -127,8 +123,6 @@ import {
   isLive as isLiveSession,
   registry as liveRegistry,
   renameSession,
-  type SseEvent,
-  subscribe as subscribeLiveSession,
 } from '../conversations/liveSessions.js';
 import {
   createSessionFromExisting,
@@ -169,7 +163,6 @@ import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPrefere
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
-import { shouldRefreshDesktopConversationStateForAppEvent } from './localApiConversationEvents.js';
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
@@ -202,16 +195,6 @@ import {
 import { normalizeDesktopConversationModelPreferenceUpdate } from './localApiConversationModelPreferences.js';
 import { assertConversationFound, assertSessionFound } from './localApiConversationNotFound.js';
 import { buildDesktopConversationSource, normalizeResolvedSessionFile } from './localApiConversationSource.js';
-import {
-  buildConversationStateBridgeEvent,
-  shouldEmitConversationState,
-  shouldRecoverConversationState,
-} from './localApiConversationStateEvents.js';
-import {
-  buildConversationStateSubscriptionSurface,
-  shouldIgnoreConversationStateLiveEvent,
-  shouldSubscribeConversationStateLiveEvents,
-} from './localApiConversationStateSubscription.js';
 import { buildCreateLiveSessionPerf, shouldDispatchInitialLiveSessionPrompt } from './localApiCreateLiveSessionResponse.js';
 import {
   buildExportLiveSessionResponse,
@@ -240,7 +223,6 @@ import {
   shouldReturnUnchangedSessionDetail,
 } from './localApiSessionDetailResponse.js';
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
-import { normalizeDesktopLocalApiTailBlocks } from './localApiTailBlocks.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
@@ -274,13 +256,6 @@ export interface DesktopLocalApiDispatchResult {
   headers: Record<string, string>;
   body: Uint8Array;
 }
-
-export type DesktopConversationStateBridgeEvent =
-  | { type: 'open' }
-  | { type: 'state'; state: DesktopConversationState }
-  | { type: 'stream_events'; events: SseEvent[]; liveSession: DesktopConversationState['liveSession'] }
-  | { type: 'error'; message: string }
-  | { type: 'close' };
 
 type DesktopAppBridgeEvent = { type: 'open' } | { type: 'event'; event: unknown } | { type: 'error'; message: string } | { type: 'close' };
 
@@ -689,252 +664,6 @@ export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridg
 
     closed = markSubscriptionClosed();
     unsubscribe();
-    onEvent(buildDesktopCloseEvent());
-  };
-}
-
-export async function subscribeDesktopConversationState(
-  input: {
-    conversationId: string;
-    tailBlocks?: number;
-    surfaceId?: string;
-    surfaceType?: 'desktop_web' | 'mobile_web';
-    streamEvents?: boolean;
-    initialState?: boolean;
-  },
-  onEvent: (event: DesktopConversationStateBridgeEvent) => void,
-): Promise<() => void> {
-  const capabilityContext = await getLocalLiveSessionCapabilityContext();
-  const conversationId = readRequiredConversationId(input.conversationId);
-  const tailBlocks = normalizeDesktopLocalApiTailBlocks(input.tailBlocks);
-  const shouldForwardStreamEvents = input.streamEvents !== false;
-  const shouldEmitInitialState = input.initialState !== false;
-
-  let closed = false;
-  let liveUnsubscribe: (() => void) | null = null;
-  let appUnsubscribe: (() => void) | null = null;
-  let currentState = await readDesktopConversationState({
-    conversationId,
-    profile: capabilityContext.getRuntimeScope(),
-    tailBlocks,
-  });
-  let lastSerializedState = '';
-  let liveEmitTimer: ReturnType<typeof setTimeout> | null = null;
-  let pendingLiveEvents: SseEvent[] = [];
-
-  const ensureCurrentStateIsLive = async () => {
-    if (
-      !shouldRecoverConversationState({
-        closed,
-        live: currentState.liveSession.live,
-        hasSessionDetail: Boolean(currentState.sessionDetail),
-      })
-    ) {
-      return;
-    }
-
-    await recoverConversationCapability(conversationId, {
-      getRuntimeScope: capabilityContext.getRuntimeScope,
-      buildLiveSessionResourceOptions: capabilityContext.buildLiveSessionResourceOptions,
-      buildLiveSessionExtensionFactories: capabilityContext.buildLiveSessionExtensionFactories,
-      flushLiveDeferredResumes: capabilityContext.flushLiveDeferredResumes,
-    });
-
-    currentState = await readDesktopConversationState({
-      conversationId,
-      profile: capabilityContext.getRuntimeScope(),
-      tailBlocks,
-    });
-  };
-
-  const emitState = (state: DesktopConversationState, options?: { skipDeepCompare?: boolean }) => {
-    if (options?.skipDeepCompare) {
-      if (!closed) {
-        onEvent(buildConversationStateBridgeEvent(state));
-      }
-      return;
-    }
-
-    const serialized = JSON.stringify(state);
-    if (!shouldEmitConversationState({ closed, serializedState: serialized, lastSerializedState })) {
-      return;
-    }
-
-    lastSerializedState = serialized;
-    onEvent(buildConversationStateBridgeEvent(state));
-  };
-
-  const readLiveToolUpdateText = (event: SseEvent): string | null => {
-    if (event.type !== 'tool_update') return null;
-    const partialResult = event.partialResult;
-    if (typeof partialResult === 'string') return partialResult;
-    if (partialResult && typeof partialResult === 'object' && 'content' in partialResult) {
-      const content = (partialResult as { content?: unknown }).content;
-      if (Array.isArray(content)) {
-        const first = content[0];
-        if (first && typeof first === 'object' && typeof (first as { text?: unknown }).text === 'string') {
-          return (first as { text: string }).text;
-        }
-      }
-    }
-    return null;
-  };
-
-  const coalesceLiveEvents = (events: SseEvent[]): SseEvent[] => {
-    const coalesced: SseEvent[] = [];
-    for (const event of events) {
-      const previous = coalesced.at(-1);
-      if (previous?.type === 'text_delta' && event.type === 'text_delta') {
-        coalesced[coalesced.length - 1] = { ...previous, delta: `${previous.delta}${event.delta}` };
-        continue;
-      }
-      if (previous?.type === 'thinking_delta' && event.type === 'thinking_delta') {
-        coalesced[coalesced.length - 1] = { ...previous, delta: `${previous.delta}${event.delta}` };
-        continue;
-      }
-      if (previous?.type === 'tool_update' && event.type === 'tool_update' && previous.toolCallId === event.toolCallId) {
-        const previousText = readLiveToolUpdateText(previous);
-        const nextText = readLiveToolUpdateText(event);
-        if (previousText !== null && nextText !== null) {
-          coalesced[coalesced.length - 1] = { ...previous, partialResult: `${previousText}${nextText}` };
-          continue;
-        }
-      }
-      coalesced.push(event);
-    }
-    return coalesced;
-  };
-
-  const scheduleLiveStateEmit = () => {
-    if (closed || liveEmitTimer) {
-      return;
-    }
-
-    liveEmitTimer = setTimeout(() => {
-      liveEmitTimer = null;
-      const events = coalesceLiveEvents(pendingLiveEvents);
-      pendingLiveEvents = [];
-      if (!closed && events.length > 0) {
-        onEvent({ type: 'stream_events', events, liveSession: currentState.liveSession });
-      }
-    }, 250);
-  };
-
-  const closeLiveSubscription = () => {
-    liveUnsubscribe?.();
-    liveUnsubscribe = null;
-  };
-
-  const syncLiveSubscription = () => {
-    closeLiveSubscription();
-
-    if (!shouldForwardStreamEvents || !shouldSubscribeConversationStateLiveEvents(currentState.liveSession.live)) {
-      return;
-    }
-
-    liveUnsubscribe = subscribeLiveSession(
-      conversationId,
-      (event) => {
-        if (shouldIgnoreConversationStateLiveEvent(closed)) {
-          return;
-        }
-
-        currentState = {
-          ...currentState,
-          liveSession: currentState.liveSession.live
-            ? {
-                ...currentState.liveSession,
-                ...(event.type === 'title_update' ? { title: event.title } : {}),
-              }
-            : currentState.liveSession,
-          stream: applyDesktopConversationStreamEvent(currentState.stream, event),
-        };
-
-        if (currentState.liveSession.live) {
-          currentState = {
-            ...currentState,
-            liveSession: {
-              ...currentState.liveSession,
-              isStreaming: currentState.stream.isStreaming,
-            },
-          };
-        }
-
-        pendingLiveEvents.push(event);
-        scheduleLiveStateEmit();
-      },
-      {
-        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-        ...buildConversationStateSubscriptionSurface(input),
-      },
-    );
-  };
-
-  const refreshState = async () => {
-    currentState = await readDesktopConversationState({
-      conversationId,
-      profile: capabilityContext.getRuntimeScope(),
-      tailBlocks,
-    });
-    await ensureCurrentStateIsLive();
-    syncLiveSubscription();
-    if (shouldEmitInitialState) {
-      emitState(currentState);
-    }
-  };
-
-  onEvent({ type: 'open' });
-  await ensureCurrentStateIsLive();
-  if (shouldEmitInitialState) {
-    emitState(currentState);
-  }
-  syncLiveSubscription();
-
-  if (!shouldEmitInitialState && !shouldForwardStreamEvents) {
-    return () => {
-      if (!shouldCloseSubscription(closed)) {
-        return;
-      }
-
-      closed = markSubscriptionClosed();
-      closeLiveSubscription();
-      onEvent(buildDesktopCloseEvent());
-    };
-  }
-
-  appUnsubscribe = subscribeAppEvents((event) => {
-    if (
-      !shouldRefreshDesktopConversationStateForAppEvent(conversationId, event as { type?: string; topics?: unknown; sessionId?: unknown })
-    ) {
-      return;
-    }
-
-    void refreshState().catch((error) => {
-      if (closed) {
-        return;
-      }
-
-      onEvent({
-        type: 'error',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    });
-  });
-
-  return () => {
-    if (!shouldCloseSubscription(closed)) {
-      return;
-    }
-
-    closed = markSubscriptionClosed();
-    if (liveEmitTimer) {
-      clearTimeout(liveEmitTimer);
-      liveEmitTimer = null;
-    }
-    pendingLiveEvents = [];
-    closeLiveSubscription();
-    appUnsubscribe?.();
-    appUnsubscribe = null;
     onEvent(buildDesktopCloseEvent());
   };
 }
