@@ -813,7 +813,7 @@ export async function subscribeDesktopConversationState(
       if (!closed && events.length > 0) {
         onEvent({ type: 'stream_events', events, liveSession: currentState.liveSession });
       }
-    }, 100);
+    }, 250);
   };
 
   const closeLiveSubscription = () => {
