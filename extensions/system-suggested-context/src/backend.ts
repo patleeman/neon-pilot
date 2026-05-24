@@ -186,6 +186,14 @@ function ensureTerminalPunctuation(value: string): string {
   return /[.!?…]$/.test(value) ? value : `${value}.`;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function errorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined;
+}
+
 function parsePointerTimestamp(value: string | undefined): number {
   if (!value || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return Number.NaN;
   const parsed = Date.parse(value);
@@ -480,16 +488,16 @@ export async function providePromptContext(
   },
   _ctx: ExtensionBackendContext,
 ): Promise<{ contextMessages: Array<{ customType: string; content: string }>; warnings?: string[] }> {
-  // Only inject pointers for brand-new conversations with no existing content
-  if (await hasConversationTranscriptContent(input.conversationId)) {
-    return { contextMessages: [], warnings: [] };
-  }
-
   const hasSelectedIds =
     Array.isArray(input.relatedConversationIds) &&
     input.relatedConversationIds.some((id) => typeof id === 'string' && id.trim().length > 0);
 
   try {
+    // Only inject pointers for brand-new conversations with no existing content
+    if (await hasConversationTranscriptContent(input.conversationId)) {
+      return { contextMessages: [], warnings: [] };
+    }
+
     const pointers = hasSelectedIds
       ? await buildRelatedConversationPointers({
           prompt: input.prompt,
@@ -516,6 +524,13 @@ export async function providePromptContext(
       warnings: pointers.warnings.length > 0 ? pointers.warnings : undefined,
     };
   } catch (error) {
+    _ctx.log?.warn('related conversation pointers failed', {
+      conversationId: input.conversationId,
+      currentCwd: input.currentCwd ?? null,
+      selectedPointerCount: normalizeSessionIds(input.relatedConversationIds).length,
+      error: errorMessage(error),
+      stack: errorStack(error),
+    });
     return {
       contextMessages: [],
       warnings: ['Related conversation pointers failed; sent without them.'],

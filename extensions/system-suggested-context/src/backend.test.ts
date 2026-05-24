@@ -30,6 +30,28 @@ describe('system-suggested-context backend', () => {
     vi.clearAllMocks();
   });
 
+  it('logs pointer injection failures before returning the user warning', async () => {
+    const warn = vi.fn();
+    mocks.getConversationBlocks.mockRejectedValue(new Error('db unavailable'));
+
+    const result = await providePromptContext(
+      { prompt: 'architecture routing review', conversationId: 'conv-new', currentCwd: '/repo', relatedConversationIds: ['conv-related'] },
+      { log: { warn } } as never,
+    );
+
+    expect(result).toEqual({ contextMessages: [], warnings: ['Related conversation pointers failed; sent without them.'] });
+    expect(warn).toHaveBeenCalledWith(
+      'related conversation pointers failed',
+      expect.objectContaining({
+        conversationId: 'conv-new',
+        currentCwd: '/repo',
+        selectedPointerCount: 1,
+        error: 'db unavailable',
+        stack: expect.stringContaining('db unavailable'),
+      }),
+    );
+  });
+
   it('keeps warmed pointer caches isolated by profile', async () => {
     mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
     mocks.searchIndexedConversationDocuments
