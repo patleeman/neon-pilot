@@ -9,7 +9,7 @@ import {
   resolveConversationSessionFile,
 } from './conversationService.js';
 import { readConversationSummary } from './conversationSummaries.js';
-import type { DisplayBlock } from './sessions.js';
+import type { DisplayBlock } from './conversationTypes.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
 export const CONVERSATION_INSPECT_ACTION_VALUES = ['list', 'search', 'query', 'diff', 'outline', 'read_window'] as const;

@@ -5,6 +5,8 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 import type { ExtensionModelProfileResolution } from '../extensions/extensionModelProfileResolution.js';
 import type { ExtensionModelProfileRegistration } from '../extensions/extensionRegistry.js';
 import { resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
+import type { ThreadGoal } from './conversationTypes.js';
+import type { DisplayBlock } from './conversationTypes.js';
 import type { LiveContextUsage, LiveSessionToolDefinition } from './liveSessionEvents.js';
 import { type ParallelPromptJob, type ParallelPromptPreview, readParallelState } from './liveSessionParallelJobs.js';
 import { buildLiveSessionPresenceState, type LiveSessionPresenceHost, type LiveSessionPresenceState } from './liveSessionPresence.js';
@@ -12,8 +14,7 @@ import { type QueuedPromptPreview, readQueueState } from './liveSessionQueue.js'
 import { hasQueuedOrActiveStaleTurn } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 import { applyLatestCompactionSummaryTitle, buildLiveStateBlocks, mergeConversationHistoryBlocks } from './liveSessionTranscript.js';
-import type { ThreadGoal } from './sessions.js';
-import { type DisplayBlock, readGoalFromEntries, readSessionBlocksByFile } from './sessions.js';
+import { readGoalFromEntries, readSessionBlocksByFile } from './sessions.js';
 
 const DEFAULT_LIVE_SNAPSHOT_TAIL_BLOCKS = 400;
 const MAX_LIVE_SNAPSHOT_TAIL_BLOCKS = 10000;

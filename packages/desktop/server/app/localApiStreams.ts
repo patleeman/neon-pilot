@@ -5,8 +5,8 @@ import { getVaultRoot } from '@neon-pilot/core';
 
 import { getDurableRunLogCursor, getDurableRunSnapshot, readDurableRunLogDelta } from '../automation/durableRuns.js';
 import { inlineConversationSessionSnapshotAssetsCapability } from '../conversations/conversationSessionAssetCapability.js';
+import type { DisplayBlock } from '../conversations/conversationTypes.js';
 import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
-import type { DisplayBlock } from '../conversations/sessions.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
 

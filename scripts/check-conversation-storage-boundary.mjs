@@ -9,11 +9,8 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 // should use conversation service / conversations.db read-model APIs instead.
 const allowed = new Set([
   'packages/desktop/server/app/localApi.ts',
-  'packages/desktop/server/app/localApiStreams.ts',
-  'packages/desktop/server/conversations/conversationAssetsCapability.ts',
   'packages/desktop/server/conversations/conversationBootstrap.ts',
-  'packages/desktop/server/conversations/conversationCatalog.ts',
-  'packages/desktop/server/conversations/conversationInspectCapability.ts',
+  'packages/desktop/server/conversations/conversationTypes.ts',
   'packages/desktop/server/conversations/conversationRecovery.ts',
   'packages/desktop/server/conversations/conversationSearchIndex.ts',
   'packages/desktop/server/conversations/conversationService.ts',

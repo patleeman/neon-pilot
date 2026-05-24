@@ -1,7 +1,8 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
 import { readSessionDetailForRoute } from './conversationService.js';
-import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse } from './sessions.js';
-import { readSessionImageAsset, type SessionImageAsset } from './sessions.js';
+import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse } from './conversationTypes.js';
+import type { SessionImageAsset } from './conversationTypes.js';
+import { readSessionImageAsset } from './sessions.js';
 
 export function readConversationSessionImageAssetCapability(
   sessionId: string,

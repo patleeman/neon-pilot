@@ -10,7 +10,8 @@ import { logWarn } from '../shared/logging.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { readConversationAutoTitleSettings } from './conversationAutoTitle.js';
 import { ensureConversationsDbFileMigrated, resolveAgentRuntimeDir } from './conversationDbPaths.js';
-import { readSessionSearchText, type SessionMeta } from './sessions.js';
+import type { SessionMeta } from './conversationTypes.js';
+import { readSessionSearchText } from './sessions.js';
 
 const SUMMARY_SCHEMA_VERSION = 2;
 const MAX_BACKFILL_PER_CALL = 25;

@@ -5,8 +5,8 @@ import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
-import type { SessionMeta } from './sessions.js';
-import type { SessionDetail } from './sessions.js';
+import type { SessionMeta } from './conversationTypes.js';
+import type { SessionDetail } from './conversationTypes.js';
 
 interface ConversationCatalogRow {
   id: string;

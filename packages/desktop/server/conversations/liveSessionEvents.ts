@@ -1,9 +1,10 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 
+import type { DisplayBlock, ThreadGoal } from './conversationTypes.js';
 import type { ParallelPromptPreview } from './liveSessionParallelJobs.js';
 import type { LiveSessionPresenceState } from './liveSessionPresence.js';
 import type { QueuedPromptPreview } from './liveSessionQueue.js';
-import { buildDisplayBlocksFromEntries, type DisplayBlock, getAssistantErrorDisplayMessage, type ThreadGoal } from './sessions.js';
+import { buildDisplayBlocksFromEntries, getAssistantErrorDisplayMessage } from './sessions.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
 export interface LiveContextUsageSegment {

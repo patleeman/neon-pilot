@@ -1,6 +1,7 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
-import { buildDisplayBlocksFromEntries, type DisplayBlock } from './sessions.js';
+import type { DisplayBlock } from './conversationTypes.js';
+import { buildDisplayBlocksFromEntries } from './sessions.js';
 
 export function buildLiveStateBlocks(session: AgentSession, options: { omitStreamMessage?: boolean } = {}): DisplayBlock[] {
   const state = session.state;

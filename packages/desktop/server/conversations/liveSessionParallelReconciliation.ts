@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { normalize, relative, resolve } from 'node:path';
 
 import { readGitRepoInfo, readGitStatusSummary } from '../workspace/gitStatus.js';
+import type { DisplayBlock } from './conversationTypes.js';
 import { extractTextFromMessageContent, getStableForkBranchEntries, type StableForkBranchEntry } from './liveSessionForking.js';
 import {
   normalizeParallelPromptList,
@@ -11,7 +12,7 @@ import {
   truncateParallelPreviewText,
   writePersistedParallelJobs,
 } from './liveSessionParallelJobs.js';
-import { type DisplayBlock, readSessionBlocksByFile, readSessionMetaByFile } from './sessions.js';
+import { readSessionBlocksByFile, readSessionMetaByFile } from './sessions.js';
 
 const PARALLEL_RESULT_CUSTOM_TYPE = 'parallel_result';
 

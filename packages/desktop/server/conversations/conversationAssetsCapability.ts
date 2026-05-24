@@ -15,7 +15,7 @@ import {
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationCheckpointReviewContext, resolveConversationCheckpointRecord } from './checkpointReview.js';
 import { readSessionDetailForRoute } from './conversationService.js';
-import { type DisplayBlock } from './sessions.js';
+import type { DisplayBlock } from './conversationTypes.js';
 
 export class ConversationAssetCapabilityInputError extends Error {}
 export class ConversationAssetCapabilityNotFoundError extends Error {}
