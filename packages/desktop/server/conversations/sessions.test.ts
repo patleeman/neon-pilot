@@ -2362,7 +2362,7 @@ describe('sessions', () => {
     expect(backlinkIndex).toBeLessThan(laterReplyIndex);
   });
 
-  it('preserves a persisted child parent-backlink entry instead of synthesizing a duplicate', () => {
+  it('repositions a persisted child parent-backlink entry instead of leaving it at the bottom', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
 
@@ -2394,10 +2394,31 @@ describe('sessions', () => {
       parentSessionId: 'persisted-backlink-parent',
       parentMessageId: parentMessageId!,
     });
+    appendFileSync(
+      childSessionFile!,
+      `${JSON.stringify({
+        type: 'message',
+        id: 'persisted-backlink-later-user',
+        parentId: parentMessageId,
+        timestamp: '2099-03-11T12:00:10.000Z',
+        message: { role: 'user', content: 'Later child prompt' },
+      })}\n${JSON.stringify({
+        type: 'message',
+        id: 'persisted-backlink-later-assistant',
+        parentId: 'persisted-backlink-later-user',
+        timestamp: '2099-03-11T12:00:11.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'Later child reply' }] },
+      })}\n`,
+    );
 
     const childBlocks = readSessionBlocks(childSessionId!)?.blocks ?? [];
     const backlinks = childBlocks.filter((block) => block.type === 'context' && block.customType === 'parent_conversation_backlink');
+    const anchorIndex = childBlocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+    const laterReplyIndex = childBlocks.findIndex((block) => block.type === 'text' && block.text === 'Later child reply');
+    const backlinkIndex = childBlocks.indexOf(backlinks[0]!);
     expect(backlinks).toHaveLength(1);
+    expect(backlinkIndex).toBe(anchorIndex + 1);
+    expect(backlinkIndex).toBeLessThan(laterReplyIndex);
     expect(backlinks[0]).toEqual(
       expect.objectContaining({ text: expect.stringContaining('Fork conversation from parent: Persisted backlink parent') }),
     );

@@ -1153,32 +1153,38 @@ function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): Display
 }
 
 function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
-  if (blocks.some((block) => block.type === 'context' && block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE)) {
+  const existingBacklink = blocks.find(
+    (block) => block.type === 'context' && block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+  );
+  const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
+  if (existingBacklink && kind !== 'fork' && kind !== 'rewind' && kind !== 'duplicate') {
     return blocks;
   }
 
   const parentId = meta.parentSessionId?.trim() || (meta.parentSessionFile ? resolveSessionIdByFile(meta.parentSessionFile) : undefined);
   if (!parentId) return blocks;
-  const kind = meta.offshootKind ?? (meta.sourceRunId ? 'subagent' : 'side');
   const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
   const parentMeta = scanSessionMetas().find((m) => m.id === parentId);
   const parentTitle = parentMeta?.title?.trim() || parentId;
-  const backlink: DisplayBlock = {
-    type: 'context',
-    id: `topology-parent-${meta.id}`,
-    ts: meta.timestamp,
-    customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
-    text: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
-  };
+  const backlink: DisplayBlock =
+    existingBacklink ??
+    ({
+      type: 'context',
+      id: `topology-parent-${meta.id}`,
+      ts: meta.timestamp,
+      customType: PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
+      text: `${label} conversation from parent: ${parentTitle}\nOpen parent: /conversations/${parentId}${meta.parentMessageId ? `\nSource message: ${meta.parentMessageId}` : ''}`,
+    } satisfies DisplayBlock);
+  const contentBlocks = existingBacklink ? blocks.filter((block) => block !== existingBacklink) : blocks;
   // For forks and rewinds, place the backlink immediately after the source entry
   // when the child still contains that copied history. Appending it to the end makes
   // the marker drift downward as the child conversation grows or reloads.
   if (kind === 'fork' || kind === 'rewind' || kind === 'duplicate') {
     const parentMessageId = meta.parentMessageId?.trim();
     if (parentMessageId) {
-      const anchorIndex = blocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
+      const anchorIndex = contentBlocks.findIndex((block) => block.id === parentMessageId || block.id.startsWith(`${parentMessageId}-`));
       if (anchorIndex >= 0) {
-        return [...blocks.slice(0, anchorIndex + 1), backlink, ...blocks.slice(anchorIndex + 1)];
+        return [...contentBlocks.slice(0, anchorIndex + 1), backlink, ...contentBlocks.slice(anchorIndex + 1)];
       }
     }
 
@@ -1189,14 +1195,14 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
     // written before the child resumes, so its timestamp separates copied parent
     // history from child-only turns for the normal fork/rewind flow.
     const offshootTimestamp = meta.offshootTimestamp ?? meta.timestamp;
-    const inheritedSnapshotEndIndex = findLastBlockIndex(blocks, (block) => block.ts <= offshootTimestamp);
+    const inheritedSnapshotEndIndex = findLastBlockIndex(contentBlocks, (block) => block.ts <= offshootTimestamp);
     if (inheritedSnapshotEndIndex >= 0) {
-      return [...blocks.slice(0, inheritedSnapshotEndIndex + 1), backlink, ...blocks.slice(inheritedSnapshotEndIndex + 1)];
+      return [...contentBlocks.slice(0, inheritedSnapshotEndIndex + 1), backlink, ...contentBlocks.slice(inheritedSnapshotEndIndex + 1)];
     }
 
-    return [...blocks, backlink];
+    return [...contentBlocks, backlink];
   }
-  return [backlink, ...blocks];
+  return [backlink, ...contentBlocks];
 }
 
 function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBlock) => boolean): number {
