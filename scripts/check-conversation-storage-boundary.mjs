@@ -15,7 +15,6 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationSessionAssetCapability.ts',
   'packages/desktop/server/conversations/conversationSummaries.ts',
   'packages/desktop/server/conversations/liveSessionBranching.ts',
-  'packages/desktop/server/conversations/liveSessionCapability.ts',
   'packages/desktop/server/conversations/liveSessionCreation.ts',
   'packages/desktop/server/conversations/liveSessionEvents.ts',
   'packages/desktop/server/conversations/liveSessionParallelReconciliation.ts',
