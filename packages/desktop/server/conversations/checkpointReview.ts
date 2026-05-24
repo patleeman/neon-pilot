@@ -7,7 +7,7 @@ import {
   listConversationCommitCheckpoints,
 } from '@neon-pilot/core';
 
-import { readSessionMeta } from './sessions.js';
+import { readConversationSessionMeta } from './conversationService.js';
 
 interface GitHubRepoRef {
   owner: string;
@@ -335,7 +335,7 @@ export function resolveConversationCheckpointRecord(options: {
     return null;
   }
 
-  const cwd = readSessionMeta(options.conversationId)?.cwd?.trim();
+  const cwd = readConversationSessionMeta(options.conversationId)?.cwd?.trim();
   if (!cwd) {
     return null;
   }

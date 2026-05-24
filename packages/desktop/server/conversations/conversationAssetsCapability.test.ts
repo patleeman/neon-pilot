@@ -12,7 +12,7 @@ const {
   saveConversationAttachmentMock,
   addConversationCommitCheckpointCommentMock,
   resolveConversationCheckpointRecordMock,
-  readSessionBlocksMock,
+  readSessionDetailForRouteMock,
   invalidateAppTopicsMock,
 } = vi.hoisted(() => ({
   deleteConversationArtifactMock: vi.fn(),
@@ -26,7 +26,7 @@ const {
   saveConversationAttachmentMock: vi.fn(),
   addConversationCommitCheckpointCommentMock: vi.fn(),
   resolveConversationCheckpointRecordMock: vi.fn(),
-  readSessionBlocksMock: vi.fn(),
+  readSessionDetailForRouteMock: vi.fn(),
   invalidateAppTopicsMock: vi.fn(),
 }));
 
@@ -52,8 +52,8 @@ vi.mock('./checkpointReview.js', () => ({
   resolveConversationCheckpointRecord: resolveConversationCheckpointRecordMock,
 }));
 
-vi.mock('./sessions.js', () => ({
-  readSessionBlocks: readSessionBlocksMock,
+vi.mock('./conversationService.js', () => ({
+  readSessionDetailForRoute: readSessionDetailForRouteMock,
 }));
 
 import {
@@ -84,13 +84,13 @@ beforeEach(() => {
   saveConversationAttachmentMock.mockReset();
   addConversationCommitCheckpointCommentMock.mockReset();
   resolveConversationCheckpointRecordMock.mockReset();
-  readSessionBlocksMock.mockReset();
+  readSessionDetailForRouteMock.mockReset();
   invalidateAppTopicsMock.mockReset();
 
   listConversationArtifactsMock.mockReturnValue([{ id: 'artifact-1', title: 'Artifact 1' }]);
   listConversationAttachmentsMock.mockReturnValue([{ id: 'attachment-1', kind: 'excalidraw' }]);
   listConversationCommitCheckpointsMock.mockReturnValue([]);
-  readSessionBlocksMock.mockReturnValue(null);
+  readSessionDetailForRouteMock.mockResolvedValue({ sessionRead: { detail: null } });
   getConversationArtifactMock.mockReturnValue({ id: 'artifact-1', title: 'Artifact 1' });
   getConversationAttachmentMock.mockReturnValue({
     id: 'attachment-1',
@@ -225,7 +225,7 @@ describe('conversationAssetsCapability', () => {
     ).toThrowError(new ConversationAssetCapabilityNotFoundError('Commit checkpoint not found'));
   });
 
-  it('merges saved checkpoints with git commits mentioned in the transcript', () => {
+  it('merges saved checkpoints with git commits mentioned in the transcript', async () => {
     const savedCheckpoint = {
       id: 'saved-checkpoint',
       conversationId: 'session-1',
@@ -266,17 +266,21 @@ describe('conversationAssetsCapability', () => {
     };
 
     listConversationCommitCheckpointsMock.mockReturnValue([savedCheckpoint]);
-    readSessionBlocksMock.mockReturnValue({
-      blocks: [
-        { type: 'text', ts: '2026-04-30T12:00:00.000Z', text: 'Fixed in bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.' },
-        { type: 'tool_use', ts: '2026-04-30T12:01:00.000Z', tool: 'bash', input: {}, output: 'already saved aaaaaaa' },
-      ],
+    readSessionDetailForRouteMock.mockResolvedValue({
+      sessionRead: {
+        detail: {
+          blocks: [
+            { type: 'text', ts: '2026-04-30T12:00:00.000Z', text: 'Fixed in bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.' },
+            { type: 'tool_use', ts: '2026-04-30T12:01:00.000Z', tool: 'bash', input: {}, output: 'already saved aaaaaaa' },
+          ],
+        },
+      },
     });
     resolveConversationCheckpointRecordMock.mockImplementation((_input: { checkpointId: string }) =>
       _input.checkpointId.startsWith('b') ? transcriptCheckpoint : savedCheckpoint,
     );
 
-    expect(readConversationCommitCheckpointsCapability('assistant', ' session-1 ')).toEqual({
+    await expect(readConversationCommitCheckpointsCapability('assistant', ' session-1 ')).resolves.toEqual({
       conversationId: 'session-1',
       checkpoints: [transcriptCheckpoint, savedCheckpoint],
     });

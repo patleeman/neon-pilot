@@ -14,7 +14,8 @@ import {
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationCheckpointReviewContext, resolveConversationCheckpointRecord } from './checkpointReview.js';
-import { type DisplayBlock, readSessionBlocks } from './sessions.js';
+import { readSessionDetailForRoute } from './conversationService.js';
+import { type DisplayBlock } from './sessions.js';
 
 export class ConversationAssetCapabilityInputError extends Error {}
 export class ConversationAssetCapabilityNotFoundError extends Error {}
@@ -76,12 +77,12 @@ function buildArtifactListResult(profile: string, conversationId: string) {
   };
 }
 
-function buildCheckpointListResult(profile: string, conversationId: string) {
+async function buildCheckpointListResult(profile: string, conversationId: string) {
   const savedCheckpoints = listConversationCommitCheckpoints({ profile, conversationId });
 
   return {
     conversationId,
-    checkpoints: mergeTranscriptCommitCheckpoints(profile, conversationId, savedCheckpoints),
+    checkpoints: await mergeTranscriptCommitCheckpoints(profile, conversationId, savedCheckpoints),
   };
 }
 
@@ -136,17 +137,18 @@ function extractCommitHashCandidates(blocks: DisplayBlock[]): string[] {
   return Array.from(commitHashes);
 }
 
-function mergeTranscriptCommitCheckpoints(
+async function mergeTranscriptCommitCheckpoints(
   profile: string,
   conversationId: string,
   savedCheckpoints: ConversationCommitCheckpointSummary[],
-): ConversationCommitCheckpointSummary[] {
+): Promise<ConversationCommitCheckpointSummary[]> {
   const checkpointsByCommit = new Map<string, ConversationCommitCheckpointSummary>();
   for (const checkpoint of savedCheckpoints) {
     checkpointsByCommit.set(checkpoint.commitSha.toLowerCase(), checkpoint);
   }
 
-  const detail = readSessionBlocks(conversationId);
+  const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile });
+  const detail = sessionRead.detail;
   if (!detail) {
     return savedCheckpoints;
   }
@@ -238,7 +240,7 @@ export function readConversationArtifactCapability(profile: string, input: Conve
   };
 }
 
-export function readConversationCommitCheckpointsCapability(profile: string, conversationIdInput: string) {
+export async function readConversationCommitCheckpointsCapability(profile: string, conversationIdInput: string) {
   const conversationId = normalizeRequiredId(conversationIdInput, 'conversationId');
   return buildCheckpointListResult(profile, conversationId);
 }

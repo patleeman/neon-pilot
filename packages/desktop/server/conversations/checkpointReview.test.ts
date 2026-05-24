@@ -5,10 +5,10 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getConversationCommitCheckpointMock, listConversationCommitCheckpointsMock, readSessionMetaMock } = vi.hoisted(() => ({
+const { getConversationCommitCheckpointMock, listConversationCommitCheckpointsMock, readConversationSessionMetaMock } = vi.hoisted(() => ({
   getConversationCommitCheckpointMock: vi.fn(),
   listConversationCommitCheckpointsMock: vi.fn(),
-  readSessionMetaMock: vi.fn(),
+  readConversationSessionMetaMock: vi.fn(),
 }));
 
 vi.mock('@neon-pilot/core', async () => {
@@ -20,8 +20,8 @@ vi.mock('@neon-pilot/core', async () => {
   };
 });
 
-vi.mock('./sessions.js', () => ({
-  readSessionMeta: readSessionMetaMock,
+vi.mock('./conversationService.js', () => ({
+  readConversationSessionMeta: readConversationSessionMetaMock,
 }));
 
 import { parseGitHubRemoteUrl, resolveConversationCheckpointRecord } from './checkpointReview.js';
@@ -37,11 +37,11 @@ afterEach(() => {
 beforeEach(() => {
   getConversationCommitCheckpointMock.mockReset();
   listConversationCommitCheckpointsMock.mockReset();
-  readSessionMetaMock.mockReset();
+  readConversationSessionMetaMock.mockReset();
 
   getConversationCommitCheckpointMock.mockReturnValue(null);
   listConversationCommitCheckpointsMock.mockReturnValue([]);
-  readSessionMetaMock.mockReturnValue(null);
+  readConversationSessionMetaMock.mockReturnValue(null);
 });
 
 function createTempRepoRoot(): string {
@@ -149,12 +149,12 @@ describe('checkpointReview', () => {
         commentCount: 1,
       }),
     );
-    expect(readSessionMetaMock).not.toHaveBeenCalled();
+    expect(readConversationSessionMetaMock).not.toHaveBeenCalled();
   });
 
   it('falls back to a local git commit when the hash is not a saved checkpoint', () => {
     const { repoRoot, commitSha, shortSha } = createCommittedRepo();
-    readSessionMetaMock.mockReturnValue({ cwd: repoRoot });
+    readConversationSessionMetaMock.mockReturnValue({ cwd: repoRoot });
 
     const resolved = resolveConversationCheckpointRecord({
       profile: 'assistant',
