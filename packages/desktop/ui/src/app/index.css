@@ -369,7 +369,7 @@
   }
 
   .ui-message-action-button {
-    @apply inline-flex select-none items-center gap-1 rounded-none border border-transparent bg-transparent px-0 py-0.5 font-mono text-[11px] font-medium text-dim underline decoration-transparent underline-offset-4 transition-colors hover:decoration-current focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex select-none items-center gap-1 rounded-none border border-transparent bg-transparent px-0 py-0.5 font-mono text-[11px] font-medium text-dim no-underline transition-colors hover:no-underline focus-visible:no-underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .ui-message-action-button:hover,
