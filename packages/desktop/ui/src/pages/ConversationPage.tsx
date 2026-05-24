@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
@@ -4475,19 +4476,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         }
 
         rememberComposerInput(inputSnapshot);
-        setDraftPendingPrompt({
-          text: textToSend,
-          behavior: queuedBehavior,
-          images: promptImages,
-          attachmentRefs: [],
-          contextMessages: browserContextMessages,
+        flushSync(() => {
+          setDraftPendingPrompt({
+            text: textToSend,
+            behavior: queuedBehavior,
+            images: promptImages,
+            attachmentRefs: [],
+            contextMessages: browserContextMessages,
+          });
+          setPendingAssistantStatusLabel(
+            resolveConversationPendingStatusLabel({
+              isLiveSession: false,
+              hasVisibleSessionDetail: false,
+            }),
+          );
         });
-        setPendingAssistantStatusLabel(
-          resolveConversationPendingStatusLabel({
-            isLiveSession: false,
-            hasVisibleSessionDetail: false,
-          }),
-        );
         let createdSessionId: string | null = null;
         let navigatedToCreatedConversation = false;
         try {

@@ -28,6 +28,7 @@ const seconds = Number(arg('seconds', '30')) || 30;
 const maxReadyMs = Number(arg('max-ready-ms', app ? '5000' : '15000')) || 5000;
 const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
+const maxDraftFirstPromptVisibleMs = Number(arg('max-draft-first-prompt-visible-ms', '1500')) || 1500;
 const maxLongTranscriptOpenMs = Number(arg('max-long-transcript-open-ms', '2500')) || 2500;
 const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
@@ -425,6 +426,8 @@ async function main() {
       failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > ${maxLongTranscriptOpenMs}`);
     if (draftSubmitVisibleMs > maxDraftSubmitVisibleMs)
       failures.push(`draftSubmitVisibleMs ${draftSubmitVisibleMs} > ${maxDraftSubmitVisibleMs}`);
+    if (draftSubmitFirstPromptVisibleMs > maxDraftFirstPromptVisibleMs)
+      failures.push(`draftSubmitFirstPromptVisibleMs ${draftSubmitFirstPromptVisibleMs} > ${maxDraftFirstPromptVisibleMs}`);
     if (failures.length)
       throw new Error(
         `Desktop perf smoke failed:\n${failures.join('\n')}\nTop offenders: ${JSON.stringify(cpuSamples.toSorted((a, b) => b.total - a.total)[0]?.offenders ?? [], null, 2)}`,
