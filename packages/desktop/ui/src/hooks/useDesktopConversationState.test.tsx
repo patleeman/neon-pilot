@@ -3,6 +3,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { api } from '../client/api.js';
 import { normalizeDesktopConversationStateTailBlocks, useDesktopConversationState } from './useDesktopConversationState.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -40,20 +41,37 @@ describe('useDesktopConversationState', () => {
     Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
 
-  it('resubscribes when reconnect is requested after a same-conversation cwd change', async () => {
-    let nextSubscriptionId = 0;
-    const subscribeConversationState = vi.fn().mockImplementation(() => {
-      nextSubscriptionId += 1;
-      return Promise.resolve({ subscriptionId: `sub-${nextSubscriptionId}` });
+  it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {
+    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
     });
-    const unsubscribeConversationState = vi.fn().mockResolvedValue(undefined);
 
     Object.defineProperty(window, 'neonPilotDesktop', {
       configurable: true,
       value: {
         getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
-        subscribeConversationState,
-        unsubscribeConversationState,
       },
     });
 
@@ -66,16 +84,9 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    const initialSubscribeCount = subscribeConversationState.mock.calls.length;
-    expect(initialSubscribeCount).toBeGreaterThan(0);
-    expect(subscribeConversationState).toHaveBeenLastCalledWith({
-      conversationId: 'conv-1',
-      tailBlocks: 20,
-      surfaceId: expect.any(String),
-      surfaceType: 'desktop_web',
-      streamEvents: false,
-      initialState: false,
-    });
+    const initialFetchCount = desktopConversationState.mock.calls.length;
+    expect(initialFetchCount).toBeGreaterThan(0);
+    expect(desktopConversationState).toHaveBeenLastCalledWith('conv-1', { tailBlocks: 20 });
 
     await act(async () => {
       latestReconnect?.();
@@ -83,7 +94,6 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(subscribeConversationState).toHaveBeenCalledTimes(initialSubscribeCount + 1);
-    expect(unsubscribeConversationState).toHaveBeenCalledWith(`sub-${initialSubscribeCount}`);
+    expect(desktopConversationState).toHaveBeenCalledTimes(initialFetchCount + 1);
   });
 });

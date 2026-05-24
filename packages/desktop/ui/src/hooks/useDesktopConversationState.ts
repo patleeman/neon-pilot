@@ -1,22 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../client/api';
-import { recordClientPerfTiming } from '../client/perfDiagnostics';
-import { DESKTOP_CONVERSATION_STATE_EVENT, getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
+import { getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import type { DesktopConversationState, DisplayBlock, PromptAttachmentRefInput, PromptImageInput, SseEvent } from '../shared/types';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
-
-type DesktopConversationStateEnvelope = {
-  subscriptionId: string;
-  event: {
-    type: 'open' | 'state' | 'stream_events' | 'error' | 'close';
-    state?: DesktopConversationState;
-    events?: SseEvent[];
-    liveSession?: DesktopConversationState['liveSession'];
-    message?: string;
-  };
-};
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 
@@ -220,90 +208,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     let closed = false;
-    let subscriptionId: string | null = null;
-    const pendingEvents: DesktopConversationStateEnvelope[] = [];
     setState(null);
     setError(null);
-
-    const handleEnvelope = (detail: DesktopConversationStateEnvelope) => {
-      switch (detail.event.type) {
-        case 'open':
-          setError(null);
-          return;
-        case 'state':
-          if (detail.event.state) {
-            setState((previous) => mergeDesktopConversationState(previous, detail.event.state as DesktopConversationState));
-            setError(null);
-          }
-          return;
-        case 'stream_events':
-          if (detail.event.events && detail.event.liveSession) {
-            setState((previous) =>
-              previous
-                ? {
-                    ...previous,
-                    liveSession: detail.event.liveSession as DesktopConversationState['liveSession'],
-                    stream: detail.event.events.reduce(applyDesktopConversationStreamEvent, previous.stream),
-                  }
-                : previous,
-            );
-            setError(null);
-          }
-          return;
-        case 'error':
-          setError(detail.event.message ?? 'Conversation state subscription failed.');
-          return;
-        case 'close':
-          return;
-      }
-    };
-
-    const replayPendingEvents = () => {
-      if (!subscriptionId || pendingEvents.length === 0) {
-        pendingEvents.length = 0;
-        return;
-      }
-
-      const queued = pendingEvents.splice(0, pendingEvents.length);
-      for (const detail of queued) {
-        if (detail.subscriptionId === subscriptionId) {
-          handleEnvelope(detail);
-        }
-      }
-    };
-
-    const handleStateEvent = (event: Event) => {
-      const receivedAtMs = performance.now();
-      const detail = (event as CustomEvent<DesktopConversationStateEnvelope>).detail;
-      if (!detail || closed) {
-        return;
-      }
-
-      if (!subscriptionId) {
-        pendingEvents.push(detail);
-        return;
-      }
-
-      if (detail.subscriptionId !== subscriptionId) {
-        return;
-      }
-
-      handleEnvelope(detail);
-      recordClientPerfTiming({
-        name: 'desktop.conversationStateBridgeEvent',
-        startedAtMs: receivedAtMs,
-        meta: {
-          conversationId,
-          eventType: detail.event.type,
-          streamEventCount: detail.event.events?.length ?? 0,
-          hasState: Boolean(detail.event.state),
-          stateBlockCount: detail.event.state?.stream.blocks.length ?? null,
-          stateTotalBlocks: detail.event.state?.stream.totalBlocks ?? null,
-        },
-      });
-    };
-
-    window.addEventListener(DESKTOP_CONVERSATION_STATE_EVENT, handleStateEvent as EventListener);
 
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
     void api
@@ -320,37 +226,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
         }
       });
 
-    void bridge
-      .subscribeConversationState({
-        conversationId,
-        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-        surfaceId,
-        surfaceType,
-        streamEvents: false,
-        initialState: false,
-      })
-      .then((result) => {
-        if (closed) {
-          void bridge.unsubscribeConversationState(result.subscriptionId).catch(() => {});
-          return;
-        }
-
-        subscriptionId = result.subscriptionId;
-        replayPendingEvents();
-      })
-      .catch((nextError) => {
-        if (!closed) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
-        }
-      });
-
     return () => {
       closed = true;
-      pendingEvents.length = 0;
-      window.removeEventListener(DESKTOP_CONVERSATION_STATE_EVENT, handleStateEvent as EventListener);
-      if (subscriptionId) {
-        void bridge.unsubscribeConversationState(subscriptionId).catch(() => {});
-      }
     };
   }, [bridge, conversationId, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
