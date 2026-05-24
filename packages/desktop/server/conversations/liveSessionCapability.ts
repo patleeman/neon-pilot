@@ -218,17 +218,6 @@ async function buildLiveSessionOptionsAsync(
   };
 }
 
-function buildLiveSessionLoaderOptions(
-  context: LiveSessionCapabilityContext,
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    ...context.buildLiveSessionResourceOptions(context.getRuntimeScope()),
-    extensionFactories: context.buildLiveSessionExtensionFactories(),
-    ...overrides,
-  };
-}
-
 function buildBackgroundRunInternalContext(entries: Array<{ prompt: string }>): string {
   if (entries.length === 0) {
     return '';
@@ -492,7 +481,7 @@ export async function prewarmLiveSessionCapability(
       })
     : resolveNeutralChatCwd(profile);
 
-  await prewarmLiveSessionLoader(cwd, buildLiveSessionLoaderOptions(context));
+  await prewarmLiveSessionLoader(cwd, await buildLiveSessionOptionsAsync(context));
   return { ok: true };
 }
 
@@ -514,7 +503,7 @@ export async function createLiveSessionCapability(
   const createStartedAtMs = performance.now();
   const created = await createLocalSession(
     cwd,
-    buildLiveSessionLoaderOptions(context, {
+    await buildLiveSessionOptionsAsync(context, {
       ...(input.model !== undefined ? { initialModel: input.model } : {}),
       ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
       ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
