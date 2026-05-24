@@ -17,3 +17,7 @@ Conversation navigation records `conversationOpenSamples` with these phases:
 `longTaskSamples` record Long Task API entries and event-loop lag. Samples include recent `clientSamples` plus the latest `chatRenderSamples` entry under `meta.attribution` when available, so beachball reports can be correlated with the synchronous renderer work that ran around the block.
 
 API samples are recorded when responses include `Server-Timing` or `X-PA-Perf` headers. Keep new diagnostics cheap and side-effect-free; this is a tripwire, not a replacement for browser profiling.
+
+Draft send responsiveness is guarded by `scripts/perf-desktop-smoke.mjs`. The smoke records both route-level visibility (`draftSubmitVisibleMs`) and first user-prompt visibility (`draftSubmitFirstPromptVisibleMs`) so CDP route-readiness variance does not hide whether the UI actually painted the submitted prompt. It also fails when post-submit renderer long tasks exceed `--max-post-submit-longtask-ms`.
+
+Live prompt submission should keep foreground work tiny. Plain sends without explicit related conversations or context messages skip prompt-context provider invocation; selected related conversations and attached context still opt into provider assembly. The `/live-sessions/:id/prompt` response includes `perf.totalBeforeReturnMs`, and normal prompt starts are accepted before agent execution is scheduled so the route/prompt paint path is not blocked by agent startup.
