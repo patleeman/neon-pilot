@@ -218,19 +218,6 @@ export function registerDesktopIpc(options: {
     return controller.readDaemonState();
   });
 
-  ipcMain.handle(`${CHANNEL_PREFIX}:invoke-local-api`, async (event, input) => {
-    const method = typeof input?.method === 'string' ? input.method.toUpperCase() : '';
-    if (method !== 'GET' && method !== 'POST' && method !== 'PUT' && method !== 'PATCH' && method !== 'DELETE') {
-      throw new Error('Unsupported desktop local API method.');
-    }
-    const path = typeof input?.path === 'string' ? input.path : '';
-    if (!path.startsWith('/') || path.startsWith('//') || path.includes('://')) {
-      throw new Error('Desktop local API paths must be absolute local paths.');
-    }
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    return options.hostManager.getHostController(hostId).invokeLocalApi(method, path, input.body);
-  });
-
   ipcMain.handle(`${CHANNEL_PREFIX}:read-sessions`, async (event) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     const controller = options.hostManager.getHostController(hostId);

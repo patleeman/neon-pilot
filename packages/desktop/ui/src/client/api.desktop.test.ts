@@ -93,11 +93,9 @@ describe('api desktop transport', () => {
       activeHostKind: 'local',
       activeHostSummary: 'Local backend is healthy.',
     });
-    const invokeLocalApi = vi.fn();
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment,
-        invokeLocalApi,
       },
     });
 
@@ -110,7 +108,6 @@ describe('api desktop transport', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hello: true }),
     });
-    expect(invokeLocalApi).not.toHaveBeenCalled();
   });
 
   it('restores queued messages through the local desktop bridge', async () => {

@@ -119,7 +119,6 @@ export interface NeonPilotDesktopBridge {
   checkForUpdates(): Promise<DesktopAppPreferencesState>;
   readAppStatus(): Promise<AppStatus>;
   readDaemonState(): Promise<DaemonState>;
-  invokeLocalApi(input: { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; body?: unknown }): Promise<unknown>;
   readSessions(): Promise<SessionMeta[]>;
   readSessionMeta(sessionId: string): Promise<SessionMeta>;
   readSessionSearchIndex(sessionIds: string[]): Promise<{ index: Record<string, string> }>;
