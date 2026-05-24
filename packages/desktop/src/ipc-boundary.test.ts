@@ -30,5 +30,17 @@ describe('desktop IPC protocol boundary', () => {
     ]) {
       expect(combined, forbidden).not.toContain(forbidden);
     }
+
+    const exposedRendererBridge = `${preloadSource}\n${bridgeSource}`;
+    for (const forbidden of [
+      'readAppStatus',
+      'readSessions',
+      'readModels',
+      'readScheduledTasks',
+      'readDurableRuns',
+      'readConversationArtifacts',
+    ]) {
+      expect(exposedRendererBridge, forbidden).not.toContain(forbidden);
+    }
   });
 });
