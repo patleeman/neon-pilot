@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../client/api';
 import { getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
@@ -187,6 +187,17 @@ export function applyDesktopConversationStreamEvent(
   }
 }
 
+export function applyDesktopConversationStreamEvents(
+  stream: DesktopConversationState['stream'],
+  events: readonly SseEvent[],
+): DesktopConversationState['stream'] {
+  let next = stream;
+  for (const event of events) {
+    next = applyDesktopConversationStreamEvent(next, event);
+  }
+  return next;
+}
+
 function mergeDesktopConversationState(
   previous: DesktopConversationState | null,
   next: DesktopConversationState,
@@ -216,6 +227,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const [error, setError] = useState<string | null>(null);
   const [connectVersion, setConnectVersion] = useState(0);
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
+  const pendingStreamEventsRef = useRef<SseEvent[]>([]);
+  const pendingStreamFrameRef = useRef<number | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
 
   useEffect(() => {
@@ -288,35 +301,61 @@ export function useDesktopConversationState(conversationId: string | null, optio
     params.set('surfaceType', surfaceType);
     const source = createDesktopAwareEventSource(`/api/live-sessions/${encodeURIComponent(conversationId)}/events?${params.toString()}`);
 
+    const flushPendingStreamEvents = () => {
+      pendingStreamFrameRef.current = null;
+      const events = pendingStreamEventsRef.current;
+      pendingStreamEventsRef.current = [];
+      if (events.length === 0) {
+        return;
+      }
+
+      setState((previous) => {
+        if (previous?.conversationId !== conversationId) {
+          return previous;
+        }
+
+        const stream = applyDesktopConversationStreamEvents(previous.stream, events);
+        const latestTitleEvent = events.findLast((streamEvent) => streamEvent.type === 'title_update');
+        return {
+          ...previous,
+          stream,
+          liveSession: previous.liveSession.live
+            ? {
+                ...previous.liveSession,
+                ...(latestTitleEvent?.type === 'title_update' ? { title: latestTitleEvent.title } : {}),
+                isStreaming: stream.isStreaming,
+              }
+            : previous.liveSession,
+        };
+      });
+      setError(null);
+    };
+
+    const schedulePendingStreamEventsFlush = () => {
+      if (pendingStreamFrameRef.current !== null) {
+        return;
+      }
+      pendingStreamFrameRef.current = window.requestAnimationFrame(flushPendingStreamEvents);
+    };
+
     source.onmessage = (event) => {
       try {
-        const streamEvent = JSON.parse(event.data) as SseEvent;
-        setState((previous) => {
-          if (previous?.conversationId !== conversationId) {
-            return previous;
-          }
-
-          const stream = applyDesktopConversationStreamEvent(previous.stream, streamEvent);
-          return {
-            ...previous,
-            stream,
-            liveSession: previous.liveSession.live
-              ? {
-                  ...previous.liveSession,
-                  ...(streamEvent.type === 'title_update' ? { title: streamEvent.title } : {}),
-                  isStreaming: stream.isStreaming,
-                }
-              : previous.liveSession,
-          };
-        });
-        setError(null);
+        pendingStreamEventsRef.current.push(JSON.parse(event.data) as SseEvent);
+        schedulePendingStreamEventsFlush();
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
     };
     source.onerror = () => setError('Conversation realtime stream failed.');
 
-    return () => source.close();
+    return () => {
+      source.close();
+      if (pendingStreamFrameRef.current !== null) {
+        window.cancelAnimationFrame(pendingStreamFrameRef.current);
+        pendingStreamFrameRef.current = null;
+      }
+      pendingStreamEventsRef.current = [];
+    };
   }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, surfaceId, surfaceType]);
 
   const reconnect = useCallback(() => {

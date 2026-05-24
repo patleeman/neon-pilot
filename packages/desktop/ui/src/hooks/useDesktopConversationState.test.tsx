@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../client/api.js';
 import {
   applyDesktopConversationStreamEvent,
+  applyDesktopConversationStreamEvents,
   normalizeDesktopConversationStateTailBlocks,
   useDesktopConversationState,
 } from './useDesktopConversationState.js';
@@ -86,6 +87,38 @@ describe('applyDesktopConversationStreamEvent', () => {
     });
 
     expect(next.goalState).toBeNull();
+  });
+});
+
+describe('applyDesktopConversationStreamEvents', () => {
+  it('coalesces stream deltas into one updated block', () => {
+    const stream = {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const next = applyDesktopConversationStreamEvents(stream, [
+      { type: 'text_delta', delta: 'Hel' },
+      { type: 'text_delta', delta: 'lo' },
+    ]);
+
+    expect(next.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
+    expect(next.totalBlocks).toBe(1);
   });
 });
 
