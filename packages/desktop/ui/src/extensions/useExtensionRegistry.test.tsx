@@ -56,9 +56,9 @@ describe('useExtensionRegistry', () => {
             ],
             composerControls: [
               {
-                id: 'goal-mode',
-                component: 'GoalModeComposerButton',
-                title: 'Goal mode',
+                id: 'model-preferences',
+                component: 'ModelPreferencesComposerControl',
+                title: 'Model preferences',
                 slot: 'preferences',
                 priority: 100,
               },
@@ -127,9 +127,9 @@ describe('useExtensionRegistry', () => {
     expect(result.current.composerControls).toEqual([
       {
         extensionId: 'test-extension',
-        id: 'goal-mode',
-        component: 'GoalModeComposerButton',
-        title: 'Goal mode',
+        id: 'model-preferences',
+        component: 'ModelPreferencesComposerControl',
+        title: 'Model preferences',
         slot: 'preferences',
         priority: 100,
         frontendEntry: 'dist/frontend.js',

@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDataContext } from '../app/contexts.js';
 import { constrainPromptImageDimensions } from '../conversation/promptAttachments.js';
 import {
-  applyGoalModeToggleAction,
   buildMissionAutoModeInputFromDraft,
   ConversationPage,
   createDraftMissionTask,
@@ -17,7 +16,6 @@ import {
   resolveConversationCwdChangeAction,
   resolveConversationPerformanceMode,
   resolveDisplayedConversationPendingStatusLabel,
-  resolveGoalModeToggleAction,
   shouldAutoDispatchPendingInitialPrompt,
   shouldDeferConversationFileRefresh,
   shouldEnableMessageForkControls,
@@ -104,56 +102,6 @@ describe('desktop conversation state fallback', () => {
       nowSpy.mockRestore();
       randomSpy.mockRestore();
     }
-  });
-
-  it('updates goal mode immediately for saved conversations with composer text', async () => {
-    const updateGoal = vi.fn(async () => undefined);
-    const setPending = vi.fn();
-    const action = resolveGoalModeToggleAction({ conversationId: 'conv-1', goalEnabled: false, composerText: ' ship it ' });
-
-    expect(action).toEqual({
-      kind: 'enable-now',
-      conversationId: 'conv-1',
-      objective: 'ship it',
-    });
-
-    await applyGoalModeToggleAction(action, updateGoal, setPending);
-
-    expect(updateGoal).toHaveBeenCalledWith('conv-1', { objective: 'ship it' });
-    expect(setPending).toHaveBeenCalledWith(true);
-  });
-
-  it('clears optimistic goal mode state if enabling a saved conversation fails', async () => {
-    const updateGoal = vi.fn(async () => {
-      throw new Error('nope');
-    });
-    const setPending = vi.fn();
-    const action = resolveGoalModeToggleAction({ conversationId: 'conv-1', goalEnabled: false, composerText: 'ship it' });
-
-    await expect(applyGoalModeToggleAction(action, updateGoal, setPending)).rejects.toThrow('nope');
-
-    expect(setPending).toHaveBeenNthCalledWith(1, true);
-    expect(setPending).toHaveBeenNthCalledWith(2, false);
-  });
-
-  it('disables goal mode immediately for saved conversations', async () => {
-    const updateGoal = vi.fn(async () => undefined);
-    const setPending = vi.fn();
-    const action = resolveGoalModeToggleAction({ conversationId: 'conv-1', goalEnabled: true, composerText: 'ignored' });
-
-    expect(action).toEqual({
-      kind: 'disable-now',
-      conversationId: 'conv-1',
-    });
-
-    await applyGoalModeToggleAction(action, updateGoal, setPending);
-
-    expect(updateGoal).toHaveBeenCalledWith('conv-1', {});
-    expect(setPending).toHaveBeenCalledWith(false);
-  });
-
-  it('keeps draft goal mode pending until the conversation exists', () => {
-    expect(resolveGoalModeToggleAction({ goalEnabled: false, composerText: 'ship it' })).toEqual({ kind: 'enable-pending' });
   });
 
   it('preserves mission tasks when syncing mission draft changes', () => {

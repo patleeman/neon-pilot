@@ -2120,27 +2120,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [input]);
 
   useEffect(() => {
-    if (!draft || debouncedRelatedThreadsQuery.length === 0) {
-      return;
-    }
-
-    // Find the extension that provides the warmPointers action (system-suggested-context)
-    // instead of hardcoding its id.
-    const suggestedCtxExtension = extensionRegistry.extensions.find((e) => e.backendActions?.some((a) => a.id === 'warmPointers'));
-    if (suggestedCtxExtension) {
-      api
-        .invokeExtensionAction(suggestedCtxExtension.id, 'warmPointers', {
-          prompt: debouncedRelatedThreadsQuery,
-          currentConversationId: id,
-          currentCwd: draftCwdValue || null,
-        })
-        .catch(() => {
-          // Suggested context is an enhancement. Never interrupt drafting or submit for cache misses.
-        });
-    }
-  }, [debouncedRelatedThreadsQuery, draft, draftCwdValue, extensionRegistry.extensions, id]);
-
-  useEffect(() => {
     setSelectedRelatedThreadIds((current) => pruneRelatedThreadSelectionIds(current, relatedThreadCandidateById));
   }, [relatedThreadCandidateById]);
 
@@ -4359,11 +4338,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             rememberComposerInput(inputSnapshot, created.id);
             persistPendingConversationPrompt(created.id, initialPrompt);
             setPendingConversationPromptDispatching(created.id, true);
-            if (composerGoalPending && text) {
-              await api.updateGoal(created.id, { objective: text }).catch(() => {});
-              setComposerGoalPending(false);
-            }
-
             const sendResult = await api.promptSession(
               created.id,
               initialPrompt.text,
@@ -4465,11 +4439,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           rememberComposerInput(inputSnapshot, newId);
           setPendingInitialPrompt(initialPrompt);
           setPendingInitialPromptDispatchingState(true);
-          if (composerGoalPending && text) {
-            await api.updateGoal(newId, { objective: text }).catch(() => {});
-            setComposerGoalPending(false);
-          }
-
           navigate(`/conversations/${newId}`, {
             replace: true,
             state: {
@@ -4567,10 +4536,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         );
 
         try {
-          if (composerGoalPending && text) {
-            await api.updateGoal(id, { objective: text });
-            setComposerGoalPending(false);
-          }
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
         } catch (error) {
           if (!isConversationSessionNotLiveError(error)) {
@@ -4614,10 +4579,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           setConfirmedLive(true);
           stream.reconnect();
           setPendingAssistantStatusLabel('Working…');
-          if (composerGoalPending && text) {
-            await api.updateGoal(id, { objective: text });
-            setComposerGoalPending(false);
-          }
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
           await refetchConversationAttachments();
           window.setTimeout(() => {
@@ -5072,7 +5033,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     hasPendingAskUserQuestion: Boolean(pendingAskUserQuestion),
     conversationNeedsTakeover,
     goalActive: stream.goalState?.status === 'active',
-    composerGoalPending,
     isCompacting: stream.isCompacting,
     conversationRunningForPage,
   });
@@ -5087,20 +5047,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         conversationId: id,
         cwd: currentCwd,
         isStreaming: conversationRunningForPage,
-        hasGoal: stream.goalState?.status === 'active' || composerGoalPending,
+        hasGoal: stream.goalState?.status === 'active',
         isCompacting: stream.isCompacting,
         error: sessionError,
       }),
-    [
-      composerGoalPending,
-      conversationRunningForPage,
-      currentCwd,
-      id,
-      lifecycleEvent,
-      sessionError,
-      stream.goalState?.status,
-      stream.isCompacting,
-    ],
+    [conversationRunningForPage, currentCwd, id, lifecycleEvent, sessionError, stream.goalState?.status, stream.isCompacting],
   );
   const { top: composerShelvesTop, bottom: composerShelvesBottom } = useMemo(
     () => splitComposerShelvesByPlacement(composerShelves),
@@ -5774,14 +5725,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
               )}
 
-              <ConversationGoalPanel
-                goal={
-                  composerGoalPending && input.trim()
-                    ? { objective: input.trim(), status: 'active', tasks: [], stopReason: null, updatedAt: null }
-                    : stream.goalState
-                }
-                workingLabel={goalEnabled && conversationRunningForPage ? 'Working…' : null}
-              />
+              <ConversationGoalPanel goal={stream.goalState} workingLabel={goalEnabled && conversationRunningForPage ? 'Working…' : null} />
 
               {hasComposerShelfContent && (
                 <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
@@ -5925,7 +5869,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 currentModel={currentModel || model || defaultModel}
                 currentThinkingLevel={currentThinkingLevel}
                 savingPreference={savingPreference}
-                goalEnabled={goalEnabled}
                 conversationNeedsTakeover={conversationNeedsTakeover}
                 composerHasContent={composerHasContent}
                 composerShowsQuestionSubmit={composerShowsQuestionSubmit}
@@ -5952,9 +5895,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 onSelectModel={selectModel}
                 onSelectThinkingLevel={(thinkingLevel) => {
                   void saveThinkingLevelPreference(thinkingLevel);
-                }}
-                onToggleGoal={() => {
-                  void toggleGoalMode();
                 }}
                 onInsertComposerText={insertTextIntoComposer}
                 onAppendComposerText={appendTextToComposer}

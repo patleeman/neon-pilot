@@ -38,8 +38,6 @@ function rowProps(overrides: Partial<React.ComponentProps<typeof ConversationPre
       savingPreference: null,
       selectModel: vi.fn(),
       selectThinkingLevel: vi.fn(),
-      goalEnabled: false,
-      toggleGoal: vi.fn(),
     },
     inlineLimit: Number.POSITIVE_INFINITY,
     ...overrides,

@@ -131,8 +131,6 @@ export function ConversationComposerActions({
             savingPreference: null,
             selectModel: () => {},
             selectThinkingLevel: () => {},
-            goalEnabled: false,
-            toggleGoal: () => {},
           }}
         />
       ))}

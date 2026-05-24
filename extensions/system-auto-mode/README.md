@@ -60,11 +60,10 @@ Loop mode stores a prompt, max iteration count, iterations used, and delay. Afte
 
 Simple delays are supported in the loop delay field: `immediate`, `After each turn`, `500ms`, `2s`, `5m`, or `1h`. Unknown delay text falls back to immediate continuation.
 
-## Goal Tool Guardrails
+## Goal Slash Command and Tool Guardrails
 
-The `goal` tool manages the goal-mode path. It is hardened so a completed goal cannot keep speaking through stale queued continuations:
+The `/goal` slash command is the user-facing way to set, view, pause, resume, or clear a conversation goal. The `goal` tool manages the agent-facing goal-mode path. It is hardened so a completed goal cannot keep speaking through stale queued continuations:
 
-- manually enabling goal mode in the UI only records the goal; it does not immediately start the thread;
 - turn-end events update progress counters but never enqueue continuations;
 - only one continuation timer can be pending at a time, and it is normally scheduled from `agent_end` after the active run is fully done;
 - `session_start` also re-arms an active goal when there are no pending messages, so a stranded/reopened conversation does not remain visibly active but inert;

@@ -13,7 +13,6 @@ describe('conversationLifecyclePresentation', () => {
       hasPendingAskUserQuestion: false,
       conversationNeedsTakeover: false,
       goalActive: false,
-      composerGoalPending: false,
       isCompacting: false,
       conversationRunningForPage: false,
     };

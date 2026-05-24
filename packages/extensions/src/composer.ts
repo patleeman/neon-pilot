@@ -30,8 +30,6 @@ export interface ComposerControlContext {
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   selectModel: (modelId: string) => void;
   selectThinkingLevel: (thinkingLevel: string) => void;
-  goalEnabled: boolean;
-  toggleGoal: () => void;
 }
 
 export type ComposerButtonContext = ComposerControlContext;

@@ -31,7 +31,6 @@ export function ConversationComposerInputControls({
   currentModel,
   currentThinkingLevel,
   savingPreference,
-  goalEnabled,
   conversationNeedsTakeover,
   composerHasContent,
   composerShowsQuestionSubmit,
@@ -50,7 +49,6 @@ export function ConversationComposerInputControls({
 
   onSelectModel,
   onSelectThinkingLevel,
-  onToggleGoal,
   onInsertComposerText,
   onAppendComposerText,
   onSubmitComposerQuestion,
@@ -69,7 +67,6 @@ export function ConversationComposerInputControls({
   currentModel: string;
   currentThinkingLevel: string;
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
-  goalEnabled: boolean;
   conversationNeedsTakeover: boolean;
   composerHasContent: boolean;
   composerShowsQuestionSubmit: boolean;
@@ -88,7 +85,6 @@ export function ConversationComposerInputControls({
 
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
-  onToggleGoal: () => void;
   onInsertComposerText: (text: string) => void;
   onAppendComposerText: (text: string) => void;
   onSubmitComposerQuestion: () => void;
@@ -143,8 +139,6 @@ export function ConversationComposerInputControls({
     savingPreference,
     selectModel: onSelectModel,
     selectThinkingLevel: onSelectThinkingLevel,
-    goalEnabled,
-    toggleGoal: onToggleGoal,
   };
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
   const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');

@@ -11,14 +11,13 @@ export function resolveConversationLifecycleEvent(input: {
   hasPendingAskUserQuestion: boolean;
   conversationNeedsTakeover: boolean;
   goalActive: boolean;
-  composerGoalPending: boolean;
   isCompacting: boolean;
   conversationRunningForPage: boolean;
 }): ConversationLifecycleEvent | null {
   if (input.hasSessionError) return 'model-error';
   if (input.hasPendingAskUserQuestion) return 'waiting-for-user';
   if (input.conversationNeedsTakeover) return 'blocked';
-  if (input.goalActive || input.composerGoalPending) return 'goal-active';
+  if (input.goalActive) return 'goal-active';
   if (input.isCompacting) return 'compaction-available';
   if (input.conversationRunningForPage) return 'after-run-start';
   return null;
