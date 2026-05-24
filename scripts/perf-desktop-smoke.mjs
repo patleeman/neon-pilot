@@ -30,6 +30,7 @@ const maxCpu = Number(arg('max-cpu', app ? '120' : '1000')) || 120;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
 const maxDraftFirstPromptVisibleMs = Number(arg('max-draft-first-prompt-visible-ms', '2500')) || 2500;
 const maxLongTranscriptOpenMs = Number(arg('max-long-transcript-open-ms', '2500')) || 2500;
+const maxPostSubmitLongTaskMs = Number(arg('max-post-submit-longtask-ms', '250')) || 250;
 const draftSubmitWaitMs = Math.max(0, Number(arg('draft-submit-wait-ms', '0')) || 0);
 const keep = process.argv.includes('--keep');
 const root = mkdtempSync(join(tmpdir(), 'neon-pilot-perf-smoke-'));
@@ -428,6 +429,9 @@ async function main() {
       failures.push(`draftSubmitVisibleMs ${draftSubmitVisibleMs} > ${maxDraftSubmitVisibleMs}`);
     if (draftSubmitFirstPromptVisibleMs > maxDraftFirstPromptVisibleMs)
       failures.push(`draftSubmitFirstPromptVisibleMs ${draftSubmitFirstPromptVisibleMs} > ${maxDraftFirstPromptVisibleMs}`);
+    const postSubmitLongTaskPeakMs = Math.max(0, ...(postDraftPerfStore?.longTaskSamples ?? []).map((sample) => sample.durationMs ?? 0));
+    if (postSubmitLongTaskPeakMs > maxPostSubmitLongTaskMs)
+      failures.push(`postSubmitLongTaskPeakMs ${postSubmitLongTaskPeakMs} > ${maxPostSubmitLongTaskMs}`);
     if (failures.length)
       throw new Error(
         `Desktop perf smoke failed:\n${failures.join('\n')}\nTop offenders: ${JSON.stringify(cpuSamples.toSorted((a, b) => b.total - a.total)[0]?.offenders ?? [], null, 2)}`,
