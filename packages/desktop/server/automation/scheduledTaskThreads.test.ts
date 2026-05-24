@@ -6,12 +6,10 @@ const daemon = vi.hoisted(() => ({
   resolveAutomationThreadTitle: vi.fn(),
   setStoredAutomationThreadBinding: vi.fn(),
 }));
-const conversationService = vi.hoisted(() => ({ resolveConversationSessionFile: vi.fn() }));
-const sessions = vi.hoisted(() => ({ readSessionMeta: vi.fn() }));
+const conversationService = vi.hoisted(() => ({ readConversationSessionMeta: vi.fn(), resolveConversationSessionFile: vi.fn() }));
 
 vi.mock('@neon-pilot/daemon', () => daemon);
 vi.mock('../conversations/conversationService.js', () => conversationService);
-vi.mock('../conversations/sessions.js', () => sessions);
 
 import {
   applyScheduledTaskThreadBinding,
@@ -23,7 +21,7 @@ describe('scheduledTaskThreads', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     conversationService.resolveConversationSessionFile.mockReturnValue('/session.json');
-    sessions.readSessionMeta.mockReturnValue({ title: 'Planning', cwd: '/repo' });
+    conversationService.readConversationSessionMeta.mockReturnValue({ title: 'Planning', cwd: '/repo' });
     daemon.resolveAutomationThreadTitle.mockReturnValue('Dedicated thread');
   });
 
@@ -56,7 +54,7 @@ describe('scheduledTaskThreads', () => {
     expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'missing' })).toThrow(
       'Selected thread was not found.',
     );
-    sessions.readSessionMeta.mockReturnValueOnce({ cwd: '/other' });
+    conversationService.readConversationSessionMeta.mockReturnValueOnce({ cwd: '/other' });
     expect(() => resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', cwd: '/repo' })).toThrow(
       'Selected thread must use the same working directory as the automation.',
     );
@@ -89,7 +87,7 @@ describe('scheduledTaskThreads', () => {
       threadConversationId: 'conv-1',
       threadTitle: 'Planning',
     });
-    sessions.readSessionMeta.mockReturnValueOnce(undefined);
+    conversationService.readConversationSessionMeta.mockReturnValueOnce(undefined);
     expect(buildScheduledTaskThreadDetail({ threadMode: 'dedicated' } as never)).toEqual({
       threadMode: 'dedicated',
       threadTitle: 'Dedicated thread',

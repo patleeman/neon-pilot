@@ -14,7 +14,7 @@ import {
   updateStoredAutomation,
 } from '@neon-pilot/daemon';
 
-import { readSessionMeta } from '../conversations/sessions.js';
+import { readConversationSessionMeta } from '../conversations/conversationService.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { loadScheduledTasksForProfile, type TaskRuntimeEntry, toScheduledTaskMetadata } from './scheduledTasks.js';
@@ -271,7 +271,7 @@ function applyScheduledTaskCallbackBinding(
     return;
   }
 
-  const sessionMeta = readSessionMeta(callbackConversationId);
+  const sessionMeta = readConversationSessionMeta(callbackConversationId);
   if (!sessionMeta?.file?.trim()) {
     throw new Error('Callback conversation not found.');
   }
