@@ -801,32 +801,35 @@ export async function submitLiveSessionPromptCapability(
   const queuedContextAtMs = performance.now();
 
   if (recoveredLiveEntry?.session.sessionFile) {
-    void syncWebLiveConversationRun({
-      conversationId: liveConversationId,
-      sessionFile: recoveredLiveEntry.session.sessionFile,
-      cwd: recoveredLiveEntry.cwd,
-      title: recoveredLiveEntry.title,
-      profile: prepared.runtimeScope,
-      state: 'running',
-      pendingOperation: {
-        type: 'prompt',
-        text: prepared.text,
-        ...(behavior ? { behavior } : {}),
-        ...(prepared.promptImages && prepared.promptImages.length > 0 ? { images: prepared.promptImages } : {}),
-        ...(promptContextMessages.length > 0
-          ? {
-              contextMessages: promptContextMessages,
-            }
-          : {}),
-        enqueuedAt: new Date().toISOString(),
-      },
-    }).catch((error) => {
-      logWarn('live prompt running-state sync failed', {
-        sessionId: liveConversationId,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+    const syncTimer = setTimeout(() => {
+      void syncWebLiveConversationRun({
+        conversationId: liveConversationId,
+        sessionFile: recoveredLiveEntry.session.sessionFile,
+        cwd: recoveredLiveEntry.cwd,
+        title: recoveredLiveEntry.title,
+        profile: prepared.runtimeScope,
+        state: 'running',
+        pendingOperation: {
+          type: 'prompt',
+          text: prepared.text,
+          ...(behavior ? { behavior } : {}),
+          ...(prepared.promptImages && prepared.promptImages.length > 0 ? { images: prepared.promptImages } : {}),
+          ...(promptContextMessages.length > 0
+            ? {
+                contextMessages: promptContextMessages,
+              }
+            : {}),
+          enqueuedAt: new Date().toISOString(),
+        },
+      }).catch((error) => {
+        logWarn('live prompt running-state sync failed', {
+          sessionId: liveConversationId,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       });
-    });
+    }, 1_000);
+    syncTimer.unref?.();
   }
 
   const syncedRunAtMs = performance.now();

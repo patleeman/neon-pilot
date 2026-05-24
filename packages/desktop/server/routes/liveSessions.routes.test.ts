@@ -629,21 +629,26 @@ describe('live session routes', () => {
       'referenced_context',
       expect.stringContaining('Referenced conversation attachments:'),
     );
-    expect(syncWebLiveConversationRunMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        conversationId: 'live-resumed',
-        pendingOperation: expect.objectContaining({
-          behavior: 'followUp',
-          contextMessages: expect.not.arrayContaining([
-            expect.objectContaining({
-              customType: 'related_threads_context',
+    await vi.waitFor(
+      () => {
+        expect(syncWebLiveConversationRunMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            conversationId: 'live-resumed',
+            pendingOperation: expect.objectContaining({
+              behavior: 'followUp',
+              contextMessages: expect.not.arrayContaining([
+                expect.objectContaining({
+                  customType: 'related_threads_context',
+                }),
+              ]),
+              text: 'Please continue.',
             }),
-          ]),
-          text: 'Please continue.',
-        }),
-        profile: 'assistant',
-        state: 'running',
-      }),
+            profile: 'assistant',
+            state: 'running',
+          }),
+        );
+      },
+      { timeout: 2_000 },
     );
     expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('live-resumed', 'Please continue.', 'followUp', undefined, 'surface-1');
     expect(markBackgroundRunResultsDeliveredMock).toHaveBeenCalledWith({
