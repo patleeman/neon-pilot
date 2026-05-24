@@ -286,6 +286,8 @@ async function main() {
         cdp,
         `(async()=>{const prompt=${JSON.stringify(prompt)}; const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:prompt})); await new Promise(r=>requestAnimationFrame(r)); await new Promise(r=>setTimeout(r,50)); const button=document.querySelector('button[aria-label="Send"]'); if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
       );
+      await waitForExpression(cdp, child, `document.body.innerText.includes(${JSON.stringify(prompt)})`, 45_000);
+      const firstPromptVisibleMs = Math.round(performance.now() - clickStart);
       await waitForExpression(cdp, child, `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`, 45_000);
       const routeMs = Math.round(performance.now() - clickStart);
       await waitForExpression(
@@ -294,9 +296,10 @@ async function main() {
         `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
         90_000,
       );
-      return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
+      return { firstPromptVisibleMs, routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
     const draftSubmitVisibleMs = draftSubmitResult.result.routeMs + draftSubmitResult.result.promptVisibleAfterRouteMs;
+    const draftSubmitFirstPromptVisibleMs = draftSubmitResult.result.firstPromptVisibleMs;
     const draftSubmitSetupMs = draftSubmitResult.durationMs - draftSubmitVisibleMs;
     const createLiveSessionClientMs = await evalJs(
       cdp,
@@ -390,6 +393,7 @@ async function main() {
       startupPerfStore,
       draftSubmitSetupMs,
       draftSubmitVisibleMs,
+      draftSubmitFirstPromptVisibleMs,
       draftSubmitRouteMs: draftSubmitResult.result.routeMs,
       draftSubmitNavigateCalledMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
