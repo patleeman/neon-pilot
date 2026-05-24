@@ -39,11 +39,21 @@ interface ClientPerfSample {
   meta?: Record<string, unknown>;
 }
 
+interface RendererLongTaskSample {
+  route: string;
+  recordedAt: string;
+  startTimeMs: number;
+  durationMs: number;
+  source: 'longtask' | 'event-loop-lag';
+  meta?: Record<string, unknown>;
+}
+
 interface PerfStore {
   apiSamples: PerfApiSample[];
   conversationOpenSamples: ConversationOpenPhaseSample[];
   chatRenderSamples: ChatRenderSample[];
   clientSamples: ClientPerfSample[];
+  longTaskSamples: RendererLongTaskSample[];
   extensionRegistryLoading?: boolean;
   extensionRegistryLoadedAt?: string;
   extensionRegistryLoadedAtMs?: number;
@@ -56,8 +66,10 @@ const perfStore: PerfStore = {
   conversationOpenSamples: [],
   chatRenderSamples: [],
   clientSamples: [],
+  longTaskSamples: [],
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
+let rendererBlockTelemetryStarted = false;
 publishPerfStore();
 
 function appendSample<T>(samples: T[], sample: T): void {
@@ -128,6 +140,67 @@ export function recordClientPerfTiming(input: { name: string; startedAtMs: numbe
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][client]', sample);
   }
+}
+
+function recordRendererLongTask(input: {
+  source: RendererLongTaskSample['source'];
+  startTimeMs: number;
+  durationMs: number;
+  meta?: Record<string, unknown>;
+}): void {
+  const sample: RendererLongTaskSample = {
+    route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
+    recordedAt: new Date().toISOString(),
+    startTimeMs: Math.max(0, input.startTimeMs),
+    durationMs: Math.max(0, input.durationMs),
+    source: input.source,
+    ...(input.meta ? { meta: input.meta } : {}),
+  };
+  appendSample(perfStore.longTaskSamples, sample);
+  publishPerfStore();
+  if (shouldLogPerfSamples()) {
+    console.info('[pa-perf][renderer-block]', sample);
+  }
+}
+
+export function startRendererBlockTelemetry(): void {
+  if (rendererBlockTelemetryStarted || typeof globalThis.performance === 'undefined') {
+    return;
+  }
+  rendererBlockTelemetryStarted = true;
+
+  try {
+    const Observer = globalThis.PerformanceObserver;
+    if (Observer && Observer.supportedEntryTypes?.includes('longtask')) {
+      const observer = new Observer((list) => {
+        for (const entry of list.getEntries()) {
+          recordRendererLongTask({
+            source: 'longtask',
+            startTimeMs: entry.startTime,
+            durationMs: entry.duration,
+            meta: { name: entry.name, entryType: entry.entryType },
+          });
+        }
+      });
+      observer.observe({ type: 'longtask', buffered: true });
+    }
+  } catch {
+    // Long Task API is best-effort; keep the fallback lag sampler active.
+  }
+
+  let expectedAtMs = performance.now() + 250;
+  globalThis.setInterval(() => {
+    const now = performance.now();
+    const lagMs = now - expectedAtMs;
+    expectedAtMs = now + 250;
+    if (lagMs >= 75) {
+      recordRendererLongTask({
+        source: 'event-loop-lag',
+        startTimeMs: now - lagMs,
+        durationMs: lagMs,
+      });
+    }
+  }, 250);
 }
 
 export function recordExtensionRegistryUsability(input: { loading: boolean; counts?: Record<string, number> }): void {

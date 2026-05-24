@@ -14,6 +14,7 @@ import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { startRendererBlockTelemetry } from '../client/perfDiagnostics';
 import { addNotification } from '../components/notifications/notificationStore';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { App } from './App';
@@ -73,6 +74,8 @@ if (desktopShellParams.get('desktop-shell') === '1') {
     // Ignore storage failures.
   }
 }
+
+startRendererBlockTelemetry();
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
