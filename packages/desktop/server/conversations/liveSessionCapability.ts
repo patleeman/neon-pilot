@@ -828,7 +828,7 @@ export async function submitLiveSessionPromptCapability(
           stack: error instanceof Error ? error.stack : undefined,
         });
       });
-    }, 1_000);
+    }, 5_000);
     syncTimer.unref?.();
   }
 
