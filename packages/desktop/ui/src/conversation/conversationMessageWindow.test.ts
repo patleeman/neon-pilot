@@ -53,6 +53,21 @@ describe('conversationMessageWindow', () => {
         appendPendingInitialPromptBlock: append,
       })?.map((message) => message.id),
     ).toEqual(['base']);
+
+    expect(
+      resolveComputedMessagesRaw({
+        draft: false,
+        draftPendingPrompt: '',
+        isLiveSession: false,
+        streamHasSnapshot: false,
+        visibleStreamBlocks: [],
+        baseMessages: [],
+        pendingInitialPrompt: 'queued',
+        visibleSessionDetailAvailable: false,
+        mergeHistoricalAndStreamBlocks: merge,
+        appendPendingInitialPromptBlock: append,
+      })?.map((message) => message.id),
+    ).toEqual(['pending:queued']);
   });
 
   it('prunes old messages above the render window', () => {

@@ -25,6 +25,13 @@ export function resolveComputedMessagesRaw(input: {
     return input.appendPendingInitialPromptBlock(liveMessages, input.pendingInitialPrompt);
   }
 
+  if (input.pendingInitialPrompt) {
+    return input.appendPendingInitialPromptBlock(
+      input.visibleSessionDetailAvailable ? input.baseMessages : undefined,
+      input.pendingInitialPrompt,
+    );
+  }
+
   return input.visibleSessionDetailAvailable ? input.baseMessages : undefined;
 }
 
