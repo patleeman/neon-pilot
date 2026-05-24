@@ -760,6 +760,47 @@ export async function subscribeDesktopConversationState(
     onEvent(buildConversationStateBridgeEvent(state));
   };
 
+  const readLiveToolUpdateText = (event: SseEvent): string | null => {
+    if (event.type !== 'tool_update') return null;
+    const partialResult = event.partialResult;
+    if (typeof partialResult === 'string') return partialResult;
+    if (partialResult && typeof partialResult === 'object' && 'content' in partialResult) {
+      const content = (partialResult as { content?: unknown }).content;
+      if (Array.isArray(content)) {
+        const first = content[0];
+        if (first && typeof first === 'object' && typeof (first as { text?: unknown }).text === 'string') {
+          return (first as { text: string }).text;
+        }
+      }
+    }
+    return null;
+  };
+
+  const coalesceLiveEvents = (events: SseEvent[]): SseEvent[] => {
+    const coalesced: SseEvent[] = [];
+    for (const event of events) {
+      const previous = coalesced.at(-1);
+      if (previous?.type === 'text_delta' && event.type === 'text_delta') {
+        coalesced[coalesced.length - 1] = { ...previous, delta: `${previous.delta}${event.delta}` };
+        continue;
+      }
+      if (previous?.type === 'thinking_delta' && event.type === 'thinking_delta') {
+        coalesced[coalesced.length - 1] = { ...previous, delta: `${previous.delta}${event.delta}` };
+        continue;
+      }
+      if (previous?.type === 'tool_update' && event.type === 'tool_update' && previous.toolCallId === event.toolCallId) {
+        const previousText = readLiveToolUpdateText(previous);
+        const nextText = readLiveToolUpdateText(event);
+        if (previousText !== null && nextText !== null) {
+          coalesced[coalesced.length - 1] = { ...previous, partialResult: `${previousText}${nextText}` };
+          continue;
+        }
+      }
+      coalesced.push(event);
+    }
+    return coalesced;
+  };
+
   const scheduleLiveStateEmit = () => {
     if (closed || liveEmitTimer) {
       return;
@@ -767,12 +808,12 @@ export async function subscribeDesktopConversationState(
 
     liveEmitTimer = setTimeout(() => {
       liveEmitTimer = null;
-      const events = pendingLiveEvents;
+      const events = coalesceLiveEvents(pendingLiveEvents);
       pendingLiveEvents = [];
       if (!closed && events.length > 0) {
         onEvent({ type: 'stream_events', events, liveSession: currentState.liveSession });
       }
-    }, 50);
+    }, 100);
   };
 
   const closeLiveSubscription = () => {
