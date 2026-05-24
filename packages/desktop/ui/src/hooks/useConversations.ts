@@ -334,19 +334,27 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     applyLayoutState(nextLayout, { setOpenIds, setPinnedIds, setArchivedConversationIds, setActiveId });
   }, []);
 
+  const openIdSet = useMemo(() => new Set(openIds), [openIds]);
+  const pinnedIdSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
+  const titledSessionSource = useMemo(() => {
+    const allSessions = sessions ?? [];
+    if (options.includeArchivedSessions !== false) {
+      return allSessions;
+    }
+
+    return allSessions.filter((session) => openIdSet.has(session.id) || pinnedIdSet.has(session.id));
+  }, [openIdSet, options.includeArchivedSessions, pinnedIdSet, sessions]);
   const withTitles = useMemo(
     () =>
-      (sessions ?? []).map((session) => {
+      titledSessionSource.map((session) => {
         const liveTitle = normalizeConversationTitle(liveTitles.get(session.id));
         const sessionTitle = normalizeConversationTitle(session.title) ?? NEW_CONVERSATION_TITLE;
         const title = liveTitle ?? sessionTitle;
 
         return title === session.title ? session : { ...session, title };
       }),
-    [liveTitles, sessions],
+    [liveTitles, titledSessionSource],
   );
-  const openIdSet = useMemo(() => new Set(openIds), [openIds]);
-  const pinnedIdSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
   const sessionsById = useMemo(
     () => new Map(withTitles.map((session) => [session.id, session] satisfies [string, SessionMeta])),
     [withTitles],
