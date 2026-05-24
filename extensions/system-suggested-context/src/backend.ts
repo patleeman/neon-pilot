@@ -511,7 +511,14 @@ export async function providePromptContext(
           prompt: input.prompt,
           currentConversationId: input.conversationId,
           currentCwd: input.currentCwd,
-        }) ?? { contextMessages: [], pointers: [], warnings: [] });
+        }) ??
+        (await buildRelatedConversationPointers({
+          prompt: input.prompt,
+          currentConversationId: input.conversationId,
+          currentCwd: input.currentCwd,
+          selectedSessionIds: [],
+          includeAuto: true,
+        })));
 
     if (pointers.pointers.length > 0) {
       // Fire-and-forget telemetry: persist which pointer IDs were used
