@@ -27,6 +27,7 @@ import {
 } from './conversationCatalog.js';
 import { readConversationContextDocs } from './conversationContextDocs.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
+import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
 import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
 import { listSessions, readSessionBlocksWithTelemetry, readSessionMeta } from './sessions.js';
@@ -36,6 +37,8 @@ let getRuntimeScopeFn: () => string = () => {
 };
 
 let getRepoRootFn: () => string = () => process.cwd();
+let readModelBackfillStarted = false;
+let readModelBackfillTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function getRuntimeScope(): string {
   return getRuntimeScopeFn();
@@ -504,6 +507,41 @@ export async function readSessionDetailForRoute(input: { conversationId: string;
     sessionRead,
     remoteMirror: sessionRead.detail ? { status: 'deferred', durationMs: 0 } : { status: 'not-remote', durationMs: 0 },
   };
+}
+
+export function startConversationReadModelBackfill(options: { delayMs?: number; limit?: number; tailBlocks?: number } = {}): void {
+  if (readModelBackfillStarted) return;
+  readModelBackfillStarted = true;
+
+  const delayMs =
+    Number.isSafeInteger(options.delayMs) && typeof options.delayMs === 'number' && options.delayMs >= 0 ? options.delayMs : 60_000;
+  const limit =
+    Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? Math.min(options.limit, 500) : 100;
+  const tailBlocks =
+    Number.isSafeInteger(options.tailBlocks) && typeof options.tailBlocks === 'number' && options.tailBlocks > 0
+      ? Math.min(options.tailBlocks, 250)
+      : 80;
+
+  readModelBackfillTimer = setTimeout(() => {
+    readModelBackfillTimer = null;
+    try {
+      scheduleConversationSearchIndexing();
+      for (const meta of listConversationSessionsSnapshot({ includeLive: false }).slice(0, limit)) {
+        readConversationSessionDetail({ conversationId: meta.id, tailBlocks });
+      }
+    } catch {
+      // Best-effort delayed reconciliation. Request paths still have targeted fallback.
+    }
+  }, delayMs);
+  readModelBackfillTimer.unref?.();
+}
+
+export function resetConversationReadModelBackfillForTests(): void {
+  if (readModelBackfillTimer) {
+    clearTimeout(readModelBackfillTimer);
+    readModelBackfillTimer = null;
+  }
+  readModelBackfillStarted = false;
 }
 
 export async function readConversationModelPreferenceStateById(

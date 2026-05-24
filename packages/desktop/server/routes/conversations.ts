@@ -10,7 +10,11 @@ import { startConversationCatalogBackfill } from '../conversations/conversationC
 import { readConversationContextDocs, writeConversationContextDocs } from '../conversations/conversationContextDocs.js';
 import { ConversationInspectCapabilityInputError } from '../conversations/conversationInspectCapability.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
-import { publishConversationSessionMetaChanged, setConversationServiceContext } from '../conversations/conversationService.js';
+import {
+  publishConversationSessionMetaChanged,
+  setConversationServiceContext,
+  startConversationReadModelBackfill,
+} from '../conversations/conversationService.js';
 import { readConversationSessionImageAssetCapability } from '../conversations/conversationSessionAssetCapability.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { readConversationSummaryIndexCapability, startConversationSummaryBackfillLoop } from '../conversations/conversationSummaries.js';
@@ -147,6 +151,7 @@ export function registerConversationRoutes(
   startConversationCatalogBackfill({
     listSessions: readConversationSessionsCapability,
   });
+  startConversationReadModelBackfill();
   startConversationSummaryBackfillLoop({
     listSessions: readConversationSessionsCapability,
   });
