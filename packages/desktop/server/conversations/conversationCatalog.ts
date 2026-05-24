@@ -68,6 +68,17 @@ function getDb(): SqliteDatabase {
       updated_at TEXT NOT NULL,
       PRIMARY KEY (conversation_id, cache_key)
     );
+    CREATE TABLE IF NOT EXISTS conversation_assets (
+      conversation_id TEXT NOT NULL,
+      signature TEXT NOT NULL,
+      block_id TEXT NOT NULL,
+      image_index INTEGER NOT NULL DEFAULT -1,
+      mime_type TEXT NOT NULL,
+      file_name TEXT,
+      data BLOB NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, block_id, image_index)
+    );
   `);
   return db;
 }
@@ -220,6 +231,63 @@ export function writeConversationDetailCache(conversationId: string, detail: Ses
     `,
     )
     .run(conversationId, detailCacheKey(options), detail.signature ?? '', JSON.stringify(detail), new Date().toISOString());
+}
+
+export function readConversationAssetCache(input: {
+  conversationId: string;
+  signature: string;
+  blockId: string;
+  imageIndex?: number;
+}): { mimeType: string; data: Buffer; fileName?: string } | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT mime_type, file_name, data
+      FROM conversation_assets
+      WHERE conversation_id = ? AND signature = ? AND block_id = ? AND image_index = ?
+    `,
+    )
+    .get(input.conversationId, input.signature, input.blockId, input.imageIndex ?? -1) as
+    | { mime_type: string; file_name: string | null; data: Buffer }
+    | undefined;
+  if (!row) return null;
+  return {
+    mimeType: row.mime_type,
+    data: Buffer.from(row.data),
+    ...(row.file_name ? { fileName: row.file_name } : {}),
+  };
+}
+
+export function writeConversationAssetCache(input: {
+  conversationId: string;
+  signature: string;
+  blockId: string;
+  imageIndex?: number;
+  asset: { mimeType: string; data: Buffer; fileName?: string };
+}): void {
+  getDb()
+    .prepare(
+      `
+      INSERT INTO conversation_assets (conversation_id, signature, block_id, image_index, mime_type, file_name, data, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(conversation_id, block_id, image_index) DO UPDATE SET
+        signature = excluded.signature,
+        mime_type = excluded.mime_type,
+        file_name = excluded.file_name,
+        data = excluded.data,
+        updated_at = excluded.updated_at
+    `,
+    )
+    .run(
+      input.conversationId,
+      input.signature,
+      input.blockId,
+      input.imageIndex ?? -1,
+      input.asset.mimeType,
+      input.asset.fileName ?? null,
+      input.asset.data,
+      new Date().toISOString(),
+    );
 }
 
 export function closeConversationCatalogDb(): void {

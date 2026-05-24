@@ -21,7 +21,12 @@ import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-age
 import { getDurableSessionsDir, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
-import { readConversationDetailCache, writeConversationDetailCache } from './conversationCatalog.js';
+import {
+  readConversationAssetCache,
+  readConversationDetailCache,
+  writeConversationAssetCache,
+  writeConversationDetailCache,
+} from './conversationCatalog.js';
 import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
@@ -2178,6 +2183,23 @@ export function readSessionImageAsset(
     return null;
   }
 
+  const signature = getFileSignature(meta.file);
+  if (signature) {
+    const cachedAsset = readConversationAssetCache({ conversationId: meta.id, signature, blockId, imageIndex });
+    if (cachedAsset) {
+      return cachedAsset;
+    }
+  }
+
+  const cacheAsset = (
+    asset: { mimeType: string; data: Buffer; fileName?: string } | null,
+  ): { mimeType: string; data: Buffer; fileName?: string } | null => {
+    if (asset && signature) {
+      writeConversationAssetCache({ conversationId: meta.id, signature, blockId, imageIndex, asset });
+    }
+    return asset;
+  };
+
   const manager = SessionManager.open(meta.file);
   for (const entry of manager.getBranch()) {
     if (entry.type !== 'message') {
@@ -2191,7 +2213,7 @@ export function readSessionImageAsset(
       }
 
       const image = buildSessionImageAssets(contentBlocks)[imageIndex];
-      return image?.asset ?? null;
+      return cacheAsset(image?.asset ?? null);
     }
 
     if (entry.message.role !== 'toolResult') {
@@ -2204,7 +2226,7 @@ export function readSessionImageAsset(
         continue;
       }
 
-      return image.asset;
+      return cacheAsset(image.asset);
     }
   }
 
