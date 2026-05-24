@@ -10,8 +10,8 @@ import { logWarn } from '../shared/logging.js';
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
 import { readConversationAutoTitleSettings } from './conversationAutoTitle.js';
 import { ensureConversationsDbFileMigrated, resolveAgentRuntimeDir } from './conversationDbPaths.js';
+import { readTranscriptBackedConversationSearchText } from './conversationTranscriptOps.js';
 import type { SessionMeta } from './conversationTypes.js';
-import { readSessionSearchText } from './sessions.js';
 
 const SUMMARY_SCHEMA_VERSION = 2;
 const MAX_BACKFILL_PER_CALL = 25;
@@ -443,7 +443,7 @@ async function generateConversationSummary(meta: SessionMeta): Promise<Conversat
     return null;
   }
 
-  const sourceText = readSessionSearchText(meta.id, MAX_SOURCE_CHARACTERS) ?? '';
+  const sourceText = readTranscriptBackedConversationSearchText(meta.id, MAX_SOURCE_CHARACTERS) ?? '';
   if (!sourceText.trim()) {
     return buildFallbackRecord(meta, fingerprint, meta.title);
   }

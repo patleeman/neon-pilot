@@ -7,8 +7,8 @@ import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.j
 import { upsertConversationCatalogSession } from './conversationCatalog.js';
 import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
 import { readConversationSummary } from './conversationSummaries.js';
+import { listTranscriptBackedConversationSessions, readTranscriptBackedConversationSearchText } from './conversationTranscriptOps.js';
 import type { SessionMeta } from './conversationTypes.js';
-import { listSessions, readSessionSearchText } from './sessions.js';
 
 const SEARCH_INDEX_SCHEMA_VERSION = 1;
 const DEFAULT_MAX_INDEX_BATCH = 12;
@@ -110,7 +110,7 @@ function readIndexedRow(sessionId: string): ConversationSearchIndexRow | null {
 
 function buildSearchText(meta: SessionMeta): string {
   const summary = readConversationSummary(meta.id);
-  const transcriptText = readSessionSearchText(meta.id, 12_000) ?? '';
+  const transcriptText = readTranscriptBackedConversationSearchText(meta.id, 12_000) ?? '';
   return [
     meta.title,
     summary?.displaySummary,
@@ -186,7 +186,7 @@ export function indexConversationSearchBatch(options: { maxSessions?: number; ma
   let indexed = 0;
   let remaining = 0;
 
-  for (const meta of listSessions()) {
+  for (const meta of listTranscriptBackedConversationSessions()) {
     if (meta.messageCount <= 0 || !existsSync(meta.file)) {
       continue;
     }

@@ -11,12 +11,9 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationDisplayBlocks.ts',
   'packages/desktop/server/conversations/conversationTranscriptOps.ts',
   'packages/desktop/server/conversations/conversationTypes.ts',
-  'packages/desktop/server/conversations/conversationSearchIndex.ts',
   'packages/desktop/server/conversations/conversationService.ts',
-  'packages/desktop/server/conversations/conversationSummaries.ts',
   'packages/desktop/server/conversations/liveSessionParallelReconciliation.ts',
   'packages/desktop/server/conversations/liveSessionStateSnapshot.ts',
-  'packages/desktop/server/conversations/sessionExchange.ts',
 ]);
 
 const output = execFileSync(

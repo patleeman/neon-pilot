@@ -1,13 +1,29 @@
+import type { SessionMeta } from './conversationTypes.js';
 import {
   appendChildConversationTopologyEntry as appendSessionChildConversationTopologyEntry,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
   appendConversationWorkspaceMetadata as appendSessionConversationWorkspaceMetadata,
   appendParentConversationBacklinkEntry as appendSessionParentConversationBacklinkEntry,
+  clearSessionCaches,
+  listSessions,
   readSessionMetaByFile,
+  readSessionSearchText,
 } from './sessions.js';
 
 export function readConversationSessionMetaByFilePath(filePath: string) {
   return readSessionMetaByFile(filePath);
+}
+
+export function listTranscriptBackedConversationSessions(): SessionMeta[] {
+  return listSessions();
+}
+
+export function readTranscriptBackedConversationSearchText(conversationId: string, maxCharacters?: number): string | null {
+  return typeof maxCharacters === 'number' ? readSessionSearchText(conversationId, maxCharacters) : readSessionSearchText(conversationId);
+}
+
+export function clearTranscriptBackedConversationCaches(): void {
+  clearSessionCaches();
 }
 
 export function appendConversationWorkspaceMetadata(input: Parameters<typeof appendSessionConversationWorkspaceMetadata>[0]): void {

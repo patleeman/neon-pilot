@@ -6,7 +6,7 @@ import { getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationSessionMeta } from './conversationService.js';
-import { clearSessionCaches, listSessions } from './sessions.js';
+import { clearTranscriptBackedConversationCaches, listTranscriptBackedConversationSessions } from './conversationTranscriptOps.js';
 
 interface RawSessionHeader {
   type?: unknown;
@@ -78,8 +78,8 @@ function rewriteSessionId(content: string, nextSessionId: string): string {
 }
 
 function readExistingSessionIds(): Set<string> {
-  clearSessionCaches();
-  return new Set(listSessions().map((session) => session.id));
+  clearTranscriptBackedConversationCaches();
+  return new Set(listTranscriptBackedConversationSessions().map((session) => session.id));
 }
 
 export function exportConversationSession(input: { conversationId?: unknown; sessionTitle?: unknown }): ExportConversationSessionResult {
@@ -141,7 +141,7 @@ export function importConversationSession(input: { filePath?: unknown }): Import
     copyFileSync(filePath, destinationPath);
   }
 
-  clearSessionCaches();
+  clearTranscriptBackedConversationCaches();
   invalidateAppTopics('sessions');
 
   return { ok: true, conversationId, sessionFile: destinationPath, importedAsNewId };
