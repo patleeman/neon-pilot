@@ -1,7 +1,7 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
+import { buildConversationDisplayBlocksFromEntries } from './conversationDisplayBlocks.js';
 import type { DisplayBlock } from './conversationTypes.js';
-import { buildDisplayBlocksFromEntries } from './sessions.js';
 
 export function buildLiveStateBlocks(session: AgentSession, options: { omitStreamMessage?: boolean } = {}): DisplayBlock[] {
   const state = session.state;
@@ -12,7 +12,7 @@ export function buildLiveStateBlocks(session: AgentSession, options: { omitStrea
     messages.push(streamMessage);
   }
 
-  return buildDisplayBlocksFromEntries(
+  return buildConversationDisplayBlocksFromEntries(
     messages.map((message, index) => ({
       id: `live-${index}`,
       timestamp: (message as { timestamp?: string | number }).timestamp ?? index,

@@ -1,11 +1,11 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 
+import { buildConversationDisplayBlocksFromEntries } from './conversationDisplayBlocks.js';
 import type { DisplayBlock, ThreadGoal } from './conversationTypes.js';
 import type { ParallelPromptPreview } from './liveSessionParallelJobs.js';
 import type { LiveSessionPresenceState } from './liveSessionPresence.js';
 import type { QueuedPromptPreview } from './liveSessionQueue.js';
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
-import { buildDisplayBlocksFromEntries } from './sessions.js';
 import { normalizeTranscriptToolName } from './toolNames.js';
 
 export interface LiveContextUsageSegment {
@@ -73,7 +73,7 @@ function buildUserMessageBlock(message: {
   content?: unknown;
   timestamp?: string | number;
 }): Extract<DisplayBlock, { type: 'user' }> | null {
-  const [block] = buildDisplayBlocksFromEntries([
+  const [block] = buildConversationDisplayBlocksFromEntries([
     {
       id: 'live-user',
       timestamp: message.timestamp ?? Date.now(),
