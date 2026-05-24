@@ -1989,7 +1989,7 @@ export function Sidebar() {
     return {
       id: activeConversationId,
       file: '',
-      timestamp: new Date(0).toISOString(),
+      timestamp: new Date().toISOString(),
       cwd: draftCwd,
       cwdSlug: '',
       model: '',

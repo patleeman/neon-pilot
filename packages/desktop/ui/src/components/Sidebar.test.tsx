@@ -136,6 +136,15 @@ describe('Sidebar', () => {
     );
   }
 
+  it('renders a fresh timestamp for active conversations that are not in the session list yet', () => {
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    const html = renderSidebar('/conversations/brand-new', { sessions: [], liveTitles: new Map([['brand-new', '(image attachment)']]) });
+
+    expect(html).toContain('(image attachment)');
+    expect(html).toContain('now');
+    expect(html).not.toContain('Dec 31');
+  });
+
   it('renders a flat primary nav for core workspaces', () => {
     const html = renderSidebar('/conversations/new');
 
