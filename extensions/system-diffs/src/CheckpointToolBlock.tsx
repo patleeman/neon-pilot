@@ -33,14 +33,12 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
     <SurfacePanel
       muted
       className={cx(
-        'px-3.5 py-3 text-[12px] transition-colors',
+        'px-3 py-2.5 text-[12px] transition-colors',
         isError ? 'border-danger/30 bg-danger/5' : 'border-success/20 bg-success/5',
       )}
     >
-      <div className="flex items-start gap-3">
-        <div className="ui-chat-avatar mt-0.5">
-          <span className="ui-chat-avatar-mark">✓</span>
-        </div>
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 text-[13px] text-success">✓</span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="truncate text-[13px] font-medium text-primary">{checkpoint.subject}</span>
@@ -49,7 +47,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
             </Pill>
             {typeof checkpoint.fileCount === 'number' ? <span className="text-[10px] text-dim">{checkpoint.fileCount} files</span> : null}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px]">
             {typeof checkpoint.linesAdded === 'number' && typeof checkpoint.linesDeleted === 'number' ? (
               <span className="font-mono tabular-nums text-secondary">
                 <span className="text-success">+{checkpoint.linesAdded}</span>{' '}

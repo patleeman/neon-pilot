@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe('CheckpointInlineDiff', () => {
-  it('renders a collapsed inline diff peek with unified file sections', () => {
+  it('renders a compact inline diff with unified file sections', () => {
     vi.mocked(useApi).mockReturnValue(
       createUseApiResult({
         data: {
@@ -78,9 +78,9 @@ describe('CheckpointInlineDiff', () => {
       </ThemeProvider>,
     );
 
-    expect(html).toContain('Diff peek');
-    expect(html).toContain('Scroll inline or click the preview to expand it.');
-    expect(html).toContain('Show diff');
+    expect(html).not.toContain('Diff peek');
+    expect(html).not.toContain('Scroll inline or click the preview to expand it.');
+    expect(html).not.toContain('Show diff');
     expect(html).toContain('packages/desktop/ui/src/components/chat/ChatView.tsx');
     expect(html).toContain('Modified');
   });

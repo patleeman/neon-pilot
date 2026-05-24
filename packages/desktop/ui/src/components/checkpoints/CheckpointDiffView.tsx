@@ -105,7 +105,7 @@ export function CheckpointDiffSection({
       ref={registerSection}
       data-checkpoint-file-path={file.path}
       className={cx(
-        'mb-4 scroll-mt-4 overflow-hidden rounded-lg border border-border-subtle/80 bg-base/80 shadow-[0_18px_50px_rgba(0,0,0,0.14)]',
+        'mb-2 scroll-mt-3 overflow-hidden border-b border-border-subtle/70 bg-base/80 last:mb-0 last:border-b-0',
         active && 'border-accent/30',
         sectionClassName,
       )}
@@ -114,7 +114,7 @@ export function CheckpointDiffSection({
         type="button"
         onClick={handleToggleCollapse}
         className={cx(
-          'flex w-full items-center justify-between gap-3 border-b border-border-subtle/60 bg-elevated/35 px-4 py-2.5 text-left transition-colors',
+          'flex w-full items-center justify-between gap-3 border-b border-border-subtle/50 bg-elevated/25 px-3 py-2 text-left transition-colors',
           stickyHeader && 'sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-elevated/80',
         )}
       >

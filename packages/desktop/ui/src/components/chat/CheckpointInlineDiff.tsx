@@ -1,18 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useAppEvents } from '../../app/contexts';
 import { api } from '../../client/api';
 import { useApi } from '../../hooks/useApi';
 import { CheckpointDiffSection } from '../checkpoints/CheckpointDiffView';
 import { cx, ErrorState, LoadingState } from '../ui';
-import { DiffActionButton } from './DiffActionButton.js';
-
-const COLLAPSED_INLINE_DIFF_HEIGHT = 'clamp(12rem, 24vh, 16rem)';
-const EXPANDED_INLINE_DIFF_HEIGHT = 'clamp(24rem, 56vh, 44rem)';
+const INLINE_DIFF_HEIGHT = 'clamp(20rem, 56vh, 44rem)';
 
 export function CheckpointInlineDiff({ conversationId, checkpointId }: { conversationId?: string | null; checkpointId: string }) {
   const { versions } = useAppEvents();
-  const [expanded, setExpanded] = useState(false);
   const previewEnabled = Boolean(conversationId?.trim());
   const previousCheckpointIdRef = useRef(checkpointId);
   const lastCheckpointVersionRef = useRef(versions.checkpoints);
@@ -36,7 +32,6 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
     }
 
     previousCheckpointIdRef.current = checkpointId;
-    setExpanded(false);
   }, [checkpointId]);
 
   useEffect(() => {
@@ -61,33 +56,10 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
   const hasFiles = (checkpoint?.files.length ?? 0) > 0;
 
   return (
-    <div className="mt-4 border-t border-border-subtle/60 pt-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-        <div>
-          <p className="font-medium text-secondary">{expanded ? 'Inline diff' : 'Diff peek'}</p>
-          <p className="mt-0.5 text-dim">
-            {expanded ? 'Single-column continuous diff.' : 'Scroll inline or click the preview to expand it.'}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {hasFiles ? (
-            <DiffActionButton onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} className="px-2 py-1 text-[10px]">
-              {expanded ? 'Hide diff' : 'Show diff'}
-            </DiffActionButton>
-          ) : null}
-        </div>
-      </div>
-
+    <div className="mt-3 border-t border-border-subtle/50 pt-2">
       <div
-        className={cx('relative mt-3 overflow-hidden rounded-xl bg-base/40', hasFiles && !expanded && 'cursor-zoom-in')}
-        style={{ height: expanded ? EXPANDED_INLINE_DIFF_HEIGHT : COLLAPSED_INLINE_DIFF_HEIGHT }}
-        onClick={() => {
-          if (!hasFiles || expanded) {
-            return;
-          }
-
-          setExpanded(true);
-        }}
+        className={cx('relative overflow-hidden rounded-lg bg-base/40', hasFiles && 'border border-border-subtle/60')}
+        style={{ height: INLINE_DIFF_HEIGHT }}
       >
         {loading && !checkpoint ? (
           <LoadingState label="Loading diff…" className="h-full justify-center" />
@@ -104,9 +76,6 @@ export function CheckpointInlineDiff({ conversationId, checkpointId }: { convers
             ))}
           </div>
         )}
-        {!expanded && hasFiles ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-surface via-surface/90 to-transparent" />
-        ) : null}
       </div>
     </div>
   );
