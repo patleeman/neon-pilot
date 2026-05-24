@@ -73,6 +73,8 @@ interface AppEventWatchTarget {
   eventKinds?: readonly AppEventWatchKind[];
 }
 
+const SESSION_FILE_CHANGED_MIN_INTERVAL_MS = 500;
+
 const ALL_TOPICS: AppEventTopic[] = [
   'sessions',
   'sessionFiles',
@@ -90,6 +92,7 @@ const ALL_TOPICS: AppEventTopic[] = [
 ];
 const listeners = new Set<AppEventListener>();
 let monitorStop: WatchStop | undefined;
+const lastSessionFileChangedEventAtMs = new Map<string, number>();
 
 function isDirectory(path: string): boolean {
   try {
@@ -559,7 +562,13 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
     }
     pendingConversationSessionFilePaths.clear();
 
+    const nowMs = Date.now();
     for (const sessionId of sessionIds) {
+      const lastEventAtMs = lastSessionFileChangedEventAtMs.get(sessionId);
+      if (lastEventAtMs !== undefined && nowMs - lastEventAtMs < SESSION_FILE_CHANGED_MIN_INTERVAL_MS) {
+        continue;
+      }
+      lastSessionFileChangedEventAtMs.set(sessionId, nowMs);
       publishAppEvent({ type: 'session_file_changed', sessionId });
     }
   };
@@ -648,6 +657,7 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
     profileWatcherStop = undefined;
     pendingTopics.clear();
     pendingConversationSessionFilePaths.clear();
+    lastSessionFileChangedEventAtMs.clear();
     monitorStop = undefined;
   };
 }

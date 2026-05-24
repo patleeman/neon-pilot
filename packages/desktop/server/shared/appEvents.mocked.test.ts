@@ -34,6 +34,7 @@ const {
   watchErrorsByPath,
   watchRegistrations,
   watchMock,
+  writeAppTelemetryEventMock,
 } = vi.hoisted(() => {
   const directories = new Set<string>();
   const existingPaths = new Set<string>();
@@ -113,6 +114,7 @@ const {
     watchErrorsByPath,
     watchRegistrations,
     watchMock,
+    writeAppTelemetryEventMock: vi.fn(),
   };
 });
 
@@ -138,6 +140,7 @@ vi.mock('@neon-pilot/core', () => ({
   resolveProfileActivityConversationLinksDir: resolveProfileActivityConversationLinksDirMock,
   resolveProfileActivityStateDir: resolveProfileActivityStateDirMock,
   resolveProfileConversationArtifactsDir: resolveProfileConversationArtifactsDirMock,
+  writeAppTelemetryEvent: writeAppTelemetryEventMock,
 }));
 
 vi.mock('@neon-pilot/daemon', () => ({
@@ -151,8 +154,8 @@ vi.mock('../automation/durableRuns.js', () => ({
   clearDurableRunsListCache: clearDurableRunsListCacheMock,
 }));
 
-vi.mock('../conversations/sessions.js', () => ({
-  readKnownSessionIdByFilePath: readKnownSessionIdByFilePathMock,
+vi.mock('../conversations/conversationService.js', () => ({
+  readKnownConversationIdByFilePath: readKnownSessionIdByFilePathMock,
 }));
 
 vi.mock('./logging.js', () => ({
@@ -241,6 +244,7 @@ describe('appEvents mocked behavior', () => {
     resolveProfileConversationAttachmentsDirMock.mockClear();
     statSyncMock.mockClear();
     watchMock.mockClear();
+    writeAppTelemetryEventMock.mockClear();
     seedBaseFs();
   });
 
@@ -341,6 +345,36 @@ describe('appEvents mocked behavior', () => {
     expect(watchedActivityPaths).toEqual([]);
 
     expect(events).toEqual([]);
+    unsubscribe();
+  });
+
+  it('rate limits session file changed events per conversation', () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    const sessionsWatcher = getLatestWatch('/sessions', (registration) => registration.options.recursive === true);
+    sessionsWatcher.callback('change', 'conv-1.jsonl');
+    vi.advanceTimersByTime(80);
+    sessionsWatcher.callback('change', 'conv-1.jsonl');
+    vi.advanceTimersByTime(80);
+
+    expect(events).toContainEqual({ type: 'session_file_changed', sessionId: 'conv-1' });
+
+    vi.advanceTimersByTime(500);
+    sessionsWatcher.callback('change', 'conv-1.jsonl');
+    vi.advanceTimersByTime(80);
+
+    expect(events.filter((event) => (event as { type?: string }).type === 'session_file_changed')).toHaveLength(2);
     unsubscribe();
   });
 
