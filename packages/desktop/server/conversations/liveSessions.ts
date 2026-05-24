@@ -16,6 +16,7 @@ import {
   writeConversationAutoModeState,
 } from './conversationAutoMode.js';
 import { type ConversationModelPreferenceInput, type ConversationModelPreferenceState } from './conversationModelPreferences.js';
+import { appendConversationWorkspaceMetadata, readConversationSessionMetaByFilePath } from './conversationTranscriptOps.js';
 import { executeLiveSessionBash } from './liveSessionBash.js';
 import { finalizeLiveSessionBashExecution } from './liveSessionBashFinalization.js';
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
@@ -114,7 +115,6 @@ import { subscribeLiveSession } from './liveSessionSubscription.js';
 import { resolveStableSessionTitle } from './liveSessionTitle.js';
 import { type BeforeAgentStartProbeMessage, inspectAvailableLiveSessionTools } from './liveSessionToolInspection.js';
 import { repairLiveSessionTranscriptTail as repairLiveSessionTranscriptTailWithCallbacks } from './liveSessionTranscriptRepair.js';
-import { appendConversationWorkspaceMetadata, readSessionMetaByFile } from './sessions.js';
 
 export { registerLiveSessionLifecycleHandler };
 
@@ -514,7 +514,7 @@ async function applyPendingConversationWorkingDirectoryChange(entry: LiveEntry):
     pendingChanges: pendingConversationWorkingDirectoryChanges,
     resolveSessionFile: (candidate) => resolveLiveSessionFile(candidate.session, { ensurePersisted: true }) ?? undefined,
     changeSessionWorkingDirectory: async (candidate, sessionFile, cwd, options) => {
-      const currentMeta = readSessionMetaByFile(sessionFile);
+      const currentMeta = readConversationSessionMetaByFilePath(sessionFile);
       const previousWorkspaceCwd =
         currentMeta && 'workspaceCwd' in currentMeta ? currentMeta.workspaceCwd : (currentMeta?.cwd ?? candidate.cwd);
       appendConversationWorkspaceMetadata({

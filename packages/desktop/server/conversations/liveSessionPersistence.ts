@@ -17,8 +17,15 @@ const SESSION_MANAGER_PERSISTENCE_PATCH = Symbol('pa.session-manager-persistence
 
 function updateConversationCatalogForSessionFile(sessionFile: string): void {
   const meta = readConversationSessionMetaByFile(sessionFile);
-  if (meta) {
+  if (!meta) {
+    return;
+  }
+
+  try {
     upsertConversationCatalogSession(meta);
+  } catch {
+    // Best-effort write-through cache update. Transcript persistence must not fail
+    // because the read model rejected malformed or incomplete metadata.
   }
 }
 

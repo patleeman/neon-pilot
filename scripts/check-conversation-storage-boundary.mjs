@@ -8,15 +8,14 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 // Existing transcript-boundary users. Keep this list shrinking; new product code
 // should use conversation service / conversations.db read-model APIs instead.
 const allowed = new Set([
+  'packages/desktop/server/conversations/conversationTranscriptOps.ts',
   'packages/desktop/server/conversations/conversationTypes.ts',
   'packages/desktop/server/conversations/conversationRecovery.ts',
   'packages/desktop/server/conversations/conversationSearchIndex.ts',
   'packages/desktop/server/conversations/conversationService.ts',
   'packages/desktop/server/conversations/conversationSummaries.ts',
-  'packages/desktop/server/conversations/liveSessionBranching.ts',
   'packages/desktop/server/conversations/liveSessionEvents.ts',
   'packages/desktop/server/conversations/liveSessionParallelReconciliation.ts',
-  'packages/desktop/server/conversations/liveSessions.ts',
   'packages/desktop/server/conversations/liveSessionStateSnapshot.ts',
   'packages/desktop/server/conversations/liveSessionTranscript.ts',
   'packages/desktop/server/conversations/sessionExchange.ts',

@@ -1,11 +1,11 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
 
-import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
 import {
   appendChildConversationTopologyEntry,
   appendConversationOffshootMetadata,
   appendParentConversationBacklinkEntry,
-} from './sessions.js';
+} from './conversationTranscriptOps.js';
+import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
 
 export interface LiveSessionBranchHost {
   sessionId: string;
