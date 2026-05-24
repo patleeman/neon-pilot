@@ -1,43 +1,87 @@
 # Desktop API Boundary
 
-Neon Pilot is an Electron desktop app. The renderer must use one product API surface: the typed desktop bridge backed by Electron IPC/local-api.
+Neon Pilot's desktop app uses three process boundaries with one clear ownership rule:
 
-## Canonical rule
+> Product APIs do not use Electron IPC. IPC is a native capability adapter. HTTP is the product data plane. WebSocket is the realtime plane.
 
-Renderer product code must not add new HTTP routes or fetch-based fallbacks for desktop-only product controls.
+## Protocol split
 
-Use the desktop bridge/local-api path for actions such as:
+### HTTP: product data and mutations
 
-- creating, resuming, prompting, stopping, branching, forking, compacting, reloading, exporting, or destroying live conversations
-- restoring or clearing queued steer/follow-up prompts
-- changing conversation cwd, model preferences, or other conversation control state
-- native desktop actions such as file/folder pickers, local model/provider settings, and window/app controls
+Use HTTP for renderer, companion, extension, and future remote clients that request product data or perform bounded mutations.
 
-HTTP is a transport edge, not the renderer's product API.
+Examples:
 
-## Allowed HTTP surfaces
+- sessions, session metadata, transcript/detail/bootstrap reads, blocks, search, and summaries
+- conversation assets: artifacts, checkpoints, attachments, attachment downloads, review context, and diffs
+- scheduled tasks, durable runs, execution projections, task/run logs, cancel/rerun/attention mutations
+- models, providers, provider auth, default cwd, open conversation tabs, title settings, conversation model preferences
+- knowledge/vault/workspace trees, files, searches, diffs, and explicit file mutations
+- extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and companion APIs
 
-Keep HTTP when there is a real non-renderer or external consumer:
+HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.
 
-- extension-declared routes and extension-owned gateways, including Kitty/mobile pairing or future extension webhooks
-- OAuth callbacks, webhooks, downloads/assets, or other browser/network protocol edges
-- companion/daemon surfaces that are actually consumed outside the Electron renderer
-- read-only diagnostics only when there is a concrete need and they are clearly namespaced/documented
+### WebSocket: realtime events and control
 
-Do not preserve HTTP endpoints for hypothetical future remote runtime support. If a remote runtime becomes real, add a remote transport behind the same typed desktop API contract.
+Use WebSocket for long-lived realtime flows and bidirectional control.
+
+Examples:
+
+- live conversation events: agent start/stop, message deltas, tool calls/results, context usage, queue state, parallel jobs, title updates, presence, stale/hidden turn state, and turn end
+- user controls for active live sessions: submit prompt, queue steer/follow-up, abort, takeover, approvals, and parallel-job actions
+- app-wide invalidations and small events: sessions changed, tasks/runs changed, daemon status changed, notifications, extension commands, session running state, and live titles
+- optional background execution realtime events such as log tails or status deltas
+
+WebSocket messages should be small deltas, invalidations, or control messages. Do not routinely broadcast full sessions lists, transcripts, logs, artifacts, or other large snapshots over WebSocket.
+
+### Electron IPC: native/bootstrap only
+
+Use IPC only when the renderer needs Electron or OS capability, or to bootstrap HTTP/WebSocket access.
+
+Allowed IPC surfaces:
+
+- `getConnectionInfo` / bootstrap data: HTTP base URL, WebSocket URL, auth token, runtime channel, and host metadata
+- native file/folder pickers
+- clipboard read/write
+- open external URLs and reveal/open local paths
+- window/app controls, popouts, menu shortcuts, and shell navigation owned by Electron
+- screenshots, screen picker, app update checks, and native Workbench Browser embedding when required
+
+IPC payloads should be small. Do not send sessions, transcripts, search results, logs, artifacts, runs/task lists, or app-event snapshots through IPC.
+
+## Renderer client rule
+
+Renderer product code should depend on typed clients:
+
+- `api` / HTTP client for product reads and mutations
+- realtime/WebSocket client for subscriptions and live controls
+- desktop native bridge for bootstrap and native OS/Electron operations only
+
+Do not add new product-data methods to the Electron preload bridge. If product data is only available through an internal module, expose it through an HTTP route or WebSocket event/control message instead.
+
+## Extension API rule
+
+Extensions should use the public `@neon-pilot/extensions` SDK and host-provided clients/capabilities. Extension code must not import desktop internals or depend on Electron IPC channels.
+
+Extension frontend code should treat host APIs as product HTTP/realtime capabilities surfaced through the SDK. Extension backend code should use backend context capabilities and shared server modules through stable SDK seams. When an extension needs a missing host capability, add a reusable SDK primitive rather than adding an extension-specific IPC channel.
+
+## Performance guardrails
+
+- IPC messages should remain control-plane sized; target less than 64KB.
+- WebSocket app events should be deltas/invalidations; target less than 64KB except explicit chunk protocols.
+- Large data must be fetched by HTTP with pagination, byte streaming, range support, or explicit size limits.
+- Renderer clients should coalesce in-flight large reads where practical.
+- App invalidations should be debounced before triggering HTTP refetches.
+- Desktop perf smoke should cover startup, large session fixtures, long transcript open, search, and idle CPU.
 
 ## Migration policy
 
-When touching a renderer API method:
+When touching a desktop renderer API method:
 
-1. Prefer an existing desktop bridge/local-api capability.
-2. Add the smallest typed bridge/local-api capability if one is missing.
-3. Remove renderer HTTP fallbacks for desktop-only controls.
-4. Delete server routes that no remaining non-renderer caller uses.
-5. If an endpoint remains for companion/gateway/extension use, keep it out of the renderer path and document why it remains.
+1. If it is product data or a bounded mutation, route it through HTTP.
+2. If it is realtime stream/control, route it through WebSocket.
+3. If it is native OS/Electron functionality, keep it in IPC.
+4. Delete obsolete IPC product handlers and preload bridge methods.
+5. Add/keep tests that enforce payload size and protocol ownership where practical.
 
-## Current cleanup status
-
-The Electron renderer now uses the typed desktop bridge/local-api path for desktop-only product controls, including live conversation control, conversation state, model/provider/default-cwd settings, open conversation tabs, scheduled tasks, durable-run reads/actions, native folder picking, and conversation artifacts/attachments/deferred resumes.
-
-The remaining HTTP surfaces in these areas are intentional protocol edges, such as SSE streams (`/api/live-sessions/:id/events`, `/api/runs/:id/events`), binary/session image assets, OAuth event streams, extension/gateway/workspace routes, and companion-owned `/companion/v1/*` APIs.
+The desired end state is a renderer with no Electron IPC dependency for product APIs. IPC remains a small native adapter and bootstrap seam.

@@ -4,6 +4,8 @@ The normal way to create a Neon Pilot extension is to ask your agent to build it
 
 This package is the public import surface for native Neon Pilot extensions. Extension code should import from `@neon-pilot/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
 
+Extension code must not depend on Electron IPC as a product API. Host product data is exposed through SDK capabilities backed by the desktop HTTP data plane; realtime changes are exposed through SDK subscriptions backed by the realtime plane; native OS/Electron actions stay behind explicit host capabilities. If the SDK lacks a capability, add a reusable SDK primitive instead of importing app internals or creating extension-specific IPC.
+
 This doc is written for agents building extensions. Read it before creating or editing an extension, then inspect the current schema/types and nearby system extensions for exact examples.
 
 ## Platform rule

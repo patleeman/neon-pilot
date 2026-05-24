@@ -61,7 +61,9 @@ my-extension/
 └── dist/               # Built output
 ```
 
-Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the packaged local-extension-development skill; renderer/extension UI should not call `/api/extensions/*` directly.
+Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the packaged local-extension-development skill; renderer/extension UI should use the public extension SDK clients/capabilities instead of reaching into desktop internals.
+
+Extension frontend code must not depend on Electron IPC channels. Product data flows through host-provided HTTP clients/capabilities, realtime updates flow through host-provided realtime subscriptions, and native OS/Electron operations remain host-owned capabilities. If an extension needs a missing product API, add a reusable SDK capability rather than adding an extension-specific IPC bridge.
 
 ## Packaging and distribution
 

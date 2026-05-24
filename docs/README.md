@@ -23,7 +23,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Projects](projects.md) — project records and workspace metadata
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
-- [Desktop API Boundary](desktop-api-boundary.md) — renderer IPC/local-api contract and HTTP edge policy
+- [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
 - [Knowledge](../extensions/system-knowledge/README.md) — vault, docs, skills, instruction files, and managed sync
 - [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
 - [Configuration](configuration.md) — file-based config, env vars
