@@ -1,5 +1,6 @@
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
+import { CheckpointTranscriptRenderer } from '../../../../../extensions/system-diffs/src/panels.js';
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
 import { ErrorState, LoadingState } from '../components/ui';
@@ -70,6 +71,9 @@ export function NativeExtensionToolBlockHost({
   context: ExtensionToolBlockContext;
 }) {
   if (!extension || !renderer) {
+    if (block.tool === 'checkpoint') {
+      return <CheckpointTranscriptRenderer block={block} context={context} />;
+    }
     return <ErrorState message={`Extension renderer unavailable for ${block.tool}.`} />;
   }
 

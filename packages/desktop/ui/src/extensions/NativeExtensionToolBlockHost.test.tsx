@@ -25,4 +25,25 @@ describe('NativeExtensionToolBlockHost', () => {
 
     expect(html).toContain('Extension renderer unavailable for self_preservation.');
   });
+
+  it('falls back to the bundled checkpoint renderer when registry data is stale', () => {
+    const html = renderToStaticMarkup(
+      createElement(NativeExtensionToolBlockHost, {
+        extension: undefined,
+        renderer: undefined,
+        block: {
+          type: 'tool_use',
+          ts: '2026-05-23T20:21:43.000Z',
+          tool: 'checkpoint',
+          input: { action: 'save', message: 'fix checkpoint renderer', paths: ['src/file.ts'] },
+          output: 'Saved checkpoint abc1234 fix checkpoint renderer (1 files, +1 -0).',
+          status: 'ok',
+        },
+        context: {},
+      }),
+    );
+
+    expect(html).toContain('fix checkpoint renderer');
+    expect(html).not.toContain('Extension renderer unavailable for checkpoint.');
+  });
 });
