@@ -4521,34 +4521,40 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           recordSubmitPhase('afterNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
           navigatedToCreatedConversation = true;
 
-          window.setTimeout(() => {
-            void api
-              .promptSession(
-                newId,
-                initialPrompt.text,
-                initialPrompt.behavior,
-                initialPrompt.images,
-                initialPrompt.attachmentRefs,
-                undefined,
-                initialPrompt.contextMessages,
-              )
-              .then((sendResult) => {
-                for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
-                  showNotice('danger', warning, 5000);
-                }
-                if (sendResult.accepted) {
-                  clearPendingConversationPrompt(newId);
-                }
-              })
-              .catch((error) => {
-                persistPendingConversationPrompt(newId, initialPrompt);
-                setPendingInitialPrompt(initialPrompt);
-                showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-              })
-              .finally(() => {
-                setPendingInitialPromptDispatchingState(false);
-              });
-          }, 0);
+          const dispatchInitialPromptAfterRoutePaint = () => {
+            window.setTimeout(() => {
+              void api
+                .promptSession(
+                  newId,
+                  initialPrompt.text,
+                  initialPrompt.behavior,
+                  initialPrompt.images,
+                  initialPrompt.attachmentRefs,
+                  undefined,
+                  initialPrompt.contextMessages,
+                )
+                .then((sendResult) => {
+                  for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
+                    showNotice('danger', warning, 5000);
+                  }
+                  if (sendResult.accepted) {
+                    clearPendingConversationPrompt(newId);
+                  }
+                })
+                .catch((error) => {
+                  persistPendingConversationPrompt(newId, initialPrompt);
+                  setPendingInitialPrompt(initialPrompt);
+                  showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+                })
+                .finally(() => {
+                  setPendingInitialPromptDispatchingState(false);
+                });
+            }, 0);
+          };
+
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(dispatchInitialPromptAfterRoutePaint);
+          });
 
           window.setTimeout(() => {
             clearDraftConversationAttachments();
