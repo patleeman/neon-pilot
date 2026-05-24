@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
-import { completeConversationOpenPhase, ensureConversationOpenStart } from '../client/perfDiagnostics';
+import { completeConversationOpenPhase, ensureConversationOpenStart, measureClientPerfTiming } from '../client/perfDiagnostics';
 import { buildSlashMenuItems } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
@@ -828,12 +828,36 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // Historical messages from the JSONL snapshot (doesn't update after load).
   // Memoize the conversion so typing in the composer does not rebuild long transcripts.
   const baseMessages = useMemo<MessageBlock[]>(
-    () => (visibleSessionDetail ? mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks) : []),
-    [hydratedHistoricalBlocks, visibleSessionDetail],
+    () =>
+      measureClientPerfTiming(
+        {
+          name: 'conversation.mergeHydratedHistoricalBlocks',
+          minDurationMs: 8,
+          meta: {
+            conversationId: id,
+            blockCount: visibleSessionDetail?.blocks.length ?? 0,
+            hydratedBlockCount: Object.keys(hydratedHistoricalBlocks).length,
+          },
+        },
+        () => (visibleSessionDetail ? mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks) : []),
+      ),
+    [hydratedHistoricalBlocks, id, visibleSessionDetail],
   );
   const visibleStreamBlocks = useMemo<MessageBlock[]>(
-    () => mergeHydratedStreamBlocks(stream.blocks, hydratedHistoricalBlocks),
-    [hydratedHistoricalBlocks, stream.blocks],
+    () =>
+      measureClientPerfTiming(
+        {
+          name: 'conversation.mergeHydratedStreamBlocks',
+          minDurationMs: 8,
+          meta: {
+            conversationId: id,
+            blockCount: stream.blocks.length,
+            hydratedBlockCount: Object.keys(hydratedHistoricalBlocks).length,
+          },
+        },
+        () => mergeHydratedStreamBlocks(stream.blocks, hydratedHistoricalBlocks),
+      ),
+    [hydratedHistoricalBlocks, id, stream.blocks],
   );
 
   // Pending steer/followup queue as reported by the live session.
@@ -843,18 +867,32 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // JSONL + live deltas only when we have at least one source of blocks.
   const computedMessagesRaw = useMemo<MessageBlock[] | undefined>(
     () =>
-      resolveComputedMessagesRaw({
-        draft,
-        draftPendingPrompt,
-        isLiveSession,
-        streamHasSnapshot: stream.hasSnapshot,
-        visibleStreamBlocks,
-        baseMessages,
-        pendingInitialPrompt,
-        visibleSessionDetailAvailable: Boolean(visibleSessionDetail),
-        mergeHistoricalAndStreamBlocks,
-        appendPendingInitialPromptBlock,
-      }),
+      measureClientPerfTiming(
+        {
+          name: 'conversation.resolveComputedMessagesRaw',
+          minDurationMs: 8,
+          meta: {
+            conversationId: id,
+            isLiveSession,
+            streamHasSnapshot: stream.hasSnapshot,
+            baseMessageCount: baseMessages.length,
+            streamBlockCount: visibleStreamBlocks.length,
+          },
+        },
+        () =>
+          resolveComputedMessagesRaw({
+            draft,
+            draftPendingPrompt,
+            isLiveSession,
+            streamHasSnapshot: stream.hasSnapshot,
+            visibleStreamBlocks,
+            baseMessages,
+            pendingInitialPrompt,
+            visibleSessionDetailAvailable: Boolean(visibleSessionDetail),
+            mergeHistoricalAndStreamBlocks,
+            appendPendingInitialPromptBlock,
+          }),
+      ),
     [
       baseMessages,
       draft,
@@ -876,14 +914,29 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   // accumulate thousands of blocks in memory. Dropped blocks are still on disk and
   // re-fetched if the user scrolls back up.
   const { computedMessages, computedHistoricalBlockOffset, computedHistoricalTotalBlocks } = useMemo(() => {
-    return pruneComputedMessages({
-      messages: computedMessagesRaw,
-      historicalBlockOffset: computedHistoricalBlockOffsetRaw,
-      historicalTotalBlocks: computedHistoricalTotalBlocksRaw,
-      historicalTailBlocks,
-      maxRenderedBlocks: MAX_RENDERED_BLOCKS,
-    });
-  }, [computedHistoricalBlockOffsetRaw, computedHistoricalTotalBlocksRaw, computedMessagesRaw, historicalTailBlocks]);
+    return measureClientPerfTiming(
+      {
+        name: 'conversation.pruneComputedMessages',
+        minDurationMs: 8,
+        meta: {
+          conversationId: id,
+          messageCount: computedMessagesRaw?.length ?? 0,
+          historicalBlockOffset: computedHistoricalBlockOffsetRaw,
+          historicalTotalBlocks: computedHistoricalTotalBlocksRaw,
+          historicalTailBlocks,
+          maxRenderedBlocks: MAX_RENDERED_BLOCKS,
+        },
+      },
+      () =>
+        pruneComputedMessages({
+          messages: computedMessagesRaw,
+          historicalBlockOffset: computedHistoricalBlockOffsetRaw,
+          historicalTotalBlocks: computedHistoricalTotalBlocksRaw,
+          historicalTailBlocks,
+          maxRenderedBlocks: MAX_RENDERED_BLOCKS,
+        }),
+    );
+  }, [computedHistoricalBlockOffsetRaw, computedHistoricalTotalBlocksRaw, computedMessagesRaw, historicalTailBlocks, id]);
 
   const [stableTranscriptState, setStableTranscriptState] = useState<{
     conversationId: string;

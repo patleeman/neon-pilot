@@ -1,7 +1,7 @@
 import React, { memo, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../client/api';
-import { recordChatRenderTiming } from '../../client/perfDiagnostics';
+import { measureClientPerfTiming, recordChatRenderTiming } from '../../client/perfDiagnostics';
 import { type ExtensionSelectionActionRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { useApi } from '../../hooks/useApi';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
@@ -168,38 +168,58 @@ export const ChatView = memo(function ChatView({
     }
     return tools;
   }, [extensionRegistry.extensions]);
-  const renderItems = useMemo(() => buildChatRenderItems(messages, standaloneTools), [messages, standaloneTools]);
+  const renderItems = useMemo(
+    () =>
+      measureClientPerfTiming(
+        {
+          name: 'chat.buildRenderItems',
+          minDurationMs: 8,
+          meta: { conversationId, messageCount: messages.length, standaloneToolCount: standaloneTools.size },
+        },
+        () => buildChatRenderItems(messages, standaloneTools),
+      ),
+    [conversationId, messages, standaloneTools],
+  );
   const renderItemStats = useMemo(() => {
-    let messageItems = 0;
-    let traceClusters = 0;
-    let traceBlocks = 0;
-    let toolBlocks = 0;
-    let standaloneToolBlocks = 0;
-    let markdownBlocks = 0;
+    return measureClientPerfTiming(
+      {
+        name: 'chat.computeRenderItemStats',
+        minDurationMs: 8,
+        meta: { conversationId, renderItemCount: renderItems.length },
+      },
+      () => {
+        let messageItems = 0;
+        let traceClusters = 0;
+        let traceBlocks = 0;
+        let toolBlocks = 0;
+        let standaloneToolBlocks = 0;
+        let markdownBlocks = 0;
 
-    for (const item of renderItems) {
-      if (item.type === 'trace_cluster') {
-        traceClusters += 1;
-        traceBlocks += item.blocks.length;
-        toolBlocks += item.blocks.filter((block) => block.type === 'tool_use').length;
-        continue;
-      }
-      if (item.type === 'context_cluster') {
-        messageItems += item.blocks.length;
-        continue;
-      }
-      messageItems += 1;
-      const block = item.block;
-      if (block.type === 'tool_use') {
-        toolBlocks += 1;
-        standaloneToolBlocks += 1;
-      } else if (block.type === 'assistant' || block.type === 'user') {
-        markdownBlocks += 1;
-      }
-    }
+        for (const item of renderItems) {
+          if (item.type === 'trace_cluster') {
+            traceClusters += 1;
+            traceBlocks += item.blocks.length;
+            toolBlocks += item.blocks.filter((block) => block.type === 'tool_use').length;
+            continue;
+          }
+          if (item.type === 'context_cluster') {
+            messageItems += item.blocks.length;
+            continue;
+          }
+          messageItems += 1;
+          const block = item.block;
+          if (block.type === 'tool_use') {
+            toolBlocks += 1;
+            standaloneToolBlocks += 1;
+          } else if (block.type === 'assistant' || block.type === 'user') {
+            markdownBlocks += 1;
+          }
+        }
 
-    return { messageItems, traceClusters, traceBlocks, toolBlocks, standaloneToolBlocks, markdownBlocks };
-  }, [renderItems]);
+        return { messageItems, traceClusters, traceBlocks, toolBlocks, standaloneToolBlocks, markdownBlocks };
+      },
+    );
+  }, [conversationId, renderItems]);
   const { isInlineRunExpanded, toggleInlineRun, expandInlineRun } = useInlineTraceRunExpansion(renderItems);
 
   useEffect(() => {

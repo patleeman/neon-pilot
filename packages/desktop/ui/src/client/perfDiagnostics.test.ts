@@ -27,6 +27,22 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('records thresholded client timing samples', async () => {
+    const { measureClientPerfTiming } = await import('./perfDiagnostics');
+
+    const value = measureClientPerfTiming({ name: 'test.syncWork', meta: { items: 2 } }, () => 'ok');
+
+    expect(value).toBe('ok');
+    const perf = (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { clientSamples?: unknown[] } }).__NEON_PILOT_APP_PERF__;
+    expect(perf?.clientSamples).toEqual([
+      expect.objectContaining({
+        name: 'test.syncWork',
+        route: '/',
+        meta: { items: 2 },
+      }),
+    ]);
+  });
+
   it('records conversation extension-open phase timing', async () => {
     const { completeConversationOpenPhase, ensureConversationOpenStart } = await import('./perfDiagnostics');
 
