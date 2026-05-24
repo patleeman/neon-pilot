@@ -1078,6 +1078,22 @@ async function dispatchDesktopLocalProductApiRequest(input: {
     );
   }
 
+  const conversationArtifactMatch = /^\/api\/conversations\/([^/]+)\/artifacts\/([^/]+)$/.exec(path);
+  if (method === 'GET' && conversationArtifactMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationArtifact({
+        conversationId: decodeURIComponent(conversationArtifactMatch[1] ?? ''),
+        artifactId: decodeURIComponent(conversationArtifactMatch[2] ?? ''),
+      }),
+    );
+  }
+  const conversationArtifactsMatch = /^\/api\/conversations\/([^/]+)\/artifacts$/.exec(path);
+  if (method === 'GET' && conversationArtifactsMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationArtifacts(decodeURIComponent(conversationArtifactsMatch[1] ?? '')),
+    );
+  }
+
   const conversationAttachmentAssetMatch = /^\/api\/conversations\/([^/]+)\/attachments\/([^/]+)\/asset$/.exec(path);
   if (method === 'GET' && conversationAttachmentAssetMatch) {
     return createDesktopLocalApiJsonResponse(
