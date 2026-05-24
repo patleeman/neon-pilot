@@ -27,8 +27,6 @@ describe('desktop IPC protocol boundary', () => {
       'check-for-updates',
       'pick-folder',
       'capture-screenshot',
-      'subscribe-conversation-state',
-      'unsubscribe-conversation-state',
       'go-back',
       'go-forward',
       'workbench-browser-set-bounds',

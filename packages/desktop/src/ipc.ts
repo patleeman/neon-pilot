@@ -1,11 +1,10 @@
-import { clipboard, ipcMain, shell, type WebContents } from 'electron';
+import { clipboard, ipcMain, shell } from 'electron';
 
 import type { HostManager } from './hosts/host-manager.js';
 import { captureDesktopScreenshot } from './screenshot.js';
 import type { DesktopWindowController } from './window.js';
 
 const CHANNEL_PREFIX = 'neon-pilot-desktop';
-const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
 
 export function registerDesktopIpc(options: {
   hostManager: HostManager;
@@ -20,80 +19,6 @@ export function registerDesktopIpc(options: {
     keyboardShortcuts?: Record<string, string>;
   }) => Promise<unknown> | unknown;
 }): void {
-  const conversationStateSubscriptions = new Map<string, () => void>();
-
-  const sendBufferedSubscriptionEvent = <T>(input: {
-    sender: WebContents;
-    channel: string;
-    subscriptionId: string;
-    subscribe: (emit: (event: T) => void) => Promise<() => void>;
-    store: Map<string, () => void>;
-  }): Promise<void> =>
-    (async () => {
-      const pendingEvents: T[] = [];
-      let deliveryEnabled = false;
-      let active = true;
-      let flushScheduled = false;
-
-      const flushPendingEvents = () => {
-        flushScheduled = false;
-        if (!active || input.sender.isDestroyed()) {
-          pendingEvents.length = 0;
-          return;
-        }
-
-        const events = pendingEvents.splice(0);
-        for (const pendingEvent of events) {
-          input.sender.send(input.channel, {
-            subscriptionId: input.subscriptionId,
-            event: pendingEvent,
-          });
-        }
-      };
-
-      const scheduleFlush = () => {
-        if (!deliveryEnabled || flushScheduled) {
-          return;
-        }
-
-        flushScheduled = true;
-        setImmediate(flushPendingEvents);
-      };
-
-      const deliver = (nextEvent: T) => {
-        if (!active || input.sender.isDestroyed()) {
-          return;
-        }
-
-        pendingEvents.push(nextEvent);
-        scheduleFlush();
-      };
-
-      const unsubscribe = await input.subscribe(deliver);
-
-      // If the sender was destroyed during subscribe, clean up immediately.
-      if (input.sender.isDestroyed()) {
-        unsubscribe();
-        return;
-      }
-
-      const cleanup = () => {
-        if (!active) {
-          return;
-        }
-
-        active = false;
-        unsubscribe();
-        input.store.delete(input.subscriptionId);
-        pendingEvents.length = 0;
-      };
-
-      input.store.set(input.subscriptionId, cleanup);
-      input.sender.once('destroyed', cleanup);
-      deliveryEnabled = true;
-      scheduleFlush();
-    })();
-
   ipcMain.handle(`${CHANNEL_PREFIX}:get-environment`, async (event) => {
     const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
     return options.hostManager.getDesktopEnvironmentForHost(hostId);
@@ -205,28 +130,6 @@ export function registerDesktopIpc(options: {
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:capture-screenshot`, async () => captureDesktopScreenshot());
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-conversation-state`, async (event, input) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.subscribeConversationState) {
-      throw new Error('Dedicated desktop conversation state is only available for the local host.');
-    }
-
-    const subscriptionId = `${event.sender.id}:conversation:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-    await sendBufferedSubscriptionEvent({
-      sender: event.sender,
-      channel: CONVERSATION_STATE_CHANNEL,
-      subscriptionId,
-      store: conversationStateSubscriptions,
-      subscribe: (emit) => controller.subscribeConversationState!(input, emit),
-    });
-    return { subscriptionId };
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, async (_event, subscriptionId: string) => {
-    conversationStateSubscriptions.get(subscriptionId)?.();
-  });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:go-back`, async (event) => {
     return options.windowController.goBackForWebContents(event.sender.id);

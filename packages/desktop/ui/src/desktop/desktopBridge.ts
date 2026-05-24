@@ -1,6 +1,5 @@
 import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState, FolderPickerResult } from '../shared/types';
 
-export const DESKTOP_CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
 export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
 export const DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
@@ -75,15 +74,6 @@ export interface NeonPilotDesktopBridge {
   // Native OS screenshot picker. Kept on IPC because Electron owns the UI;
   // main process rejects oversized image payloads before base64 transfer.
   captureScreenshot(): Promise<DesktopScreenshotCaptureResult>;
-  subscribeConversationState(input: {
-    conversationId: string;
-    tailBlocks?: number;
-    surfaceId?: string;
-    surfaceType?: 'desktop_web' | 'mobile_web';
-    streamEvents?: boolean;
-    initialState?: boolean;
-  }): Promise<{ subscriptionId: string }>;
-  unsubscribeConversationState(subscriptionId: string): Promise<void>;
   goBack(): Promise<DesktopNavigationState>;
   goForward(): Promise<DesktopNavigationState>;
   setWorkbenchBrowserBounds(input: {

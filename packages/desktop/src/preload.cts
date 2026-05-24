@@ -5,8 +5,6 @@ const SHORTCUT_CHANNEL = `${CHANNEL_PREFIX}:shortcut`;
 const SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const NAVIGATE_CHANNEL = `${CHANNEL_PREFIX}:navigate`;
 const NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
-const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
-const CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
 const WORKBENCH_BROWSER_COMMENT_CHANNEL = `${CHANNEL_PREFIX}:workbench-browser-comment`;
 const WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
 const SHOW_WORKBENCH_BROWSER_CHANNEL = `${CHANNEL_PREFIX}:show-workbench-browser`;
@@ -43,15 +41,6 @@ const desktopBridge = {
   checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
   pickFolder: (input?: { cwd?: string | null; prompt?: string | null }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:pick-folder`, input),
   captureScreenshot: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-screenshot`),
-  subscribeConversationState: (input: {
-    conversationId: string;
-    tailBlocks?: number;
-    surfaceId?: string;
-    surfaceType?: 'desktop_web' | 'mobile_web';
-    streamEvents?: boolean;
-  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:subscribe-conversation-state`, input),
-  unsubscribeConversationState: (subscriptionId: string) =>
-    ipcRenderer.invoke(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, subscriptionId),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),
   goForward: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-forward`),
   setWorkbenchBrowserBounds: (input: {
@@ -96,10 +85,6 @@ ipcRenderer.on(SHORTCUT_CHANNEL, (_event, action: unknown) => {
 
 ipcRenderer.on(NAVIGATE_CHANNEL, (_event, payload: unknown) => {
   dispatchDesktopEvent(NAVIGATE_EVENT, payload);
-});
-
-ipcRenderer.on(CONVERSATION_STATE_CHANNEL, (_event, payload: unknown) => {
-  dispatchDesktopEvent(CONVERSATION_STATE_EVENT, payload);
 });
 
 ipcRenderer.on(WORKBENCH_BROWSER_COMMENT_CHANNEL, (_event, payload: unknown) => {
