@@ -751,10 +751,14 @@ export async function submitLiveSessionPromptCapability(
   referencedVaultFileIds: string[];
   referencedAttachmentIds: string[];
   relatedConversationPointerWarnings?: string[];
+  perf?: Record<string, number>;
 }> {
+  const startedAtMs = performance.now();
   const prepared = await prepareLiveSessionPrompt(input, context);
+  const preparedAtMs = performance.now();
   const behavior = normalizePromptBehavior(input.behavior);
   const liveConversationId = await ensureConversationPromptTargetLive(prepared.conversationId, context);
+  const liveReadyAtMs = performance.now();
   const recoveredLiveEntry = liveRegistry.get(liveConversationId);
   const promptContext = await buildPromptContextMessagesForSubmit({
     conversationId: liveConversationId,
@@ -763,6 +767,7 @@ export async function submitLiveSessionPromptCapability(
     selectedSessionIds: input.relatedConversationIds,
     contextMessages: prepared.normalizedContextMessages,
   });
+  const promptContextAtMs = performance.now();
   const promptContextMessages = promptContext.contextMessages;
 
   persistAppTelemetryEvent({
@@ -788,9 +793,12 @@ export async function submitLiveSessionPromptCapability(
     },
   });
 
+  const telemetryAtMs = performance.now();
+
   for (const message of promptContextMessages) {
     await queuePromptContext(liveConversationId, message.customType, message.content);
   }
+  const queuedContextAtMs = performance.now();
 
   if (recoveredLiveEntry?.session.sessionFile) {
     await syncWebLiveConversationRun({
@@ -815,6 +823,8 @@ export async function submitLiveSessionPromptCapability(
     });
   }
 
+  const syncedRunAtMs = performance.now();
+
   const submittedPrompt = await submitLocalPromptSession(
     liveConversationId,
     prepared.text,
@@ -822,6 +832,7 @@ export async function submitLiveSessionPromptCapability(
     prepared.promptImages,
     prepared.surfaceId,
   );
+  const submittedAtMs = performance.now();
   const promptPromise = submittedPrompt.completion;
   const daemonRunsRoot = resolveDurableRunsRoot(resolveDaemonRoot());
 
@@ -877,6 +888,16 @@ export async function submitLiveSessionPromptCapability(
     referencedVaultFileIds: prepared.referencedVaultFiles.map((file) => file.id),
     referencedAttachmentIds: prepared.referencedAttachments.map((attachment) => attachment.attachmentId),
     ...(promptContext.warnings.length > 0 ? { relatedConversationPointerWarnings: promptContext.warnings } : {}),
+    perf: {
+      prepareMs: Math.round(preparedAtMs - startedAtMs),
+      ensureLiveMs: Math.round(liveReadyAtMs - preparedAtMs),
+      promptContextMs: Math.round(promptContextAtMs - liveReadyAtMs),
+      telemetryMs: Math.round(telemetryAtMs - promptContextAtMs),
+      queueContextMs: Math.round(queuedContextAtMs - telemetryAtMs),
+      syncRunMs: Math.round(syncedRunAtMs - queuedContextAtMs),
+      submitLocalMs: Math.round(submittedAtMs - syncedRunAtMs),
+      totalBeforeReturnMs: Math.round(submittedAtMs - startedAtMs),
+    },
   };
 }
 

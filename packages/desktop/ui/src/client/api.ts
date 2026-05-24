@@ -934,7 +934,8 @@ export const api = {
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
     relatedConversationIds?: string[],
   ) => {
-    return post<{
+    const startedAtMs = performance.now();
+    const result = await post<{
       ok: true;
       accepted: true;
       delivery: 'started' | 'queued';
@@ -943,6 +944,7 @@ export const api = {
       referencedVaultFileIds: string[];
       referencedAttachmentIds: string[];
       relatedConversationPointerWarnings?: string[];
+      perf?: Record<string, number>;
     }>(`/live-sessions/${encodeURIComponent(id)}/prompt`, {
       text,
       behavior,
@@ -952,6 +954,19 @@ export const api = {
       contextMessages,
       relatedConversationIds,
     });
+    recordClientPerfTiming({
+      name: 'desktop.promptSession',
+      startedAtMs,
+      meta: {
+        conversationId: id,
+        promptLength: text.length,
+        imageCount: images?.length ?? 0,
+        contextMessageCount: contextMessages?.length ?? 0,
+        relatedConversationCount: relatedConversationIds?.length ?? 0,
+        serverPerf: result.perf ?? null,
+      },
+    });
+    return result;
   },
 
   restoreQueuedMessage: async (

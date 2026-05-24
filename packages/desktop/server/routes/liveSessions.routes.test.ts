@@ -34,8 +34,8 @@ const {
   resolveConversationCwdMock,
   resolveDaemonPathsMock,
   resolveDurableRunsRootMock,
+  resolveConversationSessionFileMock,
   resolveExtensionPromptReferencesMock,
-  resolveMentionedVaultFilesMock,
   resolvePromptReferencesMock,
   restoreQueuedMessageMock,
   resumeLocalSessionMock,
@@ -46,7 +46,6 @@ const {
   takeOverSessionControlMock,
   buildReferencedMemoryDocsContextMock,
   buildReferencedTasksContextMock,
-  buildReferencedVaultFilesContextMock,
   expandPromptReferencesWithNodeGraphMock,
   publishAppEventMock,
   createSessionListenerUnsubscribeMock,
@@ -86,8 +85,8 @@ const {
   resolveConversationCwdMock: vi.fn(),
   resolveDaemonPathsMock: vi.fn(),
   resolveDurableRunsRootMock: vi.fn(),
+  resolveConversationSessionFileMock: vi.fn((id: string) => `/sessions/${id}.jsonl`),
   resolveExtensionPromptReferencesMock: vi.fn(),
-  resolveMentionedVaultFilesMock: vi.fn(),
   resolvePromptReferencesMock: vi.fn(),
   restoreQueuedMessageMock: vi.fn(),
   resumeLocalSessionMock: vi.fn(),
@@ -98,7 +97,6 @@ const {
   takeOverSessionControlMock: vi.fn(),
   buildReferencedMemoryDocsContextMock: vi.fn(),
   buildReferencedTasksContextMock: vi.fn(),
-  buildReferencedVaultFilesContextMock: vi.fn(),
   expandPromptReferencesWithNodeGraphMock: vi.fn(),
   publishAppEventMock: vi.fn(),
   writeAppTelemetryEventMock: vi.fn(),
@@ -156,6 +154,7 @@ vi.mock('../middleware/index.js', () => ({
 
 vi.mock('../conversations/conversationService.js', () => ({
   parseTailBlocksQuery: parseTailBlocksQueryMock,
+  resolveConversationSessionFile: resolveConversationSessionFileMock,
 }));
 
 vi.mock('../conversations/sessions.js', () => ({
@@ -183,11 +182,6 @@ vi.mock('../knowledge/promptReferences.js', () => ({
   extractMentionIds: extractMentionIdsMock,
   pickPromptReferencesInOrder: pickPromptReferencesInOrderMock,
   resolvePromptReferences: resolvePromptReferencesMock,
-}));
-
-vi.mock('../knowledge/vaultFiles.js', () => ({
-  buildReferencedVaultFilesContext: buildReferencedVaultFilesContextMock,
-  resolveMentionedVaultFiles: resolveMentionedVaultFilesMock,
 }));
 
 vi.mock('../extensions/promptReferenceResolvers.js', () => ({
@@ -337,7 +331,6 @@ describe('live session routes', () => {
     resolveDaemonPathsMock.mockReset();
     resolveDurableRunsRootMock.mockReset();
     resolveExtensionPromptReferencesMock.mockReset();
-    resolveMentionedVaultFilesMock.mockReset();
     resolvePromptReferencesMock.mockReset();
     restoreQueuedMessageMock.mockReset();
     resumeLocalSessionMock.mockReset();
@@ -348,7 +341,6 @@ describe('live session routes', () => {
     takeOverSessionControlMock.mockReset();
     buildReferencedMemoryDocsContextMock.mockReset();
     buildReferencedTasksContextMock.mockReset();
-    buildReferencedVaultFilesContextMock.mockReset();
     expandPromptReferencesWithNodeGraphMock.mockReset();
     liveRegistry.clear();
     vi.useRealTimers();
@@ -393,7 +385,6 @@ describe('live session routes', () => {
     resolveDaemonPathsMock.mockReturnValue({ root: '/daemon' });
     resolveDurableRunsRootMock.mockReturnValue('/daemon/runs');
     resolveExtensionPromptReferencesMock.mockResolvedValue({ contextBlocks: [], references: [] });
-    resolveMentionedVaultFilesMock.mockReturnValue([]);
     resolvePromptReferencesMock.mockReturnValue({ projectIds: [], taskIds: [], memoryDocIds: [], skillNames: [] });
     restoreQueuedMessageMock.mockResolvedValue({ restoredIndex: 0 });
     resumeLocalSessionMock.mockResolvedValue({ id: 'live-resumed' });
@@ -403,7 +394,6 @@ describe('live session routes', () => {
     takeOverSessionControlMock.mockReturnValue({ ok: true, surfaceId: 'surface-1' });
     buildReferencedMemoryDocsContextMock.mockReturnValue('Memory docs context');
     buildReferencedTasksContextMock.mockReturnValue('Task context');
-    buildReferencedVaultFilesContextMock.mockReturnValue('Vault files context');
     expandPromptReferencesWithNodeGraphMock.mockReturnValue({ projectIds: [], memoryDocIds: [], skillNames: [] });
   });
 
@@ -429,17 +419,19 @@ describe('live session routes', () => {
     expect(listMemoryDocs).not.toHaveBeenCalled();
     expect(resolvePromptReferencesMock).not.toHaveBeenCalled();
     expect(expandPromptReferencesWithNodeGraphMock).not.toHaveBeenCalled();
-    expect(resolveMentionedVaultFilesMock).not.toHaveBeenCalled();
     expect(queuePromptContextMock).not.toHaveBeenCalled();
-    expect(promptRes.json).toHaveBeenCalledWith({
-      accepted: true,
-      delivery: 'started',
-      ok: true,
-      referencedAttachmentIds: [],
-      referencedMemoryDocIds: [],
-      referencedTaskIds: [],
-      referencedVaultFileIds: [],
-    });
+    expect(promptRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accepted: true,
+        delivery: 'started',
+        ok: true,
+        referencedAttachmentIds: [],
+        referencedMemoryDocIds: [],
+        referencedTaskIds: [],
+        referencedVaultFileIds: [],
+        perf: expect.any(Object),
+      }),
+    );
   });
 
   it('passes relatedConversationIds through to submit (context injection delegated to extension)', async () => {
@@ -660,15 +652,18 @@ describe('live session routes', () => {
       sessionFile: '/sessions/stored.jsonl',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('runs');
-    expect(promptRes.json).toHaveBeenCalledWith({
-      accepted: true,
-      delivery: 'started',
-      ok: true,
-      referencedAttachmentIds: ['att-1'],
-      referencedMemoryDocIds: ['note-1'],
-      referencedTaskIds: ['task-1'],
-      referencedVaultFileIds: ['vault-1'],
-    });
+    expect(promptRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accepted: true,
+        delivery: 'started',
+        ok: true,
+        referencedAttachmentIds: ['att-1'],
+        referencedMemoryDocIds: ['note-1'],
+        referencedTaskIds: ['task-1'],
+        referencedVaultFileIds: ['vault-1'],
+        perf: expect.any(Object),
+      }),
+    );
 
     isLiveMock.mockReturnValue(true);
     submitLocalPromptSessionMock.mockImplementationOnce(async () => {
