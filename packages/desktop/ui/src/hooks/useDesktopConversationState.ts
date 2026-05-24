@@ -208,7 +208,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     let closed = false;
-    setState(null);
+    setState((current) => (current?.conversationId === conversationId ? current : null));
     setError(null);
 
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
