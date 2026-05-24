@@ -735,7 +735,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     sessionSnapshot?.isLive ??
     (useDesktopConversation ? confirmedLiveValue : confirmedLive);
   const conversationNeedsTakeover = false;
-  const composerRunState = resolveConversationComposerRunState({
+  const rawComposerRunState = resolveConversationComposerRunState({
     streamIsStreaming: stream.isStreaming,
     sessionIsRunning: sessionSnapshot?.isRunning,
     bootstrapLiveSessionIsStreaming:
@@ -744,6 +744,31 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       visibleDesktopConversationState?.liveSession.live === true ? visibleDesktopConversationState.liveSession.isStreaming : false,
     hasStaleTurnState: liveSessionHasStaleTurnState,
   });
+  const [latchedStreamControlsActive, setLatchedStreamControlsActive] = useState(rawComposerRunState.streamControlsActive);
+
+  useEffect(() => {
+    if (rawComposerRunState.streamControlsActive) {
+      setLatchedStreamControlsActive(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setLatchedStreamControlsActive(false);
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [rawComposerRunState.streamControlsActive]);
+
+  const composerRunState = useMemo(
+    () => ({
+      allowQueuedPrompts: latchedStreamControlsActive || liveSessionHasStaleTurnState,
+      defaultComposerBehavior: latchedStreamControlsActive ? 'steer' : liveSessionHasStaleTurnState ? 'followUp' : undefined,
+      streamControlsActive: latchedStreamControlsActive,
+    }),
+    [latchedStreamControlsActive, liveSessionHasStaleTurnState],
+  );
   const allowQueuedPrompts = composerRunState.allowQueuedPrompts;
   const defaultComposerBehavior = composerRunState.defaultComposerBehavior;
   const conversationRunningForPage = composerRunState.streamControlsActive || liveSessionHasStaleTurnState;
@@ -5106,15 +5131,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [id, suggestedContextShelfState],
   );
   const [composerChromeReady, setComposerChromeReady] = useState(draft);
+  const composerChromeConversationKeyRef = useRef<string | null>(draft ? 'draft' : (id ?? null));
 
   useEffect(() => {
+    const conversationKey = draft ? 'draft' : (id ?? null);
+    if (composerChromeConversationKeyRef.current !== conversationKey) {
+      composerChromeConversationKeyRef.current = conversationKey;
+      setComposerChromeReady(draft);
+    }
+
     if (draft) {
       setComposerChromeReady(true);
       return;
     }
 
-    setComposerChromeReady(false);
-    if (!id || !hasRenderableMessages || showConversationLoadingState) {
+    if (!id || composerChromeReady || !hasRenderableMessages || showConversationLoadingState) {
       return;
     }
 
@@ -5125,7 +5156,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [draft, hasRenderableMessages, id, showConversationLoadingState]);
+  }, [composerChromeReady, draft, hasRenderableMessages, id, showConversationLoadingState]);
 
   const hasComposerShelfContent =
     composerChromeReady &&
