@@ -19,6 +19,12 @@ import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE as SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
+import {
+  hasConversationCatalogRows,
+  listConversationCatalogSessions,
+  readConversationCatalogSession,
+  upsertConversationCatalogSessions,
+} from './conversationCatalog.js';
 import { readConversationContextDocs } from './conversationContextDocs.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
@@ -360,7 +366,11 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
 export function listConversationSessionsSnapshot() {
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
-  const jsonl = decorateSessionsWithAttention(profile, listSessions(), deferredResumesBySessionFile);
+  const storedSessions = hasConversationCatalogRows() ? listConversationCatalogSessions() : listSessions();
+  if (storedSessions.length > 0 && !hasConversationCatalogRows()) {
+    upsertConversationCatalogSessions(storedSessions);
+  }
+  const jsonl = decorateSessionsWithAttention(profile, storedSessions, deferredResumesBySessionFile);
   const live = listAllLiveSessions();
   const liveById = new Map(live.map((entry) => [entry.id, entry]));
   const jsonlIds = new Set(jsonl.map((session) => session.id));
@@ -439,7 +449,7 @@ export function readConversationSessionSignature(conversationId: string): string
 export function readConversationSessionMeta(conversationId: string) {
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
-  const storedSession = readSessionMeta(conversationId);
+  const storedSession = readConversationCatalogSession(conversationId) ?? readSessionMeta(conversationId);
   const decoratedSession = storedSession
     ? (decorateSessionsWithAttention(profile, [storedSession], deferredResumesBySessionFile)[0] ?? null)
     : null;

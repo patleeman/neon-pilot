@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { listConversationSessionsSnapshotMock, readConversationSessionMetaMock, readSessionSearchTextMock } = vi.hoisted(() => ({
+const { listConversationSessionsSnapshotMock, readConversationSessionMetaMock, readIndexedConversationSearchTextMock } = vi.hoisted(() => ({
   listConversationSessionsSnapshotMock: vi.fn(),
   readConversationSessionMetaMock: vi.fn(),
-  readSessionSearchTextMock: vi.fn(),
+  readIndexedConversationSearchTextMock: vi.fn(),
 }));
 
 vi.mock('./conversationService.js', () => ({
@@ -11,8 +11,8 @@ vi.mock('./conversationService.js', () => ({
   readConversationSessionMeta: readConversationSessionMetaMock,
 }));
 
-vi.mock('./sessions.js', () => ({
-  readSessionSearchText: readSessionSearchTextMock,
+vi.mock('./conversationSearchIndex.js', () => ({
+  readIndexedConversationSearchText: readIndexedConversationSearchTextMock,
 }));
 
 import {
@@ -24,7 +24,7 @@ import {
 beforeEach(() => {
   listConversationSessionsSnapshotMock.mockReset();
   readConversationSessionMetaMock.mockReset();
-  readSessionSearchTextMock.mockReset();
+  readIndexedConversationSearchTextMock.mockReset();
 });
 
 describe('conversationSessionCapability', () => {
@@ -52,7 +52,10 @@ describe('conversationSessionCapability', () => {
   });
 
   it('builds a normalized session search index and tolerates missing sessions', () => {
-    readSessionSearchTextMock.mockReturnValueOnce('hello world').mockReturnValueOnce(null);
+    readIndexedConversationSearchTextMock.mockReturnValue({
+      'conversation-1': 'hello world',
+      'conversation-2': '',
+    });
 
     expect(
       readConversationSessionSearchIndexCapability({
@@ -64,12 +67,11 @@ describe('conversationSessionCapability', () => {
         'conversation-2': '',
       },
     });
-    expect(readSessionSearchTextMock).toHaveBeenNthCalledWith(1, 'conversation-1');
-    expect(readSessionSearchTextMock).toHaveBeenNthCalledWith(2, 'conversation-2');
+    expect(readIndexedConversationSearchTextMock).toHaveBeenCalledWith(['conversation-1', 'conversation-2']);
   });
 
   it('returns an empty search index when no valid session ids are provided', () => {
     expect(readConversationSessionSearchIndexCapability({ sessionIds: [null, '   ', 123] })).toEqual({ index: {} });
-    expect(readSessionSearchTextMock).not.toHaveBeenCalled();
+    expect(readIndexedConversationSearchTextMock).not.toHaveBeenCalled();
   });
 });

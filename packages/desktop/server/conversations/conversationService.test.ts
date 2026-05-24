@@ -10,8 +10,12 @@ const {
   getLocalLiveSessionsMock,
   listDeferredResumeRecordsMock,
   listProfileActivityEntriesMock,
+  hasConversationCatalogRowsMock,
+  listConversationCatalogSessionsMock,
   listSessionsMock,
+  readConversationCatalogSessionMock,
   liveSessionRegistry,
+  upsertConversationCatalogSessionsMock,
   loadDaemonConfigMock,
   loadDeferredResumeStateMock,
   loadProfileActivityReadStateMock,
@@ -37,8 +41,12 @@ const {
   getLocalLiveSessionsMock: vi.fn(),
   listDeferredResumeRecordsMock: vi.fn(),
   listProfileActivityEntriesMock: vi.fn(),
+  hasConversationCatalogRowsMock: vi.fn(() => false),
+  listConversationCatalogSessionsMock: vi.fn(() => []),
   listSessionsMock: vi.fn(),
+  readConversationCatalogSessionMock: vi.fn(() => null),
   liveSessionRegistry: new Map<string, unknown>(),
+  upsertConversationCatalogSessionsMock: vi.fn(),
   loadDaemonConfigMock: vi.fn(),
   loadDeferredResumeStateMock: vi.fn(),
   loadProfileActivityReadStateMock: vi.fn(),
@@ -110,6 +118,13 @@ vi.mock('./sessions.js', () => ({
   readSessionMeta: readSessionMetaMock,
 }));
 
+vi.mock('./conversationCatalog.js', () => ({
+  hasConversationCatalogRows: hasConversationCatalogRowsMock,
+  listConversationCatalogSessions: listConversationCatalogSessionsMock,
+  readConversationCatalogSession: readConversationCatalogSessionMock,
+  upsertConversationCatalogSessions: upsertConversationCatalogSessionsMock,
+}));
+
 vi.mock('./conversationModelPreferences.js', () => ({
   readConversationModelPreferenceSnapshot: readConversationModelPreferenceSnapshotMock,
   resolveConversationModelPreferenceState: resolveConversationModelPreferenceStateMock,
@@ -153,7 +168,11 @@ describe('conversationService', () => {
     getLocalLiveSessionsMock.mockReset();
     listDeferredResumeRecordsMock.mockReset();
     listProfileActivityEntriesMock.mockReset();
+    hasConversationCatalogRowsMock.mockReset();
+    listConversationCatalogSessionsMock.mockReset();
     listSessionsMock.mockReset();
+    readConversationCatalogSessionMock.mockReset();
+    upsertConversationCatalogSessionsMock.mockReset();
     liveSessionRegistry.clear();
     loadDaemonConfigMock.mockReset();
     loadDeferredResumeStateMock.mockReset();
@@ -177,7 +196,10 @@ describe('conversationService', () => {
     getLocalLiveSessionsMock.mockReturnValue([]);
     listDeferredResumeRecordsMock.mockReturnValue([]);
     listProfileActivityEntriesMock.mockReturnValue([]);
+    hasConversationCatalogRowsMock.mockReturnValue(false);
+    listConversationCatalogSessionsMock.mockReturnValue([]);
     listSessionsMock.mockReturnValue([]);
+    readConversationCatalogSessionMock.mockReturnValue(null);
     loadDaemonConfigMock.mockImplementation(() => {
       throw new Error('daemon unavailable');
     });

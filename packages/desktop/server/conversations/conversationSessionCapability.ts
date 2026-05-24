@@ -1,5 +1,5 @@
+import { readIndexedConversationSearchText } from './conversationSearchIndex.js';
 import { listConversationSessionsSnapshot, readConversationSessionMeta } from './conversationService.js';
-import { readSessionSearchText } from './sessions.js';
 
 export function readConversationSessionsCapability() {
   return listConversationSessionsSnapshot();
@@ -25,11 +25,5 @@ export function readConversationSessionSearchIndexCapability(input: { sessionIds
     return { index: {} as Record<string, string> };
   }
 
-  const index: Record<string, string> = {};
-  for (const sessionId of sessionIds) {
-    const searchText = readSessionSearchText(sessionId);
-    index[sessionId] = typeof searchText === 'string' ? searchText : '';
-  }
-
-  return { index };
+  return { index: readIndexedConversationSearchText(sessionIds) };
 }

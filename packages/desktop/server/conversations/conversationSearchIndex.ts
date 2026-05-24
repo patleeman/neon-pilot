@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { type SqliteDatabase } from '@neon-pilot/core';
 
 import { openRecoveringRuntimeSqliteDb } from '../shared/sqliteRuntimeRecovery.js';
+import { upsertConversationCatalogSession } from './conversationCatalog.js';
 import { ensureConversationsDbFileMigrated } from './conversationDbPaths.js';
 import { readConversationSummary } from './conversationSummaries.js';
 import { listSessions, readSessionSearchText, type SessionMeta } from './sessions.js';
@@ -124,6 +125,7 @@ function buildSearchText(meta: SessionMeta): string {
 }
 
 function upsertSearchDocument(meta: SessionMeta, signature: string, searchText: string): void {
+  upsertConversationCatalogSession(meta, signature);
   const database = getDb();
   const lastActivityAt = normalizeActivityAt(meta);
   const updatedAt = new Date().toISOString();
@@ -351,6 +353,30 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
     blockIndex: 0,
     snippet: row.snippet || row.title,
   }));
+}
+
+export function readIndexedConversationSearchText(sessionIds: string[]): Record<string, string> {
+  const uniqueIds = [...new Set(sessionIds.map((id) => id.trim()).filter(Boolean))];
+  const index: Record<string, string> = Object.fromEntries(uniqueIds.map((id) => [id, '']));
+  if (uniqueIds.length === 0) {
+    return index;
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const rows = getDb()
+    .prepare(
+      `
+    SELECT session_id AS sessionId, search_text AS searchText
+    FROM conversation_search_index_fts
+    WHERE session_id IN (${placeholders})
+  `,
+    )
+    .all(...uniqueIds) as Array<{ sessionId: string; searchText: string }>;
+
+  for (const row of rows) {
+    index[row.sessionId] = row.searchText;
+  }
+  return index;
 }
 
 export function closeConversationSearchIndexDb(): void {
