@@ -4488,14 +4488,23 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
           recordSubmitPhase('createLiveSession', createStartedAtMs);
           createdSessionId = created.id;
+          const primeCachesStartedAtMs = performance.now();
           primeCreatedConversationOpenCaches(created, {
             tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
             bootstrapVersionKey: conversationVersionKey,
             sessionDetailVersion: conversationEventVersion,
           });
+          recordSubmitPhase('primeCreatedConversationCaches', primeCachesStartedAtMs, { conversationId: created.id });
           const newId = created.id;
+          const persistDrawingsStartedAtMs = performance.now();
           const attachmentRefs = await persistPromptDrawings(newId);
+          recordSubmitPhase('persistPromptDrawings', persistDrawingsStartedAtMs, { conversationId: newId, count: attachmentRefs.length });
+          const persistContextDocsStartedAtMs = performance.now();
           await persistPromptContextDocs(newId);
+          recordSubmitPhase('persistPromptContextDocs', persistContextDocsStartedAtMs, {
+            conversationId: newId,
+            count: pendingAttachedContextDocs.length,
+          });
           const initialPrompt = {
             text: textToSend,
             behavior: queuedBehavior,
