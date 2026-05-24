@@ -18,6 +18,7 @@ function arg(name, fallback) {
 }
 const app = arg('app', '');
 const entry = arg('entry', '');
+const desktopMainFile = join(repo, 'packages', 'desktop', 'dist', 'main.js');
 if (!app) {
   console.error('Usage: node scripts/perf-desktop-smoke.mjs --app="/path/to/Neon Pilot.app" [--sessions=2500 --blocks=80]');
   process.exit(1);
@@ -231,7 +232,7 @@ async function main() {
   const start = performance.now();
   const child = spawn(
     join(app, 'Contents', 'MacOS', basename(app, '.app')),
-    [`--remote-debugging-port=${port}`, '--no-quit-confirmation', ...(entry ? [entry] : [])],
+    [`--remote-debugging-port=${port}`, desktopMainFile, '--no-quit-confirmation', ...(entry ? [entry] : [])],
     {
       env,
       stdio: 'ignore',
