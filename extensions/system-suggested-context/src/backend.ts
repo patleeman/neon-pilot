@@ -356,6 +356,14 @@ function formatPointerContext(pointers: RelatedConversationPointer[]): string {
   return lines.join('\n');
 }
 
+function formatSelectedConversationIdsContext(sessionIds: string[]): string {
+  const lines = ['User-selected related prior conversations. IDs only; call conversation_inspect before relying on details.'];
+  for (const sessionId of sessionIds.slice(0, MAX_RELATED_CONVERSATION_POINTERS)) {
+    lines.push(`- id: ${sessionId}`);
+  }
+  return lines.join('\n');
+}
+
 async function hasConversationTranscriptContent(conversationId: string): Promise<boolean> {
   return (((await getConversationBlocks(conversationId, { tailBlocks: 1 })) as { totalBlocks?: number } | undefined)?.totalBlocks ?? 0) > 0;
 }
@@ -533,28 +541,30 @@ export async function providePromptContext(
       return { contextMessages: [], warnings: [] };
     }
 
-    const cachedPointers = hasSelectedIds
-      ? null
-      : readCachedRelatedConversationPointers({
-          profile: _ctx.profile,
-          prompt: input.prompt,
-          currentConversationId: input.conversationId,
-          currentCwd: input.currentCwd,
-        });
+    if (hasSelectedIds) {
+      const selectedIds = normalizeSessionIds(input.relatedConversationIds)
+        .filter((sessionId) => sessionId !== input.conversationId)
+        .slice(0, MAX_RELATED_CONVERSATION_POINTERS);
+      return selectedIds.length > 0
+        ? {
+            contextMessages: [
+              {
+                customType: RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE,
+                content: formatSelectedConversationIdsContext(selectedIds),
+              },
+            ],
+          }
+        : { contextMessages: [] };
+    }
 
-    const pointers = cachedPointers
-      ? cachedPointers
-      : hasSelectedIds
-        ? await withPointerBudget(
-            buildRelatedConversationPointers({
-              prompt: input.prompt,
-              currentConversationId: input.conversationId,
-              currentCwd: input.currentCwd,
-              selectedSessionIds: input.relatedConversationIds,
-              includeAuto: false,
-            }),
-          )
-        : { contextMessages: [], pointers: [], warnings: [] };
+    const cachedPointers = readCachedRelatedConversationPointers({
+      profile: _ctx.profile,
+      prompt: input.prompt,
+      currentConversationId: input.conversationId,
+      currentCwd: input.currentCwd,
+    });
+
+    const pointers = cachedPointers ? cachedPointers : { contextMessages: [], pointers: [], warnings: [] };
 
     if (!hasSelectedIds && !cachedPointers) {
       void warmRelatedConversationPointerCache({

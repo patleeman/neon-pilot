@@ -146,7 +146,7 @@ describe('app-telemetry-db', () => {
       .run('legacy-event', new Date().toISOString(), 'server', 'legacy', 'imported');
     legacyDb.close();
 
-    writeAppTelemetryEvent({ source: 'server', category: 'api', name: 'request' });
+    maintainAppTelemetryDb(testDir);
     closeAppTelemetryDbs();
 
     const db = openSqliteDatabase(join(testDir, 'observability', 'observability.db'));
@@ -167,6 +167,7 @@ describe('app-telemetry-db', () => {
   it('keeps trace maintenance separate from app telemetry indexing', () => {
     writeAppTelemetryEvent({ source: 'server', category: 'api', name: 'request', route: '/health' });
     writeTraceStats({ sessionId: 'shared-log-session', modelId: 'shared-model', tokensInput: 1, tokensOutput: 2, cost: 0.01 });
+    maintainAppTelemetryDb(testDir);
     closeAppTelemetryDbs();
     closeTraceDbs();
 
@@ -184,6 +185,7 @@ describe('app-telemetry-db', () => {
     for (let index = 0; index < 1250; index += 1) {
       writeAppTelemetryEvent({ source: 'server', category: 'test', name: `event-${index}` });
     }
+    maintainAppTelemetryDb(testDir);
     closeAppTelemetryDbs();
 
     const db = openSqliteDatabase(join(testDir, 'observability', 'observability.db'));

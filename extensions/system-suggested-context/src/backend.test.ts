@@ -124,7 +124,7 @@ describe('system-suggested-context backend', () => {
     expect(result.contextMessages[0]?.content.match(/id: conv-related/g)).toHaveLength(1);
   });
 
-  it('injects compact one-line pointer previews without ranking internals', async () => {
+  it('injects selected pointer IDs without blocking on previews', async () => {
     mocks.getConversationBlocks.mockResolvedValue({ totalBlocks: 0 });
     mocks.getConversationMeta.mockResolvedValue({
       id: 'conv-manual',
@@ -150,9 +150,10 @@ describe('system-suggested-context backend', () => {
 
     expect(result.contextMessages).toHaveLength(1);
     expect(result.contextMessages[0]?.content).toBe(
-      'Potentially related prior conversations. Previews only; call conversation_inspect before relying on details.\n' +
-        '- Fix Stale Run Hourglass — Stale sidebar hourglass fixed by refreshing executions from run snapshots. id: conv-manual',
+      'User-selected related prior conversations. IDs only; call conversation_inspect before relying on details.\n' + '- id: conv-manual',
     );
+    expect(mocks.getConversationMeta).not.toHaveBeenCalled();
+    expect(mocks.readConversationSummary).not.toHaveBeenCalled();
     expect(result.contextMessages[0]?.content).not.toContain('workspace:');
     expect(result.contextMessages[0]?.content).not.toContain('created:');
     expect(result.contextMessages[0]?.content).not.toContain('source:');

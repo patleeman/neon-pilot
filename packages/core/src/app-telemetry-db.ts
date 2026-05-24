@@ -239,61 +239,64 @@ function maybePruneAppTelemetryEvents(db: SqliteDatabase, dbPath: string, input:
   ).run(maxEvents);
 }
 
+function insertAppTelemetryEvent(db: SqliteDatabase, event: AppTelemetryLogEvent): void {
+  db.prepare(
+    `
+      INSERT OR IGNORE INTO app_telemetry_events (
+        id, ts, source, category, name, session_id, run_id, route, status, duration_ms, count, value, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  ).run(
+    event.id,
+    event.ts,
+    event.source,
+    event.category,
+    event.name,
+    event.sessionId,
+    event.runId,
+    event.route,
+    event.status,
+    event.durationMs,
+    event.count,
+    event.value,
+    stringifyMetadata(event.metadata),
+  );
+}
+
+function indexAppTelemetryLogs(db: SqliteDatabase, stateRoot?: string): void {
+  const maxEvents = resolveMaxEvents();
+  const events = readAppTelemetryLogEvents({ since: '0000-01-01T00:00:00.000Z', limit: maxEvents + 1000, stateRoot });
+  const insertMany = db.transaction((items: AppTelemetryLogEvent[]) => {
+    for (const event of items) insertAppTelemetryEvent(db, event);
+  });
+  insertMany(events);
+}
+
 export function writeAppTelemetryEvent(input: AppTelemetryEventInput): void {
   try {
     const category = normalizeString(input.category, 120);
     const name = normalizeString(input.name, 160);
     if (!category || !name) return;
 
-    const event: AppTelemetryLogEvent = {
-      schemaVersion: 1,
-      id: randomUUID(),
-      ts: nowIso(),
-      source: input.source,
-      category,
-      name,
-      sessionId: normalizeString(input.sessionId, 160),
-      runId: normalizeString(input.runId, 200),
-      route: normalizeString(input.route, 500),
-      status: typeof input.status === 'number' && Number.isInteger(input.status) ? input.status : null,
-      durationMs: normalizeFiniteNumber(input.durationMs),
-      count: typeof input.count === 'number' && Number.isInteger(input.count) ? input.count : null,
-      value: normalizeFiniteNumber(input.value),
-      metadata: normalizeMetadata(input.metadata),
-    };
-
-    writeAppTelemetryLogEvent(event, input.stateRoot);
-
-    try {
-      const dbPath = resolveAppTelemetryDbPath(input.stateRoot);
-      const db = getAppTelemetryDb(input.stateRoot);
-
-      db.prepare(
-        `
-      INSERT INTO app_telemetry_events (
-        id, ts, source, category, name, session_id, run_id, route, status, duration_ms, count, value, metadata_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      ).run(
-        event.id,
-        event.ts,
-        event.source,
-        event.category,
-        event.name,
-        event.sessionId,
-        event.runId,
-        event.route,
-        event.status,
-        event.durationMs,
-        event.count,
-        event.value,
-        stringifyMetadata(event.metadata),
-      );
-
-      maybePruneAppTelemetryEvents(db, dbPath);
-    } catch (error) {
-      logTelemetryStorageError('failed to index app telemetry event into SQLite', error);
-    }
+    writeAppTelemetryLogEvent(
+      {
+        schemaVersion: 1,
+        id: randomUUID(),
+        ts: nowIso(),
+        source: input.source,
+        category,
+        name,
+        sessionId: normalizeString(input.sessionId, 160),
+        runId: normalizeString(input.runId, 200),
+        route: normalizeString(input.route, 500),
+        status: typeof input.status === 'number' && Number.isInteger(input.status) ? input.status : null,
+        durationMs: normalizeFiniteNumber(input.durationMs),
+        count: typeof input.count === 'number' && Number.isInteger(input.count) ? input.count : null,
+        value: normalizeFiniteNumber(input.value),
+        metadata: normalizeMetadata(input.metadata),
+      },
+      input.stateRoot,
+    );
   } catch (error) {
     logTelemetryStorageError('failed to normalize app telemetry event', error);
   }
@@ -310,6 +313,7 @@ export interface AppTelemetryDbMaintenanceResult {
 export function maintainAppTelemetryDb(stateRoot?: string): AppTelemetryDbMaintenanceResult {
   const dbPath = resolveAppTelemetryDbPath(stateRoot);
   const db = getAppTelemetryDb(stateRoot);
+  indexAppTelemetryLogs(db, stateRoot);
   const before = countAppTelemetryEvents(db);
   maybePruneAppTelemetryEvents(db, dbPath, { force: true });
   const after = countAppTelemetryEvents(db);
