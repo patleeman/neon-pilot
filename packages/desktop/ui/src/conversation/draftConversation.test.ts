@@ -9,6 +9,7 @@ import {
   clearDraftConversationModel,
   clearDraftConversationModelPreferences,
   clearDraftConversationThinkingLevel,
+  DRAFT_CONVERSATION_STATE_CHANGED_EVENT,
   hasConversationAttachments,
   hasDraftConversationAttachments,
   persistConversationAttachments,
@@ -81,13 +82,27 @@ describe('draftConversation', () => {
     expect(storage.getItem(DRAFT_CONVERSATION_THINKING_LEVEL_STORAGE_KEY)).toBe(JSON.stringify('high'));
   });
 
-  it('persists and reads the draft composer text', () => {
+  it('persists and reads the draft composer text without emitting global draft preference changes', () => {
     const storage = createStorage();
+    let eventCount = 0;
+    const listener = () => {
+      eventCount += 1;
+    };
+    const eventTarget = new EventTarget();
+    const originalWindow = globalThis.window;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: eventTarget });
+    eventTarget.addEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, listener);
 
-    persistDraftConversationComposer('Keep this unsent note', storage);
+    try {
+      persistDraftConversationComposer('Keep this unsent note', storage);
+    } finally {
+      eventTarget.removeEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, listener);
+      Object.defineProperty(globalThis, 'window', { configurable: true, value: originalWindow });
+    }
 
     expect(readDraftConversationComposer(storage)).toBe('Keep this unsent note');
     expect(storage.getItem(DRAFT_CONVERSATION_COMPOSER_STORAGE_KEY)).toBe(JSON.stringify('Keep this unsent note'));
+    expect(eventCount).toBe(0);
   });
 
   it('clears the stored draft composer text', () => {
