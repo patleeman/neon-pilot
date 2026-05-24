@@ -1,3 +1,4 @@
+import { buildDesktopWebSocketUrl } from '../client/endpoints';
 import type { DesktopAppEvent } from '../shared/types';
 
 interface DesktopRealtimeListener {
@@ -9,13 +10,8 @@ interface DesktopRealtimeListener {
 
 type DesktopRealtimeMessage = { type: 'connected' } | { type: 'app_event'; event: DesktopAppEvent } | { type: 'error'; message: string };
 
-function buildRealtimeUrl(path: string): string {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}${path}`;
-}
-
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
-  const socket = new WebSocket(buildRealtimeUrl('/api/realtime'));
+  const socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   let closed = false;
 
   socket.addEventListener('open', () => listener.onopen?.());
