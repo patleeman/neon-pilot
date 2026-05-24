@@ -183,6 +183,35 @@ describe('durableRuns', () => {
     await expect(listDurableRuns()).resolves.toEqual(firstResult.result);
   });
 
+  it('falls back to scanned runs when the daemon list exceeds the foreground budget', async () => {
+    const deferred = createDeferred<{
+      scannedAt: string;
+      runs: Array<ReturnType<typeof createRun>>;
+      summary: { totalRuns: number };
+    }>();
+    pingDaemonMock.mockResolvedValue(true);
+    listDurableRunsFromDaemonMock.mockReturnValue(deferred.promise);
+    scanDurableRunsForRecoveryMock.mockReturnValue([createRun('scan-fast')]);
+    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 1 });
+
+    vi.useFakeTimers();
+    const request = listDurableRunsWithTelemetry();
+    await vi.advanceTimersByTimeAsync(251);
+
+    await expect(request).resolves.toMatchObject({
+      result: {
+        runs: [{ ...createRun('scan-fast'), decorated: true }],
+        summary: { totalRuns: 1 },
+        runsRoot: '/daemon-root/runs',
+      },
+      telemetry: {
+        cache: 'miss',
+        source: 'scan',
+        runCount: 1,
+      },
+    });
+  });
+
   it('falls back to scanned runs when the daemon is unavailable or disabled and clears the cache after unexpected failures', async () => {
     pingDaemonMock.mockRejectedValueOnce(new Error('ECONNREFUSED while connecting'));
     scanDurableRunsForRecoveryMock.mockReturnValue([createRun('scan-1')]);

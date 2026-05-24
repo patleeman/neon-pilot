@@ -26,6 +26,7 @@ import { createInitialDurableRunStatus, saveDurableRunStatus } from '../runs/sto
 import { decorateDurableRunAttention, decorateDurableRunsAttention } from './durableRunAttention.js';
 
 const LIST_DURABLE_RUNS_CACHE_TTL_MS = 10_000;
+const LIST_DURABLE_RUNS_DAEMON_BUDGET_MS = 250;
 
 export interface DurableRunsListTelemetry {
   cache: 'hit' | 'inflight' | 'miss';
@@ -40,6 +41,39 @@ let durableRunsListCache: {
   promise: Promise<ListDurableRunsResult & { runsRoot: string }> | null;
   source: DurableRunsListTelemetry['source'] | null;
 } | null = null;
+
+class DurableRunsDaemonBudgetExceeded extends Error {
+  constructor() {
+    super('Durable runs daemon list exceeded foreground budget.');
+  }
+}
+
+function withDaemonListBudget<T>(promise: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new DurableRunsDaemonBudgetExceeded()), LIST_DURABLE_RUNS_DAEMON_BUDGET_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+function buildScannedDurableRunsResult(runsRoot: string): ListDurableRunsResult & { runsRoot: string } {
+  const scannedAt = new Date().toISOString();
+  const runs = scanDurableRunsForRecovery(runsRoot);
+  return {
+    scannedAt,
+    runs: decorateRuns(runs),
+    summary: summarizeScannedDurableRuns(runs),
+    runsRoot,
+  };
+}
 
 export function clearDurableRunsListCache(): void {
   durableRunsListCache = null;
@@ -266,7 +300,9 @@ export async function listDurableRunsWithTelemetry(): Promise<{
     try {
       if (await pingDaemon()) {
         source = 'daemon';
-        const result = await listDurableRunsFromDaemon();
+        const daemonListPromise = listDurableRunsFromDaemon();
+        const result = await withDaemonListBudget(daemonListPromise);
+        daemonListPromise.catch(() => undefined);
         return {
           ...result,
           runs: decorateRuns(result.runs),
@@ -274,20 +310,13 @@ export async function listDurableRunsWithTelemetry(): Promise<{
         };
       }
     } catch (error) {
-      if (!isDaemonUnavailable(error)) {
+      if (!isDaemonUnavailable(error) && !(error instanceof DurableRunsDaemonBudgetExceeded)) {
         throw error;
       }
     }
 
     source = 'scan';
-    const scannedAt = new Date().toISOString();
-    const runs = scanDurableRunsForRecovery(runsRoot);
-    return {
-      scannedAt,
-      runs: decorateRuns(runs),
-      summary: summarizeScannedDurableRuns(runs),
-      runsRoot,
-    };
+    return buildScannedDurableRunsResult(runsRoot);
   })();
 
   durableRunsListCache = {
