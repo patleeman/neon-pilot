@@ -272,7 +272,6 @@ export function persistDraftConversationComposer(text: string, storage: StorageL
     storage,
     shouldPersist: (value) => value.length > 0,
   });
-  emitDraftConversationStateChanged();
 }
 
 export function clearDraftConversationComposer(storage: StorageLike | null = getSessionStorage()): void {

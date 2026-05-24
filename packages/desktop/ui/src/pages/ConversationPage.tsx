@@ -73,13 +73,7 @@ import {
   selectConversationScheduledTasks,
 } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
-import {
-  applyGoalModeToggleAction,
-  buildMissionAutoModeInputFromDraft,
-  createDraftMissionTask,
-  type GoalModeToggleAction,
-  resolveGoalModeToggleAction,
-} from '../conversation/conversationGoalMode';
+import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../conversation/conversationGoalMode';
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
@@ -400,8 +394,7 @@ export { shouldEnableMessageForkControls };
 
 // ── ConversationPage ──────────────────────────────────────────────────────────
 
-export { applyGoalModeToggleAction, buildMissionAutoModeInputFromDraft, createDraftMissionTask, resolveGoalModeToggleAction };
-export type { GoalModeToggleAction };
+export { buildMissionAutoModeInputFromDraft, createDraftMissionTask };
 
 export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const { id: routeId } = useParams<{ id?: string }>();
@@ -1331,18 +1324,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     shouldPersist: (value) => value.length > 0,
   });
 
-  // Goal mode
-  const [composerGoalPending, setComposerGoalPending] = useState(false);
-  useEffect(() => {
-    if (composerGoalPending && stream.goalState?.status === 'active') {
-      setComposerGoalPending(false);
-    }
-  }, [composerGoalPending, stream.goalState?.status]);
-  const goalEnabled = composerGoalPending || stream.goalState?.status === 'active';
-  const toggleGoalMode = useCallback(async () => {
-    const action = resolveGoalModeToggleAction({ conversationId: id, goalEnabled, composerText: input });
-    await applyGoalModeToggleAction(action, api.updateGoal, setComposerGoalPending);
-  }, [id, goalEnabled, input]);
+  const goalEnabled = stream.goalState?.status === 'active';
   const [extensionSlashCommands, setExtensionSlashCommands] = useState<ExtensionSlashCommandRegistration[]>([]);
   const [extensionMentionRegistrations, setExtensionMentionRegistrations] = useState<ExtensionMentionRegistration[]>([]);
   const [extensionMentionItems, setExtensionMentionItems] = useState<MentionItem[]>([]);
@@ -2171,7 +2153,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   useEffect(() => {
     const missingSessionIds = selectMissingRelatedThreadSearchIndexIds({
       draft,
-      inputText: input,
+      inputText: debouncedRelatedThreadsQuery,
       selectedThreadIds: selectedRelatedThreadIds,
       candidateIds: relatedThreadCandidateIds,
       searchIndex: relatedThreadSearchIndex,
@@ -2214,7 +2196,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [draft, input, relatedThreadCandidateIds, relatedThreadSearchIndex, selectedRelatedThreadIds.length]);
+  }, [debouncedRelatedThreadsQuery, draft, relatedThreadCandidateIds, relatedThreadSearchIndex, selectedRelatedThreadIds.length]);
 
   useEffect(() => {
     const missingSessionIds = selectMissingRelatedThreadSummaryIds({
