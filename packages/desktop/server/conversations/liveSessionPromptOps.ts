@@ -4,7 +4,7 @@ import { rememberImageProbeAttachments, type StoredImageProbeAttachment } from '
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import type { PromptImageAttachment } from './liveSessionQueue.js';
-import { getAssistantErrorDisplayMessage } from './sessions.js';
+import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
 export interface LiveSessionPromptHost {
   sessionId: string;

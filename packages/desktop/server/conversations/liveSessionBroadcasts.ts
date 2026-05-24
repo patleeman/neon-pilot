@@ -15,7 +15,7 @@ import {
   scheduleLiveSessionContextUsage,
 } from './liveSessionStateBroadcasts.js';
 import { type LiveEntry, type LiveListener } from './liveSessionTypes.js';
-import { readGoalFromEntries } from './sessions.js';
+import { readGoalFromEntries } from './sessionGoalState.js';
 
 /** Send an SSE event to every listener subscribed to this live session. */
 export function broadcast(entry: LiveEntry, event: SseEvent, options?: { exclude?: LiveListener }): void {

@@ -12,7 +12,7 @@ import {
 } from './liveSessionStaleTurns.js';
 import { buildFallbackTitleFromContent, isPlaceholderConversationTitle } from './liveSessionTitle.js';
 import { resolveCompactionSummaryTitle } from './liveSessionTranscript.js';
-import { getAssistantErrorDisplayMessage } from './sessions.js';
+import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
 const toolStartTimes = new WeakMap<AgentSession, Map<string, number>>();
 const toolStartInputs = new WeakMap<AgentSession, Map<string, unknown>>();

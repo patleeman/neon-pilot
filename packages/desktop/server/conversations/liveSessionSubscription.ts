@@ -13,7 +13,7 @@ import { readQueueState } from './liveSessionQueue.js';
 import { ensureStaleTurnState, type LiveSessionStaleTurnState } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 import { buildLiveSessionSnapshot } from './liveSessionStateSnapshot.js';
-import { readGoalFromEntries } from './sessions.js';
+import { readGoalFromEntries } from './sessionGoalState.js';
 
 export interface LiveSessionSubscriptionListener {
   send: (event: SseEvent) => void;

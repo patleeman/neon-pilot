@@ -14,7 +14,8 @@ import { type QueuedPromptPreview, readQueueState } from './liveSessionQueue.js'
 import { hasQueuedOrActiveStaleTurn } from './liveSessionStaleTurns.js';
 import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
 import { applyLatestCompactionSummaryTitle, buildLiveStateBlocks, mergeConversationHistoryBlocks } from './liveSessionTranscript.js';
-import { readGoalFromEntries, readSessionBlocksByFile } from './sessions.js';
+import { readGoalFromEntries } from './sessionGoalState.js';
+import { readSessionBlocksByFile } from './sessions.js';
 
 const DEFAULT_LIVE_SNAPSHOT_TAIL_BLOCKS = 400;
 const MAX_LIVE_SNAPSHOT_TAIL_BLOCKS = 10000;

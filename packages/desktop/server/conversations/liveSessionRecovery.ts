@@ -1,6 +1,6 @@
 import { type AgentSession, type SessionManager } from '@earendil-works/pi-coding-agent';
 
-import { getAssistantErrorDisplayMessage } from './sessions.js';
+import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 
 function resolveDanglingToolCallRepairLeafId(sessionManager: Pick<SessionManager, 'getBranch'>): string | null | undefined {
   const branch = sessionManager.getBranch();
