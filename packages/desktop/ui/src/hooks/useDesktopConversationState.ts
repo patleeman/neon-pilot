@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../client/api';
+import { recordClientPerfTiming } from '../client/perfDiagnostics';
 import { DESKTOP_CONVERSATION_STATE_EVENT, getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import type { DesktopConversationState, DisplayBlock, PromptAttachmentRefInput, PromptImageInput, SseEvent } from '../shared/types';
@@ -272,6 +273,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const handleStateEvent = (event: Event) => {
+      const receivedAtMs = performance.now();
       const detail = (event as CustomEvent<DesktopConversationStateEnvelope>).detail;
       if (!detail || closed) {
         return;
@@ -287,6 +289,18 @@ export function useDesktopConversationState(conversationId: string | null, optio
       }
 
       handleEnvelope(detail);
+      recordClientPerfTiming({
+        name: 'desktop.conversationStateBridgeEvent',
+        startedAtMs: receivedAtMs,
+        meta: {
+          conversationId,
+          eventType: detail.event.type,
+          streamEventCount: detail.event.events?.length ?? 0,
+          hasState: Boolean(detail.event.state),
+          stateBlockCount: detail.event.state?.stream.blocks.length ?? null,
+          stateTotalBlocks: detail.event.state?.stream.totalBlocks ?? null,
+        },
+      });
     };
 
     window.addEventListener(DESKTOP_CONVERSATION_STATE_EVENT, handleStateEvent as EventListener);
