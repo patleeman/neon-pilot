@@ -47,7 +47,33 @@ describe('readFileChanges', () => {
     ).toEqual([expect.objectContaining({ path: 'src/app.ts', status: 'modified', additions: 1, deletions: 1 })]);
   });
 
-  it('does not derive file changes from tool input', () => {
+  it('derives a display diff for edit tool input when metadata is absent', () => {
+    expect(
+      readFileChangesForToolBlock({
+        tool: 'edit',
+        input: {
+          path: 'src/app.ts',
+          edits: [
+            {
+              oldText: 'const label = "old";\n',
+              newText: 'const label = "new";\nconst enabled = true;\n',
+            },
+          ],
+        },
+        details: null,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        path: 'src/app.ts',
+        status: 'modified',
+        additions: 2,
+        deletions: 1,
+        patch: expect.stringContaining('-const label = "old";\n+const label = "new";'),
+      }),
+    ]);
+  });
+
+  it('does not derive file changes from non-edit tool input', () => {
     expect(readFileChangesForToolBlock({ details: null })).toEqual([]);
   });
 });

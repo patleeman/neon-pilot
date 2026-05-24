@@ -92,8 +92,47 @@ export function readFileChanges(details: unknown): FileChange[] {
   });
 }
 
-export function readFileChangesForToolBlock(block: { details?: unknown }): FileChange[] {
-  return readFileChanges(block.details);
+export function readFileChangesForToolBlock(block: { tool?: string; input?: unknown; details?: unknown }): FileChange[] {
+  const fileChanges = readFileChanges(block.details);
+  if (fileChanges.length > 0) return fileChanges;
+  return readEditToolFileChanges(block);
+}
+
+function readEditToolFileChanges(block: { tool?: string; input?: unknown }): FileChange[] {
+  if (block.tool !== 'edit' || !isRecord(block.input)) return [];
+  const path = readString(block.input, 'path');
+  const edits = Array.isArray(block.input.edits) ? block.input.edits : [];
+  if (!path || edits.length === 0) return [];
+
+  const hunks: string[] = [];
+  let additions = 0;
+  let deletions = 0;
+  edits.forEach((candidate, index) => {
+    if (!isRecord(candidate)) return;
+    const oldText = typeof candidate.oldText === 'string' ? candidate.oldText : undefined;
+    const newText = typeof candidate.newText === 'string' ? candidate.newText : undefined;
+    if (oldText === undefined || newText === undefined || oldText === newText) return;
+    const oldLines = splitPatchLines(oldText);
+    const newLines = splitPatchLines(newText);
+    deletions += oldLines.length;
+    additions += newLines.length;
+    hunks.push(
+      [
+        `@@ -${index + 1},${Math.max(1, oldLines.length)} +${index + 1},${Math.max(1, newLines.length)} @@`,
+        ...oldLines.map((line) => `-${line}`),
+        ...newLines.map((line) => `+${line}`),
+      ].join('\n'),
+    );
+  });
+
+  if (hunks.length === 0) return [];
+  const patch = [`diff --git a/${path} b/${path}`, `--- a/${path}`, `+++ b/${path}`, ...hunks].join('\n');
+  return [{ path, status: 'modified', additions, deletions, patch, truncated: false }];
+}
+
+function splitPatchLines(text: string): string[] {
+  const normalized = text.endsWith('\n') ? text.slice(0, -1) : text;
+  return normalized.length === 0 ? [''] : normalized.split('\n');
 }
 
 function resolveDiffThemeType(theme: string, availableThemes: ColorTheme[]): 'light' | 'dark' {
