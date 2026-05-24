@@ -29,6 +29,7 @@ const {
   readSessionMetaMock,
   resolveConversationModelPreferenceStateMock,
   resolveDaemonPathsMock,
+  scheduleConversationSearchIndexingMock,
   statSyncMock,
   summarizeConversationAttentionMock,
 } = vi.hoisted(() => ({
@@ -60,6 +61,7 @@ const {
   readSessionMetaMock: vi.fn(),
   resolveConversationModelPreferenceStateMock: vi.fn(),
   resolveDaemonPathsMock: vi.fn(),
+  scheduleConversationSearchIndexingMock: vi.fn(),
   statSyncMock: vi.fn(),
   summarizeConversationAttentionMock: vi.fn(),
 }));
@@ -130,6 +132,10 @@ vi.mock('./conversationModelPreferences.js', () => ({
   resolveConversationModelPreferenceState: resolveConversationModelPreferenceStateMock,
 }));
 
+vi.mock('./conversationSearchIndex.js', () => ({
+  scheduleConversationSearchIndexing: scheduleConversationSearchIndexingMock,
+}));
+
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
 }));
@@ -144,8 +150,10 @@ import {
   readConversationSessionMeta,
   readConversationSessionSignature,
   readSessionDetailForRoute,
+  resetConversationReadModelBackfillForTests,
   resolveConversationSessionFile,
   setConversationServiceContext,
+  startConversationReadModelBackfill,
   toggleConversationAttention,
   toPublicLiveSessionMeta,
 } from './conversationService.js';
@@ -187,6 +195,8 @@ describe('conversationService', () => {
     readSessionMetaMock.mockReset();
     resolveConversationModelPreferenceStateMock.mockReset();
     resolveDaemonPathsMock.mockReset();
+    resetConversationReadModelBackfillForTests();
+    scheduleConversationSearchIndexingMock.mockReset();
     statSyncMock.mockReset();
     summarizeConversationAttentionMock.mockReset();
 
@@ -667,5 +677,51 @@ describe('conversationService', () => {
     listSessionsMock.mockReturnValue([]);
     existsSyncMock.mockReturnValueOnce(false);
     await expect(readConversationModelPreferenceStateById('missing')).resolves.toBeNull();
+  });
+
+  it('starts bounded delayed read-model backfill once', () => {
+    vi.useFakeTimers();
+    try {
+      listSessionsMock.mockReturnValue([
+        {
+          id: 'conversation-1',
+          file: '/sessions/conversation-1.jsonl',
+          title: 'One',
+          cwd: '/repo',
+          timestamp: '2026-04-09T00:00:00.000Z',
+          lastActivityAt: '2026-04-09T00:00:00.000Z',
+          cwdSlug: '--repo--',
+          model: 'gpt-5',
+          messageCount: 3,
+        },
+        {
+          id: 'conversation-2',
+          file: '/sessions/conversation-2.jsonl',
+          title: 'Two',
+          cwd: '/repo',
+          timestamp: '2026-04-09T00:01:00.000Z',
+          lastActivityAt: '2026-04-09T00:01:00.000Z',
+          cwdSlug: '--repo--',
+          model: 'gpt-5',
+          messageCount: 4,
+        },
+      ]);
+
+      startConversationReadModelBackfill({ delayMs: 25, limit: 1, tailBlocks: 12 });
+      startConversationReadModelBackfill({ delayMs: 25, limit: 1, tailBlocks: 12 });
+
+      expect(scheduleConversationSearchIndexingMock).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(24);
+      expect(scheduleConversationSearchIndexingMock).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+
+      expect(scheduleConversationSearchIndexingMock).toHaveBeenCalledOnce();
+      expect(readSessionBlocksWithTelemetryMock).toHaveBeenCalledOnce();
+      expect(readSessionBlocksWithTelemetryMock).toHaveBeenCalledWith('conversation-1', { tailBlocks: 12 });
+    } finally {
+      vi.useRealTimers();
+      resetConversationReadModelBackfillForTests();
+    }
   });
 });
