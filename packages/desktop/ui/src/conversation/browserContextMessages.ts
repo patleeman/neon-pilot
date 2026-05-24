@@ -81,6 +81,8 @@ export function buildBrowserChangedContextMessage(
   };
 }
 
+const BROWSER_CHANGED_CONTEXT_BUDGET_MS = 50;
+
 export async function readBrowserChangedContextMessage(sessionKey: string): Promise<{ customType: string; content: string } | null> {
   const bridge = getDesktopBridge();
   if (!bridge?.getWorkbenchBrowserState) {
@@ -88,7 +90,9 @@ export async function readBrowserChangedContextMessage(sessionKey: string): Prom
   }
 
   try {
-    return buildBrowserChangedContextMessage(await bridge.getWorkbenchBrowserState({ sessionKey }));
+    const timeout = new Promise<null>((resolve) => globalThis.setTimeout(() => resolve(null), BROWSER_CHANGED_CONTEXT_BUDGET_MS));
+    const state = await Promise.race([bridge.getWorkbenchBrowserState({ sessionKey }), timeout]);
+    return state ? buildBrowserChangedContextMessage(state) : null;
   } catch {
     return null;
   }
