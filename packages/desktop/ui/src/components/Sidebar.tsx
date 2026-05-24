@@ -1868,7 +1868,6 @@ export function Sidebar() {
     archivedConversationIds,
     pinnedSessions,
     tabs,
-    archivedSessions,
     openSession,
     closeSession,
     pinSession,
@@ -1880,7 +1879,7 @@ export function Sidebar() {
     shiftSession,
     loading,
     refetch,
-  } = useConversations();
+  } = useConversations({ includeArchivedSessions: false });
 
   const [draftCwd, setDraftCwd] = useState(() => readDraftConversationCwd());
   const [savedWorkspacePaths, setSavedWorkspacePaths] = useState(() => readStoredWorkspacePaths());
@@ -3011,7 +3010,7 @@ export function Sidebar() {
       return;
     }
 
-    const activeSession = [...pinnedSessions, ...tabs, ...archivedSessions].find((session) => session.id === activeConversationId);
+    const activeSession = sessions?.find((session) => session.id === activeConversationId);
     if (!activeSession || !sessionNeedsAttention(activeSession)) {
       return;
     }
@@ -3019,7 +3018,7 @@ export function Sidebar() {
     void api.markConversationAttentionRead(activeSession.id).catch(() => {
       // Ignore optimistic attention-clear failures.
     });
-  }, [activeConversationId, archivedSessions, pinnedSessions, tabs]);
+  }, [activeConversationId, sessions]);
 
   const handleNewConversation = useCallback(
     (cwd?: string | null) => {

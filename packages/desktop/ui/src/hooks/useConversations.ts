@@ -94,7 +94,7 @@ function mergeRemoteConversationLayoutWithProtectedLocalIds(
   };
 }
 
-export function useConversations() {
+export function useConversations(options: { includeArchivedSessions?: boolean } = {}) {
   const initialLayout = useMemo(() => readConversationLayout(), []);
   const [openIds, setOpenIds] = useState(() => initialLayout.sessionIds);
   const [pinnedIds, setPinnedIds] = useState(() => initialLayout.pinnedSessionIds);
@@ -423,8 +423,11 @@ export function useConversations() {
     [automationThreadTitleBySessionId, liveTitles, openIds, sessionsById],
   );
   const archivedSessions = useMemo(
-    () => withTitles.filter((session) => !openIdSet.has(session.id) && !pinnedIdSet.has(session.id)).sort(compareSessionsByRecentActivity),
-    [openIdSet, pinnedIdSet, withTitles],
+    () =>
+      options.includeArchivedSessions === false
+        ? []
+        : withTitles.filter((session) => !openIdSet.has(session.id) && !pinnedIdSet.has(session.id)).sort(compareSessionsByRecentActivity),
+    [openIdSet, options.includeArchivedSessions, pinnedIdSet, withTitles],
   );
   const loading = sessions === null && (sseStatus === 'connecting' || sseStatus === 'reconnecting');
 
