@@ -39,6 +39,7 @@ const {
   saveConversationAttachmentMock,
   addConversationCommitCheckpointCommentMock,
   scheduleDeferredResumeForSessionFileMock,
+  startConversationCatalogBackfillMock,
   setConversationServiceContextMock,
   setServerTimingHeadersMock,
   toggleConversationAttentionMock,
@@ -83,6 +84,7 @@ const {
   saveConversationAttachmentMock: vi.fn(),
   addConversationCommitCheckpointCommentMock: vi.fn(),
   scheduleDeferredResumeForSessionFileMock: vi.fn(),
+  startConversationCatalogBackfillMock: vi.fn(),
   setConversationServiceContextMock: vi.fn(),
   setServerTimingHeadersMock: vi.fn(),
   toggleConversationAttentionMock: vi.fn(),
@@ -150,6 +152,10 @@ vi.mock('../conversations/conversationSessionCapability.js', () => ({
 
 vi.mock('../conversations/conversationSearchIndex.js', () => ({
   searchIndexedConversationContent: searchIndexedConversationContentMock,
+}));
+
+vi.mock('../conversations/conversationCatalog.js', () => ({
+  startConversationCatalogBackfill: startConversationCatalogBackfillMock,
 }));
 
 vi.mock('../shared/httpHeaders.js', () => ({

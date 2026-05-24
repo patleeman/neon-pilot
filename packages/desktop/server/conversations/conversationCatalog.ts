@@ -29,6 +29,8 @@ interface ConversationCatalogRow {
 }
 
 let db: SqliteDatabase | null = null;
+let catalogBackfillStarted = false;
+let catalogBackfillTimer: ReturnType<typeof setTimeout> | null = null;
 
 function getDb(): SqliteDatabase {
   if (db) return db;
@@ -291,6 +293,11 @@ export function writeConversationAssetCache(input: {
 }
 
 export function closeConversationCatalogDb(): void {
+  if (catalogBackfillTimer) {
+    clearTimeout(catalogBackfillTimer);
+    catalogBackfillTimer = null;
+  }
+  catalogBackfillStarted = false;
   if (!db) return;
   try {
     db.pragma('wal_checkpoint(TRUNCATE)');
@@ -299,4 +306,23 @@ export function closeConversationCatalogDb(): void {
   }
   db.close();
   db = null;
+}
+
+export function startConversationCatalogBackfill(input: { listSessions: () => SessionMeta[]; delayMs?: number; limit?: number }): void {
+  if (catalogBackfillStarted) return;
+  catalogBackfillStarted = true;
+
+  const delayMs = Number.isSafeInteger(input.delayMs) && typeof input.delayMs === 'number' && input.delayMs >= 0 ? input.delayMs : 60_000;
+  const limit =
+    Number.isSafeInteger(input.limit) && typeof input.limit === 'number' && input.limit > 0 ? Math.min(input.limit, 1_000) : 250;
+
+  catalogBackfillTimer = setTimeout(() => {
+    catalogBackfillTimer = null;
+    try {
+      upsertConversationCatalogSessions(input.listSessions().slice(0, limit));
+    } catch {
+      // Best-effort delayed reconciliation. Request paths still have targeted fallback.
+    }
+  }, delayMs);
+  catalogBackfillTimer.unref?.();
 }
