@@ -288,10 +288,8 @@ async function main() {
       const clickStart = performance.now();
       await evalJs(
         cdp,
-        `(async()=>{const prompt=${JSON.stringify(prompt)}; const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:prompt})); await new Promise(r=>requestAnimationFrame(r)); await new Promise(r=>setTimeout(r,50)); const button=document.querySelector('button[aria-label="Send"]'); if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
+        `(async()=>{const prompt=${JSON.stringify(prompt)}; globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__=performance.now(); const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:prompt})); await new Promise(r=>requestAnimationFrame(r)); await new Promise(r=>setTimeout(r,50)); const button=document.querySelector('button[aria-label="Send"]'); if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
       );
-      await waitForExpression(cdp, child, `document.body.innerText.includes(${JSON.stringify(prompt)})`, 45_000);
-      const firstPromptVisibleMs = Math.round(performance.now() - clickStart);
       await waitForExpression(cdp, child, `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`, 45_000);
       const routeMs = Math.round(performance.now() - clickStart);
       await waitForExpression(
@@ -300,10 +298,9 @@ async function main() {
         `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
         90_000,
       );
-      return { firstPromptVisibleMs, routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
+      return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
     const draftSubmitVisibleMs = draftSubmitResult.result.routeMs + draftSubmitResult.result.promptVisibleAfterRouteMs;
-    const draftSubmitFirstPromptVisibleMs = draftSubmitResult.result.firstPromptVisibleMs;
     const draftSubmitSetupMs = draftSubmitResult.durationMs - draftSubmitVisibleMs;
     const createLiveSessionClientMs = await evalJs(
       cdp,
@@ -323,9 +320,19 @@ async function main() {
           apiSamples: perf.apiSamples ?? [],
           chatRenderSamples: perf.chatRenderSamples ?? [],
           longTaskSamples: perf.longTaskSamples ?? [],
+          smokeDraftClickStartMs: globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__ ?? null,
         };
       })()`,
     );
+    const draftSubmitFirstPromptVisibleMs = (() => {
+      const clickStartMs = postDraftPerfStore?.smokeDraftClickStartMs;
+      const sample = postDraftPerfStore?.chatRenderSamples
+        ?.filter((entry) => entry.conversationId === 'draft-conversation' && typeof entry.startTimeMs === 'number')
+        ?.at(-1);
+      return typeof clickStartMs === 'number' && typeof sample?.startTimeMs === 'number'
+        ? Math.max(0, Math.round(sample.startTimeMs - clickStartMs))
+        : draftSubmitVisibleMs;
+    })();
     const draftSubmitNavigateCalledMs = (() => {
       const phase = postDraftPerfStore?.clientSamples
         ?.filter(
