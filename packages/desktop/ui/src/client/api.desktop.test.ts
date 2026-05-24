@@ -508,6 +508,19 @@ describe('api desktop transport', () => {
       if (path === '/api/runs/run-1/attention')
         return createJsonResponse(await markDurableRunAttention({ runId: 'run-1', ...JSON.parse(String(init?.body)) }));
       if (path === '/api/runs/run-1/cancel') return createJsonResponse(await cancelDurableRun('run-1'));
+      if (path === '/api/conversations/conversation-1/attention')
+        return createJsonResponse(await markConversationAttention({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/conversations/conversation-1/bootstrap?tailBlocks=12&knownSessionSignature=sig-1')
+        return createJsonResponse(
+          await readConversationBootstrap({ conversationId: 'conversation-1', tailBlocks: 12, knownSessionSignature: 'sig-1' }),
+        );
+      if (path === '/api/conversations/conversation-1/title')
+        return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/conversations/live-1/model-preferences')
+        return createJsonResponse(await readConversationModelPreferences({ conversationId: 'live-1' }));
+      if (path === '/api/live-sessions/live-1') return createJsonResponse(await readLiveSession('live-1'));
+      if (path === '/api/live-sessions/live-1/context') return createJsonResponse(await readLiveSessionContext('live-1'));
+      if (path === '/api/live-sessions/live-1/fork-entries') return createJsonResponse(await readLiveSessionForkEntries('live-1'));
       if (path.startsWith('/api/sessions/live-1?'))
         return createJsonResponse(await readSessionDetail({ sessionId: 'live-1', tailBlocks: 24 }));
       if (path === '/api/sessions/live-1/blocks/block-1')
@@ -807,8 +820,8 @@ describe('api desktop transport', () => {
     expect(destroyed).toEqual({ ok: true });
   });
 
-  it('uses dedicated desktop conversation artifact and attachment bridges on the local Electron host', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}));
+  it('uses HTTP for conversation artifacts and attachments on the local Electron host', async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const readConversationArtifacts = vi.fn().mockResolvedValue({
       conversationId: 'conversation-1',
@@ -841,6 +854,37 @@ describe('api desktop transport', () => {
       mimeType: 'image/png',
       fileName: 'preview.png',
     });
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/conversations/conversation-1/artifacts') return createJsonResponse(await readConversationArtifacts());
+      if (path === '/api/conversations/conversation-1/artifacts/artifact-1')
+        return createJsonResponse(await readConversationArtifact({ conversationId: 'conversation-1', artifactId: 'artifact-1' }));
+      if (path === '/api/conversations/conversation-1/attachments' && init?.method === 'POST')
+        return createJsonResponse(
+          await createConversationAttachment({ conversationId: 'conversation-1', ...JSON.parse(String(init.body)) }),
+        );
+      if (path === '/api/conversations/conversation-1/attachments') return createJsonResponse(await readConversationAttachments());
+      if (path === '/api/conversations/conversation-1/attachments/attachment-1' && init?.method === 'PATCH')
+        return createJsonResponse(
+          await updateConversationAttachment({
+            conversationId: 'conversation-1',
+            attachmentId: 'attachment-1',
+            ...JSON.parse(String(init.body)),
+          }),
+        );
+      if (path === '/api/conversations/conversation-1/attachments/attachment-1')
+        return createJsonResponse(await readConversationAttachment({ conversationId: 'conversation-1', attachmentId: 'attachment-1' }));
+      if (path === '/api/conversations/conversation-1/attachments/attachment-1/asset?asset=preview&revision=2')
+        return createJsonResponse(
+          await readConversationAttachmentAsset({
+            conversationId: 'conversation-1',
+            attachmentId: 'attachment-1',
+            asset: 'preview',
+            revision: 2,
+          }),
+        );
+      return createJsonResponse({});
+    });
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
@@ -872,9 +916,9 @@ describe('api desktop transport', () => {
     });
     const attachmentAsset = await api.conversationAttachmentAsset('conversation-1', 'attachment-1', 'preview', 2);
 
-    expect(readConversationArtifacts).toHaveBeenCalledWith('conversation-1');
+    expect(readConversationArtifacts).toHaveBeenCalledTimes(1);
     expect(readConversationArtifact).toHaveBeenCalledWith({ conversationId: 'conversation-1', artifactId: 'artifact-1' });
-    expect(readConversationAttachments).toHaveBeenCalledWith('conversation-1');
+    expect(readConversationAttachments).toHaveBeenCalledTimes(1);
     expect(readConversationAttachment).toHaveBeenCalledWith({ conversationId: 'conversation-1', attachmentId: 'attachment-1' });
     expect(createConversationAttachment).toHaveBeenCalledWith({
       conversationId: 'conversation-1',
@@ -893,7 +937,7 @@ describe('api desktop transport', () => {
       asset: 'preview',
       revision: 2,
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
     expect(artifacts).toEqual({
       conversationId: 'conversation-1',
       artifacts: [{ id: 'artifact-1', title: 'Artifact 1', kind: 'html' }],
@@ -924,8 +968,8 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('uses dedicated desktop conversation deferred-resume bridges on the local Electron host', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}));
+  it('uses HTTP for conversation deferred-resume state on the local Electron host', async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const readConversationDeferredResumes = vi.fn().mockResolvedValue({
       conversationId: 'conversation-1',
@@ -945,6 +989,19 @@ describe('api desktop transport', () => {
       conversationId: 'conversation-1',
       cancelledId: 'resume-2',
       resumes: [],
+    });
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/conversations/conversation-1/deferred-resumes' && init?.method === 'POST')
+        return createJsonResponse(
+          await scheduleConversationDeferredResume({ conversationId: 'conversation-1', ...JSON.parse(String(init.body)) }),
+        );
+      if (path === '/api/conversations/conversation-1/deferred-resumes') return createJsonResponse(await readConversationDeferredResumes());
+      if (path === '/api/conversations/conversation-1/deferred-resumes/resume-1/fire')
+        return createJsonResponse(await fireConversationDeferredResume({ conversationId: 'conversation-1', resumeId: 'resume-1' }));
+      if (path === '/api/conversations/conversation-1/deferred-resumes/resume-2')
+        return createJsonResponse(await cancelConversationDeferredResume({ conversationId: 'conversation-1', resumeId: 'resume-2' }));
+      return createJsonResponse({});
     });
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
@@ -968,7 +1025,7 @@ describe('api desktop transport', () => {
     const fired = await api.fireDeferredResumeNow('conversation-1', 'resume-1');
     const cancelled = await api.cancelDeferredResume('conversation-1', 'resume-2');
 
-    expect(readConversationDeferredResumes).toHaveBeenCalledWith('conversation-1');
+    expect(readConversationDeferredResumes).toHaveBeenCalledTimes(1);
     expect(scheduleConversationDeferredResume).toHaveBeenCalledWith({
       conversationId: 'conversation-1',
       delay: '10m',
@@ -977,7 +1034,7 @@ describe('api desktop transport', () => {
     });
     expect(fireConversationDeferredResume).toHaveBeenCalledWith({ conversationId: 'conversation-1', resumeId: 'resume-1' });
     expect(cancelConversationDeferredResume).toHaveBeenCalledWith({ conversationId: 'conversation-1', resumeId: 'resume-2' });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
     expect(resumes).toEqual({
       conversationId: 'conversation-1',
       resumes: [{ id: 'resume-1', dueAt: '2026-04-24T10:05:00.000Z' }],
@@ -1062,8 +1119,16 @@ describe('api desktop transport', () => {
     expect(pickedFolder).toEqual({ path: '/picked/vault', cancelled: false });
   });
 
-  it('uses the dedicated desktop automation workspace bridge on the local Electron host', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}));
+  it('uses HTTP for automation workspace product state on the local Electron host', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      createJsonResponse({
+        defaultEnabled: true,
+        presetLibrary: {
+          presets: [{ id: 'preset-1', name: 'Preset 1', updatedAt: '2026-04-14T12:00:00.000Z', items: [] }],
+          defaultPresetIds: ['preset-1'],
+        },
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const readConversationPlansWorkspace = vi.fn().mockResolvedValue({
       defaultEnabled: true,
@@ -1088,8 +1153,8 @@ describe('api desktop transport', () => {
     const { api } = await import('./api');
     const workspace = await api.conversationPlansWorkspace();
 
-    expect(readConversationPlansWorkspace).toHaveBeenCalledTimes(1);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(readConversationPlansWorkspace).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/conversation-plans/workspace', { method: 'GET', cache: 'no-store' });
     expect(workspace).toEqual({
       defaultEnabled: true,
       presetLibrary: {
