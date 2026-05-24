@@ -145,7 +145,7 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
   const completion = new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       void callbacks.runPromptOnLiveEntry(entry, text, behavior, images).then(resolve, reject);
-    }, 250);
+    }, 1_000);
     timer.unref?.();
   });
   void completion.catch(() => {

@@ -3768,7 +3768,7 @@ describe('submitPromptSession', () => {
     });
     expect(completionResolved).toBe(false);
 
-    await vi.waitFor(() => expect(prompt).toHaveBeenCalledWith('hello there'));
+    await vi.waitFor(() => expect(prompt).toHaveBeenCalledWith('hello there'), { timeout: 2_000 });
     resolvePrompt();
     await submitted.completion;
     expect(completionResolved).toBe(true);
