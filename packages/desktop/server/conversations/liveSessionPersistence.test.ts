@@ -1,7 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fs = vi.hoisted(() => ({ appendFileSync: vi.fn(), existsSync: vi.fn(() => true) }));
+const { fs, readSessionMetaByFileMock, upsertConversationCatalogSessionMock } = vi.hoisted(() => ({
+  fs: { appendFileSync: vi.fn(), existsSync: vi.fn(() => true) },
+  readSessionMetaByFileMock: vi.fn(),
+  upsertConversationCatalogSessionMock: vi.fn(),
+}));
 vi.mock('node:fs', () => fs);
+
+vi.mock('./sessions.js', () => ({
+  readSessionMetaByFile: readSessionMetaByFileMock,
+}));
+
+vi.mock('./conversationCatalog.js', () => ({
+  upsertConversationCatalogSession: upsertConversationCatalogSessionMock,
+}));
 
 import { ensureSessionFileExists, patchSessionManagerPersistence, resolveLiveSessionFile } from './liveSessionPersistence.js';
 
@@ -9,6 +21,7 @@ describe('live session persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fs.existsSync.mockReturnValue(true);
+    readSessionMetaByFileMock.mockReturnValue({ id: 's1', file: '/sessions/s1.jsonl' });
   });
 
   it('patches session manager persistence to rewrite first and append later entries', () => {
@@ -20,6 +33,7 @@ describe('live session persistence', () => {
 
     expect(manager._rewriteFile).toHaveBeenCalledOnce();
     expect(fs.appendFileSync).toHaveBeenCalledWith('/sessions/s1.jsonl', '{"type":"second"}\n');
+    expect(upsertConversationCatalogSessionMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not patch managers twice or managers without rewrite support', () => {
@@ -56,6 +70,7 @@ describe('live session persistence', () => {
     expect(manager._rewriteFile).toHaveBeenCalledOnce();
     expect(manager.flushed).toBe(true);
     expect(fs.appendFileSync).not.toHaveBeenCalled();
+    expect(upsertConversationCatalogSessionMock).toHaveBeenCalledOnce();
   });
 
   it('ensures persisted session files only when needed', () => {
@@ -63,6 +78,7 @@ describe('live session persistence', () => {
     ensureSessionFileExists(manager as never);
     expect(manager._rewriteFile).toHaveBeenCalledOnce();
     expect(manager.flushed).toBe(true);
+    expect(upsertConversationCatalogSessionMock).toHaveBeenCalledOnce();
 
     ensureSessionFileExists(manager as never);
     expect(manager._rewriteFile).toHaveBeenCalledOnce();

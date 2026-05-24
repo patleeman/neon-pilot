@@ -2,6 +2,9 @@ import { appendFileSync, existsSync } from 'node:fs';
 
 import { type AgentSession, type SessionManager } from '@earendil-works/pi-coding-agent';
 
+import { upsertConversationCatalogSession } from './conversationCatalog.js';
+import { readSessionMetaByFile } from './sessions.js';
+
 interface PersistableSessionManager {
   persist?: boolean;
   sessionFile?: string;
@@ -11,6 +14,13 @@ interface PersistableSessionManager {
 }
 
 const SESSION_MANAGER_PERSISTENCE_PATCH = Symbol('pa.session-manager-persistence-patch');
+
+function updateConversationCatalogForSessionFile(sessionFile: string): void {
+  const meta = readSessionMetaByFile(sessionFile);
+  if (meta) {
+    upsertConversationCatalogSession(meta);
+  }
+}
 
 export function patchSessionManagerPersistence(sessionManager: SessionManager): void {
   const manager = sessionManager as unknown as PersistableSessionManager & {
@@ -34,10 +44,12 @@ export function patchSessionManagerPersistence(sessionManager: SessionManager): 
     if (!manager.flushed || !existsSync(manager.sessionFile)) {
       rewriteFile();
       manager.flushed = true;
+      updateConversationCatalogForSessionFile(manager.sessionFile);
       return;
     }
 
     appendFileSync(manager.sessionFile, `${JSON.stringify(entry)}\n`);
+    updateConversationCatalogForSessionFile(manager.sessionFile);
   };
 
   manager[SESSION_MANAGER_PERSISTENCE_PATCH] = true;
@@ -55,6 +67,7 @@ export function ensureSessionFileExists(sessionManager: SessionManager): void {
 
   manager._rewriteFile();
   manager.flushed = true;
+  updateConversationCatalogForSessionFile(manager.sessionFile);
 }
 
 export function resolveLiveSessionFile(
