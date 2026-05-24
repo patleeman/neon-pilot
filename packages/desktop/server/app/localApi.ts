@@ -1137,6 +1137,92 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'GET' && runMatch)
     return createDesktopLocalApiJsonResponse(await readDesktopDurableRun(decodeURIComponent(runMatch[1] ?? '')));
 
+  const liveSessionContextMatch = /^\/api\/live-sessions\/([^/]+)\/context$/.exec(path);
+  if (method === 'GET' && liveSessionContextMatch) {
+    return createDesktopLocalApiJsonResponse(await readDesktopLiveSessionContext(decodeURIComponent(liveSessionContextMatch[1] ?? '')));
+  }
+  const liveSessionForkEntriesMatch = /^\/api\/live-sessions\/([^/]+)\/fork-entries$/.exec(path);
+  if (method === 'GET' && liveSessionForkEntriesMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopLiveSessionForkEntries(decodeURIComponent(liveSessionForkEntriesMatch[1] ?? '')),
+    );
+  }
+  const liveSessionMatch = /^\/api\/live-sessions\/([^/]+)$/.exec(path);
+  if (method === 'GET' && liveSessionMatch) {
+    return createDesktopLocalApiJsonResponse(await readDesktopLiveSession(decodeURIComponent(liveSessionMatch[1] ?? '')));
+  }
+
+  const conversationBootstrapMatch = /^\/api\/conversations\/([^/]+)\/bootstrap$/.exec(path);
+  if (method === 'GET' && conversationBootstrapMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationBootstrap({
+        conversationId: decodeURIComponent(conversationBootstrapMatch[1] ?? ''),
+        tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
+        knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
+          ? Number(input.url.searchParams.get('knownBlockOffset'))
+          : undefined,
+        knownTotalBlocks: input.url.searchParams.has('knownTotalBlocks')
+          ? Number(input.url.searchParams.get('knownTotalBlocks'))
+          : undefined,
+        knownLastBlockId: input.url.searchParams.get('knownLastBlockId') ?? undefined,
+      }),
+    );
+  }
+  const conversationAttentionMatch = /^\/api\/conversations\/([^/]+)\/attention$/.exec(path);
+  if (method === 'POST' && conversationAttentionMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await markDesktopConversationAttention({
+        conversationId: decodeURIComponent(conversationAttentionMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as { read?: boolean }),
+      }),
+    );
+  }
+  const conversationModelPreferencesMatch = /^\/api\/conversations\/([^/]+)\/model-preferences$/.exec(path);
+  if (conversationModelPreferencesMatch) {
+    const conversationId = decodeURIComponent(conversationModelPreferencesMatch[1] ?? '');
+    if (method === 'GET') return createDesktopLocalApiJsonResponse(await readDesktopConversationModelPreferences(conversationId));
+    if (method === 'PATCH') {
+      return createDesktopLocalApiJsonResponse(
+        await updateDesktopConversationModelPreferences({
+          conversationId,
+          ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        }),
+      );
+    }
+  }
+  const conversationDeferredResumeActionMatch = /^\/api\/conversations\/([^/]+)\/deferred-resumes\/([^/]+)\/(fire)$/.exec(path);
+  if (method === 'POST' && conversationDeferredResumeActionMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await fireDesktopConversationDeferredResume({
+        conversationId: decodeURIComponent(conversationDeferredResumeActionMatch[1] ?? ''),
+        resumeId: decodeURIComponent(conversationDeferredResumeActionMatch[2] ?? ''),
+      }),
+    );
+  }
+  const conversationDeferredResumeMatch = /^\/api\/conversations\/([^/]+)\/deferred-resumes\/([^/]+)$/.exec(path);
+  if (method === 'DELETE' && conversationDeferredResumeMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await cancelDesktopConversationDeferredResume({
+        conversationId: decodeURIComponent(conversationDeferredResumeMatch[1] ?? ''),
+        resumeId: decodeURIComponent(conversationDeferredResumeMatch[2] ?? ''),
+      }),
+    );
+  }
+  const conversationDeferredResumesMatch = /^\/api\/conversations\/([^/]+)\/deferred-resumes$/.exec(path);
+  if (conversationDeferredResumesMatch) {
+    const conversationId = decodeURIComponent(conversationDeferredResumesMatch[1] ?? '');
+    if (method === 'GET') return createDesktopLocalApiJsonResponse(await readDesktopConversationDeferredResumes(conversationId));
+    if (method === 'POST') {
+      return createDesktopLocalApiJsonResponse(
+        await scheduleDesktopConversationDeferredResume({
+          conversationId,
+          ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        }),
+      );
+    }
+  }
+
   const conversationCheckpointMatch = /^\/api\/conversations\/([^/]+)\/checkpoints\/([^/]+)$/.exec(path);
   if (method === 'GET' && conversationCheckpointMatch) {
     return createDesktopLocalApiJsonResponse(

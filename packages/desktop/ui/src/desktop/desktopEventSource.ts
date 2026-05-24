@@ -1,5 +1,15 @@
 import { buildDesktopWebSocketUrl } from '../client/endpoints';
 
+function shouldUseNativeEventSource(): boolean {
+  if (typeof window === 'undefined') return false;
+  // Chromium cannot establish a WebSocket to the app host when the renderer is
+  // served through Electron's custom neon-pilot://app protocol: ws://app is not
+  // a resolvable network endpoint. The desktop protocol handler already adapts
+  // text/event-stream requests to the same local API stream subscriptions, so
+  // use native EventSource in that shell and keep WebSocket for HTTP origins.
+  return window.location.protocol === 'neon-pilot:';
+}
+
 export interface EventSourceLike {
   onopen: ((event: Event) => void) | null;
   onmessage: ((event: MessageEvent<string>) => void) | null;
@@ -106,5 +116,8 @@ class DesktopRealtimeEventSource implements EventSourceLike {
 }
 
 export function createDesktopAwareEventSource(path: string): EventSourceLike {
+  if (shouldUseNativeEventSource()) {
+    return new EventSource(path) as EventSourceLike;
+  }
   return new DesktopRealtimeEventSource(path);
 }

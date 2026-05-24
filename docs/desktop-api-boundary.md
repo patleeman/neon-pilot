@@ -23,7 +23,7 @@ HTTP responses must be bounded, paginated, or streamed. Large binary/text payloa
 
 ### WebSocket: realtime events and control
 
-Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages.
+Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages. When the Electron renderer is loaded through the `neon-pilot://app` custom protocol, Chromium cannot resolve `ws://app`; the shell uses the desktop protocol's `text/event-stream` adapter for stream subscriptions instead of opening that WebSocket URL.
 
 Examples:
 

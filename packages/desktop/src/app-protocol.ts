@@ -161,9 +161,11 @@ function buildDesktopProtocolErrorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : String(error);
   const status = message.startsWith('No local API route for ')
     ? 404
-    : message.includes('requires subscribeDesktopLocalApiStream')
-      ? 501
-      : 500;
+    : /(^|\b)(404 Not Found|Conversation not found|Session not found|Not a live session)(\b|\.?$)/i.test(message)
+      ? 404
+      : message.includes('requires subscribeDesktopLocalApiStream')
+        ? 501
+        : 500;
 
   return new Response(JSON.stringify({ error: message }), {
     status,

@@ -1,5 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+class FakeEventSource extends EventTarget {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSED = 2;
+  onopen: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  readyState = FakeEventSource.CONNECTING;
+  closed = false;
+  constructor(readonly url: string) {
+    super();
+  }
+  close(): void {
+    this.closed = true;
+    this.readyState = FakeEventSource.CLOSED;
+  }
+}
+
 class FakeWebSocket extends EventTarget {
   static CONNECTING = 0;
   static OPEN = 1;
@@ -28,6 +46,27 @@ describe('createDesktopAwareEventSource', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllGlobals();
+  });
+
+  it('uses native EventSource for the custom desktop app protocol', async () => {
+    const sources: FakeEventSource[] = [];
+    vi.stubGlobal(
+      'EventSource',
+      class extends FakeEventSource {
+        constructor(url: string) {
+          super(url);
+          sources.push(this);
+        }
+      },
+    );
+    vi.stubGlobal('window', { location: { protocol: 'neon-pilot:', host: 'app' } });
+
+    const { createDesktopAwareEventSource } = await import('./desktopEventSource');
+    const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
+
+    expect(sources[0]?.url).toBe('/api/live-sessions/live-1/events');
+    source.close();
+    expect(sources[0]?.closed).toBe(true);
   });
 
   it('subscribes to stream paths over the realtime WebSocket', async () => {
