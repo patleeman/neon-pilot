@@ -1073,9 +1073,16 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
   return decorateSessionAssetUrlsForBlocks(blocks, sessionId) as DisplayBlock[];
 }
 
-function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[] {
+function buildChildConversationTopologyBlocks(meta: SessionMeta, existingBlocks: DisplayBlock[] = []): DisplayBlock[] {
+  const existingChildIds = new Set(
+    existingBlocks
+      .filter((block) => block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE)
+      .map((block) => block.text.match(/^Conversation:\s*(\S+)$/m)?.[1]?.trim())
+      .filter((id): id is string => Boolean(id)),
+  );
   const children = scanSessionMetas()
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
+    .filter((child) => !existingChildIds.has(child.id))
     .filter((child) => {
       const kind = child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side');
       return kind === 'fork' || kind === 'rewind' || kind === 'duplicate';
@@ -1086,13 +1093,14 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta): DisplayBlock[]
     const kind = child.offshootKind ?? (child.sourceRunId ? 'subagent' : 'side');
     const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
     const sourceRun = child.sourceRunId ? `\nSource run: ${child.sourceRunId}` : '';
+    const sourceMessage = child.parentMessageId ? `\nSource message: ${child.parentMessageId}` : '';
     const cwd = child.cwd && child.cwd !== meta.cwd ? `\nWorking directory: ${child.cwd}` : '';
     return {
       type: 'context',
       id: `topology-child-${child.id}`,
       ts: child.timestamp,
       customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
-      text: `${label} conversation created: ${child.title || child.id}\nOpen: /conversations/${child.id}\nConversation: ${child.id}${sourceRun}${cwd}`,
+      text: `${label} conversation created: ${child.title || child.id}\nOpen: /conversations/${child.id}\nConversation: ${child.id}${sourceMessage}${sourceRun}${cwd}`,
     } satisfies DisplayBlock;
   });
 }
@@ -1128,7 +1136,7 @@ function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): Display
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
   const childById = new Map(children.map((child) => [child.id, child] as const));
-  const topologyBlocks = buildChildConversationTopologyBlocks(meta);
+  const topologyBlocks = buildChildConversationTopologyBlocks(meta, blocks);
   if (topologyBlocks.length === 0) {
     return blocks;
   }
@@ -1211,7 +1219,8 @@ function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBl
 
 function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
   const blocksWithoutTopology = detail.blocks.filter(
-    (block) => !(block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE),
+    (block) =>
+      !(block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE && block.id.startsWith('topology-child-')),
   );
   const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
   const blocks = addParentConversationBacklink(
@@ -1367,23 +1376,35 @@ function readCurrentSessionLeafId(filePath: string): string | null {
 }
 
 /**
- * Invalidate transcript topology after a child conversation is created.
+ * Append a chronological source-conversation topology event.
  *
- * The visible "Forked →" marker is derived from the child session's offshoot
- * metadata in buildChildConversationTopologyBlocks()/mergeTopologyBlocks(). Do
- * not append a visible marker to the parent log here: because the SDK branch is
- * ordered by the parent chain, a marker appended to the current leaf renders at
- * the bottom of the transcript instead of at the source message. Keeping this as
- * an invalidation-only seam preserves the call site contract while letting the
- * derived topology renderer anchor the marker correctly.
+ * Pi sessions are append-only, so this event intentionally stays where the fork
+ * action happened in time. The renderer can link back to the source message
+ * instead of pretending the entry was inserted in the middle of the graph.
  */
 export function appendChildConversationTopologyEntry(input: {
   parentSessionFile: string;
   childSessionId: string;
   childTitle?: string;
   kind: ConversationOffshootKind;
+  parentMessageId?: string;
 }): void {
-  void input;
+  const childMeta = readSessionMeta(input.childSessionId);
+  const label = input.kind === 'subagent' ? 'Subagent' : input.kind.charAt(0).toUpperCase() + input.kind.slice(1);
+  const leafId = readCurrentSessionLeafId(input.parentSessionFile);
+  appendFileSync(
+    input.parentSessionFile,
+    serializeSessionJsonLine(
+      buildCustomMessageSessionEntry({
+        id: randomUUID(),
+        parentId: leafId,
+        timestamp: new Date().toISOString(),
+        customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
+        content: `${label} conversation created: ${input.childTitle?.trim() || childMeta?.title?.trim() || input.childSessionId}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}`,
+      }),
+    ),
+    'utf-8',
+  );
   clearSessionCaches();
 }
 

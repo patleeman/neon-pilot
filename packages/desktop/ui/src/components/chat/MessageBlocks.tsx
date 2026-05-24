@@ -895,7 +895,12 @@ function parseTopologyBlockKind(firstLine: string): string {
   return match?.[1]?.toLowerCase() ?? 'fork';
 }
 
-function parseTopologyBlockText(text: string): { title: string; conversationId: string | null; kind: string } {
+function parseTopologyBlockText(text: string): {
+  title: string;
+  conversationId: string | null;
+  kind: string;
+  sourceMessageId: string | null;
+} {
   const lines = text.split('\n');
   const firstLine = lines[0] ?? '';
   // "Fork conversation created: <title>" → extract title after the colon
@@ -903,14 +908,16 @@ function parseTopologyBlockText(text: string): { title: string; conversationId: 
   const title = titleMatch?.[1]?.trim() || firstLine.trim();
 
   const openLine = lines.find((l) => l.startsWith('Open: /conversations/') || l.startsWith('Open parent: /conversations/'));
+  const sourceLine = lines.find((l) => l.startsWith('Source message: '));
   const conversationId = openLine?.replace(/^Open(?: parent)?: \/conversations\//, '').trim() || null;
-  return { title, conversationId, kind: parseTopologyBlockKind(firstLine) };
+  const sourceMessageId = sourceLine?.replace(/^Source message:\s*/, '').trim() || null;
+  return { title, conversationId, kind: parseTopologyBlockKind(firstLine), sourceMessageId };
 }
 
 export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
   const navigate = useNavigate();
   const isChild = block.customType === 'child_conversation_topology';
-  const { title, conversationId, kind } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
+  const { title, conversationId, kind, sourceMessageId } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
 
   const handleClick = useCallback(() => {
     if (conversationId) {
@@ -919,14 +926,33 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
   }, [conversationId, navigate]);
 
   const label = (() => {
-    if (kind === 'rewind') return isChild ? 'Rewound →' : '← Rewound from';
-    if (kind === 'duplicate') return isChild ? 'Duplicated →' : '← Duplicated from';
-    return isChild ? 'Forked →' : '← Forked from';
+    if (kind === 'rewind') return isChild ? 'Conversation Rewound' : '← Rewound from';
+    if (kind === 'duplicate') return isChild ? 'Conversation Duplicated' : '← Duplicated from';
+    return isChild ? 'Conversation Forked' : '← Forked from';
   })();
+
+  const spotlightSource = useCallback(() => {
+    if (sourceMessageId) {
+      dispatchTranscriptSpotlight({ kind: 'block', blockId: sourceMessageId });
+    }
+  }, [sourceMessageId]);
 
   return (
     <div className="flex items-center gap-1.5 py-0.5 text-[11px] text-dim/70" data-topology-kind={block.customType}>
       <span className="shrink-0">{label}</span>
+      {isChild && sourceMessageId ? (
+        <>
+          <span className="shrink-0">from</span>
+          <button
+            type="button"
+            onClick={spotlightSource}
+            className="shrink-0 text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+          >
+            source message
+          </button>
+          <span className="shrink-0">to</span>
+        </>
+      ) : null}
       {conversationId ? (
         <button
           type="button"

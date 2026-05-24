@@ -2157,34 +2157,35 @@ describe('sessions', () => {
     );
   });
 
-  it('does not append a bottom-positioned child topology marker to the parent log', () => {
+  it('appends child topology as a chronological parent event', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);
 
     const parentSessionFile = writeSessionFile({
       sessionsDir,
-      sessionId: 'no-direct-topology-parent',
-      title: 'No direct topology parent',
+      sessionId: 'chronological-topology-parent',
+      title: 'Chronological topology parent',
       assistantTexts: ['Parent reply'],
     });
-    const before = readFileSync(parentSessionFile, 'utf-8');
+    const parentMessageId = readSessionBlocks('chronological-topology-parent')?.blocks.find((block) => block.type === 'user')?.id;
+    expect(parentMessageId).toBeTruthy();
 
     appendChildConversationTopologyEntry({
       parentSessionFile,
-      childSessionId: 'no-direct-topology-child',
-      childTitle: 'No direct topology child',
+      childSessionId: 'chronological-topology-child',
+      childTitle: 'Chronological topology child',
       kind: 'fork',
+      parentMessageId,
     });
 
-    expect(readFileSync(parentSessionFile, 'utf-8')).toBe(before);
-    expect(readSessionBlocks('no-direct-topology-parent')?.blocks).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          customType: 'child_conversation_topology',
-          text: expect.stringContaining('No direct topology child'),
-        }),
-      ]),
+    const blocks = readSessionBlocks('chronological-topology-parent')?.blocks ?? [];
+    expect(blocks[blocks.length - 1]).toEqual(
+      expect.objectContaining({
+        customType: 'child_conversation_topology',
+        text: expect.stringContaining('Chronological topology child'),
+      }),
     );
+    expect(blocks[blocks.length - 1]?.text).toContain(`Source message: ${parentMessageId}`);
   });
 
   it('keeps child backlink anchored at the rewind point after later messages', () => {

@@ -68,6 +68,7 @@ describe('live session branching', () => {
       parentSessionFile: '/sessions/source.jsonl',
       childSessionId: 'branch-id',
       kind: 'fork',
+      parentMessageId: 'entry-1',
     });
   });
 
@@ -150,6 +151,7 @@ describe('live session branching', () => {
       parentSessionFile: '/sessions/source.jsonl',
       childSessionId: 'forked-id',
       kind: 'rewind',
+      parentMessageId: 'entry-1',
     });
     expect(callbacks.destroySession).not.toHaveBeenCalled();
   });
