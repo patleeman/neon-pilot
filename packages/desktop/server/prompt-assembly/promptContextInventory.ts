@@ -46,6 +46,11 @@ export async function buildPromptContextPlan(input: {
   const contextMessages = [...(input.contextMessages ?? [])];
   const blocks: PromptContextBlock[] = [];
   const diagnostics: AssemblyDiagnostic[] = [];
+  const selectedSessionIds = Array.isArray(input.selectedSessionIds) ? input.selectedSessionIds.filter((id) => typeof id === 'string') : [];
+  if (contextMessages.length === 0 && selectedSessionIds.length === 0) {
+    return { blocks, contextMessages, diagnostics };
+  }
+
   const providers = listExtensionPromptContextProviderRegistrations();
 
   await Promise.allSettled(
@@ -57,7 +62,7 @@ export async function buildPromptContextPlan(input: {
             prompt: input.prompt,
             conversationId: input.conversationId,
             currentCwd: input.currentCwd,
-            relatedConversationIds: input.selectedSessionIds,
+            relatedConversationIds: selectedSessionIds,
           }),
         );
         if (invokeResult === PROMPT_CONTEXT_PROVIDER_TIMEOUT) {
