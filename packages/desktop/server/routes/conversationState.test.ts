@@ -4,7 +4,11 @@ const fs = vi.hoisted(() => ({ existsSync: vi.fn() }));
 const sessionManager = vi.hoisted(() => ({ open: vi.fn() }));
 const autoMode = vi.hoisted(() => ({ readConversationAutoModeStateFromSessionManager: vi.fn(), writeConversationAutoModeState: vi.fn() }));
 const recovery = vi.hoisted(() => ({ recoverConversationCapability: vi.fn() }));
-const service = vi.hoisted(() => ({ publishConversationSessionMetaChanged: vi.fn(), resolveConversationSessionFile: vi.fn() }));
+const service = vi.hoisted(() => ({
+  publishConversationSessionMetaChanged: vi.fn(),
+  readConversationSessionMeta: vi.fn(),
+  resolveConversationSessionFile: vi.fn(),
+}));
 const live = vi.hoisted(() => ({
   createSessionFromExisting: vi.fn(),
   isLive: vi.fn(),
@@ -12,7 +16,7 @@ const live = vi.hoisted(() => ({
   registry: new Map<string, unknown>(),
   setLiveSessionAutoModeState: vi.fn(),
 }));
-const sessions = vi.hoisted(() => ({ appendConversationOffshootMetadata: vi.fn(), readSessionBlocks: vi.fn() }));
+const sessions = vi.hoisted(() => ({ appendConversationOffshootMetadata: vi.fn() }));
 const middleware = vi.hoisted(() => ({ logError: vi.fn() }));
 const appEvents = vi.hoisted(() => ({ publishAppEvent: vi.fn() }));
 const liveRoutes = vi.hoisted(() => ({ ensureRequestControlsLocalLiveConversation: vi.fn() }));
@@ -63,6 +67,7 @@ describe('conversationState routes', () => {
     live.registry.clear();
     fs.existsSync.mockReturnValue(true);
     service.resolveConversationSessionFile.mockReturnValue('/session.json');
+    service.readConversationSessionMeta.mockReturnValue({ cwd: '/repo', file: '/session.json' });
     sessionManager.open.mockReturnValue({ id: 'manager' });
   });
 
@@ -127,7 +132,7 @@ describe('conversationState routes', () => {
   it('duplicates live or persisted conversations and records offshoot metadata', async () => {
     const { routes, context } = setupRouter();
     const handler = routes.get('POST /api/conversations/:id/duplicate')!;
-    sessions.readSessionBlocks.mockReturnValue({ meta: { cwd: '/repo', file: '/session.json' } });
+    service.readConversationSessionMeta.mockReturnValue({ cwd: '/repo', file: '/session.json' });
     live.createSessionFromExisting.mockResolvedValue({ id: 'copy-1', sessionFile: '/copy.json' });
     const response = res();
 
@@ -151,7 +156,7 @@ describe('conversationState routes', () => {
   it('returns 404 for missing conversations', async () => {
     const { routes } = setupRouter();
     service.resolveConversationSessionFile.mockReturnValue(null);
-    sessions.readSessionBlocks.mockReturnValue(null);
+    service.readConversationSessionMeta.mockReturnValue(null);
     const autoRes = res();
     await routes.get('GET /api/conversations/:id/auto-mode')!({ params: { id: 'missing' } }, autoRes);
     expect(autoRes.status).toHaveBeenCalledWith(404);

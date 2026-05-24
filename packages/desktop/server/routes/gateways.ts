@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from 'express';
 
+import { readSessionDetailForRoute } from '../conversations/conversationService.js';
 import {
   compactLiveSessionCapability,
   createLiveSessionCapability,
@@ -7,7 +8,6 @@ import {
 } from '../conversations/liveSessionCapability.js';
 import { registerLiveSessionLifecycleHandler } from '../conversations/liveSessionLifecycle.js';
 import { getAvailableModelObjects, renameSession, updateLiveSessionModelPreferences } from '../conversations/liveSessions.js';
-import { readSessionBlocks } from '../conversations/sessions.js';
 import type { TelegramGatewayHostApi } from '../extensions/backendApi/gateways.js';
 import { TELEGRAM_GATEWAY_HOST_API_GLOBAL } from '../extensions/backendApi/gateways.js';
 import {
@@ -62,7 +62,7 @@ export function registerTelegramGatewayLifecycleDelivery(): void {
   lifecycleRegistered = true;
   registerLiveSessionLifecycleHandler(async (event) => {
     if (event.trigger !== 'turn_end') return;
-    const text = readLatestAssistantText(event.conversationId);
+    const text = await readLatestAssistantText(event.conversationId);
     if (text && lastTelegramDeliveryByConversation.get(event.conversationId) !== text) {
       const delivered = await ensureTelegramRuntime().deliverAssistantReply({ conversationId: event.conversationId, text });
       if (delivered) {
@@ -170,9 +170,9 @@ export function readTelegramGatewayRuntimeStatus(): { running: boolean } {
   return { running: telegramRuntime !== null };
 }
 
-function readLatestAssistantText(conversationId: string): string | null {
-  const detail = readSessionBlocks(conversationId, { tailBlocks: 20 });
-  const block = [...(detail?.blocks ?? [])].reverse().find((candidate) => candidate.type === 'text');
+async function readLatestAssistantText(conversationId: string): Promise<string | null> {
+  const { sessionRead } = await readSessionDetailForRoute({ conversationId, profile: getRuntimeScopeFn(), tailBlocks: 20 });
+  const block = [...(sessionRead.detail?.blocks ?? [])].reverse().find((candidate) => candidate.type === 'text');
   return block && block.type === 'text' && block.text.trim() ? block.text.trim() : null;
 }
 

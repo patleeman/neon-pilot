@@ -43,8 +43,8 @@ vi.mock('../gateways/telegramGateway.js', () => ({ TelegramGatewayRuntime: runti
 vi.mock('../conversations/liveSessionLifecycle.js', () => lifecycle);
 vi.mock('../conversations/liveSessions.js', () => liveSessions);
 vi.mock('../conversations/liveSessionCapability.js', () => capability);
-vi.mock('../conversations/sessions.js', () => ({
-  readSessionBlocks: vi.fn(() => ({ blocks: [{ type: 'text', text: ' latest reply ' }] })),
+vi.mock('../conversations/conversationService.js', () => ({
+  readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
 }));
 vi.mock('../middleware/index.js', () => ({ logError: vi.fn() }));
 vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));

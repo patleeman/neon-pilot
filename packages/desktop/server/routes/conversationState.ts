@@ -5,7 +5,11 @@ import type { Express } from 'express';
 
 import { readConversationAutoModeStateFromSessionManager, writeConversationAutoModeState } from '../conversations/conversationAutoMode.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
-import { publishConversationSessionMetaChanged, resolveConversationSessionFile } from '../conversations/conversationService.js';
+import {
+  publishConversationSessionMetaChanged,
+  readConversationSessionMeta,
+  resolveConversationSessionFile,
+} from '../conversations/conversationService.js';
 import {
   createSessionFromExisting,
   isLive as isLocalLive,
@@ -13,7 +17,7 @@ import {
   registry as liveRegistry,
   setLiveSessionAutoModeState,
 } from '../conversations/liveSessions.js';
-import { appendConversationOffshootMetadata, readSessionBlocks } from '../conversations/sessions.js';
+import { appendConversationOffshootMetadata } from '../conversations/sessions.js';
 import { logError } from '../middleware/index.js';
 import { publishAppEvent } from '../shared/appEvents.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
@@ -48,9 +52,9 @@ function initializeConversationStateRoutesContext(
 
 function resolveConversationSource(conversationId: string) {
   const liveEntry = liveRegistry.get(conversationId);
-  const sessionDetail = readSessionBlocks(conversationId);
-  const cwd = liveEntry?.cwd ?? sessionDetail?.meta.cwd;
-  const sessionFile = liveEntry?.session.sessionFile ?? sessionDetail?.meta.file;
+  const meta = readConversationSessionMeta(conversationId);
+  const cwd = liveEntry?.cwd ?? meta?.cwd;
+  const sessionFile = liveEntry?.session.sessionFile ?? meta?.file;
 
   if (!cwd || !sessionFile) {
     return null;
@@ -59,7 +63,7 @@ function resolveConversationSource(conversationId: string) {
   return {
     cwd,
     sessionFile,
-    meta: sessionDetail?.meta,
+    meta,
     liveEntry,
   };
 }
