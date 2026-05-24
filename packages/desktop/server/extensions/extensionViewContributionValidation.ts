@@ -54,6 +54,9 @@ export function validateTranscriptRendererContributions(value: unknown): void {
     requireString(renderer.id, `contributes.transcriptRenderers[${index}].id`);
     requireString(renderer.tool, `contributes.transcriptRenderers[${index}].tool`);
     requireString(renderer.component, `contributes.transcriptRenderers[${index}].component`);
+    if (renderer.standalone !== undefined && typeof renderer.standalone !== 'boolean') {
+      throw new Error(`Extension manifest contributes.transcriptRenderers[${index}].standalone must be a boolean.`);
+    }
   }
 }
 

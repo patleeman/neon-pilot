@@ -11,7 +11,9 @@ describe('extensionViewContributionValidation', () => {
   it('validates view-adjacent contribution groups', () => {
     expect(validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View' }])).toBeUndefined();
     expect(validatePromptReferenceContributions([{ id: 'ref', handler: 'resolve' }])).toBeUndefined();
-    expect(validateTranscriptRendererContributions([{ id: 'renderer', tool: 'tool', component: 'Renderer' }])).toBeUndefined();
+    expect(
+      validateTranscriptRendererContributions([{ id: 'renderer', tool: 'tool', component: 'Renderer', standalone: true }]),
+    ).toBeUndefined();
     expect(validateThemeContributions([{ id: 'theme', label: 'Theme', appearance: 'dark', tokens: {} }])).toBeUndefined();
   });
 
@@ -28,6 +30,9 @@ describe('extensionViewContributionValidation', () => {
     expect(() => validateTranscriptRendererContributions([{ id: 'renderer', tool: 'tool' }])).toThrow(
       'Extension manifest contributes.transcriptRenderers[0].component must be a non-empty string.',
     );
+    expect(() =>
+      validateTranscriptRendererContributions([{ id: 'renderer', tool: 'tool', component: 'Renderer', standalone: 'yes' }]),
+    ).toThrow('Extension manifest contributes.transcriptRenderers[0].standalone must be a boolean.');
     expect(() => validateThemeContributions([{ id: 'theme', label: 'Theme', appearance: 'blue', tokens: {} }])).toThrow(
       'Extension manifest contributes.themes[0].appearance must be one of: light, dark.',
     );
