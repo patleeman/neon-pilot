@@ -4371,6 +4371,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return result.attachedContextDocs;
       };
 
+      const waitForDraftPendingPromptPaint = () =>
+        new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve());
+          });
+        });
+
       if (!id && !visibleSessionDetail) {
         const selectedRelatedThreadIdsSnapshot = [...selectedRelatedThreadIds];
 
@@ -4484,6 +4491,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         let createdSessionId: string | null = null;
         let navigatedToCreatedConversation = false;
         try {
+          const draftPendingPromptPaintStartedAtMs = performance.now();
+          await waitForDraftPendingPromptPaint();
+          recordSubmitPhase('draftPendingPromptPaintYield', draftPendingPromptPaintStartedAtMs);
           const createStartedAtMs = performance.now();
           const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
           recordSubmitPhase('createLiveSession', createStartedAtMs);
