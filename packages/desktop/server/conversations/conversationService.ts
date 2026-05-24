@@ -31,11 +31,15 @@ import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
 import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
 import {
+  appendConversationOffshootDetachedMetadata as appendSessionConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
+  appendConversationWorkspaceMetadata as appendSessionConversationWorkspaceMetadata,
+  buildAppendOnlySessionDetailResponse as buildSessionAppendOnlySessionDetailResponse,
   listSessions,
   readKnownSessionIdByFilePath,
   readSessionBlocksWithTelemetry,
   readSessionMeta,
+  renameStoredSession as renameStoredConversationSession,
 } from './sessions.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -447,6 +451,26 @@ export function readKnownConversationIdByFilePath(filePath: string): string | nu
 
 export function appendConversationOffshootMetadata(input: Parameters<typeof appendSessionConversationOffshootMetadata>[0]): void {
   appendSessionConversationOffshootMetadata(input);
+}
+
+export function appendConversationOffshootDetachedMetadata(
+  input: Parameters<typeof appendSessionConversationOffshootDetachedMetadata>[0],
+): void {
+  appendSessionConversationOffshootDetachedMetadata(input);
+}
+
+export function appendConversationWorkspaceMetadata(input: Parameters<typeof appendSessionConversationWorkspaceMetadata>[0]): void {
+  appendSessionConversationWorkspaceMetadata(input);
+}
+
+export function renameStoredConversation(conversationId: string, nextName: string): ReturnType<typeof renameStoredConversationSession> {
+  return renameStoredConversationSession(conversationId, nextName);
+}
+
+export function buildAppendOnlyConversationDetailResponse(
+  input: Parameters<typeof buildSessionAppendOnlySessionDetailResponse>[0],
+): ReturnType<typeof buildSessionAppendOnlySessionDetailResponse> {
+  return buildSessionAppendOnlySessionDetailResponse(input);
 }
 
 export function readConversationSessionSignature(conversationId: string): string | null {

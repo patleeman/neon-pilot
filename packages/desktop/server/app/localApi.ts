@@ -72,11 +72,15 @@ import { applyConversationModelPreferencesToSessionManager } from '../conversati
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import {
+  appendConversationOffshootDetachedMetadata,
+  appendConversationWorkspaceMetadata,
+  buildAppendOnlyConversationDetailResponse,
   publishConversationSessionMetaChanged,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
   readConversationSessionSignature,
   readSessionDetailForRoute,
+  renameStoredConversation,
   resolveConversationSessionFile,
   toggleConversationAttention,
 } from '../conversations/conversationService.js';
@@ -130,12 +134,6 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import {
-  appendConversationOffshootDetachedMetadata,
-  appendConversationWorkspaceMetadata,
-  buildAppendOnlySessionDetailResponse,
-  renameStoredSession,
-} from '../conversations/sessions.js';
 import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
 import { beginExtensionStartupGuard, completeExtensionStartupGuard } from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
@@ -1409,7 +1407,7 @@ export async function renameDesktopConversation(input: {
     return buildRenameDesktopConversationResult({ title: nextName });
   }
 
-  const renamed = renameStoredSession(conversationId, nextName);
+  const renamed = renameStoredConversation(conversationId, nextName);
   publishConversationSessionMetaChanged(conversationId);
   return buildRenameDesktopConversationResult({
     title: resolveRenamedStoredConversationTitle({ renamedTitle: renamed.title, fallbackTitle: nextName }),
@@ -1753,7 +1751,7 @@ export async function readDesktopSessionDetail(input: {
     knownSessionSignature: input.knownSessionSignature,
     nextSessionSignature: sessionRead.detail.signature,
   })
-    ? buildAppendOnlySessionDetailResponse({
+    ? buildAppendOnlyConversationDetailResponse({
         detail: sessionRead.detail,
         knownBlockOffset: input.knownBlockOffset,
         knownTotalBlocks: input.knownTotalBlocks,
