@@ -24,6 +24,17 @@ describe('prompt context inventory', () => {
     ).resolves.toEqual({ blocks: [], contextMessages: [{ customType: 'existing', content: 'keep me' }], diagnostics: [] });
   });
 
+  it('skips providers for plain prompts without explicit context or related sessions', async () => {
+    registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
+      { extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' },
+    ]);
+
+    const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1' });
+
+    expect(extensionBackend.invokeExtensionAction).not.toHaveBeenCalled();
+    expect(plan).toEqual({ blocks: [], contextMessages: [], diagnostics: [] });
+  });
+
   it('invokes providers and normalizes blocks into extension turn context messages', async () => {
     registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
       { extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' },
