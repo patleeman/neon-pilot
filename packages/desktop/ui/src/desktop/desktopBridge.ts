@@ -160,6 +160,7 @@ export interface NeonPilotDesktopBridge {
     tailBlocks?: number;
     surfaceId?: string;
     surfaceType?: 'desktop_web' | 'mobile_web';
+    streamEvents?: boolean;
   }): Promise<{ subscriptionId: string }>;
   unsubscribeConversationState(subscriptionId: string): Promise<void>;
   goBack(): Promise<DesktopNavigationState>;

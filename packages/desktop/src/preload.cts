@@ -122,6 +122,7 @@ const desktopBridge = {
     tailBlocks?: number;
     surfaceId?: string;
     surfaceType?: 'desktop_web' | 'mobile_web';
+    streamEvents?: boolean;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:subscribe-conversation-state`, input),
   unsubscribeConversationState: (subscriptionId: string) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, subscriptionId),

@@ -699,12 +699,14 @@ export async function subscribeDesktopConversationState(
     tailBlocks?: number;
     surfaceId?: string;
     surfaceType?: 'desktop_web' | 'mobile_web';
+    streamEvents?: boolean;
   },
   onEvent: (event: DesktopConversationStateBridgeEvent) => void,
 ): Promise<() => void> {
   const capabilityContext = await getLocalLiveSessionCapabilityContext();
   const conversationId = readRequiredConversationId(input.conversationId);
   const tailBlocks = normalizeDesktopLocalApiTailBlocks(input.tailBlocks);
+  const shouldForwardStreamEvents = input.streamEvents !== false;
 
   let closed = false;
   let liveUnsubscribe: (() => void) | null = null;
@@ -824,7 +826,7 @@ export async function subscribeDesktopConversationState(
   const syncLiveSubscription = () => {
     closeLiveSubscription();
 
-    if (!shouldSubscribeConversationStateLiveEvents(currentState.liveSession.live)) {
+    if (!shouldForwardStreamEvents || !shouldSubscribeConversationStateLiveEvents(currentState.liveSession.live)) {
       return;
     }
 

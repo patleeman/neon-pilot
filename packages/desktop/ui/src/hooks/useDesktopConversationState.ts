@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../client/api';
 import { DESKTOP_CONVERSATION_STATE_EVENT, getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
+import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import type { DesktopConversationState, DisplayBlock, PromptAttachmentRefInput, PromptImageInput, SseEvent } from '../shared/types';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
@@ -297,6 +298,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
         surfaceId,
         surfaceType,
+        streamEvents: false,
       })
       .then((result) => {
         if (closed) {
@@ -322,6 +324,49 @@ export function useDesktopConversationState(conversationId: string | null, optio
       }
     };
   }, [bridge, conversationId, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+
+  useEffect(() => {
+    if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession.live) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    if (tailBlocks !== undefined) params.set('tailBlocks', String(tailBlocks));
+    params.set('surfaceId', surfaceId);
+    params.set('surfaceType', surfaceType);
+    const source = createDesktopAwareEventSource(`/api/live-sessions/${encodeURIComponent(conversationId)}/events?${params.toString()}`);
+
+    source.onmessage = (event) => {
+      try {
+        const streamEvent = JSON.parse(event.data) as SseEvent;
+        setState((previous) => {
+          if (previous?.conversationId !== conversationId) {
+            return previous;
+          }
+
+          const stream = applyDesktopConversationStreamEvent(previous.stream, streamEvent);
+          return {
+            ...previous,
+            stream,
+            liveSession: previous.liveSession.live
+              ? {
+                  ...previous.liveSession,
+                  ...(streamEvent.type === 'title_update' ? { title: streamEvent.title } : {}),
+                  isStreaming: stream.isStreaming,
+                }
+              : previous.liveSession,
+          };
+        });
+        setError(null);
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
+      }
+    };
+    source.onerror = () => setError('Conversation realtime stream failed.');
+
+    return () => source.close();
+  }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, surfaceId, surfaceType]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {

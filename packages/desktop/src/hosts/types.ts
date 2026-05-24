@@ -69,10 +69,11 @@ export interface DesktopConversationStateSubscriptionRequest {
   tailBlocks?: number;
   surfaceId?: string;
   surfaceType?: 'desktop_web' | 'mobile_web';
+  streamEvents?: boolean;
 }
 
 export interface DesktopConversationStateBridgeEvent {
-  type: 'open' | 'state' | 'error' | 'close';
+  type: 'open' | 'state' | 'stream_events' | 'error' | 'close';
   state?: unknown;
   message?: string;
 }

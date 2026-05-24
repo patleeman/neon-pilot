@@ -73,6 +73,7 @@ describe('useDesktopConversationState', () => {
       tailBlocks: 20,
       surfaceId: expect.any(String),
       surfaceType: 'desktop_web',
+      streamEvents: false,
     });
 
     await act(async () => {
