@@ -31,10 +31,10 @@ describe('app telemetry persistence queue', () => {
     }
 
     await vi.runOnlyPendingTimersAsync();
-    expect(core.writeAppTelemetryEvent).toHaveBeenCalledTimes(100);
-    expect(core.writeAppTelemetryEvent).not.toHaveBeenCalledWith({ source: 'ui', category: 'batch', name: '100' });
+    expect(core.writeAppTelemetryEvent).toHaveBeenCalledTimes(25);
+    expect(core.writeAppTelemetryEvent).not.toHaveBeenCalledWith({ source: 'ui', category: 'batch', name: '25' });
 
-    await vi.runOnlyPendingTimersAsync();
+    await vi.runAllTimersAsync();
     expect(core.writeAppTelemetryEvent).toHaveBeenCalledTimes(101);
     expect(core.writeAppTelemetryEvent).toHaveBeenLastCalledWith({ source: 'ui', category: 'batch', name: '100' });
   });
@@ -57,6 +57,36 @@ describe('app telemetry persistence queue', () => {
     expect(core.writeAppTelemetryEvent).not.toHaveBeenCalledWith({ source: 'ui', category: 'overflow', name: 'old-0' });
     expect(core.writeAppTelemetryEvent).toHaveBeenCalledWith({ source: 'ui', category: 'overflow', name: 'old-500' });
     expect(core.writeAppTelemetryEvent).toHaveBeenCalledWith({ source: 'ui', category: 'overflow', name: 'new' });
+  });
+
+  it('samples noisy server telemetry before queueing', async () => {
+    const telemetry = await loadModule();
+
+    telemetry.persistAppTelemetryEvent({
+      source: 'server',
+      category: 'extension_action',
+      name: 'getState',
+      metadata: { extensionId: 'system-todo', ok: true },
+    });
+    telemetry.persistAppTelemetryEvent({
+      source: 'server',
+      category: 'extension_action',
+      name: 'getState',
+      metadata: { extensionId: 'system-todo', ok: true },
+    });
+
+    await vi.runAllTimersAsync();
+    expect(core.writeAppTelemetryEvent).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(5000);
+    telemetry.persistAppTelemetryEvent({
+      source: 'server',
+      category: 'extension_action',
+      name: 'getState',
+      metadata: { extensionId: 'system-todo', ok: true },
+    });
+    await vi.runOnlyPendingTimersAsync();
+    expect(core.writeAppTelemetryEvent).toHaveBeenCalledTimes(2);
   });
 
   it('does not let telemetry writer failures escape explicit flushes', async () => {
