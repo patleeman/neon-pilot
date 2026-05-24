@@ -69,6 +69,7 @@ import {
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
+export type { SessionImageAsset } from './sessionImages.js';
 import { buildSessionIndexKey, shouldReloadPersistentSessionIndex } from './sessionIndexKey.js';
 import {
   buildPersistentSessionIndexDocument as buildPersistentSessionIndexDocumentFromCache,
@@ -1076,8 +1077,11 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
 function buildChildConversationTopologyBlocks(meta: SessionMeta, existingBlocks: DisplayBlock[] = []): DisplayBlock[] {
   const existingChildIds = new Set(
     existingBlocks
-      .filter((block) => block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE)
-      .map((block) => block.text.match(/^Conversation:\s*(\S+)$/m)?.[1]?.trim())
+      .map((block) =>
+        block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE
+          ? block.text.match(/^Conversation:\s*(\S+)$/m)?.[1]?.trim()
+          : undefined,
+      )
       .filter((id): id is string => Boolean(id)),
   );
   const children = scanSessionMetas()

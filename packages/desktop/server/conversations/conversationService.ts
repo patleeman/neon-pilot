@@ -348,6 +348,7 @@ function buildSyntheticLiveSessionSnapshot(
     file: liveEntry.sessionFile,
     timestamp: new Date().toISOString(),
     cwd: liveEntry.cwd,
+    workspaceCwd: null,
     cwdSlug: liveEntry.cwd.replace(/\//g, '-'),
     model: '',
     title: liveEntry.title || 'New Conversation',
@@ -379,7 +380,7 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
   );
 }
 
-export function listConversationSessionsSnapshot() {
+export function listConversationSessionsSnapshot(options: { includeLive?: boolean } = {}) {
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const storedSessions = hasConversationCatalogRows() ? listConversationCatalogSessions() : listSessions();
@@ -387,7 +388,7 @@ export function listConversationSessionsSnapshot() {
     upsertConversationCatalogSessions(storedSessions);
   }
   const jsonl = decorateSessionsWithAttention(profile, storedSessions, deferredResumesBySessionFile);
-  const live = listAllLiveSessions();
+  const live = options.includeLive === false ? [] : listAllLiveSessions();
   const liveById = new Map(live.map((entry) => [entry.id, entry]));
   const jsonlIds = new Set(jsonl.map((session) => session.id));
   const syntheticLive = live
