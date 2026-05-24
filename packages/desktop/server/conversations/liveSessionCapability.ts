@@ -38,6 +38,7 @@ import {
   forkSession as forkLiveSession,
   isLive as isLocalLive,
   manageParallelPromptJob,
+  prewarmLiveSessionLoader,
   type PromptImageAttachment,
   queuePromptContext,
   registry as liveRegistry,
@@ -74,6 +75,10 @@ export interface LiveSessionCapabilityContext {
     lastAttemptCount?: number;
   }>;
   listMemoryDocs: () => MemoryDocSummary[];
+}
+
+export interface PrewarmLiveSessionCapabilityInput {
+  cwd?: string;
 }
 
 export interface CreateLiveSessionCapabilityInput {
@@ -470,6 +475,25 @@ async function ensureConversationPromptTargetLive(conversationId: string, contex
   const resumed = await resumeLocalSession(sessionFile, await buildLiveSessionOptionsAsync(context));
   await context.flushLiveDeferredResumes();
   return resumed.id;
+}
+
+export async function prewarmLiveSessionCapability(
+  input: PrewarmLiveSessionCapabilityInput,
+  context: LiveSessionCapabilityContext,
+): Promise<{ ok: true }> {
+  const profile = context.getRuntimeScope();
+  const hasExplicitCwd = typeof input.cwd === 'string' && input.cwd.trim().length > 0;
+  const cwd = hasExplicitCwd
+    ? resolveConversationCwd({
+        repoRoot: context.getRepoRoot(),
+        profile,
+        explicitCwd: input.cwd,
+        defaultCwd: context.getDefaultWebCwd(),
+      })
+    : resolveNeutralChatCwd(profile);
+
+  await prewarmLiveSessionLoader(cwd, buildLiveSessionLoaderOptions(context));
+  return { ok: true };
 }
 
 export async function createLiveSessionCapability(

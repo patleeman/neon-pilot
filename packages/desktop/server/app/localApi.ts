@@ -10,16 +10,7 @@ installProcessLogging();
 const DESKTOP_SCHEDULED_TASK_PROFILE = 'shared';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import {
-  getPiAgentRuntimeDir,
-  getStateRoot,
-  readKnowledgeBaseState,
-  saveConversationCommitCheckpoint,
-  startKnowledgeBaseSyncLoop,
-  subscribeKnowledgeBaseState,
-  syncKnowledgeBaseNow,
-  updateKnowledgeBase,
-} from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot, saveConversationCommitCheckpoint } from '@neon-pilot/core';
 import { ensureAutomationThread } from '@neon-pilot/daemon';
 import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
@@ -108,6 +99,7 @@ import {
   forkLiveSessionCapability,
   type LiveSessionCapabilityContext,
   manageLiveSessionParallelJobCapability,
+  prewarmLiveSessionCapability,
   reloadLiveSessionCapability,
   restoreQueuedLiveSessionMessageCapability,
   resumeLiveSessionCapability,
@@ -161,7 +153,7 @@ import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '
 import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
-import { pickFolderCapability, readVaultFilesCapability } from '../workspace/workspaceDesktopCapability.js';
+import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
@@ -626,19 +618,6 @@ async function getLocalProviderDesktopCapabilityContext(): Promise<ProviderDeskt
   return assertLocalProviderDesktopCapabilityContext(localProviderDesktopCapabilityContext);
 }
 
-subscribeKnowledgeBaseState(() => {
-  invalidateAppTopics('knowledgeBase');
-});
-
-// The desktop shell serves local API routes directly inside Electron. Running the
-// managed knowledge-base sync loop there shells out to git on a timer and can
-// block the app while the user is clicking around. Keep the loop in the managed
-// web service, but skip it for the embedded desktop runtime and its worker
-// helpers.
-if (process.env.NEON_PILOT_DESKTOP_RUNTIME !== '1') {
-  startKnowledgeBaseSyncLoop();
-}
-
 export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void> {
   await getLocalRoutes();
 
@@ -883,6 +862,15 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const runMatch = /^\/api\/runs\/([^/]+)$/.exec(path);
   if (method === 'GET' && runMatch)
     return createDesktopLocalApiJsonResponse(await readDesktopDurableRun(decodeURIComponent(runMatch[1] ?? '')));
+
+  if (method === 'POST' && path === '/api/live-sessions/prewarm') {
+    return createDesktopLocalApiJsonResponse(
+      await prewarmLiveSessionCapability(
+        (input.body ?? {}) as Parameters<typeof prewarmLiveSessionCapability>[0],
+        await getLocalLiveSessionCapabilityContext(),
+      ),
+    );
+  }
 
   if (method === 'POST' && path === '/api/live-sessions') {
     return createDesktopLocalApiJsonResponse(
@@ -1257,28 +1245,6 @@ export async function updateDesktopDefaultCwd(cwd: string | null) {
       runtimeSettingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
     },
   );
-  return state;
-}
-
-export async function readDesktopVaultFiles() {
-  return readVaultFilesCapability();
-}
-
-export async function readDesktopKnowledgeBase() {
-  return readKnowledgeBaseState();
-}
-
-export async function updateDesktopKnowledgeBase(input: { repoUrl?: string | null; branch?: string | null }) {
-  const state = updateKnowledgeBase(input);
-  const context = await getLocalServerRouteContext();
-  context.materializeWebRuntimeConfig(context.getRuntimeScope());
-  invalidateAppTopics('knowledgeBase');
-  return state;
-}
-
-export async function syncDesktopKnowledgeBase() {
-  const state = syncKnowledgeBaseNow();
-  invalidateAppTopics('knowledgeBase');
   return state;
 }
 

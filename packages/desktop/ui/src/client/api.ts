@@ -247,7 +247,7 @@ async function getMemoryData(): Promise<MemoryData> {
     return pending;
   }
 
-  const request = get<MemoryData>('/memory').finally(() => {
+  const request = get<MemoryData>('/extensions/system-knowledge/memory').finally(() => {
     pendingMemoryRequests.delete(cacheKey);
   });
   pendingMemoryRequests.set(cacheKey, request);
@@ -881,6 +881,8 @@ export const api = {
       usedFallbackPrompt?: boolean;
     }>(`/conversations/${encodeURIComponent(id)}/recover`);
   },
+  prewarmLiveSession: async (cwd?: string) => post<{ ok: true }>('/live-sessions/prewarm', { cwd }),
+
   createLiveSession: async (
     cwd?: string,
     text?: string,

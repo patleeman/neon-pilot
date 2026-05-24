@@ -1224,6 +1224,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => selectComposerModel(models, currentModel, defaultModel),
     [currentModel, defaultModel, models],
   );
+  useEffect(() => {
+    if (!isDraftConversation) {
+      return;
+    }
+
+    void api.prewarmLiveSession(draftCwdValue || undefined).catch(() => {
+      // Best-effort latency prewarm only; send still creates the session normally.
+    });
+  }, [draftCwdValue, isDraftConversation]);
+
   const createLiveSessionPreferenceInput = useMemo(
     () =>
       buildLiveSessionPreferenceInput({
