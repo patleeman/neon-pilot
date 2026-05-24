@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-pilot/core';
 
+import { appendConversationOffshootMetadata } from '../conversations/conversationService.js';
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
-import { appendConversationOffshootMetadata } from '../conversations/sessions.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';

@@ -5,6 +5,7 @@ const sessionManager = vi.hoisted(() => ({ open: vi.fn() }));
 const autoMode = vi.hoisted(() => ({ readConversationAutoModeStateFromSessionManager: vi.fn(), writeConversationAutoModeState: vi.fn() }));
 const recovery = vi.hoisted(() => ({ recoverConversationCapability: vi.fn() }));
 const service = vi.hoisted(() => ({
+  appendConversationOffshootMetadata: vi.fn(),
   publishConversationSessionMetaChanged: vi.fn(),
   readConversationSessionMeta: vi.fn(),
   resolveConversationSessionFile: vi.fn(),
@@ -16,7 +17,6 @@ const live = vi.hoisted(() => ({
   registry: new Map<string, unknown>(),
   setLiveSessionAutoModeState: vi.fn(),
 }));
-const sessions = vi.hoisted(() => ({ appendConversationOffshootMetadata: vi.fn() }));
 const middleware = vi.hoisted(() => ({ logError: vi.fn() }));
 const appEvents = vi.hoisted(() => ({ publishAppEvent: vi.fn() }));
 const liveRoutes = vi.hoisted(() => ({ ensureRequestControlsLocalLiveConversation: vi.fn() }));
@@ -27,7 +27,6 @@ vi.mock('../conversations/conversationAutoMode.js', () => autoMode);
 vi.mock('../conversations/conversationRecovery.js', () => recovery);
 vi.mock('../conversations/conversationService.js', () => service);
 vi.mock('../conversations/liveSessions.js', () => live);
-vi.mock('../conversations/sessions.js', () => sessions);
 vi.mock('../middleware/index.js', () => middleware);
 vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('./liveSessions.js', () => liveRoutes);
@@ -143,7 +142,7 @@ describe('conversationState routes', () => {
       extensionFactories: ['factory'],
     });
     expect(context.buildLiveSessionResourceOptions).toHaveBeenCalled();
-    expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith({
+    expect(service.appendConversationOffshootMetadata).toHaveBeenCalledWith({
       sessionFile: '/copy.json',
       kind: 'duplicate',
       parentSessionFile: '/session.json',

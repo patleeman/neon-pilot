@@ -6,6 +6,7 @@ import type { Express } from 'express';
 import { readConversationAutoModeStateFromSessionManager, writeConversationAutoModeState } from '../conversations/conversationAutoMode.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
 import {
+  appendConversationOffshootMetadata,
   publishConversationSessionMetaChanged,
   readConversationSessionMeta,
   resolveConversationSessionFile,
@@ -17,7 +18,6 @@ import {
   registry as liveRegistry,
   setLiveSessionAutoModeState,
 } from '../conversations/liveSessions.js';
-import { appendConversationOffshootMetadata } from '../conversations/sessions.js';
 import { logError } from '../middleware/index.js';
 import { publishAppEvent } from '../shared/appEvents.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
