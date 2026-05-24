@@ -5052,18 +5052,42 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => buildNewConversationPanelContext({ conversationId: id, suggestedContext: suggestedContextShelfState }),
     [id, suggestedContextShelfState],
   );
-  const hasComposerShelfContent = hasConversationComposerShelfContent({
-    composerShelvesTopCount: composerShelvesTop.length,
-    composerShelvesBottomCount: composerShelvesBottom.length,
-    attachedContextDocsCount: attachedContextDocs.length,
-    draftMentionItemsCount: draftMentionItems.length,
-    pendingQueueCount: pendingQueue.length,
-    visibleBackgroundExecutionsCount: visibleActiveConversationBackgroundExecutions.length,
-    draft,
-    orderedDeferredResumesCount: orderedDeferredResumes.length,
-    pendingBrowserCommentsCount: pendingBrowserComments.length,
-    hasActiveQuestion: Boolean(pendingAskUserQuestion && composerActiveQuestion),
-  });
+  const [composerChromeReady, setComposerChromeReady] = useState(draft);
+
+  useEffect(() => {
+    if (draft) {
+      setComposerChromeReady(true);
+      return;
+    }
+
+    setComposerChromeReady(false);
+    if (!id || !hasRenderableMessages || showConversationLoadingState) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setComposerChromeReady(true);
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [draft, hasRenderableMessages, id, showConversationLoadingState]);
+
+  const hasComposerShelfContent =
+    composerChromeReady &&
+    hasConversationComposerShelfContent({
+      composerShelvesTopCount: composerShelvesTop.length,
+      composerShelvesBottomCount: composerShelvesBottom.length,
+      attachedContextDocsCount: attachedContextDocs.length,
+      draftMentionItemsCount: draftMentionItems.length,
+      pendingQueueCount: pendingQueue.length,
+      visibleBackgroundExecutionsCount: visibleActiveConversationBackgroundExecutions.length,
+      draft,
+      orderedDeferredResumesCount: orderedDeferredResumes.length,
+      pendingBrowserCommentsCount: pendingBrowserComments.length,
+      hasActiveQuestion: Boolean(pendingAskUserQuestion && composerActiveQuestion),
+    });
   const composerAttachmentProviders = extensionRegistry.composerAttachmentProviders;
   const composerAttachmentProviderClientsRef = useRef<Map<string, ReturnType<typeof createNativeExtensionClient>>>(new Map());
   const invokeComposerAttachmentProvider = useCallback(
@@ -5687,7 +5711,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
               )}
 
-              <ConversationGoalPanel goal={stream.goalState} workingLabel={goalEnabled && conversationRunningForPage ? 'Working…' : null} />
+              {composerChromeReady ? (
+                <ConversationGoalPanel
+                  goal={stream.goalState}
+                  workingLabel={goalEnabled && conversationRunningForPage ? 'Working…' : null}
+                />
+              ) : null}
 
               {hasComposerShelfContent && (
                 <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
