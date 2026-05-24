@@ -18,8 +18,8 @@ const apiSessionMetaMock = vi.fn();
 const fetchSessionsSnapshotMock = vi.fn();
 let desktopListener: { onopen?: () => void; onevent?: (event: DesktopAppEvent) => void } | null = null;
 
-vi.mock('../desktop/desktopAppEvents', () => ({
-  subscribeDesktopAppEvents: subscribeDesktopAppEventsMock,
+vi.mock('../desktop/desktopRealtime', () => ({
+  subscribeDesktopRealtimeAppEvents: subscribeDesktopAppEventsMock,
 }));
 
 vi.mock('../client/api', () => ({
@@ -112,7 +112,7 @@ describe('App execution state integration', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     desktopListener = null;
-    subscribeDesktopAppEventsMock.mockImplementation(async (listener) => {
+    subscribeDesktopAppEventsMock.mockImplementation((listener) => {
       desktopListener = listener;
       listener.onopen?.();
       return () => {};

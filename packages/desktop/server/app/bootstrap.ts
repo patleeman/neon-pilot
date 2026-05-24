@@ -17,6 +17,7 @@ import { subscribeProviderOAuthLogins } from '../models/providerAuth.js';
 import { startAppEventMonitor } from '../shared/appEvents.js';
 import { createServiceAttentionMonitor, type ServiceAttentionMonitorOptions } from '../shared/internalAttention.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { createDesktopRealtimeUpgradeHandler } from './realtime.js';
 
 export function createServerApps(): { app: Express } {
   const app = express();
@@ -170,7 +171,7 @@ export function startServerListeners(options: {
     });
   });
 
-  if (options.handleUpgrade) {
-    server.on('upgrade', options.handleUpgrade);
+  if ('on' in server && typeof server.on === 'function') {
+    server.on('upgrade', options.handleUpgrade ?? createDesktopRealtimeUpgradeHandler());
   }
 }

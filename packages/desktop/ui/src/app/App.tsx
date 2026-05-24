@@ -11,7 +11,7 @@ import {
   readDraftConversationComposer,
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
-import { subscribeDesktopAppEvents } from '../desktop/desktopAppEvents';
+import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
 import { ExtensionPage } from '../extensions/ExtensionPage';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
@@ -470,7 +470,7 @@ export function App() {
       reconnectTimer = window.setTimeout(() => {
         if (cancelled) return;
         cleanup();
-        void subscribeDesktopAppEvents({
+        const localCleanup = subscribeDesktopRealtimeAppEvents({
           onopen: () => {
             openedOnceRef.current = true;
             setSseStatus('open');
@@ -486,19 +486,12 @@ export function App() {
               scheduleReconnect(3000);
             }
           },
-        })
-          .then((localCleanup) => {
-            if (cancelled || generation !== subscriptionGenerationRef.current) {
-              localCleanup();
-              return;
-            }
-            cleanup = localCleanup;
-          })
-          .catch(() => {
-            if (cancelled || generation !== subscriptionGenerationRef.current) return;
-            setSseStatus('offline');
-            void bootstrapSnapshots();
-          });
+        });
+        if (cancelled || generation !== subscriptionGenerationRef.current) {
+          localCleanup();
+          return;
+        }
+        cleanup = localCleanup;
       }, delayMs);
     };
 
@@ -509,7 +502,7 @@ export function App() {
       }
     }, 1500);
 
-    void subscribeDesktopAppEvents({
+    const localCleanup = subscribeDesktopRealtimeAppEvents({
       onopen: () => {
         openedOnceRef.current = true;
         window.clearTimeout(bootstrapTimer);
@@ -526,20 +519,12 @@ export function App() {
           scheduleReconnect(3000);
         }
       },
-    })
-      .then((localCleanup) => {
-        if (cancelled || generation !== subscriptionGenerationRef.current) {
-          localCleanup();
-          return;
-        }
-
-        cleanup = localCleanup;
-      })
-      .catch(() => {
-        if (cancelled || generation !== subscriptionGenerationRef.current) return;
-        setSseStatus('offline');
-        void bootstrapSnapshots();
-      });
+    });
+    if (cancelled || generation !== subscriptionGenerationRef.current) {
+      localCleanup();
+    } else {
+      cleanup = localCleanup;
+    }
 
     return () => {
       cancelled = true;
