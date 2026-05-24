@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -19,7 +19,7 @@ function arg(name, fallback) {
 const app = arg('app', '');
 const entry = arg('entry', '');
 if (!app) {
-  console.error('Usage: node scripts/perf-desktop-smoke.mjs --app=/path/to/Neon\ Pilot.app [--sessions=2500 --blocks=80]');
+  console.error('Usage: node scripts/perf-desktop-smoke.mjs --app="/path/to/Neon Pilot.app" [--sessions=2500 --blocks=80]');
   process.exit(1);
 }
 const sessions = Number(arg('sessions', '2500')) || 2500;
@@ -111,7 +111,9 @@ async function waitForPage(port, child, timeoutMs = 45_000) {
       const targets = await fetchJson(`http://127.0.0.1:${port}/json/list`);
       const page = targets.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
       if (page) return page;
-    } catch {}
+    } catch {
+      // CDP endpoint may not be ready yet.
+    }
     await sleep(100);
   }
   throw new Error('timed out waiting for CDP page');
