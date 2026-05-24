@@ -46,7 +46,6 @@ import type {
 
 export const DESKTOP_API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
 export const DESKTOP_CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
-export const DESKTOP_APP_EVENTS_EVENT = 'neon-pilot-desktop-app-events';
 export const DESKTOP_PROVIDER_OAUTH_EVENT = 'neon-pilot-desktop-provider-oauth-login';
 export const DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-comment';
 export const DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
@@ -428,8 +427,6 @@ export interface NeonPilotDesktopBridge {
   unsubscribeConversationState(subscriptionId: string): Promise<void>;
   subscribeApiStream(path: string): Promise<{ subscriptionId: string }>;
   unsubscribeApiStream(subscriptionId: string): Promise<void>;
-  subscribeAppEvents(): Promise<{ subscriptionId: string }>;
-  unsubscribeAppEvents(subscriptionId: string): Promise<void>;
   goBack(): Promise<DesktopNavigationState>;
   goForward(): Promise<DesktopNavigationState>;
   setWorkbenchBrowserBounds(input: {

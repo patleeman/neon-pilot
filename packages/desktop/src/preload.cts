@@ -9,8 +9,6 @@ const API_STREAM_CHANNEL = `${CHANNEL_PREFIX}:api-stream`;
 const API_STREAM_EVENT = 'neon-pilot-desktop-api-stream';
 const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
 const CONVERSATION_STATE_EVENT = 'neon-pilot-desktop-conversation-state';
-const APP_EVENTS_CHANNEL = `${CHANNEL_PREFIX}:app-events`;
-const APP_EVENTS_EVENT = 'neon-pilot-desktop-app-events';
 const PROVIDER_OAUTH_CHANNEL = `${CHANNEL_PREFIX}:provider-oauth-login`;
 const PROVIDER_OAUTH_EVENT = 'neon-pilot-desktop-provider-oauth-login';
 const WORKBENCH_BROWSER_COMMENT_CHANNEL = `${CHANNEL_PREFIX}:workbench-browser-comment`;
@@ -328,8 +326,6 @@ const desktopBridge = {
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, subscriptionId),
   subscribeApiStream: (path: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:subscribe-api-stream`, path),
   unsubscribeApiStream: (subscriptionId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:unsubscribe-api-stream`, subscriptionId),
-  subscribeAppEvents: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:subscribe-app-events`),
-  unsubscribeAppEvents: (subscriptionId: string) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:unsubscribe-app-events`, subscriptionId),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),
   goForward: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-forward`),
   setWorkbenchBrowserBounds: (input: {
@@ -382,10 +378,6 @@ ipcRenderer.on(API_STREAM_CHANNEL, (_event, payload: unknown) => {
 
 ipcRenderer.on(CONVERSATION_STATE_CHANNEL, (_event, payload: unknown) => {
   dispatchDesktopEvent(CONVERSATION_STATE_EVENT, payload);
-});
-
-ipcRenderer.on(APP_EVENTS_CHANNEL, (_event, payload: unknown) => {
-  dispatchDesktopEvent(APP_EVENTS_EVENT, payload);
 });
 
 ipcRenderer.on(PROVIDER_OAUTH_CHANNEL, (_event, payload: unknown) => {

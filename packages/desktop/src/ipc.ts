@@ -7,7 +7,6 @@ import type { DesktopWindowController } from './window.js';
 const CHANNEL_PREFIX = 'neon-pilot-desktop';
 const API_STREAM_CHANNEL = `${CHANNEL_PREFIX}:api-stream`;
 const CONVERSATION_STATE_CHANNEL = `${CHANNEL_PREFIX}:conversation-state`;
-const APP_EVENTS_CHANNEL = `${CHANNEL_PREFIX}:app-events`;
 const PROVIDER_OAUTH_CHANNEL = `${CHANNEL_PREFIX}:provider-oauth-login`;
 
 export function registerDesktopIpc(options: {
@@ -25,7 +24,6 @@ export function registerDesktopIpc(options: {
 }): void {
   const streamSubscriptions = new Map<string, () => void>();
   const conversationStateSubscriptions = new Map<string, () => void>();
-  const appEventSubscriptions = new Map<string, () => void>();
   const providerOAuthSubscriptions = new Map<string, () => void>();
 
   const sendBufferedSubscriptionEvent = <T>(input: {
@@ -1059,28 +1057,6 @@ export function registerDesktopIpc(options: {
 
   ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-conversation-state`, async (_event, subscriptionId: string) => {
     conversationStateSubscriptions.get(subscriptionId)?.();
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-app-events`, async (event) => {
-    const hostId = options.windowController.getHostIdForWebContentsId(event.sender.id) ?? options.hostManager.getActiveHostId();
-    const controller = options.hostManager.getHostController(hostId);
-    if (!controller.subscribeDesktopAppEvents) {
-      throw new Error('Desktop app events are only available for the local host.');
-    }
-
-    const subscriptionId = `${event.sender.id}:app:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-    await sendBufferedSubscriptionEvent({
-      sender: event.sender,
-      channel: APP_EVENTS_CHANNEL,
-      subscriptionId,
-      store: appEventSubscriptions,
-      subscribe: (emit) => controller.subscribeDesktopAppEvents!(emit),
-    });
-    return { subscriptionId };
-  });
-
-  ipcMain.handle(`${CHANNEL_PREFIX}:unsubscribe-app-events`, async (_event, subscriptionId: string) => {
-    appEventSubscriptions.get(subscriptionId)?.();
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:subscribe-provider-oauth-login`, async (event, loginId: string) => {
