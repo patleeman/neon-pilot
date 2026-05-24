@@ -7,9 +7,12 @@ const {
   entriesByDir,
   existingPaths,
   existsSyncMock,
+  getConfigRootMock,
   getDaemonConfigFilePathMock,
+  getDurableSessionsDirMock,
   getDurableTasksDirMock,
   getMachineConfigFilePathMock,
+  getPiAgentRuntimeDirMock,
   getStateRootMock,
   loadDaemonConfigMock,
   clearDurableRunsListCacheMock,
@@ -79,9 +82,12 @@ const {
     entriesByDir,
     existingPaths,
     existsSyncMock,
+    getConfigRootMock: vi.fn(() => '/config'),
     getDaemonConfigFilePathMock: vi.fn(() => '/daemon/config.json'),
+    getDurableSessionsDirMock: vi.fn(() => '/sessions'),
     getDurableTasksDirMock: vi.fn(() => '/tasks'),
     getMachineConfigFilePathMock: vi.fn(() => '/machine/config.json'),
+    getPiAgentRuntimeDirMock: vi.fn(() => '/runtime'),
     getStateRootMock: vi.fn(() => '/state'),
     loadDaemonConfigMock: vi.fn(() => ({ ipc: { socketPath: '/daemon/socket.sock' } })),
     clearDurableRunsListCacheMock: vi.fn(),
@@ -118,8 +124,11 @@ vi.mock('node:fs', () => ({
 }));
 
 vi.mock('@neon-pilot/core', () => ({
+  getConfigRoot: getConfigRootMock,
+  getDurableSessionsDir: getDurableSessionsDirMock,
   getDurableTasksDir: getDurableTasksDirMock,
   getMachineConfigFilePath: getMachineConfigFilePathMock,
+  getPiAgentRuntimeDir: getPiAgentRuntimeDirMock,
   getStateRoot: getStateRootMock,
   resolveConversationAttentionStatePath: resolveConversationAttentionStatePathMock,
   resolveDeferredResumeStateFile: resolveDeferredResumeStateFileMock,
@@ -281,6 +290,34 @@ describe('appEvents mocked behavior', () => {
     expect(events).toContainEqual({ type: 'invalidate', topics: ['sessionFiles'] });
     expect(events).toContainEqual({ type: 'session_file_changed', sessionId: 'conv-1' });
     expect(readKnownSessionIdByFilePathMock).toHaveBeenCalledWith('/sessions/nested/conv-1.jsonl');
+    unsubscribe();
+  });
+
+  it('derives session file change ids from codex session filenames without reading the file', () => {
+    unsupportedRecursivePaths.add('/sessions');
+    markDirectory('/sessions/nested');
+    entriesByDir.set('/sessions', [{ name: 'nested', isDirectory: () => true }]);
+    entriesByDir.set('/sessions/nested', []);
+
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    const nestedWatcher = getLatestWatch('/sessions/nested');
+    nestedWatcher.callback('change', '2026-05-24T14-38-23-128Z_019e57fc-3805-7809-afb5-17969eded1a8.jsonl');
+    vi.advanceTimersByTime(80);
+
+    expect(events).toContainEqual({ type: 'session_file_changed', sessionId: '019e57fc-3805-7809-afb5-17969eded1a8' });
+    expect(readKnownSessionIdByFilePathMock).not.toHaveBeenCalled();
     unsubscribe();
   });
 

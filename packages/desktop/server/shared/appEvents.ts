@@ -176,6 +176,11 @@ function findNearestExistingDirectory(path: string): string {
   return isDirectory(current) ? current : dirname(current);
 }
 
+function readConversationIdFromSessionFilename(filePath: string): string | null {
+  const match = /^.+_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i.exec(basename(filePath));
+  return match?.[1] ?? null;
+}
+
 function createTopicSources(options: AppEventMonitorOptions, profile: string): TopicSources {
   const daemonConfig = loadDaemonConfig();
   const daemonPaths = resolveDaemonPaths(daemonConfig.ipc.socketPath);
@@ -560,7 +565,7 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
 
     const sessionIds = new Set<string>();
     for (const filePath of pendingConversationSessionFilePaths) {
-      const sessionId = readKnownConversationIdByFilePath(filePath)?.trim();
+      const sessionId = readConversationIdFromSessionFilename(filePath) ?? readKnownConversationIdByFilePath(filePath)?.trim();
       if (sessionId) {
         sessionIds.add(sessionId);
       }
