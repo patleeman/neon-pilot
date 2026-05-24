@@ -17,6 +17,7 @@ function arg(name, fallback) {
   return found ? found.slice(prefix.length) : fallback;
 }
 const app = arg('app', '');
+const entry = arg('entry', '');
 if (!app) {
   console.error('Usage: node scripts/perf-desktop-smoke.mjs --app=/path/to/Neon\ Pilot.app [--sessions=2500 --blocks=80]');
   process.exit(1);
@@ -226,7 +227,7 @@ async function main() {
   const start = performance.now();
   const child = spawn(
     join(app, 'Contents', 'MacOS', basename(app, '.app')),
-    [`--remote-debugging-port=${port}`, '--no-quit-confirmation'],
+    [`--remote-debugging-port=${port}`, '--no-quit-confirmation', ...(entry ? [entry] : [])],
     {
       env,
       stdio: 'ignore',
