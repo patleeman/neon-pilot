@@ -11,7 +11,7 @@ const {
   parsePendingOperationMock,
   promptSessionMock,
   queuePromptContextMock,
-  readSessionBlocksMock,
+  readConversationSessionDetailMock,
   repairLiveSessionTranscriptTailMock,
   resumeSessionMock,
   syncWebLiveConversationRunMock,
@@ -26,7 +26,7 @@ const {
   parsePendingOperationMock: vi.fn(),
   promptSessionMock: vi.fn(),
   queuePromptContextMock: vi.fn(),
-  readSessionBlocksMock: vi.fn(),
+  readConversationSessionDetailMock: vi.fn(),
   repairLiveSessionTranscriptTailMock: vi.fn(),
   resumeSessionMock: vi.fn(),
   syncWebLiveConversationRunMock: vi.fn(),
@@ -63,8 +63,9 @@ vi.mock('./liveSessions.js', () => ({
   resumeSession: resumeSessionMock,
 }));
 
-vi.mock('./sessions.js', () => ({
-  readSessionBlocks: readSessionBlocksMock,
+vi.mock('./conversationService.js', () => ({
+  readConversationSessionDetail: readConversationSessionDetailMock,
+  resolveConversationSessionFile: vi.fn(() => undefined),
 }));
 
 vi.mock('../middleware/index.js', () => ({
@@ -93,7 +94,7 @@ describe('recoverConversationCapability', () => {
     parsePendingOperationMock.mockReset();
     promptSessionMock.mockReset();
     queuePromptContextMock.mockReset();
-    readSessionBlocksMock.mockReset();
+    readConversationSessionDetailMock.mockReset();
     repairLiveSessionTranscriptTailMock.mockReset();
     resumeSessionMock.mockReset();
     syncWebLiveConversationRunMock.mockReset();
@@ -124,9 +125,11 @@ describe('recoverConversationCapability', () => {
       title: 'Live title',
       session: { sessionFile: '/sessions/live.json' },
     });
-    readSessionBlocksMock.mockReturnValueOnce({
-      meta: { cwd: '/repo/live', title: 'Live title' },
-      blocks: [{ type: 'error', ts: '2026-04-21T12:00:00.000Z', message: 'Codex error: upstream overloaded' }],
+    readConversationSessionDetailMock.mockReturnValueOnce({
+      detail: {
+        meta: { cwd: '/repo/live', title: 'Live title' },
+        blocks: [{ type: 'error', ts: '2026-04-21T12:00:00.000Z', message: 'Codex error: upstream overloaded' }],
+      },
     });
 
     const result = await recoverConversationCapability('conversation-live', createContext());
@@ -170,13 +173,15 @@ describe('recoverConversationCapability', () => {
         },
       },
     });
-    readSessionBlocksMock.mockReturnValueOnce({
-      meta: {
-        file: '/sessions/stored.json',
-        cwd: '/repo/stored',
-        title: 'Stored title',
+    readConversationSessionDetailMock.mockReturnValueOnce({
+      detail: {
+        meta: {
+          file: '/sessions/stored.json',
+          cwd: '/repo/stored',
+          title: 'Stored title',
+        },
+        blocks: [],
       },
-      blocks: [],
     });
     existsSyncMock.mockReturnValueOnce(true);
     resumeSessionMock.mockResolvedValueOnce({ id: 'conversation-1-live' });
@@ -227,13 +232,15 @@ describe('recoverConversationCapability', () => {
       },
     });
     parsePendingOperationMock.mockReturnValueOnce(pendingOperation);
-    readSessionBlocksMock.mockReturnValueOnce({
-      meta: {
-        file: '/sessions/stored.json',
-        cwd: '/repo/stored',
-        title: 'Stored title',
+    readConversationSessionDetailMock.mockReturnValueOnce({
+      detail: {
+        meta: {
+          file: '/sessions/stored.json',
+          cwd: '/repo/stored',
+          title: 'Stored title',
+        },
+        blocks: [{ type: 'error', ts: '2026-04-21T12:00:00.000Z', message: 'Codex error: upstream overloaded' }],
       },
-      blocks: [{ type: 'error', ts: '2026-04-21T12:00:00.000Z', message: 'Codex error: upstream overloaded' }],
     });
     existsSyncMock.mockReturnValueOnce(true);
     resumeSessionMock.mockResolvedValueOnce({ id: 'conversation-1-live' });

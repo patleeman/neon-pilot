@@ -16,7 +16,10 @@ const liveSessions = vi.hoisted(() => ({
   repairLiveSessionTranscriptTail: vi.fn(),
   resumeSession: vi.fn(async () => ({ id: 'resumed-id' })),
 }));
-const sessions = vi.hoisted(() => ({ readSessionBlocks: vi.fn(() => null) }));
+const service = vi.hoisted(() => ({
+  readConversationSessionDetail: vi.fn(() => ({ detail: null })),
+  resolveConversationSessionFile: vi.fn(() => undefined as string | undefined),
+}));
 
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/daemon', () => daemon);
@@ -24,7 +27,7 @@ vi.mock('../automation/durableRuns.js', () => durableRuns);
 vi.mock('../middleware/index.js', () => middleware);
 vi.mock('./conversationRuns.js', () => runs);
 vi.mock('./liveSessions.js', () => liveSessions);
-vi.mock('./sessions.js', () => sessions);
+vi.mock('./conversationService.js', () => service);
 
 import { recoverConversationCapability } from './conversationRecovery.js';
 
@@ -79,7 +82,9 @@ describe('conversation recovery', () => {
         manifest: { spec: { cwd: '/manifest-cwd' }, source: { filePath: '/manifest/session.jsonl' } },
       },
     });
-    sessions.readSessionBlocks.mockReturnValueOnce({ meta: { file: '/session/detail.jsonl', cwd: '/detail-cwd', title: 'Detail Title' } });
+    service.readConversationSessionDetail.mockReturnValueOnce({
+      detail: { meta: { file: '/session/detail.jsonl', cwd: '/detail-cwd', title: 'Detail Title' } },
+    });
     liveSessions.registry.set('resumed-id', { cwd: '/resumed-cwd' });
     const ctx = context();
 

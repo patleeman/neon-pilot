@@ -10,6 +10,7 @@ import {
   syncWebLiveConversationRun,
   type WebLiveConversationPendingOperation,
 } from './conversationRuns.js';
+import { readConversationSessionDetail, resolveConversationSessionFile } from './conversationService.js';
 import {
   isLive as isLiveSession,
   promptSession,
@@ -18,7 +19,6 @@ import {
   repairLiveSessionTranscriptTail,
   resumeSession,
 } from './liveSessions.js';
-import { readSessionBlocks } from './sessions.js';
 interface RecoveryLoaderOptions {
   extensionFactories?: ExtensionFactory[];
   additionalExtensionPaths?: string[];
@@ -122,12 +122,12 @@ export async function recoverConversationCapability(
 
   if (isLiveSession(conversationId)) {
     const liveEntry = liveRegistry.get(conversationId);
-    const liveSessionDetail = readSessionBlocks(conversationId);
+    const liveSessionRead = readConversationSessionDetail({ conversationId, tailBlocks: 1 });
     const continuation = await continueRecoveredConversation({
       conversationId,
       sessionFile: liveEntry?.session.sessionFile,
-      cwd: liveEntry?.cwd ?? liveSessionDetail?.meta.cwd ?? '',
-      title: liveEntry?.title ?? liveSessionDetail?.meta.title,
+      cwd: liveEntry?.cwd ?? liveSessionRead.detail?.meta.cwd ?? '',
+      title: liveEntry?.title ?? liveSessionRead.detail?.meta.title,
       profile: context.getRuntimeScope(),
       recoveryOperation: null,
     });
@@ -145,9 +145,12 @@ export async function recoverConversationCapability(
   const checkpointPayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {};
 
   const pendingOperation = options.replayPendingOperation ? parsePendingOperation(checkpointPayload.pendingOperation) : undefined;
-  const sessionDetail = readSessionBlocks(conversationId);
+  const sessionRead = readConversationSessionDetail({ conversationId, tailBlocks: 1 });
   const sessionFile =
-    sessionDetail?.meta.file ?? readCheckpointString(checkpointPayload, 'sessionFile') ?? runDetail?.run.manifest?.source?.filePath?.trim();
+    sessionRead.detail?.meta.file ??
+    resolveConversationSessionFile(conversationId) ??
+    readCheckpointString(checkpointPayload, 'sessionFile') ??
+    runDetail?.run.manifest?.source?.filePath?.trim();
 
   if (!sessionFile || !existsSync(sessionFile)) {
     throw new Error('Conversation not found.');
@@ -156,7 +159,7 @@ export async function recoverConversationCapability(
   const runtimeScope = context.getRuntimeScope();
   const manifestSpec = runDetail?.run.manifest?.spec;
   const manifestCwd = typeof manifestSpec?.cwd === 'string' && manifestSpec.cwd.trim().length > 0 ? manifestSpec.cwd.trim() : undefined;
-  const requestedCwd = sessionDetail?.meta.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
+  const requestedCwd = sessionRead.detail?.meta.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
   const resumed = await resumeSession(sessionFile, {
     ...buildRecoveryLoaderOptions(context, runtimeScope),
     ...(requestedCwd ? { cwdOverride: requestedCwd } : {}),
@@ -165,7 +168,7 @@ export async function recoverConversationCapability(
 
   const resumedEntry = liveRegistry.get(resumed.id);
   const effectiveCwd = resumedEntry?.cwd ?? requestedCwd;
-  const effectiveTitle = sessionDetail?.meta.title ?? readCheckpointString(checkpointPayload, 'title');
+  const effectiveTitle = sessionRead.detail?.meta.title ?? readCheckpointString(checkpointPayload, 'title');
   const effectiveProfile = readCheckpointString(checkpointPayload, 'profile') ?? runtimeScope;
 
   if (!effectiveCwd) {
