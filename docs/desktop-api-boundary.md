@@ -23,7 +23,7 @@ HTTP responses must be bounded, paginated, or streamed. Large binary/text payloa
 
 ### WebSocket: realtime events and control
 
-Use WebSocket for long-lived realtime flows and bidirectional control.
+Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages.
 
 Examples:
 
@@ -54,7 +54,7 @@ IPC payloads should be small. Do not send sessions, transcripts, search results,
 Renderer product code should depend on typed clients:
 
 - `api` / HTTP client for product reads and mutations
-- realtime/WebSocket client for subscriptions and live controls
+- realtime/WebSocket client for subscriptions and live controls through the typed endpoint configuration
 - desktop native bridge for bootstrap and native OS/Electron operations only
 
 Do not add new product-data methods to the Electron preload bridge. If product data is only available through an internal module, expose it through an HTTP route or WebSocket event/control message instead.
