@@ -2,6 +2,26 @@ import { invokeExtensionAction } from '../extensions/extensionBackend.js';
 import { listExtensionPromptContextProviderRegistrations } from '../extensions/extensionRegistry.js';
 import type { AssemblyDiagnostic } from './types.js';
 
+const PROMPT_CONTEXT_PROVIDER_BUDGET_MS = 200;
+const PROMPT_CONTEXT_PROVIDER_TIMEOUT = Symbol('prompt-context-provider-timeout');
+
+async function withPromptContextProviderBudget<T>(run: Promise<T>): Promise<T | typeof PROMPT_CONTEXT_PROVIDER_TIMEOUT> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      run,
+      new Promise<typeof PROMPT_CONTEXT_PROVIDER_TIMEOUT>((resolve) => {
+        timer = setTimeout(() => resolve(PROMPT_CONTEXT_PROVIDER_TIMEOUT), PROMPT_CONTEXT_PROVIDER_BUDGET_MS);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 export interface PromptContextBlock {
   id: string;
   providerId: string;
@@ -32,12 +52,23 @@ export async function buildPromptContextPlan(input: {
     providers.map(async (provider) => {
       const providerId = `${provider.extensionId}/${provider.id}`;
       try {
-        const invokeResult = await invokeExtensionAction(provider.extensionId, provider.handler, {
-          prompt: input.prompt,
-          conversationId: input.conversationId,
-          currentCwd: input.currentCwd,
-          relatedConversationIds: input.selectedSessionIds,
-        });
+        const invokeResult = await withPromptContextProviderBudget(
+          invokeExtensionAction(provider.extensionId, provider.handler, {
+            prompt: input.prompt,
+            conversationId: input.conversationId,
+            currentCwd: input.currentCwd,
+            relatedConversationIds: input.selectedSessionIds,
+          }),
+        );
+        if (invokeResult === PROMPT_CONTEXT_PROVIDER_TIMEOUT) {
+          diagnostics.push({
+            severity: 'warning',
+            code: 'prompt-context-provider-timeout',
+            message: `${provider.title ?? provider.id} context timed out; sent without it.`,
+            sourceId: providerId,
+          });
+          return;
+        }
         if (!invokeResult.ok) {
           diagnostics.push({
             severity: 'warning',
