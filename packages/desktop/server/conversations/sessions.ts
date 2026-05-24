@@ -1383,6 +1383,7 @@ function readSessionEntryPreview(filePath: string, entryId: string): string | nu
   try {
     const entry = SessionManager.open(filePath).getEntry(entryId);
     if (!entry || entry.type !== 'message' || !('message' in entry)) return null;
+    if (!('content' in entry.message)) return null;
     const content = entry.message.content;
     const text =
       typeof content === 'string'
