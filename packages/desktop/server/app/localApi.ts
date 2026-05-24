@@ -46,6 +46,7 @@ import { loadScheduledTasksForProfile } from '../automation/scheduledTasks.js';
 import { buildScheduledTaskThreadDetail } from '../automation/scheduledTaskThreads.js';
 import {
   createConversationAttachmentCapability,
+  deleteConversationAttachmentCapability,
   readConversationArtifactCapability,
   readConversationArtifactsCapability,
   readConversationAttachmentCapability,
@@ -1077,6 +1078,49 @@ async function dispatchDesktopLocalProductApiRequest(input: {
     );
   }
 
+  const conversationAttachmentAssetMatch = /^\/api\/conversations\/([^/]+)\/attachments\/([^/]+)\/asset$/.exec(path);
+  if (method === 'GET' && conversationAttachmentAssetMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopConversationAttachmentAsset({
+        conversationId: decodeURIComponent(conversationAttachmentAssetMatch[1] ?? ''),
+        attachmentId: decodeURIComponent(conversationAttachmentAssetMatch[2] ?? ''),
+        asset: input.url.searchParams.get('asset') === 'preview' ? 'preview' : 'source',
+        revision: input.url.searchParams.has('revision') ? Number(input.url.searchParams.get('revision')) : undefined,
+      }),
+    );
+  }
+  const conversationAttachmentMatch = /^\/api\/conversations\/([^/]+)\/attachments\/([^/]+)$/.exec(path);
+  if (conversationAttachmentMatch) {
+    const conversationId = decodeURIComponent(conversationAttachmentMatch[1] ?? '');
+    const attachmentId = decodeURIComponent(conversationAttachmentMatch[2] ?? '');
+    if (method === 'GET')
+      return createDesktopLocalApiJsonResponse(await readDesktopConversationAttachment({ conversationId, attachmentId }));
+    if (method === 'PATCH') {
+      return createDesktopLocalApiJsonResponse(
+        await updateDesktopConversationAttachment({
+          conversationId,
+          attachmentId,
+          ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        }),
+      );
+    }
+    if (method === 'DELETE')
+      return createDesktopLocalApiJsonResponse(await deleteDesktopConversationAttachment({ conversationId, attachmentId }));
+  }
+  const conversationAttachmentsMatch = /^\/api\/conversations\/([^/]+)\/attachments$/.exec(path);
+  if (conversationAttachmentsMatch) {
+    const conversationId = decodeURIComponent(conversationAttachmentsMatch[1] ?? '');
+    if (method === 'GET') return createDesktopLocalApiJsonResponse(await readDesktopConversationAttachments(conversationId));
+    if (method === 'POST') {
+      return createDesktopLocalApiJsonResponse(
+        await createDesktopConversationAttachment({
+          conversationId,
+          ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        }),
+      );
+    }
+  }
+
   return null;
 }
 
@@ -1729,6 +1773,11 @@ export async function updateDesktopConversationAttachment(input: {
 }) {
   const context = await getLocalServerRouteContext();
   return updateConversationAttachmentCapability(context.getRuntimeScope(), input);
+}
+
+export async function deleteDesktopConversationAttachment(input: { conversationId: string; attachmentId: string }) {
+  const context = await getLocalServerRouteContext();
+  return deleteConversationAttachmentCapability(context.getRuntimeScope(), input);
 }
 
 export async function readDesktopConversationAttachmentAsset(input: {
