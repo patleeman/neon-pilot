@@ -105,12 +105,19 @@ const ctx = {
     setEnabled() {},
   },
   conversations: {
+    async get() {
+      return { running: false, toolNames: activeTools };
+    },
     async create(input) {
       const conversation = { id: 'smoke-created-' + (conversations.length + 1), ...input };
       conversations.push(conversation);
       return conversation;
     },
     async setTitle() {},
+    async appendCustomEntry(_conversationId, customType, data) {
+      appendedEntries.push({ customType, data });
+      return { ok: true };
+    },
     async appendVisibleCustomMessage() {},
     async setActiveTools(_conversationId, toolNames) {
       activeTools = toolNames;
@@ -246,6 +253,7 @@ const smokes = {
     assert(JSON.stringify(activeTools) === JSON.stringify(['read']), 'code mode should not stay active by default');
     await module.toggleCodeMode({ conversationId: 'smoke-conversation', action: 'on' }, ctx);
     assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not replace active tools');
+    assert(appendedEntries.some((entry) => entry.customType === 'code-mode-state'), 'code mode state was not persisted to session');
     const result = await execCode.execute('smoke', { code: 'return await listTools();' }, undefined, undefined, ctx.agentToolContext);
     assert(result?.content?.[0]?.text?.includes('read'), 'exec_code did not expose tool discovery');
   },

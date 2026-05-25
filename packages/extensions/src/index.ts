@@ -1198,6 +1198,8 @@ export interface ExtensionBackendContext {
       text: string,
       options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
     ): Promise<unknown>;
+    setActiveTools(conversationId: string, toolNames: string[]): Promise<{ conversationId: string; toolNames: string[] }>;
+    appendCustomEntry(conversationId: string, customType: string, data?: unknown): Promise<{ ok: true }>;
     runTurn(
       conversationId: string,
       text: string,

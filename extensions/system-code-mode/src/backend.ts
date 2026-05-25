@@ -25,6 +25,15 @@ interface ToolSummary {
   source?: unknown;
 }
 
+interface CodeModeState {
+  enabled: boolean;
+  active: boolean | null;
+  pending: boolean;
+  running: boolean | null;
+  toolNames?: string[];
+  updatedAt?: string;
+}
+
 const CODE_TOOL_NAME = 'exec_code';
 const METADATA_NAMESPACE = 'system-code-mode';
 const DEFAULT_TOOL_NAMES = ['read', 'bash', 'edit', 'write'];
@@ -52,7 +61,7 @@ function conversationIdFrom(input: unknown, ctx: ExtensionBackendContext): strin
   return conversationId;
 }
 
-function normalizeState(value: unknown): { enabled: boolean; updatedAt?: string } {
+function normalizePersistedState(value: unknown): { enabled: boolean; updatedAt?: string } {
   if (!isRecord(value)) return { enabled: false };
   return {
     enabled: value.enabled === true,
@@ -60,9 +69,45 @@ function normalizeState(value: unknown): { enabled: boolean; updatedAt?: string 
   };
 }
 
-export async function readState(input: unknown, ctx: ExtensionBackendContext): Promise<{ enabled: boolean; updatedAt?: string }> {
+function normalizeToolNames(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((toolName): toolName is string => typeof toolName === 'string' && toolName.trim().length > 0);
+}
+
+async function readLiveState(
+  conversationId: string,
+  ctx: ExtensionBackendContext,
+): Promise<{ running: boolean | null; toolNames?: string[] }> {
+  try {
+    const detail = await ctx.conversations.get(conversationId);
+    if (!isRecord(detail)) return { running: null };
+    return {
+      running: typeof detail.running === 'boolean' ? detail.running : null,
+      toolNames: normalizeToolNames(detail.toolNames),
+    };
+  } catch {
+    return { running: null };
+  }
+}
+
+function toCodeModeState(
+  persisted: { enabled: boolean; updatedAt?: string },
+  live: { running: boolean | null; toolNames?: string[] },
+): CodeModeState {
+  const active = live.toolNames ? live.toolNames.length === 1 && live.toolNames[0] === CODE_TOOL_NAME : null;
+  return {
+    ...persisted,
+    active,
+    pending: persisted.enabled && active !== true,
+    running: live.running,
+    ...(live.toolNames ? { toolNames: live.toolNames } : {}),
+  };
+}
+
+export async function readState(input: unknown, ctx: ExtensionBackendContext): Promise<CodeModeState> {
   const conversationId = conversationIdFrom(input, ctx);
-  return normalizeState(await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE }));
+  const persisted = normalizePersistedState(await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE }));
+  return toCodeModeState(persisted, await readLiveState(conversationId, ctx));
 }
 
 async function writeState(
@@ -76,12 +121,29 @@ async function writeState(
   return state;
 }
 
-async function setLiveTools(conversationId: string, enabled: boolean, ctx: ExtensionBackendContext): Promise<void> {
+async function appendLiveState(
+  conversationId: string,
+  state: { enabled: boolean; updatedAt: string },
+  ctx: ExtensionBackendContext,
+): Promise<void> {
   const conversations = ctx.conversations as typeof ctx.conversations & {
-    setActiveTools?(conversationId: string, toolNames: string[]): Promise<unknown>;
+    appendCustomEntry?(conversationId: string, customType: string, data?: unknown): Promise<unknown>;
   };
-  if (!conversations.setActiveTools) return;
-  await conversations.setActiveTools(conversationId, enabled ? [CODE_TOOL_NAME] : DEFAULT_TOOL_NAMES);
+  if (!conversations.appendCustomEntry) return;
+  await conversations.appendCustomEntry(conversationId, 'code-mode-state', state);
+}
+
+async function setLiveTools(
+  conversationId: string,
+  enabled: boolean,
+  ctx: ExtensionBackendContext,
+): Promise<{ running: boolean | null; toolNames?: string[] }> {
+  try {
+    await ctx.conversations.setActiveTools(conversationId, enabled ? [CODE_TOOL_NAME] : DEFAULT_TOOL_NAMES);
+  } catch {
+    return readLiveState(conversationId, ctx);
+  }
+  return readLiveState(conversationId, ctx);
 }
 
 function readAction(input: unknown): 'toggle' | 'on' | 'off' | 'status' {
@@ -102,7 +164,7 @@ function readAction(input: unknown): 'toggle' | 'on' | 'off' | 'status' {
 export async function toggleCodeMode(
   input: unknown,
   ctx: ExtensionBackendContext,
-): Promise<{ enabled: boolean; updatedAt?: string; notice: { tone: 'accent'; text: string } }> {
+): Promise<CodeModeState & { notice: { tone: 'accent'; text: string } }> {
   const conversationId = conversationIdFrom(input, ctx);
   const current = await readState({ conversationId }, ctx);
   const action = readAction(input);
@@ -114,14 +176,19 @@ export async function toggleCodeMode(
   }
   const enabled = action === 'toggle' ? !current.enabled : action === 'on';
   const next = await writeState(conversationId, enabled, ctx);
-  await setLiveTools(conversationId, enabled, ctx);
+  await appendLiveState(conversationId, next, ctx);
+  const live = await setLiveTools(conversationId, enabled, ctx);
+  const state = toCodeModeState(next, live);
   return {
-    ...next,
+    ...state,
     notice: {
       tone: 'accent',
-      text: enabled
-        ? 'Code mode enabled. The next turn will expose only exec_code.'
-        : 'Code mode disabled. Start a new turn to restore the normal tool surface.',
+      text:
+        enabled && state.running
+          ? 'Code mode enabled. The current running turn may keep its existing tools; the next turn will expose exec_code.'
+          : enabled
+            ? 'Code mode enabled. The next turn will expose only exec_code.'
+            : 'Code mode disabled. Start a new turn to restore the normal tool surface.',
     },
   };
 }

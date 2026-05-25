@@ -133,6 +133,26 @@ export function createExtensionConversationsCapability(
       return { conversationId, toolNames: patchable.getActiveToolNames?.() ?? normalized };
     },
 
+    async appendCustomEntry(conversationId: string, customType: string, data?: unknown): Promise<{ ok: true }> {
+      const entry = findLiveEntry(conversationId);
+      const sessionManager = entry.session.sessionManager as unknown as {
+        appendCustomEntry?: (type: string, entryData?: unknown) => void;
+      };
+      const normalizedType = customType.trim();
+      if (!normalizedType) throw new Error('customType required.');
+      if (typeof sessionManager.appendCustomEntry !== 'function') {
+        throw new Error(`Conversation "${conversationId}" does not support custom entries.`);
+      }
+      sessionManager.appendCustomEntry(normalizedType, data);
+      invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', {
+        type: 'session.customEntry.appended',
+        conversationId,
+        customType: normalizedType,
+      });
+      return { ok: true };
+    },
+
     /**
      * Read conversation blocks (session detail).
      * Works for both live and persisted sessions.

@@ -142,6 +142,43 @@ describe('extensionConversations', () => {
     });
   });
 
+  it('updates live active tools and appends hidden custom entries', async () => {
+    const appendCustomEntry = vi.fn();
+    const setActiveTools = vi.fn();
+    const entry = liveEntry({
+      session: {
+        ...liveEntry().session,
+        getActiveToolNames: vi.fn(() => ['exec_code']),
+        setActiveTools,
+        sessionManager: {
+          ...liveEntry().session.sessionManager,
+          appendCustomEntry,
+        },
+      },
+    });
+    live.registry.set('conv-1', entry);
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(capability.setActiveTools('conv-1', ['exec_code', 'exec_code', ' '])).resolves.toEqual({
+      conversationId: 'conv-1',
+      toolNames: ['exec_code'],
+    });
+    await expect(capability.appendCustomEntry('conv-1', 'code-mode-state', { enabled: true })).resolves.toEqual({ ok: true });
+
+    expect(setActiveTools).toHaveBeenCalledWith(['exec_code']);
+    expect(appendCustomEntry).toHaveBeenCalledWith('code-mode-state', { enabled: true });
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.tools.updated',
+      conversationId: 'conv-1',
+      toolNames: ['exec_code'],
+    });
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.customEntry.appended',
+      conversationId: 'conv-1',
+      customType: 'code-mode-state',
+    });
+  });
+
   it('rolls back to the parent of the selected user turn', async () => {
     const entry = liveEntry();
     live.registry.set('conv-1', entry);

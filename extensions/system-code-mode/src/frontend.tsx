@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 interface CodeModeState {
   enabled: boolean;
+  active?: boolean | null;
+  pending?: boolean;
+  running?: boolean | null;
 }
 
 export function CodeModeShelf({
@@ -62,7 +65,13 @@ export function CodeModeShelf({
     <div className="border-b border-border-subtle/70 bg-accent-bg/35 px-3 py-1.5 text-[12px] text-primary">
       <div className="flex min-h-6 items-center gap-2">
         <span className="font-medium">Code Mode</span>
-        <span className="text-secondary">Only exec_code is exposed to the model.</span>
+        <span className="text-secondary">
+          {state.pending
+            ? state.running
+              ? 'Current turn may still have existing tools; next turn uses exec_code.'
+              : 'Pending live tool update; next turn uses exec_code.'
+            : 'Only exec_code is exposed to the model.'}
+        </span>
         <span className="flex-1" />
         <button
           type="button"
