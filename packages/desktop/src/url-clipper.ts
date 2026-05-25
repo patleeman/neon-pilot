@@ -52,9 +52,11 @@ export async function importClipboardUrlToKnowledge(input: {
 }): Promise<DesktopUrlClipImportResult> {
   const url = normalizeClipboardUrl(input.clipboardText);
   await input.host.ensureActiveHostRunning();
-  const response = await input.host.getActiveHostController().dispatchApiRequest({
+  const controller = input.host.getActiveHostController();
+  const actionPath = await resolveExtensionActionPathByRouteCapability(controller, 'knowledgeFiles', 'vaultImportSharedItem');
+  const response = await controller.dispatchApiRequest({
     method: 'POST',
-    path: '/api/extensions/system-knowledge/actions/vaultImportSharedItem',
+    path: actionPath,
     body: {
       kind: 'url',
       url,
@@ -73,4 +75,36 @@ export async function importClipboardUrlToKnowledge(input: {
     throw new Error(result.error || 'Knowledge import failed.');
   }
   return result.result as DesktopUrlClipImportResult;
+}
+
+async function resolveExtensionActionPathByRouteCapability(
+  controller: ReturnType<DesktopUrlClipperHost['getActiveHostController']>,
+  capability: string,
+  actionId: string,
+): Promise<string> {
+  const response = await controller.dispatchApiRequest({ method: 'GET', path: '/api/extensions/installed' });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(readApiDispatchError(response));
+  }
+  const extensions = parseApiDispatchResult<
+    Array<{
+      id: string;
+      enabled?: boolean;
+      manifest?: {
+        backend?: { actions?: Array<{ id: string }> };
+        contributes?: { views?: Array<{ routeCapabilities?: string[] }> };
+      };
+      surfaces?: Array<{ routeCapabilities?: string[] }>;
+      backendActions?: Array<{ id: string }>;
+    }>
+  >(response);
+  const extension = extensions.find(
+    (candidate) =>
+      candidate.enabled !== false &&
+      (candidate.manifest?.contributes?.views?.some((view) => view.routeCapabilities?.includes(capability)) ||
+        candidate.surfaces?.some((surface) => surface.routeCapabilities?.includes(capability))) &&
+      (candidate.backendActions ?? candidate.manifest?.backend?.actions ?? []).some((action) => action.id === actionId),
+  );
+  if (!extension) throw new Error(`No enabled extension provides ${capability}.${actionId}.`);
+  return `/api/extensions/${encodeURIComponent(extension.id)}/actions/${encodeURIComponent(actionId)}`;
 }

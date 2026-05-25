@@ -51,6 +51,25 @@ describe('importClipboardUrlToKnowledge', () => {
         return {
           async dispatchApiRequest(input) {
             requests.push(input);
+            if (input.path === '/api/extensions/installed') {
+              return {
+                statusCode: 200,
+                headers: { 'content-type': 'application/json' },
+                body: Buffer.from(
+                  JSON.stringify([
+                    {
+                      id: 'knowledge',
+                      enabled: true,
+                      manifest: {
+                        backend: { actions: [{ id: 'vaultImportSharedItem' }] },
+                        contributes: { views: [{ routeCapabilities: ['knowledgeFiles'] }] },
+                      },
+                      backendActions: [{ id: 'vaultImportSharedItem' }],
+                    },
+                  ]),
+                ),
+              };
+            }
             return {
               statusCode: 200,
               headers: { 'content-type': 'application/json' },
@@ -66,8 +85,12 @@ describe('importClipboardUrlToKnowledge', () => {
     ).resolves.toEqual({ title: 'Example', note: { id: 'inbox/example.md' } });
     expect(requests).toEqual([
       {
+        method: 'GET',
+        path: '/api/extensions/installed',
+      },
+      {
         method: 'POST',
-        path: '/api/extensions/system-knowledge/actions/vaultImportSharedItem',
+        path: '/api/extensions/knowledge/actions/vaultImportSharedItem',
         body: {
           kind: 'url',
           url: 'https://example.com/page',
