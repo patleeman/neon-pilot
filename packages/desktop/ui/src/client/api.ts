@@ -215,18 +215,6 @@ async function requireLocalDesktopBridge(action: string): Promise<NonNullable<Re
   throw new Error(`${action} requires the local desktop host.`);
 }
 
-async function requireLocalDesktopConversationBridge(
-  conversationId: string,
-  action: string,
-): Promise<NonNullable<ReturnType<typeof getDesktopBridge>>> {
-  const desktopBridge = getDesktopBridge();
-  if (desktopBridge && (await shouldUseDesktopLocalConversationCapabilities(conversationId))) {
-    return desktopBridge;
-  }
-
-  throw new Error(`${action} requires the local desktop host.`);
-}
-
 /** Keep the cached promise retryable so transient failures don't permanently
  *  disable the desktop bridge path. Matching the same pattern in desktopEventSource.ts. */
 async function readCachedDesktopEnvironment(): Promise<DesktopEnvironmentState | null> {
@@ -261,10 +249,6 @@ async function shouldUseDesktopLocalCapabilities(): Promise<boolean> {
 
   const environment = await readCachedDesktopEnvironment();
   return environment?.activeHostKind === 'local';
-}
-
-async function shouldUseDesktopLocalConversationCapabilities(_conversationId: string): Promise<boolean> {
-  return Boolean(getDesktopBridge()) && (await shouldUseDesktopLocalCapabilities());
 }
 
 export function normalizeDurableRunLogTailParam(value: unknown): number | undefined {
@@ -832,8 +816,7 @@ export const api = {
     );
   },
   changeConversationCwd: async (id: string, cwd: string | null, surfaceId?: string, workspaceCwd?: string | null) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Changing conversation working directories')).changeConversationCwd({
-      conversationId: id,
+    return patch(`/conversations/${encodeURIComponent(id)}/cwd`, {
       cwd,
       ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
       ...(surfaceId ? { surfaceId } : {}),
@@ -849,10 +832,7 @@ export const api = {
     });
   },
   updateGoal: async (id: string, input: { objective?: string }) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Updating conversation goals')).updateConversationGoal({
-      conversationId: id,
-      ...input,
-    });
+    return patch(`/conversations/${encodeURIComponent(id)}/goal`, input);
   },
   conversationModelPreferences: async (id: string) =>
     get<{
@@ -866,8 +846,7 @@ export const api = {
     input: { model?: string | null; thinkingLevel?: string | null; serviceTier?: string | null },
     surfaceId?: string,
   ) => {
-    return (await requireLocalDesktopConversationBridge(id, 'Updating conversation model preferences')).updateConversationModelPreferences({
-      conversationId: id,
+    return patch(`/conversations/${encodeURIComponent(id)}/model-preferences`, {
       ...input,
       ...(surfaceId ? { surfaceId } : {}),
     });

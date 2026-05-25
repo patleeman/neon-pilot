@@ -983,6 +983,24 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       }),
     );
   }
+  const conversationCwdMatch = /^\/api\/conversations\/([^/]+)\/cwd$/.exec(path);
+  if (method === 'PATCH' && conversationCwdMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await changeDesktopConversationCwd({
+        conversationId: decodeURIComponent(conversationCwdMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+      }),
+    );
+  }
+  const conversationGoalMatch = /^\/api\/conversations\/([^/]+)\/goal$/.exec(path);
+  if (method === 'PATCH' && conversationGoalMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await updateDesktopConversationGoal({
+        conversationId: decodeURIComponent(conversationGoalMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+      }),
+    );
+  }
   const conversationModelPreferencesMatch = /^\/api\/conversations\/([^/]+)\/model-preferences$/.exec(path);
   if (conversationModelPreferencesMatch) {
     const conversationId = decodeURIComponent(conversationModelPreferencesMatch[1] ?? '');

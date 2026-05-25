@@ -77,7 +77,7 @@ describe('api desktop transport', () => {
     const tools = await api.tools();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/memory');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/memory');
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/tools');
     expect(memory.skills[0]?.name).toBe('checkpoint');
     expect(tools.cwd).toBe('/repo');
@@ -492,9 +492,16 @@ describe('api desktop transport', () => {
         );
       if (path === '/api/conversations/conversation-1/title')
         return createJsonResponse(await renameConversation({ conversationId: 'conversation-1', ...JSON.parse(String(init?.body)) }));
+      if (path === '/api/conversations/live-1/cwd')
+        return createJsonResponse(await changeConversationCwd({ conversationId: 'live-1', ...JSON.parse(String(init?.body)) }));
       if (path === '/api/conversations/conversation-1/recover') return createJsonResponse(await recoverConversation('conversation-1'));
-      if (path === '/api/conversations/live-1/model-preferences')
+      if (path === '/api/conversations/live-1/model-preferences') {
+        if (init?.method === 'PATCH')
+          return createJsonResponse(
+            await updateConversationModelPreferences({ conversationId: 'live-1', ...JSON.parse(String(init.body)) }),
+          );
         return createJsonResponse(await readConversationModelPreferences({ conversationId: 'live-1' }));
+      }
       if (path === '/api/live-sessions' && init?.method === 'POST')
         return createJsonResponse(await createLiveSession(JSON.parse(String(init.body))));
       if (path === '/api/live-sessions/resume' && init?.method === 'POST')
@@ -586,7 +593,7 @@ describe('api desktop transport', () => {
     const aborted = await api.abortSession('live-1', 'surface-1');
     const destroyed = await api.destroySession('conversation-1', 'surface-1');
 
-    expect(getEnvironment).toHaveBeenCalledTimes(1);
+    expect(getEnvironment).not.toHaveBeenCalled();
     expect(readAppStatus).toHaveBeenCalledTimes(1);
     expect(readDaemonState).toHaveBeenCalledTimes(1);
     expect(readSessions).toHaveBeenCalledTimes(1);
