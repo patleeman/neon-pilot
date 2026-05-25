@@ -110,6 +110,34 @@ function isLeadingContextItem(item: ChatRenderItem): boolean {
   return item.type === 'context_cluster' || (item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary'));
 }
 
+function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): boolean {
+  return (
+    previous.messages === next.messages &&
+    previous.conversationId === next.conversationId &&
+    (previous.messageIndexOffset ?? 0) === (next.messageIndexOffset ?? 0) &&
+    previous.scrollContainerRef === next.scrollContainerRef &&
+    (previous.focusMessageIndex ?? null) === (next.focusMessageIndex ?? null) &&
+    (previous.isStreaming ?? false) === (next.isStreaming ?? false) &&
+    (previous.isCompacting ?? false) === (next.isCompacting ?? false) &&
+    (previous.pendingStatusLabel ?? null) === (next.pendingStatusLabel ?? null) &&
+    (previous.performanceMode ?? 'default') === (next.performanceMode ?? 'default') &&
+    (previous.layout ?? 'default') === (next.layout ?? 'default') &&
+    previous.selectionActions === next.selectionActions &&
+    previous.hydratingMessageBlockIds === next.hydratingMessageBlockIds &&
+    (previous.activeArtifactId ?? null) === (next.activeArtifactId ?? null) &&
+    (previous.activeCheckpointId ?? null) === (next.activeCheckpointId ?? null) &&
+    (previous.askUserQuestionDisplayMode ?? 'inline') === (next.askUserQuestionDisplayMode ?? 'inline') &&
+    (previous.resumeConversationBusy ?? false) === (next.resumeConversationBusy ?? false) &&
+    (previous.resumeConversationTitle ?? null) === (next.resumeConversationTitle ?? null) &&
+    (previous.resumeConversationLabel ?? 'continue') === (next.resumeConversationLabel ?? 'continue') &&
+    previous.windowingHeaderContent === next.windowingHeaderContent &&
+    (previous.anchorWindowingToTail ?? false) === (next.anchorWindowingToTail ?? false) &&
+    (previous.systemPrompt ?? null) === (next.systemPrompt ?? null) &&
+    previous.toolDefinitions === next.toolDefinitions &&
+    (previous.remoteControlled ?? false) === (next.remoteControlled ?? false)
+  );
+}
+
 export const ChatView = memo(function ChatView({
   messages,
   conversationId = null,
@@ -535,4 +563,4 @@ export const ChatView = memo(function ChatView({
       {selectedImage && <ImageInspectModal image={selectedImage} onClose={() => setSelectedImage(null)} />}
     </>
   );
-});
+}, areChatViewPropsEqual);
