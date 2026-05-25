@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
+import { buildDeferredEntryHydrationId } from '../../transcript/messageBlocks.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImageBlock, type InspectableImage } from './ImageMessageBlocks.js';
 import { AssistantMessage, ContextShelf, SummaryMessage, SystemEventMessage, TopologyBlock, UserMessage } from './MessageBlocks.js';
@@ -89,6 +90,8 @@ export function ChatRenderItemView({
 
   if (item.type === 'trace_cluster') {
     const live = isStreaming && isTailItem;
+    const deferredEntryHydrationId =
+      item.blocks.length === 0 && item.deferredEntryIds ? buildDeferredEntryHydrationId(item.deferredEntryIds) : null;
 
     return (
       <div
@@ -103,7 +106,9 @@ export function ChatRenderItemView({
         })}
         <TraceClusterBlock
           blocks={item.blocks}
-          deferredBlockIds={item.blocks.length === 0 ? item.deferredBlockIds : undefined}
+          deferredBlockIds={
+            item.blocks.length === 0 ? (deferredEntryHydrationId ? [deferredEntryHydrationId] : item.deferredBlockIds) : undefined
+          }
           summary={item.summary}
           live={live}
           onOpenArtifact={onOpenArtifact}

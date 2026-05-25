@@ -81,6 +81,7 @@ import {
   inlineConversationSessionDetailAppendOnlyAssetsCapability,
   inlineConversationSessionDetailAssetsCapability,
   readConversationSessionBlockWithInlineAssetsCapability,
+  readConversationSessionEntryBlocksWithInlineAssetsCapability,
 } from '../conversations/conversationSessionAssetCapability.js';
 import {
   readConversationSessionMetaCapability,
@@ -711,6 +712,17 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopSessionBlock({
         sessionId: decodeURIComponent(sessionBlockMatch[1] ?? ''),
         blockId: decodeURIComponent(sessionBlockMatch[2] ?? ''),
+      }),
+    );
+  }
+  const sessionEntryBlocksMatch = /^\/api\/sessions\/([^/]+)\/entry-blocks$/.exec(path);
+  if (method === 'POST' && sessionEntryBlocksMatch) {
+    const body = input.body && typeof input.body === 'object' ? (input.body as { entryIds?: unknown }) : {};
+    const entryIds = Array.isArray(body.entryIds) ? body.entryIds.filter((entryId): entryId is string => typeof entryId === 'string') : [];
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopSessionEntryBlocks({
+        sessionId: decodeURIComponent(sessionEntryBlocksMatch[1] ?? ''),
+        entryIds,
       }),
     );
   }
@@ -1976,6 +1988,15 @@ export async function readDesktopSessionBlock(input: { sessionId: string; blockI
   assertSessionFound(Boolean(result), 'Session block not found');
 
   return result;
+}
+
+export async function readDesktopSessionEntryBlocks(input: { sessionId: string; entryIds: string[] }) {
+  await getLocalRoutes();
+
+  const result = await readConversationSessionEntryBlocksWithInlineAssetsCapability(input.sessionId, input.entryIds);
+  assertSessionFound(Boolean(result), 'Session not found');
+
+  return { blocks: result };
 }
 
 function resolveDesktopConversationSource(conversationId: string): {

@@ -41,6 +41,7 @@ import {
   listSessions,
   readKnownSessionIdByFilePath,
   readSessionBlocksWithTelemetry,
+  readSessionEntryBlocks,
   readSessionImageAsset,
   readSessionMeta,
   readSessionMetaByFile,
@@ -553,6 +554,10 @@ export function readConversationSessionDetail(input: {
   return input.includeToolBlocks === false && result.detail
     ? { ...result, detail: projectConversationOnlySessionDetail(result.detail) }
     : result;
+}
+
+export function readConversationSessionEntryBlocks(input: { conversationId: string; entryIds: string[] }) {
+  return readSessionEntryBlocks(input.conversationId, input.entryIds);
 }
 
 export async function readSessionDetailForRoute(input: {

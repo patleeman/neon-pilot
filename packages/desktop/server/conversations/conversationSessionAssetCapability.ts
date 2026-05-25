@@ -1,5 +1,5 @@
 import type { ReadConversationBootstrapStateResult } from './conversationBootstrap.js';
-import { readConversationSessionImageAsset, readSessionDetailForRoute } from './conversationService.js';
+import { readConversationSessionEntryBlocks, readConversationSessionImageAsset, readSessionDetailForRoute } from './conversationService.js';
 import type { DisplayBlock, SessionDetail, SessionDetailAppendOnlyResponse, SessionImageAsset } from './conversationTypes.js';
 
 export function readConversationSessionImageAssetCapability(
@@ -152,4 +152,18 @@ export async function readConversationSessionBlockWithInlineAssetsCapability(
   }
 
   return inlineConversationSessionBlockAssetsCapability(normalizedSessionId, block);
+}
+
+export async function readConversationSessionEntryBlocksWithInlineAssetsCapability(
+  sessionId: string,
+  entryIds: string[],
+): Promise<DisplayBlock[] | null> {
+  const normalizedSessionId = sessionId.trim();
+  const normalizedEntryIds = [...new Set(entryIds.map((entryId) => entryId.trim()).filter(Boolean))];
+  if (!normalizedSessionId) {
+    return null;
+  }
+
+  const blocks = readConversationSessionEntryBlocks({ conversationId: normalizedSessionId, entryIds: normalizedEntryIds });
+  return blocks ? inlineConversationSessionBlocksAssetsCapability(normalizedSessionId, blocks) : null;
 }

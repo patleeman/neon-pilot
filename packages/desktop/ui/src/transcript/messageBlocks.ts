@@ -1,5 +1,27 @@
 import type { DisplayBlock, MessageBlock, TranscriptRenderItem } from '../shared/types';
 
+const DEFERRED_ENTRY_HYDRATION_PREFIX = 'entries:';
+
+export function buildDeferredEntryHydrationId(entryIds: string[]): string | null {
+  const normalizedEntryIds = [...new Set(entryIds.map((entryId) => entryId.trim()).filter(Boolean))];
+  return normalizedEntryIds.length > 0 ? `${DEFERRED_ENTRY_HYDRATION_PREFIX}${JSON.stringify(normalizedEntryIds)}` : null;
+}
+
+export function parseDeferredEntryHydrationId(blockId: string): string[] | null {
+  if (!blockId.startsWith(DEFERRED_ENTRY_HYDRATION_PREFIX)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(blockId.slice(DEFERRED_ENTRY_HYDRATION_PREFIX.length));
+    return Array.isArray(parsed)
+      ? parsed.filter((entryId): entryId is string => typeof entryId === 'string' && entryId.trim().length > 0)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeHistoricalBlockId(blockId: string): string | null {
   const normalized = blockId.trim();
   return normalized.length > 0 ? normalized : null;
@@ -77,11 +99,16 @@ export function mergeHydratedHistoricalBlocks(blocks: DisplayBlock[], hydratedBl
 export function transcriptRenderItemsToMessageBlocks(
   renderItems: TranscriptRenderItem[],
   hydratedBlocks: Record<string, MessageBlock> = {},
+  hydratedEntryClusters: Record<string, MessageBlock[]> = {},
 ): MessageBlock[] {
   const messages: MessageBlock[] = [];
   for (const item of renderItems) {
     if (item.type === 'message') {
       messages.push(item.block);
+    } else if (item.type === 'trace_cluster' && item.deferredEntryIds?.length) {
+      const hydrationId = buildDeferredEntryHydrationId(item.deferredEntryIds);
+      messages.push(...(hydrationId ? (hydratedEntryClusters[hydrationId] ?? []) : []));
+      messages.push(...item.blocks);
     } else if (item.type === 'trace_cluster' && item.deferredBlockIds?.length) {
       messages.push(...item.deferredBlockIds.flatMap((blockId) => hydratedBlocks[blockId] ?? []));
       messages.push(...item.blocks);
@@ -95,12 +122,19 @@ export function transcriptRenderItemsToMessageBlocks(
 export function hydrateTranscriptRenderItems(
   renderItems: TranscriptRenderItem[],
   hydratedBlocks: Record<string, MessageBlock>,
+  hydratedEntryClusters: Record<string, MessageBlock[]> = {},
 ): TranscriptRenderItem[] {
-  if (Object.keys(hydratedBlocks).length === 0) {
+  if (Object.keys(hydratedBlocks).length === 0 && Object.keys(hydratedEntryClusters).length === 0) {
     return renderItems;
   }
 
   return renderItems.map((item) => {
+    if (item.type === 'trace_cluster' && item.deferredEntryIds?.length) {
+      const hydrationId = buildDeferredEntryHydrationId(item.deferredEntryIds);
+      const hydratedTraceBlocks = hydrationId ? (hydratedEntryClusters[hydrationId] ?? []) : [];
+      return hydratedTraceBlocks.length > 0 ? { ...item, blocks: hydratedTraceBlocks } : item;
+    }
+
     if (item.type !== 'trace_cluster' || !item.deferredBlockIds?.length) {
       return item;
     }

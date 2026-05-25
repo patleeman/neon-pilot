@@ -327,6 +327,7 @@ import {
   mergeHydratedHistoricalBlocks,
   mergeHydratedStreamBlocks,
   normalizeHistoricalBlockId,
+  parseDeferredEntryHydrationId,
   removeHydratingHistoricalBlockId,
   transcriptRenderItemsToMessageBlocks,
 } from '../transcript/messageBlocks';
@@ -570,6 +571,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
   const desktopConversation = useDesktopConversationState(id ?? null, {
     tailBlocks: historicalTailBlocks,
+    includeToolBlocks: false,
     enabled: shouldSubscribeToDesktopConversationState({ draft }),
   });
   const desktopConversationChecking = false;
@@ -586,6 +588,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     draft || useDesktopConversation || desktopConversationChecking ? undefined : id,
     {
       tailBlocks: historicalTailBlocks,
+      includeToolBlocks: false,
       versionKey: conversationVersionKey,
     },
   );
@@ -824,6 +827,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       ? sessionDetail
       : bootstrapSessionDetail;
   const [hydratedHistoricalBlocks, setHydratedHistoricalBlocks] = useState<Record<string, MessageBlock>>({});
+  const [hydratedHistoricalEntryClusters, setHydratedHistoricalEntryClusters] = useState<Record<string, MessageBlock[]>>({});
   const [hydratingHistoricalBlockIds, setHydratingHistoricalBlockIds] = useState<string[]>([]);
   const hydratingHistoricalBlockIdSet = useMemo(
     () => buildHydratingHistoricalBlockIdSet(hydratingHistoricalBlockIds),
@@ -832,6 +836,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   useEffect(() => {
     setHydratedHistoricalBlocks({});
+    setHydratedHistoricalEntryClusters({});
     setHydratingHistoricalBlockIds([]);
     setRequestedFocusMessageIndex(null);
     pendingJumpMessageIndexRef.current = null;
@@ -847,12 +852,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       setHydratingHistoricalBlockIds((current) => addHydratingHistoricalBlockId(current, normalizedBlockId));
 
       try {
-        const block = await api.sessionBlock(id, normalizedBlockId);
-        const messageBlock = displayBlockToMessageBlock(block);
-        setHydratedHistoricalBlocks((current) => ({
-          ...current,
-          [normalizedBlockId]: messageBlock,
-        }));
+        const deferredEntryIds = parseDeferredEntryHydrationId(normalizedBlockId);
+        if (deferredEntryIds) {
+          const { blocks } = await api.sessionEntryBlocks(id, deferredEntryIds);
+          setHydratedHistoricalEntryClusters((current) => ({
+            ...current,
+            [normalizedBlockId]: blocks.map(displayBlockToMessageBlock),
+          }));
+        } else {
+          const block = await api.sessionBlock(id, normalizedBlockId);
+          const messageBlock = displayBlockToMessageBlock(block);
+          setHydratedHistoricalBlocks((current) => ({
+            ...current,
+            [normalizedBlockId]: messageBlock,
+          }));
+        }
       } catch (error) {
         console.error('Failed to hydrate historical block', error);
         addNotification({
@@ -869,6 +883,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
 
   const hydratedHistoricalBlockCount = Object.keys(hydratedHistoricalBlocks).length;
+  const hydratedHistoricalEntryClusterCount = Object.keys(hydratedHistoricalEntryClusters).length;
 
   // Historical messages from the JSONL snapshot (doesn't update after load).
   // Memoize the conversion so typing in the composer does not rebuild long transcripts.
@@ -891,13 +906,24 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           }
 
           if (visibleSessionDetail.renderItems?.length) {
-            return transcriptRenderItemsToMessageBlocks(visibleSessionDetail.renderItems, hydratedHistoricalBlocks);
+            return transcriptRenderItemsToMessageBlocks(
+              visibleSessionDetail.renderItems,
+              hydratedHistoricalBlocks,
+              hydratedHistoricalEntryClusters,
+            );
           }
 
           return mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks);
         },
       ),
-    [hydratedHistoricalBlockCount, hydratedHistoricalBlocks, id, visibleSessionDetail],
+    [
+      hydratedHistoricalBlockCount,
+      hydratedHistoricalBlocks,
+      hydratedHistoricalEntryClusterCount,
+      hydratedHistoricalEntryClusters,
+      id,
+      visibleSessionDetail,
+    ],
   );
   const visibleStreamBlocks = useMemo<MessageBlock[]>(
     () =>
@@ -5381,7 +5407,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     !stream.hasSnapshot &&
     visibleStreamBlocks.length === 0 &&
     visibleTranscriptMessageIndexOffset === visibleSessionDetail.blockOffset
-      ? hydrateTranscriptRenderItems(visibleSessionDetail.renderItems, hydratedHistoricalBlocks)
+      ? hydrateTranscriptRenderItems(visibleSessionDetail.renderItems, hydratedHistoricalBlocks, hydratedHistoricalEntryClusters)
       : undefined;
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks =

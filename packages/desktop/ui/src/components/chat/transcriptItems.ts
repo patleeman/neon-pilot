@@ -34,6 +34,7 @@ export type ChatRenderItem =
       endIndex: number;
       summary: TraceClusterSummary;
       deferredBlockIds?: string[];
+      deferredEntryIds?: string[];
     };
 
 const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);

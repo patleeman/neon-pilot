@@ -75,7 +75,8 @@ describe('conversation transcript projection', () => {
         input: { path: 'src/app.ts' },
         output: 'large output',
         toolCallId: 'call-1',
-      },
+        sourceEntryIds: ['assistant-1', 'tool-1'],
+      } as DisplayBlock & { sourceEntryIds: string[] },
       { type: 'text', id: 'a1', ts, text: 'done' },
     ];
 
@@ -93,7 +94,7 @@ describe('conversation transcript projection', () => {
       expect.objectContaining({
         type: 'trace_cluster',
         blocks: [],
-        deferredBlockIds: ['tool1'],
+        deferredEntryIds: ['assistant-1', 'tool-1'],
         summary: expect.objectContaining({ stepCount: 1 }),
       }),
       expect.objectContaining({ type: 'message', block: expect.objectContaining({ id: 'a1' }) }),

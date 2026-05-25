@@ -19,6 +19,7 @@ import {
   readSessionBlock,
   readSessionBlocks,
   readSessionBlocksWithTelemetry,
+  readSessionEntryBlocks,
   readSessionImageAsset,
   readSessionMetaByFile,
   readSessionSearchText,
@@ -1152,6 +1153,53 @@ describe('sessions', () => {
 
     const rebasedId = originalToolBlock?.id.replace(/-c\d+$/, '-c99') ?? '';
     expect(readSessionBlock(sessionId, rebasedId)).toEqual(expect.objectContaining({ type: 'tool_use', output: 'file contents' }));
+  });
+
+  it('hydrates transcript tool details by stable source entry ids', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+    const sessionId = 'session-entry-hydrate';
+    const sessionDir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, `2026-03-11T12-00-00-000Z_${sessionId}.jsonl`),
+      [
+        JSON.stringify({ type: 'session', id: sessionId, timestamp: '2026-03-11T12:00:00.000Z', cwd: '/tmp/project' }),
+        JSON.stringify({
+          type: 'message',
+          id: 'user-1',
+          parentId: null,
+          timestamp: '2026-03-11T12:00:00.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'read it' }] },
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'assistant-1',
+          parentId: 'user-1',
+          timestamp: '2026-03-11T12:00:01.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'toolCall', id: 'call-1', name: 'read', arguments: { path: 'src/app.ts' } }],
+          },
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'tool-1',
+          parentId: 'assistant-1',
+          timestamp: '2026-03-11T12:00:02.000Z',
+          message: { role: 'toolResult', toolCallId: 'call-1', toolName: 'read', content: [{ type: 'text', text: 'file contents' }] },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    const sourceEntryIds =
+      readSessionBlocks(sessionId)?.blocks.flatMap((block) =>
+        block.type === 'tool_use' ? ((block as typeof block & { sourceEntryIds?: string[] }).sourceEntryIds ?? []) : [],
+      ) ?? [];
+    expect(sourceEntryIds.length).toBeGreaterThan(0);
+    expect(readSessionEntryBlocks(sessionId, sourceEntryIds)).toEqual([
+      expect.objectContaining({ type: 'tool_use', tool: 'read', output: 'file contents' }),
+    ]);
   });
 
   it('prefers a persisted session display name over the first user message fallback', () => {

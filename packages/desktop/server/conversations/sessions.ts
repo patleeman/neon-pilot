@@ -378,6 +378,18 @@ export type DisplayBlock =
     }
   | { type: 'error'; id: string; ts: string; tool?: string; message: string };
 
+type DisplayBlockSourceMetadata = { sourceEntryIds?: string[] };
+
+function attachDisplayBlockSourceEntryIds<T extends DisplayBlock>(block: T, sourceEntryIds: string[]): T {
+  Object.defineProperty(block, 'sourceEntryIds', {
+    value: sourceEntryIds,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  return block;
+}
+
 interface CachedSessionMeta {
   signature: string;
   meta: SessionMeta;
@@ -781,13 +793,16 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       entryAnchorIndexById.set(baseId, blocks.length);
       anchorRecorded = true;
     };
+    const pushBlock = (block: DisplayBlock) => {
+      blocks.push(attachDisplayBlockSourceEntryIds(block, [baseId]));
+    };
 
     if (role === 'compactionSummary' || role === 'branchSummary') {
       const normalizedSummary = summary?.trim();
       if (normalizedSummary) {
         const detail = role === 'compactionSummary' ? resolveCompactionSummarySupplement(details) : undefined;
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'summary',
           id: baseId,
           ts,
@@ -804,7 +819,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       const { text, images } = extractUserContent(content);
       if (text || images.length > 0) {
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'user',
           id: baseId,
           ts,
@@ -825,7 +840,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       );
       if (relatedSummaryText) {
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'summary',
           id: baseId,
           ts,
@@ -848,7 +863,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       );
       if (pointerText) {
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'summary',
           id: baseId,
           ts,
@@ -865,7 +880,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       for (const block of contentBlocks) {
         if (block.type === 'text' && block.text?.trim()) {
           recordAnchor();
-          blocks.push({
+          pushBlock({
             type: 'context',
             id: `${baseId}-m${blocks.length}`,
             ts,
@@ -883,7 +898,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           }
 
           recordAnchor();
-          blocks.push({
+          pushBlock({
             type: 'image',
             id: `${baseId}-i${blocks.length}`,
             ts,
@@ -901,7 +916,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       for (const block of contentBlocks) {
         if (block.type === 'text' && block.text?.trim()) {
           recordAnchor();
-          blocks.push({
+          pushBlock({
             type: 'context',
             id: `${baseId}-m${blocks.length}`,
             ts,
@@ -919,7 +934,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           }
 
           recordAnchor();
-          blocks.push({
+          pushBlock({
             type: 'image',
             id: `${baseId}-i${blocks.length}`,
             ts,
@@ -950,7 +965,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       };
 
       recordAnchor();
-      blocks.push({
+      pushBlock({
         type: 'tool_use',
         id: `${baseId}-c${blocks.length}`,
         ts,
@@ -967,13 +982,13 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
       for (const block of contentBlocks) {
         if (role === 'assistant' && block.type === 'thinking' && block.thinking?.trim()) {
           recordAnchor();
-          blocks.push({ type: 'thinking', id: `${baseId}-t${blocks.length}`, ts, text: block.thinking });
+          pushBlock({ type: 'thinking', id: `${baseId}-t${blocks.length}`, ts, text: block.thinking });
           continue;
         }
 
         if (block.type === 'text' && block.text?.trim()) {
           recordAnchor();
-          blocks.push({ type: 'text', id: `${baseId}-x${blocks.length}`, ts, text: block.text });
+          pushBlock({ type: 'text', id: `${baseId}-x${blocks.length}`, ts, text: block.text });
           continue;
         }
 
@@ -981,7 +996,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
           recordAnchor();
           const idx = blocks.length;
           toolCallIndex.set(block.id, idx);
-          blocks.push({
+          pushBlock({
             type: 'tool_use',
             id: `${baseId}-c${blocks.length}`,
             ts,
@@ -995,7 +1010,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
 
       if (role === 'assistant' && errorMessage) {
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'error',
           id: `${baseId}-e${blocks.length}`,
           ts,
@@ -1019,15 +1034,18 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
         const endMs = new Date(ts).getTime();
         const duration = endMs > startMs ? endMs - startMs : undefined;
         const imageCount = contentBlocks.filter((block) => block.type === 'image' && imageSrc(block) && imageMimeType(block)).length;
-        blocks[idx] = {
+        const nextBlock = {
           ...existing,
           output: resultText,
           durationMs: duration,
           details: imageCount > 0 ? { ...(details && typeof details === 'object' ? details : {}), imageCount } : details,
         };
+        blocks[idx] = attachDisplayBlockSourceEntryIds(nextBlock, [
+          ...new Set([...((existing as DisplayBlock & DisplayBlockSourceMetadata).sourceEntryIds ?? []), baseId]),
+        ]);
       } else if (resultText) {
         recordAnchor();
-        blocks.push({
+        pushBlock({
           type: 'tool_use',
           id: `${baseId}-c${blocks.length}`,
           ts,
@@ -1069,7 +1087,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
         !hasOriginalToolCall ||
         (normalizedToolName !== 'image' && normalizedToolName !== 'browser_screenshot' && normalizedToolName !== 'screenshot')
       ) {
-        blocks.push(...resultImages);
+        blocks.push(...resultImages.map((block) => attachDisplayBlockSourceEntryIds(block as DisplayBlock, [baseId])));
       }
     }
   }
@@ -2315,6 +2333,29 @@ export function readSessionBlock(sessionId: string, blockId: string): DisplayBlo
   }
 
   return blocks.find((block) => block.id.startsWith(`${blockPrefix}-${blockKind}`)) ?? null;
+}
+
+export function readSessionEntryBlocks(sessionId: string, entryIds: string[]): DisplayBlock[] | null {
+  const meta = resolveSessionMeta(sessionId);
+  if (!meta) {
+    return null;
+  }
+
+  const normalizedEntryIds = [...new Set(entryIds.map((entryId) => entryId.trim()).filter(Boolean))];
+  if (normalizedEntryIds.length === 0) {
+    return [];
+  }
+
+  const requestedEntryIds = new Set(normalizedEntryIds);
+  const manager = SessionManager.open(meta.file);
+  const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
+  const blocks = buildDisplayBlocksFromEntries(branchEntries).filter(
+    (block) =>
+      requestedEntryIds.has(block.id) ||
+      [...requestedEntryIds].some((entryId) => block.id.startsWith(`${entryId}-`)) ||
+      ((block as DisplayBlock & DisplayBlockSourceMetadata).sourceEntryIds ?? []).some((entryId) => requestedEntryIds.has(entryId)),
+  );
+  return decorateSessionAssetUrls(blocks, sessionId);
 }
 
 export function readSessionImageAsset(
