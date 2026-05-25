@@ -7,7 +7,6 @@ import {
   scheduleConversationSearchIndexing,
   searchIndexedConversationDocuments,
 } from '@neon-pilot/extensions/backend/conversations';
-import { eng, removeStopwords } from 'stopword';
 
 interface IndexedConversationSearchCandidate {
   sessionId: string;
@@ -80,6 +79,67 @@ const PRODUCT_STOPWORDS = new Set([
   'working',
   'would',
   'yeah',
+]);
+const COMMON_STOPWORDS = new Set([
+  'about',
+  'after',
+  'again',
+  'against',
+  'all',
+  'also',
+  'and',
+  'any',
+  'are',
+  'because',
+  'been',
+  'before',
+  'being',
+  'between',
+  'both',
+  'but',
+  'can',
+  'did',
+  'for',
+  'from',
+  'had',
+  'has',
+  'have',
+  'her',
+  'here',
+  'him',
+  'his',
+  'into',
+  'its',
+  'just',
+  'more',
+  'most',
+  'not',
+  'off',
+  'our',
+  'out',
+  'over',
+  'she',
+  'should',
+  'some',
+  'than',
+  'that',
+  'the',
+  'their',
+  'them',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'those',
+  'through',
+  'too',
+  'under',
+  'was',
+  'were',
+  'with',
+  'you',
+  'your',
 ]);
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -163,7 +223,7 @@ function tokenize(value: string): string[] {
     .split(/[^a-z0-9_./-]+/)
     .map((term) => term.trim())
     .filter((term) => term.length >= 3);
-  const terms = removeStopwords(tokens, eng).filter((term) => !PRODUCT_STOPWORDS.has(term));
+  const terms = tokens.filter((term) => !COMMON_STOPWORDS.has(term) && !PRODUCT_STOPWORDS.has(term));
   return Array.from(new Set(terms)).slice(0, 32);
 }
 
