@@ -15,8 +15,14 @@ import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
+const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const STREAM_DELTA_FLUSH_INTERVAL_MS = 80;
+const desktopConversationStateCache = new Map<string, DesktopConversationState>();
+
+export function clearDesktopConversationStateCacheForTests(): void {
+  desktopConversationStateCache.clear();
+}
 
 export function normalizeDesktopConversationStateTailBlocks(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
@@ -220,6 +226,26 @@ function mergeDesktopConversationState(
   };
 }
 
+function buildDesktopConversationStateCacheKey(conversationId: string, tailBlocks: number | undefined): string {
+  return `${conversationId}:${tailBlocks ?? 'default'}`;
+}
+
+function rememberDesktopConversationState(
+  cache: Map<string, DesktopConversationState>,
+  key: string,
+  nextState: DesktopConversationState,
+): void {
+  cache.delete(key);
+  cache.set(key, nextState);
+  while (cache.size > MAX_CACHED_DESKTOP_CONVERSATION_STATES) {
+    const oldestKey = cache.keys().next().value;
+    if (typeof oldestKey !== 'string') {
+      break;
+    }
+    cache.delete(oldestKey);
+  }
+}
+
 export function useDesktopConversationState(conversationId: string | null, options?: { tailBlocks?: number; enabled?: boolean }) {
   const enabled = options?.enabled !== false && Boolean(conversationId);
   const bridge = getDesktopBridge();
@@ -252,10 +278,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     let closed = false;
-    setState((current) => (current?.conversationId === conversationId ? current : null));
+    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
+    const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
+    setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
 
-    const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
     void api
       .desktopConversationState(conversationId, tailBlocks !== undefined ? { tailBlocks } : undefined)
       .then((nextState) => {
@@ -266,7 +294,11 @@ export function useDesktopConversationState(conversationId: string | null, optio
             setError(null);
             return;
           }
-          setState((previous) => mergeDesktopConversationState(previous, nextState));
+          setState((previous) => {
+            const mergedState = mergeDesktopConversationState(previous, nextState);
+            rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+            return mergedState;
+          });
           setError(null);
         }
       })

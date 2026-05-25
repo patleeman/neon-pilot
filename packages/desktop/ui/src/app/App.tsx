@@ -12,7 +12,6 @@ import {
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
 import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
-import { ExtensionPage } from '../extensions/ExtensionPage';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
@@ -127,9 +126,11 @@ function ConversationsRouteRedirect() {
   return <Navigate to={redirectPath} replace />;
 }
 
-const conversationPageModulePromise = import('../pages/ConversationPage');
 const ConversationPage = lazyRouteWithRecovery('conversation-page', () =>
-  conversationPageModulePromise.then((module) => ({ default: module.ConversationPage })),
+  import('../pages/ConversationPage').then((module) => ({ default: module.ConversationPage })),
+);
+const ExtensionPage = lazyRouteWithRecovery('extension-page', () =>
+  import('../extensions/ExtensionPage').then((module) => ({ default: module.ExtensionPage })),
 );
 function suspendRoute(element: React.ReactNode) {
   return (

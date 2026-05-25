@@ -7,6 +7,7 @@ import { api } from '../client/api.js';
 import {
   applyDesktopConversationStreamEvent,
   applyDesktopConversationStreamEvents,
+  clearDesktopConversationStateCacheForTests,
   normalizeDesktopConversationStateTailBlocks,
   useDesktopConversationState,
 } from './useDesktopConversationState.js';
@@ -129,6 +130,7 @@ describe('useDesktopConversationState', () => {
     }
     latestReconnect = null;
     latestState = null;
+    clearDesktopConversationStateCacheForTests();
     vi.restoreAllMocks();
     Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
@@ -264,5 +266,91 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(latestState?.state?.stream.blocks).toHaveLength(2);
+  });
+
+  it('shows cached conversation state immediately when switching back to a recent thread', async () => {
+    let resolveThirdFetch: ((value: Awaited<ReturnType<typeof api.desktopConversationState>>) => void) | null = null;
+    const convOneState = {
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+      stream: {
+        blocks: [{ type: 'text' as const, id: 'block-1', text: 'Cached transcript', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    };
+    const convTwoState = {
+      ...convOneState,
+      conversationId: 'conv-2',
+      stream: {
+        ...convOneState.stream,
+        blocks: [{ type: 'text' as const, id: 'block-2', text: 'Second transcript', ts: '2026-05-24T00:00:01.000Z' }],
+      },
+    };
+    vi.spyOn(api, 'desktopConversationState')
+      .mockResolvedValueOnce(convOneState)
+      .mockResolvedValueOnce(convTwoState)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveThirdFetch = resolve;
+          }),
+      );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-1" tailBlocks={20} />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.conversationId).toBe('conv-1');
+    expect(latestState?.state?.stream.blocks[0]).toEqual(expect.objectContaining({ text: 'Cached transcript' }));
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-2" tailBlocks={20} />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.conversationId).toBe('conv-2');
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-1" tailBlocks={20} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.conversationId).toBe('conv-1');
+    expect(latestState?.state?.stream.blocks[0]).toEqual(expect.objectContaining({ text: 'Cached transcript' }));
+
+    await act(async () => {
+      resolveThirdFetch?.(convOneState);
+      await flushPromises();
+    });
   });
 });
