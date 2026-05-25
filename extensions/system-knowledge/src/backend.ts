@@ -89,16 +89,15 @@ export async function readMemory(_input: unknown, ctx: ExtensionBackendContext) 
     exists: existsSync(filePath),
     content: existsSync(filePath) ? readFileSync(filePath, 'utf-8') : undefined,
   }));
-  const skills = listSkillsForProfile(runtimeScope);
-  const memoryDocs = listMemoryDocs();
-  const usageByPath = buildRecentReadUsage([...skills.map((item) => item.path), ...memoryDocs.map((item) => item.path)]);
+  const [skills, memoryDocs] = await Promise.all([listSkillsForProfile(runtimeScope), listMemoryDocs()]);
+  const usageByPath = await buildRecentReadUsage([...skills.map((item) => item.path), ...memoryDocs.map((item) => item.path)]);
 
   for (const skill of skills) {
-    const usage = usageByPath.get(normalizeMemoryPath(skill.path));
+    const usage = usageByPath.get(await normalizeMemoryPath(skill.path));
     if (usage) Object.assign(skill, usage);
   }
   for (const doc of memoryDocs) {
-    const usage = usageByPath.get(normalizeMemoryPath(doc.path));
+    const usage = usageByPath.get(await normalizeMemoryPath(doc.path));
     if (usage) Object.assign(doc, usage);
   }
 

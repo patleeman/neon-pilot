@@ -24,7 +24,7 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   const id = typeof body.id === 'string' ? body.id.trim() : '';
   if (!id) throw new Error('skill id is required.');
   const enabled = body.enabled !== false;
-  setSkillEnabled(id, enabled);
+  await setSkillEnabled(id, enabled);
   await refreshSkillMcpConfig(_ctx);
   return { ok: true, id, enabled };
 }

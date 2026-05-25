@@ -161,7 +161,7 @@ export async function updateSkillEnabled(input: unknown, _ctx: ExtensionBackendC
   const id = typeof body.id === 'string' ? body.id.trim() : '';
   if (!id) throw new Error('skill id is required.');
   const enabled = body.enabled !== false;
-  setSkillEnabled(id, enabled);
+  await setSkillEnabled(id, enabled);
   return { ok: true, id, enabled };
 }
 
@@ -172,7 +172,7 @@ export async function updateRuntimeCapability(input: unknown, ctx: ExtensionBack
   const enabled = body.enabled !== false;
   if (!id) throw new Error('capability id is required.');
   if (kind === 'skill') {
-    setSkillEnabled(id, enabled);
+    await setSkillEnabled(id, enabled);
   } else if (kind === 'extension') {
     if (!enabled && id === 'system-extension-manager') {
       throw new Error('Cannot disable the Extension Manager: this extension is required by the application.');
