@@ -1,5 +1,4 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { recordTelemetryEvent } from '@neon-pilot/extensions/backend';
 import {
   applyScheduledTaskThreadBinding,
   buildScheduledTaskThreadDetail,
@@ -23,6 +22,7 @@ import {
   type TaskRuntimeEntry,
   updateStoredAutomation,
 } from '@neon-pilot/extensions/backend/automations';
+import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
 import { Type } from '@sinclair/typebox';
 
 const SCHEDULED_TASK_ACTION_VALUES = ['list', 'get', 'save', 'delete', 'validate', 'run'] as const;

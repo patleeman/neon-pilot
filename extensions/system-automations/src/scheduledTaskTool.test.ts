@@ -23,7 +23,7 @@ const automations = vi.hoisted(() => ({
 const telemetry = vi.hoisted(() => ({ recordTelemetryEvent: vi.fn() }));
 
 vi.mock('@neon-pilot/extensions/backend/automations', () => automations);
-vi.mock('@neon-pilot/extensions/backend', () => telemetry);
+vi.mock('@neon-pilot/extensions/backend/telemetry', () => telemetry);
 
 import { createScheduledTaskAgentExtension } from './scheduledTaskTool.js';
 
