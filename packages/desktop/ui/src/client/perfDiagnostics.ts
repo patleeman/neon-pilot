@@ -68,6 +68,8 @@ interface PerfStore {
 }
 
 const MAX_PERF_SAMPLES = 120;
+const CLIENT_PERF_TELEMETRY_MIN_DURATION_MS = 16;
+const CHAT_RENDER_TELEMETRY_MIN_DURATION_MS = 16;
 const perfStore: PerfStore = {
   apiSamples: [],
   conversationOpenSamples: [],
@@ -133,6 +135,16 @@ export function recordChatRenderTiming(input: {
   };
   appendSample(perfStore.chatRenderSamples, sample);
   publishPerfStore();
+  if (sample.durationMs >= CHAT_RENDER_TELEMETRY_MIN_DURATION_MS) {
+    recordRendererTelemetry({
+      category: 'renderer_performance',
+      name: 'chat_render',
+      route: sample.route ?? undefined,
+      sessionId: sample.conversationId ?? undefined,
+      durationMs: Math.round(sample.durationMs),
+      metadata: summarizeChatRenderSample(sample),
+    });
+  }
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][chat-render]', sample);
   }
@@ -161,6 +173,15 @@ export function recordClientPerfTiming(input: {
   };
   appendSample(perfStore.clientSamples, sample);
   publishPerfStore();
+  if (sample.durationMs >= CLIENT_PERF_TELEMETRY_MIN_DURATION_MS) {
+    recordRendererTelemetry({
+      category: 'renderer_performance',
+      name: 'client_work',
+      route: sample.route ?? undefined,
+      durationMs: Math.round(sample.durationMs),
+      metadata: summarizeClientSample(sample),
+    });
+  }
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][client]', sample);
   }

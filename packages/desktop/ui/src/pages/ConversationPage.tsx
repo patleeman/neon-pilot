@@ -4638,7 +4638,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         );
 
         try {
+          const streamSendStartedAtMs = performance.now();
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
+          recordSubmitPhase('streamSend', streamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
         } catch (error) {
           if (!isConversationSessionNotLiveError(error)) {
             throw error;
@@ -4655,10 +4657,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           setConfirmedLive(true);
           stream.reconnect();
           setPendingAssistantStatusLabel('Resuming…');
+          const recoveredStreamSendStartedAtMs = performance.now();
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
+          recordSubmitPhase('streamSendAfterRecover', recoveredStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
         }
 
+        const refetchAttachmentsStartedAtMs = performance.now();
         await refetchConversationAttachments();
+        recordSubmitPhase('refetchConversationAttachments', refetchAttachmentsStartedAtMs, { conversationId: id });
 
         window.setTimeout(() => {
           scrollToBottom();
@@ -4681,8 +4687,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           setConfirmedLive(true);
           stream.reconnect();
           setPendingAssistantStatusLabel('Working…');
+          const resumedStreamSendStartedAtMs = performance.now();
           await stream.send(textToSend, queuedBehavior, promptImages, attachmentRefs, browserContextMessages);
+          recordSubmitPhase('streamSendAfterResume', resumedStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
+          const refetchAttachmentsStartedAtMs = performance.now();
           await refetchConversationAttachments();
+          recordSubmitPhase('refetchConversationAttachments', refetchAttachmentsStartedAtMs, { conversationId: id });
           window.setTimeout(() => {
             scrollToBottom();
           }, 50);

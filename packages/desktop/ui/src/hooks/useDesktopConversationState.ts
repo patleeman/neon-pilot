@@ -11,6 +11,7 @@ import type {
   SseEvent,
   ThreadGoal,
 } from '../shared/types';
+import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
@@ -309,12 +310,19 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return;
       }
 
+      const flushStartedAtMs = performance.now();
+      let applied = false;
+      let previousBlockCount = 0;
+      let nextBlockCount = 0;
       setState((previous) => {
         if (previous?.conversationId !== conversationId) {
           return previous;
         }
 
+        previousBlockCount = previous.stream.blocks.length;
         const stream = applyDesktopConversationStreamEvents(previous.stream, events);
+        nextBlockCount = stream.blocks.length;
+        applied = true;
         const latestTitleEvent = events.findLast((streamEvent) => streamEvent.type === 'title_update');
         return {
           ...previous,
@@ -328,6 +336,25 @@ export function useDesktopConversationState(conversationId: string | null, optio
             : previous.liveSession,
         };
       });
+      const durationMs = performance.now() - flushStartedAtMs;
+      if (
+        applied &&
+        (durationMs >= 8 || events.some((streamEvent) => streamEvent.type === 'user_message' || streamEvent.type === 'agent_start'))
+      ) {
+        const eventCounts = events.reduce<Record<string, number>>((counts, streamEvent) => {
+          counts[streamEvent.type] = (counts[streamEvent.type] ?? 0) + 1;
+          return counts;
+        }, {});
+        recordRendererTelemetry({
+          category: 'renderer_performance',
+          name: 'conversation_stream_flush',
+          route: `${window.location.pathname}${window.location.search}`,
+          sessionId: conversationId,
+          durationMs: Math.round(durationMs),
+          count: events.length,
+          metadata: { eventCounts, previousBlockCount, nextBlockCount },
+        });
+      }
       setError(null);
     };
 
