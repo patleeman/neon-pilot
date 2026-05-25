@@ -34,16 +34,19 @@ describe('api desktop transport', () => {
       .fn()
       .mockResolvedValueOnce(
         createJsonResponse({
-          agentsMd: [],
-          skills: [
-            {
-              source: 'global',
-              name: 'checkpoint',
-              description: "Commit and push the agent's current work.",
-              path: '/vault/skills/checkpoint/SKILL.md',
-            },
-          ],
-          memoryDocs: [],
+          ok: true,
+          result: {
+            agentsMd: [],
+            skills: [
+              {
+                source: 'global',
+                name: 'checkpoint',
+                description: "Commit and push the agent's current work.",
+                path: '/vault/skills/checkpoint/SKILL.md',
+              },
+            ],
+            memoryDocs: [],
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -77,7 +80,7 @@ describe('api desktop transport', () => {
     const tools = await api.tools();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/memory');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/actions/readMemory');
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/tools');
     expect(memory.skills[0]?.name).toBe('checkpoint');
     expect(tools.cwd).toBe('/repo');

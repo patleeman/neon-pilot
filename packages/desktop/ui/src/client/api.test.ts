@@ -192,7 +192,7 @@ describe('api.memory', () => {
   });
 
   it('dedupes concurrent memory requests', async () => {
-    const fetchMock = vi.fn(async () => jsonResponse({ skills: [], memoryDocs: [] }));
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
@@ -204,13 +204,13 @@ describe('api.memory', () => {
   });
 
   it('ignores legacy profile arguments for memory requests', async () => {
-    const fetchMock = vi.fn(async () => jsonResponse({ skills: [], memoryDocs: [] }));
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
     await Promise.all([api.memory(), api.memory()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/memory');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/actions/readMemory');
   });
 });

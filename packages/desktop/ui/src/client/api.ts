@@ -221,9 +221,19 @@ async function getMemoryData(): Promise<MemoryData> {
     return pending;
   }
 
-  const request = get<MemoryData>('/extensions/system-knowledge/memory').finally(() => {
-    pendingMemoryRequests.delete(cacheKey);
-  });
+  const request = extensionPost<{ ok: true; result: MemoryData } | { ok: false; error: string }>(
+    '/extensions/system-knowledge/actions/readMemory',
+    {},
+  )
+    .then((response) => {
+      if (response.ok === false) {
+        throw new Error(response.error || 'Memory data is unavailable.');
+      }
+      return response.result;
+    })
+    .finally(() => {
+      pendingMemoryRequests.delete(cacheKey);
+    });
   pendingMemoryRequests.set(cacheKey, request);
   return request;
 }
@@ -378,6 +388,9 @@ export const api = {
   },
   sessionBlock: async (id: string, blockId: string) => {
     return get<DisplayBlock>(`/sessions/${encodeURIComponent(id)}/blocks/${encodeURIComponent(blockId)}`);
+  },
+  sessionEntryBlocks: async (id: string, entryIds: string[]) => {
+    return post<{ blocks: DisplayBlock[] }>(`/sessions/${encodeURIComponent(id)}/entry-blocks`, { entryIds });
   },
   sessionSearchIndex: async (sessionIds: string[]) => {
     return post<{ index: Record<string, string> }>('/sessions/search-index', { sessionIds });
