@@ -460,6 +460,7 @@ export async function flushSessionIndexWrite(): Promise<void> {
 }
 
 const MAX_SESSION_DETAIL_CACHE_ENTRIES = 24;
+const FAST_TAIL_EXACT_COUNT_MAX_BYTES = 2 * 1024 * 1024;
 
 // ── Parsing ────────────────────────────────────────────────────────────────────
 
@@ -571,9 +572,15 @@ function summarizeTailScanEntry(rawLine: string): TailScanEntrySummary | null {
   };
 }
 
-function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tailBlocks: number): SessionDetail | null {
+function tryReadSessionTailBlocksByFile(
+  filePath: string,
+  meta: SessionMeta,
+  tailBlocks: number,
+  options: { exactCounts?: boolean } = {},
+): SessionDetail | null {
   const branchDisplayEntries: TailScanDisplayEntrySummary[] = [];
   let pendingEntryId: string | null | undefined;
+  let scannedVisibleBlockCount = 0;
 
   try {
     readFileLinesReverse(filePath, (rawLine) => {
@@ -598,9 +605,10 @@ function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tai
 
       if (summary.kind === 'display') {
         branchDisplayEntries.push(summary);
+        scannedVisibleBlockCount += summary.visibleBlockCount;
       }
 
-      return pendingEntryId !== null;
+      return pendingEntryId !== null && (options.exactCounts || scannedVisibleBlockCount < tailBlocks);
     });
   } catch {
     return null;
@@ -609,7 +617,8 @@ function tryReadSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tai
   const chronologicalDisplayEntries = branchDisplayEntries.slice().reverse();
   const suppressedEntryIds = collectSuppressedTranscriptEntryIds(chronologicalDisplayEntries.map((entry) => entry.displayEntry));
   const visibleEntries = chronologicalDisplayEntries.filter((entry) => !suppressedEntryIds.has(entry.id));
-  const totalBlocks = visibleEntries.reduce((sum, entry) => sum + entry.visibleBlockCount, 0);
+  const visibleScannedBlocks = visibleEntries.reduce((sum, entry) => sum + entry.visibleBlockCount, 0);
+  const totalBlocks = options.exactCounts ? visibleScannedBlocks : Math.max(meta.messageCount, visibleScannedBlocks);
   const tailBlockLimit = Math.min(tailBlocks, totalBlocks);
 
   const retained: TailScanDisplayEntrySummary[] = [];
@@ -2176,7 +2185,9 @@ export function readSessionBlocksByFileWithTelemetry(
 
   const fastTailDetail =
     typeof requestedTailBlocks === 'number' && requestedTailBlocks > 0
-      ? tryReadSessionTailBlocksByFile(meta.file, meta, requestedTailBlocks)
+      ? tryReadSessionTailBlocksByFile(meta.file, meta, requestedTailBlocks, {
+          exactCounts: (parseSignatureSize(signature) ?? Number.POSITIVE_INFINITY) <= FAST_TAIL_EXACT_COUNT_MAX_BYTES,
+        })
       : null;
   if (fastTailDetail) {
     const detail = {

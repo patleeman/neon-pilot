@@ -517,6 +517,7 @@ export async function readDesktopConversationState(input: {
   profile: string;
   tailBlocks?: number;
 }): Promise<DesktopConversationState> {
+  const startedAtMs = performance.now();
   const conversationId = input.conversationId.trim();
   if (!conversationId) {
     throw new Error('conversationId required');
@@ -527,7 +528,9 @@ export async function readDesktopConversationState(input: {
       : undefined;
 
   const sessionMeta = readConversationSessionMetaCapability(conversationId);
+  const sessionMetaAtMs = performance.now();
   const liveSession = sessionMeta?.isLive ? readLiveSessionStateSnapshot(conversationId, tailBlocks) : null;
+  const liveSnapshotAtMs = performance.now();
 
   if (liveSession && sessionMeta) {
     return {
@@ -549,6 +552,11 @@ export async function readDesktopConversationState(input: {
         hasStaleTurnState: liveSession.hasStaleTurnState,
       },
       stream: createDesktopConversationStreamStateFromSnapshot(liveSession),
+      perf: {
+        sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
+        liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),
+        totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+      },
     };
   }
 
@@ -557,6 +565,7 @@ export async function readDesktopConversationState(input: {
     profile: input.profile,
     tailBlocks,
   });
+  const sessionReadAtMs = performance.now();
 
   if (!sessionRead.detail) {
     return {
@@ -564,14 +573,28 @@ export async function readDesktopConversationState(input: {
       sessionDetail: null,
       liveSession: { live: false },
       stream: createEmptyDesktopConversationStreamState(),
+      perf: {
+        sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
+        liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),
+        sessionReadMs: Math.round(sessionReadAtMs - liveSnapshotAtMs),
+        totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+      },
     };
   }
 
   const detail = inlineConversationSessionDetailAssetsCapability(conversationId, sessionRead.detail);
+  const assetInlineAtMs = performance.now();
   return {
     conversationId,
     sessionDetail: detail,
     liveSession: { live: false },
     stream: createEmptyDesktopConversationStreamState(),
+    perf: {
+      sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
+      liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),
+      sessionReadMs: Math.round(sessionReadAtMs - liveSnapshotAtMs),
+      assetInlineMs: Math.round(assetInlineAtMs - sessionReadAtMs),
+      totalBeforeReturnMs: Math.round(assetInlineAtMs - startedAtMs),
+    },
   };
 }

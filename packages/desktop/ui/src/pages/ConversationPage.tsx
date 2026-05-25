@@ -323,6 +323,7 @@ import {
   mergeHydratedStreamBlocks,
   normalizeHistoricalBlockId,
   removeHydratingHistoricalBlockId,
+  transcriptRenderItemsToMessageBlocks,
 } from '../transcript/messageBlocks';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 
@@ -417,14 +418,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
   useEffect(() => {
-    const preload = () => {
-      void loadChatView();
-    };
-    if ('requestIdleCallback' in window) {
-      const idleId = window.requestIdleCallback(preload, { timeout: 1500 });
-      return () => window.cancelIdleCallback(idleId);
-    }
-
+    const preload = () => void loadChatView();
     const timeoutId = window.setTimeout(preload, 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
@@ -883,9 +877,20 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             conversationId: id,
             blockCount: visibleSessionDetail?.blocks.length ?? 0,
             hydratedBlockCount: hydratedHistoricalBlockCount,
+            hasPrecomputedRenderItems: Boolean(visibleSessionDetail?.renderItems?.length),
           },
         },
-        () => (visibleSessionDetail ? mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks) : []),
+        () => {
+          if (!visibleSessionDetail) {
+            return [];
+          }
+
+          if (hydratedHistoricalBlockCount === 0 && visibleSessionDetail.renderItems?.length) {
+            return transcriptRenderItemsToMessageBlocks(visibleSessionDetail.renderItems);
+          }
+
+          return mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks);
+        },
       ),
     [hydratedHistoricalBlockCount, hydratedHistoricalBlocks, id, visibleSessionDetail],
   );
@@ -1889,6 +1894,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const composerResizeFrameRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollPrefetchUserIntentRef = useRef(false);
   const pendingJumpMessageIndexRef = useRef<number | null>(null);
   const [requestedFocusMessageIndex, setRequestedFocusMessageIndex] = useState<number | null>(null);
 
@@ -2995,16 +3001,36 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    if (historicalHasOlderBlocks && !sessionLoading && el.scrollTop <= HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX) {
+    if (
+      scrollPrefetchUserIntentRef.current &&
+      historicalHasOlderBlocks &&
+      !sessionLoading &&
+      el.scrollTop <= HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX
+    ) {
       loadOlderMessages();
     }
   }, [historicalHasOlderBlocks, loadOlderMessages, sessionLoading, syncScrollStateFromDom]);
 
   useEffect(() => {
+    scrollPrefetchUserIntentRef.current = false;
+  }, [id]);
+
+  useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const markUserScrollIntent = () => {
+      scrollPrefetchUserIntentRef.current = true;
+    };
+    el.addEventListener('wheel', markUserScrollIntent, { passive: true });
+    el.addEventListener('touchstart', markUserScrollIntent, { passive: true });
+    el.addEventListener('pointerdown', markUserScrollIntent, { passive: true });
     el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
+    return () => {
+      el.removeEventListener('wheel', markUserScrollIntent);
+      el.removeEventListener('touchstart', markUserScrollIntent);
+      el.removeEventListener('pointerdown', markUserScrollIntent);
+      el.removeEventListener('scroll', handleScroll);
+    };
   }, [handleScroll]);
 
   useEscapeAbortStream({

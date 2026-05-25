@@ -674,8 +674,8 @@ export const api = {
     const result = await get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
     recordClientPerfTiming({
       name: 'desktop.conversationBootstrap',
-      durationMs: performance.now() - startedAtMs,
-      metadata: {
+      startedAtMs,
+      meta: {
         conversationId: id,
         tailBlocks: options?.tailBlocks,
         hasKnownSessionSignature: Boolean(options?.knownSessionSignature),
@@ -685,10 +685,21 @@ export const api = {
     return result;
   },
   desktopConversationState: async (id: string, options?: { tailBlocks?: number }) => {
+    const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     const query = params.toString();
-    return get<DesktopConversationState>(`/conversations/${encodeURIComponent(id)}/state${query ? `?${query}` : ''}`);
+    const result = await get<DesktopConversationState>(`/conversations/${encodeURIComponent(id)}/state${query ? `?${query}` : ''}`);
+    recordClientPerfTiming({
+      name: 'desktop.conversationState',
+      startedAtMs,
+      meta: {
+        conversationId: id,
+        tailBlocks: options?.tailBlocks,
+        serverPerf: result.perf,
+      },
+    });
+    return result;
   },
   conversationPlansWorkspace: async () => get<ConversationAutomationWorkspaceState>('/conversation-plans/workspace'),
   conversationArtifacts: async (id: string) =>

@@ -9,6 +9,7 @@ import {
   mergeHydratedStreamBlocks,
   normalizeHistoricalBlockId,
   removeHydratingHistoricalBlockId,
+  transcriptRenderItemsToMessageBlocks,
 } from './messageBlocks';
 
 describe('message block hydration helpers', () => {
@@ -55,6 +56,36 @@ describe('message block hydration helpers', () => {
     };
 
     expect(mergeHydratedStreamBlocks([streamBlock], { 'block-1': hydrated })).toEqual([hydrated]);
+  });
+
+  it('flattens precomputed transcript render items without rebuilding message blocks', () => {
+    const text: Extract<MessageBlock, { type: 'text' }> = {
+      type: 'text',
+      id: 'assistant-1',
+      ts: '2026-04-01T00:00:00.000Z',
+      text: 'hello',
+    };
+    const tool: Extract<MessageBlock, { type: 'tool_use' }> = {
+      type: 'tool_use',
+      id: 'tool-1',
+      ts: '2026-04-01T00:00:01.000Z',
+      tool: 'shell',
+      input: {},
+      output: 'ok',
+    };
+
+    expect(
+      transcriptRenderItemsToMessageBlocks([
+        { type: 'message', block: text, index: 0 },
+        {
+          type: 'trace_cluster',
+          blocks: [tool],
+          startIndex: 1,
+          endIndex: 1,
+          summary: { categories: [], durationMs: null, hasError: false, hasRunning: false },
+        },
+      ]),
+    ).toEqual([text, tool]);
   });
 
   it('does not duplicate historical blocks when live stream bootstrap overlaps', () => {

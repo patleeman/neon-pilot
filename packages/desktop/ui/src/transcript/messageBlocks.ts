@@ -1,4 +1,4 @@
-import type { DisplayBlock, MessageBlock } from '../shared/types';
+import type { DisplayBlock, MessageBlock, TranscriptRenderItem } from '../shared/types';
 
 export function normalizeHistoricalBlockId(blockId: string): string | null {
   const normalized = blockId.trim();
@@ -72,6 +72,18 @@ export function displayBlockToMessageBlock(block: DisplayBlock): MessageBlock {
 
 export function mergeHydratedHistoricalBlocks(blocks: DisplayBlock[], hydratedBlocks: Record<string, MessageBlock>): MessageBlock[] {
   return blocks.map((block) => hydratedBlocks[block.id] ?? displayBlockToMessageBlock(block));
+}
+
+export function transcriptRenderItemsToMessageBlocks(renderItems: TranscriptRenderItem[]): MessageBlock[] {
+  const messages: MessageBlock[] = [];
+  for (const item of renderItems) {
+    if (item.type === 'message') {
+      messages.push(item.block);
+    } else {
+      messages.push(...item.blocks);
+    }
+  }
+  return messages;
 }
 
 export function mergeHydratedStreamBlocks(blocks: MessageBlock[], hydratedBlocks: Record<string, MessageBlock>): MessageBlock[] {

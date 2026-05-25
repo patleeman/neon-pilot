@@ -999,6 +999,7 @@ export interface DesktopConversationState {
   sessionDetail: SessionDetail | null;
   liveSession: ConversationBootstrapLiveState;
   stream: DesktopConversationStreamState;
+  perf?: Record<string, number>;
 }
 
 // ── SSE events from /api/live-sessions/:id/events ────────────────────────────

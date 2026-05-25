@@ -545,8 +545,10 @@ describe('readDesktopConversationState', () => {
         },
         autoModeState: null,
         systemPrompt: null,
+        toolDefinitions: undefined,
         cwdChange: null,
       },
+      perf: expect.any(Object),
     });
   });
 
@@ -688,6 +690,7 @@ describe('readDesktopConversationState', () => {
       },
       liveSession: { live: false },
       stream: createEmptyDesktopConversationStreamState(),
+      perf: expect.any(Object),
     });
   });
 });
