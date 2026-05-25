@@ -209,8 +209,8 @@ export function ToolBlock({
   const pinnedCheckpoint = block.tool === 'checkpoint' && checkpointAction === 'save' && !isRunning && !isError;
   const pinnedArtifact = isDurableArtifactTool(block);
   const pinnedVisual = isPinnedVisualTool(block);
-  const pinnedFileChange = isFileChangingTool(block, fileChanges);
-  const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual || pinnedFileChange;
+  const fileChangingTool = isFileChangingTool(block, fileChanges);
+  const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual;
 
   if (useExtensionRenderer && pinnedCheckpoint) {
     return (
@@ -285,7 +285,7 @@ export function ToolBlock({
   const backgroundRun = backgroundRunId ? runs?.runs.find((candidate) => candidate.runId === backgroundRunId) : null;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
   const headerDisclosureLabel =
-    pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError
+    fileChangingTool && fileChanges.length > 0 && !isRunning && !isError
       ? pinnedDiffOpen
         ? 'Hide diff'
         : 'View diff'
@@ -293,7 +293,7 @@ export function ToolBlock({
         ? 'hide'
         : 'show';
   const toggleHeaderDisclosure = () => {
-    if (pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError) {
+    if (fileChangingTool && fileChanges.length > 0 && !isRunning && !isError) {
       setPinnedDiffOpen((current) => !current);
       return;
     }
@@ -325,7 +325,7 @@ export function ToolBlock({
         }}
         className={cx(
           'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
-          pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError && 'cursor-pointer',
+          fileChangingTool && fileChanges.length > 0 && !isRunning && !isError && 'cursor-pointer',
         )}
       >
         <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
@@ -437,7 +437,7 @@ export function ToolBlock({
         </div>
       )}
 
-      {fileChanges.length > 0 && !isRunning && !isError && (!pinnedTool || pinnedDiffOpen) ? (
+      {fileChanges.length > 0 && !isRunning && !isError && (!fileChangingTool || pinnedDiffOpen) ? (
         <FileChangesToolDiff fileChanges={fileChanges} />
       ) : null}
 

@@ -1460,6 +1460,7 @@ function ExtensionSettingsSection({
       setSaveError(null);
       try {
         await api.updateSettings(changes);
+        window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
         setSaveNotice('Saved.');
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : String(err));

@@ -76,7 +76,8 @@ describe('CheckpointTranscriptRenderer', () => {
     const html = renderToStaticMarkup(<CheckpointTranscriptRenderer block={{ status: 'ok', input: { action: 'save' } }} context={{}} />);
 
     expect(html).toContain('fix: checkpoint cards');
-    expect(html).toContain('inline diff abc1234');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('inline diff abc1234');
   });
 
   it('treats semantic checkpoint failures as danger cards even when the tool status is ok', () => {

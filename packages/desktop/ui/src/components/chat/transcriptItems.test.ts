@@ -52,7 +52,7 @@ describe('chat transcript items', () => {
     expect(items[2]).toMatchObject({ type: 'message', index: 4 });
   });
 
-  it('folds context blocks adjacent to internal work into the same cluster', () => {
+  it('folds context blocks adjacent to internal work into the same cluster without absorbing compaction markers', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-12T18:00:00.000Z', text: 'Continue' },
       { type: 'context', ts: '2026-03-12T18:00:01.000Z', text: 'Goal continuation', title: 'Goal continuation' },
@@ -63,19 +63,20 @@ describe('chat transcript items', () => {
 
     const items = buildChatRenderItems(messages);
 
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     expect(items[1]).toMatchObject({
       type: 'trace_cluster',
       startIndex: 1,
-      endIndex: 3,
+      endIndex: 2,
       summary: {
-        stepCount: 3,
+        stepCount: 2,
         categories: [
-          { key: 'context', kind: 'context', label: 'context', count: 2 },
+          { key: 'context', kind: 'context', label: 'context', count: 1 },
           { key: 'tool:read', kind: 'tool', label: 'read', tool: 'read', count: 1 },
         ],
       },
     });
+    expect(items[2]).toMatchObject({ type: 'message', index: 3, block: { type: 'summary', kind: 'compaction' } });
   });
 
   it('keeps artifact tool blocks inside internal-work even when extension marks them standalone', () => {

@@ -125,6 +125,15 @@ describe('ChatView rendering stability', () => {
     expect(container.querySelector('strong')?.textContent).toBe('streaming');
   });
 
+  it('renders completed markdown chunks while keeping the active streaming chunk plain', () => {
+    const streamingTail = createStreamingTail(['# Streaming title', '', '**active** tail'].join('\n'));
+    const { container } = renderChatView([streamingTail], { isStreaming: true });
+
+    expect(container.querySelector('h1')?.textContent).toBe('Streaming title');
+    expect(container.textContent).toContain('**active** tail');
+    expect(container.querySelector('strong')).toBeNull();
+  });
+
   it('does not install continuous reply-selection polling when selection replies are enabled', () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
 

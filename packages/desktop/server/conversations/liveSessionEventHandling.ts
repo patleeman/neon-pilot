@@ -361,6 +361,7 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
       sessionId: entry.sessionId,
       runId: entry.traceRunId ?? undefined,
       durationMs: entry.traceRunStartedAtMs ? now - entry.traceRunStartedAtMs : undefined,
+      metadata: { title: entry.title },
     });
   }
 

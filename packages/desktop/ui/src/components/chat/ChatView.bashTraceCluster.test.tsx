@@ -252,6 +252,17 @@ describe('ChatView bash trace clusters', () => {
     const { container } = renderChatView([editBlock]);
 
     expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).not.toContain('src/app.ts');
+    expect(container.textContent).not.toContain('View diff');
+    expect(container.textContent).not.toContain('edited src/app.ts');
+
+    const internalWorkToggle = container.querySelector('button[aria-expanded="false"]');
+    expect(internalWorkToggle).toBeTruthy();
+
+    act(() => {
+      internalWorkToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
     expect(container.textContent).toContain('edit');
     expect(container.textContent).toContain('src/app.ts');
     expect(container.textContent).toContain('View diff');
@@ -266,8 +277,6 @@ describe('ChatView bash trace clusters', () => {
       viewDiffButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(container.textContent).toContain('Hide diff');
     expect(container.textContent).toContain('Modified');
-    expect(container.textContent).not.toContain('edited src/app.ts');
   });
 });

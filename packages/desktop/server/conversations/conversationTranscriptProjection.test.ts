@@ -64,6 +64,27 @@ describe('conversation transcript projection', () => {
     ]);
   });
 
+  it('keeps compaction summaries as visible transcript markers', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'text', id: 'a1', ts, text: 'before' },
+      {
+        type: 'summary',
+        id: 'compact-1',
+        ts,
+        kind: 'compaction',
+        title: 'Proactive compaction',
+        text: '## Goal\nKeep the useful context.',
+      },
+      { type: 'text', id: 'a2', ts, text: 'after' },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', index: 0, block: expect.objectContaining({ id: 'a1' }) }),
+      expect.objectContaining({ type: 'message', index: 1, block: expect.objectContaining({ type: 'summary', id: 'compact-1' }) }),
+      expect.objectContaining({ type: 'message', index: 2, block: expect.objectContaining({ id: 'a2' }) }),
+    ]);
+  });
+
   it('projects saved transcript detail without eager internal-work blocks', () => {
     const blocks: DisplayBlock[] = [
       { type: 'user', id: 'u1', ts, text: 'please test this' },

@@ -108,7 +108,10 @@ function shouldFocusComposerFromTranscriptPointerDown(event: React.PointerEvent<
 }
 
 function isLeadingContextItem(item: ChatRenderItem): boolean {
-  return item.type === 'context_cluster' || (item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary'));
+  return (
+    item.type === 'context_cluster' ||
+    (item.type === 'message' && (item.block.type === 'context' || (item.block.type === 'summary' && item.block.kind !== 'compaction')))
+  );
 }
 
 function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): boolean {
@@ -465,7 +468,9 @@ export const ChatView = memo(function ChatView({
   const transcriptItems = shouldGroupIntroContext ? renderItems.slice(leadingContextItemCount) : renderItems;
   const introContextBlocks = introContextItems.flatMap((item) => {
     if (item.type === 'context_cluster') return item.blocks;
-    if (item.type === 'message' && (item.block.type === 'context' || item.block.type === 'summary')) return [item.block];
+    if (item.type === 'message' && (item.block.type === 'context' || (item.block.type === 'summary' && item.block.kind !== 'compaction'))) {
+      return [item.block];
+    }
     return [];
   });
 

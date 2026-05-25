@@ -20,7 +20,7 @@ Each checkpoint produces a real git commit in the repository.
 
 ## Viewing checkpoint diffs
 
-Checkpoint diffs render inline in the transcript checkpoint card. The card shows a collapsed diff peek with a **Show diff** button for expanding the inline view.
+Checkpoint saves stay pinned under collapsed internal-work groups, but the checkpoint card itself starts collapsed. Expanding the card reveals the inline diff view.
 
 The extension no longer contributes a right-rail Diffs panel or paired workbench detail view.
 

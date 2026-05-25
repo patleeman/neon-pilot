@@ -44,7 +44,7 @@ export function isTopologyBlock(block: MessageBlock): boolean {
 }
 
 function isContextConversationBlock(block: MessageBlock): block is ContextConversationBlock {
-  return (block.type === 'context' || block.type === 'summary') && !isTopologyBlock(block);
+  return (block.type === 'context' || (block.type === 'summary' && block.kind !== 'compaction')) && !isTopologyBlock(block);
 }
 
 function addSummaryCategory(categories: Map<string, TraceClusterSummaryCategory>, category: Omit<TraceClusterSummaryCategory, 'count'>) {

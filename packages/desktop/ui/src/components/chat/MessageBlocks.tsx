@@ -11,7 +11,7 @@ import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
-import { renderMarkdownText, renderPlainText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
+import { renderMarkdownText, renderStreamingMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { isTopologyBlock } from './transcriptItems.js';
@@ -654,7 +654,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               onToggleInlineRun={onToggleInlineRun}
             />
           ) : renderStreamingPlainText ? (
-            renderPlainText(block.text)
+            renderStreamingMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint })
           ) : (
             renderText(block.text, { onOpenFilePath, onOpenCheckpoint })
           )}
@@ -875,6 +875,10 @@ export function resolveCompactionSummaryLabel(title: string | undefined): string
   return normalized;
 }
 
+function resolveCompactionMarkerLabel(title: string | undefined): string {
+  return title?.trim() === 'Manual compaction' ? 'Context manually compacted' : 'Context automatically compacted';
+}
+
 export function resolveCompactionSummaryDetail(title: string | undefined, extraDetail?: string): string {
   const baseDetail = (() => {
     switch (title?.trim()) {
@@ -1016,6 +1020,34 @@ export const SummaryMessage = memo(function SummaryMessage({
   })();
   const blockId = block.id?.trim() || undefined;
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
+
+  if (block.kind === 'compaction') {
+    const markerLabel = resolveCompactionMarkerLabel(block.title);
+    return (
+      <LazyDetails
+        className="group my-5 block w-full text-dim"
+        dataAttrs={{ 'data-summary-kind': block.kind, 'data-compaction-marker': '1' }}
+        summary={
+          <summary className="grid w-full cursor-pointer grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+            <span className="h-px bg-border-subtle" aria-hidden="true" />
+            <span className="flex items-center gap-1.5 text-dim/85">
+              <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+                ›
+              </span>
+              <span aria-hidden="true">▣</span>
+              <span>{markerLabel}</span>
+            </span>
+            <span className="h-px bg-border-subtle" aria-hidden="true" />
+          </summary>
+        }
+      >
+        <div {...replySelectionScopeProps} className="mx-auto mt-3 w-[78%] space-y-3 text-[13px] leading-relaxed text-primary/90">
+          <p className="text-[12px] leading-relaxed text-secondary">{summaryPresentation.detail}</p>
+          {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+        </div>
+      </LazyDetails>
+    );
+  }
 
   return (
     <SystemEventFrame

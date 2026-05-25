@@ -21,7 +21,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
   onOpenCheckpoint?: (checkpointId: string) => void;
   activeCheckpointId?: string | null;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const isRunning = block.status === 'running' || !!block.running;
   const output = stripAnsiForTranscript(block.output ?? '');
   const isError =

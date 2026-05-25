@@ -1003,11 +1003,10 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('data-summary-kind="compaction"');
+    expect(html).toContain('data-compaction-marker="1"');
     expect(html).toContain('<details');
-    expect(html).toContain('border-transparent');
-    expect(html).toContain('hover:bg-surface/15');
-    expect(html).toContain('Context compacted');
-    expect(html).toContain('Older turns were summarized to keep the active context window focused.');
+    expect(html).toContain('Context automatically compacted');
+    expect(html).not.toContain('Older turns were summarized to keep the active context window focused.');
     expect(html).not.toContain('Show summary');
     expect(html).not.toContain('border-warning');
     expect(html).not.toContain('ui-chat-avatar-mark">pa<');
@@ -1280,8 +1279,9 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Overflow recovery compaction');
-    expect(html).toContain('interrupted turn could retry automatically');
+    expect(html).toContain('data-compaction-marker="1"');
+    expect(html).toContain('Context automatically compacted');
+    expect(html).not.toContain('interrupted turn could retry automatically');
   });
 
   it('renders Codex compaction detail when the summary metadata provides it', () => {
@@ -1300,9 +1300,10 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Overflow recovery compaction');
-    expect(html).toContain('interrupted turn could retry automatically');
-    expect(html).toContain('This used Codex compaction under the hood.');
+    expect(html).toContain('data-compaction-marker="1"');
+    expect(html).toContain('Context automatically compacted');
+    expect(html).not.toContain('interrupted turn could retry automatically');
+    expect(html).not.toContain('This used Codex compaction under the hood.');
   });
 
   it('renders long compaction summaries inside the shared system event frame', () => {
