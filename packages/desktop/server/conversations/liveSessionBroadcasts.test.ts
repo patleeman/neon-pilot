@@ -149,6 +149,7 @@ describe('live session broadcasts', () => {
     const e = entry();
     stateBroadcasts.broadcastLiveSessionQueueState.mockImplementation((_entry, send) => send({ type: 'queue' }));
     stateBroadcasts.broadcastLiveSessionParallelState.mockImplementation((_entry, send) => send({ type: 'parallel' }));
+    readApi.computeLiveSessionRunning.mockReturnValueOnce(true);
 
     await syncDurableConversationRun(e, { runId: 'run-1' } as never, { force: true });
     broadcastQueueState(e, true);
@@ -158,6 +159,7 @@ describe('live session broadcasts', () => {
     broadcastPresenceState(e, { exclude: (e as never as { listeners: unknown[] }).listeners[0] as never });
 
     expect(durableRun.syncLiveSessionDurableRun).toHaveBeenCalledWith(e, { runId: 'run-1' }, { force: true });
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_meta_changed', sessionId: 's1', running: true });
     expect(stateBroadcasts.broadcastLiveSessionQueueState).toHaveBeenCalledWith(e, expect.any(Function), true);
     expect(stateBroadcasts.broadcastLiveSessionParallelState).toHaveBeenCalledWith(e, expect.any(Function), true);
     expect(stateBroadcasts.scheduleLiveSessionContextUsage).toHaveBeenCalledWith(e, expect.any(Function), 123);

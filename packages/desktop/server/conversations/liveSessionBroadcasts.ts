@@ -94,6 +94,7 @@ export async function syncDurableConversationRun(
   input: { force?: boolean; lastError?: string } = {},
 ): Promise<void> {
   await syncLiveSessionDurableRun(entry, state, input);
+  publishRunningChange(entry);
 }
 
 export function broadcastContextUsage(
