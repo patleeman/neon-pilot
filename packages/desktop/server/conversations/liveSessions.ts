@@ -248,6 +248,22 @@ function publishSessionMetaChanged(sessionId: string): void {
   publishAppEvent(package_);
 }
 
+function publishOptimisticPromptRunningState(entry: LiveEntry): void {
+  if (entry.running) {
+    return;
+  }
+  entry.running = true;
+  publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId, running: true });
+}
+
+function syncPromptRunningState(entry: LiveEntry): void {
+  const target = registry.get(entry.sessionId);
+  if (!target) {
+    return;
+  }
+  publishRunningChange(target);
+}
+
 export function readLiveSessionStateSnapshot(sessionId: string, tailBlocks?: number): LiveSessionStateSnapshot {
   const entry = registry.get(sessionId);
   if (!entry) {
@@ -814,10 +830,20 @@ async function runPromptOnLiveEntry(
   behavior: 'steer' | 'followUp' | undefined,
   images?: PromptImageAttachment[],
 ): Promise<void> {
-  await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, {
-    repairLiveSessionTranscriptTail,
-    broadcastQueueState,
-  });
+  if (behavior === undefined) {
+    publishOptimisticPromptRunningState(entry);
+  }
+
+  try {
+    await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, {
+      repairLiveSessionTranscriptTail,
+      broadcastQueueState,
+    });
+  } finally {
+    if (behavior === undefined) {
+      syncPromptRunningState(entry);
+    }
+  }
 }
 
 export async function promptSession(
@@ -846,9 +872,18 @@ export async function submitPromptSession(
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
 
   const normalizedBehavior = resolvePromptBehavior(entry, behavior);
-  return submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, {
+  const submitted = await submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, {
     runPromptOnLiveEntry,
   });
+  if (submitted.acceptedAs === 'started') {
+    publishOptimisticPromptRunningState(entry);
+    void submitted.completion
+      .finally(() => {
+        syncPromptRunningState(entry);
+      })
+      .catch(() => undefined);
+  }
+  return submitted;
 }
 
 export async function executeSessionBash(

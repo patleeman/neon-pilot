@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { getDurableSessionsDir } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { type AppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import * as conversationModelPreferences from './conversationModelPreferences.js';
 import {
   abortSession,
@@ -3761,8 +3762,13 @@ describe('submitPromptSession', () => {
       },
     });
 
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => events.push(event));
     const submitted = await submitPromptSession('session-submit-started', 'hello there');
+    unsubscribe();
+
     expect(submitted.acceptedAs).toBe('started');
+    expect(events).toContainEqual({ type: 'session_meta_changed', sessionId: 'session-submit-started', running: true });
     void submitted.completion.then(() => {
       completionResolved = true;
     });
@@ -3834,9 +3840,13 @@ describe('submitPromptSession', () => {
       },
     });
 
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => events.push(event));
     const submitted = await submitPromptSession('session-submit-queued', 'keep going', 'followUp');
+    unsubscribe();
 
     expect(submitted.acceptedAs).toBe('queued');
+    expect(events).not.toContainEqual({ type: 'session_meta_changed', sessionId: 'session-submit-queued', running: true });
     await expect(submitted.completion).resolves.toBeUndefined();
     expect(followUp).toHaveBeenCalledWith('keep going');
   });
