@@ -98,7 +98,7 @@ function publishPerfStore(): void {
 
 function shouldLogPerfSamples(): boolean {
   try {
-    return globalThis.localStorage?.getItem('pa.debugPerf') === '1';
+    return globalThis.localStorage?.getItem('neonPilot.debugPerf') === '1';
   } catch {
     return false;
   }

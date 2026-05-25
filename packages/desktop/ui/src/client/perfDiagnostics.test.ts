@@ -4,6 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 describe('perfDiagnostics', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.restoreAllMocks();
+    const storage = new Map<string, string>();
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => storage.set(key, value),
+        removeItem: (key: string) => storage.delete(key),
+        clear: () => storage.clear(),
+      },
+    });
   });
 
   it('records chat render timing samples', async () => {
@@ -41,6 +52,21 @@ describe('perfDiagnostics', () => {
         meta: { items: 2 },
       }),
     ]);
+  });
+
+  it('only logs perf samples for the documented debug key', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    localStorage.setItem('pa.debugPerf', '1');
+
+    const { recordClientPerfTiming } = await import('./perfDiagnostics');
+    recordClientPerfTiming({ name: 'test.legacyDebugKey', startedAtMs: performance.now() - 20 });
+
+    expect(info).not.toHaveBeenCalled();
+
+    localStorage.setItem('neonPilot.debugPerf', '1');
+    recordClientPerfTiming({ name: 'test.debugKey', startedAtMs: performance.now() - 20 });
+
+    expect(info).toHaveBeenCalledWith('[pa-perf][client]', expect.objectContaining({ name: 'test.debugKey' }));
   });
 
   it('records conversation extension-open phase timing', async () => {
