@@ -16,7 +16,7 @@ import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { type DeferredResumeSummary } from '../automation/deferredResumes.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
-import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
+import { publishAppEvent } from '../shared/appEvents.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE as SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
 import {
@@ -288,10 +288,6 @@ export function publishConversationSessionMetaChanged(...conversationIds: Array<
 
     seen.add(conversationId);
     publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId });
-  }
-
-  if (seen.size > 0) {
-    invalidateAppTopics('sessions');
   }
 }
 

@@ -304,13 +304,13 @@ describe('conversationService', () => {
     expect(parseTailBlocksQuery('50000')).toBe(10000);
   });
 
-  it('publishes deduped session meta change events and refreshes the sessions snapshot', () => {
+  it('publishes deduped scoped session meta change events without refreshing the sessions snapshot', () => {
     publishConversationSessionMetaChanged(' conversation-1 ', undefined, 'conversation-1', null, 'conversation-2');
 
     expect(publishAppEventMock).toHaveBeenCalledTimes(2);
     expect(publishAppEventMock).toHaveBeenNthCalledWith(1, { type: 'session_meta_changed', sessionId: 'conversation-1' });
     expect(publishAppEventMock).toHaveBeenNthCalledWith(2, { type: 'session_meta_changed', sessionId: 'conversation-2' });
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('sessions');
+    expect(invalidateAppTopicsMock).not.toHaveBeenCalledWith('sessions');
   });
 
   it('merges live registry state and resolves session files', () => {

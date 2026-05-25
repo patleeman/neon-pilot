@@ -316,7 +316,6 @@ export function App() {
           setTitle(payload.sessionId, payload.title);
           return;
         case 'session_meta_changed':
-          bumpConversationVersion(payload.sessionId);
           if (payload.running !== undefined) {
             setSessionsState((previous) =>
               previous ? updateSessionRunningPreservingOrder(previous, payload.sessionId, payload.running) : previous,
