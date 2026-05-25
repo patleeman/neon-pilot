@@ -14,6 +14,7 @@ import type {
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
+const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const STREAM_DELTA_FLUSH_INTERVAL_MS = 80;
 
 export function normalizeDesktopConversationStateTailBlocks(value: unknown): number | undefined {
@@ -230,6 +231,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
   const pendingStreamEventsRef = useRef<SseEvent[]>([]);
   const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const pendingStreamFlushDelayRef = useRef<number | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
 
   useEffect(() => {
@@ -296,6 +298,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       }
       window.clearTimeout(pendingStreamFlushTimerRef.current);
       pendingStreamFlushTimerRef.current = null;
+      pendingStreamFlushDelayRef.current = null;
     };
 
     const flushPendingStreamEvents = () => {
@@ -328,15 +331,24 @@ export function useDesktopConversationState(conversationId: string | null, optio
       setError(null);
     };
 
-    const schedulePendingStreamEventsFlush = () => {
+    const schedulePendingStreamEventsFlush = (delayMs: number) => {
       if (pendingStreamFlushTimerRef.current !== null) {
-        return;
+        if ((pendingStreamFlushDelayRef.current ?? Number.POSITIVE_INFINITY) <= delayMs) {
+          return;
+        }
+        window.clearTimeout(pendingStreamFlushTimerRef.current);
       }
-      pendingStreamFlushTimerRef.current = window.setTimeout(flushPendingStreamEvents, STREAM_DELTA_FLUSH_INTERVAL_MS);
+      pendingStreamFlushDelayRef.current = delayMs;
+      pendingStreamFlushTimerRef.current = window.setTimeout(flushPendingStreamEvents, delayMs);
     };
 
     const shouldFlushStreamEventImmediately = (streamEvent: SseEvent): boolean =>
-      streamEvent.type !== 'text_delta' && streamEvent.type !== 'thinking_delta' && streamEvent.type !== 'tool_update';
+      streamEvent.type === 'error' || streamEvent.type === 'cwd_changed';
+
+    const getStreamEventFlushDelay = (streamEvent: SseEvent): number =>
+      streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update'
+        ? STREAM_DELTA_FLUSH_INTERVAL_MS
+        : STREAM_CONTROL_FLUSH_INTERVAL_MS;
 
     source.onmessage = (event) => {
       try {
@@ -345,7 +357,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         if (shouldFlushStreamEventImmediately(streamEvent)) {
           flushPendingStreamEvents();
         } else {
-          schedulePendingStreamEventsFlush();
+          schedulePendingStreamEventsFlush(getStreamEventFlushDelay(streamEvent));
         }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));

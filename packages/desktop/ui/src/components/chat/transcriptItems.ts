@@ -127,6 +127,39 @@ function summarizeTraceCluster(blocks: TraceConversationBlock[]): TraceClusterSu
   };
 }
 
+function getChatRenderItemStartIndex(item: ChatRenderItem): number {
+  return item.type === 'message' ? item.index : item.startIndex;
+}
+
+function getChatRenderItemEndIndex(item: ChatRenderItem): number {
+  return item.type === 'message' ? item.index : item.endIndex;
+}
+
+function shiftChatRenderItemIndex(item: ChatRenderItem, offset: number): ChatRenderItem {
+  if (offset === 0) {
+    return item;
+  }
+  if (item.type === 'message') {
+    return { ...item, index: item.index + offset };
+  }
+  return { ...item, startIndex: item.startIndex + offset, endIndex: item.endIndex + offset };
+}
+
+function shouldRebuildPreviousClusterForAppend(
+  previousLastItem: ChatRenderItem | undefined,
+  nextBlock: MessageBlock | undefined,
+  standaloneTools: Set<string>,
+): boolean {
+  if (!previousLastItem || !nextBlock) {
+    return false;
+  }
+  if (previousLastItem.type !== 'trace_cluster' && previousLastItem.type !== 'context_cluster') {
+    return false;
+  }
+
+  return isTraceConversationBlock(nextBlock, standaloneTools) || isContextConversationBlock(nextBlock);
+}
+
 export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: Set<string> = new Set()): ChatRenderItem[] {
   const items: ChatRenderItem[] = [];
   let pendingTraceBlocks: TraceConversationBlock[] = [];
@@ -205,4 +238,66 @@ export function buildChatRenderItems(messages: MessageBlock[], standaloneTools: 
   flushTraceBlocks();
   flushContextBlocks();
   return items;
+}
+
+export function buildChatRenderItemsIncremental(input: {
+  messages: MessageBlock[];
+  standaloneTools?: Set<string>;
+  previousMessages?: MessageBlock[];
+  previousRenderItems?: ChatRenderItem[];
+}): ChatRenderItem[] {
+  const standaloneTools = input.standaloneTools ?? new Set<string>();
+  const previousMessages = input.previousMessages;
+  const previousRenderItems = input.previousRenderItems;
+
+  if (!previousMessages || !previousRenderItems || input.messages.length < previousMessages.length) {
+    return buildChatRenderItems(input.messages, standaloneTools);
+  }
+
+  let firstChangedIndex = -1;
+  const comparableLength = Math.min(previousMessages.length, input.messages.length);
+  for (let index = 0; index < comparableLength; index += 1) {
+    if (previousMessages[index] !== input.messages[index]) {
+      firstChangedIndex = index;
+      break;
+    }
+  }
+
+  if (firstChangedIndex < 0) {
+    firstChangedIndex = previousMessages.length;
+  }
+
+  if (firstChangedIndex === input.messages.length) {
+    return previousRenderItems;
+  }
+
+  if (firstChangedIndex === 0) {
+    return buildChatRenderItems(input.messages, standaloneTools);
+  }
+
+  const previousLastItem = previousRenderItems.at(-1);
+  let rebuildStartIndex = firstChangedIndex;
+  if (
+    firstChangedIndex === previousMessages.length &&
+    shouldRebuildPreviousClusterForAppend(previousLastItem, input.messages[firstChangedIndex], standaloneTools)
+  ) {
+    rebuildStartIndex = previousLastItem ? getChatRenderItemStartIndex(previousLastItem) : firstChangedIndex;
+  } else {
+    const containingItem = previousRenderItems.find(
+      (item) => getChatRenderItemStartIndex(item) <= firstChangedIndex && getChatRenderItemEndIndex(item) >= firstChangedIndex,
+    );
+    if (containingItem) {
+      rebuildStartIndex = getChatRenderItemStartIndex(containingItem);
+    }
+  }
+
+  if (rebuildStartIndex <= 0) {
+    return buildChatRenderItems(input.messages, standaloneTools);
+  }
+
+  const keptItems = previousRenderItems.filter((item) => getChatRenderItemEndIndex(item) < rebuildStartIndex);
+  const rebuiltItems = buildChatRenderItems(input.messages.slice(rebuildStartIndex), standaloneTools).map((item) =>
+    shiftChatRenderItemIndex(item, rebuildStartIndex),
+  );
+  return [...keptItems, ...rebuiltItems];
 }

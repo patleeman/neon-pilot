@@ -23,7 +23,7 @@ import {
   normalizeConversationDiffDisclosureMode,
   normalizeConversationTranscriptDisclosureMode,
 } from './toolPresentation.js';
-import { buildChatRenderItems, type ChatRenderItem } from './transcriptItems.js';
+import { buildChatRenderItemsIncremental, type ChatRenderItem } from './transcriptItems.js';
 import { type TranscriptSelectionAction, useChatReplySelection } from './useChatReplySelection.js';
 import { useChatWindowing } from './useChatWindowing.js';
 import { useInlineTraceRunExpansion } from './useInlineTraceRunExpansion.js';
@@ -199,20 +199,40 @@ export const ChatView = memo(function ChatView({
     }
     return tools;
   }, [extensionRegistry.extensions]);
-  const renderItems = useMemo(
-    () =>
-      precomputedRenderItems
-        ? (precomputedRenderItems as ChatRenderItem[])
-        : measureClientPerfTiming(
-            {
-              name: 'chat.buildRenderItems',
-              minDurationMs: 8,
-              meta: { conversationId, messageCount: messages.length, standaloneToolCount: standaloneTools.size },
-            },
-            () => buildChatRenderItems(messages, standaloneTools),
-          ),
-    [conversationId, messages, precomputedRenderItems, standaloneTools],
-  );
+  const renderItemsCacheRef = useRef<{
+    conversationId: string | null;
+    messages: MessageBlock[];
+    standaloneTools: Set<string>;
+    renderItems: ChatRenderItem[];
+  } | null>(null);
+  const renderItems = useMemo(() => {
+    if (precomputedRenderItems) {
+      const nextRenderItems = precomputedRenderItems as ChatRenderItem[];
+      renderItemsCacheRef.current = { conversationId, messages, standaloneTools, renderItems: nextRenderItems };
+      return nextRenderItems;
+    }
+
+    return measureClientPerfTiming(
+      {
+        name: 'chat.buildRenderItems',
+        minDurationMs: 8,
+        meta: { conversationId, messageCount: messages.length, standaloneToolCount: standaloneTools.size },
+      },
+      () => {
+        const previous = renderItemsCacheRef.current;
+        const nextRenderItems = buildChatRenderItemsIncremental({
+          messages,
+          standaloneTools,
+          previousMessages:
+            previous?.conversationId === conversationId && previous.standaloneTools === standaloneTools ? previous.messages : undefined,
+          previousRenderItems:
+            previous?.conversationId === conversationId && previous.standaloneTools === standaloneTools ? previous.renderItems : undefined,
+        });
+        renderItemsCacheRef.current = { conversationId, messages, standaloneTools, renderItems: nextRenderItems };
+        return nextRenderItems;
+      },
+    );
+  }, [conversationId, messages, precomputedRenderItems, standaloneTools]);
   const renderItemStats = useMemo(() => {
     return measureClientPerfTiming(
       {

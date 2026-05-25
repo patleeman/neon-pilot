@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { buildChatRenderItems } from './transcriptItems.js';
+import { buildChatRenderItems, buildChatRenderItemsIncremental } from './transcriptItems.js';
 
 describe('chat transcript items', () => {
   it('groups consecutive internal trace blocks into one cluster', () => {
@@ -181,6 +181,46 @@ describe('chat transcript items', () => {
         ],
       },
     });
+  });
+
+  it('incrementally appends a user message after a trace cluster without rebuilding the cluster', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', ts: '2026-03-12T18:00:00.000Z', text: 'Do work' },
+      { type: 'thinking', ts: '2026-03-12T18:00:01.000Z', text: 'Thinking…' },
+      { type: 'tool_use', ts: '2026-03-12T18:00:02.000Z', tool: 'bash', input: {}, output: 'ok', status: 'ok' },
+    ];
+    const previousRenderItems = buildChatRenderItems(messages);
+    const nextMessages: MessageBlock[] = [...messages, { type: 'user', ts: '2026-03-12T18:00:03.000Z', text: 'Queued prompt' }];
+
+    const nextRenderItems = buildChatRenderItemsIncremental({
+      messages: nextMessages,
+      previousMessages: messages,
+      previousRenderItems,
+    });
+
+    expect(nextRenderItems).toEqual(buildChatRenderItems(nextMessages));
+    expect(nextRenderItems[1]).toBe(previousRenderItems[1]);
+  });
+
+  it('incrementally rebuilds a pending context cluster when appended trace absorbs it', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', ts: '2026-03-12T18:00:00.000Z', text: 'Continue' },
+      { type: 'context', ts: '2026-03-12T18:00:01.000Z', text: 'Context', title: 'Context' },
+    ];
+    const previousRenderItems = buildChatRenderItems(messages);
+    const nextMessages: MessageBlock[] = [
+      ...messages,
+      { type: 'tool_use', ts: '2026-03-12T18:00:02.000Z', tool: 'read', input: {}, output: 'ok', status: 'ok' },
+    ];
+
+    const nextRenderItems = buildChatRenderItemsIncremental({
+      messages: nextMessages,
+      previousMessages: messages,
+      previousRenderItems,
+    });
+
+    expect(nextRenderItems).toEqual(buildChatRenderItems(nextMessages));
+    expect(nextRenderItems[1]).toMatchObject({ type: 'trace_cluster', startIndex: 1, endIndex: 2 });
   });
 
   it('includes chained execution wrappers in internal-work tool summaries', () => {
