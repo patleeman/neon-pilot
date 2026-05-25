@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -131,83 +131,4 @@ describe('desktop local API extension routes', () => {
     expect(response.headers['content-type']).toMatch(/javascript|\bjs\b/);
     expect(Buffer.from(response.body).toString('utf-8')).toContain('AgentBoardPage');
   }, 30000);
-});
-
-describe('desktop local API vault routes', () => {
-  const tempRoot = mkdtempSync(join(tmpdir(), 'pa-local-api-vault-'));
-  const previousVaultRoot = process.env.NEON_PILOT_VAULT_ROOT;
-
-  afterAll(() => {
-    if (previousVaultRoot === undefined) {
-      delete process.env.NEON_PILOT_VAULT_ROOT;
-    } else {
-      process.env.NEON_PILOT_VAULT_ROOT = previousVaultRoot;
-    }
-    rmSync(tempRoot, { recursive: true, force: true });
-  });
-
-  it('registers vault routes and handles GET + PUT requests for the knowledge workspace', async () => {
-    process.env.NEON_PILOT_VAULT_ROOT = tempRoot;
-    mkdirSync(join(tempRoot, 'notes'), { recursive: true });
-    mkdirSync(join(tempRoot, '_attachments'), { recursive: true });
-    writeFileSync(join(tempRoot, 'notes', 'existing.md'), '# Existing\n', 'utf-8');
-    writeFileSync(join(tempRoot, '_attachments', 'demo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>', 'utf-8');
-
-    const treeResponse = await dispatchDesktopLocalApiRequest({
-      method: 'GET',
-      path: '/api/vault/tree',
-    });
-
-    expect(treeResponse.statusCode).toBe(200);
-    expect(readJsonBody(treeResponse)).toEqual(
-      expect.objectContaining({
-        root: tempRoot,
-        entries: expect.arrayContaining([expect.objectContaining({ id: 'notes/', kind: 'folder', name: 'notes' })]),
-      }),
-    );
-
-    const writeResponse = await dispatchDesktopLocalApiRequest({
-      method: 'PUT',
-      path: '/api/vault/file',
-      body: {
-        id: 'notes/new-note.md',
-        content: '# New note\n',
-      },
-    });
-
-    expect(writeResponse.statusCode).toBe(200);
-    expect(readJsonBody(writeResponse)).toEqual(
-      expect.objectContaining({
-        id: 'notes/new-note.md',
-        kind: 'file',
-        name: 'new-note.md',
-      }),
-    );
-    expect(readFileSync(join(tempRoot, 'notes', 'new-note.md'), 'utf-8')).toBe('# New note\n');
-
-    const assetResponse = await dispatchDesktopLocalApiRequest({
-      method: 'GET',
-      path: '/api/vault/asset?id=_attachments%2Fdemo.svg',
-    });
-
-    expect(assetResponse.statusCode).toBe(200);
-    expect(assetResponse.headers['content-type']).toContain('image/svg+xml');
-    expect(Buffer.from(assetResponse.body).toString('utf-8')).toContain('<svg');
-  });
-
-  it('deletes a vault folder recursively in one request', async () => {
-    process.env.NEON_PILOT_VAULT_ROOT = tempRoot;
-    const folderPath = join(tempRoot, 'delete-me');
-    mkdirSync(join(folderPath, 'nested'), { recursive: true });
-    writeFileSync(join(folderPath, 'nested', 'note.md'), '# Delete me\n', 'utf-8');
-
-    const response = await dispatchDesktopLocalApiRequest({
-      method: 'DELETE',
-      path: '/api/vault/file?id=delete-me%2F',
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(readJsonBody(response)).toEqual({ ok: true });
-    expect(existsSync(folderPath)).toBe(false);
-  });
 });

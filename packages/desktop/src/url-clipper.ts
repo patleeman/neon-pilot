@@ -54,7 +54,7 @@ export async function importClipboardUrlToKnowledge(input: {
   await input.host.ensureActiveHostRunning();
   const response = await input.host.getActiveHostController().dispatchApiRequest({
     method: 'POST',
-    path: '/api/vault/share-import',
+    path: '/api/extensions/system-knowledge/vault/share-import',
     body: {
       kind: 'url',
       url,

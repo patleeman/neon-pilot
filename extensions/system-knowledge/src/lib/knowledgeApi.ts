@@ -61,5 +61,5 @@ export const knowledgeApi = {
   uploadImage: (filename: string, dataUrl: string) => invoke<VaultImageUploadResult>('vaultUploadImage', { filename, dataUrl }),
   importUrl: (input: { url: string; title?: string; directoryId?: string; sourceApp?: string }) =>
     invoke<VaultShareImportResult>('vaultImportUrl', input),
-  assetUrl: (id: string) => `/api/vault/asset?id=${encodeURIComponent(id)}`,
+  assetUrl: (id: string) => `/api/extensions/system-knowledge/asset?id=${encodeURIComponent(id)}`,
 };

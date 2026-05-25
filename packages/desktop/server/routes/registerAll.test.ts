@@ -10,14 +10,12 @@ const routeModules = vi.hoisted(() => ({
   registerFilePickerRoutes: vi.fn(),
   registerGatewayRoutes: vi.fn(),
   registerLiveSessionRoutes: vi.fn(),
-  registerMemoryNotesRoutes: vi.fn(),
   registerModelRoutes: vi.fn(),
   registerRunAppRoutes: vi.fn(),
   registerSecretRoutes: vi.fn(),
   registerSettingsRoutes: vi.fn(),
   registerSystemRoutes: vi.fn(),
   registerToolsRoutes: vi.fn(),
-  registerVaultEditorRoutes: vi.fn(),
   registerWorkspaceExplorerRoutes: vi.fn(),
 }));
 
@@ -30,14 +28,12 @@ vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.regist
 vi.mock('./filePicker.js', () => ({ registerFilePickerRoutes: routeModules.registerFilePickerRoutes }));
 vi.mock('./gateways.js', () => ({ registerGatewayRoutes: routeModules.registerGatewayRoutes }));
 vi.mock('./liveSessions.js', () => ({ registerLiveSessionRoutes: routeModules.registerLiveSessionRoutes }));
-vi.mock('./memoryNotes.js', () => ({ registerMemoryNotesRoutes: routeModules.registerMemoryNotesRoutes }));
 vi.mock('./models.js', () => ({ registerModelRoutes: routeModules.registerModelRoutes }));
 vi.mock('./runsApp.js', () => ({ registerRunAppRoutes: routeModules.registerRunAppRoutes }));
 vi.mock('./secrets.js', () => ({ registerSecretRoutes: routeModules.registerSecretRoutes }));
 vi.mock('./settings.js', () => ({ registerSettingsRoutes: routeModules.registerSettingsRoutes }));
 vi.mock('./system.js', () => ({ registerSystemRoutes: routeModules.registerSystemRoutes }));
 vi.mock('./tools.js', () => ({ registerToolsRoutes: routeModules.registerToolsRoutes }));
-vi.mock('./vaultEditor.js', () => ({ registerVaultEditorRoutes: routeModules.registerVaultEditorRoutes }));
 vi.mock('./workspaceExplorer.js', () => ({ registerWorkspaceExplorerRoutes: routeModules.registerWorkspaceExplorerRoutes }));
 
 import { registerServerRoutes } from './registerAll.js';
@@ -56,7 +52,6 @@ describe('registerServerRoutes', () => {
     expect(routeModules.registerAppTelemetryRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerCompanionProxyRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
-    expect(routeModules.registerVaultEditorRoutes).toHaveBeenCalledWith(app);
 
     for (const register of [
       routeModules.registerSettingsRoutes,
@@ -70,7 +65,6 @@ describe('registerServerRoutes', () => {
       routeModules.registerConversationStateRoutes,
       routeModules.registerLiveSessionRoutes,
       routeModules.registerRunAppRoutes,
-      routeModules.registerMemoryNotesRoutes,
       routeModules.registerFilePickerRoutes,
       routeModules.registerWorkspaceExplorerRoutes,
     ]) {
@@ -92,10 +86,8 @@ describe('registerServerRoutes', () => {
       routeModules.registerLiveSessionRoutes,
       routeModules.registerExecutionRoutes,
       routeModules.registerRunAppRoutes,
-      routeModules.registerMemoryNotesRoutes,
       routeModules.registerFilePickerRoutes,
       routeModules.registerWorkspaceExplorerRoutes,
-      routeModules.registerVaultEditorRoutes,
     ].map((register) => register.mock.invocationCallOrder[0]);
     expect(invocationOrder).toEqual([...invocationOrder].sort((a, b) => a - b));
   });

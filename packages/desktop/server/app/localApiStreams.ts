@@ -1,8 +1,6 @@
 import { existsSync, watch } from 'node:fs';
 import { join } from 'node:path';
 
-import { getVaultRoot } from '@neon-pilot/core';
-
 import { getDurableRunLogCursor, getDurableRunSnapshot, readDurableRunLogDelta } from '../automation/durableRuns.js';
 import { inlineConversationSessionSnapshotAssetsCapability } from '../conversations/conversationSessionAssetCapability.js';
 import type { DisplayBlock } from '../conversations/conversationTypes.js';
@@ -400,45 +398,6 @@ async function subscribeDesktopAppEventsStream(_url: URL, onEvent: (event: Deskt
   };
 }
 
-async function subscribeDesktopVaultEventsStream(_url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
-  const vaultRoot = getVaultRoot().trim();
-  if (!vaultRoot) {
-    throw new Error('Vault root is not configured');
-  }
-
-  let watcher: ReturnType<typeof watch> | null = null;
-  let closed = false;
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    watcher?.close();
-    watcher = null;
-    onEvent({ type: 'close' });
-  };
-
-  onEvent({ type: 'open' });
-  emitStreamMessage(onEvent, { type: 'ready', root: vaultRoot });
-
-  try {
-    watcher = watch(vaultRoot, { recursive: true }, (eventType, filename) => {
-      if (closed) return;
-      emitStreamMessage(onEvent, {
-        eventType,
-        path: typeof filename === 'string' ? filename : null,
-      });
-    });
-  } catch (error) {
-    watcher?.close();
-    watcher = null;
-    const message = error instanceof Error ? error.message : String(error);
-    onEvent({ type: 'error', message });
-    close();
-    return close;
-  }
-
-  return close;
-}
-
 export async function subscribeDesktopLocalApiStreamByUrl(
   url: URL,
   onEvent: (event: DesktopLocalApiStreamEvent) => void,
@@ -457,10 +416,6 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (url.pathname === '/api/app-events/events') {
     return subscribeDesktopAppEventsStream(url, onEvent);
-  }
-
-  if (url.pathname === '/api/vault/events') {
-    return subscribeDesktopVaultEventsStream(url, onEvent);
   }
 
   if (url.pathname === '/api/workspace/events') {

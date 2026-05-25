@@ -8,11 +8,8 @@ import { existsSync, statSync } from 'node:fs';
 
 import {
   getMachineConfigFilePath,
-  readKnowledgeBaseState,
   readMachineInstructionFiles,
   readMachineSkillDirs,
-  syncKnowledgeBaseNow,
-  updateKnowledgeBase,
   writeMachineInstructionFiles,
   writeMachineSkillDirs,
 } from '@neon-pilot/core';
@@ -62,54 +59,6 @@ export function registerModelRoutes(
 ): void {
   initializeModelRoutesContext(context);
   // ── Models ────────────────────────────────────────────────────────────────
-
-  router.get('/api/knowledge-base', (_req, res) => {
-    try {
-      res.json(readKnowledgeBaseState());
-    } catch (err) {
-      logError('request handler error', {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.status(500).json({ error: String(err) });
-    }
-  });
-
-  router.patch('/api/knowledge-base', (req, res) => {
-    try {
-      const { repoUrl, branch } = req.body as { repoUrl?: unknown; branch?: unknown };
-      if (repoUrl !== undefined && repoUrl !== null && typeof repoUrl !== 'string') {
-        res.status(400).json({ error: 'repoUrl must be a string or null' });
-        return;
-      }
-      if (branch !== undefined && branch !== null && typeof branch !== 'string') {
-        res.status(400).json({ error: 'branch must be a string or null' });
-        return;
-      }
-
-      const nextState = updateKnowledgeBase({
-        ...(repoUrl !== undefined ? { repoUrl: repoUrl as string | null } : {}),
-        ...(branch !== undefined ? { branch: branch as string | null } : {}),
-      });
-      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
-      invalidateAppTopics('knowledgeBase');
-      res.json(nextState);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: message });
-    }
-  });
-
-  router.post('/api/knowledge-base/sync', (_req, res) => {
-    try {
-      const nextState = syncKnowledgeBaseNow();
-      invalidateAppTopics('knowledgeBase');
-      res.json(nextState);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: message });
-    }
-  });
 
   router.get('/api/skill-folders', (_req, res) => {
     try {

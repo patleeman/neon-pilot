@@ -42,6 +42,7 @@ export function validateExtensionBackendContribution(backend: Record<string, unk
       requireString(route.handler, `backend.routes[${index}].handler`);
       validateOptionalString(route.title, `backend.routes[${index}].title`);
       validateOptionalString(route.description, `backend.routes[${index}].description`);
+      if (route.stream !== undefined) validateEnum(route.stream, ['sse'], `backend.routes[${index}].stream`);
       if (!(route.path as string).startsWith('/')) throw new Error(`backend.routes[${index}].path must start with /.`);
       if ((route.path as string).includes('..')) throw new Error(`backend.routes[${index}].path must not contain ..`);
     }

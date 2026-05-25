@@ -35,7 +35,6 @@ function createLocalApiModuleMock(overrides: Partial<LocalApiModule> = {}): Loca
     updateDesktopModelPreferences: vi.fn(),
     readDesktopDefaultCwd: vi.fn(),
     updateDesktopDefaultCwd: vi.fn(),
-    readDesktopVaultFiles: vi.fn(),
     pickDesktopFolder: vi.fn(),
     readDesktopConversationTitleSettings: vi.fn(),
     updateDesktopConversationTitleSettings: vi.fn(),
@@ -303,7 +302,6 @@ describe('LocalHostController', () => {
   it('routes desktop operator settings through the local API module without loopback proxying', async () => {
     const readDesktopDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: '', effectiveCwd: '/repo' });
     const updateDesktopDefaultCwd = vi.fn().mockResolvedValue({ currentCwd: './repo', effectiveCwd: '/repo' });
-    const readDesktopVaultFiles = vi.fn().mockResolvedValue({ root: '/vault', files: [{ id: 'notes/a.md' }] });
     const pickDesktopFolder = vi.fn().mockResolvedValue({ path: '/picked/repo', cancelled: false });
     const readDesktopConversationTitleSettings = vi.fn().mockResolvedValue({
       enabled: true,
@@ -319,7 +317,6 @@ describe('LocalHostController', () => {
       createLocalApiModuleMock({
         readDesktopDefaultCwd,
         updateDesktopDefaultCwd,
-        readDesktopVaultFiles,
         pickDesktopFolder,
         readDesktopConversationTitleSettings,
         updateDesktopConversationTitleSettings,
@@ -330,7 +327,6 @@ describe('LocalHostController', () => {
 
     await expect(controller.readDefaultCwd?.()).resolves.toEqual({ currentCwd: '', effectiveCwd: '/repo' });
     await expect(controller.updateDefaultCwd?.('./repo')).resolves.toEqual({ currentCwd: './repo', effectiveCwd: '/repo' });
-    await expect(controller.readVaultFiles?.()).resolves.toEqual({ root: '/vault', files: [{ id: 'notes/a.md' }] });
     await expect(controller.pickFolder?.({ cwd: '/repo' })).resolves.toEqual({ path: '/picked/repo', cancelled: false });
     await expect(controller.readConversationTitleSettings?.()).resolves.toEqual({
       enabled: true,
@@ -345,7 +341,6 @@ describe('LocalHostController', () => {
 
     expect(readDesktopDefaultCwd).toHaveBeenCalledTimes(1);
     expect(updateDesktopDefaultCwd).toHaveBeenCalledWith('./repo');
-    expect(readDesktopVaultFiles).toHaveBeenCalledTimes(1);
     expect(pickDesktopFolder).toHaveBeenCalledWith({ cwd: '/repo' });
     expect(readDesktopConversationTitleSettings).toHaveBeenCalledTimes(1);
     expect(updateDesktopConversationTitleSettings).toHaveBeenCalledWith({ enabled: false, model: 'anthropic/claude-sonnet-4-6' });

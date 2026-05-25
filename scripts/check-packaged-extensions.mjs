@@ -57,7 +57,7 @@ const forbiddenBackendPrefixes = [
   '@sinclair/typebox',
   'jsdom',
 ];
-const allowedHostBackedExtensionIds = new Set(['system-prompt-assembly', 'system-skills']);
+const allowedHostBackedExtensionIds = new Set(['system-knowledge', 'system-prompt-assembly', 'system-skills']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -354,6 +354,10 @@ function createSmokeContext(extensionId) {
   return {
     extensionId,
     profile: 'shared',
+    runtimeScope: 'shared',
+    runtimeDir: join(repoRoot, 'tmp', 'extension-smoke-runtime'),
+    runtimeSettingsFilePath: join(repoRoot, 'tmp', 'extension-smoke-runtime', 'settings.json'),
+    profileSettingsFilePath: join(repoRoot, 'tmp', 'extension-smoke-runtime', 'settings.json'),
     toolContext: { conversationId: 'extension-smoke-test', cwd: repoRoot },
     ui: { invalidate: noop },
     log: { info: noop, warn: noop, error: noop },
@@ -364,6 +368,25 @@ function createSmokeContext(extensionId) {
       delete: async () => ({ ok: true, deleted: false }),
       list: async () => [],
     },
+    shell: {
+      exec: async (input) => ({
+        command: input.command,
+        args: input.args ?? [],
+        cwd: input.cwd,
+        stdout: '',
+        stderr: '',
+        executionWrappers: [],
+      }),
+      spawn: async () => ({ pid: null, executionWrappers: [], kill: noop }),
+    },
+    git: {},
+    filesystem: {},
+    workspace: {},
+    conversations: {},
+    runs: {},
+    attention: {},
+    automations: {},
+    vault: {},
     notify: {
       toast: noop,
       system: () => false,

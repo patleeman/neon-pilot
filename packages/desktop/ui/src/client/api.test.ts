@@ -160,28 +160,25 @@ describe('api live session surface forwarding', () => {
   });
 
   it('forwards surface ids for branch and fork controls', async () => {
-    const branchLiveSession = vi.fn(async () => ({ newSessionId: 'branched', sessionFile: '/tmp/branched.jsonl' }));
-    const forkLiveSession = vi.fn(async () => ({ newSessionId: 'forked', sessionFile: '/tmp/forked.jsonl' }));
-    vi.stubGlobal('window', {
-      neonPilotDesktop: {
-        getEnvironment: vi.fn(async () => ({ activeHostKind: 'local' })),
-        branchLiveSession,
-        forkLiveSession,
-      },
-    });
+    const fetchMock = vi.fn(async () => jsonResponse({ newSessionId: 'branched', sessionFile: '/tmp/branched.jsonl' }));
+    vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
     await api.branchSession('thread-1', 'entry-1', 'surface-1');
     await api.forkSession('thread-1', 'entry-2', { preserveSource: false, beforeEntry: true }, 'surface-1');
 
-    expect(branchLiveSession).toHaveBeenCalledWith({ conversationId: 'thread-1', entryId: 'entry-1', surfaceId: 'surface-1' });
-    expect(forkLiveSession).toHaveBeenCalledWith({
-      conversationId: 'thread-1',
-      entryId: 'entry-2',
-      preserveSource: false,
-      beforeEntry: true,
-      surfaceId: 'surface-1',
-    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/live-sessions/thread-1/branch',
+      expect.objectContaining({ body: JSON.stringify({ entryId: 'entry-1', surfaceId: 'surface-1' }) }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/live-sessions/thread-1/fork',
+      expect.objectContaining({
+        body: JSON.stringify({ entryId: 'entry-2', preserveSource: false, beforeEntry: true, surfaceId: 'surface-1' }),
+      }),
+    );
   });
 });
 
@@ -214,6 +211,6 @@ describe('api.memory', () => {
     await Promise.all([api.memory(), api.memory()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/memory');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/memory');
   });
 });

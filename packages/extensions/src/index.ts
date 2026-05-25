@@ -806,6 +806,7 @@ export interface ExtensionBackendRoute {
   handler: string;
   title?: string;
   description?: string;
+  stream?: 'sse';
 }
 
 export interface ExtensionRouteRequest {
@@ -814,12 +815,22 @@ export interface ExtensionRouteRequest {
   query: Record<string, string | string[]>;
   params: Record<string, string>;
   body?: unknown;
+  signal?: AbortSignal;
+}
+
+export interface ExtensionRouteSseEvent {
+  event?: string;
+  data?: unknown;
+  id?: string;
+  retry?: number;
 }
 
 export interface ExtensionRouteResponse {
   status?: number;
   body?: unknown;
   headers?: Record<string, string>;
+  stream?: 'sse';
+  events?: AsyncIterable<ExtensionRouteSseEvent>;
 }
 
 export interface ExtensionRenderContext {

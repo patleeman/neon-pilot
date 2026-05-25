@@ -20,7 +20,7 @@ The extension renders native React surfaces declared in `extension.json`:
 - `knowledge-tree` renders the right-rail browser.
 - `knowledge-file` renders the workbench detail panel for the selected file.
 
-The extension also owns backend actions for knowledge state, managed sync, vault file operations, and prompt-reference resolution:
+The extension owns backend actions for knowledge state, managed sync, vault file operations, and prompt-reference resolution. It uses the generic extension backend context (`ctx.storage`, `ctx.shell`, UI invalidation, and local file APIs) instead of a Knowledge-specific core service:
 
 - `readState` reads configured repository/sync status.
 - `updateState` updates the managed knowledge repository configuration.
@@ -37,8 +37,8 @@ Knowledge UI should stay in this extension. Host code may render contributed sur
 The vault is the root directory for durable knowledge. It resolves in this order:
 
 1. `NEON_PILOT_VAULT_ROOT` environment variable
-2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when `knowledgeBaseRepoUrl` is configured
-3. Legacy `vaultRoot` config value in `<config-root>/config.json`
+2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when this extension has a repository URL saved in extension storage
+3. Legacy `vaultRoot` config value in the runtime settings or machine config file
 4. `~/Documents/neon-pilot`
 
 ## Vault contents

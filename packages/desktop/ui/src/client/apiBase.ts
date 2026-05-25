@@ -8,6 +8,6 @@ function resolveApiPrefix(_pathname: string | null | undefined): string {
 
 export function buildApiPath(path: string, pathname?: string | null | undefined): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const currentPathname = pathname ?? (typeof window === 'undefined' ? undefined : window.location.pathname);
+  const currentPathname = pathname ?? (typeof window === 'undefined' ? undefined : window.location?.pathname);
   return buildDesktopHttpUrl(`${resolveApiPrefix(currentPathname)}${normalizedPath}`);
 }

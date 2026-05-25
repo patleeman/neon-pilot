@@ -25,9 +25,7 @@ import {
   getDurableSettingsDir,
   getDurableSkillsDir,
   getDurableTasksDir,
-  getKnowledgeBaseStateDir,
   getLocalRuntimeConfigDir,
-  getManagedKnowledgeBaseRoot,
   getRuntimeConfigRoot,
   getStateRoot,
   getSyncRoot,
@@ -123,8 +121,6 @@ describe('runtime config path helpers', () => {
 
     expect(getConfigRoot()).toBe('/runtime/state/config');
     expect(getDefaultVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
-    expect(getKnowledgeBaseStateDir()).toBe('/runtime/state/knowledge-base');
-    expect(getManagedKnowledgeBaseRoot()).toBe('/runtime/state/knowledge-base/repo');
     expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
     expect(getRuntimeConfigRoot()).toBe('/runtime/state/config/runtime');
     expect(getSyncRoot()).toBe('/runtime/state/sync');
@@ -159,19 +155,6 @@ describe('runtime config path helpers', () => {
     expect(getDurableNotesDir()).toBe('/custom/vault/notes');
     expect(getDurableProjectsDir()).toBe('/custom/vault/projects');
     expect(getLocalRuntimeConfigDir()).toBe('/custom/local');
-  });
-
-  it('prefers the managed knowledge base root when a knowledge base repo is configured', () => {
-    const configDir = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
-    const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
-    writeFileSync(join(configDir, 'config.json'), JSON.stringify({ knowledgeBaseRepoUrl: 'https://github.com/user/kb.git' }));
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
-    process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
-
-    expect(getVaultRoot()).toBe(join(stateRoot, 'knowledge-base', 'repo'));
-
-    rmSync(configDir, { recursive: true, force: true });
-    rmSync(stateRoot, { recursive: true, force: true });
   });
 
   it('reads vault root from machine config when no env override is set', () => {

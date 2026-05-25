@@ -1,7 +1,7 @@
 /**
  * Core Neon Pilot core library.
  *
- * Runtime state management for auth, sessions, knowledge, and desktop resources.
+ * Runtime state management for auth, sessions, and desktop resources.
  * Mutable data stays outside managed repository files.
  */
 
@@ -17,9 +17,6 @@ export * from './sqlite-migrations.js';
 
 // Machine-local config exports
 export * from './machine-config.js';
-
-// Managed knowledge base sync exports
-export * from './knowledge-base.js';
 
 // Activity exports
 export * from './activity.js';

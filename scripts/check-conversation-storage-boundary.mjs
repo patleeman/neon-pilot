@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
@@ -26,7 +26,9 @@ const output = execFileSync(
 const violations = [];
 for (const file of output.split('\n').filter(Boolean)) {
   if (file.endsWith('.test.ts') || file.endsWith('.test.tsx') || allowed.has(file)) continue;
-  const text = readFileSync(resolve(root, file), 'utf8');
+  const absolutePath = resolve(root, file);
+  if (!existsSync(absolutePath)) continue;
+  const text = readFileSync(absolutePath, 'utf8');
   if (/from ['\"](?:\.\.?\/)+conversations\/sessions\.js['\"]/.test(text) || /from ['\"]\.\/sessions\.js['\"]/.test(text)) {
     violations.push(file);
   }

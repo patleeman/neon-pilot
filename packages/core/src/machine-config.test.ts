@@ -9,11 +9,9 @@ import {
   getMachineConfigFilePath,
   readMachineConfigSection,
   readMachineInstructionFiles,
-  readMachineKnowledgeBase,
   readMachineSkillDirs,
   updateMachineConfigSection,
   writeMachineInstructionFiles,
-  writeMachineKnowledgeBase,
   writeMachineSkillDirs,
 } from './machine-config.js';
 
@@ -70,27 +68,6 @@ describe('machine config', () => {
     expect(section.modules).toEqual({ tasks: true });
     expect('polluted' in section).toBe(false);
     expect(section).not.toHaveProperty('constructor');
-  });
-
-  it('reads and writes the managed knowledge base repo in config.json', () => {
-    const configDir = createTempDir('pa-machine-config-');
-
-    writeMachineKnowledgeBase({ repoUrl: 'https://github.com/user/kb.git', branch: 'trunk' }, { configRoot: configDir });
-    expect(readMachineKnowledgeBase({ configRoot: configDir })).toEqual({
-      repoUrl: 'https://github.com/user/kb.git',
-      branch: 'trunk',
-    });
-    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({
-      knowledgeBaseRepoUrl: 'https://github.com/user/kb.git',
-      knowledgeBaseBranch: 'trunk',
-    });
-
-    writeMachineKnowledgeBase({ repoUrl: '', branch: '' }, { configRoot: configDir });
-    expect(readMachineKnowledgeBase({ configRoot: configDir })).toEqual({
-      repoUrl: '',
-      branch: 'main',
-    });
-    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
   });
 
   it('reads and writes instruction files in config.json', () => {

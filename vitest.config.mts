@@ -28,11 +28,6 @@ export default defineConfig({
       ),
       '@neon-pilot/extensions/backend/events': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/events.ts'),
       '@neon-pilot/extensions/backend/images': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/images.ts'),
-      '@neon-pilot/extensions/backend/knowledge': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/knowledge.ts'),
-      '@neon-pilot/extensions/backend/knowledgeVault': resolve(
-        process.cwd(),
-        'packages/desktop/server/extensions/backendApi/knowledgeVault.ts',
-      ),
       '@neon-pilot/extensions/backend/mcp': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/mcp.ts'),
       '@neon-pilot/extensions/backend/runs': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runs.ts'),
       '@neon-pilot/extensions/backend/runtime': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runtime.ts'),

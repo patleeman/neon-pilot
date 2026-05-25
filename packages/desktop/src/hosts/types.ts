@@ -309,7 +309,6 @@ export interface HostController {
   updateModelPreferences?(input: DesktopModelPreferencesUpdateRequest): Promise<{ ok: true }>;
   readDefaultCwd?(): Promise<unknown>;
   updateDefaultCwd?(cwd: string | null): Promise<unknown>;
-  readVaultFiles?(): Promise<unknown>;
   pickFolder?(input?: { cwd?: string | null; prompt?: string | null }): Promise<unknown>;
   readConversationTitleSettings?(): Promise<unknown>;
   updateConversationTitleSettings?(input: { enabled?: boolean; model?: string | null }): Promise<unknown>;

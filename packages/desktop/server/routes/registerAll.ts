@@ -8,14 +8,12 @@ import { registerExtensionRoutes } from './extensions.js';
 import { registerFilePickerRoutes } from './filePicker.js';
 import { registerGatewayRoutes } from './gateways.js';
 import { registerLiveSessionRoutes } from './liveSessions.js';
-import { registerMemoryNotesRoutes } from './memoryNotes.js';
 import { registerModelRoutes } from './models.js';
 import { registerRunAppRoutes } from './runsApp.js';
 import { registerSecretRoutes } from './secrets.js';
 import { registerSettingsRoutes } from './settings.js';
 import { registerSystemRoutes } from './system.js';
 import { registerToolsRoutes } from './tools.js';
-import { registerVaultEditorRoutes } from './vaultEditor.js';
 import { registerWorkspaceExplorerRoutes } from './workspaceExplorer.js';
 
 export function registerServerRoutes({ app, context }: RegisterServerRoutesInput): void {
@@ -47,10 +45,6 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
 
   registerRunAppRoutes(app, context);
 
-  registerMemoryNotesRoutes(app, context);
-
   registerFilePickerRoutes(app, context);
   registerWorkspaceExplorerRoutes(app, context);
-
-  registerVaultEditorRoutes(app);
 }

@@ -800,11 +800,12 @@ export async function submitLiveSessionPromptCapability(
   }
   const queuedContextAtMs = performance.now();
 
-  if (recoveredLiveEntry?.session.sessionFile) {
+  const recoveredSessionFile = recoveredLiveEntry?.session.sessionFile;
+  if (recoveredSessionFile) {
     const syncTimer = setTimeout(() => {
       void syncWebLiveConversationRun({
         conversationId: liveConversationId,
-        sessionFile: recoveredLiveEntry.session.sessionFile,
+        sessionFile: recoveredSessionFile,
         cwd: recoveredLiveEntry.cwd,
         title: recoveredLiveEntry.title,
         profile: prepared.runtimeScope,

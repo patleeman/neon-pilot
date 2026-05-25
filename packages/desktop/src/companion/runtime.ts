@@ -675,7 +675,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async listKnowledgeEntries(directoryId?: string | null) {
       return invokeDesktopApi(hostManager, {
         method: 'GET',
-        path: `/api/vault/tree${directoryId ? `?dir=${encodeURIComponent(directoryId)}` : ''}`,
+        path: `/api/extensions/system-knowledge/vault/tree${directoryId ? `?dir=${encodeURIComponent(directoryId)}` : ''}`,
       });
     },
 
@@ -688,21 +688,21 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
       }
       return invokeDesktopApi(hostManager, {
         method: 'GET',
-        path: `/api/vault/note-search?${params.toString()}`,
+        path: `/api/extensions/system-knowledge/vault/note-search?${params.toString()}`,
       });
     },
 
     async readKnowledgeFile(fileId: string) {
       return invokeDesktopApi(hostManager, {
         method: 'GET',
-        path: `/api/vault/file?id=${encodeURIComponent(fileId)}`,
+        path: `/api/extensions/system-knowledge/vault/file?id=${encodeURIComponent(fileId)}`,
       });
     },
 
     async writeKnowledgeFile(input: { fileId: string; content: string }) {
       return invokeDesktopApi(hostManager, {
         method: 'PUT',
-        path: '/api/vault/file',
+        path: '/api/extensions/system-knowledge/vault/file',
         body: {
           id: input.fileId,
           content: input.content,
@@ -713,7 +713,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async createKnowledgeFolder(folderId: string) {
       return invokeDesktopApi(hostManager, {
         method: 'POST',
-        path: '/api/vault/folder',
+        path: '/api/extensions/system-knowledge/vault/folder',
         body: {
           id: folderId,
         },
@@ -723,7 +723,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async renameKnowledgeEntry(input: { id: string; newName: string }) {
       return invokeDesktopApi(hostManager, {
         method: 'POST',
-        path: '/api/vault/rename',
+        path: '/api/extensions/system-knowledge/vault/rename',
         body: input,
       });
     },
@@ -731,7 +731,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async deleteKnowledgeEntry(id: string) {
       return invokeDesktopApi(hostManager, {
         method: 'DELETE',
-        path: `/api/vault/file?id=${encodeURIComponent(id)}`,
+        path: `/api/extensions/system-knowledge/vault/file?id=${encodeURIComponent(id)}`,
       });
     },
 
@@ -740,7 +740,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
       const mimeType = input.mimeType?.trim() || 'image/png';
       return invokeDesktopApi(hostManager, {
         method: 'POST',
-        path: '/api/vault/image',
+        path: '/api/extensions/system-knowledge/vault/image',
         body: {
           filename: safeFileName,
           dataUrl: `data:${mimeType};base64,${input.dataBase64.trim()}`,
@@ -751,7 +751,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async importKnowledge(input: CompanionKnowledgeImportInput) {
       return invokeDesktopApi(hostManager, {
         method: 'POST',
-        path: '/api/vault/share-import',
+        path: '/api/extensions/system-knowledge/vault/share-import',
         body: input,
       });
     },

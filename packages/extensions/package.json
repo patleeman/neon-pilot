@@ -107,14 +107,6 @@
       "types": "./dist/backend/images.d.ts",
       "default": "./dist/backend/images.js"
     },
-    "./backend/knowledge": {
-      "types": "./dist/backend/knowledge.d.ts",
-      "default": "./dist/backend/knowledge.js"
-    },
-    "./backend/knowledgeVault": {
-      "types": "./dist/backend/knowledgeVault.d.ts",
-      "default": "./dist/backend/knowledgeVault.js"
-    },
     "./backend/mcp": {
       "types": "./dist/backend/mcp.d.ts",
       "default": "./dist/backend/mcp.js"

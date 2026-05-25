@@ -6,7 +6,7 @@
  *
  * Environment variables for override:
  * - NEON_PILOT_STATE_ROOT: Override the base state directory
- * - NEON_PILOT_VAULT_ROOT: Override the durable knowledge vault root
+ * - NEON_PILOT_VAULT_ROOT: Override the durable vault root
  * - NEON_PILOT_AUTH_PATH: Override auth directory
  * - NEON_PILOT_SESSION_PATH: Override session directory
  * - NEON_PILOT_CACHE_PATH: Override cache directory
@@ -101,7 +101,6 @@ function getMachineConfigFilePathForRuntimePaths(options: RuntimePathMachineConf
 
 function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOptions = {}): {
   vaultRoot?: string;
-  knowledgeBaseRepoUrl?: string;
 } {
   const filePath = getMachineConfigFilePathForRuntimePaths(options);
   if (!existsSync(filePath)) {
@@ -114,17 +113,11 @@ function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOpti
       return {};
     }
 
-    const record = parsed as { vaultRoot?: unknown; knowledgeBaseRepoUrl?: unknown };
+    const record = parsed as { vaultRoot?: unknown };
     const vaultRoot =
       typeof record.vaultRoot === 'string' && record.vaultRoot.trim().length > 0 ? expandHomePath(record.vaultRoot.trim()) : undefined;
-    const knowledgeBaseRepoUrl =
-      typeof record.knowledgeBaseRepoUrl === 'string' && record.knowledgeBaseRepoUrl.trim().length > 0
-        ? record.knowledgeBaseRepoUrl.trim()
-        : undefined;
-
     return {
       ...(vaultRoot ? { vaultRoot } : {}),
-      ...(knowledgeBaseRepoUrl ? { knowledgeBaseRepoUrl } : {}),
     };
   } catch {
     return {};
@@ -141,14 +134,6 @@ export function getDefaultVaultRoot(): string {
   return join(homedir(), 'Documents', 'neon-pilot');
 }
 
-export function getKnowledgeBaseStateDir(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'knowledge-base');
-}
-
-export function getManagedKnowledgeBaseRoot(stateRoot: string = getStateRoot()): string {
-  return join(getKnowledgeBaseStateDir(stateRoot), 'repo');
-}
-
 /**
  * Get the configured durable knowledge vault root directory.
  */
@@ -159,10 +144,6 @@ export function getVaultRoot(options: RuntimePathMachineConfigOptions = {}): str
   }
 
   const configured = readMachineConfigRuntimeOverrides(options);
-  if (configured.knowledgeBaseRepoUrl) {
-    return getManagedKnowledgeBaseRoot(options.stateRoot);
-  }
-
   return configured.vaultRoot ?? getDefaultVaultRoot();
 }
 

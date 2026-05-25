@@ -712,6 +712,7 @@ export interface ExtensionBackendRoute {
   handler: string;
   title?: string;
   description?: string;
+  stream?: 'sse';
 }
 
 export function isExtensionPlacement(value: string): value is ExtensionPlacement {

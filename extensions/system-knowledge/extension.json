@@ -92,6 +92,99 @@
         "handler": "resolvePromptReferences",
         "title": "Resolve knowledge prompt references"
       }
+    ],
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/asset",
+        "handler": "asset",
+        "title": "Read knowledge asset"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/tree",
+        "handler": "vaultTreeRoute",
+        "title": "Read knowledge tree route"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/file",
+        "handler": "vaultReadFileRoute",
+        "title": "Read knowledge file route"
+      },
+      {
+        "method": "PUT",
+        "path": "/vault/file",
+        "handler": "vaultWriteFileRoute",
+        "title": "Write knowledge file route"
+      },
+      {
+        "method": "DELETE",
+        "path": "/vault/file",
+        "handler": "vaultDeleteFileRoute",
+        "title": "Delete knowledge file route"
+      },
+      {
+        "method": "POST",
+        "path": "/vault/folder",
+        "handler": "vaultCreateFolderRoute",
+        "title": "Create knowledge folder route"
+      },
+      {
+        "method": "POST",
+        "path": "/vault/rename",
+        "handler": "vaultRenameRoute",
+        "title": "Rename knowledge entry route"
+      },
+      {
+        "method": "POST",
+        "path": "/vault/move",
+        "handler": "vaultMoveRoute",
+        "title": "Move knowledge entry route"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/backlinks",
+        "handler": "vaultBacklinksRoute",
+        "title": "Read knowledge backlinks route"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/search",
+        "handler": "vaultSearchRoute",
+        "title": "Search knowledge route"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/note-search",
+        "handler": "vaultSearchRoute",
+        "title": "Search knowledge notes route"
+      },
+      {
+        "method": "POST",
+        "path": "/vault/image",
+        "handler": "vaultUploadImageRoute",
+        "title": "Upload knowledge image route"
+      },
+      {
+        "method": "POST",
+        "path": "/vault/share-import",
+        "handler": "vaultImportUrlRoute",
+        "title": "Import item into knowledge route"
+      },
+      {
+        "method": "GET",
+        "path": "/vault/events",
+        "handler": "vaultEventsRoute",
+        "title": "Watch knowledge vault events",
+        "stream": "sse"
+      },
+      {
+        "method": "GET",
+        "path": "/memory",
+        "handler": "memoryRoute",
+        "title": "Read memory context route"
+      }
     ]
   },
   "contributes": {

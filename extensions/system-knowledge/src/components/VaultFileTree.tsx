@@ -1428,7 +1428,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
 
   // Watch for external file system changes to the vault root
   useVaultWatcher({
-    apiPathPrefix: '/api/vault',
+    apiPathPrefix: '/api/extensions/system-knowledge/vault',
     onEvent: useCallback(
       (event) => {
         const changedPaths = event.paths;

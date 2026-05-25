@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 
-const scopedFiles = [
-  'packages/desktop/server/workspace/workspaceExplorer.ts',
-  'packages/desktop/server/extensions/extensionWorkspace.ts',
-  'packages/desktop/server/extensions/backendApi/knowledgeVault.ts',
-  'packages/desktop/server/routes/vaultEditor.ts',
-  'packages/desktop/server/routes/vaultShareImport.ts',
-];
+const scopedFiles = ['packages/desktop/server/workspace/workspaceExplorer.ts', 'packages/desktop/server/extensions/extensionWorkspace.ts'];
 
 const banned = [
   /function\s+assertSafeWorkspacePath\b/,

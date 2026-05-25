@@ -105,6 +105,8 @@ async function dispatchExtensionBackendRoute(
   res: Response,
   context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): Promise<void> {
+  const abort = new AbortController();
+  req.on?.('close', () => abort.abort());
   try {
     const extensionId = req.params.id;
     const routePath = `/${req.params[0] ?? ''}`;
@@ -118,13 +120,49 @@ async function dispatchExtensionBackendRoute(
         query: normalizeRouteQuery(req.query),
         params: {},
         body: req.body,
+        signal: abort.signal,
       },
       context,
     );
     for (const [key, value] of Object.entries(result.headers ?? {})) res.setHeader(key, value);
-    res.status(result.status ?? 200).json(result.body ?? null);
+    const status = result.status ?? 200;
+    if (result.stream === 'sse' && result.events) {
+      await sendExtensionSseResponse(res, status, result.events, abort.signal);
+      return;
+    }
+    if (Buffer.isBuffer(result.body) || result.body instanceof Uint8Array) {
+      res.status(status).send(Buffer.from(result.body));
+      return;
+    }
+    res.status(status).json(result.body ?? null);
   } catch (err) {
-    sendRouteError(res, 'extension backend route error', err);
+    if (!res.headersSent) sendRouteError(res, 'extension backend route error', err);
+  }
+}
+
+async function sendExtensionSseResponse(
+  res: Response,
+  status: number,
+  events: AsyncIterable<{ event?: string; data?: unknown; id?: string; retry?: number }>,
+  signal: AbortSignal,
+): Promise<void> {
+  res.status(status);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+  try {
+    for await (const event of events) {
+      if (signal.aborted) break;
+      if (event.id) res.write(`id: ${event.id}\n`);
+      if (event.event) res.write(`event: ${event.event}\n`);
+      if (typeof event.retry === 'number') res.write(`retry: ${event.retry}\n`);
+      const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null);
+      for (const line of data.split(/\r?\n/)) res.write(`data: ${line}\n`);
+      res.write('\n');
+    }
+  } finally {
+    res.end();
   }
 }
 
@@ -842,4 +880,10 @@ export function registerExtensionRoutes(
       sendRouteError(res, 'extension badge error', err);
     }
   });
+
+  router.get('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
+  router.post('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
+  router.put('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
+  router.patch('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
+  router.delete('/api/extensions/:id/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
 }

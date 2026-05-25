@@ -20,6 +20,9 @@ function createResponse() {
     send: vi.fn(),
     sendFile: vi.fn(),
     setHeader: vi.fn(),
+    write: vi.fn(),
+    end: vi.fn(),
+    flushHeaders: vi.fn(),
     status: vi.fn().mockReturnThis(),
     type: vi.fn().mockReturnThis(),
   };
@@ -149,6 +152,44 @@ describe('registerExtensionRoutes', () => {
     expect(res.status).toHaveBeenCalledWith(201);
 
     expect(res.json).toHaveBeenCalledWith({ ok: true, q: 'hello' });
+
+    const directRes = createResponse();
+    await harness.getHandler('/api/extensions/:id/*')(
+      { method: 'GET', params: { id: 'agent-board', 0: 'status' }, query: { q: 'direct' } },
+      directRes,
+    );
+    expect(directRes.status).toHaveBeenCalledWith(201);
+    expect(directRes.json).toHaveBeenCalledWith({ ok: true, q: 'direct' });
+  });
+
+  it('dispatches extension backend SSE routes', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/events', handler: 'events', stream: 'sse' }] },
+      }),
+    );
+    writeFileSync(
+      join(extensionRoot, 'dist', 'backend.mjs'),
+      'export function events() { return { status: 200, stream: "sse", events: (async function* () { yield { event: "ready", data: { ok: true } }; })() }; }',
+    );
+    const harness = createHarness();
+    const res = createResponse();
+
+    await harness.getHandler('/api/extensions/:id/*')({ method: 'GET', params: { id: 'agent-board', 0: 'events' }, query: {} }, res);
+
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream; charset=utf-8');
+    expect(res.write).toHaveBeenCalledWith('event: ready\n');
+    expect(res.write).toHaveBeenCalledWith('data: {"ok":true}\n');
+    expect(res.end).toHaveBeenCalled();
   });
 
   it('serves per-extension manifest and surfaces', () => {

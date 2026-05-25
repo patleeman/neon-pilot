@@ -18,7 +18,7 @@ export const BACKEND_BUNDLE_BYTE_LIMITS = new Map([
   ['system-image-probe', 2 * 1024 * 1024],
   ['system-diffs', 2 * 1024 * 1024],
   ['system-images', 2 * 1024 * 1024],
-  ['system-knowledge', 1 * 1024 * 1024],
+  ['system-knowledge', 2 * 1024 * 1024],
   ['system-mcp', 2 * 1024 * 1024],
   ['system-prompt-assembly', 25 * 1024 * 1024],
   ['system-runs', 1 * 1024 * 1024],
