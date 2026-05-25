@@ -225,7 +225,7 @@ async function createCheckpointCommit(ctx: CheckpointBackendContext, options: { 
   return { metadata, files: parseDiffSections(rawPatch) };
 }
 
-function formatCheckpointList(conversationId: string, checkpoints: ReturnType<typeof listConversationCommitCheckpoints>): string {
+function formatCheckpointList(conversationId: string, checkpoints: Awaited<ReturnType<typeof listConversationCommitCheckpoints>>): string {
   if (checkpoints.length === 0) return `No commit checkpoints saved for conversation ${conversationId}.`;
   return [
     `Commit checkpoints for conversation ${conversationId}:`,
@@ -233,7 +233,7 @@ function formatCheckpointList(conversationId: string, checkpoints: ReturnType<ty
   ].join('\n');
 }
 
-function formatCheckpoint(record: NonNullable<ReturnType<typeof getConversationCommitCheckpoint>>): string {
+function formatCheckpoint(record: NonNullable<Awaited<ReturnType<typeof getConversationCommitCheckpoint>>>): string {
   return [
     `${record.shortSha} ${record.subject}`,
     `Commit: ${record.commitSha}`,
@@ -250,7 +250,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
   const conversationId = readRequiredString(ctx.toolContext?.conversationId, 'conversationId');
   switch (input.action) {
     case 'list': {
-      const checkpoints = listConversationCommitCheckpoints({ profile, conversationId });
+      const checkpoints = await listConversationCommitCheckpoints({ profile, conversationId });
       return {
         text: formatCheckpointList(conversationId, checkpoints),
         action: 'list',
@@ -261,7 +261,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
     }
     case 'get': {
       const checkpointId = readRequiredString(input.checkpointId, 'checkpointId');
-      const record = getConversationCommitCheckpoint({ profile, conversationId, checkpointId });
+      const record = await getConversationCommitCheckpoint({ profile, conversationId, checkpointId });
       if (!record) throw new Error(`Commit checkpoint ${checkpointId} was not found.`);
       return {
         text: formatCheckpoint(record),
@@ -298,7 +298,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
 
       const linesAdded = created.files.reduce((sum, file) => sum + file.additions, 0);
       const linesDeleted = created.files.reduce((sum, file) => sum + file.deletions, 0);
-      const record = saveConversationCommitCheckpoint({
+      const record = await saveConversationCommitCheckpoint({
         profile,
         conversationId,
         checkpointId: input.checkpointId ?? created.metadata.commitSha,

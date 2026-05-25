@@ -259,25 +259,25 @@ async function safeInspectMcpSettings(ctx: ExtensionBackendContext): Promise<Mcp
     const cwd = resourceOptions.cwd ?? runtime?.getRepoRoot?.() ?? process.cwd();
     const configDiscoveryEnv = { ...process.env };
     delete configDiscoveryEnv.MCP_CONFIG_PATH;
-    const merged = buildMergedMcpConfigDocument({ cwd, env: configDiscoveryEnv, skillDirs }) as {
+    const merged = (await buildMergedMcpConfigDocument({ cwd, env: configDiscoveryEnv, skillDirs })) as {
       baseConfigPath: string;
       baseConfigExists: boolean;
       searchedPaths: string[];
       document: { mcpServers: Record<string, unknown> };
       baseServerNames: string[];
     };
-    const bundledSkills = readBundledSkillMcpManifests(skillDirs) as Array<{
+    const bundledSkills = (await readBundledSkillMcpManifests(skillDirs)) as Array<{
       skillName: string;
       skillDir: string;
       manifestPath: string;
       serverNames: string[];
     }>;
-    const parsed = readMcpConfigDocument({
+    const parsed = (await readMcpConfigDocument({
       path: merged.baseConfigPath,
       exists: merged.baseConfigExists || Object.keys(merged.document.mcpServers).length > 0,
       searchedPaths: merged.searchedPaths,
       document: merged.document,
-    }) as {
+    })) as {
       path: string;
       searchedPaths: string[];
       servers: Array<{

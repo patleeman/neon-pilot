@@ -25,7 +25,7 @@ function buildHandler() {
 }
 
 describe('inspectMcpSettings', () => {
-  it('returns extension-owned MCP settings state', () => {
+  it('returns extension-owned MCP settings state', async () => {
     const context = {
       runtime: {
         getLiveSessionResourceOptions: () => ({
@@ -80,7 +80,7 @@ describe('inspectMcpSettings', () => {
       ],
     });
 
-    expect(inspectMcpSettings({}, context)).toMatchObject({
+    await expect(inspectMcpSettings({}, context)).resolves.toMatchObject({
       configPath: '/repo/.mcp.json',
       configExists: true,
       servers: [

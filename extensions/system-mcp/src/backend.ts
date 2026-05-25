@@ -110,19 +110,19 @@ function buildMcpCallbackUrl(input: { callbackHost?: string; callbackPort?: numb
   return `http://${host}:${port}${path}`;
 }
 
-function getExplicitMcpDocument(ctx: McpRuntimeContext): {
+async function getExplicitMcpDocument(ctx: McpRuntimeContext): Promise<{
   baseConfigPath: string;
   baseConfigExists: boolean;
   searchedPaths: string[];
   document: { mcpServers: Record<string, unknown> };
   baseServerNames: string[];
-} {
+}> {
   const resourceOptions = ctx.runtime.getLiveSessionResourceOptions();
   const skillDirs = resourceOptions.additionalSkillPaths ?? [];
   const cwd = resourceOptions.cwd ?? ctx.runtime.getRepoRoot();
   const configDiscoveryEnv = { ...process.env };
   delete configDiscoveryEnv.MCP_CONFIG_PATH;
-  const result = buildMergedMcpConfigDocument({
+  const result = await buildMergedMcpConfigDocument({
     cwd,
     env: configDiscoveryEnv,
     skillDirs,
@@ -158,9 +158,9 @@ function parseExplicitMcpConfigJson(input: unknown): { mcpServers: Record<string
   return { mcpServers: servers as Record<string, unknown> };
 }
 
-export function saveExplicitMcpConfig(input: unknown, ctx: McpRuntimeContext): McpSettingsState {
+export async function saveExplicitMcpConfig(input: unknown, ctx: McpRuntimeContext): Promise<McpSettingsState> {
   const document = parseExplicitMcpConfigJson(input);
-  const config = getExplicitMcpDocument(ctx);
+  const config = await getExplicitMcpDocument(ctx);
   mkdirSync(dirname(config.baseConfigPath), { recursive: true });
   writeFileSync(config.baseConfigPath, `${JSON.stringify(document, null, 2)}\n`);
   return inspectMcpSettings({}, ctx);
@@ -208,12 +208,14 @@ export async function logoutMcpServer(input: unknown): Promise<{ ok: boolean; me
   return { ok: true, message: `Cleared stored OAuth state for ${server}.` };
 }
 
-export function inspectMcpSettings(_input: unknown, ctx: McpRuntimeContext): McpSettingsState {
+export async function inspectMcpSettings(_input: unknown, ctx: McpRuntimeContext): Promise<McpSettingsState> {
   const resourceOptions = ctx.runtime.getLiveSessionResourceOptions();
   const skillDirs = resourceOptions.additionalSkillPaths ?? [];
-  const bundledSkillManifests = readBundledSkillMcpManifests(skillDirs);
-  const mergedMcpConfig = getExplicitMcpDocument(ctx);
-  const parsedMcpConfig = readMcpConfigDocument({
+  const [bundledSkillManifests, mergedMcpConfig] = await Promise.all([
+    readBundledSkillMcpManifests(skillDirs),
+    getExplicitMcpDocument(ctx),
+  ]);
+  const parsedMcpConfig = await readMcpConfigDocument({
     path: mergedMcpConfig.baseConfigPath,
     exists: mergedMcpConfig.baseConfigExists || Object.keys(mergedMcpConfig.document.mcpServers).length > 0,
     searchedPaths: mergedMcpConfig.searchedPaths,
