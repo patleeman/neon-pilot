@@ -1,4 +1,4 @@
-import { getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
+import { getDesktopBridge } from '../desktop/desktopBridge';
 import type {
   ExtensionCommandRegistration,
   ExtensionDoctorReport,
@@ -27,7 +27,6 @@ import type {
   ConversationContextDocRef,
   ConversationSummaryRecord,
   DesktopConversationState,
-  DesktopEnvironmentState,
   FilePickerResult,
   GatewayProviderId,
   GatewayState,
@@ -204,28 +203,14 @@ async function readApiError(res: Response, path?: string): Promise<string> {
 }
 
 const pendingMemoryRequests = new Map<string, Promise<MemoryData>>();
-let desktopEnvironmentPromise: Promise<DesktopEnvironmentState | null> | null = null;
 
-async function requireLocalDesktopBridge(action: string): Promise<NonNullable<ReturnType<typeof getDesktopBridge>>> {
+async function requireDesktopBridge(action: string): Promise<NonNullable<ReturnType<typeof getDesktopBridge>>> {
   const desktopBridge = getDesktopBridge();
-  if (desktopBridge && (await shouldUseDesktopLocalCapabilities())) {
+  if (desktopBridge) {
     return desktopBridge;
   }
 
-  throw new Error(`${action} requires the local desktop host.`);
-}
-
-/** Keep the cached promise retryable so transient failures don't permanently
- *  disable the desktop bridge path. Matching the same pattern in desktopEventSource.ts. */
-async function readCachedDesktopEnvironment(): Promise<DesktopEnvironmentState | null> {
-  if (!desktopEnvironmentPromise) {
-    desktopEnvironmentPromise = readDesktopEnvironment().catch(() => {
-      desktopEnvironmentPromise = null;
-      return null;
-    });
-  }
-
-  return desktopEnvironmentPromise;
+  throw new Error(`${action} requires the desktop shell.`);
 }
 
 async function getMemoryData(): Promise<MemoryData> {
@@ -240,15 +225,6 @@ async function getMemoryData(): Promise<MemoryData> {
   });
   pendingMemoryRequests.set(cacheKey, request);
   return request;
-}
-
-async function shouldUseDesktopLocalCapabilities(): Promise<boolean> {
-  if (!getDesktopBridge()) {
-    return false;
-  }
-
-  const environment = await readCachedDesktopEnvironment();
-  return environment?.activeHostKind === 'local';
 }
 
 export function normalizeDurableRunLogTailParam(value: unknown): number | undefined {
@@ -632,7 +608,7 @@ export const api = {
             ...(input?.cwd !== undefined ? { cwd: input.cwd } : {}),
             ...(typeof input?.prompt === 'string' && input.prompt.trim().length > 0 ? { prompt: input.prompt.trim() } : {}),
           };
-    return (await requireLocalDesktopBridge('Picking folders')).pickFolder(request);
+    return (await requireDesktopBridge('Picking folders')).pickFolder(request);
   },
   pickFiles: async (cwd?: string) => post<FilePickerResult>('/file-picker', cwd !== undefined ? { cwd } : {}),
 

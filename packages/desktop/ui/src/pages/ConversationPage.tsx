@@ -560,7 +560,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     tailBlocks: historicalTailBlocks,
     enabled: shouldSubscribeToDesktopConversationState({ draft }),
   });
-  const desktopConversationChecking = !draft && Boolean(id) && desktopConversation.mode === 'checking';
+  const desktopConversationChecking = false;
   const useDesktopConversation = shouldUseHealthyDesktopConversationState({
     draft,
     conversationId: id,

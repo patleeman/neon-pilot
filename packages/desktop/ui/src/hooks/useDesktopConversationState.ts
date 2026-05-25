@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../client/api';
-import { getDesktopBridge, readDesktopEnvironment } from '../desktop/desktopBridge';
+import { getDesktopBridge } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import type {
   DesktopConversationState,
@@ -222,7 +222,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const bridge = getDesktopBridge();
   const surfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
   const surfaceType = useMemo(() => detectConversationSurfaceType(), []);
-  const [mode, setMode] = useState<'checking' | 'local' | 'inactive'>(enabled && bridge ? 'checking' : 'inactive');
+  const [mode, setMode] = useState<'local' | 'inactive'>(enabled && bridge ? 'local' : 'inactive');
   const [state, setState] = useState<DesktopConversationState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectVersion, setConnectVersion] = useState(0);
@@ -239,25 +239,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       return;
     }
 
-    let cancelled = false;
-    setMode('checking');
-    void readDesktopEnvironment()
-      .then((environment) => {
-        if (cancelled) {
-          return;
-        }
-
-        setMode(environment?.activeHostKind === 'local' ? 'local' : 'inactive');
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMode('inactive');
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    setMode('local');
   }, [bridge, enabled, connectVersion]);
 
   useEffect(() => {
@@ -274,6 +256,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
       .desktopConversationState(conversationId, tailBlocks !== undefined ? { tailBlocks } : undefined)
       .then((nextState) => {
         if (!closed) {
+          if (!nextState.sessionDetail && !nextState.liveSession.live && nextState.stream.blocks.length === 0) {
+            setMode('inactive');
+            setState(null);
+            setError(null);
+            return;
+          }
           setState((previous) => mergeDesktopConversationState(previous, nextState));
           setError(null);
         }
@@ -413,7 +401,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   return {
     mode,
     active: mode === 'local',
-    loading: mode === 'checking' || (mode === 'local' && matchedState === null),
+    loading: mode === 'local' && matchedState === null,
     state: matchedState,
     error,
     surfaceId,

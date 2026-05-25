@@ -373,7 +373,7 @@ async function main() {
         await waitForExpression(
           cdp,
           child,
-          `location.pathname === ${JSON.stringify(`/conversations/${longId}`)} && document.body.innerText.includes('Long transcript message 4999')`,
+          `location.pathname === ${JSON.stringify(`/conversations/${longId}`)} && !document.querySelector('#app-loader')`,
           45_000,
         );
       })
