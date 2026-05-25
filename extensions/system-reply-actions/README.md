@@ -6,4 +6,4 @@ It contributes selection actions for the transcript context menu. Core provides 
 
 ## Settings
 
-- `system-reply-actions.emojiPickerItems` — comma-separated reply starters for the transcript selection emoji picker. Each item is used as both the button label and the drafted reply text. Empty items are ignored; clear the value to remove the emoji starter buttons.
+- `systemReplyActions.emojiPickerItems` — comma-separated reply starters for the transcript selection emoji picker. Each item is used as both the button label and the drafted reply text. Empty items are ignored; clear the value to remove the emoji starter buttons.

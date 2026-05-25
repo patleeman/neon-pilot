@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -17,8 +17,30 @@ const forbiddenPatterns = [
   /(?:^|[^A-Za-z0-9_-])(?:extensions|installable-extensions)\/[^'"\s]+\/src\//,
 ];
 
-const coreFiles = execFileSync('git', ['ls-files', ...coreSearchRoots], { cwd: repoRoot, encoding: 'utf8' })
-  .split('\n')
+function walkTrackedFallback(dir) {
+  const absoluteDir = resolve(repoRoot, dir);
+  if (!existsSync(absoluteDir)) return [];
+  return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const child = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name === 'dist' || entry.name === 'node_modules') return [];
+      return walkTrackedFallback(child);
+    }
+    return filePattern.test(child) ? [child] : [];
+  });
+}
+
+function listFiles(roots) {
+  try {
+    return execFileSync('git', ['ls-files', ...roots], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+      .split('\n')
+      .filter(Boolean);
+  } catch {
+    return roots.flatMap((root) => walkTrackedFallback(root));
+  }
+}
+
+const coreFiles = listFiles(coreSearchRoots)
   .filter((file) => filePattern.test(file))
   .filter((file) => !file.includes('/dist/'))
   .filter((file) => !file.includes('.test.'))
@@ -36,8 +58,7 @@ for (const file of coreFiles) {
   });
 }
 
-const extensionFiles = execFileSync('git', ['ls-files', ...extensionSearchRoots], { cwd: repoRoot, encoding: 'utf8' })
-  .split('\n')
+const extensionFiles = listFiles(extensionSearchRoots)
   .filter((file) => filePattern.test(file))
   .filter((file) => !file.includes('/dist/'))
   .filter((file) => file.includes('/src/'))

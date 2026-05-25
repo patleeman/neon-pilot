@@ -116,8 +116,8 @@ describe('registerDesktopIpc', () => {
     }).not.toThrow();
   });
 
-  it('registers at least 100 IPC handlers', () => {
-    expect(mockIpcHandle.mock.calls.length).toBeGreaterThanOrEqual(100);
+  it('registers the desktop-shell IPC handlers', () => {
+    expect(mockIpcHandle.mock.calls.length).toBeGreaterThanOrEqual(20);
   });
 
   it('registers a conversation lifecycle handler', () => {

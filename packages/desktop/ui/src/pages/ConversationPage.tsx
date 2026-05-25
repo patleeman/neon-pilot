@@ -6234,9 +6234,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 gitSummaryPresentation={gitSummaryPresentation}
                 sessionTokens={sessionTokens}
               />
-            ) : (
-              <div className="conversation-composer-meta mt-1.5 min-h-4 px-3" aria-hidden="true" />
-            )}
+            ) : null}
           </div>
         </div>
       )}

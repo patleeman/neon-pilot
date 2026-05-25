@@ -269,7 +269,7 @@ const smokes = {
     assert(result && typeof result === 'object', 'readSettings failed');
   },
   async 'system-mcp'() {
-    const result = module.inspectMcpSettings({}, ctx);
+    const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
   },
   async 'system-onboarding'() {

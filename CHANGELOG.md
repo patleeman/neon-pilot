@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.5 — 2026-05-25
+
+### Highlights
+
+- Improves transcript reliability and readability with stronger linked-run detection, clearer subagent conversation links, and tighter handling for internal work shelves.
+- Makes composer image attachments more resilient by resizing oversized images before submit while preserving originals that are already small enough.
+- Expands Excalidraw input into a fuller sketching surface with manifest-declared tools, richer editor controls, and updated extension documentation.
+- Removes stale desktop runtime helpers and narrows public exports so core, desktop, and extension boundaries stay smaller ahead of release.
+- Refreshes installable/system extension package metadata and lockfile state for the `0.9.1-rc.5` train.
+
+### Notes
+
+- 221 commits since the previous release.
+
 ## 0.9.1-rc.4 — 2026-05-24
 
 ### Highlights

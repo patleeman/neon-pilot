@@ -34,7 +34,7 @@ describe('backend api mcp/browser/index exports', () => {
         listDurableRuns: expect.any(Function),
         buildLiveSessionResourceOptionsForRuntime: expect.any(Function),
         publishAppEvent: expect.any(Function),
-        readKnowledgeState: expect.any(Function),
+        listMemoryDocs: expect.any(Function),
         saveConversationArtifact: expect.any(Function),
       }),
     );

@@ -201,25 +201,27 @@ function resolveThreadBindingInput(params: {
   };
 }
 
-function formatTaskList(loaded: LoadedScheduledTasksForProfile): string {
+async function formatTaskList(loaded: LoadedScheduledTasksForProfile): Promise<string> {
   if (loaded.tasks.length === 0) {
     return loaded.parseErrors.length > 0
       ? `No valid tasks found. Parse errors: ${loaded.parseErrors.map((error) => `${error.filePath}: ${error.error}`).join('; ')}`
       : 'No scheduled tasks found.';
   }
 
-  const lines = loaded.tasks.map((task) => {
-    const runtime = loaded.runtimeState[task.key];
-    const status = runtime?.running ? 'running' : (runtime?.lastStatus ?? (task.enabled ? 'active' : 'disabled'));
-    const threadDetail = buildScheduledTaskThreadDetail(task);
-    const threadSummary =
-      threadDetail.threadMode === 'none'
-        ? undefined
-        : (threadDetail.threadTitle ?? threadDetail.threadConversationId ?? threadDetail.threadMode);
-    return `- @${task.id} [${status}] ${task.title ?? task.id} · ${formatSchedule(task)} · ${formatTargetLabel(task)}${
-      threadSummary ? ` · thread ${threadSummary}` : ''
-    }`;
-  });
+  const lines = await Promise.all(
+    loaded.tasks.map(async (task) => {
+      const runtime = loaded.runtimeState[task.key];
+      const status = runtime?.running ? 'running' : (runtime?.lastStatus ?? (task.enabled ? 'active' : 'disabled'));
+      const threadDetail = await buildScheduledTaskThreadDetail(task);
+      const threadSummary =
+        threadDetail.threadMode === 'none'
+          ? undefined
+          : (threadDetail.threadTitle ?? threadDetail.threadConversationId ?? threadDetail.threadMode);
+      return `- @${task.id} [${status}] ${task.title ?? task.id} · ${formatSchedule(task)} · ${formatTargetLabel(task)}${
+        threadSummary ? ` · thread ${threadSummary}` : ''
+      }`;
+    }),
+  );
 
   if (loaded.parseErrors.length > 0) {
     lines.push(`Parse errors: ${loaded.parseErrors.map((error) => `${error.filePath}: ${error.error}`).join('; ')}`);
@@ -228,12 +230,12 @@ function formatTaskList(loaded: LoadedScheduledTasksForProfile): string {
   return ['Scheduled tasks:', ...lines].join('\n');
 }
 
-function formatTaskDetail(
+async function formatTaskDetail(
   task: StoredAutomation,
   runtime: TaskRuntimeEntry | undefined,
   callbackBinding?: ReturnType<typeof getTaskCallbackBinding>,
-): string {
-  const threadDetail = buildScheduledTaskThreadDetail(task);
+): Promise<string> {
+  const threadDetail = await buildScheduledTaskThreadDetail(task);
   const lines = [
     `Task @${task.id}`,
     `title: ${task.title ?? task.id}`,
@@ -314,7 +316,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
             case 'list': {
               const loaded = await loadScheduledTasksForProfile(profile);
               return {
-                content: [{ type: 'text' as const, text: formatTaskList(loaded) }],
+                content: [{ type: 'text' as const, text: await formatTaskList(loaded) }],
                 details: {
                   action: 'list',
                   profile,
@@ -330,7 +332,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const { task, runtime } = await resolveScheduledTaskForProfile(profile, taskId);
               const callbackBinding = await getTaskCallbackBinding({ profile, taskId });
               return {
-                content: [{ type: 'text' as const, text: formatTaskDetail(task, runtime, callbackBinding) }],
+                content: [{ type: 'text' as const, text: await formatTaskDetail(task, runtime, callbackBinding) }],
                 details: {
                   action: 'get',
                   profile,

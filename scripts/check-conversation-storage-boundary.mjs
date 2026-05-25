@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
@@ -14,17 +14,39 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationService.ts',
 ]);
 
-const output = execFileSync(
-  'git',
-  ['ls-files', 'packages/desktop/server/**/*.ts', 'extensions/**/*.ts', 'installable-extensions/**/*.ts'],
-  {
-    cwd: root,
-    encoding: 'utf8',
-  },
-);
+function walkTrackedFallback(dir) {
+  const absoluteDir = resolve(root, dir);
+  if (!existsSync(absoluteDir)) return [];
+  return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const child = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name === 'dist' || entry.name === 'node_modules') return [];
+      return walkTrackedFallback(child);
+    }
+    return child.endsWith('.ts') || child.endsWith('.tsx') ? [child] : [];
+  });
+}
+
+function listCandidateFiles() {
+  try {
+    return execFileSync('git', ['ls-files', 'packages/desktop/server/**/*.ts', 'extensions/**/*.ts', 'installable-extensions/**/*.ts'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .split('\n')
+      .filter(Boolean);
+  } catch {
+    return [
+      ...walkTrackedFallback('packages/desktop/server'),
+      ...walkTrackedFallback('extensions'),
+      ...walkTrackedFallback('installable-extensions'),
+    ];
+  }
+}
 
 const violations = [];
-for (const file of output.split('\n').filter(Boolean)) {
+for (const file of listCandidateFiles()) {
   if (file.endsWith('.test.ts') || file.endsWith('.test.tsx') || allowed.has(file)) continue;
   const absolutePath = resolve(root, file);
   if (!existsSync(absolutePath)) continue;

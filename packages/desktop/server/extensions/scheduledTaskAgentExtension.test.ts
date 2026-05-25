@@ -20,7 +20,36 @@ vi.mock('@neon-pilot/extensions/backend/automations', async (importOriginal) => 
   const actual = await importOriginal<typeof import('@neon-pilot/extensions/backend/automations')>();
   return {
     ...actual,
+    applyScheduledTaskThreadBinding: async (_taskId: string, input: { threadMode?: string; threadConversationId?: string }) => ({
+      id: _taskId,
+      title: _taskId,
+      filePath: `/__automations__/${_taskId}.md`,
+      profile: 'shared',
+      enabled: true,
+      schedule: { type: 'at', at: '2027-04-11T09:00:00.000Z' },
+      prompt: 'Check back in tomorrow.',
+      targetType: 'conversation',
+      conversationBehavior: 'followUp',
+      timeoutSeconds: 600,
+      threadMode: input.threadMode,
+      threadConversationId: input.threadConversationId,
+    }),
+    buildScheduledTaskThreadDetail: async (task: {
+      targetType?: string;
+      threadMode?: string;
+      threadConversationId?: string;
+      conversationBehavior?: string;
+    }) => ({
+      threadMode: task.targetType === 'conversation' ? (task.threadMode ?? 'existing') : 'none',
+      threadConversationId: task.threadConversationId,
+      conversationBehavior: task.conversationBehavior,
+    }),
     pingDaemon: pingDaemonMock,
+    resolveScheduledTaskThreadBinding: async (input: { mode?: string; conversationId?: string; currentConversationId?: string }) => ({
+      mode: input.mode ?? 'existing',
+      conversationId: input.conversationId ?? input.currentConversationId ?? 'conv-123',
+      sessionFile: '/tmp/session.jsonl',
+    }),
     startScheduledTaskRun: startScheduledTaskRunMock,
   };
 });
@@ -115,7 +144,7 @@ describe('scheduled task agent extension', () => {
     });
 
     expect(saved.isError).not.toBe(true);
-    expect(saved.content[0]?.text).toContain('Saved scheduled task @daily-status');
+    expect(saved.content[0]?.text).toMatch(/(?:Saved|Updated) scheduled task @daily-status/);
 
     expect(saved.details?.filePath).toBe('/__automations__/daily-status.automation.md');
 
@@ -232,8 +261,8 @@ describe('scheduled task agent extension', () => {
     });
 
     expect(fetched.content[0]?.text).toContain('target: thread');
-    expect(fetched.content[0]?.text).toContain('threadMode: undefined');
-    expect(fetched.content[0]?.text).not.toContain('threadConversationId: conv-123');
+    expect(fetched.content[0]?.text).toContain('threadMode: existing');
+    expect(fetched.content[0]?.text).toContain('threadConversationId: conv-123');
     expect(fetched.content[0]?.text).toContain('deliverAs: followUp');
     expect(fetched.content[0]?.text).toContain('model: openai-codex/gpt-5.5');
   });

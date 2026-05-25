@@ -12,7 +12,7 @@ const queue = vi.hoisted(() => ({
 const stale = vi.hoisted(() => ({ ensureStaleTurnState: vi.fn() }));
 const broadcasts = vi.hoisted(() => ({ readLiveSessionContextUsage: vi.fn(() => ({ tokens: 10 })) }));
 const snapshot = vi.hoisted(() => ({ buildLiveSessionSnapshot: vi.fn((_entry, tailBlocks) => ({ id: 's1', tailBlocks })) }));
-const sessions = vi.hoisted(() => ({ readGoalFromEntries: vi.fn(() => ({ objective: 'goal' })) }));
+const sessionGoalState = vi.hoisted(() => ({ readGoalFromEntries: vi.fn(() => ({ objective: 'goal' })) }));
 
 vi.mock('./liveSessionParallelJobs.js', () => parallel);
 vi.mock('./liveSessionPresence.js', () => presence);
@@ -20,7 +20,7 @@ vi.mock('./liveSessionQueue.js', () => queue);
 vi.mock('./liveSessionStaleTurns.js', () => stale);
 vi.mock('./liveSessionStateBroadcasts.js', () => broadcasts);
 vi.mock('./liveSessionStateSnapshot.js', () => snapshot);
-vi.mock('./sessions.js', () => sessions);
+vi.mock('./sessionGoalState.js', () => sessionGoalState);
 
 import { subscribeLiveSession } from './liveSessionSubscription.js';
 

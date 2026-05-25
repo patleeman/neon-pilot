@@ -13,7 +13,7 @@ const stateBroadcasts = vi.hoisted(() => ({
   clearLiveSessionContextUsageTimer: vi.fn(),
   scheduleLiveSessionContextUsage: vi.fn(),
 }));
-const sessions = vi.hoisted(() => ({ readGoalFromEntries: vi.fn(() => ({ objective: 'goal' })) }));
+const sessionGoalState = vi.hoisted(() => ({ readGoalFromEntries: vi.fn(() => ({ objective: 'goal' })) }));
 
 vi.mock('@earendil-works/pi-coding-agent', () => agent);
 vi.mock('../shared/appEvents.js', () => appEvents);
@@ -22,7 +22,7 @@ vi.mock('./liveSessionDurableRun.js', () => durableRun);
 vi.mock('./liveSessionPresenceFacade.js', () => presence);
 vi.mock('./liveSessionReadApi.js', () => readApi);
 vi.mock('./liveSessionStateBroadcasts.js', () => stateBroadcasts);
-vi.mock('./sessions.js', () => sessions);
+vi.mock('./sessionGoalState.js', () => sessionGoalState);
 
 import {
   applySessionTitle,
@@ -74,7 +74,7 @@ describe('live session broadcasts', () => {
     broadcastSnapshot(e as never, callbacks);
 
     expect(callbacks.ensureStaleTurnState).toHaveBeenCalledWith(e);
-    expect(sessions.readGoalFromEntries).toHaveBeenCalledWith([{ type: 'text', text: 'hello' }]);
+    expect(sessionGoalState.readGoalFromEntries).toHaveBeenCalledWith([{ type: 'text', text: 'hello' }]);
     expect(e.listeners[0].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 1 });
     expect(e.listeners[1].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 2 });
   });

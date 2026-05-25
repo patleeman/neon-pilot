@@ -7,7 +7,7 @@
   "packageType": "system",
   "contributes": {
     "settings": {
-      "system-reply-actions.emojiPickerItems": {
+      "systemReplyActions.emojiPickerItems": {
         "type": "string",
         "default": "👍 Agree, 👎 Disagree, ✅ Do it, ❓ Clarify, 💡 Explain, 📋 Summarize",
         "description": "Comma-separated emoji reply starters. Each item becomes one button in the transcript selection picker.",
@@ -26,7 +26,7 @@
         "priority": 100,
         "args": { "draftText": "👍 Agree" },
         "settingItems": {
-          "key": "system-reply-actions.emojiPickerItems",
+          "key": "systemReplyActions.emojiPickerItems",
           "idPrefix": "emoji-picker-item",
           "argsKey": "draftText",
           "icon": "firstToken"
