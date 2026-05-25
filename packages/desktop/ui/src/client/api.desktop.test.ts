@@ -33,6 +33,26 @@ describe('api desktop transport', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
+        createJsonResponse([
+          {
+            id: 'knowledge',
+            name: 'Knowledge',
+            enabled: true,
+            manifest: {
+              schemaVersion: 2,
+              id: 'knowledge',
+              name: 'Knowledge',
+              backend: { entry: 'src/backend.ts', actions: [{ id: 'readMemory', handler: 'readMemory' }] },
+              contributes: {
+                views: [{ id: 'vault', title: 'Knowledge', location: 'main', component: 'Vault', routeCapabilities: ['knowledgeFiles'] }],
+              },
+            },
+            surfaces: [],
+            backendActions: [{ id: 'readMemory', handler: 'readMemory' }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
         createJsonResponse({
           ok: true,
           result: {
@@ -79,9 +99,10 @@ describe('api desktop transport', () => {
     const memory = await api.memory();
     const tools = await api.tools();
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/actions/readMemory');
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/tools');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/installed');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/extensions/knowledge/actions/readMemory');
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/tools');
     expect(memory.skills[0]?.name).toBe('checkpoint');
     expect(tools.cwd).toBe('/repo');
   });

@@ -192,25 +192,51 @@ describe('api.memory', () => {
   });
 
   it('dedupes concurrent memory requests', async () => {
-    const fetchMock = vi.fn(async () => jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/extensions/installed') return jsonResponse([knowledgeExtensionSummary()]);
+      return jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
     const [first, second] = await Promise.all([api.memory(), api.memory()]);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(first).toEqual({ skills: [], memoryDocs: [] });
     expect(second).toEqual(first);
   });
 
   it('ignores legacy profile arguments for memory requests', async () => {
-    const fetchMock = vi.fn(async () => jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/extensions/installed') return jsonResponse([knowledgeExtensionSummary()]);
+      return jsonResponse({ ok: true, result: { skills: [], memoryDocs: [] } });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
     await Promise.all([api.memory(), api.memory()]);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/system-knowledge/actions/readMemory');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/extensions/installed');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/extensions/knowledge/actions/readMemory');
   });
 });
+
+function knowledgeExtensionSummary() {
+  return {
+    id: 'knowledge',
+    name: 'Knowledge',
+    enabled: true,
+    manifest: {
+      schemaVersion: 2,
+      id: 'knowledge',
+      name: 'Knowledge',
+      backend: { entry: 'src/backend.ts', actions: [{ id: 'readMemory', handler: 'readMemory' }] },
+      contributes: {
+        views: [{ id: 'vault', title: 'Knowledge', location: 'main', component: 'Vault', routeCapabilities: ['knowledgeFiles'] }],
+      },
+    },
+    surfaces: [],
+    backendActions: [{ id: 'readMemory', handler: 'readMemory' }],
+  };
+}

@@ -7,6 +7,7 @@ import type {
   ExtensionManifest,
   ExtensionMentionRegistration,
   ExtensionQuickOpenRegistration,
+  ExtensionRouteCapability,
   ExtensionRouteSummary,
   ExtensionSearchItem,
   ExtensionSearchProviderRegistration,
@@ -204,6 +205,7 @@ async function readApiError(res: Response, path?: string): Promise<string> {
 }
 
 const pendingMemoryRequests = new Map<string, Promise<MemoryData>>();
+const pendingExtensionActionPaths = new Map<string, Promise<string>>();
 
 async function requireDesktopBridge(action: string): Promise<NonNullable<ReturnType<typeof getDesktopBridge>>> {
   const desktopBridge = getDesktopBridge();
@@ -221,10 +223,8 @@ async function getMemoryData(): Promise<MemoryData> {
     return pending;
   }
 
-  const request = extensionPost<{ ok: true; result: MemoryData } | { ok: false; error: string }>(
-    '/extensions/system-knowledge/actions/readMemory',
-    {},
-  )
+  const request = resolveExtensionActionPathByRouteCapability('knowledgeFiles', 'readMemory')
+    .then((actionPath) => extensionPost<{ ok: true; result: MemoryData } | { ok: false; error: string }>(actionPath, {}))
     .then((response) => {
       if (response.ok === false) {
         throw new Error(response.error || 'Memory data is unavailable.');
@@ -235,6 +235,39 @@ async function getMemoryData(): Promise<MemoryData> {
       pendingMemoryRequests.delete(cacheKey);
     });
   pendingMemoryRequests.set(cacheKey, request);
+  return request;
+}
+
+function extensionHasRouteCapability(extension: ExtensionInstallSummary, capability: ExtensionRouteCapability): boolean {
+  return Boolean(
+    extension.manifest.contributes?.views?.some((view) => view.routeCapabilities?.includes(capability)) ||
+    extension.surfaces?.some((surface) => surface.routeCapabilities?.includes(capability)),
+  );
+}
+
+async function resolveExtensionActionPathByRouteCapability(capability: ExtensionRouteCapability, actionId: string): Promise<string> {
+  const cacheKey = `${capability}:${actionId}`;
+  const pending = pendingExtensionActionPaths.get(cacheKey);
+  if (pending) return pending;
+
+  const request = api
+    .extensionInstallations()
+    .then((extensions) => {
+      const extension = extensions.find(
+        (candidate) =>
+          candidate.enabled &&
+          extensionHasRouteCapability(candidate, capability) &&
+          (candidate.backendActions ?? candidate.manifest.backend?.actions ?? []).some((action) => action.id === actionId),
+      );
+      if (!extension) {
+        throw new Error(`No enabled extension provides ${capability}.${actionId}.`);
+      }
+      return `/extensions/${encodeURIComponent(extension.id)}/actions/${encodeURIComponent(actionId)}`;
+    })
+    .finally(() => {
+      pendingExtensionActionPaths.delete(cacheKey);
+    });
+  pendingExtensionActionPaths.set(cacheKey, request);
   return request;
 }
 

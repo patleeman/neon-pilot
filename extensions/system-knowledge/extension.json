@@ -93,6 +93,11 @@
         "title": "Import shared item into knowledge"
       },
       {
+        "id": "readMemory",
+        "handler": "readMemory",
+        "title": "Read memory"
+      },
+      {
         "id": "resolvePromptReferences",
         "handler": "resolvePromptReferences",
         "title": "Resolve knowledge prompt references"
