@@ -2,7 +2,7 @@ import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
-import { ErrorState, LoadingState } from '../components/ui';
+import { cx, LoadingState, Pill, SurfacePanel } from '../components/ui';
 import type { MessageBlock } from '../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../transcript/askUserQuestions';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
@@ -58,6 +58,34 @@ function lazyRendererComponent(extension: ExtensionInstallSummary, renderer: Ext
   });
 }
 
+function stripAnsiForTranscript(value: string): string {
+  const escape = String.fromCharCode(27);
+  const bell = String.fromCharCode(7);
+  const oscPattern = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'gu');
+  const csiPattern = new RegExp(`${escape}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, 'gu');
+  return value.replace(oscPattern, '').replace(csiPattern, '');
+}
+
+function MissingExtensionRendererFallback({ block }: { block: ToolBlock }) {
+  const output = stripAnsiForTranscript(block.output ?? '').trim();
+  const isError = block.status === 'error' || !!block.error;
+
+  return (
+    <SurfacePanel
+      muted
+      className={cx('px-3 py-2.5 text-[12px]', isError ? 'border-danger/30 bg-danger/5' : 'border-border/60 bg-panel/80')}
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Pill tone={isError ? 'danger' : 'muted'} mono>
+          {block.tool}
+        </Pill>
+        <span className="text-dim">Extension renderer unavailable.</span>
+      </div>
+      {output ? <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-secondary">{output}</pre> : null}
+    </SurfacePanel>
+  );
+}
+
 export function NativeExtensionToolBlockHost({
   extension,
   renderer,
@@ -70,7 +98,7 @@ export function NativeExtensionToolBlockHost({
   context: ExtensionToolBlockContext;
 }) {
   if (!extension || !renderer) {
-    return <ErrorState message={`Extension renderer unavailable for ${block.tool}.`} />;
+    return <MissingExtensionRendererFallback block={block} />;
   }
 
   return <NativeExtensionToolBlockHostInner extension={extension} renderer={renderer} block={block} context={context} />;
