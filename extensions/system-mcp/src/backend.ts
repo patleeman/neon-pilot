@@ -13,7 +13,6 @@ import {
   readBundledSkillMcpManifests,
   readMcpConfigDocument,
 } from '@neon-pilot/extensions/backend/mcp';
-import { Type } from '@sinclair/typebox';
 
 const MCP_ACTION_VALUES = ['list', 'info', 'grep', 'call', 'auth', 'logout'] as const;
 
@@ -57,39 +56,37 @@ type McpRuntimeContext = {
   runtime: { getLiveSessionResourceOptions(): { additionalSkillPaths?: string[]; cwd?: string }; getRepoRoot(): string };
 };
 
-const McpToolParams = Type.Object({
-  action: Type.Union(
-    MCP_ACTION_VALUES.map((value) => Type.Literal(value)),
-    {
+const McpToolParams = {
+  type: 'object',
+  properties: {
+    action: {
+      type: 'string',
+      enum: MCP_ACTION_VALUES,
       description: 'MCP operation to perform.',
     },
-  ),
-  server: Type.Optional(
-    Type.String({
+    server: {
+      type: 'string',
       description: 'MCP server name. Required for info, grep, call, auth, logout.',
-    }),
-  ),
-  tool: Type.Optional(
-    Type.String({
+    },
+    tool: {
+      type: 'string',
       description: 'Tool name within the server. Used with info and call actions.',
-    }),
-  ),
-  pattern: Type.Optional(
-    Type.String({
+    },
+    pattern: {
+      type: 'string',
       description: 'Glob pattern to search tools. Used with grep action. Supports * wildcards.',
-    }),
-  ),
-  arguments: Type.Optional(
-    Type.String({
+    },
+    arguments: {
+      type: 'string',
       description: 'JSON string of arguments to pass to the tool. Used with call action. Example: \'{"query":"hello"}\'',
-    }),
-  ),
-  probe: Type.Optional(
-    Type.Boolean({
+    },
+    probe: {
+      type: 'boolean',
       description: 'When listing servers, whether to fetch and display their tools. Default false.',
-    }),
-  ),
-});
+    },
+  },
+  required: ['action'],
+} as const;
 
 function validateMcpString(value: string | undefined, label: string): string {
   if (!value || !value.trim()) {

@@ -1,5 +1,4 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { Type } from '@sinclair/typebox';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -174,14 +173,17 @@ function hasPendingMessages(ctx: { hasPendingMessages?: () => boolean }): boolea
 
 // ── Tool parameter schemas ───────────────────────────────────────────────────
 
-const GoalParams = Type.Object({
-  objective: Type.Optional(Type.String({ description: 'Start or replace the active goal objective.' })),
-  status: Type.Optional(
-    Type.Union([Type.Literal('pause'), Type.Literal('resume'), Type.Literal('complete')], {
+const GoalParams = {
+  type: 'object',
+  properties: {
+    objective: { type: 'string', description: 'Start or replace the active goal objective.' },
+    status: {
+      type: 'string',
+      enum: ['pause', 'resume', 'complete'],
       description: 'Pause the active goal, resume a paused goal, or mark the active goal complete only when the objective is achieved.',
-    }),
-  ),
-});
+    },
+  },
+} as const;
 
 // ── Extension entry ──────────────────────────────────────────────────────────
 

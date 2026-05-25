@@ -4,7 +4,6 @@ import { extname, join } from 'node:path';
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { Type } from '@sinclair/typebox';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -301,10 +300,14 @@ export async function resetInstallation(_input: unknown, ctx: ExtensionBackendCo
 // Agent extension — probe_video tool
 // ---------------------------------------------------------------------------
 
-const ProbeVideoParams = Type.Object({
-  path: Type.String({ description: 'Absolute path to the video file on disk.' }),
-  question: Type.String({ minLength: 1, maxLength: 8000, description: 'What to ask or analyze about the video.' }),
-});
+const ProbeVideoParams = {
+  type: 'object',
+  properties: {
+    path: { type: 'string', description: 'Absolute path to the video file on disk.' },
+    question: { type: 'string', minLength: 1, maxLength: 8000, description: 'What to ask or analyze about the video.' },
+  },
+  required: ['path', 'question'],
+} as const;
 
 function validatePath(value: string): string {
   const p = value.trim();
