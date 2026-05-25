@@ -3801,8 +3801,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const drawing = drawingAttachments.find((attachment) => attachment.localId === localId);
     if (!drawing) return;
 
-    const excalidrawExtension = extensionRegistry.extensions.find((e) => e.backendActions?.some((a) => a.id === 'image'));
-    const excalidrawInputClient = createNativeExtensionClient(excalidrawExtension?.id ?? 'system-excalidraw-input');
+    const excalidrawTool = extensionRegistry.composerInputTools.find((tool) => tool.id === 'excalidraw');
+    if (!excalidrawTool) {
+      showNotice('danger', 'Drawing editor is unavailable.', 4000);
+      return;
+    }
+
+    const excalidrawInputClient = createNativeExtensionClient(excalidrawTool.extensionId);
     const result = await excalidrawInputClient.ui.openModal({
       component: 'ExcalidrawEditorModal',
       props: { initialTitle: drawing.title, initialScene: drawing.scene, saveLabel: 'Update drawing' },
