@@ -88,6 +88,11 @@
         "title": "Import URL into knowledge"
       },
       {
+        "id": "vaultImportSharedItem",
+        "handler": "vaultImportSharedItem",
+        "title": "Import shared item into knowledge"
+      },
+      {
         "id": "resolvePromptReferences",
         "handler": "resolvePromptReferences",
         "title": "Resolve knowledge prompt references"

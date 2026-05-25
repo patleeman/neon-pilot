@@ -259,9 +259,9 @@ const smokes = {
     await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
   },
   async 'system-knowledge'() {
-    const list = await module.vaultListFiles();
+    const list = await module.vaultListFiles({}, ctx);
     assert(list.root === vaultRoot && Array.isArray(list.files), 'vaultListFiles failed');
-    const refs = await module.resolvePromptReferences({ text: '@smoke.md' });
+    const refs = await module.resolvePromptReferences({ text: '@smoke.md' }, ctx);
     assert(Array.isArray(refs.contextBlocks), 'resolvePromptReferences failed');
   },
   async 'system-local-dictation'() {

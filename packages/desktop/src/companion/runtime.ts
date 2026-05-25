@@ -90,6 +90,23 @@ async function invokeDesktopApi<T = unknown>(
   return parseApiDispatchResult<T>(response);
 }
 
+async function invokeDesktopExtensionAction<T = unknown>(
+  hostManager: HostManager,
+  extensionId: string,
+  actionId: string,
+  input: unknown,
+): Promise<T> {
+  const response = await invokeDesktopApi<{ ok?: boolean; result?: T; error?: string }>(hostManager, {
+    method: 'POST',
+    path: `/api/extensions/${encodeURIComponent(extensionId)}/actions/${encodeURIComponent(actionId)}`,
+    body: input,
+  });
+  if (response.ok === false) {
+    throw new Error(response.error || `Extension action failed: ${extensionId}.${actionId}`);
+  }
+  return response.result as T;
+}
+
 async function subscribeDesktopApiStream(
   hostManager: HostManager,
   path: string,
@@ -673,87 +690,49 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     },
 
     async listKnowledgeEntries(directoryId?: string | null) {
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: `/api/extensions/system-knowledge/vault/tree${directoryId ? `?dir=${encodeURIComponent(directoryId)}` : ''}`,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultTree', directoryId ? { dir: directoryId } : {});
     },
 
     async searchKnowledge(input: { query?: string | null; limit?: number | null }) {
       const query = input.query?.trim() ?? '';
       const limit = Math.min(50, Math.max(1, Number(input.limit ?? 20) || 20));
-      const params = new URLSearchParams({ limit: String(limit) });
-      if (query) {
-        params.set('q', query);
-      }
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: `/api/extensions/system-knowledge/vault/note-search?${params.toString()}`,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultSearch', { q: query, limit });
     },
 
     async readKnowledgeFile(fileId: string) {
-      return invokeDesktopApi(hostManager, {
-        method: 'GET',
-        path: `/api/extensions/system-knowledge/vault/file?id=${encodeURIComponent(fileId)}`,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultReadFile', { id: fileId });
     },
 
     async writeKnowledgeFile(input: { fileId: string; content: string }) {
-      return invokeDesktopApi(hostManager, {
-        method: 'PUT',
-        path: '/api/extensions/system-knowledge/vault/file',
-        body: {
-          id: input.fileId,
-          content: input.content,
-        },
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultWriteFile', {
+        id: input.fileId,
+        content: input.content,
       });
     },
 
     async createKnowledgeFolder(folderId: string) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: '/api/extensions/system-knowledge/vault/folder',
-        body: {
-          id: folderId,
-        },
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultCreateFolder', { id: folderId });
     },
 
     async renameKnowledgeEntry(input: { id: string; newName: string }) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: '/api/extensions/system-knowledge/vault/rename',
-        body: input,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultRename', input);
     },
 
     async deleteKnowledgeEntry(id: string) {
-      return invokeDesktopApi(hostManager, {
-        method: 'DELETE',
-        path: `/api/extensions/system-knowledge/vault/file?id=${encodeURIComponent(id)}`,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultDeleteFile', { id });
     },
 
     async createKnowledgeImageAsset(input: { fileName?: string | null; mimeType?: string | null; dataBase64: string }) {
       const safeFileName = input.fileName?.trim() || 'image.png';
       const mimeType = input.mimeType?.trim() || 'image/png';
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: '/api/extensions/system-knowledge/vault/image',
-        body: {
-          filename: safeFileName,
-          dataUrl: `data:${mimeType};base64,${input.dataBase64.trim()}`,
-        },
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultUploadImage', {
+        filename: safeFileName,
+        dataUrl: `data:${mimeType};base64,${input.dataBase64.trim()}`,
       });
     },
 
     async importKnowledge(input: CompanionKnowledgeImportInput) {
-      return invokeDesktopApi(hostManager, {
-        method: 'POST',
-        path: '/api/extensions/system-knowledge/vault/share-import',
-        body: input,
-      });
+      return invokeDesktopExtensionAction(hostManager, 'system-knowledge', 'vaultImportSharedItem', input);
     },
 
     async listScheduledTasks() {
