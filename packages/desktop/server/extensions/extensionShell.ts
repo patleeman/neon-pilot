@@ -1,4 +1,21 @@
+import { type ChildProcess } from 'node:child_process';
+
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
+
+const spawnedExtensionProcesses = new Set<ChildProcess>();
+let shutdownHooksInstalled = false;
+
+function terminateSpawnedExtensionProcesses(): void {
+  for (const child of spawnedExtensionProcesses) {
+    terminateProcessGroup(child);
+  }
+}
+
+function installShutdownHooks(): void {
+  if (shutdownHooksInstalled) return;
+  shutdownHooksInstalled = true;
+  process.once('exit', terminateSpawnedExtensionProcesses);
+}
 
 export function createExtensionShellCapability() {
   return {
@@ -47,17 +64,29 @@ export function createExtensionShellCapability() {
       onStderr?: (chunk: string) => void;
       onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
     }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => void }> {
+      installShutdownHooks();
       const { child, launch } = spawnProcess({
         command: input.command,
         args: input.args ?? [],
         cwd: input.cwd,
         env: input.env ? { ...process.env, ...input.env } : process.env,
-        options: { detached: false, stdio: ['ignore', 'pipe', 'pipe'] },
+        options: { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
       });
+      spawnedExtensionProcesses.add(child);
       child.stdout?.on('data', (chunk: Buffer) => input.onStdout?.(chunk.toString('utf8')));
       child.stderr?.on('data', (chunk: Buffer) => input.onStderr?.(chunk.toString('utf8')));
-      child.on('exit', (code, signal) => input.onExit?.({ code, signal }));
-      return { pid: child.pid ?? null, executionWrappers: launch.wrappers, kill: () => terminateProcessGroup(child) };
+      child.on('exit', (code, signal) => {
+        spawnedExtensionProcesses.delete(child);
+        input.onExit?.({ code, signal });
+      });
+      return {
+        pid: child.pid ?? null,
+        executionWrappers: launch.wrappers,
+        kill: () => {
+          spawnedExtensionProcesses.delete(child);
+          terminateProcessGroup(child);
+        },
+      };
     },
   };
 }

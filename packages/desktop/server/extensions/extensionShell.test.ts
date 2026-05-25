@@ -74,6 +74,7 @@ describe('extensionShell', () => {
     child.emit('exit', 0, null);
     handle.kill();
 
+    expect(spawnProcess).toHaveBeenCalledWith(expect.objectContaining({ options: { detached: true, stdio: ['ignore', 'pipe', 'pipe'] } }));
     expect(handle).toMatchObject({ pid: 123, executionWrappers: [{ id: 'wrap' }] });
     expect(onStdout).toHaveBeenCalledWith('hello');
     expect(onStderr).toHaveBeenCalledWith('oops');
