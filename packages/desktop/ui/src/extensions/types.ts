@@ -261,8 +261,16 @@ interface ExtensionSelectionActionContribution {
   kinds: ExtensionSelectionKind[];
   icon?: string;
   args?: unknown;
+  settingItems?: ExtensionSelectionActionSettingItemsContribution;
   when?: string;
   priority?: number;
+}
+
+interface ExtensionSelectionActionSettingItemsContribution {
+  key: string;
+  idPrefix?: string;
+  argsKey?: string;
+  icon?: 'firstToken' | 'none';
 }
 
 interface ExtensionTranscriptBlockContribution {

@@ -6,60 +6,31 @@
   "version": "0.1.0",
   "packageType": "system",
   "contributes": {
+    "settings": {
+      "system-reply-actions.emojiPickerItems": {
+        "type": "string",
+        "default": "👍 Agree, 👎 Disagree, ✅ Do it, ❓ Clarify, 💡 Explain, 📋 Summarize",
+        "description": "Comma-separated emoji reply starters. Each item becomes one button in the transcript selection picker.",
+        "group": "Reply Actions",
+        "placeholder": "👍 Agree, 👎 Disagree, ✅ Do it",
+        "order": 10
+      }
+    },
     "selectionActions": [
       {
-        "id": "reply-agree",
-        "title": "Agree / proceed",
+        "id": "emoji-picker-item",
+        "title": "Emoji reply",
         "action": "composer.replyToSelection",
         "kinds": ["text", "transcriptRange"],
         "icon": "👍",
         "priority": 100,
-        "args": { "draftText": "👍 Agree" }
-      },
-      {
-        "id": "reply-disagree",
-        "title": "Disagree / stop",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "👎",
-        "priority": 90,
-        "args": { "draftText": "👎 Disagree" }
-      },
-      {
-        "id": "reply-do-it",
-        "title": "Do it",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "✅",
-        "priority": 85,
-        "args": { "draftText": "✅ Do it" }
-      },
-      {
-        "id": "reply-question",
-        "title": "Ask / clarify",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "❓",
-        "priority": 80,
-        "args": { "draftText": "❓ Clarify" }
-      },
-      {
-        "id": "reply-explain",
-        "title": "Explain",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "💡",
-        "priority": 70,
-        "args": { "draftText": "💡 Explain" }
-      },
-      {
-        "id": "reply-summarize",
-        "title": "Summarize",
-        "action": "composer.replyToSelection",
-        "kinds": ["text", "transcriptRange"],
-        "icon": "📋",
-        "priority": 60,
-        "args": { "draftText": "📋 Summarize" }
+        "args": { "draftText": "👍 Agree" },
+        "settingItems": {
+          "key": "system-reply-actions.emojiPickerItems",
+          "idPrefix": "emoji-picker-item",
+          "argsKey": "draftText",
+          "icon": "firstToken"
+        }
       }
     ]
   }

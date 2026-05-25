@@ -309,8 +309,16 @@ export interface ExtensionSelectionActionContribution {
   kinds: ExtensionSelectionKind[];
   icon?: string;
   args?: unknown;
+  settingItems?: ExtensionSelectionActionSettingItemsContribution;
   when?: string;
   priority?: number;
+}
+
+export interface ExtensionSelectionActionSettingItemsContribution {
+  key: string;
+  idPrefix?: string;
+  argsKey?: string;
+  icon?: 'firstToken' | 'none';
 }
 
 export interface ExtensionTranscriptBlockContribution {

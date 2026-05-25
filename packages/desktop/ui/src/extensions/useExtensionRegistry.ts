@@ -649,23 +649,82 @@ function normalizeContextMenus(extensions: ExtensionManifest[]): ExtensionContex
   return result;
 }
 
-function normalizeSelectionActions(extensions: ExtensionManifest[]): ExtensionSelectionActionRegistration[] {
+function toSelectionActionRegistration(
+  extensionId: string,
+  action: ExtensionSelectionActionContribution,
+): ExtensionSelectionActionRegistration {
+  return {
+    extensionId,
+    id: action.id,
+    title: action.title,
+    action: action.action,
+    kinds: action.kinds,
+    ...(action.icon ? { icon: action.icon } : {}),
+    ...(action.args !== undefined ? { args: action.args } : {}),
+    ...(action.when ? { when: action.when } : {}),
+    ...(typeof action.priority === 'number' ? { priority: action.priority } : {}),
+  };
+}
+
+function normalizeSettingItems(value: unknown): string[] {
+  if (typeof value !== 'string') {
+    return [];
+  }
+  return value
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function expandSelectionActionFromSetting(
+  extensionId: string,
+  action: ExtensionSelectionActionContribution,
+  settings: Record<string, unknown>,
+): ExtensionSelectionActionRegistration[] {
+  const settingItems = action.settingItems;
+  if (!settingItems) {
+    return [toSelectionActionRegistration(extensionId, action)];
+  }
+
+  if (typeof settings[settingItems.key] !== 'string') {
+    return [toSelectionActionRegistration(extensionId, action)];
+  }
+
+  const items = normalizeSettingItems(settings[settingItems.key]);
+  if (items.length === 0) {
+    return [];
+  }
+
+  const baseArgs =
+    action.args && typeof action.args === 'object' && !Array.isArray(action.args) ? (action.args as Record<string, unknown>) : {};
+  const idPrefix = settingItems.idPrefix?.trim() || action.id;
+  return items.map((item, index): ExtensionSelectionActionRegistration => {
+    const [firstToken = item] = item.split(/\s+/, 1);
+    const args = settingItems.argsKey ? { ...baseArgs, [settingItems.argsKey]: item } : action.args;
+    return {
+      extensionId,
+      id: `${idPrefix}-${index + 1}`,
+      title: item,
+      action: action.action,
+      kinds: action.kinds,
+      ...(settingItems.icon === 'firstToken' ? { icon: firstToken } : action.icon ? { icon: action.icon } : {}),
+      ...(args !== undefined ? { args } : {}),
+      ...(action.when ? { when: action.when } : {}),
+      priority: action.priority !== undefined ? action.priority - index : -index,
+    };
+  });
+}
+
+function normalizeSelectionActions(
+  extensions: ExtensionManifest[],
+  settings: Record<string, unknown>,
+): ExtensionSelectionActionRegistration[] {
   const result: ExtensionSelectionActionRegistration[] = [];
   for (const extension of extensions) {
     const actions = extension.contributes?.selectionActions;
     if (!actions?.length) continue;
     for (const action of actions) {
-      result.push({
-        extensionId: extension.id,
-        id: action.id,
-        title: action.title,
-        action: action.action,
-        kinds: action.kinds,
-        ...(action.icon ? { icon: action.icon } : {}),
-        ...(action.args !== undefined ? { args: action.args } : {}),
-        ...(action.when ? { when: action.when } : {}),
-        ...(typeof action.priority === 'number' ? { priority: action.priority } : {}),
-      });
+      result.push(...expandSelectionActionFromSetting(extension.id, action, settings));
     }
   }
   result.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
@@ -718,7 +777,8 @@ function canLoadExtensionRegistry(): boolean {
   return (
     typeof api.extensionInstallations === 'function' &&
     typeof api.extensionRoutes === 'function' &&
-    typeof api.extensionSurfaces === 'function'
+    typeof api.extensionSurfaces === 'function' &&
+    typeof api.settings === 'function'
   );
 }
 
@@ -727,7 +787,12 @@ async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
     return EMPTY_EXTENSION_REGISTRY_STATE;
   }
 
-  const [extensions, routes, surfaces] = await Promise.all([api.extensionInstallations(), api.extensionRoutes(), api.extensionSurfaces()]);
+  const [extensions, routes, surfaces, settings] = await Promise.all([
+    api.extensionInstallations(),
+    api.extensionRoutes(),
+    api.extensionSurfaces(),
+    api.settings(),
+  ]);
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
@@ -751,7 +816,7 @@ async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
     composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
     toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
     contextMenus: normalizeContextMenus(enabledRegistryExtensions),
-    selectionActions: normalizeSelectionActions(enabledRegistryExtensions),
+    selectionActions: normalizeSelectionActions(enabledRegistryExtensions, settings),
     threadHeaderActions: normalizeThreadHeaderActions(enabledRegistryExtensions),
     statusBarItems: normalizeStatusBarItems(enabledRegistryExtensions),
     conversationHeaderElements: normalizeConversationHeaderElements(enabledRegistryExtensions),

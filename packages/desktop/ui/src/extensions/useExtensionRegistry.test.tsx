@@ -13,6 +13,7 @@ vi.mock('../client/api', () => ({
     extensionInstallations: vi.fn(),
     extensionRoutes: vi.fn(),
     extensionSurfaces: vi.fn(),
+    settings: vi.fn(),
   },
 }));
 
@@ -93,6 +94,7 @@ describe('useExtensionRegistry', () => {
     ] as never);
     vi.mocked(api.extensionRoutes).mockResolvedValue([]);
     vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({});
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
 
@@ -179,6 +181,7 @@ describe('useExtensionRegistry', () => {
     ] as never);
     vi.mocked(api.extensionRoutes).mockResolvedValue([]);
     vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({});
 
     const useTwoRegistryConsumers = () => {
       const first = useExtensionRegistry();
@@ -194,6 +197,138 @@ describe('useExtensionRegistry', () => {
     expect(api.extensionInstallations).toHaveBeenCalledTimes(1);
     expect(api.extensionRoutes).toHaveBeenCalledTimes(1);
     expect(api.extensionSurfaces).toHaveBeenCalledTimes(1);
+    expect(api.settings).toHaveBeenCalledTimes(1);
+  });
+
+  it('expands selection action picker items from extension settings', async () => {
+    vi.mocked(api.extensionInstallations).mockResolvedValue([
+      {
+        id: 'reply-extension',
+        name: 'Reply Actions',
+        enabled: true,
+        status: 'enabled',
+        manifest: {
+          schemaVersion: 2,
+          id: 'reply-extension',
+          name: 'Reply Actions',
+          contributes: {
+            selectionActions: [
+              {
+                id: 'emoji-picker-item',
+                title: 'Emoji reply',
+                action: 'composer.replyToSelection',
+                kinds: ['text', 'transcriptRange'],
+                icon: '👍',
+                priority: 100,
+                args: { draftText: '👍 Agree' },
+                settingItems: {
+                  key: 'reply-extension.items',
+                  idPrefix: 'emoji-picker-item',
+                  argsKey: 'draftText',
+                  icon: 'firstToken',
+                },
+              },
+            ],
+          },
+        },
+      },
+    ] as never);
+    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
+    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({
+      'reply-extension.items': '🚀 Ship it, 🧭 Reorient',
+    });
+
+    const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.selectionActions).toEqual([
+      expect.objectContaining({
+        id: 'emoji-picker-item-1',
+        title: '🚀 Ship it',
+        icon: '🚀',
+        args: { draftText: '🚀 Ship it' },
+      }),
+      expect.objectContaining({
+        id: 'emoji-picker-item-2',
+        title: '🧭 Reorient',
+        icon: '🧭',
+        args: { draftText: '🧭 Reorient' },
+      }),
+    ]);
+  });
+
+  it('removes setting-expanded selection actions when the setting is empty', async () => {
+    vi.mocked(api.extensionInstallations).mockResolvedValue([
+      {
+        id: 'reply-extension',
+        name: 'Reply Actions',
+        enabled: true,
+        status: 'enabled',
+        manifest: {
+          schemaVersion: 2,
+          id: 'reply-extension',
+          name: 'Reply Actions',
+          contributes: {
+            selectionActions: [
+              {
+                id: 'emoji-picker-item',
+                title: 'Emoji reply',
+                action: 'composer.replyToSelection',
+                kinds: ['text', 'transcriptRange'],
+                icon: '👍',
+                priority: 100,
+                args: { draftText: '👍 Agree' },
+                settingItems: {
+                  key: 'reply-extension.items',
+                  idPrefix: 'emoji-picker-item',
+                  argsKey: 'draftText',
+                  icon: 'firstToken',
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'other-extension',
+        name: 'Other Extension',
+        enabled: true,
+        status: 'enabled',
+        manifest: {
+          schemaVersion: 2,
+          id: 'other-extension',
+          name: 'Other Extension',
+          contributes: {
+            selectionActions: [
+              {
+                id: 'other-action',
+                title: 'Other action',
+                action: 'other.action',
+                kinds: ['text'],
+                icon: 'O',
+                priority: 10,
+              },
+            ],
+          },
+        },
+      },
+    ] as never);
+    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
+    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({
+      'reply-extension.items': ' , ; ',
+    });
+
+    const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.selectionActions).toEqual([
+      expect.objectContaining({
+        extensionId: 'other-extension',
+        id: 'other-action',
+      }),
+    ]);
   });
 
   it('keeps disabled extensions visible but removes their active contributions', async () => {
@@ -217,6 +352,7 @@ describe('useExtensionRegistry', () => {
     ] as never);
     vi.mocked(api.extensionRoutes).mockResolvedValue([]);
     vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({});
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
 
@@ -260,6 +396,7 @@ describe('useExtensionRegistry', () => {
       ] as never);
     vi.mocked(api.extensionRoutes).mockResolvedValue([]);
     vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
+    vi.mocked(api.settings).mockResolvedValue({});
 
     const { result, rerender } = renderHook(() => useExtensionRegistry(), { wrapper });
 

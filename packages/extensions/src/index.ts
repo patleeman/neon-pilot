@@ -613,8 +613,21 @@ export interface ExtensionSelectionActionContribution {
   icon?: string;
   /** Static action arguments merged with the active selection at execution time. */
   args?: unknown;
+  /** Expand this action into one action per item from a string setting. */
+  settingItems?: ExtensionSelectionActionSettingItemsContribution;
   when?: string;
   priority?: number;
+}
+
+export interface ExtensionSelectionActionSettingItemsContribution {
+  /** Extension setting key containing comma, semicolon, or newline separated items. */
+  key: string;
+  /** Generated action id prefix. Defaults to this contribution id. */
+  idPrefix?: string;
+  /** Static args key that receives each item string. */
+  argsKey?: string;
+  /** Derive the compact icon from the first whitespace-delimited token. */
+  icon?: 'firstToken' | 'none';
 }
 
 export interface ExtensionTranscriptBlockContribution {
