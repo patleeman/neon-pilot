@@ -2437,8 +2437,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => selectUnattachedMentionItems(draftMentionItems, attachedContextDocs),
     [attachedContextDocs, draftMentionItems],
   );
+  const knownRunIds = useMemo(() => (runs ? new Set(runs.runs.map((run) => run.runId)) : null), [runs]);
   const shouldLoadConversationRun = resolveShouldLoadConversationRun({
     conversationRunId,
+    knownRunIds,
     draft,
     isLiveSession,
     stoppedMidTurn: didConversationStopMidTurn(lastConversationMessage),
