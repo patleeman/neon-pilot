@@ -570,7 +570,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
   const desktopConversation = useDesktopConversationState(id ?? null, {
     tailBlocks: historicalTailBlocks,
-    includeToolBlocks: false,
     enabled: shouldSubscribeToDesktopConversationState({ draft }),
   });
   const desktopConversationChecking = false;
@@ -587,7 +586,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     draft || useDesktopConversation || desktopConversationChecking ? undefined : id,
     {
       tailBlocks: historicalTailBlocks,
-      includeToolBlocks: false,
       versionKey: conversationVersionKey,
     },
   );
@@ -804,12 +802,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    primeSessionDetailCache(
-      id,
-      bootstrapSessionDetail,
-      { tailBlocks: historicalTailBlocks, includeToolBlocks: false },
-      effectiveConversationEventVersion,
-    );
+    primeSessionDetailCache(id, bootstrapSessionDetail, { tailBlocks: historicalTailBlocks }, effectiveConversationEventVersion);
   }, [bootstrapSessionDetail, effectiveConversationEventVersion, historicalTailBlocks, id, useDesktopConversation]);
 
   const bootstrapPendingInitialSessionDetail =
@@ -820,7 +813,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     error: webSessionError,
   } = useSessionDetail(bootstrapPendingInitialSessionDetail || useDesktopConversation || desktopConversationChecking ? undefined : id, {
     tailBlocks: historicalTailBlocks,
-    includeToolBlocks: false,
     version: effectiveConversationEventVersion,
   });
   const sessionDetail = useDesktopConversation ? (visibleDesktopConversationState?.sessionDetail ?? null) : webSessionDetail;
