@@ -26,7 +26,7 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 - Validate the actual work before calling it done. Use the narrowest meaningful check first, then broader checks when risk warrants it.
 - For extension/core boundary work, run `pnpm run check:extensions:static` or at least `node scripts/check-core-extension-boundary.mjs && node scripts/check-extension-backend-api.mjs`.
 - If you modify web UI, perform a visual check. Use the repo wrapper for agent-browser sessions and clean up only processes you started.
-- Before final summary, use the `checkpoint` skill/tool for a targeted commit. Do not stage unrelated files.
+- Before final summary, use the `checkpoint` skill/tool for a targeted commit when available; otherwise use git directly. Do not stage unrelated files.
 
 ## UI design bans
 
