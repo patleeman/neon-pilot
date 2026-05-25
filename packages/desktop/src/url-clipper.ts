@@ -54,7 +54,7 @@ export async function importClipboardUrlToKnowledge(input: {
   await input.host.ensureActiveHostRunning();
   const response = await input.host.getActiveHostController().dispatchApiRequest({
     method: 'POST',
-    path: '/api/extensions/system-knowledge/vault/share-import',
+    path: '/api/extensions/system-knowledge/actions/vaultImportSharedItem',
     body: {
       kind: 'url',
       url,
@@ -68,5 +68,9 @@ export async function importClipboardUrlToKnowledge(input: {
     throw new Error(readApiDispatchError(response));
   }
 
-  return parseApiDispatchResult<DesktopUrlClipImportResult>(response);
+  const result = parseApiDispatchResult<{ ok?: boolean; result?: DesktopUrlClipImportResult; error?: string }>(response);
+  if (result.ok === false) {
+    throw new Error(result.error || 'Knowledge import failed.');
+  }
+  return result.result as DesktopUrlClipImportResult;
 }
