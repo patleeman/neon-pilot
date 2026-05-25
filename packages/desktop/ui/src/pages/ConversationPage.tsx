@@ -380,7 +380,7 @@ interface ExcalidrawEditorSavePayload {
   previewUrl: string;
 }
 
-const INITIAL_HISTORICAL_TAIL_BLOCKS = 24;
+const INITIAL_HISTORICAL_TAIL_BLOCKS = 8;
 const HISTORICAL_TAIL_BLOCKS_STEP = 120;
 const HISTORICAL_TAIL_BLOCKS_STEP_PERCENT = 10;
 const MAX_RELATED_THREAD_SELECTIONS = 5;
@@ -5189,6 +5189,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [id, suggestedContextShelfState],
   );
   const [composerChromeReady, setComposerChromeReady] = useState(draft);
+  const [composerShelvesReady, setComposerShelvesReady] = useState(draft);
   const composerChromeConversationKeyRef = useRef<string | null>(draft ? 'draft' : (id ?? null));
 
   useEffect(() => {
@@ -5196,10 +5197,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     if (composerChromeConversationKeyRef.current !== conversationKey) {
       composerChromeConversationKeyRef.current = conversationKey;
       setComposerChromeReady(draft);
+      setComposerShelvesReady(draft);
     }
 
     if (draft) {
       setComposerChromeReady(true);
+      setComposerShelvesReady(true);
       return;
     }
 
@@ -5216,8 +5219,33 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     };
   }, [composerChromeReady, draft, hasRenderableMessages, id, showConversationLoadingState]);
 
+  useEffect(() => {
+    if (draft) {
+      setComposerShelvesReady(true);
+      return;
+    }
+    if (!composerChromeReady || composerShelvesReady || showConversationLoadingState) return;
+
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+    const schedule = () => {
+      const requestIdle = window.requestIdleCallback;
+      if (typeof requestIdle === 'function') {
+        idleId = requestIdle(() => setComposerShelvesReady(true), { timeout: 2000 });
+        return;
+      }
+      timeoutId = window.setTimeout(() => setComposerShelvesReady(true), 1600);
+    };
+    timeoutId = window.setTimeout(schedule, 600);
+
+    return () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      if (idleId !== null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+    };
+  }, [composerChromeReady, composerShelvesReady, draft, showConversationLoadingState]);
+
   const hasComposerShelfContent =
-    composerChromeReady &&
+    composerShelvesReady &&
     hasConversationComposerShelfContent({
       composerShelvesTopCount: composerShelvesTop.length,
       composerShelvesBottomCount: composerShelvesBottom.length,
