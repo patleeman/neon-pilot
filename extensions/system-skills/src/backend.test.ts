@@ -5,13 +5,13 @@ const buildSkillInjectionPlanAsync = vi.fn();
 const buildSkillInventoryAsync = vi.fn();
 const setSkillEnabled = vi.fn();
 
-vi.mock('@neon-pilot/core', () => ({ writeMergedMcpConfigFile }));
 vi.mock(
   '@neon-pilot/extensions/backend/skills',
   () => ({
     buildSkillInjectionPlanAsync,
     buildSkillInventoryAsync,
     setSkillEnabled,
+    writeMergedMcpConfigFile,
   }),
   { virtual: true },
 );

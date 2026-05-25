@@ -17,3 +17,15 @@ export function listSkillsForProfile<TResult = unknown>(..._args: unknown[]): TR
 export function normalizeMemoryPath<TResult = unknown>(..._args: unknown[]): TResult {
   return unresolved();
 }
+
+export function getDurableAgentFilePath<TResult = unknown>(..._args: unknown[]): TResult {
+  return unresolved();
+}
+
+export function getVaultRoot<TResult = unknown>(..._args: unknown[]): TResult {
+  return unresolved();
+}
+
+export function resolveRuntimeResources<TResult = unknown>(..._args: unknown[]): TResult {
+  return unresolved();
+}

@@ -1,8 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { getDurableAgentFilePath, getVaultRoot, resolveRuntimeResources } from '@neon-pilot/core';
 import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse } from '@neon-pilot/extensions';
-import { buildRecentReadUsage, listMemoryDocs, listSkillsForProfile, normalizeMemoryPath } from '@neon-pilot/extensions/backend/knowledge';
+import {
+  buildRecentReadUsage,
+  getDurableAgentFilePath,
+  getVaultRoot,
+  listMemoryDocs,
+  listSkillsForProfile,
+  normalizeMemoryPath,
+  resolveRuntimeResources,
+} from '@neon-pilot/extensions/backend/knowledge';
 
 import { readKnowledgeState, syncKnowledgeState, updateKnowledgeState } from './backend/knowledge/state';
 import * as vault from './backend/knowledge/vault';
@@ -82,13 +89,15 @@ export async function readMemory(_input: unknown, ctx: ExtensionBackendContext) 
   const runtime = (ctx as unknown as { runtime?: { getRepoRoot?: () => string } }).runtime;
   const runtimeScope = ctx.runtimeScope ?? ctx.profile;
   const repoRoot = runtime?.getRepoRoot?.() ?? process.cwd();
-  const resolvedResources = resolveRuntimeResources(runtimeScope, { repoRoot });
-  const agentsMd = resolvedResources.agentsFiles.map((filePath) => ({
-    source: inferAgentSource(filePath),
-    path: filePath,
-    exists: existsSync(filePath),
-    content: existsSync(filePath) ? readFileSync(filePath, 'utf-8') : undefined,
-  }));
+  const resolvedResources = await resolveRuntimeResources<{ agentsFiles: string[] }>(runtimeScope, { repoRoot });
+  const agentsMd = await Promise.all(
+    resolvedResources.agentsFiles.map(async (filePath) => ({
+      source: await inferAgentSource(filePath),
+      path: filePath,
+      exists: existsSync(filePath),
+      content: existsSync(filePath) ? readFileSync(filePath, 'utf-8') : undefined,
+    })),
+  );
   const [skills, memoryDocs] = await Promise.all([listSkillsForProfile(runtimeScope), listMemoryDocs()]);
   const usageByPath = await buildRecentReadUsage([...skills.map((item) => item.path), ...memoryDocs.map((item) => item.path)]);
 
@@ -104,8 +113,8 @@ export async function readMemory(_input: unknown, ctx: ExtensionBackendContext) 
   return { agentsMd, skills, memoryDocs };
 }
 
-function inferAgentSource(filePath: string): string {
-  const baseAgentFile = getDurableAgentFilePath(getVaultRoot());
+async function inferAgentSource(filePath: string): Promise<string> {
+  const baseAgentFile = await getDurableAgentFilePath(await getVaultRoot());
   if (filePath === baseAgentFile) return 'vault';
   if (filePath.includes('/skills/')) return 'global';
   return 'project';

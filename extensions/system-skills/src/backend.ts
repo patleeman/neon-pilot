@@ -1,6 +1,10 @@
-import { writeMergedMcpConfigFile } from '@neon-pilot/core';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { buildSkillInjectionPlanAsync, buildSkillInventoryAsync, setSkillEnabled } from '@neon-pilot/extensions/backend/skills';
+import {
+  buildSkillInjectionPlanAsync,
+  buildSkillInventoryAsync,
+  setSkillEnabled,
+  writeMergedMcpConfigFile,
+} from '@neon-pilot/extensions/backend/skills';
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
   const skills = (await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope ?? ctx.profile, repoRoot: process.cwd() })).map(
@@ -34,7 +38,12 @@ async function refreshSkillMcpConfig(ctx: ExtensionBackendContext): Promise<void
   const outputPath = `${ctx.runtimeDir}/mcp_servers.json`;
   const env = { ...process.env };
   if (env.MCP_CONFIG_PATH === outputPath) delete env.MCP_CONFIG_PATH;
-  const merged = writeMergedMcpConfigFile({ outputPath, cwd: process.cwd(), env, skillDirs: plan.skillPaths });
+  const merged = await writeMergedMcpConfigFile<{ bundledServerCount: number }>({
+    outputPath,
+    cwd: process.cwd(),
+    env,
+    skillDirs: plan.skillPaths,
+  });
   if (merged.bundledServerCount > 0) process.env.MCP_CONFIG_PATH = outputPath;
   else delete process.env.MCP_CONFIG_PATH;
 }

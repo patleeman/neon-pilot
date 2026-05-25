@@ -13,3 +13,7 @@ export async function buildSkillInventoryAsync<TResult = unknown>(..._args: unkn
 export function setSkillEnabled<TResult = unknown>(..._args: unknown[]): TResult {
   return unresolved();
 }
+
+export function writeMergedMcpConfigFile<TResult = unknown>(..._args: unknown[]): TResult {
+  return unresolved();
+}

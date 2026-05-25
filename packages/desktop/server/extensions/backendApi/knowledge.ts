@@ -19,3 +19,15 @@ export async function listSkillsForProfile(...args: unknown[]) {
 export async function normalizeMemoryPath(...args: unknown[]) {
   return callModuleExport<string>('../../knowledge/memoryDocs.js', 'normalizeMemoryPath', ...args);
 }
+
+export async function getDurableAgentFilePath(...args: unknown[]) {
+  return callModuleExport<string>('@neon-pilot/core', 'getDurableAgentFilePath', ...args);
+}
+
+export async function getVaultRoot(...args: unknown[]) {
+  return callModuleExport<string>('@neon-pilot/core', 'getVaultRoot', ...args);
+}
+
+export async function resolveRuntimeResources(...args: unknown[]) {
+  return callModuleExport<{ agentsFiles: string[] }>('@neon-pilot/core', 'resolveRuntimeResources', ...args);
+}

@@ -15,3 +15,7 @@ export async function buildSkillInventoryAsync(...args: unknown[]) {
 export async function setSkillEnabled(...args: unknown[]) {
   return callModuleExport<void>('../../skills/skillInventory.js', 'setSkillEnabled', ...args);
 }
+
+export async function writeMergedMcpConfigFile(...args: unknown[]) {
+  return callModuleExport<{ bundledServerCount: number }>('@neon-pilot/core', 'writeMergedMcpConfigFile', ...args);
+}
