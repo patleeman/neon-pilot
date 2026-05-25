@@ -4,7 +4,6 @@ import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import type { Api, ImageContent, Model } from '@earendil-works/pi-ai';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { buildSessionContextForRuntime } from '@neon-pilot/extensions/backend/runtime';
-import { Type } from '@sinclair/typebox';
 
 const IMAGE_QUALITY_VALUES = ['auto', 'low', 'medium', 'high'] as const;
 const IMAGE_BACKGROUND_VALUES = ['auto', 'opaque', 'transparent'] as const;
@@ -42,21 +41,31 @@ export interface ParsedImageGenerationSse {
   responseId?: string;
 }
 
-const ImageToolParams = Type.Object({
-  prompt: Type.String({ description: 'Image prompt. Be concrete about subject, composition, style, and any required text.' }),
-  size: Type.Optional(Type.String({ description: 'Optional size hint such as auto, 1024x1024, 1024x1536, or 1536x1024.' })),
-  quality: Type.Optional(Type.Union(IMAGE_QUALITY_VALUES.map((value) => Type.Literal(value)))),
-  background: Type.Optional(Type.Union(IMAGE_BACKGROUND_VALUES.map((value) => Type.Literal(value)))),
-  action: Type.Optional(Type.Union(IMAGE_ACTION_VALUES.map((value) => Type.Literal(value)))),
-  source: Type.Optional(Type.Union(IMAGE_SOURCE_VALUES.map((value) => Type.Literal(value)))),
-  sourceCount: Type.Optional(
-    Type.Number({
+const ImageToolParams = {
+  type: 'object',
+  properties: {
+    prompt: {
+      type: 'string',
+      description: 'Image prompt. Be concrete about subject, composition, style, and any required text.',
+    },
+    size: {
+      type: 'string',
+      description: 'Optional size hint such as auto, 1024x1024, 1024x1536, or 1536x1024.',
+    },
+    quality: { type: 'string', enum: IMAGE_QUALITY_VALUES },
+    background: { type: 'string', enum: IMAGE_BACKGROUND_VALUES },
+    action: { type: 'string', enum: IMAGE_ACTION_VALUES },
+    source: { type: 'string', enum: IMAGE_SOURCE_VALUES },
+    sourceCount: {
+      type: 'number',
       minimum: 1,
       maximum: MAX_SOURCE_IMAGE_COUNT,
       description: 'How many recent source images to include when source=recent. Max 4.',
-    }),
-  ),
-});
+    },
+  },
+  required: ['prompt'],
+  additionalProperties: false,
+} as const;
 
 function readRequiredString(value: string | undefined, label: string): string {
   const normalized = value?.trim();
