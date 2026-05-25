@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -21,7 +21,8 @@ const coreFiles = execFileSync('git', ['ls-files', ...coreSearchRoots], { cwd: r
   .split('\n')
   .filter((file) => filePattern.test(file))
   .filter((file) => !file.includes('/dist/'))
-  .filter((file) => !file.includes('.test.'));
+  .filter((file) => !file.includes('.test.'))
+  .filter((file) => existsSync(resolve(repoRoot, file)));
 
 const violations = [];
 for (const file of coreFiles) {
@@ -39,16 +40,18 @@ const extensionFiles = execFileSync('git', ['ls-files', ...extensionSearchRoots]
   .split('\n')
   .filter((file) => filePattern.test(file))
   .filter((file) => !file.includes('/dist/'))
-  .filter((file) => !file.includes('.test.'))
-  .filter((file) => file.includes('/src/'));
+  .filter((file) => file.includes('/src/'))
+  .filter((file) => existsSync(resolve(repoRoot, file)));
 
 const forbiddenExtensionImportPatterns = [
   /from\s+['"]@neon-pilot\/core['"]/,
   /import\(\s*['"]@neon-pilot\/core['"]/,
   /from\s+['"]@neon-pilot\/desktop(?:\/[^'"]*)?['"]/,
   /import\(\s*['"]@neon-pilot\/desktop(?:\/[^'"]*)?['"]/,
-  /from\s+['"][^'"]*packages\/(?:desktop|core)\//,
-  /import\(\s*['"][^'"]*packages\/(?:desktop|core)\//,
+  /from\s+['"]@neon-pilot\/daemon(?:\/[^'"]*)?['"]/,
+  /import\(\s*['"]@neon-pilot\/daemon(?:\/[^'"]*)?['"]/,
+  /from\s+['"][^'"]*packages\/(?:desktop|core|daemon)\//,
+  /import\(\s*['"][^'"]*packages\/(?:desktop|core|daemon)\//,
 ];
 
 for (const file of extensionFiles) {

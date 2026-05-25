@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
+import type { VaultEntry, VaultFileListResult } from '@neon-pilot/extensions/data';
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY } from '../../../../packages/desktop/ui/src/local/knowledgeOpenFiles';
-import { KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY } from '../../../../packages/desktop/ui/src/local/knowledgeTreeState';
-import type { VaultEntry, VaultFileListResult } from '../../../../packages/desktop/ui/src/shared/types';
 import { emitKBEvent } from './knowledgeEvents';
 import { VaultFileTree } from './VaultFileTree';
+
+const KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY = 'pa:knowledge-open-file-ids';
+const KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY = 'pa:knowledge-tree-expanded-folders';
 
 const apiMocks = vi.hoisted(() => ({
   createFolder: vi.fn(),
@@ -23,7 +24,7 @@ const apiMocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
+vi.mock('@neon-pilot/extensions/data', () => ({
   api: {
     invokeExtensionAction: async (_extensionId: string, actionId: string, input: Record<string, unknown> = {}) => {
       const result = await (async () => {
@@ -52,9 +53,6 @@ vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
       })();
       return { result };
     },
-  },
-  vaultApi: {
-    assetUrl: (id: string) => `/api/vault/asset?id=${encodeURIComponent(id)}`,
   },
 }));
 

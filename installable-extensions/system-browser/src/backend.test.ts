@@ -1,7 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { setWorkbenchBrowserToolHost } from '../../../packages/desktop/server/extensions/workbenchBrowserToolHost.ts';
 import { createWorkbenchBrowserAgentExtension } from './backend.js';
+
+const browserHost = vi.hoisted(() => ({
+  current: null as null | {
+    isActive: (conversationId: string) => Promise<boolean>;
+    listTabs: () => Promise<Array<{ sessionKey: string; url: string; title: string }>>;
+    snapshot: (conversationId: string, tabId?: string) => Promise<unknown>;
+    cdp: (input: unknown) => Promise<unknown>;
+    screenshot: (conversationId: string, tabId?: string) => Promise<unknown>;
+  },
+}));
+
+vi.mock('@neon-pilot/extensions/backend/browser', () => ({
+  getWorkbenchBrowserToolHost: () => browserHost.current,
+}));
+
+function setWorkbenchBrowserToolHost(nextHost: typeof browserHost.current): void {
+  browserHost.current = nextHost;
+}
 
 function collectExtension() {
   const tools: Array<{
