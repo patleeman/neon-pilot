@@ -23,7 +23,6 @@ import {
   updateStoredAutomation,
 } from '@neon-pilot/extensions/backend/automations';
 import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
-import { Type } from '@sinclair/typebox';
 
 const SCHEDULED_TASK_ACTION_VALUES = ['list', 'get', 'save', 'delete', 'validate', 'run'] as const;
 const SCHEDULED_TASK_TARGET_VALUES = ['background-agent', 'conversation'] as const;
@@ -32,68 +31,67 @@ const SCHEDULED_TASK_DELIVER_AS_VALUES = ['steer', 'followUp'] as const;
 
 type ScheduledTaskAction = (typeof SCHEDULED_TASK_ACTION_VALUES)[number];
 
-const ScheduledTaskToolParams = Type.Object({
-  action: Type.Union(SCHEDULED_TASK_ACTION_VALUES.map((value) => Type.Literal(value))),
-  profile: Type.Optional(Type.String({ description: 'Deprecated. Ignored; scheduled tasks use the shared runtime scope.' })),
-  taskId: Type.Optional(Type.String({ description: 'Task id for get/save/delete/run/validate.' })),
-  title: Type.Optional(Type.String({ description: 'Human-readable title for the automation. Defaults to taskId.' })),
-  enabled: Type.Optional(Type.Boolean({ description: 'Whether the task is enabled when saving.' })),
-  cron: Type.Optional(Type.String({ description: 'Recurring 5-field cron expression.' })),
-  at: Type.Optional(
-    Type.String({
+const ScheduledTaskToolParams = {
+  type: 'object',
+  properties: {
+    action: { type: 'string', enum: SCHEDULED_TASK_ACTION_VALUES },
+    profile: { type: 'string', description: 'Deprecated. Ignored; scheduled tasks use the shared runtime scope.' },
+    taskId: { type: 'string', description: 'Task id for get/save/delete/run/validate.' },
+    title: { type: 'string', description: 'Human-readable title for the automation. Defaults to taskId.' },
+    enabled: { type: 'boolean', description: 'Whether the task is enabled when saving.' },
+    cron: { type: 'string', description: 'Recurring 5-field cron expression.' },
+    at: {
+      type: 'string',
       description: 'One-time schedule. Supports ISO timestamps, natural phrases like "tomorrow 8pm", and explicit forms like now+1d@20:00.',
-    }),
-  ),
-  targetType: Type.Optional(
-    Type.Union(
-      SCHEDULED_TASK_TARGET_VALUES.map((value) => Type.Literal(value)),
-      {
-        description: 'Automation target: background-agent or conversation.',
-      },
-    ),
-  ),
-  threadMode: Type.Optional(
-    Type.Union(
-      SCHEDULED_TASK_THREAD_MODE_VALUES.map((value) => Type.Literal(value)),
-      {
-        description: 'Thread binding mode: dedicated, existing, or none.',
-      },
-    ),
-  ),
-  threadConversationId: Type.Optional(
-    Type.String({ description: 'Existing conversation id when binding the automation to an existing thread.' }),
-  ),
-  deliverAs: Type.Optional(
-    Type.Union(
-      SCHEDULED_TASK_DELIVER_AS_VALUES.map((value) => Type.Literal(value)),
-      {
-        description: 'Conversation delivery mode when targetType=conversation.',
-      },
-    ),
-  ),
-  model: Type.Optional(Type.String({ description: 'Full model ref, for example openai-codex/gpt-5.4.' })),
-  cwd: Type.Optional(Type.String({ description: 'Working directory for the task.' })),
-  timeoutSeconds: Type.Optional(Type.Number({ minimum: 1, description: 'Per-run timeout in seconds.' })),
-  catchUpWindowSeconds: Type.Optional(
-    Type.Number({ minimum: 1, description: 'Run once after wake when the latest missed cron slot is still within this many seconds.' }),
-  ),
-  prompt: Type.Optional(Type.String({ description: 'Task prompt body.' })),
-  deliverResultToConversation: Type.Optional(
-    Type.Boolean({ description: 'Whether task completions should wake the current conversation later.' }),
-  ),
-  notifyOnSuccess: Type.Optional(
-    Type.Boolean({
+    },
+    targetType: {
+      type: 'string',
+      enum: SCHEDULED_TASK_TARGET_VALUES,
+      description: 'Automation target: background-agent or conversation.',
+    },
+    threadMode: {
+      type: 'string',
+      enum: SCHEDULED_TASK_THREAD_MODE_VALUES,
+      description: 'Thread binding mode: dedicated, existing, or none.',
+    },
+    threadConversationId: {
+      type: 'string',
+      description: 'Existing conversation id when binding the automation to an existing thread.',
+    },
+    deliverAs: {
+      type: 'string',
+      enum: SCHEDULED_TASK_DELIVER_AS_VALUES,
+      description: 'Conversation delivery mode when targetType=conversation.',
+    },
+    model: { type: 'string', description: 'Full model ref, for example openai-codex/gpt-5.4.' },
+    cwd: { type: 'string', description: 'Working directory for the task.' },
+    timeoutSeconds: { type: 'number', minimum: 1, description: 'Per-run timeout in seconds.' },
+    catchUpWindowSeconds: {
+      type: 'number',
+      minimum: 1,
+      description: 'Run once after wake when the latest missed cron slot is still within this many seconds.',
+    },
+    prompt: { type: 'string', description: 'Task prompt body.' },
+    deliverResultToConversation: {
+      type: 'boolean',
+      description: 'Whether task completions should wake the current conversation later.',
+    },
+    notifyOnSuccess: {
+      type: 'boolean',
       description: 'Whether successful task completions should create an in-app alert for the current conversation callback.',
-    }),
-  ),
-  notifyOnFailure: Type.Optional(
-    Type.Boolean({ description: 'Whether failed task completions should create an in-app alert for the current conversation callback.' }),
-  ),
-  requireAck: Type.Optional(Type.Boolean({ description: 'Whether callback alerts should stay active until acknowledged.' })),
-  autoResumeIfOpen: Type.Optional(
-    Type.Boolean({ description: 'Whether an open saved conversation should auto-resume when the callback becomes ready.' }),
-  ),
-});
+    },
+    notifyOnFailure: {
+      type: 'boolean',
+      description: 'Whether failed task completions should create an in-app alert for the current conversation callback.',
+    },
+    requireAck: { type: 'boolean', description: 'Whether callback alerts should stay active until acknowledged.' },
+    autoResumeIfOpen: {
+      type: 'boolean',
+      description: 'Whether an open saved conversation should auto-resume when the callback becomes ready.',
+    },
+  },
+  required: ['action'],
+} as const;
 
 function readRequiredString(value: string | undefined, label: string): string {
   const normalized = value?.trim();
