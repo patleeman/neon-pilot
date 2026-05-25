@@ -1,4 +1,13 @@
-import { type ClipboardEventHandler, type KeyboardEventHandler, type RefObject, useMemo } from 'react';
+import {
+  type ClipboardEventHandler,
+  type KeyboardEventHandler,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
@@ -92,6 +101,27 @@ export function ConversationComposerInputControls({
   onAbortStream: () => void;
 }) {
   const { composerControls = [], composerInputTools } = useExtensionRegistry();
+  const [localInput, setLocalInputState] = useState(input);
+  const [, startInputTransition] = useTransition();
+  const previousInputPropRef = useRef(input);
+  const localInputRef = useRef(input);
+  const setLocalInput = (nextInput: string) => {
+    localInputRef.current = nextInput;
+    setLocalInputState(nextInput);
+  };
+
+  useEffect(() => {
+    if (previousInputPropRef.current === input) {
+      return;
+    }
+    previousInputPropRef.current = input;
+    const currentLocalInput = localInputRef.current;
+    const focused = textareaRef.current && document.activeElement === textareaRef.current;
+    if (focused && input.length > 0 && currentLocalInput.length > input.length && currentLocalInput.startsWith(input)) {
+      return;
+    }
+    setLocalInput(input);
+  }, [input, textareaRef]);
   const visibleComposerInputTools = useMemo(
     () =>
       composerInputTools.filter((tool) => {
@@ -164,9 +194,14 @@ export function ConversationComposerInputControls({
         <div className="px-1 pt-1">
           <textarea
             ref={textareaRef}
-            value={input}
+            value={localInput}
             onChange={(event) => {
-              onInputChange(event.target.value, event.target);
+              const nextValue = event.target.value;
+              const target = event.target;
+              setLocalInput(nextValue);
+              startInputTransition(() => {
+                onInputChange(nextValue, target);
+              });
             }}
             onSelect={(event) => {
               onRememberComposerSelection(event.currentTarget);

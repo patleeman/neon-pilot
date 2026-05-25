@@ -49,6 +49,12 @@ function setInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function setTextAreaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 const models: ModelInfo[] = [
   {
     id: 'model-a',
@@ -69,6 +75,11 @@ function renderInteractive(element: React.ReactElement) {
 
   return {
     container,
+    rerender: (nextElement: React.ReactElement) => {
+      act(() => {
+        root.render(nextElement);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -139,6 +150,67 @@ describe('ConversationComposerInputControls', () => {
 
     expect(html).toContain('Answer 1-9, or type to skip…');
     expect(html).toContain('Submit answers');
+  });
+
+  it('keeps composer typing local when parent input echoes stale text', () => {
+    const textareaRef: React.RefObject<HTMLTextAreaElement> = { current: null };
+    const onInputChange = vi.fn();
+    const baseProps: React.ComponentProps<typeof ConversationComposerInputControls> = {
+      fileInputRef: { current: null },
+      textareaRef,
+      input: '',
+      pendingAskUserQuestion: false,
+      composerDisabled: false,
+      composerShellWidth: 800,
+      streamIsStreaming: false,
+      models,
+      currentModel: 'model-a',
+      currentThinkingLevel: 'medium',
+      savingPreference: null,
+      conversationNeedsTakeover: false,
+      composerHasContent: false,
+      composerShowsQuestionSubmit: false,
+      composerQuestionCanSubmit: false,
+      composerQuestionRemainingCount: 0,
+      composerQuestionSubmitting: false,
+      composerSubmitLabel: 'Send',
+      composerAltHeld: false,
+      onFilesSelected: vi.fn(),
+      onInputChange,
+      onRememberComposerSelection: vi.fn(),
+      onKeyDown: vi.fn(),
+      onPaste: vi.fn(),
+      onOpenFilePicker: vi.fn(),
+      onUpsertDrawingAttachment: vi.fn(),
+      onSelectModel: vi.fn(),
+      onSelectThinkingLevel: vi.fn(),
+      onInsertComposerText: vi.fn(),
+      onAppendComposerText: vi.fn(),
+      onSubmitComposerQuestion: vi.fn(),
+      onSubmitComposerActionForModifiers: vi.fn(),
+      onAbortStream: vi.fn(),
+    };
+    const rendered = renderInteractive(<ConversationComposerInputControls {...baseProps} />);
+
+    try {
+      const textarea = rendered.container.querySelector<HTMLTextAreaElement>('textarea');
+      expect(textarea).toBeTruthy();
+
+      act(() => {
+        textarea!.focus();
+        setTextAreaValue(textarea!, 'ab');
+      });
+      expect(textarea!.value).toBe('ab');
+      expect(onInputChange).toHaveBeenCalledWith('ab', textarea);
+
+      rendered.rerender(<ConversationComposerInputControls {...baseProps} input="a" />);
+      expect(textarea!.value).toBe('ab');
+
+      rendered.rerender(<ConversationComposerInputControls {...baseProps} input="" />);
+      expect(textarea!.value).toBe('');
+    } finally {
+      rendered.unmount();
+    }
   });
 
   it('renders active mission tasks in the run-mode shelf', () => {

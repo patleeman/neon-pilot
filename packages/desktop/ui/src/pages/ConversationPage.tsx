@@ -4257,7 +4257,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       });
     };
 
-    const inputSnapshot = input;
+    const inputSnapshot = textareaRef.current?.value ?? input;
     const text = inputSnapshot.trim();
     const pendingImageAttachments = attachments;
     const pendingDrawingAttachments = drawingAttachments;
@@ -4848,7 +4848,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       altKey: e.altKey,
       shiftKey: e.shiftKey,
       isComposing: e.nativeEvent.isComposing,
-      composerInput: input,
+      composerInput: e.currentTarget.value,
       attachmentCount: attachments.length,
       drawingAttachmentCount: drawingAttachments.length,
     });
@@ -4909,7 +4909,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
       if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
         if (showSlash && e.key === 'Enter') {
-          const exactConversationSlash = parseConversationSlashCommand(input.trim());
+          const exactConversationSlash = parseConversationSlashCommand(e.currentTarget.value.trim());
           if (exactConversationSlash) {
             e.preventDefault();
             await submitComposer();
@@ -4943,7 +4943,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const canUseComposerQuestionHotkeys =
       Boolean(pendingAskUserQuestion) &&
       !composerQuestionSubmitting &&
-      input.length === 0 &&
+      e.currentTarget.value.length === 0 &&
       attachments.length === 0 &&
       drawingAttachments.length === 0 &&
       !e.ctrlKey &&
