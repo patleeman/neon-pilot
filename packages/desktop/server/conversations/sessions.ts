@@ -2297,7 +2297,24 @@ export function readSessionBlock(sessionId: string, blockId: string): DisplayBlo
   const manager = SessionManager.open(meta.file);
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
   const blocks = decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), sessionId);
-  return blocks.find((block) => block.id === blockId) ?? null;
+  const exactBlock = blocks.find((block) => block.id === blockId);
+  if (exactBlock) {
+    return exactBlock;
+  }
+
+  const rebasedMatch = /^(.+)-([mtxcei])(\d+)$/.exec(blockId);
+  if (!rebasedMatch) {
+    return null;
+  }
+
+  const [, blockPrefix, blockKind, absoluteIndexText] = rebasedMatch;
+  const absoluteIndex = Number.parseInt(absoluteIndexText ?? '', 10);
+  const indexedBlock = Number.isSafeInteger(absoluteIndex) && absoluteIndex >= 0 ? blocks[absoluteIndex] : undefined;
+  if (indexedBlock && indexedBlock.id.startsWith(`${blockPrefix}-${blockKind}`)) {
+    return indexedBlock;
+  }
+
+  return blocks.find((block) => block.id.startsWith(`${blockPrefix}-${blockKind}`)) ?? null;
 }
 
 export function readSessionImageAsset(
