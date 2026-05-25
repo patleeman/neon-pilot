@@ -44,7 +44,7 @@ Images are sent to image-capable models as image content. The composer downscale
 
 When the agent builds context for a turn, it merges inputs in this order:
 
-1. **Instruction files** — standing behavior and policy from vault or config
+1. **Instruction files** — standing behavior and policy from the vault, `~/.config/agents`, config, or project discovery
 2. **Attached context docs** — durable docs pinned to this conversation
 3. **Inline `@` file references** — files referenced in the current message
 4. **Binary attachments** — images and files attached to the current message

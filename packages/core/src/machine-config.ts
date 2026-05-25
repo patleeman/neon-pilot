@@ -6,9 +6,16 @@ import { writeAppTelemetryEvent } from './app-telemetry-db.js';
 import { getConfigRoot } from './runtime/paths.js';
 
 export const DEFAULT_RESUME_FALLBACK_PROMPT = 'Continue from where you left off.';
+
+export function getDefaultMachineInstructionFiles(): string[] {
+  return [join(homedir(), '.config', 'agents', 'AGENTS.md')];
+}
+
 export function getDefaultMachineSkillDirs(): string[] {
   const home = homedir();
   return [
+    join(home, '.config', 'agents', 'skill'),
+    join(home, '.config', 'agents', 'skills'),
     join(home, '.claude', 'skills'),
     join(home, '.codex', 'skills'),
     join(home, '.config', 'codex', 'skills'),
@@ -311,7 +318,7 @@ export function updateMachineConfigSection(
 }
 
 export function readMachineInstructionFiles(options: MachineConfigOptions = {}): string[] {
-  return [...(readMachineConfig(options).instructionFiles ?? [])];
+  return [...new Set([...getDefaultMachineInstructionFiles(), ...(readMachineConfig(options).instructionFiles ?? [])])];
 }
 
 export function writeMachineInstructionFiles(instructionFiles: string[], options: MachineConfigOptions = {}): MachineConfigDocument {

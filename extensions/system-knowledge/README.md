@@ -55,7 +55,9 @@ They can also be selected explicitly:
 
 Docs are reusable reference material stored as markdown files anywhere under `<vault-root>`.
 
-Skills are reusable workflows stored under `<vault-root>/skills/<skill-name>/SKILL.md`, optionally with adjacent `mcp.json`, examples, or assets. Runtime skill discovery loads valid skill folders from the vault, configured skill roots, local overlays, and common platform locations such as `~/.claude/skills`, `~/.codex/skills`, `~/.config/codex/skills`, Pi/Neon Pilot knowledge-base mirrors, and `~/.config/agent-skills`. Skill metadata is reference material, not a visibility toggle. Any active skill can bundle MCP servers by placing `mcp.json` next to `SKILL.md`; discovery keys off that file, not a `*-mcp` naming scheme.
+The vault is the primary durable source for global agent files. `~/.config/agents` is the canonical machine-local secondary directory for personal files that should not be synced through the knowledge base. Runtime instruction discovery includes `<vault-root>/AGENTS.md`, configured instruction files, project instruction files, local overlays, and `~/.config/agents/AGENTS.md` when present.
+
+Skills are reusable workflows stored under `<vault-root>/skills/<skill-name>/SKILL.md`, optionally with adjacent `mcp.json`, examples, or assets. Runtime skill discovery loads valid skill folders from the vault, configured skill roots, local overlays, and common platform locations such as `~/.config/agents/skill`, `~/.config/agents/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.config/codex/skills`, Pi/Neon Pilot knowledge-base mirrors, and `~/.config/agent-skills`. Skill metadata is reference material, not a visibility toggle. Any active skill can bundle MCP servers by placing `mcp.json` next to `SKILL.md`; discovery keys off that file, not a `*-mcp` naming scheme.
 
 Projects are structured work packages with milestones, tasks, and durable status. See [Projects](../../docs/projects.md).
 

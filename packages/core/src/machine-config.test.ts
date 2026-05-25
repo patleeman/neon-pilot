@@ -5,6 +5,7 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  getDefaultMachineInstructionFiles,
   getDefaultMachineSkillDirs,
   getMachineConfigFilePath,
   readMachineConfigSection,
@@ -84,6 +85,7 @@ describe('machine config', () => {
     );
 
     expect(readMachineInstructionFiles({ configRoot: configDir })).toEqual([
+      ...getDefaultMachineInstructionFiles(),
       '/Users/patrick/Documents/neon-pilot/AGENTS.md',
       '/Users/patrick/Documents/neon-pilot/skills/checkpoint/SKILL.md',
     ]);
@@ -92,7 +94,7 @@ describe('machine config', () => {
     });
 
     writeMachineInstructionFiles([], { configRoot: configDir });
-    expect(readMachineInstructionFiles({ configRoot: configDir })).toEqual([]);
+    expect(readMachineInstructionFiles({ configRoot: configDir })).toEqual(getDefaultMachineInstructionFiles());
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
   });
 

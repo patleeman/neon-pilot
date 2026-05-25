@@ -213,6 +213,12 @@ The effective local root directory for durable knowledge files. The vault may be
 
 Use **vault** when discussing local file resolution; use **knowledge base** when discussing the durable collection or sync.
 
+### Machine agent directory
+
+The machine-local secondary directory for personal agent files that are not part of the synced knowledge base. Its canonical path is `~/.config/agents`.
+
+Use the vault as the primary durable source; use the machine agent directory for local fallback instructions, skills, and future file-backed agent capabilities.
+
 ### Managed sync
 
 The git-based process that synchronizes the knowledge base across machines while preserving recovery state for conflicts or errors.

@@ -10,6 +10,7 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 | ------------------- | ----------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
 | `<state-root>`      | `~/.local/state/neon-pilot` or `$XDG_STATE_HOME/neon-pilot` | `NEON_PILOT_STATE_ROOT`        | Runtime state, daemon DBs, extension installs, active agent files               |
 | `<config-root>`     | `<state-root>/config`                                       | `NEON_PILOT_CONFIG_ROOT`       | Machine-local durable config                                                    |
+| Machine agent dir   | `~/.config/agents`                                          | none                           | Canonical secondary location for machine-local agent files                      |
 | Machine config file | `<config-root>/config.json`                                 | `NEON_PILOT_CONFIG_FILE`       | Knowledge root/sync, extra instruction files, skill folders, daemon/ui sections |
 | Local config dir    | `<config-root>/local`                                       | `NEON_PILOT_LOCAL_PROFILE_DIR` | Local settings mirror for active runtime settings                               |
 
@@ -39,6 +40,8 @@ Example:
   "skillDirs": ["/Users/me/agent/skills"]
 }
 ```
+
+Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. The knowledge vault remains the primary durable source; use the machine agent dir for personal files that should stay local to this machine.
 
 ## Runtime agent settings
 
@@ -106,6 +109,18 @@ The effective knowledge vault root resolves in this order:
 4. `~/Documents/neon-pilot`
 
 Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync inputs.
+
+## Agent file discovery
+
+Global agent files use a primary/secondary model:
+
+| Kind         | Primary durable location                    | Secondary machine-local location                |
+| ------------ | ------------------------------------------- | ----------------------------------------------- |
+| Instructions | `<vault-root>/AGENTS.md`                    | `~/.config/agents/AGENTS.md`                    |
+| Skills       | `<vault-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skill/<skill-name>/SKILL.md`  |
+| Skills       | `<vault-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skills/<skill-name>/SKILL.md` |
+
+Runtime discovery also includes explicitly configured instruction files, explicitly configured skill dirs, project instruction files found from the working directory, local overlays, extension-contributed skills, and compatibility skill roots such as `~/.claude/skills` and `~/.codex/skills`.
 
 ## Desktop, daemon, and local UI state
 
