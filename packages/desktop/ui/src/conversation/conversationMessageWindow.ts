@@ -62,3 +62,29 @@ export function pruneComputedMessages(input: {
     computedHistoricalTotalBlocks: input.historicalTotalBlocks,
   };
 }
+
+export function resolveTranscriptWindowPercent(input: {
+  blockOffset: number;
+  visibleBlockCount: number;
+  totalBlocks: number;
+  anchoredToTail: boolean;
+}): {
+  startPercent: number;
+  endPercent: number;
+} {
+  if (input.totalBlocks <= 0) {
+    return { startPercent: 0, endPercent: 100 };
+  }
+
+  const clampedOffset = Math.min(Math.max(0, input.blockOffset), input.totalBlocks);
+  const clampedVisibleBlockCount = Math.max(0, input.visibleBlockCount);
+  const startPercent = Math.min(100, Math.max(0, Math.ceil((clampedOffset / input.totalBlocks) * 100)));
+  if (input.anchoredToTail) {
+    return { startPercent, endPercent: 100 };
+  }
+
+  return {
+    startPercent,
+    endPercent: Math.min(100, Math.max(startPercent, Math.ceil(((clampedOffset + clampedVisibleBlockCount) / input.totalBlocks) * 100))),
+  };
+}

@@ -107,7 +107,11 @@ import {
   resolveMentionItems,
 } from '../conversation/conversationMentions';
 import { shouldEnableMessageForkControls } from '../conversation/conversationMessageControls';
-import { pruneComputedMessages, resolveComputedMessagesRaw } from '../conversation/conversationMessageWindow';
+import {
+  pruneComputedMessages,
+  resolveComputedMessagesRaw,
+  resolveTranscriptWindowPercent,
+} from '../conversation/conversationMessageWindow';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
 import { buildLiveSessionPreferenceInput, selectComposerModel } from '../conversation/conversationModelSelection';
 import {
@@ -5383,20 +5387,19 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks =
     !showConversationLoadingState && !draft && Boolean(id) && visibleTranscriptState?.conversationId === id && showHistoricalLoadMore;
-  const visibleTranscriptStartPercent =
-    visibleTranscriptTotalBlocks > 0
-      ? Math.min(100, Math.max(0, Math.ceil((visibleTranscriptMessageIndexOffset / visibleTranscriptTotalBlocks) * 100)))
-      : 0;
-  const visibleTranscriptEndPercent =
-    visibleTranscriptTotalBlocks > 0
-      ? Math.min(
-          100,
-          Math.max(
-            visibleTranscriptStartPercent,
-            Math.ceil(((visibleTranscriptMessageIndexOffset + visibleTranscriptCount) / visibleTranscriptTotalBlocks) * 100),
-          ),
-        )
-      : 100;
+  const visibleTranscriptAnchoredToTail =
+    !showConversationLoadingState &&
+    !draft &&
+    Boolean(id) &&
+    visibleTranscriptState?.conversationId === id &&
+    Boolean(visibleSessionDetail) &&
+    !stream.hasSnapshot;
+  const { startPercent: visibleTranscriptStartPercent, endPercent: visibleTranscriptEndPercent } = resolveTranscriptWindowPercent({
+    blockOffset: visibleTranscriptMessageIndexOffset,
+    visibleBlockCount: visibleTranscriptCount,
+    totalBlocks: visibleTranscriptTotalBlocks,
+    anchoredToTail: visibleTranscriptAnchoredToTail,
+  });
   const previousTranscriptPercent = Math.min(HISTORICAL_TAIL_BLOCKS_STEP_PERCENT, Math.max(1, visibleTranscriptStartPercent));
   const previousTranscriptBlockStep = Math.max(1, Math.ceil((visibleTranscriptTotalBlocks * previousTranscriptPercent) / 100));
   const renderingStaleTranscript = Boolean(visibleTranscriptState?.conversationId && id && visibleTranscriptState.conversationId !== id);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { pruneComputedMessages, resolveComputedMessagesRaw } from './conversationMessageWindow';
+import { pruneComputedMessages, resolveComputedMessagesRaw, resolveTranscriptWindowPercent } from './conversationMessageWindow';
 
 const block = (id: string) => ({ id, type: 'text', text: id }) as never;
 const append = (messages: never[] | undefined, prompt: string | undefined) =>
@@ -81,5 +81,34 @@ describe('conversationMessageWindow', () => {
         maxRenderedBlocks: 3,
       }),
     ).toEqual({ computedMessages: messages.slice(1), computedHistoricalBlockOffset: 11, computedHistoricalTotalBlocks: 4 });
+  });
+
+  it('reports tail-anchored transcript windows as ending at the latest content', () => {
+    expect(
+      resolveTranscriptWindowPercent({
+        blockOffset: 75,
+        visibleBlockCount: 25,
+        totalBlocks: 100,
+        anchoredToTail: true,
+      }),
+    ).toEqual({ startPercent: 75, endPercent: 100 });
+
+    expect(
+      resolveTranscriptWindowPercent({
+        blockOffset: 54,
+        visibleBlockCount: 4,
+        totalBlocks: 60,
+        anchoredToTail: false,
+      }),
+    ).toEqual({ startPercent: 90, endPercent: 97 });
+
+    expect(
+      resolveTranscriptWindowPercent({
+        blockOffset: 54,
+        visibleBlockCount: 4,
+        totalBlocks: 60,
+        anchoredToTail: true,
+      }),
+    ).toEqual({ startPercent: 90, endPercent: 100 });
   });
 });

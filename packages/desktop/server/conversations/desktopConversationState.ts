@@ -92,6 +92,7 @@ export interface DesktopConversationState {
         hasStaleTurnState?: boolean;
       };
   stream: DesktopConversationStreamState;
+  perf?: Record<string, number>;
 }
 
 export function createEmptyDesktopConversationStreamState(): DesktopConversationStreamState {
