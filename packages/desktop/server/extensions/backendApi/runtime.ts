@@ -1,10 +1,10 @@
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { callServerModuleExport } from './serverModuleResolver.js';
 
 type RuntimeAgentHooksModule = typeof import('../runtimeAgentHooks.js');
 const dynamicImport = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
 
-export function getRuntimeDir(): string {
-  return getPiAgentRuntimeDir();
+export async function getRuntimeDir(): Promise<string> {
+  return callServerModuleExport<string>('@neon-pilot/core', 'getPiAgentRuntimeDir');
 }
 
 export async function buildLiveSessionExtensionFactoriesForRuntime(

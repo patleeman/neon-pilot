@@ -42,6 +42,8 @@ Focused checks:
 | `pnpm run check:extensions` | Extension static checks plus focused extension smoke tests                          |
 | `pnpm run check:coverage`   | Periodic coverage review; advisory, not blocking                                    |
 
+`check:extensions:static` enforces the extension/core boundary. Extension runtime source must use `@neon-pilot/extensions` public APIs instead of importing `@neon-pilot/core`, `@neon-pilot/desktop`, or app package internals directly. Host backend API modules must stay narrow and lazy-load host implementations rather than statically re-exporting core/desktop modules.
+
 Use `pnpm test` as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app or external-environment checks that should not run in every deterministic test pass.
 
 Startup idle smoke:

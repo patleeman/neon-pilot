@@ -14,8 +14,8 @@ const hostBackendApiRoot = join(repoRoot, 'packages/desktop/server/extensions/ba
 const buildScriptPath = join(repoRoot, 'scripts/extension-build.mjs');
 
 const nodeBuiltins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
-const alwaysAllowedStaticImports = new Set(['@neon-pilot/core']);
 const forbiddenStaticImportPrefixes = [
+  '@neon-pilot/core',
   '@neon-pilot/daemon',
   '@earendil-works/pi-coding-agent',
   '@sinclair/typebox',
@@ -71,7 +71,7 @@ function collectImportSpecifiers(filePath, { staticOnly = false } = {}) {
 
 function isForbiddenStaticImport(specifier) {
   if (nodeBuiltins.has(specifier) || specifier.startsWith('node:')) return false;
-  if (alwaysAllowedStaticImports.has(specifier)) return false;
+  if (/^(?:\.\.\/)+\.\.\/core\/src\//.test(specifier)) return true;
   return forbiddenStaticImportPrefixes.some((prefix) => specifier === prefix || specifier.startsWith(prefix));
 }
 

@@ -103,8 +103,10 @@ export async function probeImage(input: ProbeImageInput, ctx: ExtensionBackendCo
 
   const imageIds = readImageIds(input.imageIds);
   const question = readQuestion(input.question);
-  const availableAttachments = getImageProbeAttachments(sessionId) as StoredImageProbeAttachment[];
-  const attachments = getImageProbeAttachmentsById(sessionId, imageIds) as StoredImageProbeAttachment[];
+  const [availableAttachments, attachments] = await Promise.all([
+    getImageProbeAttachments(sessionId) as Promise<StoredImageProbeAttachment[]>,
+    getImageProbeAttachmentsById(sessionId, imageIds) as Promise<StoredImageProbeAttachment[]>,
+  ]);
   if (attachments.length === 0) throw new Error('None of the requested image IDs are available to probe for this conversation.');
   if (attachments.length !== imageIds.length) {
     const foundIds = new Set(attachments.map((attachment) => attachment.id));

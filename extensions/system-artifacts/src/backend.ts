@@ -39,7 +39,7 @@ function readConversationId(ctx: ArtifactBackendContext): string {
   return readRequiredString(ctx.toolContext?.conversationId, 'conversationId');
 }
 
-function formatArtifactList(conversationId: string, artifacts: ReturnType<typeof listConversationArtifacts>): string {
+function formatArtifactList(conversationId: string, artifacts: Awaited<ReturnType<typeof listConversationArtifacts>>): string {
   if (artifacts.length === 0) return `No artifacts saved for conversation ${conversationId}.`;
   return [
     `Artifacts for conversation ${conversationId}:`,
@@ -49,7 +49,7 @@ function formatArtifactList(conversationId: string, artifacts: ReturnType<typeof
   ].join('\n');
 }
 
-function formatArtifact(record: NonNullable<ReturnType<typeof getConversationArtifact>>): string {
+function formatArtifact(record: NonNullable<Awaited<ReturnType<typeof getConversationArtifact>>>): string {
   return [
     `Artifact ${record.id}`,
     `Title: ${record.title}`,
@@ -70,13 +70,13 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
       // When updating an existing artifact, preserve current content if not provided
       let content = input.content;
       if (content === undefined && input.artifactId !== undefined) {
-        const existing = getConversationArtifact({ profile, conversationId, artifactId: input.artifactId });
+        const existing = await getConversationArtifact({ profile, conversationId, artifactId: input.artifactId });
         if (existing) {
           content = existing.content;
         }
       }
 
-      const record = saveConversationArtifact({
+      const record = await saveConversationArtifact({
         profile,
         conversationId,
         ...(input.artifactId !== undefined ? { artifactId: input.artifactId } : {}),
@@ -101,7 +101,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
 
     case 'get': {
       const artifactId = readRequiredString(input.artifactId, 'artifactId');
-      const record = getConversationArtifact({ profile, conversationId, artifactId });
+      const record = await getConversationArtifact({ profile, conversationId, artifactId });
       if (!record) throw new Error(`Artifact ${artifactId} was not found.`);
       return {
         text: formatArtifact(record),
@@ -117,7 +117,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
     }
 
     case 'list': {
-      const artifacts = listConversationArtifacts({ profile, conversationId });
+      const artifacts = await listConversationArtifacts({ profile, conversationId });
       return {
         text: formatArtifactList(conversationId, artifacts),
         action: 'list',
@@ -129,7 +129,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
 
     case 'delete': {
       const artifactId = readRequiredString(input.artifactId, 'artifactId');
-      const deleted = deleteConversationArtifact({ profile, conversationId, artifactId });
+      const deleted = await deleteConversationArtifact({ profile, conversationId, artifactId });
       ctx.ui?.invalidate('artifacts');
       return {
         text: deleted ? `Deleted artifact ${artifactId}.` : `Artifact ${artifactId} did not exist.`,

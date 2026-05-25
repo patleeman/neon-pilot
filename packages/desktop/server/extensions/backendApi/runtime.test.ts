@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@neon-pilot/core', () => ({ getPiAgentRuntimeDir: () => '/runtime/pi-agent' }));
+vi.mock('./serverModuleResolver.js', () => ({
+  callServerModuleExport: vi.fn(async (specifier: string, name: string) => {
+    if (specifier === '@neon-pilot/core' && name === 'getPiAgentRuntimeDir') return '/runtime/pi-agent';
+    throw new Error(`Unexpected server module call: ${specifier}#${name}`);
+  }),
+}));
 
 const { buildSessionContextForRuntime, getRuntimeDir } = await import('./runtime.js');
 
 describe('backendApi runtime', () => {
-  it('returns the Pi agent runtime directory from core', () => {
-    expect(getRuntimeDir()).toBe('/runtime/pi-agent');
+  it('returns the Pi agent runtime directory from core', async () => {
+    await expect(getRuntimeDir()).resolves.toBe('/runtime/pi-agent');
   });
 
   it('returns no messages when the leaf id is null or no entries exist', async () => {

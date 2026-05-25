@@ -1,7 +1,17 @@
-import type { AppTelemetryEventInput, AppTelemetrySource } from '@neon-pilot/core';
+export type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
 
-export interface ExtensionTelemetryEventInput extends Omit<AppTelemetryEventInput, 'source' | 'stateRoot'> {
-  source?: AppTelemetrySource;
+export interface ExtensionTelemetryEventInput {
+  source?: ExtensionTelemetrySource;
+  category: string;
+  name: string;
+  sessionId?: string;
+  runId?: string;
+  route?: string;
+  status?: number;
+  durationMs?: number;
+  count?: number;
+  value?: number;
+  metadata?: Record<string, unknown>;
 }
 
 const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<Record<string, unknown>>;
