@@ -4,7 +4,7 @@ import { api } from '../../client/api';
 import { measureClientPerfTiming, recordChatRenderTiming } from '../../client/perfDiagnostics';
 import { type ExtensionSelectionActionRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { useApi } from '../../hooks/useApi';
-import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
+import type { LiveSessionToolDefinition, MessageBlock, TranscriptRenderItem } from '../../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
 import { spotlightTranscriptTarget, type TranscriptSpotlightTarget } from '../../transcript/spotlight';
 import { ChatRenderItemView } from './ChatRenderItemView.js';
@@ -73,6 +73,7 @@ interface ChatViewProps {
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
   remoteControlled?: boolean;
+  precomputedRenderItems?: TranscriptRenderItem[];
 }
 
 function shouldFocusComposerFromTranscriptPointerDown(event: React.PointerEvent<HTMLDivElement>): boolean {
@@ -134,7 +135,8 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     (previous.anchorWindowingToTail ?? false) === (next.anchorWindowingToTail ?? false) &&
     (previous.systemPrompt ?? null) === (next.systemPrompt ?? null) &&
     previous.toolDefinitions === next.toolDefinitions &&
-    (previous.remoteControlled ?? false) === (next.remoteControlled ?? false)
+    (previous.remoteControlled ?? false) === (next.remoteControlled ?? false) &&
+    previous.precomputedRenderItems === next.precomputedRenderItems
   );
 }
 
@@ -174,6 +176,7 @@ export const ChatView = memo(function ChatView({
   systemPrompt = null,
   toolDefinitions = [],
   remoteControlled = false,
+  precomputedRenderItems,
 }: ChatViewProps) {
   const renderStartedAtRef = useRef(performance.now());
   renderStartedAtRef.current = performance.now();
@@ -198,15 +201,17 @@ export const ChatView = memo(function ChatView({
   }, [extensionRegistry.extensions]);
   const renderItems = useMemo(
     () =>
-      measureClientPerfTiming(
-        {
-          name: 'chat.buildRenderItems',
-          minDurationMs: 8,
-          meta: { conversationId, messageCount: messages.length, standaloneToolCount: standaloneTools.size },
-        },
-        () => buildChatRenderItems(messages, standaloneTools),
-      ),
-    [conversationId, messages, standaloneTools],
+      precomputedRenderItems
+        ? (precomputedRenderItems as ChatRenderItem[])
+        : measureClientPerfTiming(
+            {
+              name: 'chat.buildRenderItems',
+              minDurationMs: 8,
+              meta: { conversationId, messageCount: messages.length, standaloneToolCount: standaloneTools.size },
+            },
+            () => buildChatRenderItems(messages, standaloneTools),
+          ),
+    [conversationId, messages, precomputedRenderItems, standaloneTools],
   );
   const renderItemStats = useMemo(() => {
     return measureClientPerfTiming(

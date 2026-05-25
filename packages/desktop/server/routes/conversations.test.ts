@@ -183,6 +183,7 @@ vi.mock('../conversations/conversationService.js', () => ({
   publishConversationSessionMetaChanged: publishConversationSessionMetaChangedMock,
   startConversationReadModelBackfill: startConversationReadModelBackfillMock,
   readConversationModelPreferenceStateById: readConversationModelPreferenceStateByIdMock,
+  readConversationSessionImageAsset: readSessionImageAssetMock,
   readConversationSessionMeta: readConversationSessionMetaMock,
   readConversationSessionSignature: readConversationSessionSignatureMock,
   readSessionDetailForRoute: readSessionDetailForRouteMock,

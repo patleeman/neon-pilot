@@ -663,6 +663,33 @@ export interface SessionContextUsage {
   segments?: ContextUsageSegment[];
 }
 
+export interface TranscriptTraceClusterSummaryCategory {
+  key: string;
+  kind: 'thinking' | 'tool' | 'subagent' | 'error' | 'context';
+  label: string;
+  count: number;
+  tool?: string;
+}
+
+export interface TranscriptTraceClusterSummary {
+  stepCount: number;
+  categories: TranscriptTraceClusterSummaryCategory[];
+  durationMs: number | null;
+  hasError: boolean;
+  hasRunning: boolean;
+}
+
+export type TranscriptRenderItem =
+  | { type: 'message'; block: MessageBlock; index: number }
+  | { type: 'context_cluster'; blocks: Array<Extract<MessageBlock, { type: 'context' | 'summary' }>>; startIndex: number; endIndex: number }
+  | {
+      type: 'trace_cluster';
+      blocks: MessageBlock[];
+      startIndex: number;
+      endIndex: number;
+      summary: TranscriptTraceClusterSummary;
+    };
+
 export interface SessionDetail {
   meta: SessionMeta;
   blocks: DisplayBlock[];
@@ -670,6 +697,7 @@ export interface SessionDetail {
   totalBlocks: number;
   contextUsage: SessionContextUsage | null;
   signature?: string;
+  renderItems?: TranscriptRenderItem[];
 }
 
 interface SessionDetailUnchangedResponse {
@@ -686,6 +714,7 @@ export interface SessionDetailAppendOnlyResponse {
   totalBlocks: number;
   contextUsage: SessionContextUsage | null;
   signature: string | null;
+  renderItems?: TranscriptRenderItem[];
 }
 
 export type SessionDetailResult = SessionDetail | SessionDetailUnchangedResponse | SessionDetailAppendOnlyResponse;

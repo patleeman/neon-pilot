@@ -856,6 +856,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [hydratingHistoricalBlockIds, id],
   );
 
+  const hydratedHistoricalBlockCount = Object.keys(hydratedHistoricalBlocks).length;
+
   // Historical messages from the JSONL snapshot (doesn't update after load).
   // Memoize the conversion so typing in the composer does not rebuild long transcripts.
   const baseMessages = useMemo<MessageBlock[]>(
@@ -867,12 +869,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           meta: {
             conversationId: id,
             blockCount: visibleSessionDetail?.blocks.length ?? 0,
-            hydratedBlockCount: Object.keys(hydratedHistoricalBlocks).length,
+            hydratedBlockCount: hydratedHistoricalBlockCount,
           },
         },
         () => (visibleSessionDetail ? mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks) : []),
       ),
-    [hydratedHistoricalBlocks, id, visibleSessionDetail],
+    [hydratedHistoricalBlockCount, hydratedHistoricalBlocks, id, visibleSessionDetail],
   );
   const visibleStreamBlocks = useMemo<MessageBlock[]>(
     () =>
@@ -883,12 +885,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           meta: {
             conversationId: id,
             blockCount: stream.blocks.length,
-            hydratedBlockCount: Object.keys(hydratedHistoricalBlocks).length,
+            hydratedBlockCount: hydratedHistoricalBlockCount,
           },
         },
         () => mergeHydratedStreamBlocks(stream.blocks, hydratedHistoricalBlocks),
       ),
-    [hydratedHistoricalBlocks, id, stream.blocks],
+    [hydratedHistoricalBlockCount, hydratedHistoricalBlocks, id, stream.blocks],
   );
 
   // Pending steer/followup queue as reported by the live session.
@@ -5303,6 +5305,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const visibleTranscriptMessages = visibleTranscriptState?.messages;
   const visibleTranscriptMessageIndexOffset = visibleTranscriptState?.historicalBlockOffset ?? 0;
   const visibleTranscriptTotalBlocks = visibleTranscriptState?.historicalTotalBlocks ?? 0;
+  const visibleTranscriptRenderItems =
+    visibleSessionDetail?.renderItems &&
+    visibleTranscriptMessages &&
+    hydratedHistoricalBlockCount === 0 &&
+    !draft &&
+    !pendingInitialPrompt &&
+    !stream.hasSnapshot &&
+    visibleStreamBlocks.length === 0 &&
+    visibleTranscriptMessages.length === visibleSessionDetail.blocks.length &&
+    visibleTranscriptMessageIndexOffset === visibleSessionDetail.blockOffset
+      ? visibleSessionDetail.renderItems
+      : undefined;
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks =
     !showConversationLoadingState && !draft && Boolean(id) && visibleTranscriptState?.conversationId === id && showHistoricalLoadMore;
@@ -5513,6 +5527,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 key={visibleTranscriptState?.conversationId ?? id ?? 'draft-conversation'}
                 conversationId={visibleTranscriptState?.conversationId ?? id ?? null}
                 messages={visibleTranscriptMessages}
+                precomputedRenderItems={visibleTranscriptRenderItems}
                 systemPrompt={isLiveSession ? stream.systemPrompt : null}
                 toolDefinitions={isLiveSession ? stream.toolDefinitions : []}
                 remoteControlled={Boolean(
@@ -5732,6 +5747,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       visibleTranscriptHasOlderBlocks,
       visibleTranscriptMessageIndexOffset,
       visibleTranscriptMessages,
+      visibleTranscriptRenderItems,
       visibleTranscriptState?.conversationId,
       newConversationPanelContext,
       newConversationPanels,

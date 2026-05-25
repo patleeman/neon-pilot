@@ -27,6 +27,11 @@ import {
   writeConversationAssetCache,
   writeConversationDetailCache,
 } from './conversationCatalog.js';
+import {
+  attachTranscriptRenderItems,
+  buildTranscriptRenderItemsFromDisplayBlocks,
+  type TranscriptRenderItem,
+} from './conversationTranscriptProjection.js';
 import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
@@ -308,6 +313,7 @@ export interface SessionDetail {
   totalBlocks: number;
   contextUsage: SessionContextUsageSnapshot | null;
   signature?: string;
+  renderItems?: TranscriptRenderItem[];
 }
 
 export interface SessionDetailAppendOnlyResponse {
@@ -1241,6 +1247,7 @@ function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
     ...detail,
     blocks,
     totalBlocks: Math.max(0, detail.totalBlocks - previousTopologyBlockCount + topologyBlockCount),
+    renderItems: buildTranscriptRenderItemsFromDisplayBlocks(blocks),
   };
 }
 
@@ -2098,16 +2105,17 @@ export function readSessionBlocksByFileWithTelemetry(
     tailBlocks: requestedTailBlocks,
   });
   if (cachedDbDetail) {
+    const detail = attachTranscriptRenderItems(cachedDbDetail);
     return {
-      detail: cachedDbDetail,
+      detail,
       telemetry: buildSessionDetailTelemetry({
         cache: 'hit',
-        loader: cachedDbDetail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
+        loader: detail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
         startedAt,
         requestedTailBlocks,
-        totalBlocks: cachedDbDetail.totalBlocks,
-        blockOffset: cachedDbDetail.blockOffset,
-        contextUsageIncluded: cachedDbDetail.contextUsage !== null,
+        totalBlocks: detail.totalBlocks,
+        blockOffset: detail.blockOffset,
+        contextUsageIncluded: detail.contextUsage !== null,
       }),
     };
   }
@@ -2117,19 +2125,20 @@ export function readSessionBlocksByFileWithTelemetry(
   // ── Cache hit ────────────────────────────────────────────────────────────────
   if (cachedDetail?.signature === signature) {
     sessionDetailCache.delete(cacheKey);
-    const detailWithFreshTopology = refreshSessionDetailTopology(cachedDetail.detail);
-    sessionDetailCache.set(cacheKey, { ...cachedDetail, detail: detailWithFreshTopology });
+    const detailWithFreshTopology = attachTranscriptRenderItems(refreshSessionDetailTopology(cachedDetail.detail));
+    const detail = detailWithFreshTopology.signature === signature ? detailWithFreshTopology : { ...detailWithFreshTopology, signature };
+    sessionDetailCache.set(cacheKey, { ...cachedDetail, detail });
     return {
-      detail: detailWithFreshTopology.signature === signature ? detailWithFreshTopology : { ...detailWithFreshTopology, signature },
+      detail,
       telemetry: {
         ...buildSessionDetailTelemetry({
           cache: 'hit',
-          loader: detailWithFreshTopology.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
+          loader: detail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
           startedAt,
           requestedTailBlocks,
-          totalBlocks: detailWithFreshTopology.totalBlocks,
-          blockOffset: detailWithFreshTopology.blockOffset,
-          contextUsageIncluded: detailWithFreshTopology.contextUsage !== null,
+          totalBlocks: detail.totalBlocks,
+          blockOffset: detail.blockOffset,
+          contextUsageIncluded: detail.contextUsage !== null,
         }),
       },
     };
@@ -2174,6 +2183,7 @@ export function readSessionBlocksByFileWithTelemetry(
     const detail = {
       ...fastTailDetail,
       signature,
+      renderItems: buildTranscriptRenderItemsFromDisplayBlocks(fastTailDetail.blocks),
     } satisfies SessionDetail;
     sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
     writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
@@ -2218,6 +2228,7 @@ export function readSessionBlocksByFileWithTelemetry(
     totalBlocks,
     contextUsage: readSessionContextUsageFromEntries(manager.getEntries()),
     signature,
+    renderItems: buildTranscriptRenderItemsFromDisplayBlocks(blocks),
   } satisfies SessionDetail;
 
   sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
