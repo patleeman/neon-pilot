@@ -13,6 +13,7 @@ export interface ReadConversationBootstrapStateInput {
   conversationId: string;
   profile: string;
   tailBlocks?: number;
+  includeToolBlocks?: boolean;
   knownSessionSignature?: string;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
@@ -57,6 +58,7 @@ export async function readConversationBootstrapState(
         conversationId: input.conversationId,
         profile: input.profile,
         tailBlocks: input.tailBlocks,
+        includeToolBlocks: input.includeToolBlocks,
       });
   const sessionDetailAppendOnly =
     !sessionDetailReused &&

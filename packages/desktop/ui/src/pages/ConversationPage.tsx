@@ -322,6 +322,7 @@ import {
   addHydratingHistoricalBlockId,
   buildHydratingHistoricalBlockIdSet,
   displayBlockToMessageBlock,
+  hydrateTranscriptRenderItems,
   mergeHistoricalAndStreamBlocks,
   mergeHydratedHistoricalBlocks,
   mergeHydratedStreamBlocks,
@@ -386,7 +387,7 @@ interface ExcalidrawEditorSavePayload {
   previewUrl: string;
 }
 
-const INITIAL_HISTORICAL_TAIL_BLOCKS = 8;
+const INITIAL_HISTORICAL_TAIL_BLOCKS = 40;
 const HISTORICAL_TAIL_BLOCKS_STEP = 120;
 const HISTORICAL_TAIL_BLOCKS_STEP_PERCENT = 10;
 const MAX_RELATED_THREAD_SELECTIONS = 5;
@@ -569,6 +570,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
   const desktopConversation = useDesktopConversationState(id ?? null, {
     tailBlocks: historicalTailBlocks,
+    includeToolBlocks: false,
     enabled: shouldSubscribeToDesktopConversationState({ draft }),
   });
   const desktopConversationChecking = false;
@@ -585,6 +587,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     draft || useDesktopConversation || desktopConversationChecking ? undefined : id,
     {
       tailBlocks: historicalTailBlocks,
+      includeToolBlocks: false,
       versionKey: conversationVersionKey,
     },
   );
@@ -801,7 +804,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    primeSessionDetailCache(id, bootstrapSessionDetail, { tailBlocks: historicalTailBlocks }, effectiveConversationEventVersion);
+    primeSessionDetailCache(
+      id,
+      bootstrapSessionDetail,
+      { tailBlocks: historicalTailBlocks, includeToolBlocks: false },
+      effectiveConversationEventVersion,
+    );
   }, [bootstrapSessionDetail, effectiveConversationEventVersion, historicalTailBlocks, id, useDesktopConversation]);
 
   const bootstrapPendingInitialSessionDetail =
@@ -812,6 +820,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     error: webSessionError,
   } = useSessionDetail(bootstrapPendingInitialSessionDetail || useDesktopConversation || desktopConversationChecking ? undefined : id, {
     tailBlocks: historicalTailBlocks,
+    includeToolBlocks: false,
     version: effectiveConversationEventVersion,
   });
   const sessionDetail = useDesktopConversation ? (visibleDesktopConversationState?.sessionDetail ?? null) : webSessionDetail;
@@ -889,8 +898,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             return [];
           }
 
-          if (hydratedHistoricalBlockCount === 0 && visibleSessionDetail.renderItems?.length) {
-            return transcriptRenderItemsToMessageBlocks(visibleSessionDetail.renderItems);
+          if (visibleSessionDetail.renderItems?.length) {
+            return transcriptRenderItemsToMessageBlocks(visibleSessionDetail.renderItems, hydratedHistoricalBlocks);
           }
 
           return mergeHydratedHistoricalBlocks(visibleSessionDetail.blocks, hydratedHistoricalBlocks);
@@ -5375,14 +5384,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const visibleTranscriptRenderItems =
     visibleSessionDetail?.renderItems &&
     visibleTranscriptMessages &&
-    hydratedHistoricalBlockCount === 0 &&
     !draft &&
     !pendingInitialPrompt &&
     !stream.hasSnapshot &&
     visibleStreamBlocks.length === 0 &&
-    visibleTranscriptMessages.length === visibleSessionDetail.blocks.length &&
     visibleTranscriptMessageIndexOffset === visibleSessionDetail.blockOffset
-      ? visibleSessionDetail.renderItems
+      ? hydrateTranscriptRenderItems(visibleSessionDetail.renderItems, hydratedHistoricalBlocks)
       : undefined;
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks =

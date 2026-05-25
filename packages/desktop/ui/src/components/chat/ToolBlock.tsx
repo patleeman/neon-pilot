@@ -261,6 +261,13 @@ export function ToolBlock({
   const blockId = block.id?.trim();
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
+  const prefetchDeferredOutput = () => {
+    if (!outputDeferred || !blockId || hydratingDeferredOutput) {
+      return;
+    }
+
+    void onHydrateMessage?.(blockId);
+  };
 
   const preview = buildToolPreview(block);
   const visualPreview = readToolInputString(block.input, 'prompt') ?? readToolInputString(block.input, 'tabId') ?? preview;
@@ -307,6 +314,8 @@ export function ToolBlock({
         tabIndex={0}
         data-background-run-id={backgroundRunId}
         {...(backgroundRunId ? transcriptTargetAttributes({ kind: 'background_run', runId: backgroundRunId }) : {})}
+        onMouseEnter={prefetchDeferredOutput}
+        onFocus={prefetchDeferredOutput}
         onClick={toggleHeaderDisclosure}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {

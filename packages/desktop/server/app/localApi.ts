@@ -720,6 +720,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopSessionDetail({
         sessionId: decodeURIComponent(sessionDetailMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
         knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
         knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
           ? Number(input.url.searchParams.get('knownBlockOffset'))
@@ -952,6 +953,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopConversationBootstrap({
         conversationId: decodeURIComponent(conversationBootstrapMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
         knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
         knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
           ? Number(input.url.searchParams.get('knownBlockOffset'))
@@ -971,6 +973,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         conversationId: decodeURIComponent(conversationStateMatch[1] ?? ''),
         profile: capabilityContext.getRuntimeScope(),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
       }),
     );
   }
@@ -1549,6 +1552,7 @@ export async function markDesktopDurableRunAttention(input: { runId: string; rea
 export async function readDesktopConversationBootstrap(input: {
   conversationId: string;
   tailBlocks?: number;
+  includeToolBlocks?: boolean;
   knownSessionSignature?: string;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
@@ -1922,6 +1926,7 @@ export async function readDesktopLiveSessionContext(conversationId: string) {
 export async function readDesktopSessionDetail(input: {
   sessionId: string;
   tailBlocks?: number;
+  includeToolBlocks?: boolean;
   knownSessionSignature?: string;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
@@ -1939,6 +1944,7 @@ export async function readDesktopSessionDetail(input: {
     conversationId: sessionId,
     profile: context.getRuntimeScope(),
     tailBlocks: input.tailBlocks,
+    includeToolBlocks: input.includeToolBlocks,
   });
   if (!sessionRead.detail) {
     throw new Error('Session not found');

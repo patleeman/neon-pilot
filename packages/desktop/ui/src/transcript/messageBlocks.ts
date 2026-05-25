@@ -74,16 +74,54 @@ export function mergeHydratedHistoricalBlocks(blocks: DisplayBlock[], hydratedBl
   return blocks.map((block) => hydratedBlocks[block.id] ?? displayBlockToMessageBlock(block));
 }
 
-export function transcriptRenderItemsToMessageBlocks(renderItems: TranscriptRenderItem[]): MessageBlock[] {
+export function transcriptRenderItemsToMessageBlocks(
+  renderItems: TranscriptRenderItem[],
+  hydratedBlocks: Record<string, MessageBlock> = {},
+): MessageBlock[] {
   const messages: MessageBlock[] = [];
   for (const item of renderItems) {
     if (item.type === 'message') {
       messages.push(item.block);
+    } else if (item.type === 'trace_cluster' && item.deferredBlockIds?.length) {
+      messages.push(...item.deferredBlockIds.flatMap((blockId) => hydratedBlocks[blockId] ?? []));
+      messages.push(...item.blocks);
     } else {
       messages.push(...item.blocks);
     }
   }
   return messages;
+}
+
+export function hydrateTranscriptRenderItems(
+  renderItems: TranscriptRenderItem[],
+  hydratedBlocks: Record<string, MessageBlock>,
+): TranscriptRenderItem[] {
+  if (Object.keys(hydratedBlocks).length === 0) {
+    return renderItems;
+  }
+
+  return renderItems.map((item) => {
+    if (item.type !== 'trace_cluster' || !item.deferredBlockIds?.length) {
+      return item;
+    }
+
+    const hydratedTraceBlocks = item.deferredBlockIds.flatMap((blockId) => {
+      const block = hydratedBlocks[blockId];
+      return block &&
+        (block.type === 'thinking' ||
+          block.type === 'tool_use' ||
+          block.type === 'error' ||
+          block.type === 'context' ||
+          block.type === 'summary')
+        ? [block]
+        : [];
+    });
+    if (hydratedTraceBlocks.length === 0) {
+      return item;
+    }
+
+    return { ...item, blocks: [...hydratedTraceBlocks, ...item.blocks] };
+  });
 }
 
 export function mergeHydratedStreamBlocks(blocks: MessageBlock[], hydratedBlocks: Record<string, MessageBlock>): MessageBlock[] {

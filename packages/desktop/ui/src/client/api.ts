@@ -359,6 +359,7 @@ export const api = {
     id: string,
     options?: {
       tailBlocks?: number;
+      includeToolBlocks?: boolean;
       knownSessionSignature?: string;
       knownBlockOffset?: number;
       knownTotalBlocks?: number;
@@ -367,6 +368,7 @@ export const api = {
   ) => {
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
+    if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     if (options?.knownSessionSignature) params.set('knownSessionSignature', options.knownSessionSignature);
     if (options?.knownBlockOffset !== undefined) params.set('knownBlockOffset', String(options.knownBlockOffset));
     if (options?.knownTotalBlocks !== undefined) params.set('knownTotalBlocks', String(options.knownTotalBlocks));
@@ -657,6 +659,7 @@ export const api = {
     id: string,
     options?: {
       tailBlocks?: number;
+      includeToolBlocks?: boolean;
       knownSessionSignature?: string;
       knownBlockOffset?: number;
       knownTotalBlocks?: number;
@@ -666,6 +669,7 @@ export const api = {
     const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
+    if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     if (options?.knownSessionSignature) params.set('knownSessionSignature', options.knownSessionSignature);
     if (options?.knownBlockOffset !== undefined) params.set('knownBlockOffset', String(options.knownBlockOffset));
     if (options?.knownTotalBlocks !== undefined) params.set('knownTotalBlocks', String(options.knownTotalBlocks));
@@ -684,10 +688,11 @@ export const api = {
     });
     return result;
   },
-  desktopConversationState: async (id: string, options?: { tailBlocks?: number }) => {
+  desktopConversationState: async (id: string, options?: { tailBlocks?: number; includeToolBlocks?: boolean }) => {
     const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
+    if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     const query = params.toString();
     const result = await get<DesktopConversationState>(`/conversations/${encodeURIComponent(id)}/state${query ? `?${query}` : ''}`);
     recordClientPerfTiming({

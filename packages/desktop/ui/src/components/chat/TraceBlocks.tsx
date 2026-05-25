@@ -269,6 +269,7 @@ function useGracefulTraceClusterActive(active: boolean): boolean {
 
 export function TraceClusterBlock({
   blocks,
+  deferredBlockIds = [],
   summary,
   live,
   onOpenArtifact,
@@ -277,6 +278,8 @@ export function TraceClusterBlock({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  onHydrateMessage,
+  hydratingMessageBlockIds,
   onResume,
   resumeBusy,
   resumeTitle,
@@ -286,6 +289,7 @@ export function TraceClusterBlock({
   showPinnedToolCalls,
 }: {
   blocks: TraceConversationBlock[];
+  deferredBlockIds?: string[];
   summary: TraceClusterSummary;
   live: boolean;
   onOpenArtifact?: (artifactId: string) => void;
@@ -294,6 +298,8 @@ export function TraceClusterBlock({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  onHydrateMessage?: (blockId: string) => Promise<void> | void;
+  hydratingMessageBlockIds?: ReadonlySet<string>;
   onResume?: () => Promise<void> | void;
   resumeBusy?: boolean;
   resumeTitle?: string | null;
@@ -313,6 +319,22 @@ export function TraceClusterBlock({
   const title = stableActive ? 'Working' : 'Internal work';
   const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
+  const hydrateDeferredBlocks = () => {
+    if (!onHydrateMessage || deferredBlockIds.length === 0) {
+      return;
+    }
+
+    for (const blockId of deferredBlockIds) {
+      if (!hydratingMessageBlockIds?.has(blockId)) {
+        void onHydrateMessage(blockId);
+      }
+    }
+  };
+  useEffect(() => {
+    if (open) {
+      hydrateDeferredBlocks();
+    }
+  }, [open]);
   const runningBlockIndex = useMemo(
     () => blocks.findIndex((block) => block.type === 'tool_use' && (block.status === 'running' || !!block.running)),
     [blocks],
@@ -340,6 +362,8 @@ export function TraceClusterBlock({
       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-2">
         <button
           type="button"
+          onMouseEnter={hydrateDeferredBlocks}
+          onFocus={hydrateDeferredBlocks}
           onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
           aria-expanded={open}
           className={panelClassName}
@@ -425,6 +449,8 @@ export function TraceClusterBlock({
                     activeCheckpointId={activeCheckpointId}
                     onOpenBrowser={onOpenBrowser}
                     onOpenFilePath={onOpenFilePath}
+                    onHydrateMessage={onHydrateMessage}
+                    hydratingMessageBlockIds={hydratingMessageBlockIds}
                     diffDisclosureMode={diffDisclosureMode}
                   />
                 );

@@ -27,7 +27,14 @@ export interface TraceClusterSummary {
 export type ChatRenderItem =
   | { type: 'message'; block: MessageBlock; index: number }
   | { type: 'context_cluster'; blocks: ContextConversationBlock[]; startIndex: number; endIndex: number }
-  | { type: 'trace_cluster'; blocks: TraceConversationBlock[]; startIndex: number; endIndex: number; summary: TraceClusterSummary };
+  | {
+      type: 'trace_cluster';
+      blocks: TraceConversationBlock[];
+      startIndex: number;
+      endIndex: number;
+      summary: TraceClusterSummary;
+      deferredBlockIds?: string[];
+    };
 
 const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
 

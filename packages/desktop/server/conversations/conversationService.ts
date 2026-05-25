@@ -30,6 +30,7 @@ import {
 import { readConversationContextDocs } from './conversationContextDocs.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
+import { projectConversationOnlySessionDetail } from './conversationTranscriptProjection.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
 import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
 import {
@@ -542,12 +543,24 @@ export function parseTailBlocksQuery(rawTailBlocks: unknown): number | undefined
   return Number.isSafeInteger(parsed) && (parsed as number) > 0 ? Math.min(MAX_SESSION_DETAIL_TAIL_BLOCKS, parsed as number) : undefined;
 }
 
-export function readConversationSessionDetail(input: { conversationId: string; tailBlocks?: number }): SessionDetailRouteReadResult {
+export function readConversationSessionDetail(input: {
+  conversationId: string;
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}): SessionDetailRouteReadResult {
   const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
-  return readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+  const result = readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+  return input.includeToolBlocks === false && result.detail
+    ? { ...result, detail: projectConversationOnlySessionDetail(result.detail) }
+    : result;
 }
 
-export async function readSessionDetailForRoute(input: { conversationId: string; profile: string; tailBlocks?: number }): Promise<{
+export async function readSessionDetailForRoute(input: {
+  conversationId: string;
+  profile: string;
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}): Promise<{
   sessionRead: SessionDetailRouteReadResult;
   remoteMirror: SessionDetailRouteRemoteMirrorTelemetry;
 }> {

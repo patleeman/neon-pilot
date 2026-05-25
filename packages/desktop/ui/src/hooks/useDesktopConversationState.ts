@@ -226,8 +226,12 @@ function mergeDesktopConversationState(
   };
 }
 
-function buildDesktopConversationStateCacheKey(conversationId: string, tailBlocks: number | undefined): string {
-  return `${conversationId}:${tailBlocks ?? 'default'}`;
+function buildDesktopConversationStateCacheKey(
+  conversationId: string,
+  tailBlocks: number | undefined,
+  includeToolBlocks: boolean | undefined,
+): string {
+  return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}`;
 }
 
 function rememberDesktopConversationState(
@@ -246,7 +250,10 @@ function rememberDesktopConversationState(
   }
 }
 
-export function useDesktopConversationState(conversationId: string | null, options?: { tailBlocks?: number; enabled?: boolean }) {
+export function useDesktopConversationState(
+  conversationId: string | null,
+  options?: { tailBlocks?: number; includeToolBlocks?: boolean; enabled?: boolean },
+) {
   const enabled = options?.enabled !== false && Boolean(conversationId);
   const bridge = getDesktopBridge();
   const surfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
@@ -279,13 +286,16 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     let closed = false;
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
     setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
 
     void api
-      .desktopConversationState(conversationId, tailBlocks !== undefined ? { tailBlocks } : undefined)
+      .desktopConversationState(conversationId, {
+        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+        ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      })
       .then((nextState) => {
         if (!closed) {
           if (!nextState.sessionDetail && !nextState.liveSession.live && nextState.stream.blocks.length === 0) {
@@ -311,7 +321,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     return () => {
       closed = true;
     };
-  }, [bridge, conversationId, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
     if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession.live) {

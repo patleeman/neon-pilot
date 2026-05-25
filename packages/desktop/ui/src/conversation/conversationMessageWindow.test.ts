@@ -111,4 +111,15 @@ describe('conversationMessageWindow', () => {
       }),
     ).toEqual({ startPercent: 90, endPercent: 100 });
   });
+
+  it('does not round a hidden earlier transcript window to 100-100%', () => {
+    expect(
+      resolveTranscriptWindowPercent({
+        blockOffset: 999,
+        visibleBlockCount: 1,
+        totalBlocks: 1000,
+        anchoredToTail: true,
+      }),
+    ).toEqual({ startPercent: 99, endPercent: 100 });
+  });
 });

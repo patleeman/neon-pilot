@@ -14,8 +14,13 @@ const MAX_PERSISTED_CONVERSATION_BOOTSTRAPS = 24;
 
 let conversationBootstrapDbPromise: Promise<IDBDatabase | null> | null = null;
 
-function buildConversationBootstrapCacheKey(conversationId: string, options?: { tailBlocks?: number }): string {
-  return `${conversationId}::${options?.tailBlocks ?? 'all'}`;
+interface ConversationBootstrapPersistenceOptions {
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}
+
+function buildConversationBootstrapCacheKey(conversationId: string, options?: ConversationBootstrapPersistenceOptions): string {
+  return `${conversationId}::${options?.tailBlocks ?? 'all'}::${options?.includeToolBlocks === false ? 'conversation' : 'full'}`;
 }
 
 function supportsConversationBootstrapPersistence(): boolean {
@@ -70,7 +75,7 @@ async function openConversationBootstrapDb(): Promise<IDBDatabase | null> {
 
 export async function readPersistedConversationBootstrapEntry(
   conversationId: string,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapPersistenceOptions,
 ): Promise<{ data: ConversationBootstrapState; versionKey: string } | null> {
   const db = await openConversationBootstrapDb();
   if (!db) {
@@ -130,7 +135,7 @@ async function trimPersistedConversationBootstrapEntries(): Promise<void> {
 export async function writePersistedConversationBootstrapEntry(
   conversationId: string,
   data: ConversationBootstrapState,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapPersistenceOptions,
   versionKey = '0',
 ): Promise<void> {
   const db = await openConversationBootstrapDb();

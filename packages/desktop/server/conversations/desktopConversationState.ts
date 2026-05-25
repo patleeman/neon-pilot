@@ -79,6 +79,7 @@ export interface DesktopConversationState {
     totalBlocks: number;
     contextUsage: LiveContextUsage | null;
     signature?: string;
+    renderItems?: unknown[];
   } | null;
   liveSession:
     | { live: false }
@@ -517,6 +518,7 @@ export async function readDesktopConversationState(input: {
   conversationId: string;
   profile: string;
   tailBlocks?: number;
+  includeToolBlocks?: boolean;
 }): Promise<DesktopConversationState> {
   const startedAtMs = performance.now();
   const conversationId = input.conversationId.trim();
@@ -565,6 +567,7 @@ export async function readDesktopConversationState(input: {
     conversationId,
     profile: input.profile,
     tailBlocks,
+    includeToolBlocks: input.includeToolBlocks,
   });
   const sessionReadAtMs = performance.now();
 

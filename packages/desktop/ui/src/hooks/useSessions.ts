@@ -9,6 +9,11 @@ interface CachedSessionDetailEntry {
   version: number;
 }
 
+interface SessionDetailOptions {
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}
+
 const sessionDetailCache = new Map<string, CachedSessionDetailEntry>();
 const sessionDetailInflight = new Map<string, Promise<SessionDetail>>();
 const MAX_CACHED_SESSION_DETAILS = 24;
@@ -67,11 +72,11 @@ function mergeSessionDetailResultWithCachedDetail(cached: SessionDetail | null, 
   return result;
 }
 
-function buildSessionDetailCacheKey(sessionId: string, options?: { tailBlocks?: number }): string {
-  return `${sessionId}::${options?.tailBlocks ?? 'all'}`;
+function buildSessionDetailCacheKey(sessionId: string, options?: SessionDetailOptions): string {
+  return `${sessionId}::${options?.tailBlocks ?? 'all'}::${options?.includeToolBlocks === false ? 'conversation' : 'full'}`;
 }
 
-function readCachedSessionDetailEntry(sessionId: string, options?: { tailBlocks?: number }): CachedSessionDetailEntry | null {
+function readCachedSessionDetailEntry(sessionId: string, options?: SessionDetailOptions): CachedSessionDetailEntry | null {
   const cacheKey = buildSessionDetailCacheKey(sessionId, options);
   const cached = sessionDetailCache.get(cacheKey) ?? null;
   if (cached) {
@@ -92,13 +97,13 @@ function trimSessionDetailCache(): void {
   }
 }
 
-export function primeSessionDetailCache(sessionId: string, detail: SessionDetail, options?: { tailBlocks?: number }, version = 0): void {
+export function primeSessionDetailCache(sessionId: string, detail: SessionDetail, options?: SessionDetailOptions, version = 0): void {
   const cacheKey = buildSessionDetailCacheKey(sessionId, options);
   sessionDetailCache.set(cacheKey, { detail, version });
   trimSessionDetailCache();
 }
 
-export function fetchSessionDetailCached(sessionId: string, options?: { tailBlocks?: number }, version = 0): Promise<SessionDetail> {
+export function fetchSessionDetailCached(sessionId: string, options?: SessionDetailOptions, version = 0): Promise<SessionDetail> {
   const cacheKey = buildSessionDetailCacheKey(sessionId, options);
   const cached = readCachedSessionDetailEntry(sessionId, options);
   if (cached && cached.version === version) {
@@ -143,7 +148,7 @@ export function fetchSessionDetailCached(sessionId: string, options?: { tailBloc
 
 function resolveSessionDetailSeed(
   sessionId: string | undefined,
-  options?: { tailBlocks?: number },
+  options?: SessionDetailOptions,
 ): {
   detail: SessionDetail | null;
   loading: boolean;
@@ -164,10 +169,10 @@ function resolveSessionDetailSeed(
 
 const useCacheSeedEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export function useSessionDetail(sessionId: string | undefined, options?: { tailBlocks?: number; version?: number }) {
+export function useSessionDetail(sessionId: string | undefined, options?: SessionDetailOptions & { version?: number }) {
   const { versions } = useAppEvents();
   const detailVersion = options?.version ?? versions.sessionFiles;
-  const cacheOptions = options ? { tailBlocks: options.tailBlocks } : undefined;
+  const cacheOptions = options ? { tailBlocks: options.tailBlocks, includeToolBlocks: options.includeToolBlocks } : undefined;
   const initialSeed = resolveSessionDetailSeed(sessionId, cacheOptions);
   const [detail, setDetail] = useState<SessionDetail | null>(initialSeed.detail);
   const [loading, setLoading] = useState(initialSeed.loading);
@@ -178,7 +183,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: { tail
     setDetail(seed.detail);
     setLoading(seed.loading);
     setError(null);
-  }, [cacheOptions?.tailBlocks, sessionId]);
+  }, [cacheOptions?.includeToolBlocks, cacheOptions?.tailBlocks, sessionId]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -214,7 +219,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: { tail
     return () => {
       cancelled = true;
     };
-  }, [cacheOptions?.tailBlocks, detailVersion, sessionId]);
+  }, [cacheOptions?.includeToolBlocks, cacheOptions?.tailBlocks, detailVersion, sessionId]);
 
   return { detail, loading, error };
 }

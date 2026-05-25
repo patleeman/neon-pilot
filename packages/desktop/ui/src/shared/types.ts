@@ -688,6 +688,7 @@ export type TranscriptRenderItem =
       startIndex: number;
       endIndex: number;
       summary: TranscriptTraceClusterSummary;
+      deferredBlockIds?: string[];
     };
 
 export interface SessionDetail {

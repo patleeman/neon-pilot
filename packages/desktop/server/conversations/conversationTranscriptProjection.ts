@@ -67,7 +67,14 @@ type TraceTranscriptBlock =
 export type TranscriptRenderItem =
   | { type: 'message'; block: TranscriptMessageBlock; index: number }
   | { type: 'context_cluster'; blocks: ContextTranscriptBlock[]; startIndex: number; endIndex: number }
-  | { type: 'trace_cluster'; blocks: TraceTranscriptBlock[]; startIndex: number; endIndex: number; summary: TranscriptTraceClusterSummary };
+  | {
+      type: 'trace_cluster';
+      blocks: TraceTranscriptBlock[];
+      startIndex: number;
+      endIndex: number;
+      summary: TranscriptTraceClusterSummary;
+      deferredBlockIds?: string[];
+    };
 
 const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
 
@@ -305,5 +312,48 @@ export function attachTranscriptRenderItems<T extends SessionDetail | null>(deta
   return {
     ...detail,
     renderItems: buildTranscriptRenderItemsFromDisplayBlocks(detail.blocks),
+  } as T;
+}
+
+function displayBlocksFromTranscriptRenderItems(sourceBlocks: DisplayBlock[], renderItems: TranscriptRenderItem[]): DisplayBlock[] {
+  const blocks: DisplayBlock[] = [];
+  for (const item of renderItems) {
+    if (item.type === 'message') {
+      const block = sourceBlocks[item.index];
+      if (block) blocks.push(block);
+      continue;
+    }
+
+    for (let index = item.startIndex; index <= item.endIndex; index += 1) {
+      const block = sourceBlocks[index];
+      if (block && (block.type === 'context' || block.type === 'summary')) {
+        blocks.push(block);
+      }
+    }
+  }
+  return blocks;
+}
+
+export function projectConversationOnlySessionDetail<T extends SessionDetail | null>(detail: T): T {
+  if (!detail) {
+    return detail;
+  }
+
+  const renderItems = buildTranscriptRenderItemsFromDisplayBlocks(detail.blocks).map((item) => {
+    if (item.type !== 'trace_cluster') {
+      return item;
+    }
+
+    return {
+      ...item,
+      blocks: [],
+      deferredBlockIds: item.blocks.flatMap((block) => (typeof block.id === 'string' && block.id.trim() ? [block.id.trim()] : [])),
+    };
+  });
+
+  return {
+    ...detail,
+    blocks: displayBlocksFromTranscriptRenderItems(detail.blocks, renderItems),
+    renderItems,
   } as T;
 }

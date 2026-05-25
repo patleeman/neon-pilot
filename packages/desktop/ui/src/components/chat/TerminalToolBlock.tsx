@@ -29,6 +29,13 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   const blockId = block.id?.trim();
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
+  const prefetchDeferredOutput = () => {
+    if (!outputDeferred || !blockId || hydratingDeferredOutput) {
+      return;
+    }
+
+    void onHydrateMessage?.(blockId);
+  };
   const hasBody = isRunning || block.output || outputDeferred;
   const copyText = block.output ? `$ ${presentation.command}\n${block.output}` : `$ ${presentation.command}`;
   const footerBits: string[] = [];
@@ -54,7 +61,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   }
 
   return (
-    <div className="group space-y-1.5">
+    <div className="group space-y-1.5" onMouseEnter={prefetchDeferredOutput} onFocus={prefetchDeferredOutput}>
       <div className={cx('ui-terminal-block', isError ? 'border-danger/35' : null)}>
         <div className="ui-terminal-block__chrome flex items-center gap-2 border-b px-3 py-2 text-[11px]">
           <span className="min-w-0 flex-1 break-all text-primary">{presentation.command}</span>

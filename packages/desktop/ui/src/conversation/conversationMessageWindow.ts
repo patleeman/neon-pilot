@@ -78,7 +78,8 @@ export function resolveTranscriptWindowPercent(input: {
 
   const clampedOffset = Math.min(Math.max(0, input.blockOffset), input.totalBlocks);
   const clampedVisibleBlockCount = Math.max(0, input.visibleBlockCount);
-  const startPercent = Math.min(100, Math.max(0, Math.ceil((clampedOffset / input.totalBlocks) * 100)));
+  const roundedStartPercent = Math.min(100, Math.max(0, Math.ceil((clampedOffset / input.totalBlocks) * 100)));
+  const startPercent = clampedOffset > 0 && clampedOffset < input.totalBlocks && roundedStartPercent === 100 ? 99 : roundedStartPercent;
   if (input.anchoredToTail) {
     return { startPercent, endPercent: 100 };
   }

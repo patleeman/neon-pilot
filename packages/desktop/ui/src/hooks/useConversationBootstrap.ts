@@ -13,6 +13,11 @@ interface CachedConversationBootstrapEntry {
   versionKey: string;
 }
 
+interface ConversationBootstrapOptions {
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}
+
 function readConversationBootstrapSessionSignature(data: ConversationBootstrapState | null | undefined): string | undefined {
   const sessionDetailSignature = data?.sessionDetail?.signature?.trim();
   if (sessionDetailSignature) {
@@ -132,13 +137,13 @@ const conversationBootstrapCache = new Map<string, CachedConversationBootstrapEn
 const conversationBootstrapInflight = new Map<string, Promise<ConversationBootstrapState>>();
 const MAX_CACHED_CONVERSATION_BOOTSTRAPS = 24;
 
-function buildConversationBootstrapCacheKey(conversationId: string, options?: { tailBlocks?: number }): string {
-  return `${conversationId}::${options?.tailBlocks ?? 'all'}`;
+function buildConversationBootstrapCacheKey(conversationId: string, options?: ConversationBootstrapOptions): string {
+  return `${conversationId}::${options?.tailBlocks ?? 'all'}::${options?.includeToolBlocks === false ? 'conversation' : 'full'}`;
 }
 
 function readCachedConversationBootstrapEntry(
   conversationId: string,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
 ): CachedConversationBootstrapEntry | null {
   const cacheKey = buildConversationBootstrapCacheKey(conversationId, options);
   const cached = conversationBootstrapCache.get(cacheKey) ?? null;
@@ -173,7 +178,7 @@ function trimConversationBootstrapCache(): void {
 function writeConversationBootstrapCacheEntry(
   conversationId: string,
   data: ConversationBootstrapState,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
   versionKey = '0',
 ): CachedConversationBootstrapEntry {
   const cacheKey = buildConversationBootstrapCacheKey(conversationId, options);
@@ -189,7 +194,7 @@ function writeConversationBootstrapCacheEntry(
 
 async function readConversationBootstrapEntry(
   conversationId: string,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
 ): Promise<CachedConversationBootstrapEntry | null> {
   const cached = readCachedConversationBootstrapEntry(conversationId, options);
   if (cached) {
@@ -207,7 +212,7 @@ async function readConversationBootstrapEntry(
 export function primeConversationBootstrapCache(
   conversationId: string,
   data: ConversationBootstrapState,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
   versionKey = '0',
 ): void {
   writeConversationBootstrapCacheEntry(conversationId, data, options, versionKey);
@@ -215,7 +220,7 @@ export function primeConversationBootstrapCache(
 
 export function fetchConversationBootstrapCached(
   conversationId: string,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
   versionKey = '0',
 ): Promise<ConversationBootstrapState> {
   const cacheKey = buildConversationBootstrapCacheKey(conversationId, options);
@@ -266,7 +271,7 @@ export function buildConversationBootstrapVersionKey(input: { sessionsVersion: n
 
 function resolveConversationBootstrapSeed(
   conversationId: string | undefined,
-  options?: { tailBlocks?: number },
+  options?: ConversationBootstrapOptions,
 ): {
   data: ConversationBootstrapState | null;
   loading: boolean;
@@ -287,7 +292,10 @@ function resolveConversationBootstrapSeed(
 
 const useCacheSeedEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export function useConversationBootstrap(conversationId: string | undefined, options?: { tailBlocks?: number; versionKey?: string }) {
+export function useConversationBootstrap(
+  conversationId: string | undefined,
+  options?: ConversationBootstrapOptions & { versionKey?: string },
+) {
   const { versions } = useAppEvents();
   const versionKey =
     options?.versionKey ??
@@ -305,7 +313,7 @@ export function useConversationBootstrap(conversationId: string | undefined, opt
     setData(seed.data);
     setLoading(seed.loading);
     setError(null);
-  }, [conversationId, options?.tailBlocks]);
+  }, [conversationId, options?.includeToolBlocks, options?.tailBlocks]);
 
   useEffect(() => {
     if (!conversationId) {
@@ -357,7 +365,7 @@ export function useConversationBootstrap(conversationId: string | undefined, opt
     return () => {
       cancelled = true;
     };
-  }, [conversationId, options?.tailBlocks, versionKey]);
+  }, [conversationId, options?.includeToolBlocks, options?.tailBlocks, versionKey]);
 
   return { data, loading, error };
 }

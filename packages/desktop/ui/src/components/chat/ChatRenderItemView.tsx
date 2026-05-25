@@ -103,6 +103,7 @@ export function ChatRenderItemView({
         })}
         <TraceClusterBlock
           blocks={item.blocks}
+          deferredBlockIds={item.blocks.length === 0 ? item.deferredBlockIds : undefined}
           summary={item.summary}
           live={live}
           onOpenArtifact={onOpenArtifact}
@@ -111,6 +112,8 @@ export function ChatRenderItemView({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          onHydrateMessage={onHydrateMessage}
+          hydratingMessageBlockIds={hydratingMessageBlockIds}
           onResume={isTailItem ? onResumeConversation : undefined}
           resumeBusy={resumeConversationBusy}
           resumeTitle={resumeConversationTitle}
