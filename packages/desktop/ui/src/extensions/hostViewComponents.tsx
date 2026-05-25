@@ -31,34 +31,9 @@ export type ExtensionHostViewWrapperComponent = React.ComponentType<
   ExtensionHostViewComponentProps & { HostComponent: ExtensionHostViewComponent }
 >;
 
-const componentLoaders: Record<string, () => Promise<{ default: ExtensionHostViewComponent }>> = {
-  'workbench.artifacts.rail': async () => ({
-    default: (await import('../../../../../extensions/system-artifacts/src/panels')).ArtifactsPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.artifacts.detail': async () => ({
-    default: (await import('../../../../../extensions/system-artifacts/src/panels')).ArtifactDetailPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.files.rail': async () => ({
-    default: (await import('../../../../../extensions/system-files/src/panels')).WorkspaceFilesPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.files.detail': async () => ({
-    default: (await import('../../../../../extensions/system-files/src/panels')).WorkspaceFileDetailPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.browser.rail': async () => ({
-    default: (await import('../../../../../installable-extensions/system-browser/src/panels'))
-      .BrowserTabsPanel as ExtensionHostViewComponent,
-  }),
-  'workbench.browser.detail': async () => ({
-    default: (await import('../../../../../installable-extensions/system-browser/src/panels'))
-      .BrowserWorkbenchPanel as ExtensionHostViewComponent,
-  }),
-};
-
 const hostViewComponentDefinitions: HostViewComponentDefinition[] = [...HOST_VIEW_COMPONENT_DEFINITIONS];
 
-const hostViewComponentRegistry = new Map(
-  hostViewComponentDefinitions.map((definition) => [definition.id, { ...definition, load: componentLoaders[definition.id] }]),
-);
+const hostViewComponentRegistry = new Map(hostViewComponentDefinitions.map((definition) => [definition.id, { ...definition }]));
 
 export function isHostViewComponentReference(
   value: unknown,

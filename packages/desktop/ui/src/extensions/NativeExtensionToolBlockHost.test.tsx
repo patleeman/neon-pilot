@@ -26,7 +26,7 @@ describe('NativeExtensionToolBlockHost', () => {
     expect(html).toContain('Extension renderer unavailable for self_preservation.');
   });
 
-  it('falls back to the bundled checkpoint renderer when registry data is stale', () => {
+  it('does not use feature-specific bundled fallbacks when registry data is stale', () => {
     const html = renderToStaticMarkup(
       createElement(NativeExtensionToolBlockHost, {
         extension: undefined,
@@ -43,7 +43,7 @@ describe('NativeExtensionToolBlockHost', () => {
       }),
     );
 
-    expect(html).toContain('fix checkpoint renderer');
-    expect(html).not.toContain('Extension renderer unavailable for checkpoint.');
+    expect(html).toContain('Extension renderer unavailable for checkpoint.');
+    expect(html).not.toContain('fix checkpoint renderer');
   });
 });

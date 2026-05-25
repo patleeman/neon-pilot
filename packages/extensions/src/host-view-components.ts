@@ -15,73 +15,7 @@ export interface HostViewComponentDefinition {
   examples: Array<Record<string, unknown>>;
 }
 
-const emptyPropsSchema = { type: 'object', additionalProperties: false } as const;
-
-const wrapperOverrideSlot = {
-  description:
-    'Wraps the host component. The override export receives the normal surface props plus HostComponent, hostProps, and slotOverrides.',
-  propsSchema: {
-    type: 'object',
-    additionalProperties: true,
-  },
-} as const;
-
-export const HOST_VIEW_COMPONENT_DEFINITIONS = [
-  {
-    id: 'workbench.artifacts.rail',
-    title: 'Artifacts rail',
-    description: 'Conversation artifact list for the workbench right rail.',
-    locations: ['rightRail'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.artifacts.rail' } }],
-  },
-  {
-    id: 'workbench.artifacts.detail',
-    title: 'Artifact detail',
-    description: 'Conversation artifact detail pane for the workbench.',
-    locations: ['workbench'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.artifacts.detail' } }],
-  },
-  {
-    id: 'workbench.files.rail',
-    title: 'Workspace files rail',
-    description: 'Workspace file explorer rail.',
-    locations: ['rightRail'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.files.rail' } }],
-  },
-  {
-    id: 'workbench.files.detail',
-    title: 'Workspace file detail',
-    description: 'Workspace file detail pane.',
-    locations: ['workbench'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.files.detail' } }],
-  },
-  {
-    id: 'workbench.browser.rail',
-    title: 'Browser rail',
-    description: 'Workbench browser tab rail.',
-    locations: ['rightRail'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.browser.rail' } }],
-  },
-  {
-    id: 'workbench.browser.detail',
-    title: 'Browser detail',
-    description: 'Workbench browser detail pane.',
-    locations: ['workbench'],
-    propsSchema: emptyPropsSchema,
-    overrideSlots: { wrapper: wrapperOverrideSlot },
-    examples: [{ component: { host: 'workbench.browser.detail' } }],
-  },
-] as const satisfies readonly HostViewComponentDefinition[];
+export const HOST_VIEW_COMPONENT_DEFINITIONS: readonly HostViewComponentDefinition[] = [];
 
 export type HostViewComponentId = (typeof HOST_VIEW_COMPONENT_DEFINITIONS)[number]['id'];
 

@@ -73,9 +73,7 @@
         "title": "Artifacts",
         "location": "rightRail",
         "scope": "conversation",
-        "component": {
-          "host": "workbench.artifacts.rail"
-        },
+        "component": "ArtifactsPanel",
         "icon": "file",
         "detailView": "artifact-detail",
         "placement": "workbench-tool",
@@ -86,9 +84,7 @@
         "id": "artifact-detail",
         "title": "Artifact",
         "location": "workbench",
-        "component": {
-          "host": "workbench.artifacts.detail"
-        },
+        "component": "ArtifactDetailPanel",
         "placement": "workbench-tool",
         "scope": "conversation",
         "activation": "on-open"

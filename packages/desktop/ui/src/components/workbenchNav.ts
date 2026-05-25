@@ -1,5 +1,6 @@
 export function shouldRenderExtensionToolPanelInWorkbenchNav(extensionId: string): boolean {
-  return extensionId !== 'system-files';
+  void extensionId;
+  return true;
 }
 
 /** Exclude workbench tools whose toolSlot is "files" (rendered via its own dedicated nav element). */

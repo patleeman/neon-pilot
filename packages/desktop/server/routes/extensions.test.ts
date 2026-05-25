@@ -117,8 +117,8 @@ describe('registerExtensionRoutes', () => {
       expect.arrayContaining([
         expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
         expect.objectContaining({ extensionId: 'system-telemetry', location: 'main', component: 'TelemetryPage' }),
-        expect.objectContaining({ extensionId: 'system-files', location: 'rightRail', component: { host: 'workbench.files.rail' } }),
-        expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: { host: 'workbench.files.detail' } }),
+        expect.objectContaining({ extensionId: 'system-files', location: 'rightRail', component: 'WorkspaceFilesPanel' }),
+        expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: 'WorkspaceFileDetailPanel' }),
       ]),
     );
   }, 30000);

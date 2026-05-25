@@ -217,10 +217,10 @@ describe('extension registry', () => {
         expect.objectContaining({
           extensionId: 'system-files',
           location: 'rightRail',
-          component: { host: 'workbench.files.rail' },
+          component: 'WorkspaceFilesPanel',
           detailView: 'workspace-file-detail',
         }),
-        expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: { host: 'workbench.files.detail' } }),
+        expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: 'WorkspaceFileDetailPanel' }),
       ]),
     );
     expect(listExtensionSkillRegistrations()).toEqual(

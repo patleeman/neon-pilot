@@ -27,10 +27,10 @@ describe('workbench rail model', () => {
     expect(resolveWorkbenchRailMode('files', null)).toBe('files');
   });
 
-  it('maps known system extension surfaces to their built-in slots', () => {
-    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-files' }))).toBe('files');
-    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-artifacts' }))).toBe('artifacts');
-    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-browser' }))).toBe('browser');
+  it('maps declared extension tool slots to stable rail modes', () => {
+    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-files', toolSlot: 'files' }))).toBe('files');
+    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-artifacts', toolSlot: 'artifacts' }))).toBe('artifacts');
+    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-browser', toolSlot: 'browser' }))).toBe('browser');
   });
 
   it('prefers explicit tool slots over inferred extension slots', () => {
@@ -57,7 +57,9 @@ describe('workbench rail model', () => {
     expect(
       resolveActiveExtensionWorkbenchSurface({
         activeWorkbenchTool: 'files',
-        extensionRightToolPanels: [surface({ extensionId: 'system-files', id: 'files-panel', detailView: 'files-detail' })],
+        extensionRightToolPanels: [
+          surface({ extensionId: 'system-files', id: 'files-panel', detailView: 'files-detail', toolSlot: 'files' }),
+        ],
         extensionWorkbenchSurfaces: [detail],
       }),
     ).toBe(detail);
@@ -65,7 +67,7 @@ describe('workbench rail model', () => {
 
   it('detects artifacts rail modes', () => {
     expect(isArtifactsRailMode('artifacts')).toBe(true);
-    expect(isArtifactsRailMode('extension:system-artifacts:panel')).toBe(true);
+    expect(isArtifactsRailMode('extension:system-artifacts:panel')).toBe(false);
     expect(isArtifactsRailMode('files')).toBe(false);
   });
 });

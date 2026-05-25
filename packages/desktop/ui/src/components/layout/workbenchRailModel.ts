@@ -13,9 +13,6 @@ function getSurfaceToolSlot(surface: WorkbenchToolPanelSurface): string | undefi
 export function inferSurfaceToolSlot(surface: WorkbenchToolPanelSurface): string | undefined {
   const explicitSlot = getSurfaceToolSlot(surface);
   if (explicitSlot) return explicitSlot;
-  if (surface.extensionId === 'system-files') return 'files';
-  if (surface.extensionId === 'system-artifacts') return 'artifacts';
-  if (surface.extensionId === 'system-browser') return 'browser';
   return undefined;
 }
 
@@ -63,5 +60,5 @@ export function resolveActiveExtensionWorkbenchSurface({
 }
 
 export function isArtifactsRailMode(mode: WorkbenchRailMode): boolean {
-  return mode === 'artifacts' || mode.startsWith('extension:system-artifacts:');
+  return mode === 'artifacts';
 }

@@ -67,12 +67,14 @@ describe('Layout workbench rail state', () => {
     ).toBe(true);
   });
 
-  it('normalizes system extension rail actions to stable built-in modes', () => {
-    expect(resolveWorkbenchRailMode('artifacts', { extensionId: 'system-artifacts', id: 'artifacts-tool' } as never)).toBe('artifacts');
+  it('normalizes declared rail slots to stable built-in modes', () => {
+    expect(
+      resolveWorkbenchRailMode('artifacts', { extensionId: 'system-artifacts', id: 'artifacts-tool', toolSlot: 'artifacts' } as never),
+    ).toBe('artifacts');
   });
 
-  it('keeps system artifact panels in the workbench nav', () => {
-    expect(shouldRenderExtensionToolPanelInWorkbenchNav('system-files')).toBe(false);
+  it('does not hide extension panels by extension id', () => {
+    expect(shouldRenderExtensionToolPanelInWorkbenchNav('system-files')).toBe(true);
     expect(shouldRenderExtensionToolPanelInWorkbenchNav('system-artifacts')).toBe(true);
   });
 
@@ -80,7 +82,9 @@ describe('Layout workbench rail state', () => {
     expect(
       resolveActiveExtensionWorkbenchSurface({
         activeWorkbenchTool: 'files',
-        extensionRightToolPanels: [{ extensionId: 'system-files', id: 'files-tool', detailView: 'files-workbench' } as never],
+        extensionRightToolPanels: [
+          { extensionId: 'system-files', id: 'files-tool', detailView: 'files-workbench', toolSlot: 'files' } as never,
+        ],
         extensionWorkbenchSurfaces: [{ extensionId: 'system-files', id: 'files-workbench' } as never],
       }),
     ).toEqual({ extensionId: 'system-files', id: 'files-workbench' });
@@ -98,7 +102,7 @@ describe('Layout workbench rail state', () => {
 
   it('recognizes extension-backed artifacts as artifacts rail mode', () => {
     expect(isArtifactsRailMode('artifacts')).toBe(true);
-    expect(isArtifactsRailMode('extension:system-artifacts:conversation-artifacts')).toBe(true);
+    expect(isArtifactsRailMode('extension:system-artifacts:conversation-artifacts')).toBe(false);
     expect(isArtifactsRailMode('extension:system-files:file-explorer')).toBe(false);
   });
 
