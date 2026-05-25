@@ -172,8 +172,8 @@ describe('durableRuns', () => {
       runCount: 1,
     });
     expect(inflightResult.telemetry).toMatchObject({
-      cache: 'hit',
-      runCount: 0,
+      cache: 'inflight',
+      runCount: 1,
     });
     expect(cachedResult.telemetry).toMatchObject({
       cache: 'hit',
@@ -183,7 +183,7 @@ describe('durableRuns', () => {
     await expect(listDurableRuns()).resolves.toEqual(firstResult.result);
   });
 
-  it('returns an empty foreground-safe result when the daemon list exceeds the foreground budget', async () => {
+  it('falls back to scanned runs when the daemon list exceeds the foreground budget', async () => {
     const deferred = createDeferred<{
       scannedAt: string;
       runs: Array<ReturnType<typeof createRun>>;
@@ -191,41 +191,42 @@ describe('durableRuns', () => {
     }>();
     pingDaemonMock.mockResolvedValue(true);
     listDurableRunsFromDaemonMock.mockReturnValue(deferred.promise);
-    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 0 });
+    scanDurableRunsForRecoveryMock.mockReturnValue([createRun('scan-fast')]);
+    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 1 });
 
     vi.useFakeTimers();
     const request = listDurableRunsWithTelemetry();
-    await vi.advanceTimersByTimeAsync(101);
+    await vi.advanceTimersByTimeAsync(251);
 
     await expect(request).resolves.toMatchObject({
       result: {
-        runs: [],
-        summary: { totalRuns: 0 },
+        runs: [{ ...createRun('scan-fast'), decorated: true }],
+        summary: { totalRuns: 1 },
         runsRoot: '/daemon-root/runs',
       },
       telemetry: {
         cache: 'miss',
-        source: 'daemon',
-        runCount: 0,
+        source: 'scan',
+        runCount: 1,
       },
     });
-    expect(scanDurableRunsForRecoveryMock).not.toHaveBeenCalled();
   });
 
-  it('returns empty foreground-safe results when the daemon is unavailable or disabled and clears the cache after unexpected failures', async () => {
+  it('falls back to scanned runs when the daemon is unavailable or disabled and clears the cache after unexpected failures', async () => {
     pingDaemonMock.mockRejectedValueOnce(new Error('ECONNREFUSED while connecting'));
-    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 0 });
+    scanDurableRunsForRecoveryMock.mockReturnValue([createRun('scan-1')]);
+    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 1 });
 
     await expect(listDurableRunsWithTelemetry()).resolves.toMatchObject({
       result: {
-        runs: [],
-        summary: { totalRuns: 0 },
+        runs: [{ ...createRun('scan-1'), decorated: true }],
+        summary: { totalRuns: 1 },
         runsRoot: '/daemon-root/runs',
       },
       telemetry: {
         cache: 'miss',
-        source: 'daemon',
-        runCount: 0,
+        source: 'scan',
+        runCount: 1,
       },
     });
 
@@ -234,6 +235,7 @@ describe('durableRuns', () => {
     await expect(listDurableRunsWithTelemetry()).rejects.toThrow('daemon exploded');
 
     pingDaemonMock.mockResolvedValue(false);
+    scanDurableRunsForRecoveryMock.mockReturnValue([]);
     summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 0 });
     await expect(listDurableRunsWithTelemetry()).resolves.toMatchObject({
       result: {
@@ -243,7 +245,7 @@ describe('durableRuns', () => {
       },
       telemetry: {
         cache: 'miss',
-        source: 'daemon',
+        source: 'scan',
         runCount: 0,
       },
     });

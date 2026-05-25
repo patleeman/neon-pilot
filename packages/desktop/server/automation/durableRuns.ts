@@ -16,6 +16,7 @@ import {
   resolveDaemonPaths,
   resolveDurableRunsRoot,
   scanDurableRun,
+  scanDurableRunsForRecovery,
   type ScannedDurableRun,
   summarizeScannedDurableRuns,
 } from '@neon-pilot/daemon';
@@ -25,8 +26,7 @@ import { createInitialDurableRunStatus, saveDurableRunStatus } from '../runs/sto
 import { decorateDurableRunAttention, decorateDurableRunsAttention } from './durableRunAttention.js';
 
 const LIST_DURABLE_RUNS_CACHE_TTL_MS = 10_000;
-const LIST_DURABLE_RUNS_STALE_CACHE_TTL_MS = 60_000;
-const LIST_DURABLE_RUNS_DAEMON_BUDGET_MS = 100;
+const LIST_DURABLE_RUNS_DAEMON_BUDGET_MS = 250;
 
 export interface DurableRunsListTelemetry {
   cache: 'hit' | 'inflight' | 'miss';
@@ -64,24 +64,13 @@ function withDaemonListBudget<T>(promise: Promise<T>): Promise<T> {
   });
 }
 
-async function refreshDurableRunsFromDaemon(runsRoot: string): Promise<ListDurableRunsResult & { runsRoot: string }> {
-  if (!(await withDaemonListBudget(pingDaemon()))) {
-    throw new DurableRunsDaemonBudgetExceeded();
-  }
-
-  const result = await withDaemonListBudget(listDurableRunsFromDaemon());
+function buildScannedDurableRunsResult(runsRoot: string): ListDurableRunsResult & { runsRoot: string } {
+  const scannedAt = new Date().toISOString();
+  const runs = scanDurableRunsForRecovery(runsRoot);
   return {
-    ...result,
-    runs: decorateRuns(result.runs),
-    runsRoot,
-  };
-}
-
-function buildEmptyDurableRunsResult(runsRoot: string): ListDurableRunsResult & { runsRoot: string } {
-  return {
-    scannedAt: new Date().toISOString(),
-    runs: [],
-    summary: summarizeScannedDurableRuns([]),
+    scannedAt,
+    runs: decorateRuns(runs),
+    summary: summarizeScannedDurableRuns(runs),
     runsRoot,
   };
 }
@@ -279,81 +268,84 @@ export async function listDurableRunsWithTelemetry(): Promise<{
 }> {
   const startedAt = process.hrtime.bigint();
   const now = Date.now();
-  const cachedValue = durableRunsListCache?.value;
-  if (cachedValue && durableRunsListCache.expiresAt > now) {
+  if (durableRunsListCache?.value && durableRunsListCache.expiresAt > now) {
     return {
-      result: cachedValue,
+      result: durableRunsListCache.value,
       telemetry: {
         cache: 'hit',
-        source: durableRunsListCache.source ?? 'daemon',
+        source: durableRunsListCache.source ?? 'scan',
         durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-        runCount: cachedValue.runs.length,
+        runCount: durableRunsListCache.value.runs.length,
       },
     };
   }
 
-  if (durableRunsListCache?.promise && cachedValue) {
+  if (durableRunsListCache?.promise) {
+    const result = await durableRunsListCache.promise;
     return {
-      result: cachedValue,
+      result,
       telemetry: {
         cache: 'inflight',
-        source: durableRunsListCache.source ?? 'daemon',
+        source: durableRunsListCache.source ?? 'scan',
         durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-        runCount: cachedValue.runs.length,
+        runCount: result.runs.length,
       },
     };
   }
 
-  const runsRoot = resolveRunsRoot();
-  const fallbackValue =
-    cachedValue && durableRunsListCache && durableRunsListCache.expiresAt + LIST_DURABLE_RUNS_STALE_CACHE_TTL_MS > now
-      ? cachedValue
-      : buildEmptyDurableRunsResult(runsRoot);
+  let source: DurableRunsListTelemetry['source'] = 'scan';
+  const request = (async () => {
+    const runsRoot = resolveRunsRoot();
+
+    try {
+      if (await pingDaemon()) {
+        source = 'daemon';
+        const daemonListPromise = listDurableRunsFromDaemon();
+        const result = await withDaemonListBudget(daemonListPromise);
+        daemonListPromise.catch(() => undefined);
+        return {
+          ...result,
+          runs: decorateRuns(result.runs),
+          runsRoot,
+        };
+      }
+    } catch (error) {
+      if (!isDaemonUnavailable(error) && !(error instanceof DurableRunsDaemonBudgetExceeded)) {
+        throw error;
+      }
+    }
+
+    source = 'scan';
+    return buildScannedDurableRunsResult(runsRoot);
+  })();
+
+  durableRunsListCache = {
+    expiresAt: now + LIST_DURABLE_RUNS_CACHE_TTL_MS,
+    value: null,
+    promise: request,
+    source: null,
+  };
 
   try {
-    const request = refreshDurableRunsFromDaemon(runsRoot);
-    durableRunsListCache = {
-      expiresAt: Date.now() + LIST_DURABLE_RUNS_CACHE_TTL_MS,
-      value: fallbackValue,
-      promise: request,
-      source: 'daemon',
-    };
     const result = await request;
     durableRunsListCache = {
       expiresAt: Date.now() + LIST_DURABLE_RUNS_CACHE_TTL_MS,
       value: result,
       promise: null,
-      source: 'daemon',
+      source,
     };
     return {
       result,
       telemetry: {
         cache: 'miss',
-        source: 'daemon',
+        source,
         durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
         runCount: result.runs.length,
       },
     };
   } catch (error) {
-    if (!isDaemonUnavailable(error) && !(error instanceof DurableRunsDaemonBudgetExceeded)) {
-      durableRunsListCache = null;
-      throw error;
-    }
-    durableRunsListCache = {
-      expiresAt: Date.now() + LIST_DURABLE_RUNS_CACHE_TTL_MS,
-      value: fallbackValue,
-      promise: null,
-      source: 'daemon',
-    };
-    return {
-      result: fallbackValue,
-      telemetry: {
-        cache: cachedValue ? 'inflight' : 'miss',
-        source: 'daemon',
-        durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-        runCount: fallbackValue.runs.length,
-      },
-    };
+    durableRunsListCache = null;
+    throw error;
   }
 }
 
