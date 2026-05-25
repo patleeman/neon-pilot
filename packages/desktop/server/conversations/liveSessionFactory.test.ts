@@ -149,6 +149,21 @@ describe('live session factory', () => {
     expect(s.setActiveTools).toHaveBeenCalledWith(['bash', 'web_search', 'artifact']);
   });
 
+  it('does not re-expand tools after a lifecycle hook has selected a single extension tool mode', async () => {
+    const s = session();
+    s.getActiveToolNames.mockReturnValue(['artifact']);
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+    });
+
+    expect(s.setActiveTools).not.toHaveBeenCalled();
+  });
+
   it('can skip initial preference application and session file ensure', async () => {
     const s = session();
     agent.createAgentSession.mockResolvedValueOnce({ session: s });

@@ -112,7 +112,11 @@ function applyExtensionToolSelection(session: AgentSession, settingsFile: string
   if (typeof patchable.setActiveTools !== 'function') return;
 
   const extensionToolNames = warmLiveSessionToolSelection(settingsFile);
-  const activeToolNames = [...new Set([...(patchable.getActiveToolNames?.() ?? []), ...extensionToolNames])];
+  const currentToolNames = patchable.getActiveToolNames?.() ?? [];
+  if (currentToolNames.length === 1 && extensionToolNames.includes(currentToolNames[0] ?? '')) {
+    return;
+  }
+  const activeToolNames = [...new Set([...currentToolNames, ...extensionToolNames])];
   patchable.setActiveTools(activeToolNames);
 }
 
