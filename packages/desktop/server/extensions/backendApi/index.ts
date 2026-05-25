@@ -25,3 +25,4 @@ export { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceO
 export * from './runtime.js';
 export * from './skills.js';
 export * from './telemetry.js';
+export * from './tools.js';

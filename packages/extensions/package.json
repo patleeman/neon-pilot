@@ -131,6 +131,10 @@
       "types": "./dist/backend/skills.d.ts",
       "default": "./dist/backend/skills.js"
     },
+    "./backend/tools": {
+      "types": "./dist/backend/tools.d.ts",
+      "default": "./dist/backend/tools.js"
+    },
     "./backend/telemetry": {
       "types": "./dist/backend/telemetry.d.ts",
       "default": "./dist/backend/telemetry.js"

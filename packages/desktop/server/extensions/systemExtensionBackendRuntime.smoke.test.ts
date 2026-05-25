@@ -48,6 +48,7 @@ const registeredCommands = [];
 const registeredEvents = [];
 const appendedEntries = [];
 const sentMessages = [];
+let activeTools = [];
 
 const ctx = {
   extensionId,
@@ -142,6 +143,28 @@ const pi = {
   registerTool(tool) {
     registeredTools.push(tool);
   },
+  getAllTools() {
+    return [
+      {
+        name: 'read',
+        description: 'Read file contents.',
+        parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
+        sourceInfo: { source: 'builtin' },
+      },
+      ...registeredTools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+        sourceInfo: { source: 'extension' },
+      })),
+    ];
+  },
+  getActiveTools() {
+    return activeTools;
+  },
+  setActiveTools(toolNames) {
+    activeTools = toolNames;
+  },
   registerCommand(command, handler) {
     registeredCommands.push({ command, handler });
   },
@@ -207,6 +230,17 @@ const smokes = {
     writeFileSync(target, 'hello\n');
     const result = await module.applyPatch({ patch: '*** Begin Patch\n*** Update File: smoke.txt\n@@\n-hello\n+hello smoke\n*** End Patch' }, ctx);
     assert(result.text.includes('updated: smoke.txt'), 'applyPatch did not update smoke file');
+  },
+  async 'system-code-mode'() {
+    await smokeAgentFactory('default');
+    const execCode = registeredTools.find((tool) => tool.name === 'exec_code');
+    assert(execCode?.execute, 'exec_code tool was not registered');
+    const start = registeredEvents.find((event) => event.eventName === 'session_start');
+    assert(start?.handler, 'code mode session_start hook missing');
+    start.handler({}, { ...ctx.agentToolContext, setActiveTools: pi.setActiveTools });
+    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not replace active tools');
+    const result = await execCode.execute('smoke', { code: 'return await listTools();' }, undefined, undefined, ctx.agentToolContext);
+    assert(result?.content?.[0]?.text?.includes('read'), 'exec_code did not expose tool discovery');
   },
   async 'system-alleycat'() {
     const result = await module.status({}, ctx);

@@ -355,6 +355,8 @@ export interface ExtensionToolContribution {
    * When set, this tool overrides the built-in tool of that name.
    */
   replaces?: string;
+  /** Tool is registered by the extension's agentExtension at runtime. */
+  nativeRegistration?: boolean;
 }
 
 export interface ExtensionModelProfileContribution {
