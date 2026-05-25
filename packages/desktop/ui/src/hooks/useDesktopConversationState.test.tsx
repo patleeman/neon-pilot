@@ -135,6 +135,55 @@ describe('useDesktopConversationState', () => {
     Reflect.deleteProperty(window, 'neonPilotDesktop');
   });
 
+  it('treats an empty desktop conversation response as loaded state', async () => {
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-empty',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-empty" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(latestState?.mode).toBe('local');
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.conversationId).toBe('conv-empty');
+    expect(latestState?.state?.stream.blocks).toEqual([]);
+  });
+
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
       conversationId: 'conv-1',

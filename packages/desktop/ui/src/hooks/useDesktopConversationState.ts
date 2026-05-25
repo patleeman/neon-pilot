@@ -298,12 +298,6 @@ export function useDesktopConversationState(
       })
       .then((nextState) => {
         if (!closed) {
-          if (!nextState.sessionDetail && !nextState.liveSession.live && nextState.stream.blocks.length === 0) {
-            setMode('inactive');
-            setState(null);
-            setError(null);
-            return;
-          }
           setState((previous) => {
             const mergedState = mergeDesktopConversationState(previous, nextState);
             rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
