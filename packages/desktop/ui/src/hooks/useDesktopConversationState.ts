@@ -19,9 +19,11 @@ const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const STREAM_DELTA_FLUSH_INTERVAL_MS = 80;
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
+const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
 
 export function clearDesktopConversationStateCacheForTests(): void {
   desktopConversationStateCache.clear();
+  desktopConversationStateInflight.clear();
 }
 
 export function normalizeDesktopConversationStateTailBlocks(value: unknown): number | undefined {
@@ -250,6 +252,48 @@ function rememberDesktopConversationState(
   }
 }
 
+function fetchDesktopConversationStateCached(
+  conversationId: string,
+  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
+): Promise<DesktopConversationState> {
+  const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
+  const inflight = desktopConversationStateInflight.get(cacheKey);
+  if (inflight) {
+    return inflight;
+  }
+
+  const request = api
+    .desktopConversationState(conversationId, {
+      ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+    })
+    .then((nextState: DesktopConversationState) => {
+      const previous = desktopConversationStateCache.get(cacheKey) ?? null;
+      const mergedState = mergeDesktopConversationState(previous, nextState);
+      rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+      return mergedState;
+    })
+    .finally(() => {
+      desktopConversationStateInflight.delete(cacheKey);
+    });
+
+  desktopConversationStateInflight.set(cacheKey, request);
+  return request;
+}
+
+export function prefetchDesktopConversationState(
+  conversationId: string,
+  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
+): Promise<DesktopConversationState> | null {
+  const normalizedConversationId = conversationId.trim();
+  if (!normalizedConversationId) {
+    return null;
+  }
+
+  return fetchDesktopConversationStateCached(normalizedConversationId, options);
+}
+
 export function useDesktopConversationState(
   conversationId: string | null,
   options?: { tailBlocks?: number; includeToolBlocks?: boolean; enabled?: boolean },
@@ -291,11 +335,7 @@ export function useDesktopConversationState(
     setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
 
-    void api
-      .desktopConversationState(conversationId, {
-        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-        ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
-      })
+    void fetchDesktopConversationStateCached(conversationId, { tailBlocks, includeToolBlocks: options?.includeToolBlocks })
       .then((nextState) => {
         if (!closed) {
           setState((previous) => {

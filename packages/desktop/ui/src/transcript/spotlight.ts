@@ -47,7 +47,7 @@ export function transcriptTargetSelector(target: TranscriptSpotlightTarget): str
   }
 }
 
-export function spotlightTranscriptElement(element: Element): void {
+function spotlightTranscriptElement(element: Element): void {
   if (typeof element.scrollIntoView === 'function') {
     element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   }

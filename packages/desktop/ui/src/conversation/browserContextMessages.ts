@@ -27,7 +27,7 @@ export function formatBrowserCommentTargetLabel(target: DesktopWorkbenchBrowserC
   return `${role}${name ? `: ${name}` : ''}`;
 }
 
-export function formatBrowserCommentsContext(comments: PendingBrowserComment[]): string {
+function formatBrowserCommentsContext(comments: PendingBrowserComment[]): string {
   const lines = ['Browser comments from the workbench:'];
   comments.forEach((entry, index) => {
     const target = entry.target;

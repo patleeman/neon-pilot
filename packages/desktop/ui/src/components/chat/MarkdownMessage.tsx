@@ -433,7 +433,7 @@ export function renderMarkdownText(
   return <MarkdownText text={text} onOpenFilePath={options?.onOpenFilePath} onOpenCheckpoint={options?.onOpenCheckpoint} />;
 }
 
-export function renderPlainText(text: string) {
+function renderPlainText(text: string) {
   return <div className="whitespace-pre-wrap break-words">{text}</div>;
 }
 

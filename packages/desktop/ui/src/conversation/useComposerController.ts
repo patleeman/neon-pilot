@@ -2,7 +2,7 @@ import { type MutableRefObject, type RefObject, useCallback, useMemo } from 'rea
 
 import { insertTextAtComposerSelection } from './conversationComposerEditing';
 
-export interface ComposerControllerSelection {
+interface ComposerControllerSelection {
   start: number;
   end: number;
 }
@@ -16,7 +16,7 @@ export interface UseComposerControllerOptions {
   onTextInserted?: () => void;
 }
 
-export interface ComposerTextUpdateOptions {
+interface ComposerTextUpdateOptions {
   selection?: ComposerControllerSelection;
   focus?: boolean;
 }

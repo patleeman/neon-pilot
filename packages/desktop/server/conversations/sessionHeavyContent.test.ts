@@ -20,11 +20,12 @@ describe('sessionHeavyContent', () => {
     expect(buildDeferredToolOutputPreview('abcdef', 4)).toBe('abc…');
   });
 
-  it('defers heavy content outside the recent window', () => {
+  it('defers image content and old heavy tool output', () => {
     const blocks = [
       { type: 'user', images: [{ src: '/image' }, { alt: 'no src' }] },
       { type: 'tool_use', output: 'abcdef' },
       { type: 'image', src: '/block-image' },
+      { type: 'image', src: '/recent-block-image' },
       { type: 'tool_use', output: 'recent output should remain long' },
     ];
 
@@ -32,13 +33,14 @@ describe('sessionHeavyContent', () => {
       deferHeavyBlockContent({
         blocks,
         blockOffset: 0,
-        totalBlocks: 4,
+        totalBlocks: 5,
         recentHeavyContentBlockCount: 1,
         deferredToolOutputPreviewLength: 4,
       }),
     ).toEqual([
       { type: 'user', images: [{ src: undefined, deferred: true }, { alt: 'no src' }] },
       { type: 'tool_use', output: 'abc…', outputDeferred: true },
+      { type: 'image', src: undefined, deferred: true },
       { type: 'image', src: undefined, deferred: true },
       { type: 'tool_use', output: 'recent output should remain long' },
     ]);

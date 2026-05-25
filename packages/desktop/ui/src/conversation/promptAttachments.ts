@@ -15,6 +15,7 @@ export interface ComposerImageAttachment extends PromptImageInput {
 }
 
 const MAX_PROMPT_IMAGE_DIMENSION = 2000;
+const MAX_PROMPT_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_COMPOSER_DRAWING_REVISION = 1_000_000;
 
 function readBlobAsDataUrl(blob: Blob, label: string): Promise<string> {
@@ -47,6 +48,24 @@ function loadImageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
+async function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
+  if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    return loadImageFromDataUrl(await readBlobAsDataUrl(blob, 'image attachment'));
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Failed to decode image.'));
+      image.src = objectUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -62,6 +81,36 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: num
       quality,
     );
   });
+}
+
+function shouldAttachOriginalPromptImage(file: File, image: HTMLImageElement): boolean {
+  return (
+    file.size <= MAX_PROMPT_IMAGE_BYTES &&
+    image.naturalWidth <= MAX_PROMPT_IMAGE_DIMENSION &&
+    image.naturalHeight <= MAX_PROMPT_IMAGE_DIMENSION
+  );
+}
+
+async function encodePromptImageCanvas(canvas: HTMLCanvasElement, preferredMimeType: string): Promise<Blob> {
+  const outputMimeType = normalizePromptImageMimeType(preferredMimeType);
+  const outputBlob = await canvasToBlob(canvas, outputMimeType, outputMimeType === 'image/png' ? undefined : 0.9);
+  if (outputBlob.size > 0 && outputBlob.size <= MAX_PROMPT_IMAGE_BYTES) {
+    return outputBlob;
+  }
+
+  if (outputMimeType !== 'image/jpeg') {
+    const jpegBlob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
+    if (jpegBlob.size > 0 && jpegBlob.size <= MAX_PROMPT_IMAGE_BYTES) {
+      return jpegBlob;
+    }
+  }
+
+  const compactJpegBlob = await canvasToBlob(canvas, 'image/jpeg', 0.78);
+  if (compactJpegBlob.size > 0 && compactJpegBlob.size <= MAX_PROMPT_IMAGE_BYTES) {
+    return compactJpegBlob;
+  }
+
+  throw new Error('Image attachment is too large after resizing.');
 }
 
 function normalizePromptImageMimeType(mimeType: string): string {
@@ -110,20 +159,14 @@ export function constrainPromptImageDimensions(
 }
 
 async function preparePromptImage(file: File): Promise<ComposerImageAttachment> {
-  let previewUrl: string;
-  try {
-    previewUrl = await readFileAsDataUrl(file);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Could not read image attachment "${file.name || 'Unnamed file'}": ${message}`);
-  }
   const mimeType = file.type || 'image/png';
   const localId = createComposerImageLocalId();
 
   try {
-    const image = await loadImageFromDataUrl(previewUrl);
+    const image = await loadImageFromBlob(file);
     const targetSize = constrainPromptImageDimensions(image.naturalWidth, image.naturalHeight);
-    if (targetSize.width === image.naturalWidth && targetSize.height === image.naturalHeight) {
+    if (shouldAttachOriginalPromptImage(file, image)) {
+      const previewUrl = await readFileAsDataUrl(file);
       return {
         localId,
         name: file.name,
@@ -147,8 +190,7 @@ async function preparePromptImage(file: File): Promise<ComposerImageAttachment> 
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, 0, 0, targetSize.width, targetSize.height);
 
-    const outputMimeType = normalizePromptImageMimeType(mimeType);
-    const outputBlob = await canvasToBlob(canvas, outputMimeType, outputMimeType === 'image/png' ? undefined : 0.9);
+    const outputBlob = await encodePromptImageCanvas(canvas, mimeType);
     const resizedPreviewUrl = await readBlobAsDataUrl(outputBlob, file.name);
 
     return {
@@ -159,7 +201,20 @@ async function preparePromptImage(file: File): Promise<ComposerImageAttachment> 
       previewUrl: resizedPreviewUrl,
       size: outputBlob.size || file.size,
     } satisfies ComposerImageAttachment;
-  } catch {
+  } catch (error) {
+    if (file.size > MAX_PROMPT_IMAGE_BYTES) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Could not resize image attachment "${file.name || 'Unnamed file'}": ${message}`);
+    }
+
+    let previewUrl: string;
+    try {
+      previewUrl = await readFileAsDataUrl(file);
+    } catch (readError) {
+      const message = readError instanceof Error ? readError.message : String(readError);
+      throw new Error(`Could not read image attachment "${file.name || 'Unnamed file'}": ${message}`);
+    }
+
     return {
       localId,
       name: file.name,

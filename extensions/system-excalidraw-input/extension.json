@@ -10,6 +10,28 @@
     "styles": []
   },
   "contributes": {
+    "views": [
+      {
+        "id": "drawings",
+        "title": "Drawing",
+        "location": "rightRail",
+        "scope": "conversation",
+        "component": "ExcalidrawWorkbenchPanel",
+        "icon": "sparkle",
+        "detailView": "drawing-detail",
+        "placement": "workbench-tool",
+        "activation": "on-open"
+      },
+      {
+        "id": "drawing-detail",
+        "title": "Drawing",
+        "location": "workbench",
+        "scope": "conversation",
+        "component": "ExcalidrawWorkbenchDetail",
+        "placement": "workbench-tool",
+        "activation": "on-open"
+      }
+    ],
     "composerInputTools": [
       {
         "id": "excalidraw",

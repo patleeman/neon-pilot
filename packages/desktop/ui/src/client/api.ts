@@ -824,7 +824,7 @@ export const api = {
       note?: string;
     },
   ) => {
-    return post<{ conversationId: string; attachment: ConversationAttachmentRecord; attachments: ConversationAttachmentSummary[] }>(
+    return post<{ conversationId: string; attachment: ConversationAttachmentRecord }>(
       `/conversations/${encodeURIComponent(id)}/attachments`,
       input,
     );
@@ -843,7 +843,7 @@ export const api = {
       note?: string;
     },
   ) => {
-    return patch<{ conversationId: string; attachment: ConversationAttachmentRecord; attachments: ConversationAttachmentSummary[] }>(
+    return patch<{ conversationId: string; attachment: ConversationAttachmentRecord }>(
       `/conversations/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`,
       input,
     );

@@ -24,7 +24,7 @@ interface AccentTokenSet {
   active: string;
 }
 
-export const THEME_ACCENTS: Array<{ id: ThemeAccent; label: string; light: AccentTokenSet; dark: AccentTokenSet }> = [
+const THEME_ACCENTS: Array<{ id: ThemeAccent; label: string; light: AccentTokenSet; dark: AccentTokenSet }> = [
   {
     id: 'lime',
     label: 'Lime',

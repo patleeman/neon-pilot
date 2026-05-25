@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { type AboutPanelOptionsOptions, app } from 'electron';
 
-export interface DesktopAboutVersions {
+interface DesktopAboutVersions {
   applicationVersion: string;
   piVersion: string;
 }
@@ -28,7 +28,7 @@ function readVersionFromPackageJson(candidates: string[]): string | null {
   return null;
 }
 
-export function resolveDesktopAboutVersionsForPaths(currentDir: string, cwd = process.cwd()): DesktopAboutVersions {
+function resolveDesktopAboutVersionsForPaths(currentDir: string, cwd = process.cwd()): DesktopAboutVersions {
   const packageDir = resolve(currentDir, '..');
   const applicationVersion = readVersionFromPackageJson([resolve(packageDir, 'package.json')]) ?? 'Unknown';
   const piVersion =

@@ -319,7 +319,6 @@ describe('conversationAssetsCapability', () => {
     ).toEqual({
       conversationId: 'session-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 1, latestRevision: { revision: 1 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
 
     expect(saveConversationAttachmentMock).toHaveBeenCalledWith(
@@ -348,7 +347,6 @@ describe('conversationAssetsCapability', () => {
     ).toEqual({
       conversationId: 'session-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 1, latestRevision: { revision: 1 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
 
     expect(

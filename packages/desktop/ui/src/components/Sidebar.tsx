@@ -56,6 +56,7 @@ import { GATEWAY_STATE_CHANGED_EVENT } from '../gateways/gatewayEvents';
 import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
 import { buildConversationBootstrapVersionKey, fetchConversationBootstrapCached } from '../hooks/useConversationBootstrap';
 import { useConversations } from '../hooks/useConversations';
+import { prefetchDesktopConversationState } from '../hooks/useDesktopConversationState';
 import { buildSidebarNavSectionStorageKey } from '../local/localSettings';
 import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspacePaths } from '../local/savedWorkspacePaths';
 import { routeIsKnowledge, routeMatchesPrefix } from '../navigation/routeRegistry';
@@ -73,6 +74,7 @@ import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
+const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
 
 function Ico({ d, size = 16 }: { d: string; size?: number }) {
   return (
@@ -2200,6 +2202,10 @@ export function Sidebar() {
         { tailBlocks: SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS },
         conversationBootstrapVersionKey,
       ).catch(() => undefined);
+      void prefetchDesktopConversationState(normalizedConversationId, {
+        tailBlocks: SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS,
+        includeToolBlocks: false,
+      })?.catch(() => undefined);
     },
     [activeConversationId, conversationBootstrapVersionKey],
   );

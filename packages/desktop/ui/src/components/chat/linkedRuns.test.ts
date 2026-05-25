@@ -93,6 +93,11 @@ describe('linkedRuns', () => {
     expect(buildToolPreview({ ...base, tool: 'conversation', input: { action: 'ask', question: 'Which target?' } })).toBe(
       'ask Which target?',
     );
+    expect(buildToolPreview({ ...base, tool: 'todo', input: { action: 'add', text: 'Find conversation load path' } })).toBe(
+      'add Find conversation load path',
+    );
+    expect(buildToolPreview({ ...base, tool: 'todo', input: { action: 'update', id: 'td_123', status: 'done' } })).toBe('update done');
+    expect(buildToolPreview({ ...base, tool: 'todo', input: { action: 'clear', scope: 'done' } })).toBe('clear done');
     expect(buildToolPreview({ ...base, tool: 'browser_snapshot', input: {} })).toBe('snapshot active tab');
     expect(buildToolPreview({ ...base, tool: 'browser_screenshot', input: { tabId: 'tab-1' } })).toBe('tab tab-1');
   });
@@ -206,6 +211,41 @@ describe('linkedRuns', () => {
     expect(readLinkedRuns(inspectBlock)).toEqual({ scope: 'mentioned', runs: [] });
     expect(collectTraceClusterLinkedRuns([startBlock, inspectBlock])).toEqual([
       { runId: 'run-desktop-dev-abc123', title: 'Desktop dev', detail: 'background task' },
+    ]);
+  });
+
+  it('presents subagent starts as linked runs', () => {
+    const startBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
+      type: 'tool_use',
+      ts: '2026-04-26T00:00:00.000Z',
+      tool: 'subagent',
+      input: { action: 'start', taskSlug: 'tool-smoke-subagent', prompt: 'Check the tool smoke path' },
+      output: 'Started subagent run-tool-smoke-subagent-abc123 for tool-smoke-subagent.',
+      details: {
+        action: 'start_agent',
+        runId: 'run-tool-smoke-subagent-abc123',
+        taskSlug: 'tool-smoke-subagent',
+        cwd: '/Users/patrick/workingdir/personal-agent',
+        model: 'openai/gpt-5.1',
+      },
+    };
+
+    expect(readLinkedRuns(startBlock)).toEqual({
+      scope: 'mentioned',
+      runs: [
+        {
+          runId: 'run-tool-smoke-subagent-abc123',
+          title: 'Check the tool smoke path',
+          detail: 'agent task · tool-smoke-subagent · cwd personal-agent · gpt-5.1',
+        },
+      ],
+    });
+    expect(collectTraceClusterLinkedRuns([startBlock])).toEqual([
+      {
+        runId: 'run-tool-smoke-subagent-abc123',
+        title: 'Check the tool smoke path',
+        detail: 'agent task · tool-smoke-subagent · cwd personal-agent · gpt-5.1',
+      },
     ]);
   });
 

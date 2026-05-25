@@ -1,6 +1,6 @@
 import type { ActivityTreeItem } from './activityTree';
 
-export interface ActivityTreePathEntry {
+interface ActivityTreePathEntry {
   item: ActivityTreeItem;
   path: string;
 }

@@ -897,9 +897,6 @@ export function resolveCompactionSummaryDetail(title: string | undefined, extraD
   return normalizedExtraDetail ? `${baseDetail} ${normalizedExtraDetail}` : baseDetail;
 }
 
-// Exported for consumers that need to identify topology blocks by type without importing transcriptItems.
-export { isTopologyBlock as isTopologyContextBlock } from './transcriptItems.js';
-
 function parseTopologyBlockKind(firstLine: string): string {
   // "Fork conversation created: ..." → "Fork"
   // "Rewind conversation from parent: ..." → "Rewind"

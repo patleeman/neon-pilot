@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   base64ToFile,
@@ -19,6 +19,11 @@ import {
   restoreQueuedImageFiles,
   screenshotCaptureImageToFile,
 } from './promptAttachments.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('promptAttachments', () => {
   it('constrains prompt images to the provider long-side limit', () => {
@@ -126,6 +131,78 @@ describe('promptAttachments', () => {
     expect(result.drawingParseFailures).toEqual([{ fileName: 'broken.excalidraw', message: 'Invalid scene' }]);
     expect(result.rejectedFileNames).toEqual(['notes.txt']);
     expect(result.imageReadFailures).toEqual([]);
+  });
+
+  it('resizes large image attachments instead of attaching original bytes', async () => {
+    const originalUrl = 'blob:huge-original';
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => originalUrl),
+      revokeObjectURL: vi.fn(),
+    });
+    vi.stubGlobal(
+      'Image',
+      class {
+        naturalWidth = 4000;
+        naturalHeight = 2000;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        set src(_value: string) {
+          this.onload?.();
+        }
+      },
+    );
+    vi.stubGlobal(
+      'FileReader',
+      class {
+        result: string | ArrayBuffer | null = null;
+        error: Error | null = null;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        readAsDataURL(blob: Blob) {
+          void blob.text().then((text) => {
+            this.result = `data:${blob.type};base64,${globalThis.btoa(text)}`;
+            this.onload?.();
+          });
+        }
+      },
+    );
+
+    const drawImage = vi.fn();
+    vi.stubGlobal('document', {
+      createElement: vi.fn((tagName: string) => {
+        if (tagName !== 'canvas') {
+          throw new Error(`Unexpected element: ${tagName}`);
+        }
+
+        return {
+          width: 0,
+          height: 0,
+          getContext: vi.fn(() => ({
+            imageSmoothingEnabled: false,
+            imageSmoothingQuality: 'low',
+            drawImage,
+          })),
+          toBlob: vi.fn((callback: BlobCallback, type?: string) => {
+            callback(new Blob(['resized-image'], { type: type || 'image/png' }));
+          }),
+        } as unknown as HTMLCanvasElement;
+      }),
+    });
+
+    const result = await prepareComposerFiles([new File([new Uint8Array(9 * 1024 * 1024)], 'huge.png', { type: 'image/png' })]);
+
+    expect(result.imageReadFailures).toEqual([]);
+    expect(result.imageAttachments[0]).toMatchObject({
+      name: 'huge.png',
+      mimeType: 'image/png',
+      data: globalThis.btoa('resized-image'),
+      size: 'resized-image'.length,
+    });
+    expect(result.imageAttachments[0]?.data).not.toHaveLength(12 * 1024 * 1024);
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 2000, 1000);
   });
 
   it('reads files from paste/drop transfer file lists', () => {

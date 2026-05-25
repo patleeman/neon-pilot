@@ -1,8 +1,8 @@
 import { summarizeConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import type { ExecutionRecord, SessionMeta } from '../shared/types';
 
-export type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
-export type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
+type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
+type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
 
 function executionIsActive(status: string | undefined): boolean {
   // Match server-side terminalStatus(): only completed/failed/cancelled/interrupted are terminal

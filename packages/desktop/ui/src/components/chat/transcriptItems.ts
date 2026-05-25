@@ -3,7 +3,7 @@ import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { formatToolExecutionWrapperChain, readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers.js';
 import { isBackgroundShellStart } from './toolPresentation.js';
 
-export type ContextConversationBlock = Extract<MessageBlock, { type: 'context' | 'summary' }>;
+type ContextConversationBlock = Extract<MessageBlock, { type: 'context' | 'summary' }>;
 export type TraceConversationBlock =
   | Extract<MessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>
   | ContextConversationBlock;

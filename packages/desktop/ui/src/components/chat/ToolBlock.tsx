@@ -199,10 +199,19 @@ export function ToolBlock({
   const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;
   const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
   const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
+  const subagentLinkedConversationRoute =
+    block.tool === 'subagent'
+      ? linkedRuns.runs
+          .map((linkedRun) => getLinkedRunConversationRoute(linkedRun.runId, runs, runLookups))
+          .find((route): route is string => Boolean(route))
+      : undefined;
+  const subagentConversationRoute = subagentConversationId
+    ? `/conversations/${encodeURIComponent(subagentConversationId)}`
+    : subagentLinkedConversationRoute;
   const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
   const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
   const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
-  const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationId);
+  const pinnedSubagent = block.tool === 'subagent' && (Boolean(subagentConversationRoute) || linkedRuns.runs.length > 0);
   const checkpointAction =
     block.tool === 'checkpoint' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
   const useExtensionRenderer = extensionRenderer && !(block.tool === 'checkpoint' && checkpointAction === 'list');
@@ -344,13 +353,13 @@ export function ToolBlock({
         <span className={cx('flex-1 opacity-70 font-normal', agentBashTool ? 'whitespace-normal break-words' : 'truncate')}>
           {displayPreview}
         </span>
-        {subagentConversationId ? (
+        {subagentConversationRoute ? (
           <Link
-            to={`/conversations/${encodeURIComponent(subagentConversationId)}`}
+            to={subagentConversationRoute}
             className="ui-action-button shrink-0 text-[10px] font-sans"
             onClick={(event) => event.stopPropagation()}
           >
-            View
+            Open conversation
           </Link>
         ) : null}
         {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}

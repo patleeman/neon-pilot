@@ -25,6 +25,37 @@ export interface NativeExtensionClient {
   /** Conversation list access. */
   conversations: {
     list(): Promise<unknown>;
+    attachments(conversationId: string): Promise<unknown>;
+    attachment(conversationId: string, attachmentId: string): Promise<unknown>;
+    attachmentAsset(conversationId: string, attachmentId: string, asset: 'source' | 'preview', revision?: number): Promise<unknown>;
+    createAttachment(
+      conversationId: string,
+      input: {
+        kind?: 'excalidraw';
+        title?: string;
+        sourceData: string;
+        sourceName?: string;
+        sourceMimeType?: string;
+        previewData: string;
+        previewName?: string;
+        previewMimeType?: string;
+        note?: string;
+      },
+    ): Promise<unknown>;
+    updateAttachment(
+      conversationId: string,
+      attachmentId: string,
+      input: {
+        title?: string;
+        sourceData: string;
+        sourceName?: string;
+        sourceMimeType?: string;
+        previewData: string;
+        previewName?: string;
+        previewMimeType?: string;
+        note?: string;
+      },
+    ): Promise<unknown>;
   };
   /** List available models. */
   models(): Promise<unknown>;

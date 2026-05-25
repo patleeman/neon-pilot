@@ -1,11 +1,19 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 
 import type { ExcalidrawEditorSavePayload } from './editorModal';
 
 const LazyExcalidrawEditorModal = lazy(async () => {
   const module = await import('./editorModal');
   return { default: module.ExcalidrawEditorModal };
+});
+const LazyExcalidrawWorkbenchPanel = lazy(async () => {
+  const module = await import('./editorModal');
+  return { default: module.ExcalidrawWorkbenchPanel };
+});
+const LazyExcalidrawWorkbenchDetail = lazy(async () => {
+  const module = await import('./editorModal');
+  return { default: module.ExcalidrawWorkbenchDetail };
 });
 
 function PencilIcon() {
@@ -33,23 +41,33 @@ export function ExcalidrawInputTool({
 }: {
   pa: NativeExtensionClient;
   toolContext: {
+    conversationId?: string | null;
     composerDisabled: boolean;
     streamIsStreaming: boolean;
     upsertDrawingAttachment: (payload: ExcalidrawEditorSavePayload) => void;
   };
 }) {
+  useEffect(() => {
+    const subscription = pa.events.subscribe('excalidraw:saved', (event) => {
+      if (event.payload && typeof event.payload === 'object') {
+        toolContext.upsertDrawingAttachment(event.payload as ExcalidrawEditorSavePayload);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [pa, toolContext]);
+
   return (
     <button
       type="button"
       onClick={async () => {
         const result = await pa.ui.openModal({
           component: 'ExcalidrawEditorModal',
-          props: { saveLabel: 'Save drawing' },
+          props: { conversationId: toolContext.conversationId, saveLabel: 'Attach drawing' },
           size: 'fullscreen',
         });
         if (result && typeof result === 'object') {
           toolContext.upsertDrawingAttachment(result as ExcalidrawEditorSavePayload);
-          pa.ui.toast('Drawing saved to composer.');
+          pa.ui.toast('Drawing attached to composer.');
         }
       }}
       disabled={toolContext.composerDisabled}
@@ -68,6 +86,26 @@ export function ExcalidrawEditorModal(props: Parameters<typeof LazyExcalidrawEdi
       fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading Excalidraw…</div>}
     >
       <LazyExcalidrawEditorModal {...props} />
+    </Suspense>
+  );
+}
+
+export function ExcalidrawWorkbenchPanel(props: Parameters<typeof LazyExcalidrawWorkbenchPanel>[0]) {
+  return (
+    <Suspense
+      fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading drawing…</div>}
+    >
+      <LazyExcalidrawWorkbenchPanel {...props} />
+    </Suspense>
+  );
+}
+
+export function ExcalidrawWorkbenchDetail(props: Parameters<typeof LazyExcalidrawWorkbenchDetail>[0]) {
+  return (
+    <Suspense
+      fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading drawing…</div>}
+    >
+      <LazyExcalidrawWorkbenchDetail {...props} />
     </Suspense>
   );
 }

@@ -3,6 +3,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
 import { cx, Pill, SurfacePanel } from '../ui';
+import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
@@ -181,9 +182,10 @@ function hasPinnedToolBlock(block: TraceConversationBlock): block is Extract<Mes
       block.tool === 'screenshot' ||
       hasArtifactPresentation(block) ||
       (block.tool === 'subagent' &&
-        !!block.details &&
-        typeof block.details === 'object' &&
-        typeof (block.details as Record<string, unknown>).childConversationId === 'string'))
+        ((!!block.details &&
+          typeof block.details === 'object' &&
+          typeof (block.details as Record<string, unknown>).childConversationId === 'string') ||
+          readLinkedRuns(block).runs.length > 0)))
   );
 }
 

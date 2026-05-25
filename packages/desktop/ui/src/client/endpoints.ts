@@ -1,4 +1,4 @@
-export interface DesktopEndpointConfig {
+interface DesktopEndpointConfig {
   httpBaseUrl: string;
   webSocketBaseUrl: string;
 }
@@ -7,7 +7,7 @@ function normalizeBaseUrl(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
-export function readDesktopEndpointConfig(): DesktopEndpointConfig {
+function readDesktopEndpointConfig(): DesktopEndpointConfig {
   if (typeof window === 'undefined') {
     return { httpBaseUrl: '', webSocketBaseUrl: '' };
   }

@@ -694,10 +694,7 @@ function tryReadSessionTailBlocksByFile(
   );
   const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
   const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
-  const blocks =
-    droppedVisibleBlockCount > 0
-      ? deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology)
-      : blocksWithTopology;
+  const blocks = deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology);
 
   return {
     meta,

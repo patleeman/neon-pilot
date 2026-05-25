@@ -1,4 +1,4 @@
-export const WORKSPACE_OPEN_FILES_KEY_PREFIX = 'pa:workspace-open-files:';
+const WORKSPACE_OPEN_FILES_KEY_PREFIX = 'pa:workspace-open-files:';
 export const WORKSPACE_OPEN_FILES_CHANGED_EVENT = 'pa:workspace-open-files-changed';
 export const MAX_WORKSPACE_OPEN_FILES = 24;
 

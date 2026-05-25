@@ -594,11 +594,3 @@ function formatActivityTreeStatus(status: ActivityTreeItem['status']): string {
       return 'idle';
   }
 }
-
-export function useActivityTreeModel(items: readonly ActivityTreeItem[], activeItemId?: string | null) {
-  const pathModel = useMemo(() => buildActivityTreePathModel(items), [items]);
-  return {
-    pathModel,
-    selectedPath: activeItemId ? pathModel.pathById.get(activeItemId) : undefined,
-  };
-}

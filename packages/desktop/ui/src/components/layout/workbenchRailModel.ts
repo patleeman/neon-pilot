@@ -1,7 +1,7 @@
 import type { ExtensionRightToolPanelSurface, ExtensionSurfaceSummary, NativeExtensionViewSummary } from '../../extensions/types';
 
 export type BuiltInWorkbenchRailMode = 'files' | 'artifacts' | 'browser';
-export type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
+type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
 export type WorkbenchRailMode = BuiltInWorkbenchRailMode | ExtensionWorkbenchRailMode;
 
 type WorkbenchToolPanelSurface = (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary;

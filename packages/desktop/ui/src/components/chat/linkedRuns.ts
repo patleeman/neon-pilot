@@ -248,6 +248,14 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const prompt = excerpt('prompt');
       return [action, title ?? when, title && when ? `· ${when}` : null, prompt ? `· ${prompt}` : null].filter(Boolean).join(' ');
     }
+    case 'todo': {
+      const action = read('action');
+      const text = excerpt('text');
+      const status = read('status');
+      const scope = read('scope');
+      const id = read('id');
+      return [action, text ?? status ?? scope ?? id].filter(Boolean).join(' ');
+    }
     case 'artifact': {
       const action = read('action');
       const title = excerpt('title') ?? read('artifactId');
@@ -586,6 +594,48 @@ function readRunToolLinkedRun(block: Extract<MessageBlock, { type: 'tool_use' }>
   };
 }
 
+function readSubagentToolLinkedRun(block: Extract<MessageBlock, { type: 'tool_use' }>): LinkedRunPresentation | null {
+  if (block.tool !== 'subagent') {
+    return null;
+  }
+
+  const details = isRecord(block.details) ? block.details : null;
+  const input = isRecord(block.input) ? block.input : null;
+  const runId = readRunField(details, 'runId') ?? extractDurableRunIdsFromBlock(block)[0];
+  if (!runId) {
+    return null;
+  }
+
+  const taskSlug = readRunField(details, 'taskSlug') ?? readRunField(input, 'taskSlug') ?? readRunField(input, 'task');
+  const prompt = excerptLinkedRunText(readRunField(details, 'prompt') ?? readRunField(input, 'prompt'));
+  const cwd = summarizeWorkspaceTail(readRunField(details, 'cwd') ?? readRunField(input, 'cwd'));
+  const model = readRunField(details, 'model') ?? readRunField(input, 'model');
+  const status = readRunField(details, 'status') ?? (typeof block.status === 'string' ? block.status : null);
+  const descriptor = describeLinkedRun(runId);
+  const title = prompt ?? taskSlug ?? descriptor.detail ?? descriptor.title;
+  const detailBits: string[] = [];
+
+  if (status && status !== 'unknown') {
+    pushRunDetail(detailBits, normalizeRunLabel(status));
+  }
+  pushRunDetail(detailBits, 'agent task');
+  if (taskSlug && normalizeRunLabel(taskSlug) !== normalizeRunLabel(title)) {
+    pushRunDetail(detailBits, taskSlug);
+  }
+  if (cwd) {
+    pushRunDetail(detailBits, `cwd ${cwd}`);
+  }
+  if (model) {
+    pushRunDetail(detailBits, model.split('/').pop() ?? model);
+  }
+
+  return {
+    runId,
+    title,
+    detail: detailBits.length > 0 ? detailBits.join(' · ') : null,
+  };
+}
+
 export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }>): {
   scope: 'listed' | 'mentioned';
   runs: LinkedRunPresentation[];
@@ -603,6 +653,14 @@ export function readLinkedRuns(block: Extract<MessageBlock, { type: 'tool_use' }
     return {
       scope: 'mentioned',
       runs: [runToolLinkedRun],
+    };
+  }
+
+  const subagentToolLinkedRun = readSubagentToolLinkedRun(block);
+  if (subagentToolLinkedRun) {
+    return {
+      scope: 'mentioned',
+      runs: [subagentToolLinkedRun],
     };
   }
 

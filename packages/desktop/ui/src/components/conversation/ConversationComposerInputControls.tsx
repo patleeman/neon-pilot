@@ -63,7 +63,9 @@ export function ConversationComposerInputControls({
   onSubmitComposerQuestion,
   onSubmitComposerActionForModifiers,
   onAbortStream,
+  conversationId,
 }: {
+  conversationId?: string | null;
   fileInputRef: RefObject<HTMLInputElement>;
   textareaRef: RefObject<HTMLTextAreaElement>;
   input: string;
@@ -246,6 +248,7 @@ export function ConversationComposerInputControls({
                 key={`${tool.extensionId}:${tool.id}`}
                 registration={tool}
                 toolContext={{
+                  conversationId,
                   composerDisabled,
                   streamIsStreaming,
                   composerHasContent,

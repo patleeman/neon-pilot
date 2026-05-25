@@ -21,13 +21,13 @@ export function summarizeConversationBackgroundWorkKind(executions: readonly Exe
   return 'other';
 }
 
-export function isActiveExecution(execution: ExecutionRecord): boolean {
+function isActiveExecution(execution: ExecutionRecord): boolean {
   return (
     execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'
   );
 }
 
-export function executionSortTimestamp(execution: ExecutionRecord): string {
+function executionSortTimestamp(execution: ExecutionRecord): string {
   return execution.updatedAt ?? execution.startedAt ?? execution.createdAt ?? '';
 }
 
@@ -112,28 +112,6 @@ export function selectConversationActiveExecutions(input: {
       return execution.visibility !== 'hidden';
     })
     .filter(isActiveExecution)
-    .filter((execution) => !isStaleScheduledTaskExecution(execution, lookups, input.tasks))
-    .sort((left, right) => executionSortTimestamp(right).localeCompare(executionSortTimestamp(left)));
-}
-
-export function selectConversationExecutions(input: {
-  conversationId: string | null | undefined;
-  executions?: ExecutionListResult | null;
-  tasks?: ScheduledTaskSummary[] | null;
-  visibility?: 'primary' | 'visible' | 'all';
-}): ExecutionRecord[] {
-  const conversationId = input.conversationId?.trim();
-  if (!conversationId) return [];
-
-  const visibility = input.visibility ?? 'visible';
-  const lookups = buildAutomationRunningLookups(input.tasks);
-  return [...(input.executions?.executions ?? [])]
-    .filter((execution) => execution.conversationId === conversationId)
-    .filter((execution) => {
-      if (visibility === 'all') return true;
-      if (visibility === 'primary') return execution.visibility === 'primary';
-      return execution.visibility !== 'hidden';
-    })
     .filter((execution) => !isStaleScheduledTaskExecution(execution, lookups, input.tasks))
     .sort((left, right) => executionSortTimestamp(right).localeCompare(executionSortTimestamp(left)));
 }

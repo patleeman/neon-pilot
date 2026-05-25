@@ -142,8 +142,8 @@ export function ExtensionModalHost() {
       <div
         className={
           fullscreen
-            ? 'mx-4 flex h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-border-default bg-surface shadow-2xl'
-            : 'mx-4 max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border-default bg-surface p-6 shadow-2xl'
+            ? 'mx-4 flex h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] min-w-0 flex-col overflow-hidden rounded-lg border border-border-default bg-surface shadow-2xl'
+            : 'mx-4 max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border-default bg-surface p-6 shadow-2xl'
         }
       >
         {modal.title ? (

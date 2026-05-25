@@ -119,7 +119,7 @@ export function loadDesktopConfig(): DesktopConfig {
   }
 }
 
-export function saveDesktopConfig(config: DesktopConfig): void {
+function saveDesktopConfig(config: DesktopConfig): void {
   const { desktopConfigFile, desktopStateDir } = resolveDesktopRuntimePaths();
   mkdirSync(desktopStateDir, { recursive: true, mode: 0o700 });
   const normalized = normalizeDesktopConfig(config);

@@ -346,7 +346,6 @@ export function createConversationAttachmentCapability(profile: string, input: C
   return {
     conversationId,
     attachment,
-    attachments: buildAttachmentListResult(profile, conversationId).attachments,
   };
 }
 
@@ -370,7 +369,6 @@ export function updateConversationAttachmentCapability(profile: string, input: C
   return {
     conversationId,
     attachment,
-    attachments: buildAttachmentListResult(profile, conversationId).attachments,
   };
 }
 

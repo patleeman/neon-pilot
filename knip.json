@@ -4,6 +4,10 @@
     "autoprefixer",
     "postcss",
     "esbuild",
+    "@electron/asar",
+    "electron",
+    "tsx",
+    "undici-types",
     "qrcode",
     "whisper-cpp-node",
     "@neon-pilot/extensions",
@@ -21,19 +25,33 @@
   "ignoreIssues": {
     "packages/desktop/ui/src/components/chat/ArtifactCheckpointToolBlocks.tsx": ["exports"],
     "packages/desktop/ui/src/components/chat/AskUserQuestionToolBlock.tsx": ["exports"],
+    "packages/desktop/ui/src/components/chat/DiffActionButton.tsx": ["exports"],
+    "packages/desktop/ui/src/components/ConversationCheckpointWorkbench.tsx": ["exports"],
     "packages/desktop/ui/src/components/ui.tsx": ["exports", "types"],
     "packages/desktop/ui/src/extensions/data.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/commands.ts": ["exports", "types"],
     "packages/desktop/ui/src/extensions/extensionRegistryEvents.ts": ["exports"],
     "packages/desktop/ui/src/extensions/host.ts": ["files", "exports", "types"],
+    "packages/desktop/ui/src/extensions/hostViewComponents.tsx": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/selection.ts": ["exports", "types"],
     "packages/desktop/ui/src/extensions/settings.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/types.ts": ["exports", "types"],
     "packages/desktop/ui/src/extensions/ui.ts": ["exports", "types"],
-    "packages/desktop/ui/src/extensions/workbench.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/useExtensionRegistry.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-artifacts.ts": ["files", "exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-browser.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-diffs.ts": ["exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-files.ts": ["files", "exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-runs.ts": ["files", "exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench-transcript.ts": ["files", "exports", "types"],
+    "packages/desktop/ui/src/extensions/workbench.ts": ["files", "exports", "types"],
     "packages/desktop/ui/src/components/workbench/WorkbenchBrowserTab.tsx": ["exports"],
     "packages/desktop/ui/src/components/workspace/WorkspaceExplorer.tsx": ["exports"],
     "packages/desktop/ui/src/local/workbenchBrowserTabs.ts": ["exports"],
     "packages/desktop/ui/src/pages/SettingsPage.tsx": ["unresolved"],
     "packages/desktop/ui/src/shared/types.ts": ["types"],
-    "packages/desktop/ui/src/ui-state/theme.ts": ["types"]
+    "packages/desktop/ui/src/ui-state/theme.ts": ["types"],
+    "packages/core/src/runtime/paths.ts": ["duplicates"]
   },
   "workspaces": {
     ".": {
@@ -51,6 +69,8 @@
     "packages/desktop": {
       "entry": [
         "src/preload.cts",
+        "src/main.ts",
+        "src/companion/runtime.ts",
         "src/**/*.test.ts",
         "ui/src/app/main.tsx",
         "ui/src/app/globals.d.ts",
@@ -66,6 +86,10 @@
         "../../extensions/**/*.test.ts"
       ],
       "project": ["src/**/*.{ts,cts}", "ui/src/**/*.{ts,tsx}", "server/**/*.ts", "../../extensions/**/*.ts", "../../extensions/**/*.tsx"]
+    },
+    "installable-extensions/system-todo": {
+      "entry": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+      "project": ["src/**/*.{ts,tsx}"]
     }
   },
   "ignore": ["packages/desktop/server/**/*.ts", "extensions/**/*.ts", "extensions/**/*.tsx"]

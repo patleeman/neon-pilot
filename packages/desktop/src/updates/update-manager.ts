@@ -23,7 +23,7 @@ function logUpdateMessage(message: string): void {
   writeDesktopMainLogLine(`[${new Date().toISOString()}] [updates] ${message}`);
 }
 
-export type DesktopUpdatePath = 'stable' | 'test';
+type DesktopUpdatePath = 'stable' | 'test';
 
 function createDesktopUpdater(updatePath: DesktopUpdatePath): AppUpdater {
   const updater = new MacUpdater();

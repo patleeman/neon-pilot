@@ -28,6 +28,7 @@ import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
   buildBrowserCommentContextMessages,
   buildBrowserCommentsStorageKey,
+  isPendingBrowserComment,
   mergeContextMessages,
   normalizePendingBrowserComments,
   type PendingBrowserComment,
@@ -3763,6 +3764,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           attachment.localId === localId
             ? {
                 ...attachment,
+                attachmentId: payload.attachmentId,
+                revision: payload.revision,
                 title: payload.title,
                 sourceData: payload.sourceData,
                 sourceMimeType: payload.sourceMimeType,
@@ -3782,6 +3785,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         ...current,
         {
           localId: createComposerDrawingLocalId(),
+          attachmentId: payload.attachmentId,
+          revision: payload.revision,
           title: payload.title,
           sourceData: payload.sourceData,
           sourceMimeType: payload.sourceMimeType,
@@ -3810,13 +3815,20 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const excalidrawInputClient = createNativeExtensionClient(excalidrawTool.extensionId);
     const result = await excalidrawInputClient.ui.openModal({
       component: 'ExcalidrawEditorModal',
-      props: { initialTitle: drawing.title, initialScene: drawing.scene, saveLabel: 'Update drawing' },
+      props: {
+        conversationId: id,
+        initialTitle: drawing.title,
+        initialScene: drawing.scene,
+        initialAttachmentId: drawing.attachmentId,
+        initialRevision: drawing.revision,
+        saveLabel: 'Update attachment',
+      },
       size: 'fullscreen',
     });
 
     if (result && typeof result === 'object') {
       upsertDrawingAttachment(result as ExcalidrawEditorSavePayload, localId);
-      showNotice('accent', 'Drawing saved to composer.');
+      showNotice('accent', 'Drawing attached to composer.');
     }
   }
 
@@ -6131,6 +6143,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               )}
 
               <ConversationComposerInputControls
+                conversationId={id}
                 fileInputRef={fileInputRef}
                 textareaRef={textareaRef}
                 input={input}

@@ -68,7 +68,7 @@ export function createTaskFormState(task: ScheduledTaskDetail): TaskFormState {
   };
 }
 
-export function resolveCronExpression(state: TaskFormState): string {
+function resolveCronExpression(state: TaskFormState): string {
   return state.cronEditor.mode === 'builder' ? buildCronFromEasyTaskSchedule(state.cronEditor.builder) : state.cronEditor.rawCron.trim();
 }
 

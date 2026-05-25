@@ -22,6 +22,37 @@ export interface NativeExtensionClient {
   automations: typeof api.automations;
   conversations: {
     list(): Promise<unknown>;
+    attachments(conversationId: string): Promise<unknown>;
+    attachment(conversationId: string, attachmentId: string): Promise<unknown>;
+    attachmentAsset(conversationId: string, attachmentId: string, asset: 'source' | 'preview', revision?: number): Promise<unknown>;
+    createAttachment(
+      conversationId: string,
+      input: {
+        kind?: 'excalidraw';
+        title?: string;
+        sourceData: string;
+        sourceName?: string;
+        sourceMimeType?: string;
+        previewData: string;
+        previewName?: string;
+        previewMimeType?: string;
+        note?: string;
+      },
+    ): Promise<unknown>;
+    updateAttachment(
+      conversationId: string,
+      attachmentId: string,
+      input: {
+        title?: string;
+        sourceData: string;
+        sourceName?: string;
+        sourceMimeType?: string;
+        previewData: string;
+        previewName?: string;
+        previewMimeType?: string;
+        note?: string;
+      },
+    ): Promise<unknown>;
   };
   models(): Promise<unknown>;
   pickFolder(input?: { cwd?: string | null; prompt?: string | null }): Promise<unknown>;
@@ -144,6 +175,21 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
     conversations: {
       list() {
         return api.sessions();
+      },
+      attachments(conversationId) {
+        return api.conversationAttachments(conversationId);
+      },
+      attachment(conversationId, attachmentId) {
+        return api.conversationAttachment(conversationId, attachmentId);
+      },
+      attachmentAsset(conversationId, attachmentId, asset, revision) {
+        return api.conversationAttachmentAsset(conversationId, attachmentId, asset, revision);
+      },
+      createAttachment(conversationId, input) {
+        return api.createConversationAttachment(conversationId, input);
+      },
+      updateAttachment(conversationId, attachmentId, input) {
+        return api.updateConversationAttachment(conversationId, attachmentId, input);
       },
     },
     models() {

@@ -9,6 +9,7 @@ import { systemExtensionModules } from './systemExtensionModules';
 import type { ExtensionComposerInputToolRegistration } from './useExtensionRegistry';
 
 export interface ComposerInputToolContext {
+  conversationId?: string | null;
   composerDisabled: boolean;
   streamIsStreaming: boolean;
   composerHasContent: boolean;

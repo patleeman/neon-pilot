@@ -9,6 +9,7 @@ import {
   applyDesktopConversationStreamEvents,
   clearDesktopConversationStateCacheForTests,
   normalizeDesktopConversationStateTailBlocks,
+  prefetchDesktopConversationState,
   useDesktopConversationState,
 } from './useDesktopConversationState.js';
 
@@ -18,8 +19,16 @@ const mountedRoots: Root[] = [];
 let latestReconnect: (() => void) | null = null;
 let latestState: ReturnType<typeof useDesktopConversationState> | null = null;
 
-function HookProbe({ conversationId = 'conv-1', tailBlocks = 20 }: { conversationId?: string; tailBlocks?: number }) {
-  latestState = useDesktopConversationState(conversationId, { tailBlocks });
+function HookProbe({
+  conversationId = 'conv-1',
+  tailBlocks = 20,
+  includeToolBlocks,
+}: {
+  conversationId?: string;
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}) {
+  latestState = useDesktopConversationState(conversationId, { tailBlocks, includeToolBlocks });
   latestReconnect = latestState.reconnect;
   return null;
 }
@@ -182,6 +191,65 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.conversationId).toBe('conv-empty');
     expect(latestState?.state?.stream.blocks).toEqual([]);
+  });
+
+  it('reuses an in-flight desktop conversation prefetch when the page opens', async () => {
+    let resolveRequest: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
+    const request = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+      resolveRequest = resolve;
+    });
+    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(request);
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const prefetch = prefetchDesktopConversationState('conv-prefetch', { tailBlocks: 20, includeToolBlocks: false });
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-prefetch" tailBlocks={20} includeToolBlocks={false} />);
+      await flushPromises();
+    });
+
+    expect(prefetch).not.toBeNull();
+    expect(desktopConversationState).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveRequest({
+        conversationId: 'conv-prefetch',
+        sessionDetail: null,
+        liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+        stream: {
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          hasSnapshot: true,
+          isStreaming: false,
+          isCompacting: false,
+          error: null,
+          goalState: null,
+          systemPrompt: null,
+          toolDefinitions: [],
+          pendingQueue: { steering: [], followUp: [] },
+          presence: null,
+          contextUsage: null,
+          tokens: null,
+          cost: null,
+          cwdChange: null,
+          title: null,
+        },
+      });
+      await prefetch;
+      await flushPromises();
+    });
+
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.conversationId).toBe('conv-prefetch');
   });
 
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {

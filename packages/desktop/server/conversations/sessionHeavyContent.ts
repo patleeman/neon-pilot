@@ -45,16 +45,24 @@ export function deferHeavyBlockContent<TBlock extends HeavyDisplayBlockLike>(inp
 }): TBlock[] {
   return input.blocks.map((block, index) => {
     const absoluteIndex = input.blockOffset + index;
-    if (absoluteIndex >= Math.max(0, input.totalBlocks - input.recentHeavyContentBlockCount)) {
-      return block;
-    }
-
     if (block.type === 'user' && Array.isArray(block.images) && block.images.some((image) => image.src)) {
       const images = block.images;
       return {
         ...block,
         images: images.map((image) => (image.src ? { ...image, src: undefined, deferred: true } : image)),
       } as TBlock;
+    }
+
+    if (block.type === 'image' && block.src) {
+      return {
+        ...block,
+        src: undefined,
+        deferred: true,
+      } as TBlock;
+    }
+
+    if (absoluteIndex >= Math.max(0, input.totalBlocks - input.recentHeavyContentBlockCount)) {
+      return block;
     }
 
     if (
@@ -66,14 +74,6 @@ export function deferHeavyBlockContent<TBlock extends HeavyDisplayBlockLike>(inp
         ...block,
         output: buildDeferredToolOutputPreview(block.output, input.deferredToolOutputPreviewLength),
         outputDeferred: true,
-      } as TBlock;
-    }
-
-    if (block.type === 'image' && block.src) {
-      return {
-        ...block,
-        src: undefined,
-        deferred: true,
       } as TBlock;
     }
 

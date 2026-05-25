@@ -29,7 +29,7 @@ interface CaptureDesktopScreenshotDeps {
   runInteractiveScreencapture: (outputPath: string) => Promise<ScreenshotCommandResult>;
 }
 
-export const MAX_DESKTOP_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const MAX_DESKTOP_SCREENSHOT_BYTES = 8 * 1024 * 1024;
 
 const defaultDeps: CaptureDesktopScreenshotDeps = {
   platform: process.platform,

@@ -871,12 +871,10 @@ describe('api desktop transport', () => {
     const createConversationAttachment = vi.fn().mockResolvedValue({
       conversationId: 'conversation-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 1, latestRevision: { revision: 1 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
     const updateConversationAttachment = vi.fn().mockResolvedValue({
       conversationId: 'conversation-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 2, latestRevision: { revision: 2 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
     const readConversationAttachmentAsset = vi.fn().mockResolvedValue({
       dataUrl: 'data:image/png;base64,cHJldmlldw==',
@@ -983,12 +981,10 @@ describe('api desktop transport', () => {
     expect(createdAttachment).toEqual({
       conversationId: 'conversation-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 1, latestRevision: { revision: 1 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
     expect(updatedAttachment).toEqual({
       conversationId: 'conversation-1',
       attachment: { id: 'attachment-1', kind: 'excalidraw', currentRevision: 2, latestRevision: { revision: 2 } },
-      attachments: [{ id: 'attachment-1', kind: 'excalidraw' }],
     });
     expect(attachmentAsset).toEqual({
       dataUrl: 'data:image/png;base64,cHJldmlldw==',
