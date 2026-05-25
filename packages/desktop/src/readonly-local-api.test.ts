@@ -70,6 +70,17 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
     ).toBe(false);
   });
 
+  it('keeps extension-owned routes on the main thread HTTP dispatcher', () => {
+    expect(
+      shouldDispatchReadonlyLocalApiInWorker({
+        method: 'GET',
+        path: '/api/extensions/system-knowledge/vault/tree',
+        hostId: 'local',
+        ...workerAvailable,
+      }),
+    ).toBe(false);
+  });
+
   it('keeps live-registry-only reads on the main thread', () => {
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/live-sessions/session-1', hostId: 'local', ...workerAvailable }),
