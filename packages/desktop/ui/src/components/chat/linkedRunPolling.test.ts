@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { INLINE_RUN_LOG_TAIL_LINES, normalizeInlineRunPollingOptions } from './linkedRunPolling';
+import type { DurableRunRecord } from '../../shared/types';
+import { INLINE_RUN_LOG_TAIL_LINES, normalizeInlineRunPollingOptions, shouldContinuePollingDurableRun } from './linkedRunPolling';
 
 const INLINE_RUN_POLL_INTERVAL_MS = 2200;
 
@@ -19,5 +20,14 @@ describe('normalizeInlineRunPollingOptions', () => {
       tail: 240,
       pollIntervalMs: 10_000,
     });
+  });
+});
+
+describe('shouldContinuePollingDurableRun', () => {
+  it('keeps polling unknown and active runs only', () => {
+    expect(shouldContinuePollingDurableRun(null)).toBe(true);
+    expect(shouldContinuePollingDurableRun({ status: { status: 'running' } } as DurableRunRecord)).toBe(true);
+    expect(shouldContinuePollingDurableRun({ status: { status: 'complete' } } as DurableRunRecord)).toBe(false);
+    expect(shouldContinuePollingDurableRun({ status: { status: 'failed' } } as DurableRunRecord)).toBe(false);
   });
 });

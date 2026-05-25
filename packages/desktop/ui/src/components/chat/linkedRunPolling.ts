@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import { isRunActive } from '../../automation/runPresentation';
 import { api } from '../../client/api';
-import type { DurableRunDetailResult } from '../../shared/types';
+import type { DurableRunDetailResult, DurableRunRecord } from '../../shared/types';
 
 export const INLINE_RUN_LOG_TAIL_LINES = 240;
 export const INLINE_RUN_POLL_INTERVAL_MS = 2200;
@@ -64,6 +65,14 @@ function describeDurableRunPollingError(error: unknown): { message: string; unav
   };
 }
 
+export function shouldContinuePollingDurableRun(run: DurableRunRecord | null | undefined): boolean {
+  if (!run) {
+    return true;
+  }
+
+  return isRunActive(run);
+}
+
 export function usePolledDurableRunSnapshot(
   runId: string | null,
   enabled: boolean,
@@ -103,14 +112,25 @@ export function usePolledDurableRunSnapshot(
 
     let cancelled = false;
     let inFlight = false;
-    let intervalId: number | null = null;
+    let timeoutId: number | null = null;
 
     const stopPolling = () => {
       cancelled = true;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-        intervalId = null;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
       }
+    };
+
+    const scheduleNextPoll = (detail: DurableRunDetailResult | null) => {
+      if (cancelled || !shouldContinuePollingDurableRun(detail?.run)) {
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => {
+        timeoutId = null;
+        void pollSnapshot(false);
+      }, pollIntervalMs);
     };
 
     const pollSnapshot = async (initial: boolean) => {
@@ -145,6 +165,7 @@ export function usePolledDurableRunSnapshot(
           error: null,
           unavailable: false,
         });
+        scheduleNextPoll(detail);
       } catch (error) {
         if (!cancelled) {
           const pollingError = describeDurableRunPollingError(error);
@@ -158,6 +179,8 @@ export function usePolledDurableRunSnapshot(
 
           if (pollingError.unavailable) {
             stopPolling();
+          } else {
+            scheduleNextPoll(null);
           }
         }
       } finally {
@@ -166,9 +189,6 @@ export function usePolledDurableRunSnapshot(
     };
 
     void pollSnapshot(true);
-    intervalId = window.setInterval(() => {
-      void pollSnapshot(false);
-    }, pollIntervalMs);
 
     return () => {
       stopPolling();
