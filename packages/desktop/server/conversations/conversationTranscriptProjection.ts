@@ -1,4 +1,4 @@
-import type { DisplayBlock, SessionDetail } from './sessions.js';
+import type { DisplayBlock, SessionDetail } from './conversationTypes.js';
 
 export interface TranscriptTraceClusterSummaryCategory {
   key: string;
@@ -64,6 +64,8 @@ type TraceTranscriptBlock =
   | Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>
   | ContextTranscriptBlock;
 
+type DisplayBlockWithSource = DisplayBlock & { sourceEntryIds?: string[] };
+
 export type TranscriptRenderItem =
   | { type: 'message'; block: TranscriptMessageBlock; index: number }
   | { type: 'context_cluster'; blocks: ContextTranscriptBlock[]; startIndex: number; endIndex: number }
@@ -74,6 +76,7 @@ export type TranscriptRenderItem =
       endIndex: number;
       summary: TranscriptTraceClusterSummary;
       deferredBlockIds?: string[];
+      deferredEntryIds?: string[];
     };
 
 const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
@@ -130,7 +133,7 @@ function isTopologyBlock(block: TranscriptMessageBlock): boolean {
 }
 
 function isContextTranscriptBlock(block: TranscriptMessageBlock): block is ContextTranscriptBlock {
-  return (block.type === 'context' || block.type === 'summary') && !isTopologyBlock(block);
+  return (block.type === 'context' || (block.type === 'summary' && block.kind !== 'compaction')) && !isTopologyBlock(block);
 }
 
 function isTerminalBashToolBlock(block: TranscriptMessageBlock): boolean {
@@ -344,10 +347,19 @@ export function projectConversationOnlySessionDetail<T extends SessionDetail | n
       return item;
     }
 
+    const sourceEntryIds = [
+      ...new Set(
+        detail.blocks
+          .slice(item.startIndex, item.endIndex + 1)
+          .flatMap((block) => ((block as DisplayBlockWithSource).sourceEntryIds ?? []).map((entryId) => entryId.trim()).filter(Boolean)),
+      ),
+    ];
+    const deferredBlockIds = item.blocks.flatMap((block) => (typeof block.id === 'string' && block.id.trim() ? [block.id.trim()] : []));
+
     return {
       ...item,
       blocks: [],
-      deferredBlockIds: item.blocks.flatMap((block) => (typeof block.id === 'string' && block.id.trim() ? [block.id.trim()] : [])),
+      ...(sourceEntryIds.length > 0 ? { deferredEntryIds: sourceEntryIds } : { deferredBlockIds }),
     };
   });
 
