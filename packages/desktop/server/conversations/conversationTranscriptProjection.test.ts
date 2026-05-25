@@ -121,4 +121,37 @@ describe('conversation transcript projection', () => {
       expect.objectContaining({ type: 'message', block: expect.objectContaining({ id: 'a1' }) }),
     ]);
   });
+
+  it('projects cached transcript detail with entry ids derived from display block ids', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'please test this' },
+      { type: 'thinking', id: '2e456509-t86', ts, text: 'thinking' },
+      {
+        type: 'tool_use',
+        id: 'a13f792c-c81',
+        ts,
+        tool: 'read',
+        input: { path: 'src/app.ts' },
+        output: 'large output',
+        toolCallId: 'call-1',
+      },
+      { type: 'text', id: 'a1', ts, text: 'done' },
+    ];
+
+    const detail = projectConversationOnlySessionDetail({
+      meta: { id: 'conv-1' },
+      blocks,
+      blockOffset: 0,
+      totalBlocks: blocks.length,
+      contextUsage: null,
+    } as never);
+
+    expect(detail?.renderItems).toContainEqual(
+      expect.objectContaining({
+        type: 'trace_cluster',
+        blocks: [],
+        deferredEntryIds: ['2e456509', 'a13f792c'],
+      }),
+    );
+  });
 });

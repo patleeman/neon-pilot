@@ -66,6 +66,16 @@ type TraceTranscriptBlock =
 
 type DisplayBlockWithSource = DisplayBlock & { sourceEntryIds?: string[] };
 
+function deriveSourceEntryIdFromDisplayBlockId(blockId: string | undefined): string | null {
+  const normalized = blockId?.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const indexedDisplayBlockMatch = /^(.+)-[mtxcei]\d+$/.exec(normalized);
+  return (indexedDisplayBlockMatch?.[1] ?? normalized).trim() || null;
+}
+
 export type TranscriptRenderItem =
   | { type: 'message'; block: TranscriptMessageBlock; index: number }
   | { type: 'context_cluster'; blocks: ContextTranscriptBlock[]; startIndex: number; endIndex: number }
@@ -354,12 +364,16 @@ export function projectConversationOnlySessionDetail<T extends SessionDetail | n
           .flatMap((block) => ((block as DisplayBlockWithSource).sourceEntryIds ?? []).map((entryId) => entryId.trim()).filter(Boolean)),
       ),
     ];
-    const deferredBlockIds = item.blocks.flatMap((block) => (typeof block.id === 'string' && block.id.trim() ? [block.id.trim()] : []));
+    const fallbackEntryIds = item.blocks.flatMap((block) => {
+      const sourceEntryId = deriveSourceEntryIdFromDisplayBlockId(block.id);
+      return sourceEntryId ? [sourceEntryId] : [];
+    });
+    const deferredEntryIds = [...new Set(sourceEntryIds.length > 0 ? sourceEntryIds : fallbackEntryIds)];
 
     return {
       ...item,
       blocks: [],
-      ...(sourceEntryIds.length > 0 ? { deferredEntryIds: sourceEntryIds } : { deferredBlockIds }),
+      deferredEntryIds,
     };
   });
 
