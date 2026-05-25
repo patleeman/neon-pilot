@@ -49,6 +49,7 @@ export const readConversationSummary = (..._args: unknown[]): unknown => hostRes
 export const searchIndexedConversationDocuments = (..._args: unknown[]): unknown => hostResolved();
 export const scheduleConversationSearchIndexing = (..._args: unknown[]): unknown => hostResolved();
 export const persistTraceSuggestedContext = (..._args: unknown[]): unknown => hostResolved();
+export const readExtensionConversationMetadata = (..._args: unknown[]): unknown => hostResolved();
 export const readConversationMetadata = (..._args: unknown[]): unknown => hostResolved();
 export const writeConversationMetadata = (..._args: unknown[]): unknown => hostResolved();
 export const queryConversationMetadata = (..._args: unknown[]): unknown => hostResolved();

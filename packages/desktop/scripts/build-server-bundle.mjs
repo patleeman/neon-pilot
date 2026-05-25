@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { build } from 'esbuild';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { build } from 'esbuild';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(currentDir, '..');
@@ -62,10 +63,16 @@ const backendApiLazyModuleEntries = [
   ['automation/scheduledTaskThreads.js', 'server/automation/scheduledTaskThreads.ts'],
   ['automation/store.js', 'server/automation/store.ts'],
   ['knowledge/memoryDocs.js', 'server/knowledge/memoryDocs.ts'],
+  ['prompts/promptTemplateInventory.js', 'server/prompts/promptTemplateInventory.ts'],
+  ['prompt-assembly/promptAssembly.js', 'server/prompt-assembly/promptAssembly.ts'],
+  ['prompt-assembly/instructionInventory.js', 'server/prompt-assembly/instructionInventory.ts'],
+  ['skills/skillInventory.js', 'server/skills/skillInventory.ts'],
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
+  ['tools/toolInventory.js', 'server/tools/toolInventory.ts'],
   ['traces/tracePersistence.js', 'server/traces/tracePersistence.ts'],
   ['extensions/extensionBackend.js', 'server/extensions/extensionBackend.ts'],
   ['extensions/extensionCatalog.js', 'server/extensions/extensionCatalog.ts'],
+  ['extensions/extensionConversationMetadata.js', 'server/extensions/extensionConversationMetadata.ts'],
   ['extensions/extensionDoctor.js', 'server/extensions/extensionDoctor.ts'],
   ['extensions/extensionLifecycle.js', 'server/extensions/extensionLifecycle.ts'],
   ['extensions/extensionRegistry.js', 'server/extensions/extensionRegistry.ts'],

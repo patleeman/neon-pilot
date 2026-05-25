@@ -98,7 +98,7 @@ function toCodeModeState(
   return {
     ...persisted,
     active,
-    pending: persisted.enabled && active !== true,
+    pending: persisted.enabled && active === false,
     running: live.running,
     ...(live.toolNames ? { toolNames: live.toolNames } : {}),
   };
@@ -334,8 +334,28 @@ function readCodeModeStateFromSession(ctx: CodeModeContext): { enabled: boolean 
   return { enabled: false };
 }
 
-function syncActiveTools(ctx: CodeModeContext): void {
-  if (readCodeModeStateFromSession(ctx).enabled) {
+async function readCodeModeState(ctx: CodeModeContext): Promise<{ enabled: boolean }> {
+  const sessionState = readCodeModeStateFromSession(ctx);
+  if (sessionState.enabled) return sessionState;
+  const conversationId = ctx.sessionManager?.getSessionId?.();
+  if (!conversationId) return sessionState;
+  try {
+    const { readExtensionConversationMetadata } = await import('@neon-pilot/extensions/backend/conversations');
+    return normalizePersistedState(
+      await readExtensionConversationMetadata({
+        conversationId,
+        extensionId: METADATA_NAMESPACE,
+        namespace: METADATA_NAMESPACE,
+        profile: ctx.runtimeScope ?? 'shared',
+      }),
+    );
+  } catch {
+    return sessionState;
+  }
+}
+
+async function syncActiveTools(ctx: CodeModeContext): Promise<void> {
+  if ((await readCodeModeState(ctx)).enabled) {
     activateCodeMode(ctx);
     return;
   }

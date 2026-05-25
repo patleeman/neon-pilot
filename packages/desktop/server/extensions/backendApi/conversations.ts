@@ -70,6 +70,20 @@ export async function readConversationSummary(...args: unknown[]) {
   );
 }
 
+export async function readExtensionConversationMetadata(input: {
+  conversationId: string;
+  extensionId: string;
+  namespace?: string;
+  profile?: string;
+}) {
+  return callModuleExport('../../extensions/extensionConversationMetadata.js', 'readConversationMetadata', {
+    conversationId: input.conversationId,
+    extensionId: input.extensionId,
+    namespace: input.namespace,
+    profile: input.profile ?? 'shared',
+  });
+}
+
 export async function createSession(...args: unknown[]) {
   return callModuleExport('../../conversations/liveSessions.js', 'createSession', ...args);
 }

@@ -49,6 +49,7 @@ const registeredEvents = [];
 const appendedEntries = [];
 const sentMessages = [];
 let activeTools = [];
+let metadataValue = null;
 
 const ctx = {
   extensionId,
@@ -125,7 +126,7 @@ const ctx = {
     },
     metadata: {
       async get() {
-        return null;
+        return metadataValue;
       },
       async set() {},
       async delete() {},
@@ -249,8 +250,21 @@ const smokes = {
     const start = registeredEvents.find((event) => event.eventName === 'session_start');
     assert(start?.handler, 'code mode session_start hook missing');
     activeTools = ['read', 'exec_code'];
-    start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
+    await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
     assert(JSON.stringify(activeTools) === JSON.stringify(['read']), 'code mode should not stay active by default');
+    mkdirSync(join(stateRoot, 'conversation-metadata', 'shared'), { recursive: true });
+    writeFileSync(
+      join(stateRoot, 'conversation-metadata', 'shared', 'smoke-session.json'),
+      JSON.stringify({
+        version: 1,
+        conversationId: 'smoke-session',
+        namespaces: { 'system-code-mode': { enabled: true } },
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    activeTools = ['read'];
+    await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
+    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not hydrate from persisted metadata');
     await module.toggleCodeMode({ conversationId: 'smoke-conversation', action: 'on' }, ctx);
     assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not replace active tools');
     assert(appendedEntries.some((entry) => entry.customType === 'code-mode-state'), 'code mode state was not persisted to session');
