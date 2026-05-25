@@ -28,9 +28,15 @@ export default defineConfig({
       ),
       '@neon-pilot/extensions/backend/events': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/events.ts'),
       '@neon-pilot/extensions/backend/images': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/images.ts'),
+      '@neon-pilot/extensions/backend/knowledge': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/knowledge.ts'),
       '@neon-pilot/extensions/backend/mcp': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/mcp.ts'),
+      '@neon-pilot/extensions/backend/promptAssembly': resolve(
+        process.cwd(),
+        'packages/desktop/server/extensions/backendApi/promptAssembly.ts',
+      ),
       '@neon-pilot/extensions/backend/runs': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runs.ts'),
       '@neon-pilot/extensions/backend/runtime': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runtime.ts'),
+      '@neon-pilot/extensions/backend/skills': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/skills.ts'),
       '@neon-pilot/extensions/backend/telemetry': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/telemetry.ts'),
       '@neon-pilot/extensions/backend/slackMcpGateway': resolve(
         process.cwd(),

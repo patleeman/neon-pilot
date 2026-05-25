@@ -1,12 +1,13 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { listExtensionInstallSummaries } from '@neon-pilot/extensions/backend/extensions';
 import { buildMergedMcpConfigDocument, readBundledSkillMcpManifests, readMcpConfigDocument } from '@neon-pilot/extensions/backend/mcp';
-
-import { buildInstructionPlan } from '../../../packages/desktop/server/prompt-assembly/instructionInventory.js';
-import { buildPromptAssemblyPlanAsync } from '../../../packages/desktop/server/prompt-assembly/promptAssembly.js';
-import { buildPromptTemplatePlanAsync } from '../../../packages/desktop/server/prompts/promptTemplateInventory.js';
-import { buildSkillInventoryAsync, setSkillEnabled } from '../../../packages/desktop/server/skills/skillInventory.js';
-import { buildToolInjectionPlanAsync } from '../../../packages/desktop/server/tools/toolInventory.js';
+import {
+  buildInstructionPlan,
+  buildPromptAssemblyPlanAsync,
+  buildPromptTemplatePlanAsync,
+  buildToolInjectionPlanAsync,
+} from '@neon-pilot/extensions/backend/promptAssembly';
+import { buildSkillInventoryAsync, setSkillEnabled } from '@neon-pilot/extensions/backend/skills';
 
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
 

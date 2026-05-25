@@ -1,11 +1,6 @@
 import { writeMergedMcpConfigFile } from '@neon-pilot/core';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-
-import {
-  buildSkillInjectionPlanAsync,
-  buildSkillInventoryAsync,
-  setSkillEnabled,
-} from '../../../packages/desktop/server/skills/skillInventory.js';
+import { buildSkillInjectionPlanAsync, buildSkillInventoryAsync, setSkillEnabled } from '@neon-pilot/extensions/backend/skills';
 
 export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) {
   const skills = (await buildSkillInventoryAsync({ runtimeScope: ctx.runtimeScope ?? ctx.profile, repoRoot: process.cwd() })).map(

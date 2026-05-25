@@ -107,9 +107,17 @@
       "types": "./dist/backend/images.d.ts",
       "default": "./dist/backend/images.js"
     },
+    "./backend/knowledge": {
+      "types": "./dist/backend/knowledge.d.ts",
+      "default": "./dist/backend/knowledge.js"
+    },
     "./backend/mcp": {
       "types": "./dist/backend/mcp.d.ts",
       "default": "./dist/backend/mcp.js"
+    },
+    "./backend/promptAssembly": {
+      "types": "./dist/backend/promptAssembly.d.ts",
+      "default": "./dist/backend/promptAssembly.js"
     },
     "./backend/runs": {
       "types": "./dist/backend/runs.d.ts",
@@ -118,6 +126,10 @@
     "./backend/runtime": {
       "types": "./dist/backend/runtime.d.ts",
       "default": "./dist/backend/runtime.js"
+    },
+    "./backend/skills": {
+      "types": "./dist/backend/skills.d.ts",
+      "default": "./dist/backend/skills.js"
     },
     "./backend/telemetry": {
       "types": "./dist/backend/telemetry.d.ts",

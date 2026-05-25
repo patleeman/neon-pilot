@@ -9,7 +9,9 @@ export { publishAppEvent } from './events.js';
 export * from './extensions.js';
 export * from './gateways.js';
 export * from './images.js';
+export * from './knowledge.js';
 export * from './mcp.js';
+export * from './promptAssembly.js';
 export {
   cancelDurableRun,
   followUpDurableRun,
@@ -21,4 +23,5 @@ export {
 } from './runs.js';
 export { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtime.js';
 export * from './runtime.js';
+export * from './skills.js';
 export * from './telemetry.js';

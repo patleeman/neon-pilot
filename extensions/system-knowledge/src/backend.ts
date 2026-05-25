@@ -2,13 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import { getDurableAgentFilePath, getVaultRoot, resolveRuntimeResources } from '@neon-pilot/core';
 import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse } from '@neon-pilot/extensions';
+import { buildRecentReadUsage, listMemoryDocs, listSkillsForProfile, normalizeMemoryPath } from '@neon-pilot/extensions/backend/knowledge';
 
-import {
-  buildRecentReadUsage,
-  listMemoryDocs,
-  listSkillsForProfile,
-  normalizeMemoryPath,
-} from '../../../packages/desktop/server/knowledge/memoryDocs.js';
 import { readKnowledgeState, syncKnowledgeState, updateKnowledgeState } from './backend/knowledge/state';
 import * as vault from './backend/knowledge/vault';
 

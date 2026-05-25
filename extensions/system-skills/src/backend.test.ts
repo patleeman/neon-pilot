@@ -6,11 +6,15 @@ const buildSkillInventoryAsync = vi.fn();
 const setSkillEnabled = vi.fn();
 
 vi.mock('@neon-pilot/core', () => ({ writeMergedMcpConfigFile }));
-vi.mock('../../../packages/desktop/server/skills/skillInventory.js', () => ({
-  buildSkillInjectionPlanAsync,
-  buildSkillInventoryAsync,
-  setSkillEnabled,
-}));
+vi.mock(
+  '@neon-pilot/extensions/backend/skills',
+  () => ({
+    buildSkillInjectionPlanAsync,
+    buildSkillInventoryAsync,
+    setSkillEnabled,
+  }),
+  { virtual: true },
+);
 
 const { listSkills, updateSkillEnabled } = await import('./backend.js');
 
