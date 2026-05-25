@@ -1,6 +1,9 @@
+// @vitest-environment jsdom
+
+import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { clearStoredState, persistStoredState, readStoredState, type StorageLike } from './reloadState';
+import { clearStoredState, persistStoredState, readStoredState, type StorageLike, useReloadState } from './reloadState';
 
 function createStorage(): StorageLike {
   const map = new Map<string, string>();
@@ -59,5 +62,31 @@ describe('reloadState helpers', () => {
     clearStoredState(storage, 'composer');
 
     expect(readStoredState({ key: 'composer', fallback: 'fallback', storage, deserialize: (raw) => raw })).toBe('fallback');
+  });
+});
+
+describe('useReloadState', () => {
+  it('does not persist the previous key value into the next key during hydration', () => {
+    const storage = createStorage();
+    storage.setItem('draft', JSON.stringify('Create a subagent'));
+
+    const { result, rerender } = renderHook(
+      ({ storageKey }) =>
+        useReloadState({
+          storageKey,
+          initialValue: '',
+          storage,
+          shouldPersist: (value: string) => value.length > 0,
+        }),
+      { initialProps: { storageKey: 'draft' as string | null } },
+    );
+
+    expect(result.current[0]).toBe('Create a subagent');
+
+    rerender({ storageKey: 'next' });
+
+    expect(result.current[0]).toBe('');
+    expect(storage.getItem('next')).toBeNull();
+    expect(storage.getItem('draft')).toBe(JSON.stringify('Create a subagent'));
   });
 });

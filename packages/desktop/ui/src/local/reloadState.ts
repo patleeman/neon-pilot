@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type SetStateAction, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -107,14 +107,16 @@ export function useReloadState<T>({
   deserialize,
   shouldPersist,
 }: UseReloadStateOptions<T>) {
-  const [state, setState] = useState<T>(() =>
-    readStoredState({
+  const [stateRecord, setStateRecord] = useState<{ key: string | null; value: T }>(() => ({
+    key: storageKey,
+    value: readStoredState({
       key: storageKey,
       fallback: initialValue,
       storage,
       deserialize,
     }),
-  );
+  }));
+  const state = stateRecord.value;
   const hydratedKeyRef = useRef(storageKey);
 
   // Store callbacks in refs so callers can pass inline functions without
@@ -128,33 +130,44 @@ export function useReloadState<T>({
 
   useLayoutEffect(() => {
     hydratedKeyRef.current = storageKey;
-    setState(
-      readStoredState({
+    setStateRecord({
+      key: storageKey,
+      value: readStoredState({
         key: storageKey,
         fallback: initialValue,
         storage,
         deserialize: deserializeRef.current,
       }),
-    );
+    });
   }, [storageKey, initialValue, storage]);
 
   useEffect(() => {
-    if (hydratedKeyRef.current !== storageKey) {
+    if (hydratedKeyRef.current !== storageKey || stateRecord.key !== storageKey) {
       return;
     }
 
     persistStoredState({
       key: storageKey,
-      value: state,
+      value: stateRecord.value,
       storage,
       serialize: serializeRef.current,
       shouldPersist: shouldPersistRef.current,
     });
-  }, [storageKey, state, storage]);
+  }, [storageKey, stateRecord, storage]);
+
+  const setState = useCallback(
+    (next: SetStateAction<T>) => {
+      setStateRecord((current) => ({
+        key: storageKey,
+        value: typeof next === 'function' ? (next as (previous: T) => T)(current.value) : next,
+      }));
+    },
+    [storageKey],
+  );
 
   const clear = useCallback(() => {
     clearStoredState(storage, storageKey);
-    setState(initialValue);
+    setStateRecord({ key: storageKey, value: initialValue });
   }, [storage, storageKey, initialValue]);
 
   return [state, setState, clear] as const;
