@@ -21,6 +21,7 @@ import type {
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
   ConversationAttachmentAssetData,
+  ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
   ConversationContentSearchResult,
@@ -662,6 +663,7 @@ export const api = {
       knownLastBlockId?: string;
     },
   ) => {
+    const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     if (options?.knownSessionSignature) params.set('knownSessionSignature', options.knownSessionSignature);
@@ -669,7 +671,18 @@ export const api = {
     if (options?.knownTotalBlocks !== undefined) params.set('knownTotalBlocks', String(options.knownTotalBlocks));
     if (options?.knownLastBlockId) params.set('knownLastBlockId', options.knownLastBlockId);
     const query = params.toString();
-    return get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
+    const result = await get<ConversationBootstrapState>(`/conversations/${encodeURIComponent(id)}/bootstrap${query ? `?${query}` : ''}`);
+    recordClientPerfTiming({
+      name: 'desktop.conversationBootstrap',
+      durationMs: performance.now() - startedAtMs,
+      metadata: {
+        conversationId: id,
+        tailBlocks: options?.tailBlocks,
+        hasKnownSessionSignature: Boolean(options?.knownSessionSignature),
+        serverPerf: result.perf,
+      },
+    });
+    return result;
   },
   desktopConversationState: async (id: string, options?: { tailBlocks?: number }) => {
     const params = new URLSearchParams();
@@ -828,13 +841,21 @@ export const api = {
     });
   },
   recoverConversation: async (id: string) => {
-    return post<{
+    const startedAtMs = performance.now();
+    const result = await post<{
       conversationId: string;
       live: boolean;
       recovered: boolean;
       replayedPendingOperation?: boolean;
       usedFallbackPrompt?: boolean;
+      perf?: Record<string, number>;
     }>(`/conversations/${encodeURIComponent(id)}/recover`);
+    recordClientPerfTiming({
+      name: 'desktop.recoverConversation',
+      startedAtMs,
+      meta: { conversationId: id, recoveredConversationId: result.conversationId, serverPerf: result.perf ?? null },
+    });
+    return result;
   },
   prewarmLiveSession: async (cwd?: string) => post<{ ok: true }>('/live-sessions/prewarm', { cwd }),
 

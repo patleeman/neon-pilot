@@ -42,6 +42,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
+  let liveSessionResourceOptionsCache: { key: string; value: LiveSessionResourceOptions } | null = null;
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
@@ -304,23 +305,32 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function buildLiveSessionResourceOptions(): LiveSessionResourceOptions {
+    const extensionEntries = resolveRuntimeExtensionEntries();
+    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const cacheKey = JSON.stringify({ runtimeScope, modelRef, extensionEntries });
+    if (liveSessionResourceOptionsCache?.key === cacheKey) {
+      return liveSessionResourceOptionsCache.value;
+    }
+
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
-      extensionEntries: resolveRuntimeExtensionEntries(),
+      extensionEntries,
     });
 
     const assembly = buildPromptAssemblyPlan({
       runtimeScope,
       repoRoot,
-      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+      modelRef,
     });
 
-    return {
+    const value = {
       additionalExtensionPaths: resolved.extensionEntries,
       additionalSkillPaths: assembly.skills.skillPaths,
       additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
       additionalThemePaths: resolved.themeEntries,
     };
+    liveSessionResourceOptionsCache = { key: cacheKey, value };
+    return value;
   }
 
   async function buildLiveSessionResourceOptionsAsync(): Promise<LiveSessionResourceOptions> {

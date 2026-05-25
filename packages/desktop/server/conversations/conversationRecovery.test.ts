@@ -17,7 +17,7 @@ const liveSessions = vi.hoisted(() => ({
   resumeSession: vi.fn(async () => ({ id: 'resumed-id' })),
 }));
 const service = vi.hoisted(() => ({
-  readConversationSessionDetail: vi.fn(() => ({ detail: null })),
+  readConversationSessionMeta: vi.fn(() => null),
   resolveConversationSessionFile: vi.fn(() => undefined as string | undefined),
 }));
 
@@ -58,6 +58,7 @@ describe('conversation recovery', () => {
       recovered: true,
       replayedPendingOperation: false,
       usedFallbackPrompt: false,
+      perf: expect.any(Object),
     });
 
     expect(liveSessions.resumeSession).not.toHaveBeenCalled();
@@ -82,8 +83,10 @@ describe('conversation recovery', () => {
         manifest: { spec: { cwd: '/manifest-cwd' }, source: { filePath: '/manifest/session.jsonl' } },
       },
     });
-    service.readConversationSessionDetail.mockReturnValueOnce({
-      detail: { meta: { file: '/session/detail.jsonl', cwd: '/detail-cwd', title: 'Detail Title' } },
+    service.readConversationSessionMeta.mockReturnValueOnce({
+      file: '/session/detail.jsonl',
+      cwd: '/detail-cwd',
+      title: 'Detail Title',
     });
     liveSessions.registry.set('resumed-id', { cwd: '/resumed-cwd' });
     const ctx = context();

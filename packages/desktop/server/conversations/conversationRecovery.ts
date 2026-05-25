@@ -10,7 +10,7 @@ import {
   syncWebLiveConversationRun,
   type WebLiveConversationPendingOperation,
 } from './conversationRuns.js';
-import { readConversationSessionDetail, resolveConversationSessionFile } from './conversationService.js';
+import { readConversationSessionMeta, resolveConversationSessionFile } from './conversationService.js';
 import {
   isLive as isLiveSession,
   promptSession,
@@ -40,6 +40,7 @@ export interface RecoverConversationResult {
   recovered: true;
   replayedPendingOperation: boolean;
   usedFallbackPrompt: boolean;
+  perf?: Record<string, number>;
 }
 
 function buildRecoveryLoaderOptions(context: RecoverConversationCapabilityContext, profile: string): RecoveryLoaderOptions {
@@ -115,39 +116,51 @@ export async function recoverConversationCapability(
   context: RecoverConversationCapabilityContext,
   options: { replayPendingOperation?: boolean } = {},
 ): Promise<RecoverConversationResult> {
+  const startedAtMs = performance.now();
   const conversationId = conversationIdInput.trim();
   if (!conversationId) {
     throw new Error('conversationId required');
   }
 
   if (isLiveSession(conversationId)) {
+    const liveReadyAtMs = performance.now();
     const liveEntry = liveRegistry.get(conversationId);
-    const liveSessionRead = readConversationSessionDetail({ conversationId, tailBlocks: 1 });
+    const sessionMeta = readConversationSessionMeta(conversationId);
+    const sessionMetaAtMs = performance.now();
     const continuation = await continueRecoveredConversation({
       conversationId,
       sessionFile: liveEntry?.session.sessionFile,
-      cwd: liveEntry?.cwd ?? liveSessionRead.detail?.meta.cwd ?? '',
-      title: liveEntry?.title ?? liveSessionRead.detail?.meta.title,
+      cwd: liveEntry?.cwd ?? sessionMeta?.cwd ?? '',
+      title: liveEntry?.title ?? sessionMeta?.title,
       profile: context.getRuntimeScope(),
       recoveryOperation: null,
     });
+    const continuedAtMs = performance.now();
 
     return {
       conversationId,
       live: true,
       recovered: true,
       ...continuation,
+      perf: {
+        liveCheckMs: Math.round(liveReadyAtMs - startedAtMs),
+        sessionMetaMs: Math.round(sessionMetaAtMs - liveReadyAtMs),
+        continueMs: Math.round(continuedAtMs - sessionMetaAtMs),
+        totalBeforeReturnMs: Math.round(continuedAtMs - startedAtMs),
+      },
     };
   }
 
   const runDetail = await getDurableRun(createWebLiveConversationRunId(conversationId));
+  const durableRunAtMs = performance.now();
   const payload = runDetail?.run.checkpoint?.payload;
   const checkpointPayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {};
 
   const pendingOperation = options.replayPendingOperation ? parsePendingOperation(checkpointPayload.pendingOperation) : undefined;
-  const sessionRead = readConversationSessionDetail({ conversationId, tailBlocks: 1 });
+  const sessionMeta = readConversationSessionMeta(conversationId);
+  const sessionMetaAtMs = performance.now();
   const sessionFile =
-    sessionRead.detail?.meta.file ??
+    sessionMeta?.file ??
     resolveConversationSessionFile(conversationId) ??
     readCheckpointString(checkpointPayload, 'sessionFile') ??
     runDetail?.run.manifest?.source?.filePath?.trim();
@@ -159,16 +172,26 @@ export async function recoverConversationCapability(
   const runtimeScope = context.getRuntimeScope();
   const manifestSpec = runDetail?.run.manifest?.spec;
   const manifestCwd = typeof manifestSpec?.cwd === 'string' && manifestSpec.cwd.trim().length > 0 ? manifestSpec.cwd.trim() : undefined;
-  const requestedCwd = sessionRead.detail?.meta.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
+  const requestedCwd = sessionMeta?.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
+  const optionsStartedAtMs = performance.now();
+  const loaderOptions = buildRecoveryLoaderOptions(context, runtimeScope);
+  const optionsReadyAtMs = performance.now();
   const resumed = await resumeSession(sessionFile, {
-    ...buildRecoveryLoaderOptions(context, runtimeScope),
+    ...loaderOptions,
     ...(requestedCwd ? { cwdOverride: requestedCwd } : {}),
   });
-  await context.flushLiveDeferredResumes();
+  const resumedAtMs = performance.now();
+  void context.flushLiveDeferredResumes().catch((error) => {
+    logError('conversation recovery deferred resume flush failed', {
+      sessionId: resumed.id,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  });
 
   const resumedEntry = liveRegistry.get(resumed.id);
   const effectiveCwd = resumedEntry?.cwd ?? requestedCwd;
-  const effectiveTitle = sessionRead.detail?.meta.title ?? readCheckpointString(checkpointPayload, 'title');
+  const effectiveTitle = sessionMeta?.title ?? readCheckpointString(checkpointPayload, 'title');
   const effectiveProfile = readCheckpointString(checkpointPayload, 'profile') ?? runtimeScope;
 
   if (!effectiveCwd) {
@@ -183,11 +206,20 @@ export async function recoverConversationCapability(
     profile: effectiveProfile,
     recoveryOperation: pendingOperation ?? null,
   });
+  const continuedAtMs = performance.now();
 
   return {
     conversationId: resumed.id,
     live: true,
     recovered: true,
     ...continuation,
+    perf: {
+      durableRunMs: Math.round(durableRunAtMs - startedAtMs),
+      sessionMetaMs: Math.round(sessionMetaAtMs - durableRunAtMs),
+      optionBuildMs: Math.round(optionsReadyAtMs - optionsStartedAtMs),
+      resumeMs: Math.round(resumedAtMs - optionsReadyAtMs),
+      continueMs: Math.round(continuedAtMs - resumedAtMs),
+      totalBeforeReturnMs: Math.round(continuedAtMs - startedAtMs),
+    },
   };
 }

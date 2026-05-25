@@ -2179,13 +2179,14 @@ export function readSessionBlocksByFileWithTelemetry(
       ? tryReadSessionTailBlocksByFile(meta.file, meta, requestedTailBlocks)
       : null;
   if (fastTailDetail) {
-    const contentHash = computeFileContentHash(filePath) ?? '';
     const detail = {
       ...fastTailDetail,
       signature,
       renderItems: buildTranscriptRenderItemsFromDisplayBlocks(fastTailDetail.blocks),
     } satisfies SessionDetail;
-    sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
+    // Fast-tail reads serve the initial route paint; avoid a full-file hash on
+    // this path and rely on the file signature for exact cache reuse.
+    sessionDetailCache.set(cacheKey, { signature, contentHash: '', detail });
     writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
     trimSessionDetailCache();
     return {

@@ -812,6 +812,7 @@ export interface ConversationBootstrapState {
   liveSession: ConversationBootstrapLiveState;
   /** True when the session file was modified (not just appended to) since last read. */
   integrityWarning?: boolean;
+  perf?: Record<string, number>;
 }
 
 export interface DeferredResumeSummary {

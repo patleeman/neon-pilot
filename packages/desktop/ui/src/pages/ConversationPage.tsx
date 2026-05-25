@@ -351,7 +351,8 @@ const ConversationArtifactModal = lazy(() =>
 const ConversationDrawingsPickerModal = lazy(() =>
   import('../components/ConversationDrawingsPickerModal').then((module) => ({ default: module.ConversationDrawingsPickerModal })),
 );
-const ChatView = lazy(() => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView })));
+const loadChatView = () => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView }));
+const ChatView = lazy(loadChatView);
 const ConversationActivityShelf = lazy(() =>
   import('../components/conversation/ConversationActivityShelf').then((module) => ({ default: module.ConversationActivityShelf })),
 );
@@ -415,6 +416,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const { tasks, sessions, runs, setRuns, setSessions, setTasks } = useAppData();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
+  useEffect(() => {
+    const preload = () => {
+      void loadChatView();
+    };
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preload, { timeout: 1500 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = window.setTimeout(preload, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     void api
@@ -4647,7 +4660,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           }
 
           setConfirmedLive(false);
+          const recoverStartedAtMs = performance.now();
           const recovered = await api.recoverConversation(id);
+          recordSubmitPhase('recoverConversationAfterNotLive', recoverStartedAtMs, {
+            conversationId: id,
+            recoveredConversationId: recovered.conversationId,
+            serverPerf: recovered.perf ?? null,
+          });
           if (recovered.conversationId !== id) {
             ensureConversationTabOpen(recovered.conversationId);
             navigate(`/conversations/${recovered.conversationId}`);
@@ -4678,7 +4697,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               hasVisibleSessionDetail: true,
             }),
           );
+          const recoverStartedAtMs = performance.now();
           const recovered = await api.recoverConversation(id);
+          recordSubmitPhase('recoverConversationBeforeResume', recoverStartedAtMs, {
+            conversationId: id,
+            recoveredConversationId: recovered.conversationId,
+            serverPerf: recovered.perf ?? null,
+          });
           if (recovered.conversationId !== id) {
             ensureConversationTabOpen(recovered.conversationId);
             navigate(`/conversations/${recovered.conversationId}`);

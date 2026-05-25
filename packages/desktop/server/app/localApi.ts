@@ -1554,14 +1554,34 @@ export async function readDesktopConversationBootstrap(input: {
   knownTotalBlocks?: number;
   knownLastBlockId?: string;
 }) {
+  const startedAtMs = performance.now();
   const context = await getLocalLiveSessionCapabilityContext();
+  const contextReadyAtMs = performance.now();
   const bootstrap = await readConversationBootstrapState({
     ...input,
     profile: context.getRuntimeScope(),
   });
+  const bootstrapReadAtMs = performance.now();
   assertConversationBootstrapFound(isMissingConversationBootstrapState(bootstrap.state));
+  const checkedAtMs = performance.now();
+  const state = inlineConversationBootstrapAssetsCapability(bootstrap.state);
+  const inlinedAtMs = performance.now();
 
-  return inlineConversationBootstrapAssetsCapability(bootstrap.state);
+  return {
+    ...state,
+    perf: {
+      contextMs: Math.round(contextReadyAtMs - startedAtMs),
+      bootstrapReadMs: Math.round(bootstrapReadAtMs - contextReadyAtMs),
+      assertMs: Math.round(checkedAtMs - bootstrapReadAtMs),
+      assetInlineMs: Math.round(inlinedAtMs - checkedAtMs),
+      totalMs: Math.round(inlinedAtMs - startedAtMs),
+      ...(bootstrap.telemetry.sessionRead ? { sessionReadMs: Math.round(bootstrap.telemetry.sessionRead.durationMs) } : {}),
+      ...(bootstrap.telemetry.sessionRead ? { sessionReadCache: bootstrap.telemetry.sessionRead.cache === 'hit' ? 1 : 0 } : {}),
+      ...(bootstrap.telemetry.sessionRead ? { sessionReadFastTail: bootstrap.telemetry.sessionRead.loader === 'fast-tail' ? 1 : 0 } : {}),
+      remoteMirrorMs: Math.round(bootstrap.telemetry.remoteMirror.durationMs),
+      sessionDetailReused: bootstrap.telemetry.sessionDetailReused ? 1 : 0,
+    },
+  };
 }
 
 export async function renameDesktopConversation(input: {
