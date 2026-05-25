@@ -21,9 +21,13 @@ export function normalizeServerExtensionModuleSpecifier(relativeSpecifier: strin
 
 function packageEntryCandidates(specifier: string, resourcesPath: string | undefined): string[] {
   const repoRoots = [process.env.NEON_PILOT_REPO_ROOT, process.cwd()].filter((value): value is string => Boolean(value));
+  const desktopRoots = repoRoots.flatMap((root) => [resolve(root, 'packages/desktop'), root]);
   const candidates: string[] = [];
   const pushRepoPath = (relativePath: string) => {
     for (const repoRoot of repoRoots) candidates.push(resolve(repoRoot, relativePath));
+  };
+  const pushDesktopPath = (relativePath: string) => {
+    for (const desktopRoot of desktopRoots) candidates.push(resolve(desktopRoot, relativePath));
   };
   const pushResourcePath = (relativePath: string) => {
     if (typeof resourcesPath !== 'string') return;
@@ -35,12 +39,16 @@ function packageEntryCandidates(specifier: string, resourcesPath: string | undef
     pushRepoPath('packages/desktop/server/dist/core/index.js');
     pushRepoPath('packages/desktop/dist/server/core/index.js');
     pushRepoPath('packages/core/dist/index.js');
+    pushDesktopPath('server/dist/core/index.js');
+    pushDesktopPath('dist/server/core/index.js');
     pushResourcePath('server/dist/core/index.js');
     pushResourcePath('packages/desktop/server/dist/core/index.js');
     pushResourcePath('packages/desktop/dist/server/core/index.js');
     pushResourcePath('packages/core/dist/index.js');
   } else if (specifier === '@neon-pilot/daemon') {
     pushRepoPath('packages/desktop/server/dist/daemon/index.js');
+    pushDesktopPath('server/dist/daemon/index.js');
+    pushDesktopPath('dist/server/daemon/index.js');
     pushResourcePath('packages/desktop/server/dist/daemon/index.js');
     pushResourcePath('server/dist/daemon/index.js');
   } else if (specifier === '@earendil-works/pi-coding-agent') {
@@ -72,7 +80,9 @@ export function resolveServerModuleSpecifierFrom({
         ]
       : []),
     resolve(process.cwd(), 'packages/desktop/server/dist', normalized),
+    resolve(process.cwd(), 'server/dist', normalized),
     resolve(process.cwd(), 'packages/desktop/dist/server', normalized),
+    resolve(process.cwd(), 'dist/server', normalized),
     ...(typeof resourcesPath === 'string'
       ? [
           resolve(resourcesPath, 'app.asar.unpacked/packages/desktop/server/dist', normalized),

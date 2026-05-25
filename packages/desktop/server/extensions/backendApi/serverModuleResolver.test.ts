@@ -1,7 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,6 +14,10 @@ import {
 
 const originalCwd = process.cwd();
 const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+
+function expectFileUrlToResolveTo(actual: string, expectedPath: string) {
+  expect(realpathSync(fileURLToPath(actual))).toBe(realpathSync(expectedPath));
+}
 
 describe('backendApi/serverModuleResolver', () => {
   const dir = join(tmpdir(), `server-module-resolver-${process.pid}`);
@@ -54,6 +58,25 @@ describe('backendApi/serverModuleResolver', () => {
     ).toBe(pathToFileURL(target).href);
   });
 
+  it('resolves relative modules when cwd is the desktop package root', () => {
+    const desktopRoot = join(dir, 'repo/packages/desktop');
+    const target = join(desktopRoot, 'server/dist/shared/appEvents.js');
+    const staleTscOutput = join(desktopRoot, 'dist/server/shared/appEvents.js');
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    mkdirSync(resolve(staleTscOutput, '..'), { recursive: true });
+    writeFileSync(target, 'export const bundled = true;');
+    writeFileSync(staleTscOutput, 'export const bundled = false;');
+    process.chdir(desktopRoot);
+
+    expectFileUrlToResolveTo(
+      resolveServerModuleSpecifierFrom({
+        importMetaUrl: pathToFileURL(join(desktopRoot, 'server/extensions/backendApi/events.js')).href,
+        relativeSpecifier: '../../shared/appEvents.js',
+      }),
+      target,
+    );
+  });
+
   it('resolves known package entries from repo roots', () => {
     const repoRoot = join(dir, 'repo');
     const target = join(repoRoot, 'packages/desktop/server/dist/core/index.js');
@@ -67,6 +90,22 @@ describe('backendApi/serverModuleResolver', () => {
         relativeSpecifier: '@neon-pilot/core',
       }),
     ).toBe(pathToFileURL(target).href);
+  });
+
+  it('resolves known package entries when cwd is the desktop package root', () => {
+    const desktopRoot = join(dir, 'repo/packages/desktop');
+    const target = join(desktopRoot, 'server/dist/daemon/index.js');
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    writeFileSync(target, 'export const marker = true;');
+    process.chdir(desktopRoot);
+
+    expectFileUrlToResolveTo(
+      resolveServerModuleSpecifierFrom({
+        importMetaUrl: pathToFileURL(join(desktopRoot, 'server/extensions/backendApi/daemonBridge.js')).href,
+        relativeSpecifier: '@neon-pilot/daemon',
+      }),
+      target,
+    );
   });
 
   it('returns the raw specifier when no candidate exists', () => {
