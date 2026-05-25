@@ -120,7 +120,7 @@ fi
 
 # ── 6. Extension/core boundary guardrails ────────────────
 
-BOUNDARY_FILES=$(staged_files | grep -cE '^(extensions/|installable-extensions/|packages/desktop/server/extensions/backendApi/|packages/extensions/|scripts/check-core-extension-boundary\.mjs|scripts/check-extension-backend-api\.mjs|package\.json)$' || true)
+BOUNDARY_FILES=$(staged_files | grep -cE '^(extensions/|installable-extensions/|packages/desktop/server/extensions/backendApi/|packages/extensions/|scripts/check-core-extension-boundary\.mjs$|scripts/check-extension-backend-api\.mjs$|\.githooks/pre-commit$|package\.json$)' || true)
 if [ "$BOUNDARY_FILES" -gt 0 ]; then
   if run_pnpm run check:extensions:static &>/dev/null; then
     green "✓ extension boundary checks passed"
