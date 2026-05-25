@@ -37,7 +37,7 @@ Background work appears inline in the transcript:
 
 - Background command starts and delivered completion callbacks render inline run cards with expandable status, metadata, and log tail.
 - Subagent starts link to the child conversation when one exists.
-- The composer activity shelf can still surface active background work while a conversation is in progress.
+- The core composer activity shelf surfaces active background work from the Execution projection while a conversation is in progress; the extension must not poll raw durable runs from renderer UI.
 
 The extension no longer contributes a right-side Background work/Runs workbench panel.
 

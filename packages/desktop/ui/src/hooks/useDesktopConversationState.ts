@@ -14,6 +14,7 @@ import type {
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
+const STREAM_DELTA_FLUSH_INTERVAL_MS = 80;
 
 export function normalizeDesktopConversationStateTailBlocks(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
@@ -228,7 +229,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const [connectVersion, setConnectVersion] = useState(0);
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
   const pendingStreamEventsRef = useRef<SseEvent[]>([]);
-  const pendingStreamFrameRef = useRef<number | null>(null);
+  const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
 
   useEffect(() => {
@@ -289,8 +290,16 @@ export function useDesktopConversationState(conversationId: string | null, optio
     params.set('surfaceType', surfaceType);
     const source = createDesktopAwareEventSource(`/api/live-sessions/${encodeURIComponent(conversationId)}/events?${params.toString()}`);
 
+    const clearPendingStreamFlushTimer = () => {
+      if (pendingStreamFlushTimerRef.current === null) {
+        return;
+      }
+      window.clearTimeout(pendingStreamFlushTimerRef.current);
+      pendingStreamFlushTimerRef.current = null;
+    };
+
     const flushPendingStreamEvents = () => {
-      pendingStreamFrameRef.current = null;
+      clearPendingStreamFlushTimer();
       const events = pendingStreamEventsRef.current;
       pendingStreamEventsRef.current = [];
       if (events.length === 0) {
@@ -320,16 +329,24 @@ export function useDesktopConversationState(conversationId: string | null, optio
     };
 
     const schedulePendingStreamEventsFlush = () => {
-      if (pendingStreamFrameRef.current !== null) {
+      if (pendingStreamFlushTimerRef.current !== null) {
         return;
       }
-      pendingStreamFrameRef.current = window.requestAnimationFrame(flushPendingStreamEvents);
+      pendingStreamFlushTimerRef.current = window.setTimeout(flushPendingStreamEvents, STREAM_DELTA_FLUSH_INTERVAL_MS);
     };
+
+    const shouldFlushStreamEventImmediately = (streamEvent: SseEvent): boolean =>
+      streamEvent.type !== 'text_delta' && streamEvent.type !== 'thinking_delta' && streamEvent.type !== 'tool_update';
 
     source.onmessage = (event) => {
       try {
-        pendingStreamEventsRef.current.push(JSON.parse(event.data) as SseEvent);
-        schedulePendingStreamEventsFlush();
+        const streamEvent = JSON.parse(event.data) as SseEvent;
+        pendingStreamEventsRef.current.push(streamEvent);
+        if (shouldFlushStreamEventImmediately(streamEvent)) {
+          flushPendingStreamEvents();
+        } else {
+          schedulePendingStreamEventsFlush();
+        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
@@ -338,10 +355,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     return () => {
       source.close();
-      if (pendingStreamFrameRef.current !== null) {
-        window.cancelAnimationFrame(pendingStreamFrameRef.current);
-        pendingStreamFrameRef.current = null;
-      }
+      clearPendingStreamFlushTimer();
       pendingStreamEventsRef.current = [];
     };
   }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, surfaceId, surfaceType]);
