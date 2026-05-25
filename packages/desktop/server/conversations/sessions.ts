@@ -1244,9 +1244,9 @@ function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
   };
 }
 
-const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 2;
+const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 80;
 const DEFERRED_TOOL_OUTPUT_PREVIEW_LENGTH = 600;
-const MAX_INITIAL_SESSION_DETAIL_BLOCK_BYTES = 192 * 1024;
+const MAX_INITIAL_SESSION_DETAIL_BLOCK_BYTES = 768 * 1024;
 
 function deferHeavyBlockContent(blocks: DisplayBlock[], blockOffset: number, totalBlocks: number): DisplayBlock[] {
   const deferredBlocks = deferHeavyBlockContentValue({
