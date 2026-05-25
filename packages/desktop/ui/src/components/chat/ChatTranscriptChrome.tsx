@@ -9,7 +9,7 @@ export function StreamingIndicator({ label }: { label: string }) {
   return (
     <div className="flex gap-2 items-start" role="status" aria-live="polite">
       <div className="flex items-center gap-2 pt-1 text-[12px] text-secondary italic">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent not-italic" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent animate-pulse not-italic" />
         <span>{label}</span>
       </div>
     </div>

@@ -167,7 +167,12 @@ export function ConversationComposerActions({
             title={conversationNeedsTakeover ? 'Take over this conversation before stopping' : 'Stop'}
             aria-label="Stop"
           >
-            <span className="absolute inset-1.5 rounded-full bg-danger/15 opacity-35" aria-hidden="true" />
+            <span
+              className="absolute inset-0 rounded-full bg-danger/10 opacity-0 transition-opacity group-hover:opacity-0"
+              aria-hidden="true"
+            >
+              <span className="absolute inset-1.5 rounded-full bg-danger/15 animate-ping" />
+            </span>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
             </svg>
