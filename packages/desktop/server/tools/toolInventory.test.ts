@@ -8,11 +8,9 @@ const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
   isRecord: (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
 }));
-const secrets = vi.hoisted(() => ({ resolveSecret: vi.fn(() => undefined as string | undefined) }));
 
 vi.mock('../extensions/extensionRegistry.js', () => registry);
 vi.mock('../prompt-assembly/providerRuntime.js', () => providerRuntime);
-vi.mock('../secrets/secretStore.js', () => secrets);
 
 import {
   buildToolInjectionPlan,
@@ -29,7 +27,6 @@ describe('tool inventory', () => {
     vi.clearAllMocks();
     registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([]);
     registry.listExtensionToolRegistrations.mockReturnValue([]);
-    secrets.resolveSecret.mockReturnValue(undefined);
   });
 
   function tool(overrides: Record<string, unknown> = {}) {
@@ -127,14 +124,10 @@ describe('tool inventory', () => {
     );
   });
 
-  it('requires Exa API key before activating the Exa web_search provider', () => {
+  it('does not apply extension-specific secret policy in core tool inventory', () => {
     registry.listExtensionToolRegistrations.mockReturnValue([
       tool({ extensionId: 'system-exa-search', id: 'exa', name: 'web_search', priority: 10 }),
     ]);
-    expect(buildToolInjectionPlan(ctx).tools[0]).toMatchObject({ enabled: false, reason: 'required configuration is missing' });
-    expect(buildToolInjectionPlan(ctx).diagnostics).toContainEqual(expect.objectContaining({ code: 'missing-exa-api-key' }));
-
-    secrets.resolveSecret.mockReturnValueOnce('key');
     expect(buildToolInjectionPlan(ctx).activeToolNames).toEqual(['web_search']);
   });
 

@@ -5,7 +5,6 @@ import {
 } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
-import { resolveSecret } from '../secrets/secretStore.js';
 
 export interface ToolDefinition {
   id: string;
@@ -244,26 +243,7 @@ function toolConditionMatches(tool: ToolDefinition, ctx: AssemblyRuntimeContext)
 }
 
 function toolAvailabilityMatches(tool: ToolDefinition): { ok: boolean; diagnostics: AssemblyDiagnostic[] } {
-  if (tool.raw?.extensionId === 'system-exa-search' && tool.name === 'web_search') {
-    let hasKey = false;
-    try {
-      hasKey = Boolean(resolveSecret('system-exa-search', 'exaApiKey'));
-    } catch {
-      hasKey = false;
-    }
-    if (hasKey) return { ok: true, diagnostics: [] };
-    return {
-      ok: false,
-      diagnostics: [
-        {
-          severity: 'info',
-          code: 'missing-exa-api-key',
-          message: `${tool.id} requires an Exa API key. Falling back to another web_search provider if available.`,
-          sourceId: tool.id,
-        },
-      ],
-    };
-  }
+  void tool;
   return { ok: true, diagnostics: [] };
 }
 
