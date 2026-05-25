@@ -12,7 +12,12 @@ import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
 import { cx, Pill } from '../ui';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
-import { INLINE_RUN_LOG_TAIL_LINES, INLINE_RUN_POLL_INTERVAL_MS, usePolledDurableRunSnapshot } from './linkedRunPolling.js';
+import {
+  INLINE_RUN_LOG_TAIL_LINES,
+  INLINE_RUN_POLL_INTERVAL_MS,
+  shouldPollInlineRunSnapshot,
+  usePolledDurableRunSnapshot,
+} from './linkedRunPolling.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
@@ -27,12 +32,28 @@ import {
 
 const MAX_VISIBLE_LINKED_RUNS = 5;
 
-function BackgroundBashInlineOutput({ runId, command }: { runId: string; command: string }) {
-  const snapshot = usePolledDurableRunSnapshot(runId, true, {
+function BackgroundBashInlineOutput({
+  runId,
+  command,
+  run,
+  streaming,
+}: {
+  runId: string;
+  command: string;
+  run: DurableRunListResult['runs'][number] | null | undefined;
+  streaming: boolean;
+}) {
+  const pollEnabled = shouldPollInlineRunSnapshot({
+    run,
+    visible: true,
+    open: true,
+    streaming,
+  });
+  const snapshot = usePolledDurableRunSnapshot(pollEnabled ? runId : null, pollEnabled, {
     tail: INLINE_RUN_LOG_TAIL_LINES,
     pollIntervalMs: INLINE_RUN_POLL_INTERVAL_MS,
   });
-  const running = isRunActive(snapshot.detail?.run ?? null);
+  const running = isRunActive(snapshot.detail?.run ?? run ?? null) || streaming;
   const log = stripAnsiForTranscript(snapshot.log?.log ?? '');
 
   return (
@@ -254,6 +275,7 @@ export function ToolBlock({
   const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
+  const backgroundRun = backgroundRunId ? runs?.runs.find((candidate) => candidate.runId === backgroundRunId) : null;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
   const headerDisclosureLabel =
     pinnedFileChange && fileChanges.length > 0 && !isRunning && !isError
@@ -440,7 +462,7 @@ export function ToolBlock({
       )}
 
       {open && !pinnedTool && backgroundShellStart && backgroundRunId && (
-        <BackgroundBashInlineOutput runId={backgroundRunId} command={bashCommand} />
+        <BackgroundBashInlineOutput runId={backgroundRunId} command={bashCommand} run={backgroundRun} streaming={isRunning} />
       )}
 
       {open && !pinnedTool && !agentBashTool && !backgroundShellStart && (

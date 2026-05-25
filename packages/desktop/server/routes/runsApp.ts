@@ -53,6 +53,7 @@ const ACTIVE_RUN_POLL_INTERVAL_MS = 1_000;
 const IDLE_RUN_POLL_INTERVAL_MS = 5_000;
 const ACTIVE_RUN_LOG_POLL_INTERVAL_MS = 250;
 const IDLE_RUN_LOG_POLL_INTERVAL_MS = 2_000;
+const TERMINAL_RUN_STREAM_GRACE_MS = 1_500;
 
 function parseRunLogTail(raw: unknown): number {
   const normalized = typeof raw === 'string' ? raw.trim() : '';
@@ -128,6 +129,7 @@ export function registerRunAppRoutes(
       let closed = false;
       let detailPollTimer: ReturnType<typeof setTimeout> | null = null;
       let logPollTimer: ReturnType<typeof setTimeout> | null = null;
+      let terminalStopTimer: ReturnType<typeof setTimeout> | null = null;
       let logPath = (initial as { log: { path: string } }).log.path;
       let logCursor = getDurableRunLogCursor(logPath);
       let runActive = isRunStreamActive(initial as { detail: { run: { status?: { status?: string } | string } } });
@@ -146,10 +148,27 @@ export function registerRunAppRoutes(
           clearTimeout(logPollTimer);
           logPollTimer = null;
         }
+        if (terminalStopTimer) {
+          clearTimeout(terminalStopTimer);
+          terminalStopTimer = null;
+        }
+      };
+
+      const scheduleTerminalStop = () => {
+        if (closed || terminalStopTimer) {
+          return;
+        }
+
+        terminalStopTimer = setTimeout(() => {
+          if (!closed) {
+            stopStream();
+            res.end();
+          }
+        }, TERMINAL_RUN_STREAM_GRACE_MS);
       };
 
       const scheduleDetailPoll = (delayMs: number) => {
-        if (closed) {
+        if (closed || !runActive) {
           return;
         }
 
@@ -194,6 +213,10 @@ export function registerRunAppRoutes(
             writeEvent({ type: 'snapshot', detail: typedNext.detail, log: typedNext.log });
           } else {
             writeEvent({ type: 'detail', detail: typedNext.detail });
+          }
+          if (!runActive) {
+            scheduleTerminalStop();
+            return;
           }
           scheduleDetailPoll(getRunStreamPollInterval(typedNext));
         } catch {
@@ -240,13 +263,21 @@ export function registerRunAppRoutes(
             }
           }
         } finally {
-          scheduleLogPoll(getRunLogPollInterval(runActive));
+          if (runActive) {
+            scheduleLogPoll(getRunLogPollInterval(runActive));
+          } else {
+            scheduleTerminalStop();
+          }
         }
       };
 
       writeEvent({ type: 'snapshot', detail: (initial as { detail: unknown }).detail, log: (initial as { log: unknown }).log });
-      scheduleDetailPoll(getRunStreamPollInterval(initial as { detail: { run: { status?: { status?: string } | string } } }));
-      scheduleLogPoll(getRunLogPollInterval(runActive));
+      if (runActive) {
+        scheduleDetailPoll(getRunStreamPollInterval(initial as { detail: { run: { status?: { status?: string } | string } } }));
+        scheduleLogPoll(getRunLogPollInterval(runActive));
+      } else {
+        scheduleTerminalStop();
+      }
 
       req.on('close', () => {
         stopStream();

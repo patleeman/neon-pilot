@@ -18,7 +18,12 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { cx, Pill } from '../ui';
-import { INLINE_RUN_LOG_TAIL_LINES, INLINE_RUN_POLL_INTERVAL_MS, usePolledDurableRunSnapshot } from './linkedRunPolling.js';
+import {
+  INLINE_RUN_LOG_TAIL_LINES,
+  INLINE_RUN_POLL_INTERVAL_MS,
+  shouldPollInlineRunSnapshot,
+  usePolledDurableRunSnapshot,
+} from './linkedRunPolling.js';
 import { resolveLinkedRunRecord } from './linkedRunResolution.js';
 import type { LinkedRunPresentation } from './linkedRuns.js';
 import { describeInlineRunStatus, inferStatusFromLinkedRunDetail } from './linkedRunStatus.js';
@@ -66,8 +71,12 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
     return () => observer.disconnect();
   }, [expanded]);
 
-  const snapshotRunId = expanded ? resolvedRunId : null;
-  const pollEnabled = Boolean(snapshotRunId) && isVisible;
+  const pollEnabled = shouldPollInlineRunSnapshot({
+    run: resolvedRunRecord,
+    visible: isVisible,
+    open: expanded,
+  });
+  const snapshotRunId = pollEnabled ? resolvedRunId : null;
   const snapshot = usePolledDurableRunSnapshot(snapshotRunId, pollEnabled, {
     tail: INLINE_RUN_LOG_TAIL_LINES,
     pollIntervalMs: INLINE_RUN_POLL_INTERVAL_MS,

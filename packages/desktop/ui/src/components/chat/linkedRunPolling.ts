@@ -27,6 +27,26 @@ const EMPTY_POLLED_RUN_SNAPSHOT_STATE: PolledRunSnapshotState = {
   unavailable: false,
 };
 
+function isDocumentVisible(): boolean {
+  return typeof document === 'undefined' || document.visibilityState !== 'hidden';
+}
+
+function useDocumentVisible(): boolean {
+  const [visible, setVisible] = useState(isDocumentVisible);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const handleVisibilityChange = () => setVisible(isDocumentVisible());
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  return visible;
+}
+
 export function buildInlineRunExpansionKey(clusterStartIndex: number, runId: string): string {
   return `${clusterStartIndex}:${runId}`;
 }
@@ -73,6 +93,19 @@ export function shouldContinuePollingDurableRun(run: DurableRunRecord | null | u
   return isRunActive(run);
 }
 
+export function shouldPollInlineRunSnapshot(input: {
+  run: DurableRunRecord | null | undefined;
+  visible: boolean;
+  open: boolean;
+  streaming?: boolean;
+}): boolean {
+  if (!input.visible || !shouldContinuePollingDurableRun(input.run)) {
+    return false;
+  }
+
+  return input.open || input.streaming === true;
+}
+
 export function usePolledDurableRunSnapshot(
   runId: string | null,
   enabled: boolean,
@@ -82,6 +115,8 @@ export function usePolledDurableRunSnapshot(
   },
 ): PolledRunSnapshotState {
   const { tail, pollIntervalMs } = normalizeInlineRunPollingOptions(options);
+  const documentVisible = useDocumentVisible();
+  const enabledNow = enabled && documentVisible;
   const [state, setState] = useState<PolledRunSnapshotState>(EMPTY_POLLED_RUN_SNAPSHOT_STATE);
 
   useEffect(() => {
@@ -105,7 +140,7 @@ export function usePolledDurableRunSnapshot(
   }, [runId]);
 
   useEffect(() => {
-    if (!runId || !enabled) {
+    if (!runId || !enabledNow) {
       setState((current) => ({ ...current, loading: false, refreshing: false }));
       return;
     }
@@ -123,7 +158,7 @@ export function usePolledDurableRunSnapshot(
     };
 
     const scheduleNextPoll = (detail: DurableRunDetailResult | null) => {
-      if (cancelled || !shouldContinuePollingDurableRun(detail?.run)) {
+      if (cancelled || !isDocumentVisible() || !shouldContinuePollingDurableRun(detail?.run)) {
         return;
       }
 
@@ -193,7 +228,7 @@ export function usePolledDurableRunSnapshot(
     return () => {
       stopPolling();
     };
-  }, [enabled, pollIntervalMs, runId, tail]);
+  }, [enabledNow, pollIntervalMs, runId, tail]);
 
   return state;
 }

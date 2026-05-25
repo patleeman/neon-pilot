@@ -174,7 +174,7 @@ describe('registerRunAppRoutes', () => {
     expect(res.write.mock.calls).toHaveLength(writesBeforeClose);
   });
 
-  it('slows run detail and log polling after a terminal snapshot', async () => {
+  it('stops run detail and log polling after a terminal snapshot grace period', async () => {
     vi.useFakeTimers();
     readDurableRunLogDeltaMock.mockReturnValue(undefined);
     const getDurableRunSnapshot = vi
@@ -207,7 +207,8 @@ describe('registerRunAppRoutes', () => {
     await vi.advanceTimersByTimeAsync(4_999);
     expect(getDurableRunSnapshot).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(1);
-    expect(getDurableRunSnapshot).toHaveBeenCalledTimes(3);
+    expect(getDurableRunSnapshot).toHaveBeenCalledTimes(2);
+    expect(res.end).toHaveBeenCalled();
 
     req.emit('close');
   });

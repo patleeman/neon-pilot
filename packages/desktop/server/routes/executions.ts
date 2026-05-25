@@ -37,9 +37,8 @@ function parseExecutionVisibilityQuery(value: unknown): 'primary' | 'system' | '
 }
 
 const ACTIVE_EXECUTION_POLL_INTERVAL_MS = 1_000;
-const IDLE_EXECUTION_POLL_INTERVAL_MS = 5_000;
 const ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS = 500;
-const IDLE_EXECUTION_LOG_POLL_INTERVAL_MS = 2_500;
+const TERMINAL_EXECUTION_STREAM_GRACE_MS = 1_500;
 
 function isExecutionActive(status: string | undefined): boolean {
   return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
@@ -111,6 +110,7 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
       let closed = false;
       let detailPollTimer: ReturnType<typeof setTimeout> | null = null;
       let logPollTimer: ReturnType<typeof setTimeout> | null = null;
+      let terminalStopTimer: ReturnType<typeof setTimeout> | null = null;
       let logPath = initialLog.path;
       let logCursor = getDurableRunLogCursor(logPath);
       let previousStatus = initialDetail.execution.status;
@@ -124,10 +124,21 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
         clearInterval(heartbeat);
         if (detailPollTimer) clearTimeout(detailPollTimer);
         if (logPollTimer) clearTimeout(logPollTimer);
+        if (terminalStopTimer) clearTimeout(terminalStopTimer);
+      };
+
+      const scheduleTerminalStop = () => {
+        if (closed || terminalStopTimer) return;
+        terminalStopTimer = setTimeout(() => {
+          if (!closed) {
+            stopStream();
+            res.end();
+          }
+        }, TERMINAL_EXECUTION_STREAM_GRACE_MS);
       };
 
       const scheduleDetailPoll = (delayMs: number) => {
-        if (!closed) detailPollTimer = setTimeout(() => void pollDetailOnce(), delayMs);
+        if (!closed && active) detailPollTimer = setTimeout(() => void pollDetailOnce(), delayMs);
       };
       const scheduleLogPoll = (delayMs: number) => {
         if (!closed) logPollTimer = setTimeout(() => void pollLogOnce(), delayMs);
@@ -151,7 +162,11 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
             invalidateAppTopics('executions', 'runs');
           }
           writeEvent({ type: 'detail', detail });
-          scheduleDetailPoll(active ? ACTIVE_EXECUTION_POLL_INTERVAL_MS : IDLE_EXECUTION_POLL_INTERVAL_MS);
+          if (!active) {
+            scheduleTerminalStop();
+            return;
+          }
+          scheduleDetailPoll(ACTIVE_EXECUTION_POLL_INTERVAL_MS);
         } catch {
           scheduleDetailPoll(ACTIVE_EXECUTION_POLL_INTERVAL_MS);
         }
@@ -178,13 +193,21 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
             if (delta.delta.length > 0) writeEvent({ type: 'log_delta', path: delta.path, delta: delta.delta });
           }
         } finally {
-          scheduleLogPoll(active ? ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS : IDLE_EXECUTION_LOG_POLL_INTERVAL_MS);
+          if (active) {
+            scheduleLogPoll(ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS);
+          } else {
+            scheduleTerminalStop();
+          }
         }
       };
 
       writeEvent({ type: 'snapshot', detail: initialDetail, log: initialLog });
-      scheduleDetailPoll(active ? ACTIVE_EXECUTION_POLL_INTERVAL_MS : IDLE_EXECUTION_POLL_INTERVAL_MS);
-      scheduleLogPoll(active ? ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS : IDLE_EXECUTION_LOG_POLL_INTERVAL_MS);
+      if (active) {
+        scheduleDetailPoll(ACTIVE_EXECUTION_POLL_INTERVAL_MS);
+        scheduleLogPoll(ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS);
+      } else {
+        scheduleTerminalStop();
+      }
       req.on('close', stopStream);
     } catch (err) {
       handleError(res, err);

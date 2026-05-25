@@ -91,6 +91,22 @@ function createShellRunRecord(): DurableRunRecord {
   };
 }
 
+function createCompletedShellRunRecord(): DurableRunRecord {
+  return {
+    ...createShellRunRecord(),
+    status: {
+      version: 1,
+      runId: RUN_ID,
+      status: 'complete',
+      createdAt: '2026-04-14T01:23:19.371Z',
+      updatedAt: '2026-04-14T01:24:01.000Z',
+      activeAttempt: null,
+      startedAt: '2026-04-14T01:23:19.900Z',
+      completedAt: '2026-04-14T01:24:01.000Z',
+    },
+  };
+}
+
 function createMessages(): MessageBlock[] {
   return [
     {
@@ -417,6 +433,41 @@ describe('ChatView inline run cards', () => {
     expect(container.textContent).toContain('$ for i in {1..3}; do echo tick-$i; done');
     expect(container.textContent).toContain('tick-1');
     expect(container.textContent).toContain('tick-3');
+  });
+
+  it('does not fetch logs for completed background bash starts in historical transcripts', async () => {
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'bash',
+          input: {
+            command: 'echo historical',
+            background: true,
+          },
+          output: `Started background command ${RUN_ID} for ui-preview-check.`,
+          status: 'ok',
+          details: { action: 'start', runId: RUN_ID },
+        },
+      ],
+      { listedRuns: [createCompletedShellRunRecord()] },
+    );
+
+    const clusterButton = container.querySelector('button[aria-expanded]') as HTMLButtonElement | null;
+    await act(async () => {
+      clusterButton?.click();
+      await flushAsyncWork();
+    });
+    const toolButton = container.querySelector('[data-background-run-id]') as HTMLElement | null;
+    await act(async () => {
+      toolButton?.click();
+      await flushAsyncWork();
+    });
+
+    expect(apiMocks.durableRun).not.toHaveBeenCalled();
+    expect(apiMocks.durableRunLog).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('(no output)');
   });
 
   it('focuses a background bash run event by expanding the trace cluster without opening tool output', async () => {

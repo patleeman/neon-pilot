@@ -42,6 +42,14 @@ function createWrapper(overrides: { versions?: Partial<typeof INITIAL_APP_EVENT_
   };
 }
 
+function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    value: visibilityState,
+  });
+  document.dispatchEvent(new Event('visibilitychange'));
+}
+
 describe('useConversationActiveExecutions', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -49,6 +57,7 @@ describe('useConversationActiveExecutions', () => {
   });
 
   afterEach(() => {
+    setDocumentVisibility('visible');
     vi.useRealTimers();
   });
 
@@ -144,5 +153,27 @@ describe('useConversationActiveExecutions', () => {
     });
 
     expect(result.current.executions).toEqual([]);
+  });
+
+  it('does not start the active execution poll loop while the document is hidden', async () => {
+    vi.useFakeTimers();
+    setDocumentVisibility('hidden');
+    vi.mocked(api.conversationExecutions).mockResolvedValue({
+      conversationId: 'conv-1',
+      primary: [execution({ id: 'run-1' })],
+      system: [],
+      hidden: [],
+      executions: [execution({ id: 'run-1' })],
+    });
+
+    const { result } = renderHook(() => useConversationActiveExecutions('conv-1'), { wrapper: createWrapper() });
+
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(result.current.executions).toEqual([]);
+    expect(api.conversationExecutions).not.toHaveBeenCalled();
   });
 });

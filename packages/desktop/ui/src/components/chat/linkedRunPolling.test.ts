@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DurableRunRecord } from '../../shared/types';
-import { INLINE_RUN_LOG_TAIL_LINES, normalizeInlineRunPollingOptions, shouldContinuePollingDurableRun } from './linkedRunPolling';
+import {
+  INLINE_RUN_LOG_TAIL_LINES,
+  normalizeInlineRunPollingOptions,
+  shouldContinuePollingDurableRun,
+  shouldPollInlineRunSnapshot,
+} from './linkedRunPolling';
 
 const INLINE_RUN_POLL_INTERVAL_MS = 2200;
 
@@ -29,5 +34,19 @@ describe('shouldContinuePollingDurableRun', () => {
     expect(shouldContinuePollingDurableRun({ status: { status: 'running' } } as DurableRunRecord)).toBe(true);
     expect(shouldContinuePollingDurableRun({ status: { status: 'complete' } } as DurableRunRecord)).toBe(false);
     expect(shouldContinuePollingDurableRun({ status: { status: 'failed' } } as DurableRunRecord)).toBe(false);
+  });
+});
+
+describe('shouldPollInlineRunSnapshot', () => {
+  it('requires a visible live surface and an active or unknown run', () => {
+    const runningRun = { status: { status: 'running' } } as DurableRunRecord;
+    const completeRun = { status: { status: 'complete' } } as DurableRunRecord;
+
+    expect(shouldPollInlineRunSnapshot({ run: runningRun, visible: true, open: true })).toBe(true);
+    expect(shouldPollInlineRunSnapshot({ run: runningRun, visible: true, open: false, streaming: true })).toBe(true);
+    expect(shouldPollInlineRunSnapshot({ run: runningRun, visible: true, open: false })).toBe(false);
+    expect(shouldPollInlineRunSnapshot({ run: runningRun, visible: false, open: true })).toBe(false);
+    expect(shouldPollInlineRunSnapshot({ run: completeRun, visible: true, open: true })).toBe(false);
+    expect(shouldPollInlineRunSnapshot({ run: null, visible: true, open: true })).toBe(true);
   });
 });
