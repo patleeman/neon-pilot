@@ -1,10 +1,13 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { normalizeGeneratedConversationTitle } from '@neon-pilot/extensions/backend/conversations';
-import { Type } from '@sinclair/typebox';
 
-export const ConversationTitleToolParams = Type.Object({
-  title: Type.String({ description: 'Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters.' }),
-});
+export const ConversationTitleToolParams = {
+  type: 'object',
+  properties: {
+    title: { type: 'string', description: 'Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters.' },
+  },
+  required: ['title'],
+} as const;
 
 export async function executeSetConversationTitle(
   params: { title?: string },

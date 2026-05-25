@@ -1,4 +1,3 @@
-import { Value } from '@sinclair/typebox/value';
 import { describe, expect, it } from 'vitest';
 
 import { createAskUserQuestionAgentExtension } from './askUserQuestionAgentExtension.js';
@@ -54,18 +53,17 @@ describe('ask user question agent extension', () => {
     const tool = registerAskUserQuestionTool();
     const guidelines = tool.promptGuidelines?.join('\n') ?? '';
 
-    expect(Value.Check(tool.parameters as never, { question: 'Which environment should I use?' })).toBe(true);
-    expect(
-      Value.Check(tool.parameters as never, {
-        questions: [
-          {
-            label: 'Which environment should I use?',
-            style: 'radio',
-            options: ['staging', 'prod'],
-          },
-        ],
-      }),
-    ).toBe(true);
+    expect(tool.parameters).toMatchObject({
+      type: 'object',
+      properties: {
+        question: { type: 'string' },
+        questions: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 8,
+        },
+      },
+    });
     expect(guidelines).toContain('questions[]');
     expect(guidelines).toContain('radio');
     expect(guidelines).toContain('check style');

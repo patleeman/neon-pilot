@@ -1,58 +1,70 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { Type } from '@sinclair/typebox';
 
 const ASK_USER_LEGACY_MAX_OPTIONS = 6;
 const ASK_USER_MAX_QUESTIONS = 8;
 const ASK_USER_MAX_OPTIONS_PER_QUESTION = 12;
 
-const AskUserQuestionOptionParams = Type.Object({
-  value: Type.String({ minLength: 1, description: 'Stable value sent back when this option is selected.' }),
-  label: Type.Optional(Type.String({ description: 'User-facing option label. Defaults to value.' })),
-  details: Type.Optional(Type.String({ description: 'Optional supporting text shown under the option.' })),
-});
+const AskUserQuestionOptionParams = {
+  type: 'object',
+  properties: {
+    value: { type: 'string', minLength: 1, description: 'Stable value sent back when this option is selected.' },
+    label: { type: 'string', description: 'User-facing option label. Defaults to value.' },
+    details: { type: 'string', description: 'Optional supporting text shown under the option.' },
+  },
+  required: ['value'],
+} as const;
 
-const AskUserQuestionPromptParams = Type.Object({
-  id: Type.Optional(Type.String({ description: 'Optional stable question id used to track the answer locally.' })),
-  label: Type.Optional(Type.String({ description: 'User-facing question label.' })),
-  question: Type.Optional(Type.String({ description: 'Alias for label.' })),
-  details: Type.Optional(Type.String({ description: 'Optional supporting context for this question.' })),
-  style: Type.Optional(
-    Type.Union([Type.Literal('radio'), Type.Literal('check'), Type.Literal('checkbox')], {
+const AskUserQuestionPromptParams = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'Optional stable question id used to track the answer locally.' },
+    label: { type: 'string', description: 'User-facing question label.' },
+    question: { type: 'string', description: 'Alias for label.' },
+    details: { type: 'string', description: 'Optional supporting context for this question.' },
+    style: {
+      type: 'string',
+      enum: ['radio', 'check', 'checkbox'],
       description: 'radio for one choice, check/checkbox for multi-select.',
-    }),
-  ),
-  options: Type.Array(Type.Union([Type.String({ minLength: 1 }), AskUserQuestionOptionParams]), {
-    minItems: 1,
-    maxItems: ASK_USER_MAX_OPTIONS_PER_QUESTION,
-    description: 'Available answers for this question.',
-  }),
-});
+    },
+    options: {
+      type: 'array',
+      items: {
+        anyOf: [{ type: 'string', minLength: 1 }, AskUserQuestionOptionParams],
+      },
+      minItems: 1,
+      maxItems: ASK_USER_MAX_OPTIONS_PER_QUESTION,
+      description: 'Available answers for this question.',
+    },
+  },
+  required: ['options'],
+} as const;
 
-export const AskUserQuestionToolParams = Type.Object({
-  question: Type.Optional(
-    Type.String({
+export const AskUserQuestionToolParams = {
+  type: 'object',
+  properties: {
+    question: {
+      type: 'string',
       description: 'Legacy single-question form. Use questions[] for multiple questions or check-style questions.',
-    }),
-  ),
-  details: Type.Optional(
-    Type.String({
+    },
+    details: {
+      type: 'string',
       description: 'Optional overall context, or legacy single-question context when question is used alone.',
-    }),
-  ),
-  options: Type.Optional(
-    Type.Array(Type.String({ minLength: 1 }), {
+    },
+    options: {
+      type: 'array',
+      items: { type: 'string', minLength: 1 },
       description: 'Legacy quick-reply options for a single-question prompt.',
       maxItems: ASK_USER_LEGACY_MAX_OPTIONS,
-    }),
-  ),
-  questions: Type.Optional(
-    Type.Array(AskUserQuestionPromptParams, {
+    },
+    questions: {
+      type: 'array',
+      items: AskUserQuestionPromptParams,
       minItems: 1,
       maxItems: ASK_USER_MAX_QUESTIONS,
       description: 'Structured questions to render in the desktop UI. Prefer this for multiple questions and radio/check layouts.',
-    }),
-  ),
-});
+    },
+  },
+} as const;
 
 type AskUserQuestionStyle = 'radio' | 'check';
 

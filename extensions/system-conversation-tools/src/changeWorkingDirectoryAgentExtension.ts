@@ -2,18 +2,21 @@ import { existsSync, statSync } from 'node:fs';
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { resolveRequestedCwd } from '@neon-pilot/extensions/backend/conversations';
-import { Type } from '@sinclair/typebox';
 
-export const ChangeWorkingDirectoryToolParams = Type.Object({
-  cwd: Type.String({
-    description: 'Target working directory. Relative paths resolve from the current conversation cwd.',
-  }),
-  continuePrompt: Type.Optional(
-    Type.String({
+export const ChangeWorkingDirectoryToolParams = {
+  type: 'object',
+  properties: {
+    cwd: {
+      type: 'string',
+      description: 'Target working directory. Relative paths resolve from the current conversation cwd.',
+    },
+    continuePrompt: {
+      type: 'string',
       description: 'Optional prompt to continue automatically in the new working directory after the switch completes.',
-    }),
-  ),
-});
+    },
+  },
+  required: ['cwd'],
+} as const;
 
 export interface RequestConversationWorkingDirectoryChangeInput {
   conversationId: string;
