@@ -112,6 +112,7 @@ function traceSummaryTone(category: TraceClusterSummaryCategory) {
 }
 
 const MAX_VISIBLE_TRACE_BLOCKS = 5;
+const MAX_DEFERRED_TRACE_PREFETCH_BLOCKS = MAX_VISIBLE_TRACE_BLOCKS;
 const TRACE_CLUSTER_INACTIVE_GRACE_MS = 900;
 
 function readToolRecordString(source: unknown, key: string): string | undefined {
@@ -310,6 +311,7 @@ export function TraceClusterBlock({
 }) {
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const [showAllBlocks, setShowAllBlocks] = useState(false);
+  const requestedDeferredBlockIdsRef = useRef<Set<string>>(new Set());
   const expandedCategories = summary.categories.slice(0, 3);
   const remainingCategoryCount = Math.max(0, summary.categories.length - expandedCategories.length);
   const durationLabel = summary.durationMs && summary.durationMs > 0 ? `${(summary.durationMs / 1000).toFixed(1)}s` : null;
@@ -324,8 +326,10 @@ export function TraceClusterBlock({
       return;
     }
 
-    for (const blockId of deferredBlockIds) {
-      if (!hydratingMessageBlockIds?.has(blockId)) {
+    const blockIds = deferredBlockIds.slice(-MAX_DEFERRED_TRACE_PREFETCH_BLOCKS);
+    for (const blockId of blockIds) {
+      if (!hydratingMessageBlockIds?.has(blockId) && !requestedDeferredBlockIdsRef.current.has(blockId)) {
+        requestedDeferredBlockIdsRef.current.add(blockId);
         void onHydrateMessage(blockId);
       }
     }
