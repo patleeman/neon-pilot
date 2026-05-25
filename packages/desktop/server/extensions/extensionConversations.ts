@@ -120,6 +120,19 @@ export function createExtensionConversationsCapability(
       };
     },
 
+    async setActiveTools(conversationId: string, toolNames: string[]): Promise<{ conversationId: string; toolNames: string[] }> {
+      const entry = findLiveEntry(conversationId);
+      const patchable = entry.session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
+      if (typeof patchable.setActiveTools !== 'function') {
+        throw new Error(`Conversation "${conversationId}" does not support active tool updates.`);
+      }
+      const normalized = [...new Set(toolNames.map((toolName) => toolName.trim()).filter(Boolean))];
+      patchable.setActiveTools(normalized);
+      invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', { type: 'session.tools.updated', conversationId, toolNames: normalized });
+      return { conversationId, toolNames: patchable.getActiveToolNames?.() ?? normalized };
+    },
+
     /**
      * Read conversation blocks (session detail).
      * Works for both live and persisted sessions.

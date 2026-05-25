@@ -6,11 +6,42 @@
   "defaultEnabled": false,
   "description": "Replace the model-visible tool surface with a JavaScript REPL that exposes tools as globals.",
   "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
   "backend": {
     "entry": "src/backend.ts",
-    "agentExtension": "default"
+    "agentExtension": "default",
+    "actions": [
+      {
+        "id": "readState",
+        "handler": "readState",
+        "title": "Read Code Mode State"
+      },
+      {
+        "id": "toggleCodeMode",
+        "handler": "toggleCodeMode",
+        "title": "Toggle Code Mode"
+      }
+    ]
   },
   "contributes": {
+    "slashCommands": [
+      {
+        "name": "code",
+        "description": "Toggle code mode for this conversation. Usage: /code, /code on, /code off, /code status",
+        "action": "toggleCodeMode"
+      }
+    ],
+    "composerShelves": [
+      {
+        "id": "code-mode-status",
+        "title": "Code Mode",
+        "component": "CodeModeShelf",
+        "placement": "top"
+      }
+    ],
     "tools": [
       {
         "id": "exec-code",

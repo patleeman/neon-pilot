@@ -112,6 +112,10 @@ const ctx = {
     },
     async setTitle() {},
     async appendVisibleCustomMessage() {},
+    async setActiveTools(_conversationId, toolNames) {
+      activeTools = toolNames;
+      return { conversationId: 'smoke-conversation', toolNames };
+    },
     metadata: {
       async get() {
         return null;
@@ -237,7 +241,10 @@ const smokes = {
     assert(execCode?.execute, 'exec_code tool was not registered');
     const start = registeredEvents.find((event) => event.eventName === 'session_start');
     assert(start?.handler, 'code mode session_start hook missing');
-    start.handler({}, { ...ctx.agentToolContext, setActiveTools: pi.setActiveTools });
+    activeTools = ['read', 'exec_code'];
+    start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
+    assert(JSON.stringify(activeTools) === JSON.stringify(['read']), 'code mode should not stay active by default');
+    await module.toggleCodeMode({ conversationId: 'smoke-conversation', action: 'on' }, ctx);
     assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not replace active tools');
     const result = await execCode.execute('smoke', { code: 'return await listTools();' }, undefined, undefined, ctx.agentToolContext);
     assert(result?.content?.[0]?.text?.includes('read'), 'exec_code did not expose tool discovery');

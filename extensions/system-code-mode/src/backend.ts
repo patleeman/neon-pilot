@@ -1,6 +1,7 @@
 import vm from 'node:vm';
 
 import type { AgentToolResult, ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
 type CodeModeContext = ExtensionContext & {
   cwd?: string;
@@ -25,6 +26,8 @@ interface ToolSummary {
 }
 
 const CODE_TOOL_NAME = 'exec_code';
+const METADATA_NAMESPACE = 'system-code-mode';
+const DEFAULT_TOOL_NAMES = ['read', 'bash', 'edit', 'write'];
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 120_000;
 
@@ -36,6 +39,91 @@ function sessionKey(ctx: CodeModeContext): string {
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function conversationIdFrom(input: unknown, ctx: ExtensionBackendContext): string {
+  const explicit = isRecord(input) && typeof input.conversationId === 'string' ? input.conversationId.trim() : '';
+  const conversationId = explicit || ctx.toolContext?.conversationId?.trim() || ctx.toolContext?.sessionId?.trim();
+  if (!conversationId) throw new Error('conversationId required');
+  return conversationId;
+}
+
+function normalizeState(value: unknown): { enabled: boolean; updatedAt?: string } {
+  if (!isRecord(value)) return { enabled: false };
+  return {
+    enabled: value.enabled === true,
+    ...(typeof value.updatedAt === 'string' ? { updatedAt: value.updatedAt } : {}),
+  };
+}
+
+export async function readState(input: unknown, ctx: ExtensionBackendContext): Promise<{ enabled: boolean; updatedAt?: string }> {
+  const conversationId = conversationIdFrom(input, ctx);
+  return normalizeState(await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE }));
+}
+
+async function writeState(
+  conversationId: string,
+  enabled: boolean,
+  ctx: ExtensionBackendContext,
+): Promise<{ enabled: boolean; updatedAt: string }> {
+  const state = { enabled, updatedAt: new Date().toISOString() };
+  await ctx.conversations.metadata.set({ conversationId, namespace: METADATA_NAMESPACE, values: state });
+  ctx.ui.invalidate(['sessions', 'extensions']);
+  return state;
+}
+
+async function setLiveTools(conversationId: string, enabled: boolean, ctx: ExtensionBackendContext): Promise<void> {
+  const conversations = ctx.conversations as typeof ctx.conversations & {
+    setActiveTools?(conversationId: string, toolNames: string[]): Promise<unknown>;
+  };
+  if (!conversations.setActiveTools) return;
+  await conversations.setActiveTools(conversationId, enabled ? [CODE_TOOL_NAME] : DEFAULT_TOOL_NAMES);
+}
+
+function readAction(input: unknown): 'toggle' | 'on' | 'off' | 'status' {
+  const raw =
+    isRecord(input) && typeof input.action === 'string'
+      ? input.action
+      : isRecord(input) && typeof input.argument === 'string'
+        ? input.argument
+        : '';
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'on' || normalized === 'enable' || normalized === 'enabled') return 'on';
+  if (normalized === 'off' || normalized === 'disable' || normalized === 'disabled') return 'off';
+  if (normalized === 'status' || normalized === 'state' || normalized === 'show') return 'status';
+  if (!normalized || normalized === 'toggle') return 'toggle';
+  throw new Error('Usage: /code, /code on, /code off, or /code status');
+}
+
+export async function toggleCodeMode(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{ enabled: boolean; updatedAt?: string; notice: { tone: 'accent'; text: string } }> {
+  const conversationId = conversationIdFrom(input, ctx);
+  const current = await readState({ conversationId }, ctx);
+  const action = readAction(input);
+  if (action === 'status') {
+    return {
+      ...current,
+      notice: { tone: 'accent', text: current.enabled ? 'Code mode is on.' : 'Code mode is off.' },
+    };
+  }
+  const enabled = action === 'toggle' ? !current.enabled : action === 'on';
+  const next = await writeState(conversationId, enabled, ctx);
+  await setLiveTools(conversationId, enabled, ctx);
+  return {
+    ...next,
+    notice: {
+      tone: 'accent',
+      text: enabled
+        ? 'Code mode enabled. The next turn will expose only exec_code.'
+        : 'Code mode disabled. Start a new turn to restore the normal tool surface.',
+    },
+  };
 }
 
 function normalizeTimeout(value: unknown): number {
@@ -169,6 +257,27 @@ function activateCodeMode(ctx: CodeModeContext): void {
   ctx.setActiveTools?.([CODE_TOOL_NAME]);
 }
 
+function readCodeModeStateFromSession(ctx: CodeModeContext): { enabled: boolean } {
+  const entries = ctx.sessionManager?.getEntries?.() ?? [];
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const entry = entries[index];
+    if (!isRecord(entry) || entry.type !== 'custom' || entry.customType !== 'code-mode-state') continue;
+    return { enabled: isRecord(entry.data) && entry.data.enabled === true };
+  }
+  return { enabled: false };
+}
+
+function syncActiveTools(ctx: CodeModeContext): void {
+  if (readCodeModeStateFromSession(ctx).enabled) {
+    activateCodeMode(ctx);
+    return;
+  }
+  const activeTools = ctx.getActiveTools?.();
+  if (activeTools?.includes(CODE_TOOL_NAME)) {
+    ctx.setActiveTools?.(activeTools.filter((toolName) => toolName !== CODE_TOOL_NAME));
+  }
+}
+
 export default function codeModeExtension(pi: ExtensionAPI): void {
   pi.registerTool({
     name: CODE_TOOL_NAME,
@@ -195,6 +304,6 @@ export default function codeModeExtension(pi: ExtensionAPI): void {
     },
   });
 
-  pi.on('session_start', (_event, ctx) => activateCodeMode(ctx as CodeModeContext));
-  pi.on('model_select', (_event, ctx) => activateCodeMode(ctx as CodeModeContext));
+  pi.on('session_start', (_event, ctx) => syncActiveTools(ctx as CodeModeContext));
+  pi.on('model_select', (_event, ctx) => syncActiveTools(ctx as CodeModeContext));
 }
