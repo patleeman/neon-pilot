@@ -390,7 +390,7 @@ interface ExcalidrawEditorSavePayload {
 }
 
 const INITIAL_HISTORICAL_TAIL_BLOCKS = 40;
-const HISTORICAL_TAIL_BLOCKS_STEP = 120;
+const HISTORICAL_TAIL_BLOCKS_STEP = 40;
 const HISTORICAL_TAIL_BLOCKS_STEP_PERCENT = 10;
 const MAX_RELATED_THREAD_SELECTIONS = 5;
 const MAX_VISIBLE_RELATED_THREAD_RESULTS = 10;
@@ -399,7 +399,8 @@ const MAX_RELATED_THREAD_CANDIDATES = 24;
 
 const HISTORICAL_TAIL_BLOCKS_JUMP_PADDING = 40;
 const MAX_RENDERED_BLOCKS = 300;
-const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 1400;
+const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 700;
+const HISTORICAL_PREFETCH_COOLDOWN_MS = 800;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
 
@@ -1929,6 +1930,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollPrefetchUserIntentRef = useRef(false);
+  const lastHistoricalPrefetchRequestedAtRef = useRef(0);
   const pendingJumpMessageIndexRef = useRef<number | null>(null);
   const [requestedFocusMessageIndex, setRequestedFocusMessageIndex] = useState<number | null>(null);
 
@@ -3054,12 +3056,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       !sessionLoading &&
       el.scrollTop <= HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX
     ) {
+      const now = performance.now();
+      if (now - lastHistoricalPrefetchRequestedAtRef.current < HISTORICAL_PREFETCH_COOLDOWN_MS) {
+        return;
+      }
+      lastHistoricalPrefetchRequestedAtRef.current = now;
       loadOlderMessages();
     }
   }, [historicalHasOlderBlocks, loadOlderMessages, sessionLoading, syncScrollStateFromDom]);
 
   useEffect(() => {
     scrollPrefetchUserIntentRef.current = false;
+    lastHistoricalPrefetchRequestedAtRef.current = 0;
   }, [id]);
 
   useEffect(() => {
@@ -5610,6 +5618,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         <div
           ref={scrollRef}
           className="conversation-scroll-shell h-full overflow-y-auto overflow-x-hidden"
+          data-conversation-scroll-shell="1"
+          data-conversation-id={id ?? 'draft'}
+          data-historical-tail-blocks={historicalTailBlocks}
+          data-historical-total-blocks={historicalTotalBlocks}
+          data-visible-message-count={visibleTranscriptMessages?.length ?? 0}
           style={{ scrollPaddingTop: `${conversationHeaderOffset + 16}px` }}
         >
           <div ref={conversationHeaderRef} className="sticky top-0 z-30 bg-base/90 px-8 pt-6 backdrop-blur sm:px-10">

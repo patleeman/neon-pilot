@@ -267,6 +267,7 @@ function describeInteractionTarget(target: EventTarget | null): string | null {
     [
       '[data-route]',
       '[data-testid]',
+      '[data-conversation-scroll-shell]',
       '[data-extension-id]',
       '[data-chat-transcript-panel]',
       '[data-message-index]',
@@ -286,13 +287,23 @@ function describeInteractionTarget(target: EventTarget | null): string | null {
   const parts = [element.tagName.toLowerCase()];
   const route = element.getAttribute('data-route');
   const testId = element.getAttribute('data-testid');
+  const scrollShell = element.getAttribute('data-conversation-scroll-shell');
   const extensionId = element.getAttribute('data-extension-id');
+  const conversationId = element.getAttribute('data-conversation-id');
+  const historicalTailBlocks = element.getAttribute('data-historical-tail-blocks');
+  const historicalTotalBlocks = element.getAttribute('data-historical-total-blocks');
+  const visibleMessageCount = element.getAttribute('data-visible-message-count');
   const messageIndex = element.getAttribute('data-message-index');
   const ariaLabel = element.getAttribute('aria-label');
   const role = element.getAttribute('role');
   if (route) parts.push(`route=${route}`);
   if (testId) parts.push(`testid=${testId}`);
+  if (scrollShell) parts.push('conversation-scroll');
   if (extensionId) parts.push(`extension=${extensionId}`);
+  if (conversationId) parts.push(`conversation=${conversationId}`);
+  if (historicalTailBlocks) parts.push(`tail=${historicalTailBlocks}`);
+  if (historicalTotalBlocks) parts.push(`total=${historicalTotalBlocks}`);
+  if (visibleMessageCount) parts.push(`visible=${visibleMessageCount}`);
   if (messageIndex) parts.push(`message=${messageIndex}`);
   if (role) parts.push(`role=${role}`);
   if (ariaLabel) parts.push(`label=${ariaLabel.slice(0, 80)}`);

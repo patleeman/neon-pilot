@@ -77,6 +77,36 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('includes transcript size metadata for conversation scroll interactions', async () => {
+    const { recordRendererInteraction } = await import('./perfDiagnostics');
+    const scrollShell = document.createElement('div');
+    scrollShell.setAttribute('data-conversation-scroll-shell', '1');
+    scrollShell.setAttribute('data-conversation-id', 'conv-1');
+    scrollShell.setAttribute('data-historical-tail-blocks', '80');
+    scrollShell.setAttribute('data-historical-total-blocks', '600');
+    scrollShell.setAttribute('data-visible-message-count', '75');
+    document.body.appendChild(scrollShell);
+
+    recordRendererInteraction('scroll', scrollShell, 456);
+
+    const perf = (
+      globalThis as typeof globalThis & {
+        __NEON_PILOT_APP_PERF__?: { interactionSamples?: Array<{ type: string; target: string | null }> };
+      }
+    ).__NEON_PILOT_APP_PERF__;
+    expect(perf?.interactionSamples).toEqual([
+      expect.objectContaining({
+        type: 'scroll',
+        target: expect.stringContaining('conversation-scroll'),
+      }),
+    ]);
+    const target = perf?.interactionSamples?.[0]?.target ?? '';
+    expect(target).toContain('conversation=conv-1');
+    expect(target).toContain('tail=80');
+    expect(target).toContain('total=600');
+    expect(target).toContain('visible=75');
+  });
+
   it('only logs perf samples for the documented debug key', async () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     localStorage.setItem('pa.debugPerf', '1');
