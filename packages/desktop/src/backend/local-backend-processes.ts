@@ -31,6 +31,9 @@ interface BackendFatalMessage {
 
 type BackendChildMessage = BackendReadyMessage | BackendFatalMessage;
 
+const nativeWorkbenchBrowserMethods = new Set(['isActive', 'listTabs', 'snapshot', 'screenshot', 'cdp']);
+const NATIVE_WORKBENCH_BROWSER_SLOW_MS = 1_000;
+
 interface NativeWorkbenchBrowserRequest {
   type: 'native-workbench-browser-request';
   id: string;
@@ -328,11 +331,13 @@ export class LocalBackendProcesses {
       (value as { type?: unknown }).type === 'native-workbench-browser-request' &&
       typeof (value as { id?: unknown }).id === 'string' &&
       typeof (value as { method?: unknown }).method === 'string' &&
+      nativeWorkbenchBrowserMethods.has((value as { method: string }).method) &&
       Array.isArray((value as { args?: unknown }).args)
     );
   }
 
   private async handleNativeWorkbenchBrowserRequest(child: ChildProcess, request: NativeWorkbenchBrowserRequest): Promise<void> {
+    const startedAt = Date.now();
     try {
       const host = this.workbenchBrowserToolHost;
       if (!host) {
@@ -340,25 +345,42 @@ export class LocalBackendProcesses {
       }
 
       let result: unknown;
-      if (request.method === 'isActive') {
-        result = await host.isActive(String(request.args[0] ?? ''));
-      } else if (request.method === 'listTabs') {
-        result = await host.listTabs();
-      } else if (request.method === 'snapshot') {
-        result = await host.snapshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
-      } else if (request.method === 'screenshot') {
-        result = await host.screenshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
-      } else {
-        result = await host.cdp(request.args[0] as { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string });
+      switch (request.method) {
+        case 'isActive':
+          result = await host.isActive(String(request.args[0] ?? ''));
+          break;
+        case 'listTabs':
+          result = await host.listTabs();
+          break;
+        case 'snapshot':
+          result = await host.snapshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
+          break;
+        case 'screenshot':
+          result = await host.screenshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
+          break;
+        case 'cdp':
+          result = await host.cdp(
+            request.args[0] as { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string },
+          );
+          break;
       }
 
+      const durationMs = Date.now() - startedAt;
+      if (durationMs > NATIVE_WORKBENCH_BROWSER_SLOW_MS) {
+        process.stderr.write(`[desktop-backend] Workbench Browser native ${request.method} took ${String(durationMs)}ms\n`);
+      }
       child.send?.({ type: 'native-workbench-browser-response', id: request.id, ok: true, result });
     } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(
+        `[desktop-backend] Workbench Browser native ${request.method} failed after ${String(durationMs)}ms: ${message}\n`,
+      );
       child.send?.({
         type: 'native-workbench-browser-response',
         id: request.id,
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       });
     }
   }
