@@ -362,7 +362,7 @@ describe('appEvents mocked behavior', () => {
       getRuntimeScope: () => 'assistant',
     });
 
-    const sessionsWatcher = getLatestWatch('/sessions', (registration) => registration.options.recursive === true);
+    const sessionsWatcher = getLatestWatch('/sessions', (registration) => !registration.options.recursive);
     sessionsWatcher.callback('change', 'conv-1.jsonl');
     vi.advanceTimersByTime(80);
     sessionsWatcher.callback('change', 'conv-1.jsonl');
@@ -417,7 +417,7 @@ describe('appEvents mocked behavior', () => {
       getRuntimeScope: () => 'assistant',
     });
 
-    getLatestWatch('/sessions', (registration) => registration.options.recursive === true).callback('change', 'conv-1.jsonl');
+    getLatestWatch('/sessions', (registration) => !registration.options.recursive).callback('change', 'conv-1.jsonl');
     getLatestWatch('/config', (registration) => !registration.options.recursive).callback('change', 'profile.json');
 
     stopAppEventMonitor();

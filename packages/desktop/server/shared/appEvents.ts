@@ -74,6 +74,7 @@ interface AppEventWatchTarget {
 }
 
 const SESSION_FILE_CHANGED_MIN_INTERVAL_MS = 500;
+const DEFAULT_APP_EVENT_POLL_INTERVAL_MS = 1_000;
 
 const ALL_TOPICS: AppEventTopic[] = [
   'sessions',
@@ -132,6 +133,33 @@ function collectDirectoryTree(root: string): string[] {
 
   directories.sort((left, right) => left.localeCompare(right));
   return directories;
+}
+
+function collectSessionFileSignatures(root: string): Map<string, string> {
+  const signatures = new Map<string, string>();
+  for (const directory of collectDirectoryTree(root)) {
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.jsonl')) {
+        continue;
+      }
+
+      const filePath = join(directory, entry.name);
+      try {
+        const stat = statSync(filePath);
+        signatures.set(filePath, `${stat.mtimeMs}:${stat.size}`);
+      } catch {
+        // The file may have been moved between readdir and stat; the next pass will resync it.
+      }
+    }
+  }
+  return signatures;
 }
 
 function normalizeWatchRelativePath(filename: string | Buffer | null | undefined): string | null {
@@ -435,8 +463,32 @@ function startDirectoryTreeWatch(path: string, onEvent: (eventKind: AppEventWatc
   return startManualDirectoryTreeWatch(path, onEvent);
 }
 
+function startSessionFilesWatch(
+  path: string,
+  intervalMs: number,
+  onEvent: (eventKind: AppEventWatchKind, changedPath: string | null) => void,
+): WatchStop {
+  const stopWatch = startManualDirectoryTreeWatch(path, onEvent);
+  let signatures = collectSessionFileSignatures(path);
+  const pollTimer = setInterval(() => {
+    const nextSignatures = collectSessionFileSignatures(path);
+    for (const [filePath, signature] of nextSignatures) {
+      if (signatures.get(filePath) !== signature) {
+        onEvent(signatures.has(filePath) ? 'change' : 'rename', filePath);
+      }
+    }
+    signatures = nextSignatures;
+  }, intervalMs);
+
+  return () => {
+    clearInterval(pollTimer);
+    stopWatch();
+  };
+}
+
 function startWatchTarget(
   target: AppEventWatchTarget,
+  pollIntervalMs: number,
   onTopics: (topics: Iterable<AppEventTopic>) => void,
   queueConversationSessionFileChange: (changedPath: string | null) => void,
   scheduleRebuild: () => void,
@@ -461,6 +513,9 @@ function startWatchTarget(
   };
 
   try {
+    if (target.recursive && target.topics.has('sessionFiles')) {
+      return startSessionFilesWatch(target.path, pollIntervalMs, handleEvent);
+    }
     return target.recursive ? startDirectoryTreeWatch(target.path, handleEvent) : startBasicWatch(target.path, handleEvent);
   } catch (error) {
     logWarn('app event watch registration failed', {
@@ -537,6 +592,10 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
   let runtimeScope = options.getRuntimeScope();
   let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
   let rebuildTimer: ReturnType<typeof setTimeout> | undefined;
+  const pollIntervalMs =
+    Number.isSafeInteger(options.intervalMs) && (options.intervalMs as number) > 0
+      ? Math.max(250, options.intervalMs as number)
+      : DEFAULT_APP_EVENT_POLL_INTERVAL_MS;
   const pendingTopics = new Set<AppEventTopic>();
   const pendingConversationSessionFilePaths = new Set<string>();
 
@@ -604,7 +663,7 @@ export function startAppEventMonitor(options: AppEventMonitorOptions): void {
       stop();
     }
     watcherStops = buildWatchTargets(options, runtimeScope).map((target) =>
-      startWatchTarget(target, queueInvalidation, queueConversationSessionFileChange, scheduleRebuild),
+      startWatchTarget(target, pollIntervalMs, queueInvalidation, queueConversationSessionFileChange, scheduleRebuild),
     );
   };
 
