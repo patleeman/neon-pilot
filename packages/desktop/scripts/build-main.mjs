@@ -64,3 +64,20 @@ await build({
   logLevel: 'info',
   nodePaths,
 });
+
+// Build local backend child process. Electron main supervises this process; it
+// owns the product backend and daemon runtime.
+await build({
+  entryPoints: [resolve(dir, 'src', 'backend', 'local-backend-child.ts')],
+  outfile: resolve(dir, 'dist', 'backend', 'local-backend-child.js'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  banner: {
+    js: `import { createRequire as __paBackendCreateRequire } from 'node:module';var require=__paBackendCreateRequire(import.meta.url);`,
+  },
+  external: ['electron', 'fsevents'],
+  logLevel: 'info',
+  nodePaths,
+});

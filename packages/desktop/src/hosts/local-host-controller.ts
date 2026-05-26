@@ -1,5 +1,5 @@
 import { getDesktopAppBaseUrl } from '../app-protocol.js';
-import { loadLocalApiModule, type LocalApiModuleLoader } from '../local-api-module.js';
+import type { LocalApiModule, LocalApiModuleLoader } from '../local-api-module.js';
 import type {
   DesktopApiStreamEvent,
   DesktopAppBridgeEvent,
@@ -40,6 +40,14 @@ interface LocalBackendStatus {
 interface LocalBackendController {
   ensureStarted(): Promise<void>;
   getStatus(): Promise<LocalBackendStatus>;
+  dispatchApiRequest(input: {
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    path: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+  }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }>;
+  callLocalApiMethod(method: string, args: unknown[]): Promise<unknown>;
+  subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
   restart(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -57,6 +65,23 @@ class LazyLocalBackendProcesses implements LocalBackendController {
     }
 
     return (await this.backendPromise).getStatus();
+  }
+
+  async dispatchApiRequest(input: {
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    path: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+  }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }> {
+    return (await this.load()).dispatchApiRequest(input);
+  }
+
+  async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+    return (await this.load()).callLocalApiMethod(method, args);
+  }
+
+  async subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void> {
+    return (await this.load()).subscribeApiStream(path, onEvent);
   }
 
   async restart(): Promise<void> {
@@ -77,6 +102,48 @@ class LazyLocalBackendProcesses implements LocalBackendController {
   }
 }
 
+function createBackendLocalApiModule(backend: LocalBackendController): LocalApiModule {
+  return new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (typeof property !== 'string' || property === 'then') {
+          return undefined;
+        }
+
+        if (property === 'dispatchDesktopLocalApiRequest') {
+          return (input: Parameters<LocalApiModule['dispatchDesktopLocalApiRequest']>[0]) => backend.dispatchApiRequest(input);
+        }
+
+        if (property === 'subscribeDesktopLocalApiStream') {
+          return (path: string, onEvent: (event: DesktopApiStreamEvent) => void) => backend.subscribeApiStream(path, onEvent);
+        }
+
+        if (property === 'subscribeDesktopAppEvents') {
+          return async (onEvent: (event: DesktopAppBridgeEvent) => void) =>
+            backend.subscribeApiStream('/api/app-events/events', (event) => {
+              if (event.type === 'open') {
+                onEvent({ type: 'open' });
+              } else if (event.type === 'close') {
+                onEvent({ type: 'close' });
+              } else if (event.type === 'error') {
+                onEvent({ type: 'error', message: event.message });
+              } else if ('data' in event && typeof event.data === 'string') {
+                onEvent({ type: 'event', event: JSON.parse(event.data) as unknown });
+              }
+            });
+        }
+
+        if (property === 'setDesktopWorkbenchBrowserToolHost') {
+          return () => undefined;
+        }
+
+        return (...args: unknown[]) => backend.callLocalApiMethod(property, args);
+      },
+    },
+  ) as LocalApiModule;
+}
+
 export class LocalHostController implements HostController {
   readonly id: string;
   readonly label: string;
@@ -85,11 +152,14 @@ export class LocalHostController implements HostController {
   constructor(
     record: Extract<DesktopHostRecord, { kind: 'local' }>,
     private readonly backend: LocalBackendController = new LazyLocalBackendProcesses(),
-    private readonly loadLocalApi = loadLocalApiModule as LocalApiModuleLoader,
+    loadLocalApi?: LocalApiModuleLoader,
   ) {
     this.id = record.id;
     this.label = record.label;
+    this.loadLocalApi = loadLocalApi ?? (() => Promise.resolve(createBackendLocalApiModule(this.backend)));
   }
+
+  private readonly loadLocalApi: LocalApiModuleLoader;
 
   async ensureRunning(): Promise<void> {
     await this.backend.ensureStarted();

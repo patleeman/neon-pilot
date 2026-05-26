@@ -13,17 +13,19 @@ The daemon is a long-lived background process that owns durable runtime behavior
 
 ## Lifecycle
 
-The desktop app spawns the daemon as a child process on launch and sends SIGTERM on quit. The daemon communicates over a local Unix socket.
+The desktop app starts a backend child process after the first window has a chance to paint. That backend child owns the daemon runtime in-process and sends SIGTERM-equivalent shutdown through the daemon lifecycle when the app quits. The daemon still communicates over a local Unix socket for daemon-client APIs inside the backend boundary.
 
 ```
-Desktop app ←──→ Daemon (child process)
-                    │
-                    ├── Runtime DB (SQLite)
-                    ├── Automation store
-                    ├── Run logs
+Desktop app/menu shell ←──→ Backend child process
+                              │
+                              └── Daemon runtime
+                                    │
+                                    ├── Runtime DB (SQLite)
+                                    ├── Automation store
+                                    ├── Run logs
 ```
 
-If the daemon crashes or is killed, the desktop app restarts it automatically.
+If the backend child crashes or is killed, the desktop app marks the local runtime unavailable and can restart it automatically through the local host controller.
 
 ## Durable Agent Runs
 

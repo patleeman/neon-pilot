@@ -31,14 +31,15 @@ Electron main process
     │       ├── Automations
     │       └── Settings
     │
-    ├── Local API worker threads
+    ├── Backend child process
     │       │
+    │       ├── Local API
     │       ├── Session parsing and search
     │       ├── Git/checkpoint operations
-    │       └── Vault and knowledge-base reads/writes
-    │
-    ├── Daemon (in-process runtime)
-    │       │
+    │       ├── Vault and knowledge-base reads/writes
+    │       ├── Extension backend host
+    │       └── Daemon runtime
+    │             │
     │       ├── Scheduled tasks
     │       ├── Wakeups
     │       └── Follow-up queue
@@ -46,9 +47,9 @@ Electron main process
 
 - Electron owns the UI surface through the `neon-pilot://app/` protocol
 - Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule deferred work
-- Freeze-prone local API work runs behind worker-thread RPC; do not import or execute heavy desktop server capabilities directly on the Electron main thread
+- Freeze-prone local API work runs in the backend child process; do not import or execute heavy desktop server capabilities directly on the Electron main thread
 - Avoid `spawnSync`/`execSync` in desktop main-process flows
-- The daemon owns durable background behavior and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
+- The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
 - The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions, automations, and daemon status after startup settles
 
 ## Layout Modes

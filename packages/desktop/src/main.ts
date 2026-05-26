@@ -13,7 +13,6 @@ import { HostManager } from './hosts/host-manager.js';
 import { registerDesktopIpc } from './ipc.js';
 import { type DesktopKeyboardShortcuts, validateDesktopKeyboardShortcuts } from './keyboard-shortcuts.js';
 import { resolveDesktopLaunchPresentation } from './launch-mode.js';
-import { loadLocalApiModule } from './local-api-module.js';
 import { installDesktopApplicationMenu, setDesktopApplicationMenuKeyboardShortcutsReader } from './menu.js';
 import { confirmDesktopQuit } from './quit.js';
 import { applyDesktopRuntimeEnvironmentOverrides } from './runtime-env.js';
@@ -563,19 +562,6 @@ async function bootstrapDesktopApp(): Promise<void> {
 
   scheduleDesktopBackendStartup((ready) => {
     logStartupMilestone(ready ? 'backend-ready' : 'backend-unavailable');
-    if (ready) {
-      void loadLocalApiModule()
-        .then((module) => {
-          module.setDesktopWorkbenchBrowserToolHost?.({
-            isActive: () => Promise.resolve(windowController!.isWorkbenchBrowserActive()),
-            listTabs: () => Promise.resolve(windowController!.listBrowserTabs()),
-            snapshot: (_conversationId, tabId) => windowController!.snapshotWorkbenchBrowser(tabId),
-            screenshot: (_conversationId, tabId) => windowController!.screenshotWorkbenchBrowser(tabId),
-            cdp: (input) => windowController!.cdpWorkbenchBrowser(input),
-          });
-        })
-        .catch((error) => logBootstrapError(error));
-    }
   });
 }
 
