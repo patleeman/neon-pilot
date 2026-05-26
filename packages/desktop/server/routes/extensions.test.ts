@@ -106,7 +106,7 @@ describe('registerExtensionRoutes', () => {
     await harness.getHandler('/api/extensions/registry')({}, registryRes);
     expect(registryRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        extensions: expect.arrayContaining([expect.objectContaining({ id: 'system-automations', enabled: true })]),
+        extensions: expect.arrayContaining([expect.objectContaining({ id: 'system-automations', packageType: 'system' })]),
         routes: expect.arrayContaining([
           { route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' },
         ]),
@@ -114,6 +114,21 @@ describe('registerExtensionRoutes', () => {
           expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
         ]),
         settings: expect.any(Object),
+      }),
+    );
+
+    const criticalRegistryRes = createResponse();
+    harness.getHandler('/api/extensions/registry/critical')({}, criticalRegistryRes);
+    expect(criticalRegistryRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensions: expect.arrayContaining([expect.objectContaining({ id: 'system-automations', packageType: 'system' })]),
+        routes: expect.arrayContaining([
+          { route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' },
+        ]),
+        surfaces: expect.arrayContaining([
+          expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
+        ]),
+        settings: {},
       }),
     );
 

@@ -298,6 +298,7 @@ export const api = {
   extensions: async () => extensionGet<ExtensionManifest[]>('/extensions'),
   extensionInstallations: async () => extensionGet<ExtensionInstallSummary[]>('/extensions/installed'),
   extensionRegistry: async () => extensionGet<ExtensionRegistryApiState>('/extensions/registry'),
+  extensionCriticalRegistry: async () => extensionGet<ExtensionRegistryApiState>('/extensions/registry/critical'),
   createExtension: async (input: {
     id: string;
     name: string;

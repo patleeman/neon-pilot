@@ -29,9 +29,13 @@ describe('buildDesktopProtocolErrorResponse', () => {
 
 describe('ensureDesktopAppProtocolForHost', () => {
   it('clears the local desktop shell cache so stale dynamic extension chunks do not survive updates', () => {
+    vi.useFakeTimers();
     ensureDesktopAppProtocolForHost({} as never, 'local');
 
     expect(setProxyMock).toHaveBeenCalledWith({ mode: 'direct' });
+    expect(clearCacheMock).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(10_000);
     expect(clearCacheMock).toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

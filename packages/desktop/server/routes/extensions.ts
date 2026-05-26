@@ -283,6 +283,20 @@ export function registerExtensionRoutes(
     }
   });
 
+  router.get('/api/extensions/registry/critical', (_req, res) => {
+    try {
+      const snapshot = readExtensionRegistrySnapshot();
+      res.json({
+        extensions: snapshot.extensions,
+        routes: snapshot.routes,
+        surfaces: [...snapshot.surfaces, ...snapshot.views],
+        settings: {},
+      });
+    } catch (err) {
+      sendRouteError(res, 'extensions critical registry error', err);
+    }
+  });
+
   router.get('/api/extensions', (_req, res) => {
     try {
       res.json(readExtensionRegistrySnapshot().extensions);

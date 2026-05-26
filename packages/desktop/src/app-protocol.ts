@@ -391,17 +391,13 @@ function configureDesktopProtocolSession(partitionSession: ElectronSession, host
     );
 
     // App shell asset URLs are content-hashed, but Chromium can keep a stale
-    // neon-pilot://app main bundle across app updates. That stale bundle can
-    // then try to dynamically import extension chunks that no longer exist,
-    // blanking every extension-owned page. Static asset requests wait for this
-    // repair before serving the shell so the first load after an update cannot
-    // win the race with cache clearing. Clear only the desktop shell session;
-    // browser/workbench web sessions use their own partitions.
-    setup.push(
-      partitionSession.clearCache().catch(() => {
+    // neon-pilot://app main bundle across app updates. This repair is useful,
+    // but serving static shell assets must not wait on Chromium cache IO.
+    setTimeout(() => {
+      void partitionSession.clearCache().catch(() => {
         // Cache clearing is a repair path, not a startup blocker.
-      }),
-    );
+      });
+    }, 10_000).unref();
   }
 
   return Promise.all(setup).then(() => undefined);

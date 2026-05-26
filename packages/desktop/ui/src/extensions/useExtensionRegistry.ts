@@ -777,12 +777,19 @@ function canLoadExtensionRegistry(): boolean {
   return typeof api.extensionRegistry === 'function';
 }
 
-async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
+function canLoadCriticalExtensionRegistry(): boolean {
+  return typeof api.extensionCriticalRegistry === 'function';
+}
+
+async function fetchExtensionRegistryState(options?: { critical?: boolean }): Promise<ExtensionRegistryState> {
   if (!canLoadExtensionRegistry()) {
     return EMPTY_EXTENSION_REGISTRY_STATE;
   }
 
-  const { extensions, routes, surfaces, settings } = await api.extensionRegistry();
+  const { extensions, routes, surfaces, settings } =
+    options?.critical === true && canLoadCriticalExtensionRegistry()
+      ? await api.extensionCriticalRegistry()
+      : await api.extensionRegistry();
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
@@ -823,8 +830,21 @@ async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
   };
 }
 
+let initialExtensionRegistryState: ExtensionRegistryState | null = null;
 let initialExtensionRegistryLoad: Promise<ExtensionRegistryState> | null =
-  import.meta.env.PROD && canLoadExtensionRegistry() ? fetchExtensionRegistryState().catch(() => EMPTY_EXTENSION_REGISTRY_STATE) : null;
+  import.meta.env.PROD && canLoadCriticalExtensionRegistry()
+    ? fetchExtensionRegistryState({ critical: true })
+        .then((state) => {
+          initialExtensionRegistryState = state;
+          recordLoadedExtensionRegistry(state);
+          return state;
+        })
+        .catch(() => {
+          initialExtensionRegistryState = EMPTY_EXTENSION_REGISTRY_STATE;
+          recordExtensionRegistryUsability({ loading: false, counts: {} });
+          return EMPTY_EXTENSION_REGISTRY_STATE;
+        })
+    : null;
 
 function recordLoadedExtensionRegistry(state: ExtensionRegistryState): void {
   recordExtensionRegistryUsability({
@@ -842,7 +862,7 @@ function recordLoadedExtensionRegistry(state: ExtensionRegistryState): void {
 
 function useExtensionRegistryLoader(): ExtensionRegistryState {
   const { versions } = useAppEvents();
-  const [state, setState] = useState<ExtensionRegistryState>(INITIAL_EXTENSION_REGISTRY_STATE);
+  const [state, setState] = useState<ExtensionRegistryState>(() => initialExtensionRegistryState ?? INITIAL_EXTENSION_REGISTRY_STATE);
 
   useEffect(() => {
     let cancelled = false;
@@ -857,13 +877,24 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
         return;
       }
 
-      const loadPromise = initialExtensionRegistryLoad ?? fetchExtensionRegistryState();
+      const loadPromise = initialExtensionRegistryState
+        ? Promise.resolve(initialExtensionRegistryState)
+        : (initialExtensionRegistryLoad ?? fetchExtensionRegistryState({ critical: true }));
       initialExtensionRegistryLoad = null;
       loadPromise
         .then((nextState) => {
           if (cancelled) return;
+          initialExtensionRegistryState = null;
           setState(nextState);
           recordLoadedExtensionRegistry(nextState);
+          if (canLoadExtensionRegistry()) {
+            void fetchExtensionRegistryState()
+              .then((fullState) => {
+                if (cancelled) return;
+                setState(fullState);
+              })
+              .catch(() => undefined);
+          }
         })
         .catch((error: Error) => {
           if (cancelled) return;

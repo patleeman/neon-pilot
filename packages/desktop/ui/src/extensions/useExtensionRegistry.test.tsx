@@ -12,6 +12,7 @@ vi.mock('../client/api', () => ({
   api: {
     extensionInstallations: vi.fn(),
     extensionRegistry: vi.fn(),
+    extensionCriticalRegistry: vi.fn(),
     extensionRoutes: vi.fn(),
     extensionSurfaces: vi.fn(),
     settings: vi.fn(),
@@ -34,6 +35,7 @@ function mockExtensionRegistryState({
   settings?: Record<string, unknown>;
 }) {
   vi.mocked(api.extensionRegistry).mockResolvedValue({ extensions, routes, surfaces, settings } as never);
+  vi.mocked(api.extensionCriticalRegistry).mockResolvedValue({ extensions, routes, surfaces, settings } as never);
 }
 
 describe('useExtensionRegistry', () => {
@@ -208,6 +210,7 @@ describe('useExtensionRegistry', () => {
     expect(result.current.first.extensions.map((entry) => entry.id)).toEqual(['shared-extension']);
     expect(result.current.second.extensions.map((entry) => entry.id)).toEqual(['shared-extension']);
     expect(api.extensionRegistry).toHaveBeenCalledTimes(1);
+    expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(1);
     expect(api.extensionInstallations).not.toHaveBeenCalled();
     expect(api.extensionRoutes).not.toHaveBeenCalled();
     expect(api.extensionSurfaces).not.toHaveBeenCalled();
@@ -388,6 +391,35 @@ describe('useExtensionRegistry', () => {
       </AppEventsContext.Provider>
     );
 
+    const firstRegistryState = {
+      extensions: [
+        {
+          id: 'test-extension',
+          name: 'Test Extension',
+          enabled: true,
+          status: 'enabled',
+          manifest: { schemaVersion: 2, id: 'test-extension', name: 'Test Extension' },
+        },
+      ],
+      routes: [],
+      surfaces: [],
+      settings: {},
+    } as never;
+    const secondRegistryState = {
+      extensions: [
+        {
+          id: 'next-extension',
+          name: 'Next Extension',
+          enabled: true,
+          status: 'enabled',
+          manifest: { schemaVersion: 2, id: 'next-extension', name: 'Next Extension' },
+        },
+      ],
+      routes: [],
+      surfaces: [],
+      settings: {},
+    } as never;
+    vi.mocked(api.extensionCriticalRegistry).mockResolvedValueOnce(firstRegistryState).mockResolvedValueOnce(secondRegistryState);
     vi.mocked(api.extensionRegistry)
       .mockResolvedValueOnce({
         extensions: [
@@ -428,11 +460,14 @@ describe('useExtensionRegistry', () => {
 
     await waitFor(() => expect(result.current.extensions.map((entry) => entry.id)).toEqual(['next-extension']));
     expect(api.extensionRegistry).toHaveBeenCalledTimes(2);
+    expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(2);
   });
 
   it('keeps registry arrays defined when the extension API is unavailable', async () => {
     const originalExtensionRegistry = api.extensionRegistry;
+    const originalExtensionCriticalRegistry = api.extensionCriticalRegistry;
     (api as unknown as { extensionRegistry?: unknown }).extensionRegistry = undefined;
+    (api as unknown as { extensionCriticalRegistry?: unknown }).extensionCriticalRegistry = undefined;
 
     try {
       const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
@@ -447,6 +482,8 @@ describe('useExtensionRegistry', () => {
       expect(result.current.composerInputTools).toEqual([]);
     } finally {
       (api as unknown as { extensionRegistry: typeof originalExtensionRegistry }).extensionRegistry = originalExtensionRegistry;
+      (api as unknown as { extensionCriticalRegistry: typeof originalExtensionCriticalRegistry }).extensionCriticalRegistry =
+        originalExtensionCriticalRegistry;
     }
   });
 });
