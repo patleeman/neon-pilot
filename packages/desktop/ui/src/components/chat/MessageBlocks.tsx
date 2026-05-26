@@ -319,7 +319,7 @@ export const ContextShelf = memo(function ContextShelf({
           </span>
           <span className="h-px bg-border-subtle" aria-hidden="true" />
         </summary>
-        <div className="mx-auto mt-3 w-[78%] space-y-1.5 border-l border-border-subtle pl-4">
+        <div className="mx-auto mt-3 w-[78%] space-y-1.5">
           {hasSystemPrompt ? (
             <LazyDetails
               className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
