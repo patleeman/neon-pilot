@@ -34,6 +34,7 @@ export function validateSettingsContributions(value: unknown): void {
     if (setting.enum !== undefined && !Array.isArray(setting.enum)) {
       throw new Error(`Extension manifest contributes.settings.${key}.enum must be an array.`);
     }
+    validateOptionalString(setting.control, `contributes.settings.${key}.control`);
   }
 }
 

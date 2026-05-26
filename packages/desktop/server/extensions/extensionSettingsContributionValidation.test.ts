@@ -11,7 +11,7 @@ describe('extensionSettingsContributionValidation', () => {
     expect(
       validateSettingsComponentContribution({ id: 'settings', component: 'Settings', sectionId: 'general', label: 'Settings', order: 1 }),
     ).toBeUndefined();
-    expect(validateSettingsContributions({ enabled: { type: 'boolean', enum: ['yes'] } })).toBeUndefined();
+    expect(validateSettingsContributions({ enabled: { type: 'boolean', enum: ['yes'], control: 'toggle' } })).toBeUndefined();
     expect(validateSecretContributions({ token: { label: 'Token', order: 1 } })).toBeUndefined();
   });
 
@@ -27,6 +27,9 @@ describe('extensionSettingsContributionValidation', () => {
     );
     expect(() => validateSettingsContributions({ mode: { enum: 'bad' } })).toThrow(
       'Extension manifest contributes.settings.mode.enum must be an array.',
+    );
+    expect(() => validateSettingsContributions({ mode: { control: 12 } })).toThrow(
+      'Extension manifest contributes.settings.mode.control must be a string.',
     );
     expect(() => validateSecretContributions({ token: { label: 'Token', order: 1.5 } })).toThrow(
       'Extension manifest contributes.secrets.token.order must be an integer.',

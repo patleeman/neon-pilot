@@ -9,10 +9,11 @@
     "settings": {
       "systemReplyActions.emojiPickerItems": {
         "type": "string",
+        "control": "emoji-label-list",
         "default": "👍 Agree, 👎 Disagree, ✅ Do it, ❓ Clarify, 💡 Explain, 📋 Summarize",
-        "description": "Comma-separated emoji reply starters. Each item becomes one button in the transcript selection picker.",
+        "description": "Emoji reply starters shown as buttons in the transcript selection picker.",
         "group": "Reply Actions",
-        "placeholder": "👍 Agree, 👎 Disagree, ✅ Do it",
+        "placeholder": "Agree",
         "order": 10
       }
     },

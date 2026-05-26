@@ -690,6 +690,8 @@ export type ExtensionSettingType = 'string' | 'boolean' | 'number' | 'select';
 
 export interface ExtensionSettingsContribution {
   type: ExtensionSettingType;
+  /** Optional host-rendered control for specialized value editing. */
+  control?: 'emoji-label-list' | string;
   default?: unknown;
   description?: string;
   /** Group label for UI organization. Defaults to 'General'. */

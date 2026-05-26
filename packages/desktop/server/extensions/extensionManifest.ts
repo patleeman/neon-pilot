@@ -338,6 +338,7 @@ export interface ExtensionSubscriptionContribution {
 
 export interface ExtensionSettingsContribution {
   type: 'string' | 'boolean' | 'number' | 'select';
+  control?: 'emoji-label-list' | string;
   default?: unknown;
   description?: string;
   group?: string;

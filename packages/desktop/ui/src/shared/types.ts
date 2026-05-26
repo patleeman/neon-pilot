@@ -1213,6 +1213,11 @@ export interface InstructionFilesState {
   instructionFiles: string[];
 }
 
+export interface SystemPromptTemplateState {
+  configFile: string;
+  template: string;
+}
+
 type ProviderAuthType = 'none' | 'api_key' | 'oauth' | 'environment';
 
 export interface ProviderAuthSummary {
@@ -1780,6 +1785,7 @@ export interface UnifiedSettingsEntry {
   extensionId: string;
   key: string;
   type: string;
+  control?: string;
   default?: unknown;
   description?: string;
   group: string;

@@ -5,6 +5,7 @@ export interface ExtensionSettingsRegistration {
   packageType: ExtensionPackageType;
   key: string;
   type: string;
+  control?: string;
   default?: unknown;
   description?: string;
   group: string;
@@ -47,6 +48,7 @@ export function buildExtensionSettingsRegistrations(input: {
         packageType: input.packageType ?? 'user',
         key,
         type,
+        control: typeof setting.control === 'string' && setting.control.trim() ? setting.control.trim() : undefined,
         default: setting.default,
         description: typeof setting.description === 'string' ? setting.description : undefined,
         group: typeof setting.group === 'string' && setting.group.trim() ? setting.group.trim() : 'General',
