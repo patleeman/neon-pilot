@@ -299,24 +299,27 @@ export const ContextShelf = memo(function ContextShelf({
           <TopologyBlock block={block as Extract<MessageBlock, { type: 'context' }>} />
         </div>
       ))}
-      <details
-        className="group w-[78%] rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:bg-surface/10 open:bg-surface/15"
-        data-context-shelf="1"
-      >
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-          <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
-            ›
+      <details className="group my-5 block w-full text-dim" data-context-shelf="1">
+        <summary className="grid w-full cursor-pointer grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+          <span className="h-px bg-border-subtle" aria-hidden="true" />
+          <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 text-dim/85 sm:max-w-[42rem]">
+            <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+              ›
+            </span>
+            <span aria-hidden="true">▣</span>
+            <span className="shrink-0">Context</span>
+            <span className="shrink-0">
+              · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
+            </span>
+            {preview ? <span className="min-w-0 truncate text-dim/70">· {preview}</span> : null}
+            <span className="shrink-0 text-dim/55">· click to expand</span>
+            {blocks[blocks.length - 1]?.ts ? (
+              <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
+            ) : null}
           </span>
-          <span className="shrink-0 font-medium text-secondary/85">Context</span>
-          <span className="text-dim">
-            · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
-          </span>
-          {preview ? <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span> : <span className="flex-1" />}
-          {blocks[blocks.length - 1]?.ts ? (
-            <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
-          ) : null}
+          <span className="h-px bg-border-subtle" aria-hidden="true" />
         </summary>
-        <div className="mt-2 ml-1 space-y-1.5 border-l border-border-subtle pl-4">
+        <div className="mx-auto mt-3 w-[78%] space-y-1.5 border-l border-border-subtle pl-4">
           {hasSystemPrompt ? (
             <LazyDetails
               className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
