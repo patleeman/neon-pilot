@@ -121,11 +121,14 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('defaults to user extensions and exposes available as a filter, not commands', async () => {
+  it('defaults to installed add-ons and exposes available add-ons as a filter, not commands', async () => {
     renderPage();
 
     await screen.findByText('Menu Test');
-    expect(screen.getByRole('button', { name: 'available' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Available add-ons' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
+    expect(screen.queryByText('USER')).toBeNull();
+    expect(screen.getByText('Add-on')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 

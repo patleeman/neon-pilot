@@ -30,6 +30,17 @@ interface InstallableExtensionCatalogResponse {
   extensions: InstallableExtensionCatalogItem[];
 }
 
+type ExtensionFilter = 'installed-addons' | 'available-addons' | 'all-installed' | 'built-in' | 'enabled' | 'disabled';
+
+const EXTENSION_FILTERS: Array<{ id: ExtensionFilter; label: string }> = [
+  { id: 'installed-addons', label: 'Installed add-ons' },
+  { id: 'available-addons', label: 'Available add-ons' },
+  { id: 'all-installed', label: 'All installed' },
+  { id: 'built-in', label: 'Built-in' },
+  { id: 'enabled', label: 'Enabled' },
+  { id: 'disabled', label: 'Disabled' },
+];
+
 interface LogicalSurfaceSummary {
   id: string;
   title: string;
@@ -444,6 +455,10 @@ function formatSkillSummary(extension: ExtensionInstallSummary): string {
   return extension.skills?.length ? extension.skills.map((skill) => skill.name).join(', ') : 'None';
 }
 
+function extensionSourceLabel(packageType?: string): string {
+  return packageType === 'system' ? 'Built-in' : 'Add-on';
+}
+
 function formatFrontendSummary(extension: ExtensionInstallSummary): string {
   return extension.manifest?.frontend?.entry ?? 'None';
 }
@@ -473,7 +488,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'user' | 'available' | 'all' | 'system' | 'enabled' | 'disabled'>('user');
+  const [filter, setFilter] = useState<ExtensionFilter>('installed-addons');
   const [query, setQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -660,9 +675,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const normalizedQuery = query.trim().toLowerCase();
     return extensions.filter((extension) => {
       const matchesFilter =
-        filter === 'all' ||
-        (filter === 'system' && extension.packageType === 'system') ||
-        (filter === 'user' && extension.packageType !== 'system') ||
+        filter === 'all-installed' ||
+        (filter === 'built-in' && extension.packageType === 'system') ||
+        (filter === 'installed-addons' && extension.packageType !== 'system') ||
         (filter === 'enabled' && extension.enabled) ||
         (filter === 'disabled' && !extension.enabled && extension.status !== 'invalid') ||
         (filter === 'disabled' && extension.status === 'invalid');
@@ -682,7 +697,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const items = catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id)) return false;
-      if (filter !== 'all' && filter !== 'available') return false;
+      if (filter !== 'all-installed' && filter !== 'available-addons') return false;
       if (!normalizedQuery) return true;
       return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
     });
@@ -701,7 +716,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-[14px] font-semibold text-primary">{extension.name}</div>
                 <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
-                  {extension.packageType ?? 'user'}
+                  {extensionSourceLabel(extension.packageType)}
                 </span>
               </div>
               <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
@@ -793,7 +808,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
                 <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
-                  available
+                  Available add-on
                 </span>
               </div>
               <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
@@ -865,17 +880,17 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-                  {(['user', 'available', 'all', 'system', 'enabled', 'disabled'] as const).map((nextFilter) => (
+                  {EXTENSION_FILTERS.map(({ id: nextFilter, label }) => (
                     <button
                       key={nextFilter}
                       type="button"
                       className={cx(
-                        'rounded-lg px-3 py-1.5 text-[12px] capitalize transition-colors',
+                        'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
                         filter === nextFilter ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
                       )}
                       onClick={() => setFilter(nextFilter)}
                     >
-                      {nextFilter}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -1123,7 +1138,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
                 </div>
                 <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-secondary">
-                  <span className="rounded-md bg-surface px-2 py-1">{extension.packageType ?? 'user'}</span>
+                  <span className="rounded-md bg-surface px-2 py-1">{extensionSourceLabel(extension.packageType)}</span>
                   <span className="rounded-md bg-surface px-2 py-1">{extension.enabled ? 'Enabled' : 'Disabled'}</span>
                   <span className="rounded-md bg-surface px-2 py-1">
                     {isLocked(extension) ? 'Required' : isQuarantined(extension) ? 'Quarantined' : (extension.status ?? 'loaded')}
