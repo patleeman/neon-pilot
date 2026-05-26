@@ -134,10 +134,16 @@ export function resolveRewindTargetForMessage(
   const block = messages[messageIndex];
   if (block?.type === 'text') {
     const assistantEntryId = resolveSessionEntryIdFromBlockId(block.id);
+    const promptDraft = assistantEntryId
+      ? (messages
+          .slice(0, messageIndex)
+          .reverse()
+          .find((message) => message.type === 'user')?.text ?? null)
+      : null;
     return {
       entryId: assistantEntryId ?? entry.entryId,
-      beforeEntry: false,
-      promptDraft: null,
+      beforeEntry: Boolean(assistantEntryId),
+      promptDraft,
     };
   }
 

@@ -185,8 +185,8 @@ describe('resolveRewindTargetForMessage', () => {
       ]),
     ).toEqual({
       entryId: 'assistant-entry',
-      beforeEntry: false,
-      promptDraft: null,
+      beforeEntry: true,
+      promptDraft: 'Second prompt',
     });
   });
 

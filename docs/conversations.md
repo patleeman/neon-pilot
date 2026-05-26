@@ -64,6 +64,7 @@ The transcript treats explicit branch actions (`fork`, `rewind`, `duplicate`) as
 ### /fork
 
 Create a new conversation from a previous user message. The new conversation starts fresh but carries the context up to that point.
+From the transcript action buttons, forking a user prompt opens a child conversation with that prompt restored in the composer; forking an assistant reply keeps the transcript through that reply.
 
 ```
 Original conversation:
@@ -79,6 +80,7 @@ Fork from msg2:
 ### /tree
 
 Navigate the conversation tree to any previous point and continue from there without creating a new file.
+Transcript rewind actions create a new conversation file at the selected point. Rewinding from an assistant reply cuts before the reply and restores the preceding user prompt in the composer so it can be resent or edited.
 
 ```
   ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (branch A, current)

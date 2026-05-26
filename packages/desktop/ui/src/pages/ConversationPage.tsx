@@ -3546,10 +3546,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             entryId = resolveBranchEntryIdFromSessionDetailResult(clickedBlock, messageIndex, detail);
           }
           if (entryId) {
+            const promptDraft =
+              clickedBlock.type === 'text'
+                ? (realMessages
+                    .slice(0, localMessageIndex)
+                    .reverse()
+                    .find((message) => message.type === 'user')?.text ?? null)
+                : null;
             target =
               clickedBlock.type === 'user'
                 ? { entryId, beforeEntry: false, promptDraft: null }
-                : { entryId, beforeEntry: false, promptDraft: null };
+                : { entryId, beforeEntry: true, promptDraft };
           }
         }
 
