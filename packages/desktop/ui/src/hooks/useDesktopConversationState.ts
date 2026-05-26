@@ -17,7 +17,6 @@ import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
-const STREAM_DELTA_FLUSH_INTERVAL_MS = 32;
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
 
@@ -317,6 +316,7 @@ export function useDesktopConversationState(
   const [connectVersion, setConnectVersion] = useState(0);
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
   const pendingStreamEventsRef = useRef<SseEvent[]>([]);
+  const pendingStreamFrameRef = useRef<number | null>(null);
   const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const pendingStreamFlushDelayRef = useRef<number | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
@@ -387,8 +387,21 @@ export function useDesktopConversationState(
       pendingStreamFlushDelayRef.current = null;
     };
 
-    const flushPendingStreamEvents = () => {
+    const clearPendingStreamFrame = () => {
+      if (pendingStreamFrameRef.current === null) {
+        return;
+      }
+      window.cancelAnimationFrame(pendingStreamFrameRef.current);
+      pendingStreamFrameRef.current = null;
+    };
+
+    const clearPendingStreamFlush = () => {
       clearPendingStreamFlushTimer();
+      clearPendingStreamFrame();
+    };
+
+    const flushPendingStreamEvents = () => {
+      clearPendingStreamFlush();
       const events = pendingStreamEventsRef.current;
       pendingStreamEventsRef.current = [];
       if (events.length === 0) {
@@ -443,7 +456,7 @@ export function useDesktopConversationState(
       setError(null);
     };
 
-    const schedulePendingStreamEventsFlush = (delayMs: number) => {
+    const schedulePendingStreamEventsTimerFlush = (delayMs: number) => {
       if (pendingStreamFlushTimerRef.current !== null) {
         if ((pendingStreamFlushDelayRef.current ?? Number.POSITIVE_INFINITY) <= delayMs) {
           return;
@@ -454,13 +467,18 @@ export function useDesktopConversationState(
       pendingStreamFlushTimerRef.current = window.setTimeout(flushPendingStreamEvents, delayMs);
     };
 
+    const schedulePendingStreamEventsFrameFlush = () => {
+      if (pendingStreamFrameRef.current !== null || pendingStreamFlushTimerRef.current !== null) {
+        return;
+      }
+      pendingStreamFrameRef.current = window.requestAnimationFrame(flushPendingStreamEvents);
+    };
+
     const shouldFlushStreamEventImmediately = (streamEvent: SseEvent): boolean =>
       streamEvent.type === 'error' || streamEvent.type === 'cwd_changed';
 
-    const getStreamEventFlushDelay = (streamEvent: SseEvent): number =>
-      streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update'
-        ? STREAM_DELTA_FLUSH_INTERVAL_MS
-        : STREAM_CONTROL_FLUSH_INTERVAL_MS;
+    const shouldFlushStreamEventOnFrame = (streamEvent: SseEvent): boolean =>
+      streamEvent.type === 'text_delta' || streamEvent.type === 'thinking_delta' || streamEvent.type === 'tool_update';
 
     source.onmessage = (event) => {
       try {
@@ -468,8 +486,10 @@ export function useDesktopConversationState(
         pendingStreamEventsRef.current.push(streamEvent);
         if (shouldFlushStreamEventImmediately(streamEvent)) {
           flushPendingStreamEvents();
+        } else if (shouldFlushStreamEventOnFrame(streamEvent)) {
+          schedulePendingStreamEventsFrameFlush();
         } else {
-          schedulePendingStreamEventsFlush(getStreamEventFlushDelay(streamEvent));
+          schedulePendingStreamEventsTimerFlush(STREAM_CONTROL_FLUSH_INTERVAL_MS);
         }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -479,7 +499,7 @@ export function useDesktopConversationState(
 
     return () => {
       source.close();
-      clearPendingStreamFlushTimer();
+      clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
   }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, surfaceId, surfaceType]);

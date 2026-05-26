@@ -3,6 +3,33 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const eventSources = vi.hoisted(() => [] as FakeEventSource[]);
+
+class FakeEventSource {
+  onopen: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  readyState = 1;
+  closed = false;
+
+  close(): void {
+    this.closed = true;
+    this.readyState = 2;
+  }
+
+  send(data: unknown): void {
+    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }));
+  }
+}
+
+vi.mock('../desktop/desktopEventSource', () => ({
+  createDesktopAwareEventSource: vi.fn(() => {
+    const source = new FakeEventSource();
+    eventSources.push(source);
+    return source;
+  }),
+}));
+
 import { api } from '../client/api.js';
 import {
   applyDesktopConversationStreamEvent,
@@ -195,6 +222,7 @@ describe('useDesktopConversationState', () => {
     for (const root of mountedRoots.splice(0)) {
       act(() => root.unmount());
     }
+    eventSources.splice(0);
     latestReconnect = null;
     latestState = null;
     clearDesktopConversationStateCacheForTests();
@@ -308,6 +336,73 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.conversationId).toBe('conv-prefetch');
+  });
+
+  it('flushes text deltas on the next animation frame', async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+      stream: {
+        blocks: [],
+        blockOffset: 0,
+        totalBlocks: 0,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(eventSources).toHaveLength(1);
+
+    act(() => {
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Hel' });
+      eventSources[0]?.send({ type: 'text_delta', delta: 'lo' });
+    });
+
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
+    expect(latestState?.state?.stream.blocks).toEqual([]);
+
+    await act(async () => {
+      frameCallbacks[0]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
   });
 
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {
