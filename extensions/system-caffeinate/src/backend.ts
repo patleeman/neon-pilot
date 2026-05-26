@@ -1,4 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { readExtensionSettings } from '@neon-pilot/extensions/backend/settings';
+
+const AUTO_START_SETTING_KEY = 'caffeinate.autoStart';
 
 interface CaffeinateStatus {
   running: boolean;
@@ -58,4 +61,9 @@ export async function stop(_input: unknown, ctx: ExtensionBackendContext): Promi
 
 export async function toggle(input: unknown, ctx: ExtensionBackendContext): Promise<CaffeinateStatus> {
   return processHandle && processPid ? stop(input, ctx) : start(input, ctx);
+}
+
+export async function startup(input: unknown, ctx: ExtensionBackendContext): Promise<CaffeinateStatus> {
+  const settings = await readExtensionSettings();
+  return settings[AUTO_START_SETTING_KEY] === true ? start(input, ctx) : currentStatus();
 }

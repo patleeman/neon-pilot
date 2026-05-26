@@ -11,15 +11,26 @@
   },
   "backend": {
     "entry": "dist/backend.mjs",
+    "startupAction": "caffeinateStartup",
     "onDisableAction": "caffeinateStop",
     "actions": [
       { "id": "caffeinateStatus", "handler": "status", "title": "Caffeinate status" },
+      { "id": "caffeinateStartup", "handler": "startup", "title": "Caffeinate startup" },
       { "id": "caffeinateStart", "handler": "start", "title": "Start caffeinate" },
       { "id": "caffeinateStop", "handler": "stop", "title": "Stop caffeinate" },
       { "id": "caffeinateToggle", "handler": "toggle", "title": "Toggle caffeinate" }
     ]
   },
   "contributes": {
+    "settings": {
+      "caffeinate.autoStart": {
+        "type": "boolean",
+        "default": false,
+        "description": "Start macOS caffeinate automatically when Neon Pilot starts.",
+        "group": "Caffeinate",
+        "order": 1
+      }
+    },
     "topBarElements": [
       {
         "id": "caffeinate-toggle",
@@ -28,5 +39,5 @@
       }
     ]
   },
-  "permissions": []
+  "permissions": ["settings:read"]
 }

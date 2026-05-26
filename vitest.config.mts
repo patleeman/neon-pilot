@@ -36,6 +36,7 @@ export default defineConfig({
       ),
       '@neon-pilot/extensions/backend/runs': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runs.ts'),
       '@neon-pilot/extensions/backend/runtime': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/runtime.ts'),
+      '@neon-pilot/extensions/backend/settings': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/settings.ts'),
       '@neon-pilot/extensions/backend/skills': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/skills.ts'),
       '@neon-pilot/extensions/backend/telemetry': resolve(process.cwd(), 'packages/desktop/server/extensions/backendApi/telemetry.ts'),
       '@neon-pilot/extensions/backend/slackMcpGateway': resolve(

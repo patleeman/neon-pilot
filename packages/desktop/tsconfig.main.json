@@ -14,7 +14,8 @@
       "@neon-pilot/extensions/data": ["./ui/src/extensions/data"],
       "@neon-pilot/extensions/settings": ["./ui/src/extensions/settings"],
       "@neon-pilot/extensions/excalidraw": ["../extensions/src/excalidraw"],
-      "@neon-pilot/extensions/backend": ["./server/extensions/backendApi"]
+      "@neon-pilot/extensions/backend": ["./server/extensions/backendApi"],
+      "@neon-pilot/extensions/backend/*": ["./server/extensions/backendApi/*"]
     }
   },
   "include": ["src/**/*.ts"],

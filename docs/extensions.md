@@ -1118,6 +1118,16 @@ All settings are stored in a single `<stateRoot>/settings.json` file.
 | `placeholder` | Placeholder text for string inputs            | No         |
 | `order`       | Sort order within group. Default 0.           | No         |
 
+Backend extensions that need manifest-declared settings should import the
+settings backend API instead of reaching into desktop internals:
+
+```ts
+import { readExtensionSettings } from '@neon-pilot/extensions/backend/settings';
+
+const settings = await readExtensionSettings();
+const enabled = settings['myExt.featureEnabled'] === true;
+```
+
 #### Settings vs Extension Storage
 
 Extensions have two storage mechanisms for different purposes:

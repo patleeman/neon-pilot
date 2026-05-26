@@ -127,6 +127,10 @@
       "types": "./dist/backend/runtime.d.ts",
       "default": "./dist/backend/runtime.js"
     },
+    "./backend/settings": {
+      "types": "./dist/backend/settings.d.ts",
+      "default": "./dist/backend/settings.js"
+    },
     "./backend/skills": {
       "types": "./dist/backend/skills.d.ts",
       "default": "./dist/backend/skills.js"
