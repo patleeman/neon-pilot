@@ -1,5 +1,3 @@
-import { eng, removeStopwords } from 'stopword';
-
 import { fuzzyScore } from '../commands/slashMenu';
 import type { ConversationSummaryRecord, SessionMeta } from '../shared/types';
 
@@ -9,34 +7,54 @@ const MAX_RECENT_WINDOW_DAYS = 365;
 const DEFAULT_CANDIDATE_LIMIT = 48;
 const DEFAULT_RECENT_RESULTS_LIMIT = 10;
 const MAX_RELATED_CONVERSATION_LIMIT = 100;
-const PRODUCT_QUERY_STOPWORDS = new Set([
+const QUERY_STOPWORDS = new Set([
+  'a',
+  'about',
   'actually',
   'agent',
   'agents',
+  'an',
+  'and',
   'app',
+  'are',
+  'as',
+  'at',
+  'be',
+  'but',
+  'by',
   'conversation',
   'conversations',
   'does',
   'doing',
   'done',
+  'for',
+  'from',
   'good',
   'help',
   'how',
+  'in',
+  'is',
+  'it',
   'junk',
   'like',
   'look',
   'looks',
   'new',
+  'now',
   'okay',
+  'our',
   'please',
   'pro',
   'really',
   'screen',
   'stuff',
+  'that',
+  'the',
   'thing',
   'things',
   'thread',
   'threads',
+  'to',
   'today',
   'used',
   'user',
@@ -46,6 +64,7 @@ const PRODUCT_QUERY_STOPWORDS = new Set([
   'when',
   'where',
   'why',
+  'with',
   'work',
   'working',
   'would',
@@ -79,7 +98,7 @@ function normalizeQueryTokens(query: string): string[] {
     .split(/\s+/)
     .filter((token) => token.length > 0);
 
-  const tokens = removeStopwords(cleanedTokens, eng).filter((token) => token.length > 1 && !PRODUCT_QUERY_STOPWORDS.has(token));
+  const tokens = cleanedTokens.filter((token) => token.length > 1 && !QUERY_STOPWORDS.has(token));
 
   return [...new Set(tokens)].slice(0, 8);
 }

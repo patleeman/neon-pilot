@@ -3,26 +3,9 @@ import {
   listRecentConversationResults,
   rankRelatedConversationSessions,
   type RelatedConversationSearchResult,
-  selectRecentConversationCandidates,
 } from './relatedConversationSearch';
+export { selectDraftRelatedThreadCandidates } from './relatedConversationCandidates';
 import { buildRelatedThreadCandidateLookup, selectVisibleRelatedThreadResults } from './relatedThreadSelection';
-
-export function selectDraftRelatedThreadCandidates<TSession>(input: {
-  draft: boolean;
-  sessions: TSession[] | undefined;
-  workspaceCwd: string | null;
-  recentWindowDays: number;
-  limit: number;
-}): TSession[] {
-  return input.draft
-    ? selectRecentConversationCandidates(input.sessions, {
-        workspaceCwd: input.workspaceCwd,
-        recentWindowDays: input.recentWindowDays,
-        limit: input.limit,
-        closedOnly: true,
-      })
-    : [];
-}
 
 export function resolveRelatedThreadResults(input: {
   selectedRelatedThreadIds: string[];

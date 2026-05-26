@@ -469,6 +469,12 @@ describe('api desktop transport', () => {
       if (path === '/api/sessions/conversation-1/meta') return createJsonResponse(await readSessionMeta('conversation-1'));
       if (path === '/api/sessions/search-index')
         return createJsonResponse(await readSessionSearchIndex(JSON.parse(String(init?.body)).sessionIds));
+      if (path === '/api/related-conversations/results')
+        return createJsonResponse({
+          searchResults: [{ sessionId: 'conversation-1', title: 'Related', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
+          recentResults: [],
+          visibleResults: [{ sessionId: 'conversation-1', title: 'Related', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
+        });
       if (path === '/api/models') return createJsonResponse(await readModels());
       if (path === '/api/model-preferences') return createJsonResponse(await updateModelPreferences(JSON.parse(String(init?.body))));
       if (path === '/api/model-providers') return createJsonResponse(await readModelProviders());
@@ -563,6 +569,15 @@ describe('api desktop transport', () => {
     const sessions = await api.sessions();
     const sessionMeta = await api.sessionMeta('conversation-1');
     const sessionSearchIndex = await api.sessionSearchIndex(['conversation-1']);
+    const relatedConversationResults = await api.relatedConversationResults({
+      sessions: [],
+      searchIndex: {},
+      summaries: {},
+      query: 'related',
+      workspaceCwd: '/repo',
+      selectedRelatedThreadIds: ['conversation-1'],
+      limit: 5,
+    });
     const models = await api.models();
     const modelPreferenceUpdate = await api.updateModelPreferences({ thinkingLevel: 'medium' });
     const modelProviders = await api.modelProviders();
@@ -720,6 +735,7 @@ describe('api desktop transport', () => {
     expect(sessions).toEqual([{ id: 'conversation-1', title: 'Conversation 1' }]);
     expect(sessionMeta).toEqual({ id: 'conversation-1', title: 'Conversation 1' });
     expect(sessionSearchIndex).toEqual({ index: { 'conversation-1': 'hello world' } });
+    expect(relatedConversationResults.visibleResults.map((result) => result.sessionId)).toEqual(['conversation-1']);
     expect(models).toEqual({
       currentModel: 'gpt-5.4',
       currentThinkingLevel: 'high',

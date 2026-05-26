@@ -155,7 +155,6 @@ import {
   EMPTY_ASK_USER_ANSWERS,
   hasAskUserQuestionAnswers,
 } from '../conversation/conversationQuestionAnswers';
-import { resolveRelatedThreadResults, selectDraftRelatedThreadCandidates } from '../conversation/conversationRelatedThreadPanel';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
 import {
@@ -236,7 +235,8 @@ import {
   restoreComposerImageFiles,
   restoreQueuedImageFiles,
 } from '../conversation/promptAttachments';
-import { rankRelatedConversationSessions, type RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
+import { selectDraftRelatedThreadCandidates } from '../conversation/relatedConversationCandidates';
+import type { RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
 import {
   pruneRelatedThreadSelectionIds,
   resolveRelatedThreadPreselectionUpdate,
@@ -1570,6 +1570,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [selectedRelatedThreadIds, setSelectedRelatedThreadIds] = useState<string[]>([]);
   const [autoSelectedRelatedThreadIds, setAutoSelectedRelatedThreadIds] = useState<string[]>([]);
   const [preparingRelatedThreadContext, setPreparingRelatedThreadContext] = useState(false);
+  const [relatedThreadResultsState, setRelatedThreadResultsState] = useState<{
+    visibleResults: RelatedConversationSearchResult[];
+    searchResults: RelatedConversationSearchResult[];
+  }>({ visibleResults: [], searchResults: [] });
   const [slashIdx, setSlashIdx] = useState(0);
   const [mentionIdx, setMentionIdx] = useState(0);
   const keyboardInset = useVisualViewportKeyboardInset();
@@ -2180,38 +2184,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => new Map(relatedThreadCandidates.map((candidate) => [candidate.id, candidate] as const)),
     [relatedThreadCandidates],
   );
-  const visibleRelatedThreadResults = useMemo<RelatedConversationSearchResult[]>(
-    () =>
-      resolveRelatedThreadResults({
-        selectedRelatedThreadIds,
-        query: debouncedRelatedThreadsQuery,
-        candidates: relatedThreadCandidates,
-        searchIndex: relatedThreadSearchIndex,
-        summaries: relatedThreadSummaries,
-        workspaceCwd: setupWorkspaceCwd,
-        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
-      }),
-    [
-      debouncedRelatedThreadsQuery,
-      relatedThreadCandidates,
-      relatedThreadSearchIndex,
-      relatedThreadSummaries,
-      selectedRelatedThreadIds,
-      setupWorkspaceCwd,
-    ],
-  );
-  const relatedThreadSearchResults = useMemo(
-    () =>
-      rankRelatedConversationSessions({
-        sessions: relatedThreadCandidates,
-        searchIndex: relatedThreadSearchIndex,
-        summaries: relatedThreadSummaries,
-        query: debouncedRelatedThreadsQuery,
-        workspaceCwd: setupWorkspaceCwd,
-        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
-      }),
-    [debouncedRelatedThreadsQuery, relatedThreadCandidates, relatedThreadSearchIndex, relatedThreadSummaries, setupWorkspaceCwd],
-  );
+  const visibleRelatedThreadResults = relatedThreadResultsState.visibleResults;
+  const relatedThreadSearchResults = relatedThreadResultsState.searchResults;
   const toggleRelatedThreadSelection = useCallback(
     (sessionId: string) => {
       setSelectedRelatedThreadIds((current) => {
@@ -2275,6 +2249,51 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   useEffect(() => {
     setSelectedRelatedThreadIds((current) => pruneRelatedThreadSelectionIds(current, relatedThreadCandidateById));
   }, [relatedThreadCandidateById]);
+
+  useEffect(() => {
+    if (!showNewConversationSetup || relatedThreadCandidates.length === 0) {
+      setRelatedThreadResultsState({ visibleResults: [], searchResults: [] });
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .relatedConversationResults({
+        sessions: relatedThreadCandidates,
+        searchIndex: relatedThreadSearchIndex,
+        summaries: relatedThreadSummaries,
+        query: debouncedRelatedThreadsQuery,
+        workspaceCwd: setupWorkspaceCwd,
+        selectedRelatedThreadIds,
+        limit: MAX_VISIBLE_RELATED_THREAD_RESULTS,
+      })
+      .then((result) => {
+        if (!cancelled) {
+          setRelatedThreadSearchError(null);
+          setRelatedThreadResultsState({
+            visibleResults: result.visibleResults,
+            searchResults: result.searchResults,
+          });
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRelatedThreadSearchError(error instanceof Error ? error.message : String(error));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedRelatedThreadsQuery,
+    relatedThreadCandidates,
+    relatedThreadSearchIndex,
+    relatedThreadSummaries,
+    selectedRelatedThreadIds,
+    setupWorkspaceCwd,
+    showNewConversationSetup,
+  ]);
 
   useRelatedThreadHotkeys({
     enabled: showNewConversationSetup && !preparingRelatedThreadContext,

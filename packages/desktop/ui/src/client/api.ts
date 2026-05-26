@@ -1,3 +1,4 @@
+import type { RelatedConversationSearchResult } from '../conversation/relatedConversationSearch';
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import type {
   ExtensionCommandRegistration,
@@ -438,6 +439,20 @@ export const api = {
   sessionSearchIndex: async (sessionIds: string[]) => {
     return post<{ index: Record<string, string> }>('/sessions/search-index', { sessionIds });
   },
+  relatedConversationResults: async (input: {
+    sessions: SessionMeta[];
+    searchIndex: Record<string, string>;
+    summaries: Record<string, ConversationSummaryRecord>;
+    query: string;
+    workspaceCwd?: string | null;
+    selectedRelatedThreadIds?: string[];
+    limit?: number;
+  }) =>
+    post<{
+      searchResults: RelatedConversationSearchResult[];
+      recentResults: RelatedConversationSearchResult[];
+      visibleResults: RelatedConversationSearchResult[];
+    }>('/related-conversations/results', input),
   conversationContentSearch: async (query: string, limit = 80) =>
     post<ConversationContentSearchResult>('/sessions/search', { query, limit: normalizeConversationContentSearchLimit(limit) }),
   conversationSummaries: async (sessionIds: string[]) =>

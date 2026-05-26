@@ -160,6 +160,7 @@ import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
+import { buildRelatedConversationResults } from './localApiRelatedConversations.js';
 import { decodeLocalApiBody, readLocalApiError } from './localApiResponseParsing.js';
 import { resolveRollbackLeafId, rewriteConversationSessionToLeaf, validateDesktopRollbackTurns } from './localApiRollback.js';
 import { buildLocalApiQueryObject, buildLocalApiRoutePattern, findMatchingLocalApiRoute } from './localApiRouting.js';
@@ -700,6 +701,9 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'POST' && path === '/api/sessions/search-index') {
     const body = input.body as { sessionIds?: string[] } | undefined;
     return createDesktopLocalApiJsonResponse(await readDesktopSessionSearchIndex(body?.sessionIds ?? []));
+  }
+  if (method === 'POST' && path === '/api/related-conversations/results') {
+    return createDesktopLocalApiJsonResponse(buildRelatedConversationResults(input.body));
   }
 
   const sessionMetaMatch = /^\/api\/sessions\/([^/]+)\/meta$/.exec(path);

@@ -1,6 +1,5 @@
 import type { FileDiffOptions } from '@pierre/diffs';
-import { PatchDiff } from '@pierre/diffs/react';
-import { type CSSProperties, useCallback, useMemo } from 'react';
+import { type CSSProperties, lazy, Suspense, useCallback, useMemo } from 'react';
 
 import type { ConversationCommitCheckpointFile } from '../../shared/types';
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
@@ -27,6 +26,8 @@ const checkpointDiffStyle = {
   '--diffs-bg-addition-emphasis-override': 'rgb(var(--color-success) / 0.24)',
   '--diffs-bg-deletion-emphasis-override': 'rgb(var(--color-danger) / 0.24)',
 } as CSSProperties;
+
+const PatchDiff = lazy(() => import('@pierre/diffs/react').then((module) => ({ default: module.PatchDiff })));
 
 export function resolveDiffThemeType(theme: string, availableThemes: ColorTheme[]): 'light' | 'dark' {
   const appearance = availableThemes.find((candidate) => candidate.id === theme)?.appearance;
@@ -149,7 +150,9 @@ export function CheckpointDiffSection({
       </button>
       {!collapsed ? (
         <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
-          <PatchDiff key={`${file.path}:${view}`} patch={file.patch} options={diffOptions} style={checkpointDiffStyle} />
+          <Suspense fallback={<div className="px-3 py-2 text-[11px] text-dim">Loading diff...</div>}>
+            <PatchDiff key={`${file.path}:${view}`} patch={file.patch} options={diffOptions} style={checkpointDiffStyle} />
+          </Suspense>
         </div>
       ) : null}
     </section>

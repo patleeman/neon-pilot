@@ -1,6 +1,5 @@
 import type { FileDiffOptions } from '@pierre/diffs';
-import { PatchDiff } from '@pierre/diffs/react';
-import { type CSSProperties, useMemo, useState } from 'react';
+import { type CSSProperties, lazy, Suspense, useMemo, useState } from 'react';
 
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
 import { cx } from '../ui';
@@ -38,6 +37,8 @@ const fileChangeDiffStyle = {
   '--diffs-bg-addition-emphasis-override': 'rgb(var(--color-success) / 0.24)',
   '--diffs-bg-deletion-emphasis-override': 'rgb(var(--color-danger) / 0.24)',
 } as CSSProperties;
+
+const PatchDiff = lazy(() => import('@pierre/diffs/react').then((module) => ({ default: module.PatchDiff })));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -220,7 +221,9 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
               {open ? (
                 change.patch ? (
                   <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
-                    <PatchDiff patch={change.patch} options={diffOptions} style={fileChangeDiffStyle} />
+                    <Suspense fallback={<div className="px-3 py-2 text-dim">Loading diff...</div>}>
+                      <PatchDiff patch={change.patch} options={diffOptions} style={fileChangeDiffStyle} />
+                    </Suspense>
                   </div>
                 ) : (
                   <div className="px-3 py-2 text-dim">
