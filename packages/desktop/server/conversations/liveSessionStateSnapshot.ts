@@ -19,7 +19,7 @@ import { readGoalFromEntries } from './sessionGoalState.js';
 
 const DEFAULT_LIVE_SNAPSHOT_TAIL_BLOCKS = 400;
 const MAX_LIVE_SNAPSHOT_TAIL_BLOCKS = 10000;
-const EMPTY_LIVE_SESSION_FILE_MAX_BYTES = 16 * 1024;
+const SMALL_LIVE_SESSION_FILE_MAX_BYTES = 16 * 1024;
 
 function normalizeLiveSnapshotTailBlocks(value: number | undefined): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
@@ -94,9 +94,9 @@ function hasNoLiveSessionEntries(session: AgentSession): boolean {
   }
 }
 
-function isLikelyEmptyLiveSessionFile(filePath: string): boolean {
+function isSmallLiveSessionFile(filePath: string): boolean {
   try {
-    return statSync(filePath).size <= EMPTY_LIVE_SESSION_FILE_MAX_BYTES;
+    return statSync(filePath).size <= SMALL_LIVE_SESSION_FILE_MAX_BYTES;
   } catch {
     return false;
   }
@@ -125,11 +125,11 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
     };
   }
 
-  if (liveBlocks.length === 0 && !entry.isCompacting && isLikelyEmptyLiveSessionFile(sessionFile)) {
+  if (!entry.isCompacting && isSmallLiveSessionFile(sessionFile)) {
     return {
-      blocks: [],
+      blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),
       blockOffset: 0,
-      totalBlocks: 0,
+      totalBlocks: liveBlocks.length,
       isStreaming: entry.session.isStreaming,
     };
   }

@@ -113,6 +113,24 @@ describe('liveSessionStateSnapshot', () => {
     expect(readSessionBlocksByFileMock).toHaveBeenCalledWith('/tmp/session.jsonl', { tailBlocks: 400 });
   });
 
+  it('skips transcript reads for small streaming session files', async () => {
+    const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    const snapshot = buildLiveSessionSnapshot({
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: true,
+        state: {
+          messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }], timestamp: '2026-05-26T12:00:00.000Z' }],
+        },
+        sessionManager: { getEntries: () => [{ type: 'message' }] },
+      },
+    } as never);
+
+    expect(snapshot).toMatchObject({ blockOffset: 0, isStreaming: true });
+    expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
+  });
+
   it('builds minimal state snapshots for empty idle live sessions', async () => {
     const { readLiveSessionStateSnapshotFromEntry } = await import('./liveSessionStateSnapshot.js');
 

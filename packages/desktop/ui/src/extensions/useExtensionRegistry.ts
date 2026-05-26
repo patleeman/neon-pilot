@@ -4,6 +4,7 @@ import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { recordExtensionRegistryUsability } from '../client/perfDiagnostics';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from './extensionRegistryEvents';
+import { criticalExtensionRegistryPrewarm } from './extensionRegistryPrewarm';
 import type { ExtensionInstallSummary, ExtensionManifest, ExtensionRouteSummary, ExtensionSurfaceSummary } from './types';
 
 export interface ExtensionTopBarElementRegistration {
@@ -790,6 +791,15 @@ async function fetchExtensionRegistryState(options?: { critical?: boolean }): Pr
     options?.critical === true && canLoadCriticalExtensionRegistry()
       ? await api.extensionCriticalRegistry()
       : await api.extensionRegistry();
+  return normalizeExtensionRegistryState(extensions, routes, surfaces, settings);
+}
+
+function normalizeExtensionRegistryState(
+  extensions: ExtensionInstallSummary[],
+  routes: ExtensionRouteSummary[],
+  surfaces: ExtensionSurfaceSummary[],
+  settings: Record<string, unknown>,
+): ExtensionRegistryState {
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
@@ -831,20 +841,20 @@ async function fetchExtensionRegistryState(options?: { critical?: boolean }): Pr
 }
 
 let initialExtensionRegistryState: ExtensionRegistryState | null = null;
-let initialExtensionRegistryLoad: Promise<ExtensionRegistryState> | null =
-  import.meta.env.PROD && canLoadCriticalExtensionRegistry()
-    ? fetchExtensionRegistryState({ critical: true })
-        .then((state) => {
-          initialExtensionRegistryState = state;
-          recordLoadedExtensionRegistry(state);
-          return state;
-        })
-        .catch(() => {
-          initialExtensionRegistryState = EMPTY_EXTENSION_REGISTRY_STATE;
-          recordExtensionRegistryUsability({ loading: false, counts: {} });
-          return EMPTY_EXTENSION_REGISTRY_STATE;
-        })
-    : null;
+let initialExtensionRegistryLoad: Promise<ExtensionRegistryState> | null = criticalExtensionRegistryPrewarm
+  ? criticalExtensionRegistryPrewarm
+      .then(({ extensions, routes, surfaces, settings }) => normalizeExtensionRegistryState(extensions, routes, surfaces, settings))
+      .then((state) => {
+        initialExtensionRegistryState = state;
+        recordLoadedExtensionRegistry(state);
+        return state;
+      })
+      .catch(() => {
+        initialExtensionRegistryState = EMPTY_EXTENSION_REGISTRY_STATE;
+        recordExtensionRegistryUsability({ loading: false, counts: {} });
+        return EMPTY_EXTENSION_REGISTRY_STATE;
+      })
+  : null;
 
 function recordLoadedExtensionRegistry(state: ExtensionRegistryState): void {
   recordExtensionRegistryUsability({
