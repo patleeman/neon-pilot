@@ -77,7 +77,32 @@ function readSessionModelProfile(session: AgentSession): LiveSessionStateSnapsho
   return { ...resolveExtensionModelProfile({ provider, model: modelId }), modelRef: `${provider}/${modelId}` };
 }
 
+function hasNoLiveSessionEntries(session: AgentSession): boolean {
+  const sessionManager = session.sessionManager as { getEntries?: () => unknown[] } | undefined;
+  if (typeof sessionManager?.getEntries !== 'function') {
+    return false;
+  }
+
+  try {
+    return !sessionManager.getEntries().some((entry) => {
+      const type = (entry as { type?: unknown } | null)?.type;
+      return type === 'message' || type === 'custom_message' || type === 'summary' || type === 'error';
+    });
+  } catch {
+    return false;
+  }
+}
+
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {
+  if (!entry.session.isStreaming && !entry.isCompacting && hasNoLiveSessionEntries(entry.session)) {
+    return {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      isStreaming: entry.session.isStreaming,
+    };
+  }
+
   const liveBlocks = buildLiveStateBlocks(entry.session, {
     omitStreamMessage: false,
   });
@@ -127,6 +152,37 @@ export function readLiveSessionStateSnapshotFromEntry(
   title: string,
   tailBlocks?: number,
 ): LiveSessionStateSnapshot {
+  const snapshot = buildLiveSessionSnapshot(entry, tailBlocks);
+  if (
+    snapshot.blocks.length === 0 &&
+    snapshot.totalBlocks === 0 &&
+    !entry.session.isStreaming &&
+    !entry.isCompacting &&
+    !entry.currentTurnError &&
+    hasNoLiveSessionEntries(entry.session)
+  ) {
+    return {
+      ...snapshot,
+      hasSnapshot: true,
+      isStreaming: entry.session.isStreaming,
+      isCompacting: false,
+      hasStaleTurnState: false,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      modelProfile: readSessionModelProfile(entry.session),
+      error: null,
+      title,
+      tokens: null,
+      cost: null,
+      contextUsage: null,
+      pendingQueue: { steering: [], followUp: [] },
+      parallelJobs: [],
+      presence: buildLiveSessionPresenceState(entry),
+      cwdChange: null,
+    };
+  }
+
   let tokens: LiveSessionStateSnapshot['tokens'] = null;
   let cost: number | null = null;
   try {
@@ -139,7 +195,7 @@ export function readLiveSessionStateSnapshotFromEntry(
   }
 
   return {
-    ...buildLiveSessionSnapshot(entry, tailBlocks),
+    ...snapshot,
     hasSnapshot: true,
     isStreaming: entry.session.isStreaming,
     isCompacting: entry.isCompacting === true,
