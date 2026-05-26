@@ -9,6 +9,7 @@ const core = vi.hoisted(() => ({
   getDurableTasksDir: vi.fn((syncRoot: string) => `${syncRoot}/tasks`),
   getStateRoot: vi.fn(() => '/state'),
   getSyncRoot: vi.fn((stateRoot: string) => `${stateRoot}/sync`),
+  readMachineSystemPromptTemplate: vi.fn(() => 'machine template'),
   resolveRuntimeResources: vi.fn(() => ({
     repoRoot: '/repo',
     vaultRoot: '/vault',
@@ -55,15 +56,18 @@ describe('instruction inventory', () => {
     expect(plan.finalSystemPrompt).toBe(
       'content:/repo/SYSTEM.md\n\ncontent:/repo/AGENTS.md\n\ngenerated template\n\ncontent:/repo/APPEND.md',
     );
-    expect(template.renderSystemPromptTemplate).toHaveBeenCalledWith({
-      repo_root: '/repo',
-      vault_root: '/vault',
-      agents_edit_target: '/vault/AGENTS.md',
-      skills_dir: '/vault/skills',
-      tasks_dir: '/state/sync/tasks',
-      docs_dir: '/repo/docs',
-      docs_index: '/repo/docs/README.md',
-    });
+    expect(template.renderSystemPromptTemplate).toHaveBeenCalledWith(
+      {
+        repo_root: '/repo',
+        vault_root: '/vault',
+        agents_edit_target: '/vault/AGENTS.md',
+        skills_dir: '/vault/skills',
+        tasks_dir: '/state/sync/tasks',
+        docs_dir: '/repo/docs',
+        docs_index: '/repo/docs/README.md',
+      },
+      'machine template',
+    );
   });
 
   it('skips missing/unreadable files and empty generated templates', async () => {
