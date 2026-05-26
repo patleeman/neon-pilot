@@ -48,6 +48,10 @@ export function resolveSessionEntryIdFromBlockId(blockId: string | undefined): s
     candidate = trimmed;
   }
 
+  if (/^(?:text|thinking|error)-\d+$/.test(candidate)) {
+    return null;
+  }
+
   return candidate;
 }
 

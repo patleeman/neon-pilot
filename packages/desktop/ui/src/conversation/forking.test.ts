@@ -76,6 +76,12 @@ describe('resolveSessionEntryIdFromBlockId', () => {
   it('returns the input unchanged when it is already a session entry id', () => {
     expect(resolveSessionEntryIdFromBlockId('entry-123')).toBe('entry-123');
   });
+
+  it('ignores synthetic renderer ids so callers can fall back to session detail', () => {
+    expect(resolveSessionEntryIdFromBlockId('text-1770000000000')).toBeNull();
+    expect(resolveSessionEntryIdFromBlockId('thinking-1770000000000')).toBeNull();
+    expect(resolveSessionEntryIdFromBlockId('error-1770000000000')).toBeNull();
+  });
 });
 
 describe('resolveBranchEntryIdForMessage', () => {
