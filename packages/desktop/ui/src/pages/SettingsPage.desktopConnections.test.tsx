@@ -4,9 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  CommandsSettingsSection,
   DesktopConnectionsSettingsPanel,
   DesktopKeyboardShortcutsSettingsSection,
 } from '../../../../../extensions/system-settings/src/SettingsPage';
+import { api } from '../client/api';
 import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -211,5 +213,79 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).toContain('Find on page');
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');
+  });
+});
+
+describe('CommandsSettingsSection', () => {
+  afterEach(() => {
+    for (const root of mountedRoots.splice(0)) {
+      act(() => {
+        root.unmount();
+      });
+    }
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('matches command shortcuts by action args when actions are shared', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-conversation-tools',
+        id: 'open-thread-palette',
+        title: 'Open thread palette',
+        action: 'palette.open',
+        args: { scope: 'threads' },
+      },
+      {
+        extensionId: 'system-conversation-tools',
+        id: 'open-command-palette',
+        title: 'Open command palette',
+        action: 'palette.open',
+        args: { scope: 'commands' },
+      },
+    ]);
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-conversation-tools',
+        surfaceId: 'open-thread-palette',
+        title: 'Open thread palette',
+        keys: ['mod+k'],
+        command: 'palette.open',
+        args: { scope: 'threads' },
+        scope: 'global',
+        defaultKeys: ['mod+k'],
+        enabled: true,
+      },
+      {
+        extensionId: 'system-conversation-tools',
+        surfaceId: 'open-command-palette',
+        title: 'Open command palette',
+        keys: ['mod+shift+p'],
+        command: 'palette.open',
+        args: { scope: 'commands' },
+        scope: 'global',
+        defaultKeys: ['mod+shift+p'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.textContent).toContain('Open thread palette');
+    expect(rows[0]?.textContent).toContain('mod + k');
+    expect(rows[0]?.textContent).not.toContain('mod + shift + p');
+    expect(rows[1]?.textContent).toContain('Open command palette');
+    expect(rows[1]?.textContent).toContain('mod + shift + p');
+    expect(rows[1]?.textContent).not.toContain('mod + k');
   });
 });

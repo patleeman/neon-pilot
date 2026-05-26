@@ -98,7 +98,7 @@ describe('SettingsPage', () => {
       },
     });
 
-    const settingsResult = buildUseApiResult({ 'sample.enabled': true });
+    const settingsResult = buildUseApiResult({ 'sample.enabled': true, 'conversation.pinnedToolCalls': true });
     const settingsSchemaResult = buildUseApiResult([
       {
         extensionId: 'sample-extension',
@@ -108,6 +108,15 @@ describe('SettingsPage', () => {
         description: 'Sample manifest setting',
         group: 'Sample',
         order: 1,
+      },
+      {
+        extensionId: 'sample-extension',
+        key: 'conversation.pinnedToolCalls',
+        type: 'boolean',
+        default: true,
+        description: 'Sample camelCase setting',
+        group: 'Sample',
+        order: 2,
       },
     ]);
 
@@ -322,6 +331,8 @@ describe('SettingsPage', () => {
     expect(html).toContain('AGENTS.md files');
     expect(html).not.toContain('Knowledge base');
     expect(html).toContain('Sample manifest setting');
+    expect(html).toContain('Pinned Tool Calls');
+    expect(html).not.toContain('pinnedToolCalls');
     expect(html).toContain('Injected by');
     expect(html).toContain('<span class="font-mono text-primary">sample-extension</span>');
     expect(html).not.toContain('Injected by extension <span');

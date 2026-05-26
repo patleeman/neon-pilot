@@ -906,7 +906,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
   );
 }
 
-function CommandsSettingsSection() {
+export function CommandsSettingsSection() {
   const [commands, setCommands] = useState<CommandSettingsEntry[]>([]);
   const [keybindings, setKeybindings] = useState<CommandKeybindingSettingsEntry[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -1082,7 +1082,26 @@ function keybindingMatchesCommandSetting(keybinding: CommandKeybindingSettingsEn
   const id = command.id ?? command.surfaceId ?? '';
   const action = command.action ?? '';
   const keybindingCommand = keybinding.command.replace(`${keybinding.extensionId}.`, '');
-  return keybindingCommand === id || keybindingCommand === action || keybinding.command === `${command.extensionId}.${id}`;
+  if (keybindingCommand === id || keybinding.command === `${command.extensionId}.${id}`) return true;
+  if (keybindingCommand !== action) return false;
+  return settingsArgsMatch(keybinding.args, command.args);
+}
+
+function settingsArgsMatch(left: unknown, right: unknown): boolean {
+  if (left === undefined && right === undefined) return true;
+  if (left === undefined || right === undefined) return false;
+  return stableSettingsArgsString(left) === stableSettingsArgsString(right);
+}
+
+function stableSettingsArgsString(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSettingsArgsString).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableSettingsArgsString(entry)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function emptyKeybindingForCommand(command: CommandSettingsEntry): CommandKeybindingSettingsEntry {

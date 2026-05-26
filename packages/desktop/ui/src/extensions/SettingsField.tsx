@@ -14,7 +14,7 @@ interface SettingsFieldProps {
 
 export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
   const currentValue = value ?? entry.default;
-  const label = entry.key.split('.').pop() ?? entry.key;
+  const label = formatSettingsFieldLabel(entry.key);
 
   const handleChange = (newValue: unknown) => {
     onChange(entry.key, newValue);
@@ -30,6 +30,16 @@ export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
       {renderControl(entry, currentValue, handleChange)}
     </div>
   );
+}
+
+function formatSettingsFieldLabel(key: string): string {
+  const segment = key.split('.').pop() ?? key;
+  return segment
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 function renderControl(entry: UnifiedSettingsEntry, currentValue: unknown, onChange: (value: unknown) => void): ReactNode {
