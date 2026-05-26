@@ -13,6 +13,7 @@ import type { SessionMeta } from './conversationTypes.js';
 const SEARCH_INDEX_SCHEMA_VERSION = 1;
 const DEFAULT_MAX_INDEX_BATCH = 12;
 const DEFAULT_MAX_INDEX_DURATION_MS = 200;
+const DEFAULT_INDEXING_DELAY_MS = 5 * 60_000;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 interface ConversationSearchIndexRow {
@@ -37,6 +38,7 @@ export interface IndexedConversationSearchCandidate {
 let db: SqliteDatabase | null = null;
 let indexingScheduled = false;
 let indexingActive = false;
+let indexingTimer: ReturnType<typeof setTimeout> | null = null;
 
 function resolveSearchDbFile(): string {
   return ensureConversationsDbFileMigrated();
@@ -72,6 +74,10 @@ function getDb(): SqliteDatabase {
     PRAGMA user_version = ${SEARCH_INDEX_SCHEMA_VERSION};
   `);
   return db;
+}
+
+function hasInitializedSearchIndexDb(): boolean {
+  return db !== null;
 }
 
 function fileSignature(filePath: string): string | null {
@@ -212,27 +218,42 @@ export function indexConversationSearchBatch(options: { maxSessions?: number; ma
   return { indexed, remaining };
 }
 
-export function scheduleConversationSearchIndexing(): void {
+export function scheduleConversationSearchIndexing(options: { delayMs?: number } = {}): void {
   if (indexingScheduled || indexingActive) {
     return;
   }
 
+  const delayMs =
+    Number.isSafeInteger(options.delayMs) && typeof options.delayMs === 'number' && options.delayMs >= 0
+      ? options.delayMs
+      : DEFAULT_INDEXING_DELAY_MS;
+
   indexingScheduled = true;
-  setTimeout(() => {
+  indexingTimer = setTimeout(() => {
+    indexingTimer = null;
     indexingScheduled = false;
     indexingActive = true;
     try {
       const result = indexConversationSearchBatch();
       if (result.remaining > 0) {
-        scheduleConversationSearchIndexing();
+        scheduleConversationSearchIndexing({ delayMs });
       }
     } finally {
       indexingActive = false;
     }
-  }, 0).unref?.();
+  }, delayMs);
+  indexingTimer.unref?.();
 }
 
 function buildFtsQuery(terms: string[]): string | null {
+  return buildFtsQueryWithOperator(terms, 'OR');
+}
+
+function buildFtsAllTermsQuery(terms: string[]): string | null {
+  return buildFtsQueryWithOperator(terms, 'AND');
+}
+
+function buildFtsQueryWithOperator(terms: string[], operator: 'AND' | 'OR'): string | null {
   const safeTerms = terms
     .map((term) => term.toLowerCase().replace(/[^a-z0-9_]/g, ''))
     .filter((term) => term.length >= 3)
@@ -241,7 +262,7 @@ function buildFtsQuery(terms: string[]): string | null {
     return null;
   }
 
-  return safeTerms.map((term) => `${term}*`).join(' OR ');
+  return safeTerms.map((term) => `${term}*`).join(` ${operator} `);
 }
 
 export function searchIndexedConversationDocuments(input: {
@@ -312,7 +333,11 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
   blockIndex: number;
   snippet: string;
 }> {
-  const ftsQuery = buildFtsQuery(input.terms);
+  if (!hasInitializedSearchIndexDb()) {
+    return [];
+  }
+
+  const ftsQuery = buildFtsAllTermsQuery(input.terms);
   if (!ftsQuery) {
     return [];
   }
@@ -321,17 +346,19 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
   const rows = getDb()
     .prepare(
       `
+    WITH matches AS (
+      SELECT
+        f.session_id AS session_id
+      FROM conversation_search_index_fts f
+      WHERE conversation_search_index_fts MATCH ?
+      LIMIT ?
+    )
     SELECT i.session_id AS conversationId,
       i.title AS title,
       i.cwd AS cwd,
-      i.last_activity_at AS lastActivityAt,
-      snippet(conversation_search_index_fts, 2, '…', '…', '…', 32) AS snippet
-    FROM conversation_search_index_fts f
-    JOIN conversation_search_index i ON i.session_id = f.session_id
-    WHERE conversation_search_index_fts MATCH ?
-    ORDER BY i.last_activity_at DESC,
-      bm25(conversation_search_index_fts)
-    LIMIT ?
+      i.last_activity_at AS lastActivityAt
+    FROM matches
+    JOIN conversation_search_index i ON i.session_id = matches.session_id
   `,
     )
     .all(ftsQuery, limit) as Array<{
@@ -339,7 +366,6 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
     title: string;
     cwd: string;
     lastActivityAt: string;
-    snippet: string;
   }>;
 
   return rows.map((row) => ({
@@ -352,7 +378,7 @@ export function searchIndexedConversationContent(input: { terms: string[]; limit
     blockId: 'search-index',
     blockType: 'text',
     blockIndex: 0,
-    snippet: row.snippet || row.title,
+    snippet: row.title,
   }));
 }
 
@@ -393,6 +419,10 @@ export function closeConversationSearchIndexDb(): void {
 }
 
 export function resetConversationSearchIndexForTests(): void {
+  if (indexingTimer) {
+    clearTimeout(indexingTimer);
+    indexingTimer = null;
+  }
   closeConversationSearchIndexDb();
   indexingScheduled = false;
   indexingActive = false;

@@ -125,11 +125,11 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
     };
   }
 
-  if (!entry.isCompacting && isSmallLiveSessionFile(sessionFile)) {
+  if (liveBlocks.length === 0 && !entry.isCompacting && isSmallLiveSessionFile(sessionFile)) {
     return {
-      blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),
+      blocks: [],
       blockOffset: 0,
-      totalBlocks: liveBlocks.length,
+      totalBlocks: 0,
       isStreaming: entry.session.isStreaming,
     };
   }

@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -25,6 +25,36 @@ afterEach(async () => {
 });
 
 describe('conversationSearchIndex', () => {
+  it('does not create the search database during cold fast content search', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-search-index-cold-'));
+    process.env.NEON_PILOT_STATE_ROOT = root;
+
+    const mod = await import('./conversationSearchIndex.js');
+
+    expect(mod.searchIndexedConversationContent({ terms: ['release'], limit: 5 })).toEqual([]);
+    expect(existsSync(join(root, 'neon-pilot-runtime', 'conversations.db'))).toBe(false);
+  });
+
+  it('defers scheduled indexing unless a caller requests immediate work', async () => {
+    vi.useFakeTimers();
+    const root = mkdtempSync(join(tmpdir(), 'pa-search-index-delay-'));
+    process.env.NEON_PILOT_STATE_ROOT = root;
+    listSessionsMock.mockReturnValue([]);
+
+    const mod = await import('./conversationSearchIndex.js');
+    mod.scheduleConversationSearchIndexing();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(listSessionsMock).not.toHaveBeenCalled();
+
+    mod.resetConversationSearchIndexForTests();
+    mod.scheduleConversationSearchIndexing({ delayMs: 0 });
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(listSessionsMock).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it('indexes changed sessions and searches recent FTS documents', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-search-index-'));
     process.env.NEON_PILOT_STATE_ROOT = root;
@@ -77,6 +107,10 @@ describe('conversationSearchIndex', () => {
     expect(
       mod.searchIndexedConversationContent({ terms: ['notarization'], limit: 5 }).map((candidate) => candidate.conversationId),
     ).toEqual(['session-1']);
+
+    expect(
+      mod.searchIndexedConversationContent({ terms: ['notarization', 'missing'], limit: 5 }).map((candidate) => candidate.conversationId),
+    ).toEqual([]);
 
     expect(
       mod.searchIndexedConversationDocuments({

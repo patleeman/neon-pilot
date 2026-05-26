@@ -53,20 +53,20 @@ afterEach(() => {
 describe('normalizeConversationSummaryBackfillLoopOptions', () => {
   it('uses defaults when no input provided', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({});
-    expect(result.initialDelayMs).toBe(60_000);
+    expect(result.initialDelayMs).toBe(300_000);
     expect(result.intervalMs).toBe(600_000);
     expect(result.limit).toBe(25);
     expect(result.jobDelayMs).toBe(1_500);
   });
 
   it('clamps initialDelayMs to max', () => {
-    const result = normalizeConversationSummaryBackfillLoopOptions({ initialDelayMs: 120_000 });
-    expect(result.initialDelayMs).toBe(60_000);
+    const result = normalizeConversationSummaryBackfillLoopOptions({ initialDelayMs: 600_000 });
+    expect(result.initialDelayMs).toBe(300_000);
   });
 
   it('uses default for negative initialDelayMs', () => {
     const result = normalizeConversationSummaryBackfillLoopOptions({ initialDelayMs: -1 });
-    expect(result.initialDelayMs).toBe(60_000);
+    expect(result.initialDelayMs).toBe(300_000);
   });
 
   it('uses 0 initialDelayMs as-is', () => {

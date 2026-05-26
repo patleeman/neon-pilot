@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.2 — 2026-05-26
+
+### Highlights
+
+- Improves startup readiness for large local profiles by trimming critical extension registry loading, delaying non-critical cache work, and adding an immediate startup shell while the app hydrates.
+- Restores smoother live conversation behavior with frame-synced stream flushing, live tool streaming fixes, and more reliable transcript fork resolution.
+- Keeps draft prompts intact when rewinding or forking messages, including the user-message fork path and assistant rewind flow.
+- Makes provider sign-in smoother by exposing OAuth login URLs and reopening provider authorization automatically when needed.
+- Moves the system prompt editor into the agent runtime so prompt assembly settings stay extension-owned while preserving the app shell boundary.
+
+### Notes
+
+- 12 commits since the previous release.
+
 ## 0.9.1 — 2026-05-26
 
 ### Highlights

@@ -1,13 +1,4 @@
-import {
-  type ClipboardEventHandler,
-  type KeyboardEventHandler,
-  type RefObject,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { type ClipboardEventHandler, type KeyboardEventHandler, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
@@ -104,7 +95,6 @@ export function ConversationComposerInputControls({
 }) {
   const { composerControls = [], composerInputTools } = useExtensionRegistry();
   const [localInput, setLocalInputState] = useState(input);
-  const [, startInputTransition] = useTransition();
   const previousInputPropRef = useRef(input);
   const localInputRef = useRef(input);
   const setLocalInput = (nextInput: string) => {
@@ -201,9 +191,7 @@ export function ConversationComposerInputControls({
               const nextValue = event.target.value;
               const target = event.target;
               setLocalInput(nextValue);
-              startInputTransition(() => {
-                onInputChange(nextValue, target);
-              });
+              onInputChange(nextValue, target);
             }}
             onSelect={(event) => {
               onRememberComposerSelection(event.currentTarget);

@@ -56,6 +56,7 @@ let getRuntimeScopeFn: () => string = () => {
 let getRepoRootFn: () => string = () => process.cwd();
 let readModelBackfillStarted = false;
 let readModelBackfillTimer: ReturnType<typeof setTimeout> | null = null;
+const DEFAULT_READ_MODEL_BACKFILL_DELAY_MS = 5 * 60_000;
 
 export function getRuntimeScope(): string {
   return getRuntimeScopeFn();
@@ -582,7 +583,9 @@ export function startConversationReadModelBackfill(options: { delayMs?: number; 
   readModelBackfillStarted = true;
 
   const delayMs =
-    Number.isSafeInteger(options.delayMs) && typeof options.delayMs === 'number' && options.delayMs >= 0 ? options.delayMs : 60_000;
+    Number.isSafeInteger(options.delayMs) && typeof options.delayMs === 'number' && options.delayMs >= 0
+      ? options.delayMs
+      : DEFAULT_READ_MODEL_BACKFILL_DELAY_MS;
   const limit =
     Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? Math.min(options.limit, 500) : 100;
   const tailBlocks =

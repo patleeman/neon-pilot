@@ -31,6 +31,7 @@ interface ConversationCatalogRow {
 let db: SqliteDatabase | null = null;
 let catalogBackfillStarted = false;
 let catalogBackfillTimer: ReturnType<typeof setTimeout> | null = null;
+const DEFAULT_CATALOG_BACKFILL_DELAY_MS = 5 * 60_000;
 
 function getDb(): SqliteDatabase {
   if (db) return db;
@@ -338,7 +339,10 @@ export function startConversationCatalogBackfill(input: { listSessions: () => Se
   if (catalogBackfillStarted) return;
   catalogBackfillStarted = true;
 
-  const delayMs = Number.isSafeInteger(input.delayMs) && typeof input.delayMs === 'number' && input.delayMs >= 0 ? input.delayMs : 60_000;
+  const delayMs =
+    Number.isSafeInteger(input.delayMs) && typeof input.delayMs === 'number' && input.delayMs >= 0
+      ? input.delayMs
+      : DEFAULT_CATALOG_BACKFILL_DELAY_MS;
   const limit =
     Number.isSafeInteger(input.limit) && typeof input.limit === 'number' && input.limit > 0 ? Math.min(input.limit, 1_000) : 250;
 

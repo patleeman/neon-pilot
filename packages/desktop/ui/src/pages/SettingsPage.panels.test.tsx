@@ -119,7 +119,7 @@ describe('SettingsPage — untested panel rendering', () => {
   it('renders the runtime quick link', () => {
     const html = renderPage('/settings');
     expect(html).toContain('Agent Runtime');
-    expect(html).toContain('Prompt template, instruction files, and agent tools.');
+    expect(html).toContain('Instruction files and agent tools.');
   });
 
   it('does not render interface reset controls in core settings', () => {

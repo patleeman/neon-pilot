@@ -13,12 +13,17 @@ import { Suspense, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { KnowledgeSettingsPanel as KnowledgeSettingsPanelComponent } from './components/KnowledgeSettingsPanel';
-import { VaultEditor } from './components/VaultEditor';
-import { VaultFileTree } from './components/VaultFileTree';
 import { knowledgeApi } from './lib/knowledgeApi';
 import { navigateKnowledgeFile } from './lib/knowledgeNavigation';
 
-const LazyVaultFileTree = lazyRouteWithRecovery('system-knowledge-vault-file-tree', async () => ({ default: VaultFileTree }));
+const LazyVaultFileTree = lazyRouteWithRecovery('system-knowledge-vault-file-tree', async () => {
+  const module = await import('./components/VaultFileTree');
+  return { default: module.VaultFileTree };
+});
+const LazyVaultEditor = lazyRouteWithRecovery('system-knowledge-vault-editor', async () => {
+  const module = await import('./components/VaultEditor');
+  return { default: module.VaultEditor };
+});
 
 function getKnowledgeFileId(search: string): string | null {
   return new URLSearchParams(search).get('file');
@@ -140,7 +145,11 @@ export function KnowledgePageSurface() {
   }
 
   if (activeFileId) {
-    return <VaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />;
+    return (
+      <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
+        <LazyVaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />
+      </Suspense>
+    );
   }
 
   return (
@@ -188,7 +197,11 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
     );
   }
 
-  return <VaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />;
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
+      <LazyVaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />
+    </Suspense>
+  );
 }
 
 function quickOpenFileTitle(name: string): string {

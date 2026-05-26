@@ -4,16 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1** — patch release being prepared.
+**v0.9.2** — patch release being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.2
 
 Highlights in this train:
 
-- Promotes the `0.9.1` RC train to the stable app channel with the same Extension Manager source-label clarity, installable catalog filtering, and invalid-extension recovery fixes validated in RC.
-- Ships the packaged-extension startup hardening from the RC train, including backend API bundle guards, settings-store bundling, build artifact verification fixes, and refreshed workspace package ranges.
-- Includes settings-adjacent workflow polish for reply actions, Caffeinate auto-start behavior, SpeechMike cleanup, Alleycat networking stability, and frame-lag telemetry.
-- Publishes stable `Neon Pilot` macOS artifacts and installable extension bundles for users following the stable update path.
+- Improves startup readiness for large local profiles by trimming critical extension registry loading, delaying non-critical cache work, and adding an immediate startup shell while the app hydrates.
+- Restores smoother live conversation behavior with frame-synced stream flushing, live tool streaming fixes, and more reliable transcript fork resolution.
+- Keeps draft prompts intact when rewinding or forking messages, including the user-message fork path and assistant rewind flow.
+- Makes provider sign-in smoother by exposing OAuth login URLs and reopening provider authorization automatically when needed.
+- Moves the system prompt editor into the agent runtime so prompt assembly settings stay extension-owned while preserving the app shell boundary.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
