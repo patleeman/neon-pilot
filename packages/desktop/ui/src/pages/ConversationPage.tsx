@@ -3684,7 +3684,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           return;
         }
 
-        const { newSessionId } = await api.branchSession(liveConversationId, entryId, currentSurfaceId);
+        const { newSessionId } =
+          clickedBlock.type === 'user'
+            ? await api.forkSession(
+                liveConversationId,
+                entryId,
+                {
+                  preserveSource: true,
+                  beforeEntry: true,
+                },
+                currentSurfaceId,
+              )
+            : await api.branchSession(liveConversationId, entryId, currentSurfaceId);
+        if (clickedBlock.type === 'user') {
+          persistForkPromptDraft(newSessionId, clickedBlock.text);
+        }
         ensureConversationTabOpen(newSessionId);
         navigate(`/conversations/${newSessionId}`);
       } catch (error) {
