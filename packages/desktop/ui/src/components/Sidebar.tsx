@@ -3154,6 +3154,7 @@ export function Sidebar() {
         await startNewLiveConversation({
           navigate,
           cwd: explicitCwd,
+          preserveDraftSurface: location.pathname === DRAFT_CONVERSATION_ROUTE,
           bootstrapVersionKey: conversationBootstrapVersionKey,
           sessionDetailVersion: versions.sessionFiles,
         });
@@ -3166,7 +3167,7 @@ export function Sidebar() {
         setNewConversationBusy(false);
       }
     },
-    [conversationBootstrapVersionKey, navigate, newConversationBusy, versions.sessionFiles],
+    [conversationBootstrapVersionKey, location.pathname, navigate, newConversationBusy, versions.sessionFiles],
   );
 
   const handleOpenThreadSwitcher = useCallback(() => {

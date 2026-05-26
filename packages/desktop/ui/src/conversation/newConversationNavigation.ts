@@ -20,6 +20,7 @@ export interface StartNewLiveConversationInput {
   cwd?: string | null;
   replace?: boolean;
   focusComposer?: boolean;
+  preserveDraftSurface?: boolean;
   bootstrapVersionKey?: string;
   sessionDetailVersion?: number;
 }
@@ -47,7 +48,7 @@ export async function startNewLiveConversation(input: StartNewLiveConversationIn
   input.navigate(`/conversations/${encodeURIComponent(created.id)}`, {
     replace: input.replace,
     state: {
-      preserveConversationSurfaceKey: 'draft',
+      ...(input.preserveDraftSurface === true ? { preserveConversationSurfaceKey: 'draft' } : {}),
       focusComposer: input.focusComposer === true,
     },
   });
