@@ -204,6 +204,24 @@ describe('ChatView rendering stability', () => {
     expect(container.textContent).not.toContain('npm test -- --runInBand');
   });
 
+  it('auto-expands the running tool block in the live trace cluster', () => {
+    const toolBlock = {
+      id: 'tool-1',
+      type: 'tool_use',
+      ts: '2026-04-23T18:00:02.000Z',
+      tool: 'bash',
+      input: { command: 'pnpm vitest run' },
+      output: 'RUN  v4.0.18\n',
+      status: 'running',
+      running: true,
+    } satisfies Extract<MessageBlock, { type: 'tool_use' }>;
+    const { container } = renderChatView([toolBlock], { isStreaming: true });
+
+    expect(container.textContent).toContain('Working');
+    expect(container.textContent).toContain('pnpm vitest run');
+    expect(container.textContent).toContain('RUN  v4.0.18');
+  });
+
   it('requests composer focus when the transcript background is clicked', () => {
     const onFocusComposerRequest = vi.fn();
     const { container } = renderChatView([createAssistantBlock()], { onFocusComposerRequest });

@@ -17,7 +17,7 @@ import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
-const STREAM_DELTA_FLUSH_INTERVAL_MS = 80;
+const STREAM_DELTA_FLUSH_INTERVAL_MS = 32;
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
 
@@ -149,6 +149,8 @@ export function applyDesktopConversationStreamEvent(
         tool: event.toolName,
         input: event.args,
         output: '',
+        status: 'running',
+        running: true,
         ts: new Date().toISOString(),
       });
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
@@ -164,7 +166,14 @@ export function applyDesktopConversationStreamEvent(
       const index = findLastToolUseIndex(blocks, event.toolCallId);
       if (index >= 0 && blocks[index]?.type === 'tool_use') {
         const block = blocks[index];
-        blocks[index] = { ...block, output: event.output, durationMs: event.durationMs, details: event.details ?? block.details };
+        blocks[index] = {
+          ...block,
+          output: event.output,
+          status: event.isError ? 'error' : 'ok',
+          running: false,
+          durationMs: event.durationMs,
+          details: event.details ?? block.details,
+        };
       }
       const goalState = readGoalStateFromToolDetails(event.toolName, event.details);
       return {

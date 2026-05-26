@@ -49,6 +49,64 @@ describe('normalizeDesktopConversationStateTailBlocks', () => {
 });
 
 describe('applyDesktopConversationStreamEvent', () => {
+  it('marks live tool blocks as running until tool end', () => {
+    const stream = {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const running = applyDesktopConversationStreamEvent(stream, {
+      type: 'tool_start',
+      toolCallId: 'tool-1',
+      toolName: 'bash',
+      args: { command: 'pnpm test' },
+    });
+
+    expect(running.blocks).toEqual([
+      expect.objectContaining({
+        type: 'tool_use',
+        toolCallId: 'tool-1',
+        tool: 'bash',
+        status: 'running',
+        running: true,
+      }),
+    ]);
+
+    const completed = applyDesktopConversationStreamEvent(running, {
+      type: 'tool_end',
+      toolCallId: 'tool-1',
+      toolName: 'bash',
+      isError: false,
+      durationMs: 12,
+      output: 'done',
+    });
+
+    expect(completed.blocks).toEqual([
+      expect.objectContaining({
+        type: 'tool_use',
+        toolCallId: 'tool-1',
+        status: 'ok',
+        running: false,
+        output: 'done',
+      }),
+    ]);
+  });
+
   it('clears active goal state when the goal tool completes', () => {
     const stream = {
       blocks: [
