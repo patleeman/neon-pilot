@@ -67,6 +67,7 @@ const backendApiLazyModuleEntries = [
   ['prompt-assembly/promptAssembly.js', 'server/prompt-assembly/promptAssembly.ts'],
   ['prompt-assembly/instructionInventory.js', 'server/prompt-assembly/instructionInventory.ts'],
   ['skills/skillInventory.js', 'server/skills/skillInventory.ts'],
+  ['settings/settingsStore.js', 'server/settings/settingsStore.ts'],
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
   ['tools/toolInventory.js', 'server/tools/toolInventory.ts'],
   ['traces/tracePersistence.js', 'server/traces/tracePersistence.ts'],
