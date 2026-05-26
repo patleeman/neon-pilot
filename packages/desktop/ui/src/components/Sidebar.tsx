@@ -787,7 +787,7 @@ function TopNavItem({
   const handleClick = useCallback(
     (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (event.defaultPrevented || event.button !== 0) return;
-      navigate(to, { flushSync: true });
+      navigate(to);
     },
     [navigate, to],
   );
