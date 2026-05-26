@@ -679,6 +679,17 @@ export function clearExtensionFailureRecords(extensionId: string, stateRoot: str
   writeExtensionFailureRecords(records, stateRoot);
 }
 
+export function clearExtensionFailureRecordsForOperation(extensionId: string, operation: string, stateRoot: string = getStateRoot()): void {
+  const records = readExtensionFailureRecords(stateRoot);
+  const existing = records[extensionId];
+  if (!existing) return;
+  const next = existing.filter((record) => record.operation !== operation);
+  if (next.length === existing.length) return;
+  if (next.length > 0) records[extensionId] = next;
+  else delete records[extensionId];
+  writeExtensionFailureRecords(records, stateRoot);
+}
+
 export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): { safeMode: boolean; disabledIds: string[] } {
   const markerPath = getExtensionStartupMarkerPath(stateRoot);
   const safeMode = existsSync(markerPath);

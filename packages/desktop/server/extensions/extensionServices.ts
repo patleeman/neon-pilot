@@ -3,7 +3,14 @@ import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
 import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
-import { findExtensionEntry, listExtensionInstallSummaries, recordExtensionFailure, setExtensionHealthError } from './extensionRegistry.js';
+import {
+  clearExtensionFailureRecordsForOperation,
+  clearExtensionHealthError,
+  findExtensionEntry,
+  listExtensionInstallSummaries,
+  recordExtensionFailure,
+  setExtensionHealthError,
+} from './extensionRegistry.js';
 
 interface RunningExtensionService {
   extensionId: string;
@@ -77,6 +84,8 @@ async function startOneExtensionService(
     ]);
     const stop = typeof result === 'function' ? (result as () => unknown | Promise<unknown>) : undefined;
     runningServices.set(key, { extensionId, serviceId: service.id, stop, startedAt: new Date().toISOString() });
+    clearExtensionHealthError(extensionId);
+    clearExtensionFailureRecordsForOperation(extensionId, `service ${service.id} startup`);
     logInfo('extension service started', { extensionId, serviceId: service.id });
     return { extensionId, serviceId: service.id, ok: true };
   } catch (error) {
@@ -138,6 +147,10 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (result && typeof result === 'object' && 'running' in result && (result as { running?: unknown }).running === false) {
           throw new Error('Service health check reported stopped.');
         }
+        const running = runningServices.get(key);
+        if (running) delete running.lastError;
+        clearExtensionHealthError(summary.id);
+        clearExtensionFailureRecordsForOperation(summary.id, `service ${service.id} health check`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const running = runningServices.get(key);

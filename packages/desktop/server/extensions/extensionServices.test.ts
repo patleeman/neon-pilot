@@ -9,6 +9,8 @@ const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const recordExtensionFailure = vi.fn();
 const setExtensionHealthError = vi.fn();
+const clearExtensionHealthError = vi.fn();
+const clearExtensionFailureRecordsForOperation = vi.fn();
 const setExtensionEnabled = vi.fn();
 
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
@@ -19,6 +21,8 @@ vi.mock('./extensionRegistry.js', () => ({
   listExtensionInstallSummaries,
   recordExtensionFailure,
   setExtensionHealthError,
+  clearExtensionHealthError,
+  clearExtensionFailureRecordsForOperation,
   setExtensionEnabled,
 }));
 
@@ -44,6 +48,8 @@ describe('extensionServices', () => {
       listExtensionInstallSummaries,
       recordExtensionFailure,
       setExtensionHealthError,
+      clearExtensionHealthError,
+      clearExtensionFailureRecordsForOperation,
       setExtensionEnabled,
     ]) {
       mock.mockReset();
@@ -65,6 +71,8 @@ describe('extensionServices', () => {
     expect(startSync).toHaveBeenCalledWith({ serviceId: 'sync' }, { ctx: true });
     expect(isExtensionServiceRunning('ext', 'sync')).toBe(true);
     expect(listRunningExtensionServices()[0]).toMatchObject({ extensionId: 'ext', serviceId: 'sync', startedAt: expect.any(String) });
+    expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
+    expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync startup');
 
     await stopExtensionServices('ext');
     expect(stop).toHaveBeenCalledOnce();
@@ -104,6 +112,24 @@ describe('extensionServices', () => {
     });
   });
 
+  it('clears service diagnostics after successful health checks', async () => {
+    const stop = vi.fn();
+    const startSync = vi.fn().mockResolvedValue(stop);
+    const checkSync = vi.fn().mockResolvedValue({ running: true });
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
+    findExtensionEntry.mockReturnValue({
+      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', healthCheck: 'checkSync', restart: 'on-failure' }] } },
+    });
+    loadExtensionBackend.mockResolvedValue({ startSync, checkSync });
+
+    await startExtensionServices();
+    await runExtensionServiceHealthChecks();
+
+    expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
+    expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync health check');
+    expect(recordExtensionFailure).not.toHaveBeenCalled();
+  });
+
   it('runs health checks and restarts services that report stopped', async () => {
     const stop = vi.fn();
     const startSync = vi.fn().mockResolvedValue(stop);
@@ -115,6 +141,7 @@ describe('extensionServices', () => {
     loadExtensionBackend.mockResolvedValue({ startSync, checkSync });
 
     await startExtensionServices();
+    recordExtensionFailure.mockClear();
     await runExtensionServiceHealthChecks();
 
     expect(recordExtensionFailure).toHaveBeenCalledWith({

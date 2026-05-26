@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   beginExtensionStartupGuard,
+  clearExtensionFailureRecordsForOperation,
   completeExtensionStartupGuard,
   isExtensionEnabled,
   listExtensionAssemblyProviderRegistrations,
@@ -402,6 +403,26 @@ describe('extension registry', () => {
       enabled: false,
       diagnostics: [expect.stringContaining('Extension disabled by circuit breaker')],
     });
+  });
+
+  it('clears failure records for a recovered operation without dropping unrelated failures', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'recovering-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({ schemaVersion: 2, id: 'recovering-board', name: 'Recovering Board' }),
+    );
+
+    recordExtensionFailure({ extensionId: 'recovering-board', operation: 'service sync health check', error: 'stopped', stateRoot });
+    recordExtensionFailure({ extensionId: 'recovering-board', operation: 'action run', error: 'boom', stateRoot });
+    clearExtensionFailureRecordsForOperation('recovering-board', 'service sync health check', stateRoot);
+
+    const records = JSON.parse(readFileSync(join(stateRoot, 'extensions', 'failures.json'), 'utf8')) as Record<
+      string,
+      Array<{ operation: string; error: string }>
+    >;
+    expect(records['recovering-board']).toEqual([{ at: expect.any(String), operation: 'action run', error: 'boom' }]);
   });
 
   it('safe-mode startup disables enabled runtime extensions after an unclean startup marker', () => {
