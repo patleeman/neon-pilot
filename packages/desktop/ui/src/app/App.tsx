@@ -12,6 +12,7 @@ import {
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
 import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
+import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
@@ -129,9 +130,6 @@ function ConversationsRouteRedirect() {
 const ConversationPage = lazyRouteWithRecovery('conversation-page', () =>
   import('../pages/ConversationPage').then((module) => ({ default: module.ConversationPage })),
 );
-const ExtensionPage = lazyRouteWithRecovery('extension-page', () =>
-  import('../extensions/ExtensionPage').then((module) => ({ default: module.ExtensionPage })),
-);
 function suspendRoute(element: React.ReactNode) {
   return (
     <Suspense fallback={<div className="flex h-full items-center justify-center px-6 text-[12px] text-dim">Loading…</div>}>
@@ -155,11 +153,6 @@ function SavedConversationRoute() {
       ? 'draft'
       : (id ?? 'conversation');
   return suspendRoute(<ConversationPage key={surfaceKey} />);
-}
-
-function ExtensionRoute() {
-  const location = useLocation();
-  return suspendRoute(<ExtensionPage key={`${location.pathname}${location.search}`} />);
 }
 
 export function App() {
@@ -574,7 +567,7 @@ export function App() {
                           <Route path="conversations" element={<ConversationsRouteRedirect />} />
                           <Route path="conversations/new" element={<DraftConversationRoute />} />
                           <Route path="conversations/:id" element={<SavedConversationRoute />} />
-                          <Route path="*" element={<ExtensionRoute />} />
+                          <Route path="*" element={<ExtensionRouteHost />} />
                         </Route>
                       </Routes>
                     </BrowserRouter>

@@ -221,6 +221,14 @@ type SidebarConversationGroup = {
   items: SidebarConversationItem[];
 };
 
+type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
+  id: string;
+  route: string;
+  label: string;
+  icon?: string;
+  section?: 'primary' | 'settings';
+};
+
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
   return session.offshootKind !== 'subagent' && !session.sourceRunId;
 }
@@ -808,6 +816,59 @@ function TopNavItem({
       <span className="flex-1">{label}</span>
       {badge != null && badge > 0 && <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>}
     </button>
+  );
+}
+
+function SidebarPrimaryNav({
+  chatActive,
+  newConversationBusy,
+  newConversationHotkeyLabel,
+  items,
+  onNewConversation,
+}: {
+  chatActive: boolean;
+  newConversationBusy: boolean;
+  newConversationHotkeyLabel: string;
+  items: SidebarExtensionNavItem[];
+  onNewConversation: () => void;
+}) {
+  return (
+    <div className="space-y-px pt-3 pb-1">
+      <div className="px-1">
+        <button
+          type="button"
+          onClick={onNewConversation}
+          disabled={newConversationBusy}
+          className={['ui-sidebar-nav-item mx-0 flex w-full text-secondary', chatActive && 'ui-sidebar-nav-item-active']
+            .filter(Boolean)
+            .join(' ')}
+          title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
+        >
+          <Ico d={PATH.plus} size={15} />
+          <span className="flex-1 text-left">Chat</span>
+        </button>
+      </div>
+      {items.map((item) => (
+        <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+      ))}
+    </div>
+  );
+}
+
+function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[]; notice: string | null }) {
+  return (
+    <div className="shrink-0">
+      {notice ? (
+        <div aria-live="polite" className="px-4 pb-2 text-[11px] text-accent/80">
+          {notice}
+        </div>
+      ) : null}
+      <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
+        {items.map((item) => (
+          <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -3790,7 +3851,7 @@ export function Sidebar() {
     );
   }
 
-  const extensionNavItems = useMemo(() => {
+  const extensionNavItems = useMemo<SidebarExtensionNavItem[]>(() => {
     const legacy = extensionRegistry.surfaces
       .filter(isExtensionLeftNavItemSurface)
       .map((item) => ({ ...item, section: 'primary' as const }));
@@ -3811,33 +3872,15 @@ export function Sidebar() {
   return (
     <>
       <aside className="flex-1 flex flex-col overflow-hidden">
-        <div className="space-y-px pt-3 pb-1">
-          <div className="px-1">
-            <button
-              type="button"
-              onClick={() => {
-                void handleNewConversation();
-              }}
-              disabled={newConversationBusy}
-              className={['ui-sidebar-nav-item mx-0 flex w-full text-secondary', chatButtonActive && 'ui-sidebar-nav-item-active']
-                .filter(Boolean)
-                .join(' ')}
-              title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
-            >
-              <Ico d={PATH.plus} size={15} />
-              <span className="flex-1 text-left">Chat</span>
-            </button>
-          </div>
-          {primaryNavItems.map((item) => (
-            <TopNavItem
-              key={`${item.extensionId}:${item.id}`}
-              to={item.route}
-              icon={getExtensionNavIcon(item.icon)}
-              label={item.label}
-              forceActive={routeMatchesPrefix(location.pathname, item.route)}
-            />
-          ))}
-        </div>
+        <SidebarPrimaryNav
+          chatActive={chatButtonActive}
+          newConversationBusy={newConversationBusy}
+          newConversationHotkeyLabel={newConversationHotkeyLabel}
+          items={primaryNavItems}
+          onNewConversation={() => {
+            void handleNewConversation();
+          }}
+        />
 
         <div className="px-4 pt-1 pb-0.5">
           <div className="flex items-center gap-1">
@@ -4197,24 +4240,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className="shrink-0">
-          {sidebarNotice ? (
-            <div aria-live="polite" className="px-4 pb-2 text-[11px] text-accent/80">
-              {sidebarNotice.text}
-            </div>
-          ) : null}
-          <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
-            {settingsNavItems.map((item) => (
-              <TopNavItem
-                key={`${item.extensionId}:${item.id}`}
-                to={item.route}
-                icon={getExtensionNavIcon(item.icon)}
-                label={item.label}
-                forceActive={routeMatchesPrefix(location.pathname, item.route)}
-              />
-            ))}
-          </div>
-        </div>
+        <SidebarSettingsNav items={settingsNavItems} notice={sidebarNotice?.text ?? null} />
       </aside>
       {renameConversationGroupPrompt ? (
         <TextPromptDialog
