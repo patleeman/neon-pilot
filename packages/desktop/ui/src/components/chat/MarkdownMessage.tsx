@@ -437,57 +437,14 @@ function renderPlainText(text: string) {
   return <div className="whitespace-pre-wrap break-words">{text}</div>;
 }
 
-function splitStreamingMarkdownText(text: string): { completed: string[]; tail: string } {
-  const normalized = text.replace(/\r\n/g, '\n');
-  const lines = normalized.split('\n');
-  const completed: string[] = [];
-  let current: string[] = [];
-  let inFence = false;
-
-  for (const line of lines) {
-    current.push(line);
-
-    if (/^(\s*)(`{3,}|~{3,})/.test(line)) {
-      inFence = !inFence;
-    }
-
-    if (!inFence && line.trim() === '') {
-      completed.push(current.join('\n'));
-      current = [];
-    }
-  }
-
-  if (!inFence && normalized.endsWith('\n') && current.length > 0 && current.every((line) => line.trim() === '')) {
-    completed.push(current.join('\n'));
-    current = [];
-  }
-
-  return {
-    completed: completed.filter((chunk) => chunk.trim().length > 0),
-    tail: current.join('\n'),
-  };
-}
-
 export function renderStreamingMarkdownText(
   text: string,
-  options?: {
+  _options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
   },
 ) {
-  const { completed, tail } = splitStreamingMarkdownText(text);
-  if (completed.length === 0) {
-    return renderPlainText(text);
-  }
-
-  return (
-    <div className="space-y-3">
-      {completed.map((chunk, index) => (
-        <div key={index}>{renderText(chunk, options)}</div>
-      ))}
-      {tail.trim().length > 0 ? renderPlainText(tail) : null}
-    </div>
-  );
+  return renderPlainText(text);
 }
 
 function parseSkillContentSections(content: string): { relativeTo: string | null; body: string } {

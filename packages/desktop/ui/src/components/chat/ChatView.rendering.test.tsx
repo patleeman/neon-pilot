@@ -125,12 +125,13 @@ describe('ChatView rendering stability', () => {
     expect(container.querySelector('strong')?.textContent).toBe('streaming');
   });
 
-  it('renders completed markdown chunks while keeping the active streaming chunk plain', () => {
+  it('keeps completed markdown-looking chunks plain while the stream is active', () => {
     const streamingTail = createStreamingTail(['# Streaming title', '', '**active** tail'].join('\n'));
     const { container } = renderChatView([streamingTail], { isStreaming: true });
 
-    expect(container.querySelector('h1')?.textContent).toBe('Streaming title');
+    expect(container.textContent).toContain('# Streaming title');
     expect(container.textContent).toContain('**active** tail');
+    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('strong')).toBeNull();
   });
 
