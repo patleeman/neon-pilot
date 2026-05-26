@@ -107,8 +107,8 @@ describe('pendingInitialPromptLogic', () => {
     ).toBe(false);
   });
 
-  it('keeps stored prompts while related-thread context is being prepared', () => {
-    expect(shouldKeepStoredPendingInitialPromptDuringDispatch(prompt)).toBe(false);
+  it('keeps stored prompts visible while they are being dispatched', () => {
+    expect(shouldKeepStoredPendingInitialPromptDuringDispatch(prompt)).toBe(true);
     expect(
       shouldKeepStoredPendingInitialPromptDuringDispatch({
         ...prompt,

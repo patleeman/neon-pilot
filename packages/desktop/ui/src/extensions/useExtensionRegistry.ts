@@ -803,10 +803,8 @@ function normalizeExtensionRegistryState(
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
-  const composerControls = [
-    ...normalizeComposerControls(enabledRegistryExtensions),
-    ...normalizeComposerButtons(enabledRegistryExtensions),
-  ].sort(compareComposerControls);
+  const composerButtons = normalizeComposerButtons(enabledRegistryExtensions);
+  const composerControls = [...normalizeComposerControls(enabledRegistryExtensions), ...composerButtons].sort(compareComposerControls);
 
   return {
     extensions: registryExtensions,
@@ -819,7 +817,7 @@ function normalizeExtensionRegistryState(
     settingsComponents,
     settingsComponent: settingsComponents[0] ?? null,
     composerControls,
-    composerButtons: normalizeComposerButtons(enabledRegistryExtensions),
+    composerButtons,
     composerInputTools: normalizeComposerInputTools(enabledRegistryExtensions),
     toolbarActions: normalizeToolbarActions(enabledRegistryExtensions),
     contextMenus: normalizeContextMenus(enabledRegistryExtensions),

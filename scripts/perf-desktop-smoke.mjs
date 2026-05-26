@@ -211,6 +211,20 @@ async function waitForExpression(cdp, child, expression, timeoutMs = 30_000) {
   }
   throw new Error(`timed out waiting for expression: ${expression}`);
 }
+async function readDraftPromptDiagnostics(cdp, prompt) {
+  return evalJs(
+    cdp,
+    `(() => ({
+      pathname: location.pathname,
+      bodyIncludesPrompt: document.body.innerText.includes(${JSON.stringify(prompt)}),
+      textContentIncludesPrompt: (document.body.textContent || '').includes(${JSON.stringify(prompt)}),
+      textareas: Array.from(document.querySelectorAll('textarea')).map((textarea) => textarea.value),
+      sendDisabled: document.querySelector('button[aria-label="Send"]')?.disabled ?? null,
+      bodyTextTail: document.body.innerText.slice(-1000),
+      perf: globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.slice(-8) ?? null,
+    }))()`,
+  );
+}
 async function main() {
   await run(process.execPath, [
     join(repo, 'scripts/seed-startup-profile.mjs'),
@@ -289,16 +303,29 @@ async function main() {
       const clickStart = performance.now();
       await evalJs(
         cdp,
-        `(async()=>{const prompt=${JSON.stringify(prompt)}; globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__=performance.now(); const textarea=document.querySelector('textarea'); textarea.focus(); const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set; setter.call(textarea,prompt); textarea.dispatchEvent(new Event('input',{bubbles:true})); let button=null; for(let i=0;i<60;i++){await new Promise(r=>requestAnimationFrame(r)); button=document.querySelector('button[aria-label="Send"]'); if(button&&!button.disabled) break;} if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
+        `globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__=performance.now(); document.querySelector('textarea')?.focus()`,
+      );
+      await cdp.send('Input.insertText', { text: prompt });
+      await waitForExpression(cdp, child, `document.querySelector('textarea')?.value === ${JSON.stringify(prompt)}`, 5_000);
+      await evalJs(
+        cdp,
+        `(async()=>{let button=null; for(let i=0;i<60;i++){await new Promise(r=>requestAnimationFrame(r)); button=document.querySelector('button[aria-label="Send"]'); if(button&&!button.disabled) break;} if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); button.click(); return true;})()`,
       );
       await waitForExpression(cdp, child, `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`, 45_000);
       const routeMs = Math.round(performance.now() - clickStart);
-      await waitForExpression(
-        cdp,
-        child,
-        `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && document.body.innerText.includes(${JSON.stringify(prompt)})`,
-        90_000,
-      );
+      try {
+        await waitForExpression(
+          cdp,
+          child,
+          `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new') && (document.body.textContent || '').includes(${JSON.stringify(prompt)})`,
+          90_000,
+        );
+      } catch (error) {
+        const diagnostics = await readDraftPromptDiagnostics(cdp, prompt).catch((diagnosticError) => ({
+          diagnosticError: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError),
+        }));
+        throw new Error(`${error instanceof Error ? error.message : String(error)}\nDiagnostics: ${JSON.stringify(diagnostics, null, 2)}`);
+      }
       return { routeMs, promptVisibleAfterRouteMs: Math.round(performance.now() - clickStart) - routeMs };
     });
     const draftSubmitVisibleMs = draftSubmitResult.result.routeMs + draftSubmitResult.result.promptVisibleAfterRouteMs;

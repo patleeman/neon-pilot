@@ -4758,6 +4758,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 conversationId: newId,
                 resumes: [],
               },
+              initialPendingPromptState: {
+                conversationId: newId,
+                prompt: initialPrompt,
+              },
               preserveConversationSurfaceKey: 'draft',
             },
           });

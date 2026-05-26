@@ -33,8 +33,8 @@ export function shouldClaimPendingInitialPromptForSession(input: {
   );
 }
 
-export function shouldKeepStoredPendingInitialPromptDuringDispatch(prompt: PendingConversationPrompt): boolean {
-  return (prompt.relatedConversationIds?.length ?? 0) > 0;
+export function shouldKeepStoredPendingInitialPromptDuringDispatch(_prompt: PendingConversationPrompt): boolean {
+  return true;
 }
 
 export function normalizePendingRelatedConversationIds(prompt: PendingConversationPrompt): string[] {

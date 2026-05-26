@@ -569,12 +569,12 @@ function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRe
   writeFileSync(getExtensionFailurePath(stateRoot), `${JSON.stringify(records, null, 2)}\n`);
 }
 
-function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry): string[] {
+function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry, availableExtensionIds?: string[]): string[] {
   return listExtensionContributionDiagnosticsValue({
     packageRoot: entry.packageRoot,
     skills: entry.manifest.contributes?.skills,
     dependsOn: entry.manifest.dependsOn,
-    availableExtensionIds: listExtensionEntries().map((candidate) => candidate.manifest.id),
+    availableExtensionIds: availableExtensionIds ?? listExtensionEntries().map((candidate) => candidate.manifest.id),
   });
 }
 
@@ -625,10 +625,15 @@ function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot
 
 export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot()): boolean {
   const config = readExtensionRegistryConfig(stateRoot);
-  if ((config.disabledIds ?? []).includes(extensionId)) return false;
   const entry = listExtensionEntries(stateRoot).find((candidate) => candidate.manifest.id === extensionId);
-  if (entry?.manifest.defaultEnabled === false) {
-    return (config.enabledIds ?? []).includes(extensionId);
+  return isExtensionEntryEnabled(entry, config);
+}
+
+function isExtensionEntryEnabled(entry: ExtensionRegistryEntry | undefined, config: ExtensionRegistryConfig): boolean {
+  if (!entry) return true;
+  if ((config.disabledIds ?? []).includes(entry.manifest.id)) return false;
+  if (entry.manifest.defaultEnabled === false) {
+    return (config.enabledIds ?? []).includes(entry.manifest.id);
   }
   return true;
 }
@@ -697,12 +702,13 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
   if (safeMode) {
     const config = readExtensionRegistryConfig(stateRoot);
     const at = new Date().toISOString();
+    const entries = listExtensionEntries(stateRoot);
     const plan = planStartupGuardQuarantines(
       config,
-      listExtensionEntries(stateRoot).map((entry) => ({
+      entries.map((entry) => ({
         id: entry.manifest.id,
         source: entry.source,
-        enabled: isExtensionEnabled(entry.manifest.id, stateRoot),
+        enabled: isExtensionEntryEnabled(entry, config),
       })),
       at,
     );
@@ -1009,7 +1015,8 @@ export function listExtensionEntries(stateRoot: string = getStateRoot()): Extens
 }
 
 export function listEnabledExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
-  return listExtensionEntries(stateRoot).filter((entry) => isExtensionEnabled(entry.manifest.id, stateRoot));
+  const config = readExtensionRegistryConfig(stateRoot);
+  return listExtensionEntries(stateRoot).filter((entry) => isExtensionEntryEnabled(entry, config));
 }
 
 export function listExtensions(): LoadedExtensionManifest[] {
@@ -1017,15 +1024,18 @@ export function listExtensions(): LoadedExtensionManifest[] {
 }
 
 export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()): ExtensionInstallSummary[] {
-  const valid = listExtensionEntries(stateRoot).map((entry) => {
+  const entries = listExtensionEntries(stateRoot);
+  const config = readExtensionRegistryConfig(stateRoot);
+  const availableExtensionIds = entries.map((entry) => entry.manifest.id);
+  const valid = entries.map((entry) => {
     const manifest = entry.manifest;
     const surfaces = manifest.surfaces ?? [];
     const views = manifest.contributes?.views ?? [];
-    const enabled = isExtensionEnabled(manifest.id, stateRoot);
-    const diagnostics = listExtensionContributionDiagnostics(entry);
+    const enabled = isExtensionEntryEnabled(entry, config);
+    const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
-    const quarantine = readExtensionRegistryConfig(stateRoot).quarantined?.[manifest.id];
+    const quarantine = config.quarantined?.[manifest.id];
     const quarantineDiagnostic = buildExtensionQuarantineDiagnostic(quarantine);
     return {
       id: manifest.id,
@@ -1045,10 +1055,10 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       services: manifest.backend?.services ?? [],
       subscriptions: manifest.contributes?.subscriptions ?? [],
       dependsOn: manifest.dependsOn ?? [],
-      skills: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionSkillRegistrations(entry) : [],
-      mentions: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionMentionRegistrations(entry) : [],
-      tools: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionToolRegistrations(entry) : [],
-      modelProfiles: isExtensionEnabled(manifest.id, stateRoot) ? buildExtensionModelProfileRegistrations(entry) : [],
+      skills: enabled ? buildExtensionSkillRegistrations(entry) : [],
+      mentions: enabled ? buildExtensionMentionRegistrations(entry) : [],
+      tools: enabled ? buildExtensionToolRegistrations(entry) : [],
+      modelProfiles: enabled ? buildExtensionModelProfileRegistrations(entry) : [],
       routes: buildExtensionInstallRoutes({ surfaces, views }),
     };
   });
