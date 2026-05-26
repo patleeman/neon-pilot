@@ -54,6 +54,29 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('records renderer interactions with useful target attribution', async () => {
+    const { recordRendererInteraction } = await import('./perfDiagnostics');
+    const button = document.createElement('button');
+    button.setAttribute('data-route', '/telemetry');
+    button.textContent = 'Telemetry';
+    document.body.appendChild(button);
+
+    recordRendererInteraction('click', button, 123);
+
+    const perf = (
+      globalThis as typeof globalThis & {
+        __NEON_PILOT_APP_PERF__?: { interactionSamples?: Array<{ type: string; route: string; target: string | null }> };
+      }
+    ).__NEON_PILOT_APP_PERF__;
+    expect(perf?.interactionSamples).toEqual([
+      expect.objectContaining({
+        type: 'click',
+        route: '/',
+        target: expect.stringContaining('route=/telemetry'),
+      }),
+    ]);
+  });
+
   it('only logs perf samples for the documented debug key', async () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     localStorage.setItem('pa.debugPerf', '1');

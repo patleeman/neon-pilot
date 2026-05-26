@@ -55,12 +55,21 @@ interface RendererLongTaskSample {
   meta?: Record<string, unknown>;
 }
 
+interface RendererInteractionSample {
+  type: string;
+  route: string;
+  recordedAt: string;
+  timeMs: number;
+  target: string | null;
+}
+
 interface PerfStore {
   apiSamples: PerfApiSample[];
   conversationOpenSamples: ConversationOpenPhaseSample[];
   chatRenderSamples: ChatRenderSample[];
   clientSamples: ClientPerfSample[];
   longTaskSamples: RendererLongTaskSample[];
+  interactionSamples: RendererInteractionSample[];
   extensionRegistryLoading?: boolean;
   extensionRegistryLoadedAt?: string;
   extensionRegistryLoadedAtMs?: number;
@@ -76,6 +85,7 @@ const perfStore: PerfStore = {
   chatRenderSamples: [],
   clientSamples: [],
   longTaskSamples: [],
+  interactionSamples: [],
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
 let rendererBlockTelemetryStarted = false;
@@ -223,19 +233,89 @@ function summarizeChatRenderSample(sample: ChatRenderSample): Record<string, unk
 
 function buildRendererBlockAttribution(startTimeMs: number, durationMs: number): Record<string, unknown> | null {
   const blockEndTimeMs = startTimeMs + durationMs;
+  const recentInteractions = perfStore.interactionSamples
+    .filter((sample) => sample.timeMs >= startTimeMs - 1500 && sample.timeMs <= blockEndTimeMs + 250)
+    .slice(-8)
+    .map((sample) => ({
+      type: sample.type,
+      route: sample.route,
+      timeMs: Math.round(sample.timeMs),
+      target: sample.target,
+    }));
   const recentClientSamples = perfStore.clientSamples
     .filter((sample) => sample.endTimeMs >= startTimeMs - 5000 && sample.startTimeMs <= blockEndTimeMs + 250)
     .slice(-8)
     .map(summarizeClientSample);
   const latestChatRenderSample = perfStore.chatRenderSamples.at(-1);
-  if (recentClientSamples.length === 0 && !latestChatRenderSample) {
+  if (recentInteractions.length === 0 && recentClientSamples.length === 0 && !latestChatRenderSample) {
     return null;
   }
 
   return {
+    ...(recentInteractions.length > 0 ? { recentInteractions } : {}),
     ...(recentClientSamples.length > 0 ? { recentClientSamples } : {}),
     ...(latestChatRenderSample ? { latestChatRenderSample: summarizeChatRenderSample(latestChatRenderSample) } : {}),
   };
+}
+
+function describeInteractionTarget(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  const element = target.closest<HTMLElement>(
+    [
+      '[data-route]',
+      '[data-testid]',
+      '[data-extension-id]',
+      '[data-chat-transcript-panel]',
+      '[data-message-index]',
+      '[aria-label]',
+      'button',
+      'a',
+      'input',
+      'textarea',
+      'select',
+      '[role]',
+    ].join(','),
+  );
+  if (!element) {
+    return target.tagName.toLowerCase();
+  }
+
+  const parts = [element.tagName.toLowerCase()];
+  const route = element.getAttribute('data-route');
+  const testId = element.getAttribute('data-testid');
+  const extensionId = element.getAttribute('data-extension-id');
+  const messageIndex = element.getAttribute('data-message-index');
+  const ariaLabel = element.getAttribute('aria-label');
+  const role = element.getAttribute('role');
+  if (route) parts.push(`route=${route}`);
+  if (testId) parts.push(`testid=${testId}`);
+  if (extensionId) parts.push(`extension=${extensionId}`);
+  if (messageIndex) parts.push(`message=${messageIndex}`);
+  if (role) parts.push(`role=${role}`);
+  if (ariaLabel) parts.push(`label=${ariaLabel.slice(0, 80)}`);
+  const text = element.textContent?.replace(/\s+/g, ' ').trim();
+  if (!ariaLabel && text) {
+    parts.push(`text=${text.slice(0, 80)}`);
+  }
+  return parts.join(' ');
+}
+
+export function recordRendererInteraction(type: string, target: EventTarget | null, timeMs = performance.now()): void {
+  const sample: RendererInteractionSample = {
+    type,
+    route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
+    recordedAt: new Date().toISOString(),
+    timeMs: Math.max(0, timeMs),
+    target: describeInteractionTarget(target),
+  };
+  appendSample(perfStore.interactionSamples, sample);
+  publishPerfStore();
+  if (shouldLogPerfSamples()) {
+    console.info('[pa-perf][interaction]', sample);
+  }
 }
 
 function recordRendererLongTask(input: {
@@ -277,6 +357,15 @@ export function startRendererBlockTelemetry(): void {
     return;
   }
   rendererBlockTelemetryStarted = true;
+
+  const recordInteractionEvent = (event: Event) => {
+    recordRendererInteraction(event.type, event.target, performance.now());
+  };
+  globalThis.addEventListener?.('pointerdown', recordInteractionEvent, { capture: true, passive: true });
+  globalThis.addEventListener?.('click', recordInteractionEvent, { capture: true, passive: true });
+  globalThis.addEventListener?.('keydown', recordInteractionEvent, { capture: true });
+  globalThis.addEventListener?.('wheel', recordInteractionEvent, { capture: true, passive: true });
+  globalThis.addEventListener?.('scroll', recordInteractionEvent, { capture: true, passive: true });
 
   try {
     const Observer = globalThis.PerformanceObserver;
