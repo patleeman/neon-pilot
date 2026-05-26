@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.7 — 2026-05-26
+
+### Highlights
+
+- Clarifies Extension Manager source states with Built-in, Add-on, Installed add-ons, Available add-ons, and All installed labels, including matching details modal and docs.
+- Keeps available catalog items out of installed-extension filters and stops catalog refreshes from polling, making the extension registry easier to reason about before release.
+- Improves extension recovery and invalid-package handling by clearing stale service diagnostics, allowing invalid runtime extensions to be deleted, and removing misleading load warnings.
+- Hardens packaged extension startup with backend API bundle guards, settings-store bundling, corrected build artifact verification paths, and refreshed internal workspace ranges.
+- Polishes settings-adjacent workflows with reply-action rendering improvements, Caffeinate auto-start support, SpeechMike cleanup, Alleycat networking stability, and added frame-lag telemetry.
+
+### Notes
+
+- 20 commits since the previous release.
+
 ## 0.9.1-rc.6 — 2026-05-26
 
 ### Highlights
