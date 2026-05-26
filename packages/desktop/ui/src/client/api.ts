@@ -66,6 +66,13 @@ import type {
 import { buildApiPath } from './apiBase';
 import { recordApiTiming, recordClientPerfTiming } from './perfDiagnostics';
 
+export interface ExtensionRegistryApiState {
+  extensions: ExtensionInstallSummary[];
+  routes: ExtensionRouteSummary[];
+  surfaces: ExtensionSurfaceSummary[];
+  settings: Record<string, unknown>;
+}
+
 // ── Retry helpers for transient network errors (e.g. server restarts) ────────
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
@@ -290,6 +297,7 @@ export const api = {
   daemon: async () => get<DaemonState>('/daemon'),
   extensions: async () => extensionGet<ExtensionManifest[]>('/extensions'),
   extensionInstallations: async () => extensionGet<ExtensionInstallSummary[]>('/extensions/installed'),
+  extensionRegistry: async () => extensionGet<ExtensionRegistryApiState>('/extensions/registry'),
   createExtension: async (input: {
     id: string;
     name: string;

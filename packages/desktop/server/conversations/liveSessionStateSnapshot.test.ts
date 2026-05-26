@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const existsSyncMock = vi.fn(() => true);
+const statSyncMock = vi.fn(() => ({ size: 100, isDirectory: () => false }));
 const readSessionBlocksByFileMock = vi.fn(() => ({
   blocks: [],
   blockOffset: 0,
@@ -10,7 +11,7 @@ const readSessionBlocksByFileMock = vi.fn(() => ({
 
 vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
-  statSync: vi.fn(() => ({ isDirectory: () => false })),
+  statSync: statSyncMock,
 }));
 
 vi.mock('./sessions.js', () => ({
@@ -21,10 +22,14 @@ vi.mock('./sessions.js', () => ({
 describe('liveSessionStateSnapshot', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    existsSyncMock.mockReturnValue(true);
+    statSyncMock.mockReturnValue({ size: 100, isDirectory: () => false });
   });
 
   it('defaults unsafe live snapshot tail block limits', async () => {
     const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    statSyncMock.mockReturnValue({ size: 50_000, isDirectory: () => false });
 
     buildLiveSessionSnapshot(
       {
@@ -42,6 +47,8 @@ describe('liveSessionStateSnapshot', () => {
 
   it('caps expensive live snapshot tail block limits', async () => {
     const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    statSyncMock.mockReturnValue({ size: 50_000, isDirectory: () => false });
 
     buildLiveSessionSnapshot(
       {
@@ -71,6 +78,39 @@ describe('liveSessionStateSnapshot', () => {
 
     expect(snapshot).toMatchObject({ blocks: [], blockOffset: 0, totalBlocks: 0, isStreaming: false });
     expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
+  });
+
+  it('skips transcript reads for empty new live session files', async () => {
+    const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    const snapshot = buildLiveSessionSnapshot({
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: true,
+        state: { messages: [] },
+        sessionManager: { getEntries: () => [] },
+      },
+    } as never);
+
+    expect(snapshot).toMatchObject({ blocks: [], blockOffset: 0, totalBlocks: 0, isStreaming: true });
+    expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps transcript reads for non-empty streaming session files', async () => {
+    const { buildLiveSessionSnapshot } = await import('./liveSessionStateSnapshot.js');
+
+    statSyncMock.mockReturnValue({ size: 50_000, isDirectory: () => false });
+
+    buildLiveSessionSnapshot({
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: true,
+        state: { messages: [] },
+        sessionManager: { getEntries: () => [] },
+      },
+    } as never);
+
+    expect(readSessionBlocksByFileMock).toHaveBeenCalledWith('/tmp/session.jsonl', { tailBlocks: 400 });
   });
 
   it('builds minimal state snapshots for empty idle live sessions', async () => {

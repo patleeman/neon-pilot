@@ -774,12 +774,7 @@ function normalizeStatusBarItems(extensions: ExtensionManifest[]): ExtensionStat
 }
 
 function canLoadExtensionRegistry(): boolean {
-  return (
-    typeof api.extensionInstallations === 'function' &&
-    typeof api.extensionRoutes === 'function' &&
-    typeof api.extensionSurfaces === 'function' &&
-    typeof api.settings === 'function'
-  );
+  return typeof api.extensionRegistry === 'function';
 }
 
 async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
@@ -787,12 +782,7 @@ async function fetchExtensionRegistryState(): Promise<ExtensionRegistryState> {
     return EMPTY_EXTENSION_REGISTRY_STATE;
   }
 
-  const [extensions, routes, surfaces, settings] = await Promise.all([
-    api.extensionInstallations(),
-    api.extensionRoutes(),
-    api.extensionSurfaces(),
-    api.settings(),
-  ]);
+  const { extensions, routes, surfaces, settings } = await api.extensionRegistry();
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);

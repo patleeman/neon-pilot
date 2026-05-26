@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
@@ -19,6 +19,7 @@ import { readGoalFromEntries } from './sessionGoalState.js';
 
 const DEFAULT_LIVE_SNAPSHOT_TAIL_BLOCKS = 400;
 const MAX_LIVE_SNAPSHOT_TAIL_BLOCKS = 10000;
+const EMPTY_LIVE_SESSION_FILE_MAX_BYTES = 16 * 1024;
 
 function normalizeLiveSnapshotTailBlocks(value: number | undefined): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
@@ -93,6 +94,14 @@ function hasNoLiveSessionEntries(session: AgentSession): boolean {
   }
 }
 
+function isLikelyEmptyLiveSessionFile(filePath: string): boolean {
+  try {
+    return statSync(filePath).size <= EMPTY_LIVE_SESSION_FILE_MAX_BYTES;
+  } catch {
+    return false;
+  }
+}
+
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {
   if (!entry.session.isStreaming && !entry.isCompacting && hasNoLiveSessionEntries(entry.session)) {
     return {
@@ -112,6 +121,15 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),
       blockOffset: 0,
       totalBlocks: liveBlocks.length,
+      isStreaming: entry.session.isStreaming,
+    };
+  }
+
+  if (liveBlocks.length === 0 && !entry.isCompacting && isLikelyEmptyLiveSessionFile(sessionFile)) {
+    return {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
       isStreaming: entry.session.isStreaming,
     };
   }

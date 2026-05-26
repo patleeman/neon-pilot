@@ -43,6 +43,7 @@ import {
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from '../extensions/extensionStorage.js';
 import { logError } from '../middleware/index.js';
+import { createSettingsStore } from '../settings/settingsStore.js';
 import type { ServerRouteContext } from './context.js';
 
 async function readExtensionInstallSummariesWithRuntimeState() {
@@ -261,6 +262,24 @@ export function registerExtensionRoutes(
       res.json(await readExtensionInstallSummariesWithRuntimeState());
     } catch (err) {
       sendRouteError(res, 'extensions installed error', err);
+    }
+  });
+
+  router.get('/api/extensions/registry', async (_req, res) => {
+    try {
+      const [extensions, snapshot, settings] = await Promise.all([
+        readExtensionInstallSummariesWithRuntimeState(),
+        Promise.resolve(readExtensionRegistrySnapshot()),
+        Promise.resolve(createSettingsStore().read()),
+      ]);
+      res.json({
+        extensions,
+        routes: snapshot.routes,
+        surfaces: [...snapshot.surfaces, ...snapshot.views],
+        settings,
+      });
+    } catch (err) {
+      sendRouteError(res, 'extensions registry error', err);
     }
   });
 

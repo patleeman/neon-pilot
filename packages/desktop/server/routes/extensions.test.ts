@@ -102,6 +102,21 @@ describe('registerExtensionRoutes', () => {
       ]),
     );
 
+    const registryRes = createResponse();
+    await harness.getHandler('/api/extensions/registry')({}, registryRes);
+    expect(registryRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensions: expect.arrayContaining([expect.objectContaining({ id: 'system-automations', enabled: true })]),
+        routes: expect.arrayContaining([
+          { route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' },
+        ]),
+        surfaces: expect.arrayContaining([
+          expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
+        ]),
+        settings: expect.any(Object),
+      }),
+    );
+
     const routesRes = createResponse();
     harness.getHandler('/api/extensions/routes')({}, routesRes);
     expect(routesRes.json).toHaveBeenCalledWith(

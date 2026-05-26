@@ -11,6 +11,7 @@ import { ExtensionRegistryProvider, useExtensionRegistry } from './useExtensionR
 vi.mock('../client/api', () => ({
   api: {
     extensionInstallations: vi.fn(),
+    extensionRegistry: vi.fn(),
     extensionRoutes: vi.fn(),
     extensionSurfaces: vi.fn(),
     settings: vi.fn(),
@@ -21,80 +22,93 @@ const extensionRegistryWrapper = ({ children }: { children: ReactNode }) => (
   <ExtensionRegistryProvider>{children}</ExtensionRegistryProvider>
 );
 
+function mockExtensionRegistryState({
+  extensions = [],
+  routes = [],
+  surfaces = [],
+  settings = {},
+}: {
+  extensions?: unknown[];
+  routes?: unknown[];
+  surfaces?: unknown[];
+  settings?: Record<string, unknown>;
+}) {
+  vi.mocked(api.extensionRegistry).mockResolvedValue({ extensions, routes, surfaces, settings } as never);
+}
+
 describe('useExtensionRegistry', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it('normalizes component-backed extension chrome from manifests', async () => {
-    vi.mocked(api.extensionInstallations).mockResolvedValue([
-      {
-        id: 'test-extension',
-        name: 'Test Extension',
-        enabled: true,
-        status: 'enabled',
-        manifest: {
-          schemaVersion: 2,
+    mockExtensionRegistryState({
+      extensions: [
+        {
           id: 'test-extension',
           name: 'Test Extension',
-          frontend: { entry: 'dist/frontend.js', styles: [] },
-          contributes: {
-            conversationHeaderElements: [
-              {
-                id: 'header-indicator',
-                component: 'HeaderIndicator',
-                label: 'Header indicator',
-              },
-            ],
-            statusBarItems: [
-              {
-                id: 'git-status',
-                label: 'Git status',
-                component: 'GitStatusIndicator',
-                alignment: 'right',
-                priority: 100,
-              },
-            ],
-            composerControls: [
-              {
-                id: 'model-preferences',
-                component: 'ModelPreferencesComposerControl',
-                title: 'Model preferences',
-                slot: 'preferences',
-                priority: 100,
-              },
-            ],
-            composerInputTools: [
-              {
-                id: 'draw',
-                component: 'DrawButton',
-                title: 'Draw',
-                when: '!streamIsStreaming',
-                priority: 25,
-              },
-            ],
-            activityTreeItemElements: [
-              {
-                id: 'thread-color-dot',
-                component: 'ThreadColorDot',
-                slot: 'leading',
-                priority: 10,
-              },
-            ],
-            activityTreeItemStyles: [
-              {
-                id: 'thread-color-style',
-                provider: 'getThreadColorStyle',
-                priority: 20,
-              },
-            ],
+          enabled: true,
+          status: 'enabled',
+          manifest: {
+            schemaVersion: 2,
+            id: 'test-extension',
+            name: 'Test Extension',
+            frontend: { entry: 'dist/frontend.js', styles: [] },
+            contributes: {
+              conversationHeaderElements: [
+                {
+                  id: 'header-indicator',
+                  component: 'HeaderIndicator',
+                  label: 'Header indicator',
+                },
+              ],
+              statusBarItems: [
+                {
+                  id: 'git-status',
+                  label: 'Git status',
+                  component: 'GitStatusIndicator',
+                  alignment: 'right',
+                  priority: 100,
+                },
+              ],
+              composerControls: [
+                {
+                  id: 'model-preferences',
+                  component: 'ModelPreferencesComposerControl',
+                  title: 'Model preferences',
+                  slot: 'preferences',
+                  priority: 100,
+                },
+              ],
+              composerInputTools: [
+                {
+                  id: 'draw',
+                  component: 'DrawButton',
+                  title: 'Draw',
+                  when: '!streamIsStreaming',
+                  priority: 25,
+                },
+              ],
+              activityTreeItemElements: [
+                {
+                  id: 'thread-color-dot',
+                  component: 'ThreadColorDot',
+                  slot: 'leading',
+                  priority: 10,
+                },
+              ],
+              activityTreeItemStyles: [
+                {
+                  id: 'thread-color-style',
+                  provider: 'getThreadColorStyle',
+                  priority: 20,
+                },
+              ],
+            },
           },
         },
-      },
-    ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({});
+      ],
+    });
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
 
@@ -170,18 +184,17 @@ describe('useExtensionRegistry', () => {
   });
 
   it('shares one registry load across multiple consumers under the provider', async () => {
-    vi.mocked(api.extensionInstallations).mockResolvedValue([
-      {
-        id: 'shared-extension',
-        name: 'Shared Extension',
-        enabled: true,
-        status: 'enabled',
-        manifest: { schemaVersion: 2, id: 'shared-extension', name: 'Shared Extension' },
-      },
-    ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({});
+    mockExtensionRegistryState({
+      extensions: [
+        {
+          id: 'shared-extension',
+          name: 'Shared Extension',
+          enabled: true,
+          status: 'enabled',
+          manifest: { schemaVersion: 2, id: 'shared-extension', name: 'Shared Extension' },
+        },
+      ],
+    });
 
     const useTwoRegistryConsumers = () => {
       const first = useExtensionRegistry();
@@ -194,49 +207,50 @@ describe('useExtensionRegistry', () => {
     await waitFor(() => expect(result.current.first.loading).toBe(false));
     expect(result.current.first.extensions.map((entry) => entry.id)).toEqual(['shared-extension']);
     expect(result.current.second.extensions.map((entry) => entry.id)).toEqual(['shared-extension']);
-    expect(api.extensionInstallations).toHaveBeenCalledTimes(1);
-    expect(api.extensionRoutes).toHaveBeenCalledTimes(1);
-    expect(api.extensionSurfaces).toHaveBeenCalledTimes(1);
-    expect(api.settings).toHaveBeenCalledTimes(1);
+    expect(api.extensionRegistry).toHaveBeenCalledTimes(1);
+    expect(api.extensionInstallations).not.toHaveBeenCalled();
+    expect(api.extensionRoutes).not.toHaveBeenCalled();
+    expect(api.extensionSurfaces).not.toHaveBeenCalled();
+    expect(api.settings).not.toHaveBeenCalled();
   });
 
   it('expands selection action picker items from extension settings', async () => {
-    vi.mocked(api.extensionInstallations).mockResolvedValue([
-      {
-        id: 'reply-extension',
-        name: 'Reply Actions',
-        enabled: true,
-        status: 'enabled',
-        manifest: {
-          schemaVersion: 2,
+    mockExtensionRegistryState({
+      extensions: [
+        {
           id: 'reply-extension',
           name: 'Reply Actions',
-          contributes: {
-            selectionActions: [
-              {
-                id: 'emoji-picker-item',
-                title: 'Emoji reply',
-                action: 'composer.replyToSelection',
-                kinds: ['text', 'transcriptRange'],
-                icon: '👍',
-                priority: 100,
-                args: { draftText: '👍 Agree' },
-                settingItems: {
-                  key: 'reply-extension.items',
-                  idPrefix: 'emoji-picker-item',
-                  argsKey: 'draftText',
-                  icon: 'firstToken',
+          enabled: true,
+          status: 'enabled',
+          manifest: {
+            schemaVersion: 2,
+            id: 'reply-extension',
+            name: 'Reply Actions',
+            contributes: {
+              selectionActions: [
+                {
+                  id: 'emoji-picker-item',
+                  title: 'Emoji reply',
+                  action: 'composer.replyToSelection',
+                  kinds: ['text', 'transcriptRange'],
+                  icon: '👍',
+                  priority: 100,
+                  args: { draftText: '👍 Agree' },
+                  settingItems: {
+                    key: 'reply-extension.items',
+                    idPrefix: 'emoji-picker-item',
+                    argsKey: 'draftText',
+                    icon: 'firstToken',
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
         },
+      ],
+      settings: {
+        'reply-extension.items': '🚀 Ship it, 🧭 Reorient',
       },
-    ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({
-      'reply-extension.items': '🚀 Ship it, 🧭 Reorient',
     });
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
@@ -259,65 +273,65 @@ describe('useExtensionRegistry', () => {
   });
 
   it('removes setting-expanded selection actions when the setting is empty', async () => {
-    vi.mocked(api.extensionInstallations).mockResolvedValue([
-      {
-        id: 'reply-extension',
-        name: 'Reply Actions',
-        enabled: true,
-        status: 'enabled',
-        manifest: {
-          schemaVersion: 2,
+    mockExtensionRegistryState({
+      extensions: [
+        {
           id: 'reply-extension',
           name: 'Reply Actions',
-          contributes: {
-            selectionActions: [
-              {
-                id: 'emoji-picker-item',
-                title: 'Emoji reply',
-                action: 'composer.replyToSelection',
-                kinds: ['text', 'transcriptRange'],
-                icon: '👍',
-                priority: 100,
-                args: { draftText: '👍 Agree' },
-                settingItems: {
-                  key: 'reply-extension.items',
-                  idPrefix: 'emoji-picker-item',
-                  argsKey: 'draftText',
-                  icon: 'firstToken',
+          enabled: true,
+          status: 'enabled',
+          manifest: {
+            schemaVersion: 2,
+            id: 'reply-extension',
+            name: 'Reply Actions',
+            contributes: {
+              selectionActions: [
+                {
+                  id: 'emoji-picker-item',
+                  title: 'Emoji reply',
+                  action: 'composer.replyToSelection',
+                  kinds: ['text', 'transcriptRange'],
+                  icon: '👍',
+                  priority: 100,
+                  args: { draftText: '👍 Agree' },
+                  settingItems: {
+                    key: 'reply-extension.items',
+                    idPrefix: 'emoji-picker-item',
+                    argsKey: 'draftText',
+                    icon: 'firstToken',
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
         },
-      },
-      {
-        id: 'other-extension',
-        name: 'Other Extension',
-        enabled: true,
-        status: 'enabled',
-        manifest: {
-          schemaVersion: 2,
+        {
           id: 'other-extension',
           name: 'Other Extension',
-          contributes: {
-            selectionActions: [
-              {
-                id: 'other-action',
-                title: 'Other action',
-                action: 'other.action',
-                kinds: ['text'],
-                icon: 'O',
-                priority: 10,
-              },
-            ],
+          enabled: true,
+          status: 'enabled',
+          manifest: {
+            schemaVersion: 2,
+            id: 'other-extension',
+            name: 'Other Extension',
+            contributes: {
+              selectionActions: [
+                {
+                  id: 'other-action',
+                  title: 'Other action',
+                  action: 'other.action',
+                  kinds: ['text'],
+                  icon: 'O',
+                  priority: 10,
+                },
+              ],
+            },
           },
         },
+      ],
+      settings: {
+        'reply-extension.items': ' , ; ',
       },
-    ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({
-      'reply-extension.items': ' , ; ',
     });
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
@@ -332,27 +346,26 @@ describe('useExtensionRegistry', () => {
   });
 
   it('keeps disabled extensions visible but removes their active contributions', async () => {
-    vi.mocked(api.extensionInstallations).mockResolvedValue([
-      {
-        id: 'disabled-extension',
-        name: 'Disabled Extension',
-        enabled: false,
-        status: 'disabled',
-        manifest: {
-          schemaVersion: 2,
+    mockExtensionRegistryState({
+      extensions: [
+        {
           id: 'disabled-extension',
           name: 'Disabled Extension',
-          frontend: { entry: 'dist/frontend.js', styles: [] },
-          contributes: {
-            composerButtons: [{ id: 'disabled-button', component: 'DisabledButton', placement: 'actions' }],
-            statusBarItems: [{ id: 'disabled-status', label: 'Disabled status', component: 'DisabledStatus', alignment: 'right' }],
+          enabled: false,
+          status: 'disabled',
+          manifest: {
+            schemaVersion: 2,
+            id: 'disabled-extension',
+            name: 'Disabled Extension',
+            frontend: { entry: 'dist/frontend.js', styles: [] },
+            contributes: {
+              composerButtons: [{ id: 'disabled-button', component: 'DisabledButton', placement: 'actions' }],
+              statusBarItems: [{ id: 'disabled-status', label: 'Disabled status', component: 'DisabledStatus', alignment: 'right' }],
+            },
           },
         },
-      },
-    ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({});
+      ],
+    });
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
 
@@ -375,28 +388,35 @@ describe('useExtensionRegistry', () => {
       </AppEventsContext.Provider>
     );
 
-    vi.mocked(api.extensionInstallations)
-      .mockResolvedValueOnce([
-        {
-          id: 'test-extension',
-          name: 'Test Extension',
-          enabled: true,
-          status: 'enabled',
-          manifest: { schemaVersion: 2, id: 'test-extension', name: 'Test Extension' },
-        },
-      ] as never)
-      .mockResolvedValueOnce([
-        {
-          id: 'next-extension',
-          name: 'Next Extension',
-          enabled: true,
-          status: 'enabled',
-          manifest: { schemaVersion: 2, id: 'next-extension', name: 'Next Extension' },
-        },
-      ] as never);
-    vi.mocked(api.extensionRoutes).mockResolvedValue([]);
-    vi.mocked(api.extensionSurfaces).mockResolvedValue([]);
-    vi.mocked(api.settings).mockResolvedValue({});
+    vi.mocked(api.extensionRegistry)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'test-extension',
+            name: 'Test Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'test-extension', name: 'Test Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'next-extension',
+            name: 'Next Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'next-extension', name: 'Next Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never);
 
     const { result, rerender } = renderHook(() => useExtensionRegistry(), { wrapper });
 
@@ -407,12 +427,12 @@ describe('useExtensionRegistry', () => {
     rerender();
 
     await waitFor(() => expect(result.current.extensions.map((entry) => entry.id)).toEqual(['next-extension']));
-    expect(api.extensionInstallations).toHaveBeenCalledTimes(2);
+    expect(api.extensionRegistry).toHaveBeenCalledTimes(2);
   });
 
   it('keeps registry arrays defined when the extension API is unavailable', async () => {
-    const originalExtensionInstallations = api.extensionInstallations;
-    (api as unknown as { extensionInstallations?: unknown }).extensionInstallations = undefined;
+    const originalExtensionRegistry = api.extensionRegistry;
+    (api as unknown as { extensionRegistry?: unknown }).extensionRegistry = undefined;
 
     try {
       const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
@@ -426,8 +446,7 @@ describe('useExtensionRegistry', () => {
       expect(result.current.composerButtons).toEqual([]);
       expect(result.current.composerInputTools).toEqual([]);
     } finally {
-      (api as unknown as { extensionInstallations: typeof originalExtensionInstallations }).extensionInstallations =
-        originalExtensionInstallations;
+      (api as unknown as { extensionRegistry: typeof originalExtensionRegistry }).extensionRegistry = originalExtensionRegistry;
     }
   });
 });
