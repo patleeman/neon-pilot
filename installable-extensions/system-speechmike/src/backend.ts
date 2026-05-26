@@ -79,6 +79,19 @@ let stdoutBuffer = '';
 let activeButton: string | null = null;
 let cachedSettings: SpeechMikeSettings | null = null;
 
+function parseHelperPids(output: string, helperPath: string, currentPid: number | null): number[] {
+  const pids: number[] = [];
+  for (const line of output.split(/\r?\n/)) {
+    const match = line.trim().match(/^(\d+)\s+(.+)$/);
+    if (!match) continue;
+    const pid = Number(match[1]);
+    const command = match[2];
+    if (!Number.isSafeInteger(pid) || pid === currentPid) continue;
+    if (command === helperPath || command.startsWith(`${helperPath} `)) pids.push(pid);
+  }
+  return pids;
+}
+
 function normalizeSettings(value: unknown): SpeechMikeSettings {
   const record = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
   const bindings = record.bindings && typeof record.bindings === 'object' && !Array.isArray(record.bindings) ? record.bindings : {};
@@ -184,6 +197,18 @@ async function ensureHelper(ctx: ExtensionBackendContext): Promise<string> {
   return binaryPath;
 }
 
+async function cleanupStaleHelpers(ctx: ExtensionBackendContext, helperPath: string, currentPid: number | null): Promise<void> {
+  try {
+    const result = await ctx.shell.exec({ command: '/bin/ps', args: ['-axo', 'pid=,command='], timeoutMs: 5_000, maxBuffer: 1024 * 1024 });
+    const stalePids = parseHelperPids(result.stdout, helperPath, currentPid);
+    if (stalePids.length === 0) return;
+    await ctx.shell.exec({ command: '/bin/kill', args: ['-TERM', ...stalePids.map(String)], timeoutMs: 5_000, maxBuffer: 64 * 1024 });
+    remember(`stopped stale SpeechMike helper pid=${stalePids.join(',')}`);
+  } catch (error) {
+    remember(`stale helper cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 function decodeReport(raw: string, _usagePage?: number, _usage?: number): string | null {
   const bytes = raw
     .trim()
@@ -252,6 +277,7 @@ function handleLine(line: string, ctx: ExtensionBackendContext): void {
 export async function start(_input: unknown, ctx: ExtensionBackendContext) {
   if (monitorProcess) return status(undefined, ctx);
   const helper = await ensureHelper(ctx);
+  await cleanupStaleHelpers(ctx, helper, null);
   stdoutBuffer = '';
   const child = await ctx.shell.spawn({
     command: helper,
@@ -289,10 +315,14 @@ export async function startService(input: unknown, ctx: ExtensionBackendContext)
 }
 
 export async function stop(_input: unknown, _ctx: ExtensionBackendContext) {
-  if (monitorProcess) monitorProcess.kill();
+  const processToStop = monitorProcess;
+  const pidToStop = monitorPid;
+  const helper = join(_ctx.runtimeDir, 'speechmike-helper');
+  if (processToStop) processToStop.kill();
   monitorProcess = null;
   monitorPid = null;
   running = false;
+  await cleanupStaleHelpers(_ctx, helper, pidToStop);
   remember('stopped SpeechMike monitor');
   return { ok: true };
 }
