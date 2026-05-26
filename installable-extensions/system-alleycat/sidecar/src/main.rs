@@ -8,6 +8,8 @@ use iroh::{Endpoint, SecretKey};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::{info, warn};
 
 const PROTOCOL_VERSION: u32 = 1;
@@ -137,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
+            _ = shutdown_signal() => {
                 info!("shutdown requested");
                 endpoint.close().await;
                 return Ok(());
@@ -187,6 +189,23 @@ async fn wait_for_dialable_endpoint(endpoint: &Endpoint) -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        let mut term =
+            signal(SignalKind::terminate()).expect("installing SIGTERM handler for Alleycat host");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {}
+            _ = term.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
+}
+
 fn load_config() -> anyhow::Result<Config> {
     let token =
         env::var("NEON_PILOT_ALLEYCAT_TOKEN").context("NEON_PILOT_ALLEYCAT_TOKEN is required")?;
@@ -219,6 +238,9 @@ async fn bind_endpoint(secret_key: SecretKey) -> anyhow::Result<Endpoint> {
         .max_idle_timeout(Some(idle_timeout))
         .build();
     let endpoint = Endpoint::builder(presets::N0)
+        .clear_ip_transports()
+        .bind_addr("0.0.0.0:0")
+        .context("configuring IPv4 Alleycat endpoint bind")?
         .secret_key(secret_key)
         .alpns(vec![ALLEYCAT_ALPN.to_vec()])
         .transport_config(transport)
