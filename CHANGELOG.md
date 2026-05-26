@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-rc.6 — 2026-05-26
+
+### Highlights
+
+- Improves long transcript reliability by throttling historical hydration, capping manual backfill work, and preserving scroll position during transcript backfills.
+- Makes desktop navigation feel more responsive with asynchronous sidebar navigation, cleaner route handling, and fixes for sidebar click hit testing.
+- Reduces new-chat startup lag by creating live conversations from the draft flow and restoring setup controls for new live chats.
+- Adds Code Mode as an extension-backed workflow with a composer toggle and tool narrowing that stays correct for live and resumed conversations.
+- Polishes chat workspace presentation with a quieter context shelf treatment and refined neutral styling.
+
+### Notes
+
+- 25 commits since the previous release.
+
 ## 0.9.1-rc.5 — 2026-05-25
 
 ### Highlights

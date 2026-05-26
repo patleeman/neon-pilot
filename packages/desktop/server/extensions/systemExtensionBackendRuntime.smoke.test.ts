@@ -49,6 +49,7 @@ const registeredEvents = [];
 const appendedEntries = [];
 const sentMessages = [];
 let activeTools = [];
+let sessionEntries = [];
 let metadataValue = null;
 
 const ctx = {
@@ -146,7 +147,7 @@ const ctx = {
       getSessionId: () => 'smoke-session',
       getSessionFile: () => sessionFile,
       getCwd: () => cwd,
-      getEntries: () => [],
+      getEntries: () => sessionEntries,
     },
   },
 };
@@ -252,19 +253,10 @@ const smokes = {
     activeTools = ['read', 'exec_code'];
     await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
     assert(JSON.stringify(activeTools) === JSON.stringify(['read']), 'code mode should not stay active by default');
-    mkdirSync(join(stateRoot, 'conversation-metadata', 'shared'), { recursive: true });
-    writeFileSync(
-      join(stateRoot, 'conversation-metadata', 'shared', 'smoke-session.json'),
-      JSON.stringify({
-        version: 1,
-        conversationId: 'smoke-session',
-        namespaces: { 'system-code-mode': { enabled: true } },
-        updatedAt: new Date().toISOString(),
-      }),
-    );
+    sessionEntries = [{ type: 'custom', customType: 'code-mode-state', data: { enabled: true } }];
     activeTools = ['read'];
     await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
-    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not hydrate from persisted metadata');
+    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not hydrate from session metadata');
     const draftOn = await module.toggleCodeMode({ draft: true, action: 'on' }, ctx);
     assert(draftOn.enabled === true, 'code mode draft toggle did not enable');
     const draftState = await module.readState({ draft: true }, ctx);

@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1-rc.5** — RC being prepared.
+**v0.9.1-rc.6** — RC being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.5
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.6
 
 Highlights in this train:
 
-- Improves transcript reliability and readability with stronger linked-run detection, clearer subagent conversation links, and tighter handling for internal work shelves.
-- Makes composer image attachments more resilient by resizing oversized images before submit while preserving originals that are already small enough.
-- Expands Excalidraw input into a fuller sketching surface with manifest-declared tools, richer editor controls, and updated extension documentation.
-- Removes stale desktop runtime helpers and narrows public exports so core, desktop, and extension boundaries stay smaller ahead of release.
-- Refreshes installable/system extension package metadata and lockfile state for the `0.9.1-rc.5` train.
+- Improves long transcript reliability by throttling historical hydration, capping manual backfill work, and preserving scroll position during transcript backfills.
+- Makes desktop navigation feel more responsive with asynchronous sidebar navigation, cleaner route handling, and fixes for sidebar click hit testing.
+- Reduces new-chat startup lag by creating live conversations from the draft flow and restoring setup controls for new live chats.
+- Adds Code Mode as an extension-backed workflow with a composer toggle and tool narrowing that stays correct for live and resumed conversations.
+- Polishes chat workspace presentation with a quieter context shelf treatment and refined neutral styling.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

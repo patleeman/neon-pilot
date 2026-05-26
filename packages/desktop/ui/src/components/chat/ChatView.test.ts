@@ -1033,7 +1033,8 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Runtime instructions available for inspection.');
     expect(html).not.toContain('You are Patrick');
     expect(html).not.toContain('~15 tokens');
-    expect(html).toContain('border-transparent');
+    expect(html).toContain('data-context-shelf="1"');
+    expect(html).toContain('bg-border-subtle');
     expect(html).not.toContain('Dec 31');
     expect(html).not.toContain('ui-message-card-assistant');
   });
@@ -1104,7 +1105,8 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('<details');
-    expect(html).toContain('border-transparent');
+    expect(html).toContain('data-context-shelf="1"');
+    expect(html).toContain('bg-border-subtle');
     expect(html).toContain('hover:bg-surface/15');
     expect(html).toContain('Context added');
     expect(html).toContain('data-context-type="referenced_context"');
