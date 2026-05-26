@@ -465,7 +465,7 @@ describe('SettingsPage provider model editor', () => {
     const openExternalUrl = vi.fn().mockResolvedValue({ url: 'https://auth.openai.com/oauth', opened: true });
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
-        getEnvironment: vi.fn().mockResolvedValue({ isElectron: false, activeHostKind: 'local' }),
+        getEnvironment: vi.fn().mockImplementation(() => new Promise(() => {})),
         readDesktopAppPreferences: vi.fn().mockResolvedValue({
           available: true,
           supportsStartOnSystemStart: true,

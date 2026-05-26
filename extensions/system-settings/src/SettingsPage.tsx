@@ -1917,6 +1917,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [oauthInputValue, setOauthInputValue] = useState('');
   const [oauthError, setOauthError] = useState<string | null>(null);
   const oauthTerminalStateKeyRef = useRef<string | null>(null);
+  const openedOAuthAuthUrlRef = useRef<string | null>(null);
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(SETTINGS_QUICK_LINKS[0].id);
@@ -2230,6 +2231,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setProviderCredentialNotice(null);
     setOauthError(null);
     setOauthInputValue('');
+    openedOAuthAuthUrlRef.current = null;
 
     if (oauthLoginState && oauthLoginState.provider !== selectedProviderId) {
       setOauthLoginState(null);
@@ -2296,14 +2298,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       return;
     }
 
+    const authUrl = oauthLoginState.authUrl;
+    if (openedOAuthAuthUrlRef.current === authUrl) {
+      return;
+    }
+    openedOAuthAuthUrlRef.current = authUrl;
+
     const desktopBridge = getDesktopBridge();
-    if (desktopBridge && desktopEnvironment?.activeHostKind === 'local') {
-      void desktopBridge.openExternalUrl(oauthLoginState.authUrl);
+    if (desktopBridge) {
+      void desktopBridge.openExternalUrl(authUrl);
       return;
     }
 
-    window.open(oauthLoginState.authUrl, '_blank');
-  }, [desktopEnvironment?.activeHostKind, oauthLoginState?.authUrl, oauthLoginState?.status]);
+    window.open(authUrl, '_blank');
+  }, [oauthLoginState?.authUrl, oauthLoginState?.status]);
 
   useEffect(() => {
     if (!oauthLoginState?.id) {
@@ -2910,6 +2918,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setProviderCredentialError(null);
     setOauthError(null);
     setOauthInputValue('');
+    openedOAuthAuthUrlRef.current = null;
     setOauthAction('start');
 
     try {
@@ -2977,7 +2986,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     }
 
     const desktopBridge = getDesktopBridge();
-    if (desktopBridge && desktopEnvironment?.activeHostKind === 'local') {
+    if (desktopBridge) {
       const result = await desktopBridge.openExternalUrl(normalizedUrl);
       if (!result.opened && result.error) {
         setOauthError(result.error);
