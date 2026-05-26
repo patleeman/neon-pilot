@@ -12,6 +12,7 @@ const sdkPackagePath = join(repoRoot, 'packages/extensions/package.json');
 const sdkBackendRoot = join(repoRoot, 'packages/extensions/src/backend');
 const hostBackendApiRoot = join(repoRoot, 'packages/desktop/server/extensions/backendApi');
 const buildScriptPath = join(repoRoot, 'scripts/extension-build.mjs');
+const desktopServerBuildScriptPath = join(repoRoot, 'packages/desktop/scripts/build-server-bundle.mjs');
 
 const nodeBuiltins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
 const forbiddenStaticImportPrefixes = [
@@ -69,6 +70,12 @@ function collectImportSpecifiers(filePath, { staticOnly = false } = {}) {
     .sort();
 }
 
+function collectHostBackendRuntimeSpecifiers(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const matches = source.matchAll(/['"]\.\.\/\.\.\/([^'"]+\.js)['"]/g);
+  return [...new Set([...matches].map((match) => match[1]))].sort();
+}
+
 function isForbiddenStaticImport(specifier) {
   if (nodeBuiltins.has(specifier) || specifier.startsWith('node:')) return false;
   if (/^(?:\.\.\/)+\.\.\/core\/src\//.test(specifier)) return true;
@@ -120,11 +127,25 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
 }
 
 const buildScript = readFileSync(buildScriptPath, 'utf8');
+const desktopServerBuildScript = readFileSync(desktopServerBuildScriptPath, 'utf8');
+const bundledLazyServerModules = new Set([...desktopServerBuildScript.matchAll(/\['([^']+\.js)'\s*,/g)].map((match) => match[1]));
 assert(
   buildScript.includes('/^@neon-pilot\\/extensions\\/backend\\/(.+)$/'),
   failures,
   'extension-build.mjs does not resolve @neon-pilot/extensions/backend/* subpaths explicitly',
 );
+
+for (const fileName of readdirSync(hostBackendApiRoot)) {
+  if (!fileName.endsWith('.ts') || fileName.endsWith('.test.ts')) continue;
+  const filePath = join(hostBackendApiRoot, fileName);
+  const runtimeHostSpecifiers = collectHostBackendRuntimeSpecifiers(filePath);
+  const missingBundleEntries = runtimeHostSpecifiers.filter((specifier) => !bundledLazyServerModules.has(specifier));
+  assert(
+    missingBundleEntries.length === 0,
+    failures,
+    `backendApi/${fileName} lazy-loads host modules missing from packaged server bundle (${missingBundleEntries.join(', ')})`,
+  );
+}
 assert(
   buildScript.includes('packages/desktop/server/extensions/backendApi/${args.path.split'),
   failures,
