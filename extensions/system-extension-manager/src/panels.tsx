@@ -697,7 +697,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const items = catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id)) return false;
-      if (filter !== 'all-installed' && filter !== 'available-addons') return false;
+      if (filter !== 'available-addons') return false;
       if (!normalizedQuery) return true;
       return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
     });

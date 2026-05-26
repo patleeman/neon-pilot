@@ -132,6 +132,36 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
+  it('keeps catalog-only extensions out of the all installed filter', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'available-only',
+          name: 'Available Only',
+          description: 'Catalog-only extension.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+        },
+      ],
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    await screen.findByText('Menu Test');
+    fireEvent.click(screen.getByRole('button', { name: 'All installed' }));
+    expect(screen.queryByText('Available Only')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Available add-ons' }));
+    expect(await screen.findByText('Available Only')).toBeTruthy();
+  });
+
   it('loads the installable catalog without starting a polling interval', async () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const callAction = vi.fn().mockResolvedValue({ ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] });
