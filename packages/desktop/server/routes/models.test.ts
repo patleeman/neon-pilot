@@ -11,6 +11,7 @@ const {
   getProviderOAuthLoginStateMock,
   readMachineInstructionFilesMock,
   readMachineSkillDirsMock,
+  readMachineSystemPromptTemplateMock,
   invalidateAppTopicsMock,
   logErrorMock,
   normalizeSavedModelPreferencesMock,
@@ -31,6 +32,7 @@ const {
   upsertModelProviderMock,
   writeMachineInstructionFilesMock,
   writeMachineSkillDirsMock,
+  writeMachineSystemPromptTemplateMock,
   upsertModelProviderModelMock,
   writeSavedDefaultCwdPreferenceMock,
   writeSavedModelPreferencesMock,
@@ -41,6 +43,7 @@ const {
   getProviderOAuthLoginStateMock: vi.fn(),
   readMachineInstructionFilesMock: vi.fn(),
   readMachineSkillDirsMock: vi.fn(),
+  readMachineSystemPromptTemplateMock: vi.fn(),
   invalidateAppTopicsMock: vi.fn(),
   logErrorMock: vi.fn(),
   normalizeSavedModelPreferencesMock: vi.fn(),
@@ -61,6 +64,7 @@ const {
   upsertModelProviderMock: vi.fn(),
   writeMachineInstructionFilesMock: vi.fn(),
   writeMachineSkillDirsMock: vi.fn(),
+  writeMachineSystemPromptTemplateMock: vi.fn(),
   upsertModelProviderModelMock: vi.fn(),
   writeSavedDefaultCwdPreferenceMock: vi.fn(),
   writeSavedModelPreferencesMock: vi.fn(),
@@ -71,8 +75,10 @@ vi.mock('@neon-pilot/core', () => ({
   getStateRoot: vi.fn(() => '/state-root'),
   readMachineInstructionFiles: readMachineInstructionFilesMock,
   readMachineSkillDirs: readMachineSkillDirsMock,
+  readMachineSystemPromptTemplate: readMachineSystemPromptTemplateMock,
   writeMachineInstructionFiles: writeMachineInstructionFilesMock,
   writeMachineSkillDirs: writeMachineSkillDirsMock,
+  writeMachineSystemPromptTemplate: writeMachineSystemPromptTemplateMock,
 }));
 
 vi.mock('../models/modelPreferences.js', () => ({
@@ -241,6 +247,7 @@ describe('model routes', () => {
     getProviderOAuthLoginStateMock.mockReset();
     readMachineInstructionFilesMock.mockReset();
     readMachineSkillDirsMock.mockReset();
+    readMachineSystemPromptTemplateMock.mockReset();
     invalidateAppTopicsMock.mockReset();
     logErrorMock.mockReset();
     normalizeSavedModelPreferencesMock.mockReset();
@@ -262,6 +269,7 @@ describe('model routes', () => {
     upsertModelProviderModelMock.mockReset();
     writeMachineInstructionFilesMock.mockReset();
     writeMachineSkillDirsMock.mockReset();
+    writeMachineSystemPromptTemplateMock.mockReset();
     writeSavedDefaultCwdPreferenceMock.mockReset();
     writeSavedModelPreferencesMock.mockReset();
 
@@ -278,6 +286,13 @@ describe('model routes', () => {
     getProviderOAuthLoginStateMock.mockReturnValue({ id: 'login-1', status: 'pending' });
     readMachineInstructionFilesMock.mockImplementation(() => [...((machineConfig.instructionFiles as string[] | undefined) ?? [])]);
     readMachineSkillDirsMock.mockImplementation(() => [...((machineConfig.skillDirs as string[] | undefined) ?? [])]);
+    readMachineSystemPromptTemplateMock.mockImplementation(
+      () => (machineConfig.systemPromptTemplate as string | undefined) ?? '# Defaults\n',
+    );
+    writeMachineSystemPromptTemplateMock.mockImplementation((template: string) => {
+      machineConfig.systemPromptTemplate = template;
+      return machineConfig;
+    });
     normalizeSavedModelPreferencesMock.mockReturnValue({
       currentModel: 'model-a',
       currentThinkingLevel: 'high',
@@ -417,6 +432,32 @@ describe('model routes', () => {
     expect(saveRes.json).toHaveBeenCalledWith({
       configFile: '/config/config.json',
       instructionFiles: [instructionA, instructionB],
+    });
+  });
+
+  it('reads and writes the system prompt template', () => {
+    const { patchHandler, getHandler, materializeWebRuntimeConfig } = createDesktopHarness(allocateFiles());
+    machineConfig.systemPromptTemplate = '# Existing\n';
+
+    const readRes = createResponse();
+    getHandler('/api/system-prompt-template')(createRequest(), readRes);
+    expect(readRes.json).toHaveBeenCalledWith({
+      configFile: '/config/config.json',
+      template: '# Existing\n',
+    });
+
+    const invalidRes = createResponse();
+    patchHandler('/api/system-prompt-template')(createRequest({ body: { template: 123 } }), invalidRes);
+    expect(invalidRes.status).toHaveBeenCalledWith(400);
+    expect(invalidRes.json).toHaveBeenCalledWith({ error: 'template must be a string' });
+
+    const saveRes = createResponse();
+    patchHandler('/api/system-prompt-template')(createRequest({ body: { template: '# Custom\n\n{{ vault_root }}\n' } }), saveRes);
+    expect(writeMachineSystemPromptTemplateMock).toHaveBeenCalledWith('# Custom\n\n{{ vault_root }}\n');
+    expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
+    expect(saveRes.json).toHaveBeenCalledWith({
+      configFile: '/config/config.json',
+      template: '# Custom\n\n{{ vault_root }}\n',
     });
   });
 });

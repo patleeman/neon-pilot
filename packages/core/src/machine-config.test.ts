@@ -11,9 +11,11 @@ import {
   readMachineConfigSection,
   readMachineInstructionFiles,
   readMachineSkillDirs,
+  readMachineSystemPromptTemplate,
   updateMachineConfigSection,
   writeMachineInstructionFiles,
   writeMachineSkillDirs,
+  writeMachineSystemPromptTemplate,
 } from './machine-config.js';
 
 const originalEnv = process.env;
@@ -122,6 +124,22 @@ describe('machine config', () => {
 
     writeMachineSkillDirs([], { configRoot: configDir });
     expect(readMachineSkillDirs({ configRoot: configDir })).toEqual(getDefaultMachineSkillDirs());
+    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
+  });
+
+  it('reads and writes the system prompt template in config.json', () => {
+    const configDir = createTempDir('pa-machine-config-');
+    const customTemplate = '# Custom runtime\n\nVault: {{ vault_root }}\n';
+
+    writeMachineSystemPromptTemplate(customTemplate, { configRoot: configDir });
+
+    expect(readMachineSystemPromptTemplate({ configRoot: configDir })).toBe(customTemplate);
+    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({
+      systemPromptTemplate: customTemplate,
+    });
+
+    writeMachineSystemPromptTemplate('', { configRoot: configDir });
+    expect(readMachineSystemPromptTemplate({ configRoot: configDir })).toContain('# Neon Pilot defaults');
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
   });
 });

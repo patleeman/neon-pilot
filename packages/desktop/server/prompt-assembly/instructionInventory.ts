@@ -7,9 +7,11 @@ import {
   getDurableTasksDir,
   getStateRoot,
   getSyncRoot,
+  readMachineSystemPromptTemplate,
+  renderSystemPromptTemplate,
   resolveRuntimeResources,
+  type SystemPromptTemplateVariables,
 } from '@neon-pilot/core';
-import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from '@neon-pilot/core';
 
 import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
@@ -173,7 +175,7 @@ async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<Instr
     docs_dir: `${resolved.repoRoot}/docs`,
     docs_index: `${resolved.repoRoot}/docs/README.md`,
   };
-  const content = renderSystemPromptTemplate(variables);
+  const content = renderSystemPromptTemplate(variables, readMachineSystemPromptTemplate());
   return content
     ? {
         id: 'runtime:generated-system-template',

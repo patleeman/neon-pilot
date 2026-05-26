@@ -10,8 +10,10 @@ import {
   getMachineConfigFilePath,
   readMachineInstructionFiles,
   readMachineSkillDirs,
+  readMachineSystemPromptTemplate,
   writeMachineInstructionFiles,
   writeMachineSkillDirs,
+  writeMachineSystemPromptTemplate,
 } from '@neon-pilot/core';
 import type { Express } from 'express';
 
@@ -38,6 +40,13 @@ function readSkillFoldersState() {
   return {
     configFile: getMachineConfigFilePath(),
     skillDirs: readMachineSkillDirs(),
+  };
+}
+
+function readSystemPromptTemplateState() {
+  return {
+    configFile: getMachineConfigFilePath(),
+    template: readMachineSystemPromptTemplate(),
   };
 }
 
@@ -114,6 +123,35 @@ export function registerModelRoutes(
         stack: err instanceof Error ? err.stack : undefined,
       });
       res.status(500).json({ error: String(err) });
+    }
+  });
+
+  router.get('/api/system-prompt-template', (_req, res) => {
+    try {
+      res.json(readSystemPromptTemplateState());
+    } catch (err) {
+      logError('request handler error', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  router.patch('/api/system-prompt-template', (req, res) => {
+    try {
+      const { template } = req.body as { template?: unknown };
+      if (typeof template !== 'string') {
+        res.status(400).json({ error: 'template must be a string' });
+        return;
+      }
+
+      writeMachineSystemPromptTemplate(template);
+      materializeWebRuntimeConfigFn(getRuntimeScopeFn());
+      res.json(readSystemPromptTemplateState());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
     }
   });
 

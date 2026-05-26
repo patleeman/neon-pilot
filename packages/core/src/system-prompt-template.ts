@@ -46,9 +46,12 @@ function normalizeVariables(variables: SystemPromptTemplateVariables): Record<st
   return Object.fromEntries(entries);
 }
 
-export function renderSystemPromptTemplate(variables: SystemPromptTemplateVariables = {}): string {
+export function renderSystemPromptTemplate(
+  variables: SystemPromptTemplateVariables = {},
+  template: string = SYSTEM_PROMPT_TEMPLATE,
+): string {
   const env = new nunjucks.Environment(undefined, { autoescape: false });
-  const rendered = env.renderString(SYSTEM_PROMPT_TEMPLATE, normalizeVariables(variables));
+  const rendered = env.renderString(template, normalizeVariables(variables));
 
   return rendered
     .replace(/[ \t]+\n/g, '\n')

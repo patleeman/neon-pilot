@@ -46,6 +46,7 @@ import type {
   SkillFoldersState,
   SystemPromptAggregate,
   SystemPromptPoint,
+  SystemPromptTemplateState,
   TelemetryDbMaintenanceResult,
   ToolFlowResult,
   ToolsState,
@@ -437,6 +438,8 @@ export const api = {
   updateSkillFolders: async (skillDirs: string[]) => patch<SkillFoldersState>('/skill-folders', { skillDirs }),
   instructions: async () => get<InstructionFilesState>('/instructions'),
   updateInstructions: async (instructionFiles: string[]) => patch<InstructionFilesState>('/instructions', { instructionFiles }),
+  systemPromptTemplate: async () => get<SystemPromptTemplateState>('/system-prompt-template'),
+  updateSystemPromptTemplate: async (template: string) => patch<SystemPromptTemplateState>('/system-prompt-template', { template }),
 
   // ── Models ────────────────────────────────────────────────────────────────
   models: async () => get<ModelState>('/models'),

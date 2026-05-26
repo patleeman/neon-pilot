@@ -135,6 +135,13 @@ describe('SettingsPage', () => {
         });
       }
 
+      if (fetcher === api.systemPromptTemplate) {
+        return buildUseApiResult({
+          configFile: '/tmp/config.json',
+          template: '# Neon Pilot defaults\n\nVault root: {{ vault_root }}\n',
+        });
+      }
+
       if (fetcher === api.models) {
         return buildUseApiResult({
           currentModel: 'gpt-5.4',
@@ -324,10 +331,13 @@ describe('SettingsPage', () => {
 
     expect(html).toContain('>Settings</h1>');
     expect(html).toContain('aria-label="Settings sections"');
-    expect(html.indexOf('href="#settings-general"')).toBeLessThan(html.indexOf('href="#settings-capabilities"'));
-    expect(html.indexOf('href="#settings-capabilities"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
+    expect(html.indexOf('href="#settings-appearance"')).toBeLessThan(html.indexOf('href="#settings-conversation"'));
+    expect(html.indexOf('href="#settings-conversation"')).toBeLessThan(html.indexOf('href="#settings-workspace"'));
+    expect(html.indexOf('href="#settings-workspace"')).toBeLessThan(html.indexOf('href="#settings-runtime"'));
+    expect(html.indexOf('href="#settings-runtime"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
     expect(html).toContain('Theme');
     expect(html).toContain('Agent Runtime');
+    expect(html).toContain('System prompt template');
     expect(html).toContain('AGENTS.md files');
     expect(html).not.toContain('Knowledge base');
     expect(html).toContain('Sample manifest setting');
@@ -346,8 +356,10 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Web UI');
     expect(html).not.toContain('Daemon');
     expect(html).not.toContain('Loading daemon settings');
-    expect(html).toContain('Appearance, workspace defaults, and conversation behavior for new chats.');
-    expect(html).toContain('MCP wrappers and agent-adjacent settings.');
+    expect(html).toContain('Theme, accent, and visual defaults.');
+    expect(html).toContain('Model and behavior defaults for new chats.');
+    expect(html).toContain('Default working directory and local context paths.');
+    expect(html).toContain('Prompt template, instruction files, and agent tools.');
     expect(html).toContain('Append extra AGENTS.md-style files to the runtime prompt.');
     expect(html).toContain('Leave blank to use the runtime process cwd.');
     expect(html).not.toContain('Indexed root');

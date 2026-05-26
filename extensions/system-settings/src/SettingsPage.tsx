@@ -67,10 +67,12 @@ const INPUT_CLASS =
 const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
-  { id: 'settings-general', label: 'General', summary: 'Appearance, workspace, and conversation defaults' },
+  { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
+  { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
+  { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
+  { id: 'settings-runtime', label: 'Agent Runtime', summary: 'Prompt template, instructions, and tools' },
   { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
-  { id: 'settings-capabilities', label: 'Agent Runtime', summary: 'MCP wrappers and agent-adjacent settings' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
@@ -1433,6 +1435,7 @@ function ExtensionSettingsSection({
   const { data: values, loading, error } = useApi<Record<string, unknown>>(api.settings as never);
   const { data: schema, loading: schemaLoading, error: schemaError } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [savedValues, setSavedValues] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
@@ -1454,6 +1457,7 @@ function ExtensionSettingsSection({
 
   useEffect(() => {
     if (values) {
+      setSavedValues(values);
       setDraft((prev) => {
         // Start from the fresh backend snapshot, then overlay only the keys
         // the user explicitly edited since the last save.
@@ -1468,28 +1472,40 @@ function ExtensionSettingsSection({
 
   useEffect(() => {
     if (!values || !draft) return;
-    const changes: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(draft)) {
-      if (val !== values[key]) changes[key] = val;
-    }
-    if (Object.keys(changes).length === 0) return;
-
-    const timeout = window.setTimeout(async () => {
-      setSaving(true);
+    if (getSettingsChanges(draft, savedValues).length === 0) {
       setSaveError(null);
-      try {
-        await api.updateSettings(changes);
-        window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
-        setSaveNotice('Saved.');
-      } catch (err) {
-        setSaveError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setSaving(false);
-      }
-    }, 500);
+    }
+  }, [draft, savedValues, values]);
 
-    return () => window.clearTimeout(timeout);
-  }, [draft, values]);
+  const pendingChanges = useMemo(() => {
+    if (!draft) return {};
+    return Object.fromEntries(getSettingsChanges(draft, savedValues));
+  }, [draft, savedValues]);
+  const hasPendingChanges = Object.keys(pendingChanges).length > 0;
+
+  const saveChanges = useCallback(async () => {
+    if (!hasPendingChanges) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await api.updateSettings(pendingChanges);
+      editedKeys.current.clear();
+      setSavedValues((prev) => ({ ...prev, ...pendingChanges }));
+      window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT));
+      setSaveNotice('Saved.');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }, [hasPendingChanges, pendingChanges]);
+
+  const resetChanges = useCallback(() => {
+    editedKeys.current.clear();
+    setDraft(savedValues);
+    setSaveNotice(null);
+    setSaveError(null);
+  }, [savedValues]);
 
   const grouped = useMemo(() => {
     if (!schema) return new Map<string, UnifiedSettingsEntry[]>();
@@ -1533,13 +1549,35 @@ function ExtensionSettingsSection({
               }}
             />
           ))}
-          {saving ? <p className="ui-card-meta">Saving…</p> : null}
-          {saveNotice ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              className="ui-toolbar-button text-accent disabled:opacity-50"
+              disabled={!hasPendingChanges || saving}
+              onClick={saveChanges}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="ui-toolbar-button disabled:opacity-50"
+              disabled={!hasPendingChanges || saving}
+              onClick={resetChanges}
+            >
+              Reset
+            </button>
+            {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
+          </div>
+          {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
           {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
         </SettingsPanel>
       ))}
     </div>
   );
+}
+
+function getSettingsChanges(draft: Record<string, unknown>, values: Record<string, unknown>): Array<[string, unknown]> {
+  return Object.entries(draft).filter(([key, val]) => val !== values[key]);
 }
 
 function SecretSourceLabel({ source }: { source: SecretStatusEntry['source'] }) {
@@ -1821,6 +1859,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     error: instructionFilesError,
     refetch: refetchInstructions,
   } = useApi(api.instructions);
+  const {
+    data: systemPromptTemplateState,
+    loading: systemPromptTemplateLoading,
+    error: systemPromptTemplateError,
+  } = useApi(api.systemPromptTemplate);
   const { data: modelState, loading: modelsLoading, error: modelsError, refetch: refetchModels } = useApi(api.models);
   const {
     data: modelProviderState,
@@ -1843,6 +1886,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [instructionFilesDraft, setInstructionFilesDraft] = useState<string[]>([]);
   const [savingInstructionFiles, setSavingInstructionFiles] = useState(false);
   const [instructionFilesSaveError, setInstructionFilesSaveError] = useState<string | null>(null);
+  const [systemPromptTemplateDraft, setSystemPromptTemplateDraft] = useState('');
+  const [savingSystemPromptTemplate, setSavingSystemPromptTemplate] = useState(false);
+  const [systemPromptTemplateSaveError, setSystemPromptTemplateSaveError] = useState<string | null>(null);
   const [savingPreference, setSavingPreference] = useState<'model' | 'visionModel' | 'thinking' | 'serviceTier' | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const [defaultCwdDraft, setDefaultCwdDraft] = useState('');
@@ -2126,6 +2172,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     ? instructionFilesDraft.length !== instructionFilesState.instructionFiles.length ||
       instructionFilesDraft.some((value, index) => value !== instructionFilesState.instructionFiles[index])
     : false;
+  const systemPromptTemplateDirty = systemPromptTemplateState ? systemPromptTemplateDraft !== systemPromptTemplateState.template : false;
   const pickingDefaultCwd = pathPickerTarget === 'default-cwd';
   const pickingInstructionFiles = pathPickerTarget === 'instruction-files';
 
@@ -2140,6 +2187,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setInstructionFilesDraft(instructionFilesState.instructionFiles);
     }
   }, [instructionFilesState?.configFile, instructionFilesState?.instructionFiles]);
+
+  useEffect(() => {
+    if (systemPromptTemplateState) {
+      setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+    }
+  }, [systemPromptTemplateState?.configFile, systemPromptTemplateState?.template]);
 
   useEffect(() => {
     if (!modelProviderState || !selectedModelProviderId) {
@@ -2356,6 +2409,24 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     }
   }
 
+  async function handleSaveSystemPromptTemplate() {
+    if (!systemPromptTemplateState || savingSystemPromptTemplate || !systemPromptTemplateDirty) {
+      return;
+    }
+
+    setSystemPromptTemplateSaveError(null);
+    setSavingSystemPromptTemplate(true);
+
+    try {
+      const saved = await api.updateSystemPromptTemplate(systemPromptTemplateDraft);
+      setSystemPromptTemplateDraft(saved.template);
+    } catch (error) {
+      setSystemPromptTemplateSaveError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSavingSystemPromptTemplate(false);
+    }
+  }
+
   async function handleModelPreferenceChange(
     input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string },
     field: 'model' | 'visionModel' | 'thinking' | 'serviceTier',
@@ -2456,6 +2527,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       window.clearTimeout(timeout);
     };
   }, [instructionFilesDirty, instructionFilesDraft, instructionFilesState, pickingInstructionFiles, savingInstructionFiles]);
+
+  useEffect(() => {
+    if (!systemPromptTemplateState || !systemPromptTemplateDirty || savingSystemPromptTemplate) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void handleSaveSystemPromptTemplate();
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [savingSystemPromptTemplate, systemPromptTemplateDirty, systemPromptTemplateDraft, systemPromptTemplateState]);
 
   useEffect(() => {
     if (!defaultCwdState || !defaultCwdDirty || savingDefaultCwd || pickingDefaultCwd) {
@@ -2906,76 +2991,74 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
           <AppPageIntro title="Settings" summary="Appearance, conversation defaults, workspace, skills, providers, and desktop behavior." />
 
           <div className="flex flex-col gap-12">
-            <SettingsSection
-              id="settings-general"
-              label="General"
-              description="Appearance, workspace defaults, and conversation behavior for new chats."
-            >
-              <div className="space-y-0">
-                <SettingsPanel title="Theme" description="Choose Auto to follow the OS.">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="ui-segmented-control" role="group" aria-label="Theme mode selection">
-                        <ThemeButton value="system" current={themePreference} onSelect={setThemePreference} label="Auto" />
-                        <ThemeButton value="light" current={themePreference} onSelect={setThemePreference} label="Light" />
-                        <ThemeButton value="dark" current={themePreference} onSelect={setThemePreference} label="Dark" />
-                      </div>
-                      <span className="ui-card-meta">
-                        Current theme: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
-                        {themePreference === 'system' ? ' (auto)' : ''}
-                      </span>
+            <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
+              <SettingsPanel title="Theme" description="Choose Auto to follow the OS.">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="ui-segmented-control" role="group" aria-label="Theme mode selection">
+                      <ThemeButton value="system" current={themePreference} onSelect={setThemePreference} label="Auto" />
+                      <ThemeButton value="light" current={themePreference} onSelect={setThemePreference} label="Light" />
+                      <ThemeButton value="dark" current={themePreference} onSelect={setThemePreference} label="Dark" />
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <ThemeDefaultSelect
-                        label="Light default"
-                        value={lightTheme}
-                        themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'light')}
-                        onChange={setLightTheme}
-                      />
-                      <ThemeDefaultSelect
-                        label="Dark default"
-                        value={darkTheme}
-                        themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'dark')}
-                        onChange={setDarkTheme}
-                      />
+                    <span className="ui-card-meta">
+                      Current theme: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
+                      {themePreference === 'system' ? ' (auto)' : ''}
+                    </span>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <ThemeDefaultSelect
+                      label="Light default"
+                      value={lightTheme}
+                      themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'light')}
+                      onChange={setLightTheme}
+                    />
+                    <ThemeDefaultSelect
+                      label="Dark default"
+                      value={darkTheme}
+                      themes={availableThemes.filter((availableTheme) => availableTheme.appearance === 'dark')}
+                      onChange={setDarkTheme}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="ui-card-meta font-medium text-primary">Accent color</p>
+                      <p className="ui-card-meta">Signal color for active navigation, focus rings, and primary actions.</p>
                     </div>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="ui-card-meta font-medium text-primary">Accent color</p>
-                        <p className="ui-card-meta">Signal color for active navigation, focus rings, and primary actions.</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent color">
-                        {availableAccents.map((entry) => {
-                          const isSelected = accent === entry.id;
-                          const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
-                          return (
-                            <button
-                              key={entry.id}
-                              type="button"
-                              role="radio"
-                              aria-checked={isSelected}
-                              className={cx(
-                                'flex min-w-[92px] items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35',
-                                isSelected
-                                  ? 'border-accent bg-accent/10 text-primary'
-                                  : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:bg-surface',
-                              )}
-                              onClick={() => setAccent(entry.id as ThemeAccent)}
-                            >
-                              <span
-                                className="h-4 w-4 shrink-0 rounded-full border border-border-default shadow-sm"
-                                style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
-                                aria-hidden="true"
-                              />
-                              <span className="text-[12px] font-medium">{entry.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent color">
+                      {availableAccents.map((entry) => {
+                        const isSelected = accent === entry.id;
+                        const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
+                        return (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={cx(
+                              'flex min-w-[92px] items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35',
+                              isSelected
+                                ? 'border-accent bg-accent/10 text-primary'
+                                : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:bg-surface',
+                            )}
+                            onClick={() => setAccent(entry.id as ThemeAccent)}
+                          >
+                            <span
+                              className="h-4 w-4 shrink-0 rounded-full border border-border-default shadow-sm"
+                              style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
+                              aria-hidden="true"
+                            />
+                            <span className="text-[12px] font-medium">{entry.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                </SettingsPanel>
+                </div>
+              </SettingsPanel>
+            </SettingsSection>
 
+            <SettingsSection id="settings-conversation" label="Conversation" description="Model and behavior defaults for new chats.">
+              <div className="space-y-0">
                 <SettingsPanel title="Default model" description="Used for new chats and runs unless a model is picked explicitly.">
                   {modelsLoading && !modelState ? (
                     <p className="ui-card-meta">Loading models…</p>
@@ -3037,7 +3120,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                   {modelError && <p className="text-[12px] text-danger">{modelError}</p>}
                 </SettingsPanel>
+                <ExtensionSettingsSection includeExtensionIds={['system-settings']} includeGroups={['Conversation']} separated={false} />
+              </div>
+            </SettingsSection>
 
+            <SettingsSection id="settings-workspace" label="Workspace" description="Default working directory and local context paths.">
+              <div className="space-y-0">
                 <SettingsPanel title="Working directory" description="Fallback cwd for new chats and web actions.">
                   {defaultCwdLoading && !defaultCwdState ? (
                     <p className="ui-card-meta">Loading default working directory…</p>
@@ -3114,27 +3202,59 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                   {defaultCwdSaveError && <p className="text-[12px] text-danger">{defaultCwdSaveError}</p>}
                 </SettingsPanel>
-
-                <ExtensionSettingsSection includeExtensionIds={['system-settings']} includeGroups={['Conversation']} separated={false} />
               </div>
             </SettingsSection>
 
-            <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
-              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
-              {extensionSettingsComponents.map((settingsComponent) => (
-                <ExtensionSettingsComponentPanel
-                  key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
-                  registration={settingsComponent}
-                />
-              ))}
-            </SettingsSection>
-
-            <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
-              <CommandsSettingsSection />
-            </SettingsSection>
-
-            <SettingsSection id="settings-capabilities" label="Agent Runtime" description="MCP wrappers and agent-adjacent settings.">
+            <SettingsSection id="settings-runtime" label="Agent Runtime" description="Prompt template, instruction files, and agent tools.">
               <div className="space-y-0">
+                <SettingsPanel
+                  title="System prompt template"
+                  description="Customize the generated runtime instruction template. Nunjucks variables such as vault_root and skills_dir are available."
+                >
+                  {systemPromptTemplateLoading && !systemPromptTemplateState ? (
+                    <p className="ui-card-meta">Loading system prompt template…</p>
+                  ) : systemPromptTemplateError && !systemPromptTemplateState ? (
+                    <p className="text-[12px] text-danger">Failed to load system prompt template: {systemPromptTemplateError}</p>
+                  ) : systemPromptTemplateState ? (
+                    <div className="space-y-3">
+                      <p className="ui-card-meta break-all">
+                        Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
+                      </p>
+                      <textarea
+                        id="settings-system-prompt-template"
+                        value={systemPromptTemplateDraft}
+                        onChange={(event) => {
+                          setSystemPromptTemplateDraft(event.target.value);
+                          if (systemPromptTemplateSaveError) {
+                            setSystemPromptTemplateSaveError(null);
+                          }
+                        }}
+                        className={`${INPUT_CLASS} min-h-[340px] resize-y font-mono text-[12px] leading-5`}
+                        spellCheck={false}
+                        disabled={savingSystemPromptTemplate}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="ui-card-meta">
+                          {savingSystemPromptTemplate ? 'Saving…' : systemPromptTemplateDirty ? 'Auto-save pending…' : 'Auto-saved'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+                            setSystemPromptTemplateSaveError(null);
+                          }}
+                          disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
+                          className={ACTION_BUTTON_CLASS}
+                        >
+                          Revert edits
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {systemPromptTemplateSaveError && <p className="text-[12px] text-danger">{systemPromptTemplateSaveError}</p>}
+                </SettingsPanel>
+
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (
                     <p className="ui-card-meta">Loading AGENTS.md files…</p>
@@ -3262,6 +3382,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                   registration={settingsComponent}
                 />
               ))}
+            </SettingsSection>
+
+            <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
+              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
+              {extensionSettingsComponents.map((settingsComponent) => (
+                <ExtensionSettingsComponentPanel
+                  key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
+                  registration={settingsComponent}
+                />
+              ))}
+            </SettingsSection>
+
+            <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
+              <CommandsSettingsSection />
             </SettingsSection>
 
             <SettingsSection id="settings-security" label="Security" description="Secret storage and extension credentials.">

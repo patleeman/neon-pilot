@@ -14,7 +14,7 @@ The Settings page is the main desktop UI for configuration, but settings are not
 
 The Settings page coordinates multiple stores:
 
-- Machine config in `<config-root>/config.json` for knowledge roots, extra instruction files, and skill folders.
+- Machine config in `<config-root>/config.json` for knowledge roots, extra instruction files, skill folders, and the generated system prompt template.
 - Runtime agent settings in `<state-root>/neon-pilot-runtime/settings.json` for model defaults, vision model, thinking level, service tier, default cwd, and UI/runtime preferences.
 - Extension scalar setting overrides in `<state-root>/settings.json`, backed by `contributes.settings` and `/api/settings`.
 - Extension component panels declared with `contributes.settingsComponent` for richer first-party configuration UI.
@@ -70,16 +70,16 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 
 ## Sections
 
-| Section      | Source                                               |
-| ------------ | ---------------------------------------------------- |
-| Appearance   | Built-in (theme picker)                              |
-| Conversation | Built-in (model, thinking)                           |
-| Workspace    | Built-in (default working dir)                       |
-| Commands     | Built-in command/keybinding editor                   |
-| Extensions   | Built-in extension enablement and extension settings |
-| Capabilities | Built-in AGENTS.md files and extension components    |
-| Providers    | Built-in (model providers, credentials)              |
-| Desktop      | Built-in (updates, app behavior)                     |
+| Section       | Source                                                              |
+| ------------- | ------------------------------------------------------------------- |
+| Appearance    | Built-in (theme picker)                                             |
+| Conversation  | Built-in (model, thinking)                                          |
+| Workspace     | Built-in (default working dir)                                      |
+| Agent Runtime | Built-in (system prompt template, AGENTS.md files, and agent tools) |
+| Commands      | Built-in command/keybinding editor                                  |
+| Extensions    | Built-in extension enablement and extension settings                |
+| Providers     | Built-in (model providers, credentials)                             |
+| Desktop       | Built-in (updates, app behavior)                                    |
 
 Knowledge setup lives in the Knowledge extension and is surfaced in Settings
 through its component-backed Knowledge Base panel. Manifest-declared extension

@@ -3,7 +3,7 @@ import { homedir } from 'os';
 import { dirname, isAbsolute, join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-import { readMachineInstructionFiles, readMachineSkillDirs } from './machine-config.js';
+import { readMachineInstructionFiles, readMachineSkillDirs, readMachineSystemPromptTemplate } from './machine-config.js';
 import { listUnifiedSkillNodeDirs } from './nodes.js';
 import {
   getDurableAgentFilePath,
@@ -925,7 +925,7 @@ export function materializeRuntimeResourcesToAgentDir(
     docs_index: join(resources.repoRoot, 'docs', 'README.md'),
   };
 
-  const generatedAppendContent = renderSystemPromptTemplate(templateVariables);
+  const generatedAppendContent = renderSystemPromptTemplate(templateVariables, readMachineSystemPromptTemplate());
   const fileAppendContent = resources.appendSystemFiles.length > 0 ? combineMarkdownFiles(resources.appendSystemFiles) : undefined;
   const appendContent = combineMarkdownChunks([generatedAppendContent ?? '', fileAppendContent ?? '']);
 

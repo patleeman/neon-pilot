@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from 'path';
 
 import { writeAppTelemetryEvent } from './app-telemetry-db.js';
 import { getConfigRoot } from './runtime/paths.js';
+import { SYSTEM_PROMPT_TEMPLATE } from './system-prompt-template.js';
 
 export const DEFAULT_RESUME_FALLBACK_PROMPT = 'Continue from where you left off.';
 
@@ -32,6 +33,7 @@ export interface MachineConfigDocument {
   vaultRoot?: string;
   instructionFiles?: string[];
   skillDirs?: string[];
+  systemPromptTemplate?: string;
   daemon?: Record<string, unknown>;
   ui?: Record<string, unknown>;
 }
@@ -135,6 +137,10 @@ function normalizeMachineConfig(value: unknown): MachineConfigDocument {
   const vaultRoot = typeof document.vaultRoot === 'string' && document.vaultRoot.trim().length > 0 ? document.vaultRoot.trim() : undefined;
   const instructionFiles = normalizeStringArray(document.instructionFiles);
   const skillDirs = normalizeStringArray(document.skillDirs);
+  const systemPromptTemplate =
+    typeof document.systemPromptTemplate === 'string' && document.systemPromptTemplate.trim().length > 0
+      ? document.systemPromptTemplate
+      : undefined;
   const daemon = normalizeSection(document.daemon);
   const ui = normalizeSection(document.ui);
 
@@ -142,6 +148,7 @@ function normalizeMachineConfig(value: unknown): MachineConfigDocument {
     ...(vaultRoot ? { vaultRoot } : {}),
     ...(instructionFiles ? { instructionFiles } : {}),
     ...(skillDirs ? { skillDirs } : {}),
+    ...(systemPromptTemplate ? { systemPromptTemplate } : {}),
     ...(daemon ? { daemon } : {}),
     ...(ui ? { ui } : {}),
   };
@@ -346,6 +353,26 @@ export function writeMachineSkillDirs(skillDirs: string[], options: MachineConfi
       next.skillDirs = normalizedSkillDirs;
     } else {
       delete next.skillDirs;
+    }
+    return next;
+  }, options);
+}
+
+export function readMachineSystemPromptTemplate(options: MachineConfigOptions = {}): string {
+  return readMachineConfig(options).systemPromptTemplate ?? SYSTEM_PROMPT_TEMPLATE;
+}
+
+export function writeMachineSystemPromptTemplate(
+  template: string | null | undefined,
+  options: MachineConfigOptions = {},
+): MachineConfigDocument {
+  const normalized = typeof template === 'string' ? template.trim() : '';
+  return updateMachineConfig((current) => {
+    const next: MachineConfigDocument = { ...current };
+    if (normalized.length > 0 && normalized !== SYSTEM_PROMPT_TEMPLATE.trim()) {
+      next.systemPromptTemplate = template ?? '';
+    } else {
+      delete next.systemPromptTemplate;
     }
     return next;
   }, options);

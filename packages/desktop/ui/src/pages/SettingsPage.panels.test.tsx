@@ -116,10 +116,10 @@ describe('SettingsPage — untested panel rendering', () => {
     expect(html).toContain('AGENTS.md files');
   });
 
-  it('renders the capabilities/MCP quick link', () => {
+  it('renders the runtime quick link', () => {
     const html = renderPage('/settings');
     expect(html).toContain('Agent Runtime');
-    expect(html).toContain('MCP wrappers and agent-adjacent settings.');
+    expect(html).toContain('Prompt template, instruction files, and agent tools.');
   });
 
   it('does not render interface reset controls in core settings', () => {

@@ -36,4 +36,15 @@ describe('SettingsField', () => {
 
     expect(onChange).toHaveBeenCalledWith('systemReplyActions.emojiPickerItems', '👍 Agree, 👎 Push back');
   });
+
+  it('uses a compact bare remove control for emoji label rows', () => {
+    const onChange = vi.fn();
+    const { getByLabelText } = render(<SettingsField entry={emojiListEntry} value="👍 Agree" onChange={onChange} />);
+
+    expect(getByLabelText('Remove reply action 1').textContent).toBe('×');
+
+    fireEvent.click(getByLabelText('Remove reply action 1'));
+
+    expect(onChange).toHaveBeenCalledWith('systemReplyActions.emojiPickerItems', '');
+  });
 });

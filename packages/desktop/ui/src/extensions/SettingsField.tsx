@@ -127,7 +127,7 @@ function EmojiLabelListControl({
     <div className="space-y-2">
       <div className="space-y-2">
         {rows.map((item, index) => (
-          <div key={index} className="grid grid-cols-[92px_minmax(0,1fr)_36px] items-center gap-2">
+          <div key={index} className="grid max-w-[640px] grid-cols-[92px_minmax(0,500px)_28px] items-center gap-2">
             <select
               aria-label={`Emoji for reply action ${index + 1}`}
               value={item.emoji}
@@ -169,9 +169,9 @@ function EmojiLabelListControl({
               aria-label={`Remove reply action ${index + 1}`}
               title="Remove"
               onClick={() => updateItems(rows.filter((_, itemIndex) => itemIndex !== index))}
-              className="h-9 w-9 rounded-lg border border-border-subtle bg-surface/60 text-[18px] leading-none text-secondary transition-colors hover:border-border-default hover:bg-surface hover:text-primary focus:outline-none focus:ring-1 focus:ring-accent/50"
+              className="h-8 w-7 text-[18px] leading-none text-secondary transition-colors hover:text-primary focus:outline-none focus:ring-1 focus:ring-accent/50"
             >
-              −
+              ×
             </button>
           </div>
         ))}

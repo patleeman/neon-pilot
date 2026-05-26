@@ -2,7 +2,16 @@ import { useEffect } from 'react';
 
 import { SettingsPage } from './SettingsPage';
 
-type SettingsSectionId = 'settings-providers' | 'settings-desktop' | 'settings-general' | 'settings-capabilities';
+type SettingsSectionId =
+  | 'settings-appearance'
+  | 'settings-conversation'
+  | 'settings-workspace'
+  | 'settings-runtime'
+  | 'settings-extensions'
+  | 'settings-commands'
+  | 'settings-security'
+  | 'settings-providers'
+  | 'settings-desktop';
 
 function SettingsSectionPage({ sectionIds }: { sectionIds: SettingsSectionId[] }) {
   useEffect(() => {

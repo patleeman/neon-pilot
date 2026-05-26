@@ -301,6 +301,10 @@ describe('SettingsPage provider model editor', () => {
         return instructionsResult;
       }
 
+      if (fetcher === api.systemPromptTemplate) {
+        return buildUseApiResult({ configFile: '/tmp/config.json', template: '# Neon Pilot defaults\n' });
+      }
+
       if (fetcher === api.models) {
         return modelsResult;
       }
