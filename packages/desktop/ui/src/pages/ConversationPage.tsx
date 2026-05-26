@@ -1079,6 +1079,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const messageIndexOffset = historicalBlockOffset;
   const messageCount = realMessages?.length ?? 0;
   const hasRenderableMessages = messageCount > 0;
+  const hasConversationUserMessages = useMemo(() => Boolean(realMessages?.some((message) => message.type === 'user')), [realMessages]);
   const initialScrollKey = useMemo(
     () =>
       getConversationInitialScrollKey(id ?? null, {
@@ -2148,9 +2149,15 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
   const currentCwdLabel = useMemo(() => formatConversationCwdLabel(currentCwd), [currentCwd]);
   const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
+  const setupCwdValue = draft ? draftCwdValue : (currentCwd ?? '');
+  const hasSetupCwd = hasDraftConversationCwd(setupCwdValue);
   const availableDraftWorkspacePaths = useMemo(
     () => buildAvailableDraftWorkspacePaths({ draftCwdValue, savedWorkspacePaths }),
     [draftCwdValue, savedWorkspacePaths],
+  );
+  const availableSetupWorkspacePaths = useMemo(
+    () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupCwdValue, savedWorkspacePaths }),
+    [savedWorkspacePaths, setupCwdValue],
   );
   const relatedThreadCandidates = useMemo(
     () =>
@@ -4150,6 +4157,77 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setDraftCwdError(null);
   }, []);
 
+  const pickSetupConversationCwd = useCallback(async () => {
+    if (draft) {
+      await pickDraftConversationCwd();
+      return;
+    }
+
+    if (!id || conversationCwdPickBusy || conversationCwdBusy) {
+      return;
+    }
+
+    if (!ensureConversationCanControl('change its working directory')) {
+      return;
+    }
+
+    setConversationCwdPickBusy(true);
+    setConversationCwdError(null);
+    try {
+      const result = await api.pickFolder({
+        cwd: currentCwd || undefined,
+        prompt: 'Choose a workspace folder',
+      });
+      if (result.cancelled || !result.path) {
+        return;
+      }
+
+      const nextWorkspacePaths = syncSavedWorkspacePaths([...savedWorkspacePaths, result.path]);
+      void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
+        // Ignore best-effort sync failures.
+      });
+      await submitConversationCwdChange(result.path);
+    } catch (error) {
+      setConversationCwdError(error instanceof Error ? error.message : 'Could not choose a folder.');
+    } finally {
+      setConversationCwdPickBusy(false);
+    }
+  }, [
+    conversationCwdBusy,
+    conversationCwdPickBusy,
+    currentCwd,
+    draft,
+    ensureConversationCanControl,
+    id,
+    pickDraftConversationCwd,
+    savedWorkspacePaths,
+    submitConversationCwdChange,
+    syncSavedWorkspacePaths,
+  ]);
+
+  const selectSetupConversationWorkspace = useCallback(
+    (workspacePath: string) => {
+      if (draft) {
+        selectDraftConversationWorkspace(workspacePath);
+        return;
+      }
+
+      const normalizedWorkspacePath = workspacePath.trim();
+      if (!normalizedWorkspacePath) {
+        return;
+      }
+
+      void submitConversationCwdChange(normalizedWorkspacePath);
+    },
+    [draft, selectDraftConversationWorkspace, submitConversationCwdChange],
+  );
+
+  const clearSetupConversationCwdSelection = useCallback(() => {
+    if (draft) {
+      clearDraftConversationCwdSelection();
+    }
+  }, [clearDraftConversationCwdSelection, draft]);
+
   useDesktopConversationShortcuts({
     draft,
     draftCwdPickBusy,
@@ -5481,6 +5559,30 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     hasVisibleTranscript: Boolean(visibleTranscriptMessages?.length),
   });
   const showBlockingConversationLoadingState = showConversationLoadingState && !showInlineConversationLoadingState;
+  const showNewConversationSetupAction = draft || (isLiveSession && !hasConversationUserMessages);
+  const newConversationSetupAction = showNewConversationSetupAction ? (
+    <ConversationDraftEmptyAction
+      hasDraftCwd={hasSetupCwd}
+      draftCwdValue={setupCwdValue}
+      draftCwdError={draft ? draftCwdError : conversationCwdError}
+      draftCwdPickBusy={draft ? draftCwdPickBusy : conversationCwdPickBusy || conversationCwdBusy}
+      savedWorkspacePathsLoading={savedWorkspacePathsLoading}
+      availableDraftWorkspacePaths={availableSetupWorkspacePaths}
+      onClearDraftCwdSelection={clearSetupConversationCwdSelection}
+      onSelectDraftWorkspace={selectSetupConversationWorkspace}
+      onPickDraftCwd={() => {
+        void pickSetupConversationCwd();
+      }}
+      extensionPanels={newConversationPanels.map((panel) => (
+        <NewConversationPanelHost
+          key={`${panel.extensionId}:${panel.id}`}
+          registration={panel}
+          panelContext={newConversationPanelContext}
+        />
+      ))}
+    />
+  ) : undefined;
+  const showLiveSetupBeforeTranscript = !draft && showNewConversationSetupAction && Boolean(visibleTranscriptMessages?.length);
 
   useEffect(() => {
     if (!id || draft || showConversationLoadingState) {
@@ -5656,6 +5758,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   <span>Session file was modified outside the agent. Some context may be stale.</span>
                 </div>
               )}
+              {showLiveSetupBeforeTranscript && newConversationSetupAction ? (
+                <div className={`${DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS} pt-2 text-left`}>{newConversationSetupAction}</div>
+              ) : null}
             </div>
           </div>
           {showBlockingConversationLoadingState ? (
@@ -5777,30 +5882,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     ? 'This conversation is live but has no messages yet. Send a prompt to get started.'
                     : 'Start a Pi session to populate this conversation.'
               }
-              action={
-                draft ? (
-                  <ConversationDraftEmptyAction
-                    hasDraftCwd={hasDraftCwd}
-                    draftCwdValue={draftCwdValue}
-                    draftCwdError={draftCwdError}
-                    draftCwdPickBusy={draftCwdPickBusy}
-                    savedWorkspacePathsLoading={savedWorkspacePathsLoading}
-                    availableDraftWorkspacePaths={availableDraftWorkspacePaths}
-                    onClearDraftCwdSelection={clearDraftConversationCwdSelection}
-                    onSelectDraftWorkspace={selectDraftConversationWorkspace}
-                    onPickDraftCwd={() => {
-                      void pickDraftConversationCwd();
-                    }}
-                    extensionPanels={newConversationPanels.map((panel) => (
-                      <NewConversationPanelHost
-                        key={`${panel.extensionId}:${panel.id}`}
-                        registration={panel}
-                        panelContext={newConversationPanelContext}
-                      />
-                    ))}
-                  />
-                ) : undefined
-              }
+              action={newConversationSetupAction}
             />
           )}
         </div>
@@ -5831,6 +5913,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       draftCwdValue,
       forkConversationFromMessage,
       focusComposerFromTranscriptBackground,
+      hasConversationUserMessages,
       hasRenderableMessages,
       hydrateHistoricalBlock,
       hydratingHistoricalBlockIdSet,
@@ -5862,18 +5945,19 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       visibleTranscriptEndPercent,
       previousTranscriptPercent,
       previousTranscriptBlockStep,
-      availableDraftWorkspacePaths,
-      hasDraftCwd,
-      clearDraftConversationCwdSelection,
-      pickDraftConversationCwd,
+      availableSetupWorkspacePaths,
+      hasSetupCwd,
+      clearSetupConversationCwdSelection,
+      pickSetupConversationCwd,
       savedWorkspacePathsLoading,
-      selectDraftConversationWorkspace,
+      selectSetupConversationWorkspace,
       beginTitleEdit,
       cancelConversationCwdEdit,
       cancelTitleEdit,
       conversationCwdBusy,
       conversationCwdDraft,
       conversationCwdError,
+      conversationCwdPickBusy,
       conversationHeaderOffset,
       currentCwd,
       isEditingTitle,
@@ -5890,6 +5974,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       visibleTranscriptState?.conversationId,
       newConversationPanelContext,
       newConversationPanels,
+      newConversationSetupAction,
+      showLiveSetupBeforeTranscript,
+      setupCwdValue,
     ],
   );
 

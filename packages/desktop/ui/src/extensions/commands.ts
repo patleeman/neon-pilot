@@ -31,7 +31,8 @@ export interface ExtensionCommandExecutorOptions {
   pageConversation?(direction: 'up' | 'down'): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
-  newConversationAndFocus?(): boolean;
+  newConversation?(): boolean | Promise<boolean>;
+  newConversationAndFocus?(): boolean | Promise<boolean>;
   toggleDictation?(): boolean;
   navigateConversation?(direction: 'next' | 'previous'): boolean;
   activeConversationId?: string | null;
@@ -175,6 +176,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'New Conversation',
       category: 'Conversation',
       execute() {
+        if (options.newConversation) {
+          return options.newConversation();
+        }
         options.navigate('/conversations/new');
         return true;
       },

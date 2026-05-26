@@ -501,16 +501,16 @@ export async function createLiveSessionCapability(
       })
     : resolveNeutralChatCwd(profile);
 
+  const optionsStartedAtMs = performance.now();
+  const options = await buildLiveSessionOptionsAsync(context, {
+    ...(input.model !== undefined ? { initialModel: input.model } : {}),
+    ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
+    ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
+    ...(Array.isArray(input.allowedToolNames) ? { allowedToolNames: input.allowedToolNames } : {}),
+  });
+  const optionsAtMs = performance.now();
   const createStartedAtMs = performance.now();
-  const created = await createLocalSession(
-    cwd,
-    await buildLiveSessionOptionsAsync(context, {
-      ...(input.model !== undefined ? { initialModel: input.model } : {}),
-      ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
-      ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
-      ...(Array.isArray(input.allowedToolNames) ? { allowedToolNames: input.allowedToolNames } : {}),
-    }),
-  );
+  const created = await createLocalSession(cwd, options);
   const createdAtMs = performance.now();
   appendConversationWorkspaceMetadata({
     sessionFile: created.sessionFile,
@@ -525,6 +525,7 @@ export async function createLiveSessionCapability(
     ...created,
     perf: {
       ...(created.perf ?? {}),
+      capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
       capabilityCreateLocalSessionMs: Math.round(createdAtMs - createStartedAtMs),
       capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - createdAtMs),
       capabilityBootstrapMs: Math.round(bootstrapAtMs - workspaceMetadataAtMs),

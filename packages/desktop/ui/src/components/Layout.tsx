@@ -5,6 +5,7 @@ import { useAppData, useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
+import { startNewLiveConversation } from '../conversation/newConversationNavigation';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
@@ -44,7 +45,7 @@ import {
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
-import { NotificationProvider } from './notifications/notificationStore';
+import { addNotification, NotificationProvider } from './notifications/notificationStore';
 import { cx } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
@@ -938,6 +939,34 @@ export function Layout() {
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
   }, [activeConversationId, appLayoutMode, location.pathname]);
 
+  const creatingNewConversationRef = useRef(false);
+  const startNewConversationFromLayout = useCallback(
+    async (focusComposer = false) => {
+      if (creatingNewConversationRef.current) {
+        return false;
+      }
+
+      creatingNewConversationRef.current = true;
+      try {
+        await startNewLiveConversation({ navigate, focusComposer });
+        if (focusComposer) {
+          window.setTimeout(() => window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus')), 80);
+        }
+        return true;
+      } catch (error) {
+        addNotification({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+          source: 'conversation',
+        });
+        return false;
+      } finally {
+        creatingNewConversationRef.current = false;
+      }
+    },
+    [navigate],
+  );
+
   const executeCommandOptions = useMemo(
     () => ({
       navigate,
@@ -985,10 +1014,11 @@ export function Layout() {
       cycleThinking() {
         return cycleSelectByLabel('Conversation thinking level');
       },
+      newConversation() {
+        return startNewConversationFromLayout(false);
+      },
       newConversationAndFocus() {
-        navigate('/conversations/new');
-        window.setTimeout(() => window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus')), 80);
-        return true;
+        return startNewConversationFromLayout(true);
       },
       toggleDictation() {
         window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
@@ -1032,6 +1062,7 @@ export function Layout() {
       navigate,
       sessions,
       setActiveConversationTool,
+      startNewConversationFromLayout,
     ],
   );
 

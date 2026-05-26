@@ -45,6 +45,7 @@ import {
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
 import { persistForkPromptDraft } from '../conversation/forking';
+import { startNewLiveConversation } from '../conversation/newConversationNavigation';
 import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
@@ -1913,6 +1914,7 @@ export function Sidebar() {
   const [sidebarNotice, setSidebarNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
   const [gatewayState, setGatewayState] = useState<GatewayState | null>(null);
   const [addWorkspaceBusy, setAddWorkspaceBusy] = useState(false);
+  const [newConversationBusy, setNewConversationBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -3027,7 +3029,11 @@ export function Sidebar() {
   }, [activeConversationId, sessions]);
 
   const handleNewConversation = useCallback(
-    (cwd?: string | null) => {
+    async (cwd?: string | null) => {
+      if (newConversationBusy) {
+        return;
+      }
+
       const explicitCwd = normalizeConversationGroupCwd(cwd);
       if (explicitCwd) {
         persistDraftConversationCwd(explicitCwd);
@@ -3037,9 +3043,24 @@ export function Sidebar() {
         setDraftCwd('');
       }
 
-      navigate('/conversations/new');
+      setNewConversationBusy(true);
+      try {
+        await startNewLiveConversation({
+          navigate,
+          cwd: explicitCwd,
+          bootstrapVersionKey: conversationBootstrapVersionKey,
+          sessionDetailVersion: versions.sessionFiles,
+        });
+      } catch (error) {
+        setSidebarNotice({
+          tone: 'danger',
+          text: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setNewConversationBusy(false);
+      }
     },
-    [navigate],
+    [conversationBootstrapVersionKey, navigate, newConversationBusy, versions.sessionFiles],
   );
 
   const handleOpenThreadSwitcher = useCallback(() => {
@@ -3053,7 +3074,7 @@ export function Sidebar() {
   const handleSelectSavedWorkspace = useCallback(
     (workspacePath: string) => {
       setWorkspaceQuickSelectOpen(false);
-      handleNewConversation(workspacePath);
+      void handleNewConversation(workspacePath);
     },
     [handleNewConversation],
   );
@@ -3079,7 +3100,7 @@ export function Sidebar() {
         // Ignore best-effort sync failures.
       });
       setWorkspaceQuickSelectOpen(false);
-      handleNewConversation(result.path);
+      void handleNewConversation(result.path);
     } catch (error) {
       showSidebarNotice('danger', `Add workspace failed: ${error instanceof Error ? error.message : String(error)}`, 4000);
     } finally {
@@ -3416,7 +3437,7 @@ export function Sidebar() {
       const key = normalizeHotkeyKey(event.key);
       if (matchesLetterHotkey(event, 'KeyN', 'n')) {
         event.preventDefault();
-        handleNewConversation();
+        void handleNewConversation();
         return;
       }
 
@@ -3749,11 +3770,14 @@ export function Sidebar() {
           <div className="px-1">
             <button
               type="button"
-              onClick={() => handleNewConversation()}
+              onClick={() => {
+                void handleNewConversation();
+              }}
+              disabled={newConversationBusy}
               className={['ui-sidebar-nav-item mx-0 flex w-full text-secondary', chatButtonActive && 'ui-sidebar-nav-item-active']
                 .filter(Boolean)
                 .join(' ')}
-              title={`Chat (${newConversationHotkeyLabel})`}
+              title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
             >
               <Ico d={PATH.plus} size={15} />
               <span className="flex-1 text-left">Chat</span>
@@ -3853,7 +3877,7 @@ export function Sidebar() {
                 }}
                 onCreateChildItem={(item) => {
                   const cwd = typeof item.metadata?.cwd === 'string' ? item.metadata.cwd : null;
-                  handleNewConversation(cwd);
+                  void handleNewConversation(cwd);
                 }}
                 onOpenItem={(item) => {
                   if (item.route) {
@@ -4098,7 +4122,9 @@ export function Sidebar() {
                       dropPosition={groupDropPosition}
                       dragId={group.key}
                       onToggleCollapsed={() => toggleConversationGroupCollapsed(group.key)}
-                      onNewConversation={() => handleNewConversation(group.cwd)}
+                      onNewConversation={() => {
+                        void handleNewConversation(group.cwd);
+                      }}
                       onOpenInFinder={group.cwd ? () => handleOpenConversationGroupInFinder(group.cwd, group.label) : undefined}
                       onEditName={() => handleRenameConversationGroup(group.key, group.defaultLabel, group.label)}
                       onArchiveThreads={
