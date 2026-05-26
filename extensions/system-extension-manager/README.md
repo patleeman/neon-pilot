@@ -17,37 +17,37 @@ Extension frontends must use the native PA client/action bridge for app-internal
 Settings → Extensions should make that loop boring:
 
 - create a starter native extension package
-- list installed system and user extensions
+- list installed built-in extensions and installed add-ons
 - show manifest, surfaces, routes, protocol entrypoints, build status, and permissions
 - expose host and extension command/keybinding inspection in a separate Commands tab
 - reload extension registry/runtime
 - keep per-extension actions visibly acknowledged with inline progress and result notices even when the list is scrolled
-- enable/disable user extensions without replacing the Settings page; registry-backed navigation and surfaces refresh in place
+- enable/disable add-on extensions without replacing the Settings page; registry-backed navigation and surfaces refresh in place
 - export/import extension packages
-- snapshot a user extension before agent edits
+- snapshot an add-on extension before agent edits
 - open an extension folder in Finder/editor
 - expose validate/reload operations through the Settings → Extensions UI and backend actions
 - show build/runtime errors in a way an agent can fix
 
 ## Operational model
 
-User extensions live in runtime state by default:
+Add-on extensions live in runtime state by default:
 
 ```text
 ~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
-Bundled first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as user extensions; there is no hard-coded system extension allowlist.
+Built-in first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as add-on extensions; there is no hard-coded built-in extension allowlist.
 
-Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as user extensions.
+Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as add-ons.
 
-The Settings → Extensions includes an **Available** tab for normal users. It lists optional first-party extensions and installs their `.neon-extension.zip` bundles from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. After installation, tell users to check the installed extension registry on the main **Installed** tab in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
+The Settings → Extensions surface includes an **Available add-ons** filter for normal users. It lists optional first-party extensions and installs their `.neon-extension.zip` bundles from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. After installation, tell users to check **Installed add-ons** or **All installed** in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
 Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then use **Validate** and **Reload** in Extension Manager. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports three templates: `main-page`, `right-rail`, and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
 
-Package a built user extension with `neon-pilot-extension pack <extension-dir> --out <name>.neon-extension.zip` before importing or sharing it. The bundle is a zip with one top-level extension directory and prebuilt `dist/` files; `node_modules`, `sidecar/target`, and `.dist.tmp-*` are excluded. Import installs that package into `<state-root>/extensions/{extension-id}` and does not build it at runtime. Optional first-party installable extensions use `pnpm run extension:pack:installable`, which emits `{extension-id}.neon-extension.zip` release assets for the **Available** tab catalog.
+Package a built add-on extension with `neon-pilot-extension pack <extension-dir> --out <name>.neon-extension.zip` before importing or sharing it. The bundle is a zip with one top-level extension directory and prebuilt `dist/` files; `node_modules`, `sidecar/target`, and `.dist.tmp-*` are excluded. Import installs that package into `<state-root>/extensions/{extension-id}` and does not build it at runtime. Optional first-party installable extensions use `pnpm run extension:pack:installable`, which emits `{extension-id}.neon-extension.zip` release assets for the **Available add-ons** catalog.
 
 ## Agent workflow for this extension
 
