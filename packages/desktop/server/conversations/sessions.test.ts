@@ -380,6 +380,64 @@ describe('sessions', () => {
     });
   });
 
+  it('keeps older transcript blocks loadable when rendered blocks outnumber message metadata', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const sessionId = 'session-tail-tools';
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+    const filePath = join(dir, `2026-03-11T12-00-00-000Z_${sessionId}.jsonl`);
+    const lines = [
+      JSON.stringify({
+        type: 'session',
+        id: sessionId,
+        timestamp: '2026-03-11T12:00:00.000Z',
+        cwd: '/tmp/project',
+      }),
+      JSON.stringify({
+        type: 'message',
+        id: `${sessionId}-user-1`,
+        parentId: null,
+        timestamp: '2026-03-11T12:00:00.000Z',
+        message: { role: 'user', content: 'Run a few commands' },
+      }),
+    ];
+    let parentId = `${sessionId}-user-1`;
+    for (let index = 0; index < 8; index += 1) {
+      const id = `${sessionId}-bash-${index}`;
+      lines.push(
+        JSON.stringify({
+          type: 'message',
+          id,
+          parentId,
+          timestamp: `2026-03-11T12:00:${String(index + 1).padStart(2, '0')}.000Z`,
+          message: { role: 'bashExecution', command: `echo ${index}`, output: `result ${index}` },
+        }),
+      );
+      parentId = id;
+    }
+    lines.push(
+      JSON.stringify({
+        type: 'message',
+        id: `${sessionId}-assistant-1`,
+        parentId,
+        timestamp: '2026-03-11T12:00:10.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'Done' }] },
+      }),
+    );
+    writeFileSync(filePath, lines.join('\n') + '\n');
+
+    const initialDetail = readSessionBlocks(sessionId, { tailBlocks: 4 });
+    expect(initialDetail?.blockOffset).toBeGreaterThan(0);
+
+    const expandedDetail = readSessionBlocks(sessionId, { tailBlocks: 8 });
+    expect(expandedDetail?.totalBlocks).toBe(10);
+    expect(expandedDetail?.blockOffset).toBe(2);
+    expect(expandedDetail?.blocks).toHaveLength(8);
+    expect(expandedDetail?.blocks[0]).toEqual(expect.objectContaining({ type: 'tool_use', output: 'result 1' }));
+  });
+
   it('invalidates cached archived transcript detail when the session file changes', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

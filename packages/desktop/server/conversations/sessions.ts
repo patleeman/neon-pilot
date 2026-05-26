@@ -2198,10 +2198,13 @@ export function readSessionBlocksByFileWithTelemetry(
   const meta = readCachedSessionMeta(filePath, resolveSessionFileCwdSlug(filePath));
   if (!meta) return { detail: null, telemetry: null };
 
+  const shouldReadExactTailCounts =
+    (parseSignatureSize(signature) ?? Number.POSITIVE_INFINITY) <= FAST_TAIL_EXACT_COUNT_MAX_BYTES ||
+    (typeof requestedTailBlocks === 'number' && requestedTailBlocks > meta.messageCount);
   const fastTailDetail =
     typeof requestedTailBlocks === 'number' && requestedTailBlocks > 0
       ? tryReadSessionTailBlocksByFile(meta.file, meta, requestedTailBlocks, {
-          exactCounts: (parseSignatureSize(signature) ?? Number.POSITIVE_INFINITY) <= FAST_TAIL_EXACT_COUNT_MAX_BYTES,
+          exactCounts: shouldReadExactTailCounts,
         })
       : null;
   if (fastTailDetail) {
