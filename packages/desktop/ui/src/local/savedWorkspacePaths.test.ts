@@ -34,6 +34,15 @@ describe('normalizeWorkspacePaths', () => {
     const result = normalizeWorkspacePaths(['/repo/a', null, undefined, '/repo/b']);
     expect(result).toEqual(['/repo/a', '/repo/b']);
   });
+
+  it('skips neutral chat workspace paths', () => {
+    const result = normalizeWorkspacePaths([
+      '/repo/a',
+      '/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared',
+      '/repo/b',
+    ]);
+    expect(result).toEqual(['/repo/a', '/repo/b']);
+  });
 });
 
 describe('readStoredWorkspacePaths', () => {
@@ -42,7 +51,10 @@ describe('readStoredWorkspacePaths', () => {
   });
 
   it('returns parsed and normalized paths', () => {
-    localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(['/repo/a', '/repo/b']));
+    localStorage.setItem(
+      SAVED_WORKSPACE_PATHS_STORAGE_KEY,
+      JSON.stringify(['/repo/a', '/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared', '/repo/b']),
+    );
     expect(readStoredWorkspacePaths()).toEqual(['/repo/a', '/repo/b']);
   });
 
@@ -54,8 +66,8 @@ describe('readStoredWorkspacePaths', () => {
 
 describe('writeStoredWorkspacePaths', () => {
   it('stores non-empty paths', () => {
-    writeStoredWorkspacePaths(['/repo/a']);
-    expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toContain('/repo/a');
+    writeStoredWorkspacePaths(['/repo/a', '/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared']);
+    expect(JSON.parse(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY) ?? '[]')).toEqual(['/repo/a']);
   });
 
   it('removes key when empty', () => {

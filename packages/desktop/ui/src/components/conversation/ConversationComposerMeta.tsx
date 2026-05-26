@@ -71,6 +71,7 @@ export function ConversationComposerMeta({
     gitSummary: gitSummaryPresentation,
     contextUsage: sessionTokens,
   };
+  const neutralChatCwd = currentCwdLabel === 'Chat';
   return (
     <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
@@ -177,9 +178,9 @@ export function ConversationComposerMeta({
             type="button"
             onClick={onBeginConversationCwdEdit}
             className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-secondary transition-colors hover:bg-surface/45 hover:text-primary xl:w-[26rem] xl:flex-none"
-            title={currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
+            title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
           >
-            <FolderIcon className="shrink-0 text-dim/70" />
+            {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
             <span className="ui-truncate-start min-w-0 flex-1 font-mono text-[11px]">{currentCwdLabel || 'Set working directory'}</span>
           </button>
         )}

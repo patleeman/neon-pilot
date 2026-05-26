@@ -67,4 +67,19 @@ describe('ConversationComposerMeta', () => {
     expect(html).toContain('project');
     expect(html).not.toContain('Conversation options');
   });
+
+  it('renders neutral chat cwd without exposing the backing path', () => {
+    const html = renderToString(
+      <ConversationComposerMeta
+        {...baseProps}
+        draft={false}
+        currentCwd="/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared"
+        currentCwdLabel="Chat"
+      />,
+    );
+
+    expect(html).toContain('Chat - no workspace');
+    expect(html).toContain('Chat');
+    expect(html).not.toContain('chat-workspaces/shared');
+  });
 });

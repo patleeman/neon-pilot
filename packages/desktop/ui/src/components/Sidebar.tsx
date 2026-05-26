@@ -22,6 +22,7 @@ import {
   groupConversationItemsByCwd,
   normalizeConversationGroupCwd,
 } from '../conversation/conversationCwdGroups';
+import { isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
 import {
   type ConversationBackgroundWorkKind,
   selectConversationActiveExecutions,
@@ -702,7 +703,12 @@ function resolveSidebarConversationHotkeyOrder<T>(input: {
 }
 
 function getSessionWorkspaceCwd(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string | null {
-  return Object.prototype.hasOwnProperty.call(session, 'workspaceCwd') ? (session.workspaceCwd ?? null) : (session.cwd ?? null);
+  if (Object.prototype.hasOwnProperty.call(session, 'workspaceCwd')) {
+    const workspaceCwd = session.workspaceCwd ?? null;
+    return isNeutralChatCwdPath(workspaceCwd) ? null : workspaceCwd;
+  }
+
+  return isNeutralChatCwdPath(session.cwd) ? null : (session.cwd ?? null);
 }
 
 function getLocalSessionWorkspacePath(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string {

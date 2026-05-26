@@ -408,6 +408,49 @@ describe('Sidebar', () => {
     expect(html.indexOf('Second alpha conversation')).toBeLessThan(html.indexOf('beta-worktree'));
   });
 
+  it('groups legacy neutral chat cwd sessions under Chats instead of the backing workspace path', () => {
+    const neutralPath = '/tmp/neon-pilot-runtime/chat-workspaces/shared';
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-chat']));
+
+    const html = renderSidebar('/conversations/conv-chat', {
+      sessions: [
+        createSession({
+          id: 'conv-chat',
+          title: 'Plain chat',
+          cwd: neutralPath,
+          cwdSlug: 'shared',
+        }),
+      ],
+    });
+
+    expect(html).toContain('data-sidebar-group-key="__no-cwd__"');
+    expect(html).toContain('aria-label="Collapse Chats"');
+    expect(html).toContain('Plain chat');
+    expect(html).not.toContain('chat-workspaces/shared');
+    expect(html).not.toContain('neon-pilot-runtime');
+  });
+
+  it('keeps neutral workspaceCwd sessions under Chats', () => {
+    const neutralPath = '/tmp/neon-pilot-runtime/chat-workspaces/shared';
+    storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-chat']));
+
+    const html = renderSidebar('/conversations/conv-chat', {
+      sessions: [
+        createSession({
+          id: 'conv-chat',
+          title: 'Plain chat',
+          cwd: neutralPath,
+          cwdSlug: 'shared',
+          workspaceCwd: neutralPath,
+        }),
+      ],
+    });
+
+    expect(html).toContain('data-sidebar-group-key="__no-cwd__"');
+    expect(html).toContain('aria-label="Collapse Chats"');
+    expect(html).not.toContain('chat-workspaces/shared');
+  });
+
   it('hides conversation rows for collapsed cwd groups', () => {
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
     storage.setItem(buildSidebarNavSectionStorageKey('threads-collapsed-cwd-groups'), JSON.stringify(['/home/user/project']));

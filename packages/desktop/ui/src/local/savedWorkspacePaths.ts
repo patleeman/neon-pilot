@@ -1,4 +1,5 @@
 import { normalizeConversationGroupCwd } from '../conversation/conversationCwdGroups';
+import { isNeutralChatCwdPath } from '../conversation/conversationCwdPresentation';
 import { SAVED_WORKSPACE_PATHS_STORAGE_KEY } from './localSettings';
 
 export function normalizeWorkspacePaths(values: Iterable<unknown>): string[] {
@@ -7,7 +8,7 @@ export function normalizeWorkspacePaths(values: Iterable<unknown>): string[] {
 
   for (const value of values) {
     const normalized = normalizeConversationGroupCwd(typeof value === 'string' ? value : null);
-    if (!normalized || seen.has(normalized)) {
+    if (!normalized || isNeutralChatCwdPath(normalized) || seen.has(normalized)) {
       continue;
     }
 
@@ -42,8 +43,9 @@ export function writeStoredWorkspacePaths(workspacePaths: readonly string[]): vo
   }
 
   try {
-    if (workspacePaths.length > 0) {
-      localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(workspacePaths));
+    const normalizedWorkspacePaths = normalizeWorkspacePaths(workspacePaths);
+    if (normalizedWorkspacePaths.length > 0) {
+      localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify(normalizedWorkspacePaths));
       return;
     }
 
