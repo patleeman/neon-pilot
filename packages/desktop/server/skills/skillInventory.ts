@@ -252,8 +252,28 @@ function listExtensionSkillDefinitions(): SkillDefinition[] {
 
 function listSkillDefinitionsFromParents(parents: readonly string[], kind: SkillSourceKind): SkillDefinition[] {
   const definitions: SkillDefinition[] = [];
+  const seen = new Set<string>();
+
+  const addSkillFromDir = (dir: string, root: string): void => {
+    const path = [join(dir, 'SKILL.md'), join(dir, 'INDEX.md')].find((candidate) => existsSync(candidate));
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    const metadata = readSkillMetadata(path);
+    definitions.push({
+      id: basename(dir),
+      providerId: kind,
+      title: metadata.name || basename(dir),
+      description: metadata.description,
+      source: { kind, label: kind === 'knowledge' ? 'Vault' : root, root },
+      location: { kind: 'file', path, root },
+    });
+  };
+
   for (const parent of parents) {
     if (!existsSync(parent)) continue;
+    // The parent itself may be a skill (e.g. a flat `skills/<name>/SKILL.md` layout,
+    // or a router skill like `skills/design/SKILL.md` that also has child skills).
+    addSkillFromDir(parent, parent);
     let entries: string[];
     try {
       entries = readdirSync(parent);
@@ -268,17 +288,7 @@ function listSkillDefinitionsFromParents(parents: readonly string[], kind: Skill
       } catch {
         continue;
       }
-      const path = [join(dir, 'SKILL.md'), join(dir, 'INDEX.md')].find((candidate) => existsSync(candidate));
-      if (!path) continue;
-      const metadata = readSkillMetadata(path);
-      definitions.push({
-        id: basename(dir),
-        providerId: kind,
-        title: metadata.name || basename(dir),
-        description: metadata.description,
-        source: { kind, label: kind === 'knowledge' ? 'Vault' : parent, root: parent },
-        location: { kind: 'file', path, root: parent },
-      });
+      addSkillFromDir(dir, parent);
     }
   }
   return definitions;
