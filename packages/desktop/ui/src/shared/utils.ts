@@ -1,4 +1,11 @@
 const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]\d{2}:\d{2})$/;
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const SHORT_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 function parseIsoTimestamp(iso: string): number {
   const normalized = iso.trim();
@@ -39,7 +46,7 @@ export function timeAgo(iso: string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   if (seconds < 86400 * 7) return `${Math.floor(seconds / 86400)}d ago`;
-  return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return SHORT_DATE_FORMATTER.format(timestamp);
 }
 
 export function timeAgoCompact(iso: string): string {
@@ -50,17 +57,12 @@ export function timeAgoCompact(iso: string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   if (seconds < 86400 * 7) return `${Math.floor(seconds / 86400)}d`;
-  return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return SHORT_DATE_FORMATTER.format(timestamp);
 }
 
 export function formatDate(iso: string): string {
   const timestamp = parseIsoTimestamp(iso);
   const date = new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return '';
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return SHORT_DATE_TIME_FORMATTER.format(date);
 }

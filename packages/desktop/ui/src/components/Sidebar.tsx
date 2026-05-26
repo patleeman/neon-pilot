@@ -77,6 +77,7 @@ import { TextPromptDialog } from './shared/TextPromptDialog';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
+const SIDEBAR_CONVERSATION_PREFETCH_DELAY_MS = 140;
 
 function Ico({ d, size = 16 }: { d: string; size?: number }) {
   return (
@@ -1473,6 +1474,16 @@ function OpenConversationRow({
   const showTrailingControls = showCloseButton;
   const rowTitle = canDrag ? 'Drag to reorder conversations' : undefined;
   const menuItemClass = 'ui-context-menu-item';
+  const prefetchTimeoutRef = useRef<number | null>(null);
+
+  const cancelConversationPrefetch = useCallback(() => {
+    if (prefetchTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(prefetchTimeoutRef.current);
+    prefetchTimeoutRef.current = null;
+  }, []);
 
   function stopRowInteraction(event: { preventDefault: () => void; stopPropagation: () => void }) {
     event.preventDefault();
@@ -1565,9 +1576,28 @@ function OpenConversationRow({
     setMenuOpen(true);
   }
 
-  const handleConversationIntent = useCallback(() => {
-    onPrefetch?.();
+  useEffect(() => cancelConversationPrefetch, [cancelConversationPrefetch]);
+
+  const scheduleConversationPrefetch = useCallback(() => {
+    if (!onPrefetch || prefetchTimeoutRef.current !== null) {
+      return;
+    }
+
+    prefetchTimeoutRef.current = window.setTimeout(() => {
+      prefetchTimeoutRef.current = null;
+      onPrefetch();
+    }, SIDEBAR_CONVERSATION_PREFETCH_DELAY_MS);
   }, [onPrefetch]);
+
+  const handleRowMouseEnter = useCallback(() => {
+    onMouseEnter();
+    scheduleConversationPrefetch();
+  }, [onMouseEnter, scheduleConversationPrefetch]);
+
+  const handleRowMouseLeave = useCallback(() => {
+    cancelConversationPrefetch();
+    onMouseLeave();
+  }, [cancelConversationPrefetch, onMouseLeave]);
 
   async function handleExtensionContextMenuClick(menu: (typeof conversationExtensionMenuItems)[number]) {
     if (busyExtensionMenuId) return;
@@ -1650,8 +1680,8 @@ function OpenConversationRow({
       onDragOver={canDrag ? onDragOver : undefined}
       onDrop={canDrag ? onDrop : undefined}
       onDragEnd={canDrag ? onDragEnd : undefined}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={handleRowMouseEnter}
+      onMouseLeave={handleRowMouseLeave}
       onContextMenu={handleContextMenu}
     >
       {dropPosition ? (
@@ -1666,9 +1696,6 @@ function OpenConversationRow({
       <Link
         to={`/conversations/${session.id}`}
         draggable={false}
-        onMouseEnter={handleConversationIntent}
-        onFocus={handleConversationIntent}
-        onPointerDown={handleConversationIntent}
         className={[
           'ui-sidebar-session-row select-none',
           active && 'ui-sidebar-session-row-active',
