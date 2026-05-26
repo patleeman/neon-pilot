@@ -2970,6 +2970,39 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     }
   }
 
+  async function handleOpenProviderOAuthUrl(url: string) {
+    const normalizedUrl = url.trim();
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const desktopBridge = getDesktopBridge();
+    if (desktopBridge && desktopEnvironment?.activeHostKind === 'local') {
+      const result = await desktopBridge.openExternalUrl(normalizedUrl);
+      if (!result.opened && result.error) {
+        setOauthError(result.error);
+      }
+      return;
+    }
+
+    window.open(normalizedUrl, '_blank');
+  }
+
+  async function handleCopyProviderOAuthUrl(url: string) {
+    const normalizedUrl = url.trim();
+    if (!normalizedUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(normalizedUrl);
+      setOauthError(null);
+      setProviderCredentialNotice('Copied OAuth login URL.');
+    } catch (error) {
+      setOauthError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   function navigateToSection(sectionId: SettingsQuickLinkId) {
     setActiveQuickLinkId(sectionId);
     const section = settingsScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`);
@@ -4321,6 +4354,47 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       <p className="ui-card-meta">
                                         {selectedProviderLogin.progress[selectedProviderLogin.progress.length - 1]}
                                       </p>
+                                    )}
+                                    {selectedProviderLogin.authUrl && (
+                                      <div className="space-y-2 rounded-md border border-border-subtle bg-elevated/50 p-2.5">
+                                        <label className="ui-card-meta" htmlFor="settings-provider-oauth-url">
+                                          OAuth login URL
+                                        </label>
+                                        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                                          <input
+                                            id="settings-provider-oauth-url"
+                                            value={selectedProviderLogin.authUrl}
+                                            readOnly
+                                            className={INPUT_CLASS}
+                                            spellCheck={false}
+                                            onFocus={(event) => {
+                                              event.currentTarget.select();
+                                            }}
+                                          />
+                                          <div className="flex shrink-0 gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                void handleOpenProviderOAuthUrl(selectedProviderLogin.authUrl);
+                                              }}
+                                              disabled={oauthAction !== null}
+                                              className={ACTION_BUTTON_CLASS}
+                                            >
+                                              Open
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                void handleCopyProviderOAuthUrl(selectedProviderLogin.authUrl);
+                                              }}
+                                              disabled={oauthAction !== null || !navigator.clipboard}
+                                              className={ACTION_BUTTON_CLASS}
+                                            >
+                                              Copy
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
                                     )}
                                     {selectedProviderLogin.prompt && (
                                       <form

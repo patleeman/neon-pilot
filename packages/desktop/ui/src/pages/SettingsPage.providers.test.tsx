@@ -536,6 +536,9 @@ describe('SettingsPage provider model editor', () => {
 
     expect(startProviderOAuthLoginMock).toHaveBeenCalledWith('openai-codex');
     expect(openExternalUrl).toHaveBeenCalledWith('https://auth.openai.com/oauth');
+    const oauthUrlInput = container.querySelector('#settings-provider-oauth-url');
+    expect(oauthUrlInput).toBeInstanceOf(HTMLInputElement);
+    expect((oauthUrlInput as HTMLInputElement).value).toBe('https://auth.openai.com/oauth');
   });
 
   it('removes a stored provider credential from the provider editor', async () => {
