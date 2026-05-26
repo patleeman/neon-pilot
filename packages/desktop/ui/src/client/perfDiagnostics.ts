@@ -51,7 +51,7 @@ interface RendererLongTaskSample {
   recordedAt: string;
   startTimeMs: number;
   durationMs: number;
-  source: 'longtask' | 'event-loop-lag';
+  source: 'longtask' | 'event-loop-lag' | 'input-frame-lag';
   meta?: Record<string, unknown>;
 }
 
@@ -79,6 +79,7 @@ interface PerfStore {
 const MAX_PERF_SAMPLES = 120;
 const CLIENT_PERF_TELEMETRY_MIN_DURATION_MS = 16;
 const CHAT_RENDER_TELEMETRY_MIN_DURATION_MS = 16;
+const INPUT_FRAME_LAG_TELEMETRY_MIN_DURATION_MS = 50;
 const perfStore: PerfStore = {
   apiSamples: [],
   conversationOpenSamples: [],
@@ -89,6 +90,7 @@ const perfStore: PerfStore = {
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
 let rendererBlockTelemetryStarted = false;
+let pendingInputFrameLagCheck = false;
 publishPerfStore();
 
 function appendSample<T>(samples: T[], sample: T): void {
@@ -314,7 +316,7 @@ function describeInteractionTarget(target: EventTarget | null): string | null {
   return parts.join(' ');
 }
 
-export function recordRendererInteraction(type: string, target: EventTarget | null, timeMs = performance.now()): void {
+export function recordRendererInteraction(type: string, target: EventTarget | null, timeMs = performance.now()): RendererInteractionSample {
   const sample: RendererInteractionSample = {
     type,
     route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
@@ -327,6 +329,7 @@ export function recordRendererInteraction(type: string, target: EventTarget | nu
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][interaction]', sample);
   }
+  return sample;
 }
 
 function recordRendererLongTask(input: {
@@ -359,8 +362,36 @@ function recordRendererLongTask(input: {
     },
   });
   if (shouldLogPerfSamples()) {
-    console.info('[pa-perf][renderer-block]', sample);
+    console.info(sample.source === 'input-frame-lag' ? '[pa-perf][lag]' : '[pa-perf][renderer-block]', sample);
   }
+}
+
+function scheduleInputFrameLagCheck(interaction: RendererInteractionSample): void {
+  if (pendingInputFrameLagCheck || typeof globalThis.requestAnimationFrame !== 'function') {
+    return;
+  }
+
+  pendingInputFrameLagCheck = true;
+  globalThis.requestAnimationFrame(() => {
+    pendingInputFrameLagCheck = false;
+    const frameAtMs = performance.now();
+    const durationMs = Math.max(0, frameAtMs - interaction.timeMs);
+    if (durationMs < INPUT_FRAME_LAG_TELEMETRY_MIN_DURATION_MS) {
+      return;
+    }
+
+    recordRendererLongTask({
+      source: 'input-frame-lag',
+      startTimeMs: interaction.timeMs,
+      durationMs,
+      meta: {
+        eventType: interaction.type,
+        frameAtMs: Math.round(frameAtMs),
+        inputAtMs: Math.round(interaction.timeMs),
+        target: interaction.target,
+      },
+    });
+  });
 }
 
 export function startRendererBlockTelemetry(): void {
@@ -370,7 +401,10 @@ export function startRendererBlockTelemetry(): void {
   rendererBlockTelemetryStarted = true;
 
   const recordInteractionEvent = (event: Event) => {
-    recordRendererInteraction(event.type, event.target, performance.now());
+    const interaction = recordRendererInteraction(event.type, event.target, performance.now());
+    if (event.type === 'pointerdown' || event.type === 'keydown' || event.type === 'wheel') {
+      scheduleInputFrameLagCheck(interaction);
+    }
   };
   globalThis.addEventListener?.('pointerdown', recordInteractionEvent, { capture: true, passive: true });
   globalThis.addEventListener?.('click', recordInteractionEvent, { capture: true, passive: true });

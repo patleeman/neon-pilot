@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const telemetryMocks = vi.hoisted(() => ({
+  recordRendererTelemetry: vi.fn(),
+}));
+
+vi.mock('../telemetry/appTelemetry', () => telemetryMocks);
+
 describe('perfDiagnostics', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
+    telemetryMocks.recordRendererTelemetry.mockReset();
     const storage = new Map<string, string>();
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,
@@ -138,5 +145,52 @@ describe('perfDiagnostics', () => {
         meta: { extensionCount: 3 },
       }),
     ]);
+  });
+
+  it('records input-to-frame lag after delayed interaction paint', async () => {
+    let nowMs = 100;
+    let animationFrame: FrameRequestCallback | null = null;
+    vi.spyOn(performance, 'now').mockImplementation(() => nowMs);
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      animationFrame = callback;
+      return 1;
+    });
+    vi.spyOn(globalThis, 'setInterval').mockImplementation(() => 1 as unknown as NodeJS.Timeout);
+
+    const { startRendererBlockTelemetry } = await import('./perfDiagnostics');
+    startRendererBlockTelemetry();
+
+    const button = document.createElement('button');
+    button.textContent = 'Load previous 10%';
+    document.body.appendChild(button);
+    button.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+    nowMs = 175;
+    animationFrame?.(nowMs);
+
+    const perf = (
+      globalThis as typeof globalThis & {
+        __NEON_PILOT_APP_PERF__?: {
+          longTaskSamples?: Array<{ source: string; durationMs: number; meta?: Record<string, unknown> }>;
+        };
+      }
+    ).__NEON_PILOT_APP_PERF__;
+    expect(perf?.longTaskSamples).toEqual([
+      expect.objectContaining({
+        source: 'input-frame-lag',
+        durationMs: 75,
+        meta: expect.objectContaining({
+          eventType: 'pointerdown',
+          target: expect.stringContaining('Load previous 10%'),
+        }),
+      }),
+    ]);
+    expect(telemetryMocks.recordRendererTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'renderer_performance',
+        name: 'input-frame-lag',
+        durationMs: 75,
+      }),
+    );
   });
 });
