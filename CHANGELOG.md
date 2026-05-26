@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.1 — 2026-05-26
+
+### Highlights
+
+- Promotes the `0.9.1` RC train to the stable app channel with the same Extension Manager source-label clarity, installable catalog filtering, and invalid-extension recovery fixes validated in RC.
+- Ships the packaged-extension startup hardening from the RC train, including backend API bundle guards, settings-store bundling, build artifact verification fixes, and refreshed workspace package ranges.
+- Includes settings-adjacent workflow polish for reply actions, Caffeinate auto-start behavior, SpeechMike cleanup, Alleycat networking stability, and frame-lag telemetry.
+- Publishes stable `Neon Pilot` macOS artifacts and installable extension bundles for users following the stable update path.
+
+### Notes
+
+- 0 commits since the previous release.
+
 ## 0.9.1-rc.7 — 2026-05-26
 
 ### Highlights

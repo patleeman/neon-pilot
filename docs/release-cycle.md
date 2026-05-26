@@ -4,17 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.1-rc.7** — RC being prepared.
+**v0.9.1** — patch release being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1-rc.7
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.1
 
 Highlights in this train:
 
-- Clarifies Extension Manager source states with Built-in, Add-on, Installed add-ons, Available add-ons, and All installed labels, including matching details modal and docs.
-- Keeps available catalog items out of installed-extension filters and stops catalog refreshes from polling, making the extension registry easier to reason about before release.
-- Improves extension recovery and invalid-package handling by clearing stale service diagnostics, allowing invalid runtime extensions to be deleted, and removing misleading load warnings.
-- Hardens packaged extension startup with backend API bundle guards, settings-store bundling, corrected build artifact verification paths, and refreshed internal workspace ranges.
-- Polishes settings-adjacent workflows with reply-action rendering improvements, Caffeinate auto-start support, SpeechMike cleanup, Alleycat networking stability, and added frame-lag telemetry.
+- Promotes the `0.9.1` RC train to the stable app channel with the same Extension Manager source-label clarity, installable catalog filtering, and invalid-extension recovery fixes validated in RC.
+- Ships the packaged-extension startup hardening from the RC train, including backend API bundle guards, settings-store bundling, build artifact verification fixes, and refreshed workspace package ranges.
+- Includes settings-adjacent workflow polish for reply actions, Caffeinate auto-start behavior, SpeechMike cleanup, Alleycat networking stability, and frame-lag telemetry.
+- Publishes stable `Neon Pilot` macOS artifacts and installable extension bundles for users following the stable update path.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
