@@ -1,5 +1,6 @@
 import { type RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react';
 
+import { recordClientPerfTiming } from '../client/perfDiagnostics';
 import {
   getConversationBottomScrollTop,
   getConversationPrependRestoreScrollTop,
@@ -197,6 +198,7 @@ export function useConversationScroll({
   }, [cancelScheduledScroll, scrollRef]);
 
   useLayoutEffect(() => {
+    const startedAtMs = performance.now();
     const pendingRestore = pendingPrependRestoreRef.current;
     if (!pendingRestore || !conversationId || pendingRestore.conversationId !== conversationId) {
       return;
@@ -207,16 +209,38 @@ export function useConversationScroll({
       return;
     }
 
-    el.scrollTop = getConversationPrependRestoreScrollTop({
+    const previousScrollHeight = pendingRestore.scrollHeight;
+    const previousScrollTop = pendingRestore.scrollTop;
+    const nextScrollHeight = el.scrollHeight;
+    const nextClientHeight = el.clientHeight;
+    const nextScrollTop = getConversationPrependRestoreScrollTop({
       previousScrollHeight: pendingRestore.scrollHeight,
       previousScrollTop: pendingRestore.scrollTop,
-      nextScrollHeight: el.scrollHeight,
-      nextClientHeight: el.clientHeight,
+      nextScrollHeight,
+      nextClientHeight,
       stickToBottom: pendingRestore.stickToBottom,
     });
+    el.scrollTop = nextScrollTop;
     pinnedToBottomRef.current = pendingRestore.stickToBottom;
     setAtBottom(pendingRestore.stickToBottom ? true : readAtBottom(el));
     pendingPrependRestoreRef.current = null;
+
+    recordClientPerfTiming({
+      name: 'conversation.prependRestoreLayout',
+      startedAtMs,
+      minDurationMs: 8,
+      meta: {
+        conversationId,
+        messageCount: messages?.length ?? 0,
+        nextClientHeight,
+        nextScrollHeight,
+        nextScrollTop,
+        prependRestoreKey: prependRestoreKey ?? null,
+        previousScrollHeight,
+        previousScrollTop,
+        stickToBottom: pendingRestore.stickToBottom,
+      },
+    });
   }, [conversationId, messages, prependRestoreKey, scrollRef]);
 
   useLayoutEffect(() => {

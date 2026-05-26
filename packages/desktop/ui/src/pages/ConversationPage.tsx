@@ -2075,6 +2075,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       if (targetMessageIndex === undefined) {
+        scrollPrefetchUserIntentRef.current = false;
+        lastHistoricalPrefetchRequestedAtRef.current = performance.now();
         capturePrependRestore();
       }
 
