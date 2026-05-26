@@ -526,12 +526,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
-    const interval = window.setInterval(refresh, 5_000);
     return () => {
       window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
-      window.clearInterval(interval);
     };
   }, [load, loadCatalog]);
 

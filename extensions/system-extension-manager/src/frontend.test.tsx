@@ -82,6 +82,14 @@ function renderPage(options?: { toast?: ReturnType<typeof vi.fn>; notify?: Retur
   return { toast, notify };
 }
 
+function renderPageWithPa(pa: Record<string, unknown>) {
+  render(
+    <MemoryRouter>
+      <ExtensionManagerPage pa={pa as never} context={{} as never} surface={{} as never} params={{}} />
+    </MemoryRouter>,
+  );
+}
+
 describe('ExtensionManagerPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -119,5 +127,20 @@ describe('ExtensionManagerPage', () => {
     await screen.findByText('Menu Test');
     expect(screen.getByRole('button', { name: 'available' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('loads the installable catalog without starting a polling interval', async () => {
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const callAction = vi.fn().mockResolvedValue({ ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    await screen.findByText('Menu Test');
+    expect(callAction).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
   });
 });
