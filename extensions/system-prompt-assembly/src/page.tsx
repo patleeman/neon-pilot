@@ -1,4 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { api, useApi } from '@neon-pilot/extensions/settings';
 import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -40,12 +41,29 @@ interface AgentRuntimeResult {
   diagnostics?: unknown[];
 }
 
+interface SystemPromptTemplateState {
+  configFile: string;
+  template: string;
+}
+
 export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<AgentRuntimeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const {
+    data: systemPromptTemplateState,
+    loading: systemPromptTemplateLoading,
+    error: systemPromptTemplateError,
+  } = useApi(api.systemPromptTemplate) as {
+    data: SystemPromptTemplateState | null;
+    loading: boolean;
+    error: string | null;
+  };
+  const [systemPromptTemplateDraft, setSystemPromptTemplateDraft] = useState('');
+  const [savingSystemPromptTemplate, setSavingSystemPromptTemplate] = useState(false);
+  const [systemPromptTemplateSaveError, setSystemPromptTemplateSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -60,6 +78,46 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const systemPromptTemplateDirty = systemPromptTemplateState ? systemPromptTemplateDraft !== systemPromptTemplateState.template : false;
+
+  useEffect(() => {
+    if (systemPromptTemplateState) {
+      setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+    }
+  }, [systemPromptTemplateState?.configFile, systemPromptTemplateState?.template]);
+
+  const handleSaveSystemPromptTemplate = useCallback(async () => {
+    if (!systemPromptTemplateState || savingSystemPromptTemplate || !systemPromptTemplateDirty) {
+      return;
+    }
+
+    setSystemPromptTemplateSaveError(null);
+    setSavingSystemPromptTemplate(true);
+
+    try {
+      const saved = (await api.updateSystemPromptTemplate(systemPromptTemplateDraft)) as SystemPromptTemplateState;
+      setSystemPromptTemplateDraft(saved.template);
+    } catch (err) {
+      setSystemPromptTemplateSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingSystemPromptTemplate(false);
+    }
+  }, [savingSystemPromptTemplate, systemPromptTemplateDirty, systemPromptTemplateDraft, systemPromptTemplateState]);
+
+  useEffect(() => {
+    if (!systemPromptTemplateState || !systemPromptTemplateDirty || savingSystemPromptTemplate) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void handleSaveSystemPromptTemplate();
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [handleSaveSystemPromptTemplate, savingSystemPromptTemplate, systemPromptTemplateDirty, systemPromptTemplateState]);
 
   async function toggleCapability(row: RuntimeCapability, enabled: boolean) {
     setBusyId(row.id);
@@ -114,6 +172,56 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         summary="Inspect every capability the agent can see: extensions, instruction files, skills, injected tools, MCP servers, templates, and context."
         actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
       />
+
+      <section className="space-y-3 border-t border-border-subtle/70 pt-6">
+        <div>
+          <h2 className="text-[18px] font-semibold tracking-tight text-primary">System prompt template</h2>
+          <p className="text-[13px] leading-6 text-secondary">
+            Customize the generated runtime instruction template. Nunjucks variables such as vault_root and skills_dir are available.
+          </p>
+        </div>
+        {systemPromptTemplateLoading && !systemPromptTemplateState ? (
+          <p className="text-[13px] text-secondary">Loading system prompt template...</p>
+        ) : systemPromptTemplateError && !systemPromptTemplateState ? (
+          <p className="text-[13px] text-danger">Failed to load system prompt template: {systemPromptTemplateError}</p>
+        ) : systemPromptTemplateState ? (
+          <div className="space-y-3">
+            <p className="break-all text-[12px] text-dim">
+              Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
+            </p>
+            <textarea
+              id="agent-runtime-system-prompt-template"
+              value={systemPromptTemplateDraft}
+              onChange={(event) => {
+                setSystemPromptTemplateDraft(event.target.value);
+                if (systemPromptTemplateSaveError) {
+                  setSystemPromptTemplateSaveError(null);
+                }
+              }}
+              className="min-h-[340px] w-full resize-y rounded-md border border-border-subtle bg-elevated px-3 py-2 font-mono text-[12px] leading-5 text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50"
+              spellCheck={false}
+              disabled={savingSystemPromptTemplate}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12px] text-dim">
+                {savingSystemPromptTemplate ? 'Saving...' : systemPromptTemplateDirty ? 'Auto-save pending...' : 'Auto-saved'}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+                  setSystemPromptTemplateSaveError(null);
+                }}
+                disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
+                className="ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none"
+              >
+                Revert edits
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {systemPromptTemplateSaveError ? <p className="text-[12px] text-danger">{systemPromptTemplateSaveError}</p> : null}
+      </section>
 
       <section className="space-y-4 border-t border-border-subtle/70 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
