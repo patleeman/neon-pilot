@@ -1,16 +1,20 @@
+import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
 import type { MessageBlock } from '../shared/types';
 
 export function resolveComputedMessagesRaw(input: {
   draft: boolean;
-  draftPendingPrompt: string;
+  draftPendingPrompt: PendingConversationPrompt | null;
   isLiveSession: boolean;
   streamHasSnapshot: boolean;
   visibleStreamBlocks: MessageBlock[];
   baseMessages: MessageBlock[];
-  pendingInitialPrompt: string | undefined;
+  pendingInitialPrompt: PendingConversationPrompt | null;
   visibleSessionDetailAvailable: boolean;
   mergeHistoricalAndStreamBlocks: (baseMessages: MessageBlock[], visibleStreamBlocks: MessageBlock[]) => MessageBlock[];
-  appendPendingInitialPromptBlock: (messages: MessageBlock[] | undefined, prompt: string | undefined) => MessageBlock[] | undefined;
+  appendPendingInitialPromptBlock: (
+    messages: MessageBlock[] | undefined,
+    prompt: PendingConversationPrompt | null,
+  ) => MessageBlock[] | undefined;
 }): MessageBlock[] | undefined {
   if (input.draft) {
     return input.appendPendingInitialPromptBlock(undefined, input.draftPendingPrompt);

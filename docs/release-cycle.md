@@ -32,6 +32,9 @@ Do **not** start the RC publish as a background run. The script can require inte
 ## Release Commands
 
 ```bash
+# Build and smoke test the full packaged app without notarizing, pushing, or uploading.
+pnpm run release:verify-local
+
 # Patch release (0.5.35 -> 0.5.36)
 pnpm run release:desktop:patch
 
@@ -76,6 +79,8 @@ Each release command performs these steps in order:
 11. **Git push** — pushes the version commit and tag to the remote
 12. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
 
+Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
+
 ## Automated Smoke Test
 
 The release script runs an automated smoke test after signing and notarization, before pushing the tag. It launches the built `.app` with:
@@ -117,10 +122,11 @@ The script will stop and ask you to manually test the built `.app` before contin
 If the version bump and build succeeded but the publish step failed:
 
 ```bash
+pnpm run release:verify-local
 pnpm run release:publish
 ```
 
-This runs the smoke test, push, and GitHub release creation without repeating the version bump, changelog update, and build steps. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing or still contains the generated release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested build, set `NEON_PILOT_RELEASE_SMOKE_TESTED=1`.
+First reproduce and fix release-blocking issues with the local packaged build. Once `release:verify-local` passes, rerun `release:publish` for the clean-snapshot release gate, notarization, push, and GitHub release creation. The publish step reads the matching `CHANGELOG.md` section and fails if it is missing or still contains the generated release-note TODO, so GitHub release notes stay aligned with a real summary. For non-interactive reruns of an already-tested build, set `NEON_PILOT_RELEASE_SMOKE_TESTED=1`.
 
 ## Release artifacts
 

@@ -1,5 +1,5 @@
 import { clearConversationComposerDraft } from '../conversation/forking';
-import { clearStoredState, getSessionStorage, type StorageLike } from '../local/reloadState';
+import { clearStoredState, getSessionStorage, persistStoredState, readStoredState, type StorageLike } from '../local/reloadState';
 import type { InjectedPromptMessage, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
 
 export interface PendingConversationPrompt {
@@ -243,19 +243,56 @@ export function persistPendingConversationPrompt(
     relatedConversationIds.length > 0;
   if (!shouldPersist) {
     inMemoryPendingPrompts.delete(sessionId);
+    clearStoredState(storage, buildPendingConversationPromptStorageKey(sessionId));
   } else {
     inMemoryPendingPrompts.set(sessionId, nextPrompt);
+    persistStoredState({
+      key: buildPendingConversationPromptStorageKey(sessionId),
+      value: nextPrompt,
+      storage,
+    });
   }
 
   emitPendingConversationPromptChanged(sessionId, shouldPersist ? nextPrompt : null, storage);
 }
 
-export function readPendingConversationPrompt(sessionId: string): PendingConversationPrompt | null {
+export function readPendingConversationPrompt(
+  sessionId: string,
+  storage: StorageLike | null = getSessionStorage(),
+): PendingConversationPrompt | null {
   if (!sessionId) {
     return null;
   }
 
-  return inMemoryPendingPrompts.get(sessionId) ?? null;
+  const inMemoryPrompt = inMemoryPendingPrompts.get(sessionId);
+  if (inMemoryPrompt) {
+    return inMemoryPrompt;
+  }
+
+  const storedPrompt = readStoredState<PendingConversationPrompt | null>({
+    key: buildPendingConversationPromptStorageKey(sessionId),
+    fallback: null,
+    storage,
+    deserialize: (raw) => {
+      const parsed = JSON.parse(raw) as Partial<PendingConversationPrompt>;
+      if (!parsed || typeof parsed !== 'object' || typeof parsed.text !== 'string') {
+        return null;
+      }
+      return {
+        text: parsed.text,
+        ...(parsed.behavior === 'steer' || parsed.behavior === 'followUp' ? { behavior: parsed.behavior } : {}),
+        images: normalizePendingPromptImages(parsed.images),
+        attachmentRefs: normalizePendingPromptAttachmentRefs(parsed.attachmentRefs),
+        contextMessages: normalizePendingPromptContextMessages(parsed.contextMessages),
+        relatedConversationIds: normalizePendingRelatedConversationIds(parsed.relatedConversationIds),
+      };
+    },
+  });
+
+  if (storedPrompt) {
+    inMemoryPendingPrompts.set(sessionId, storedPrompt);
+  }
+  return storedPrompt;
 }
 
 export function consumePendingConversationPrompt(

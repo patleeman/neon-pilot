@@ -30,7 +30,7 @@ const PENDING_CONVERSATION_PROMPT_STORAGE_KEY = 'pa:reload:conversation:session-
 const PENDING_CONVERSATION_PROMPT_DISPATCHING_STORAGE_KEY = 'pa:reload:conversation:session-123:pending-prompt-dispatching';
 
 describe('pendingConversationPrompt helpers', () => {
-  it('keeps pending prompts in memory only so reloads cannot replay them', () => {
+  it('persists pending prompts so route handoffs can restore them', () => {
     const storage = createStorage();
 
     persistPendingConversationPrompt(
@@ -43,10 +43,22 @@ describe('pendingConversationPrompt helpers', () => {
       storage,
     );
 
-    expect(storage.getItem('pa:reload:conversation:session-memory-only:pending-prompt')).toBeNull();
-    expect(readPendingConversationPrompt('session-memory-only')).toEqual({ text: 'hello world', images: [], attachmentRefs: [] });
+    expect(JSON.parse(storage.getItem('pa:reload:conversation:session-memory-only:pending-prompt') ?? 'null')).toEqual({
+      text: 'hello world',
+      images: [],
+      attachmentRefs: [],
+    });
 
     clearPendingConversationPrompt('session-memory-only', null);
+    expect(readPendingConversationPrompt('session-memory-only', storage)).toEqual({
+      text: 'hello world',
+      images: [],
+      attachmentRefs: [],
+      contextMessages: [],
+      relatedConversationIds: [],
+    });
+
+    clearPendingConversationPrompt('session-memory-only', storage);
   });
 
   it('keeps and restores pending prompts within the running renderer', () => {
@@ -182,7 +194,7 @@ describe('pendingConversationPrompt helpers', () => {
     });
     expect(storage.getItem(composerKey)).toBeNull();
     expect(consumePendingConversationPrompt('session-123', storage)).toBeNull();
-    expect(readPendingConversationPrompt('session-123')).toBeNull();
+    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
   });
 
   it('clears pending prompts explicitly', () => {
@@ -199,7 +211,7 @@ describe('pendingConversationPrompt helpers', () => {
     );
     clearPendingConversationPrompt('session-123', storage);
 
-    expect(readPendingConversationPrompt('session-123')).toBeNull();
+    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
   });
 
   it('ignores absurd persisted dispatching timestamps', () => {
@@ -232,22 +244,30 @@ describe('pendingConversationPrompt helpers', () => {
       storage,
     );
 
-    expect(readPendingConversationPrompt('session-123')).toBeNull();
+    expect(readPendingConversationPrompt('session-123', storage)).toBeNull();
   });
 
-  it('ignores legacy stored prompts instead of replaying them after a reload', () => {
+  it('restores stored prompts for saved-conversation handoffs', () => {
     const storage = createStorage();
 
     storage.setItem(
       PENDING_CONVERSATION_PROMPT_STORAGE_KEY,
       JSON.stringify({
-        text: 'do not replay',
+        text: 'restore me',
         images: [],
         attachmentRefs: [],
       }),
     );
 
-    expect(readPendingConversationPrompt('session-123')).toBeNull();
+    expect(readPendingConversationPrompt('session-123', storage)).toEqual({
+      text: 'restore me',
+      images: [],
+      attachmentRefs: [],
+      contextMessages: [],
+      relatedConversationIds: [],
+    });
+
+    clearPendingConversationPrompt('session-123', storage);
   });
 
   it('drops blank pending prompt context messages before caching', () => {

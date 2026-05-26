@@ -27,6 +27,7 @@
     "release:minor": "pnpm version minor",
     "release:major": "pnpm version major",
     "release:sync-pi": "node scripts/update-pi-version.mjs",
+    "release:verify-local": "node scripts/verify-desktop-release-build.mjs",
     "release:publish": "node scripts/publish-desktop-release.mjs",
     "release:desktop:patch": "pnpm run release:patch && pnpm run release:publish",
     "release:desktop:minor": "pnpm run release:minor && pnpm run release:publish",

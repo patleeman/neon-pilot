@@ -546,7 +546,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [pendingInitialPrompt, setPendingInitialPrompt] = useState<PendingConversationPrompt | null>(() =>
     resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }),
   );
-  const [pendingInitialPromptDispatching, setPendingInitialPromptDispatchingState] = useState(false);
+  const [pendingInitialPromptDispatching, setPendingInitialPromptDispatchingState] = useState(() =>
+    draft || !id ? false : isPendingConversationPromptDispatching(id),
+  );
   const [draftPendingPrompt, setDraftPendingPrompt] = useState<PendingConversationPrompt | null>(null);
   const pendingInitialPromptSessionIdRef = useRef<string | null>(null);
   const pendingInitialPromptFailureSessionIdRef = useRef<string | null>(null);
@@ -1770,6 +1772,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         pendingInitialPrompt,
         pendingInitialPromptDispatching,
         messages: realMessages,
+        visibleTranscriptMessageCount: actualTranscriptMessageCount,
       })
     ) {
       return;
@@ -1779,7 +1782,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setPendingConversationPromptDispatching(id, false);
     setPendingInitialPrompt(null);
     setPendingInitialPromptDispatchingState(false);
-  }, [draft, id, pendingInitialPrompt, pendingInitialPromptDispatching, realMessages]);
+  }, [actualTranscriptMessageCount, draft, id, pendingInitialPrompt, pendingInitialPromptDispatching, realMessages]);
 
   useEffect(() => {
     if (
@@ -4738,8 +4741,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           };
 
           rememberComposerInput(inputSnapshot, newId);
+          persistPendingConversationPrompt(newId, initialPrompt);
+          setPendingConversationPromptDispatching(newId, true);
           setPendingInitialPrompt(initialPrompt);
           setPendingInitialPromptDispatchingState(true);
+          recordSubmitPhase('persistPendingPrompt', submitStartedAtMs, {
+            conversationId: newId,
+            inMemoryPromptText: readPendingConversationPrompt(newId)?.text ?? null,
+            storageHasPendingPrompt:
+              typeof window === 'undefined'
+                ? null
+                : window.sessionStorage.getItem(`pa:reload:conversation:${newId}:pending-prompt`) !== null,
+          });
           recordSubmitPhase('beforeNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
           navigate(`/conversations/${newId}`, {
             replace: true,
@@ -4784,17 +4797,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
                     showNotice('danger', warning, 5000);
                   }
-                  if (sendResult.accepted) {
-                    clearPendingConversationPrompt(newId);
-                  }
+                  if (sendResult.accepted) setPendingConversationPromptDispatching(newId, true);
                 })
                 .catch((error) => {
                   persistPendingConversationPrompt(newId, initialPrompt);
+                  setPendingConversationPromptDispatching(newId, false);
                   setPendingInitialPrompt(initialPrompt);
-                  showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-                })
-                .finally(() => {
                   setPendingInitialPromptDispatchingState(false);
+                  showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
                 });
             }, 0);
           };

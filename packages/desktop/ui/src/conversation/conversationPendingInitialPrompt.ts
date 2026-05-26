@@ -8,12 +8,14 @@ export function shouldClearAcceptedPendingInitialPrompt(input: {
   pendingInitialPrompt: PendingConversationPrompt | null;
   pendingInitialPromptDispatching: boolean;
   messages: MessageBlock[] | undefined;
+  visibleTranscriptMessageCount: number;
 }): boolean {
   return Boolean(
     !input.draft &&
     input.conversationId &&
     input.pendingInitialPrompt &&
     input.pendingInitialPromptDispatching &&
+    input.visibleTranscriptMessageCount > 0 &&
     hasConversationTranscriptAcceptedPendingInitialPrompt({ messages: input.messages, prompt: input.pendingInitialPrompt }),
   );
 }

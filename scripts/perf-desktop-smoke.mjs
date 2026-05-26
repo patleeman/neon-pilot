@@ -221,6 +221,13 @@ async function readDraftPromptDiagnostics(cdp, prompt) {
       textareas: Array.from(document.querySelectorAll('textarea')).map((textarea) => textarea.value),
       sendDisabled: document.querySelector('button[aria-label="Send"]')?.disabled ?? null,
       bodyTextTail: document.body.innerText.slice(-1000),
+      pendingPromptStorage: (() => {
+        const id = location.pathname.split('/').filter(Boolean).at(-1);
+        return id ? sessionStorage.getItem(\`pa:reload:conversation:\${id}:pending-prompt\`) : null;
+      })(),
+      pendingPromptStorageKeys: Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index)).filter((key) =>
+        key?.includes('pending-prompt'),
+      ),
       perf: globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.slice(-8) ?? null,
     }))()`,
   );

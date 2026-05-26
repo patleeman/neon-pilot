@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
 import { pruneComputedMessages, resolveComputedMessagesRaw, resolveTranscriptWindowPercent } from './conversationMessageWindow';
 
 const block = (id: string) => ({ id, type: 'text', text: id }) as never;
-const append = (messages: never[] | undefined, prompt: string | undefined) =>
-  prompt ? [...(messages ?? []), block(`pending:${prompt}`)] : messages;
+const prompt = (text: string): PendingConversationPrompt => ({ text, images: [], attachmentRefs: [] });
+const append = (messages: never[] | undefined, pendingPrompt: PendingConversationPrompt | null) =>
+  pendingPrompt ? [...(messages ?? []), block(`pending:${pendingPrompt.text}`)] : messages;
 const merge = (baseMessages: never[], visibleStreamBlocks: never[]) => [...baseMessages, ...visibleStreamBlocks];
 
 describe('conversationMessageWindow', () => {
@@ -12,12 +14,12 @@ describe('conversationMessageWindow', () => {
     expect(
       resolveComputedMessagesRaw({
         draft: true,
-        draftPendingPrompt: 'hello',
+        draftPendingPrompt: prompt('hello'),
         isLiveSession: false,
         streamHasSnapshot: false,
         visibleStreamBlocks: [],
         baseMessages: [],
-        pendingInitialPrompt: undefined,
+        pendingInitialPrompt: null,
         visibleSessionDetailAvailable: false,
         mergeHistoricalAndStreamBlocks: merge,
         appendPendingInitialPromptBlock: append,
@@ -27,12 +29,12 @@ describe('conversationMessageWindow', () => {
     expect(
       resolveComputedMessagesRaw({
         draft: false,
-        draftPendingPrompt: '',
+        draftPendingPrompt: null,
         isLiveSession: true,
         streamHasSnapshot: false,
         visibleStreamBlocks: [block('stream')],
         baseMessages: [block('base')],
-        pendingInitialPrompt: 'queued',
+        pendingInitialPrompt: prompt('queued'),
         visibleSessionDetailAvailable: false,
         mergeHistoricalAndStreamBlocks: merge,
         appendPendingInitialPromptBlock: append,
@@ -42,12 +44,12 @@ describe('conversationMessageWindow', () => {
     expect(
       resolveComputedMessagesRaw({
         draft: false,
-        draftPendingPrompt: '',
+        draftPendingPrompt: null,
         isLiveSession: false,
         streamHasSnapshot: false,
         visibleStreamBlocks: [],
         baseMessages: [block('base')],
-        pendingInitialPrompt: undefined,
+        pendingInitialPrompt: null,
         visibleSessionDetailAvailable: true,
         mergeHistoricalAndStreamBlocks: merge,
         appendPendingInitialPromptBlock: append,
@@ -57,12 +59,12 @@ describe('conversationMessageWindow', () => {
     expect(
       resolveComputedMessagesRaw({
         draft: false,
-        draftPendingPrompt: '',
+        draftPendingPrompt: null,
         isLiveSession: false,
         streamHasSnapshot: false,
         visibleStreamBlocks: [],
         baseMessages: [],
-        pendingInitialPrompt: 'queued',
+        pendingInitialPrompt: prompt('queued'),
         visibleSessionDetailAvailable: false,
         mergeHistoricalAndStreamBlocks: merge,
         appendPendingInitialPromptBlock: append,

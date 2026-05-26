@@ -19,6 +19,7 @@ describe('conversationPendingInitialPrompt', () => {
         pendingInitialPrompt: prompt,
         pendingInitialPromptDispatching: true,
         messages,
+        visibleTranscriptMessageCount: 1,
       }),
     ).toBe(true);
     expect(
@@ -28,6 +29,17 @@ describe('conversationPendingInitialPrompt', () => {
         pendingInitialPrompt: prompt,
         pendingInitialPromptDispatching: true,
         messages,
+        visibleTranscriptMessageCount: 1,
+      }),
+    ).toBe(false);
+    expect(
+      shouldClearAcceptedPendingInitialPrompt({
+        draft: false,
+        conversationId: 'conv',
+        pendingInitialPrompt: prompt,
+        pendingInitialPromptDispatching: true,
+        messages,
+        visibleTranscriptMessageCount: 0,
       }),
     ).toBe(false);
   });
