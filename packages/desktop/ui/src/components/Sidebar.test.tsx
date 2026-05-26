@@ -170,7 +170,7 @@ describe('Sidebar', () => {
     const html = renderSidebar('/conversations/new', { hideKnowledgeNav: true });
 
     expect(html).toContain('Chat');
-    expect(html).not.toContain('href="/knowledge"');
+    expect(html).not.toContain('data-route="/knowledge"');
   });
 
   it('keeps pinned conversations in the main conversation list with a subtle pin indicator', () => {

@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { type ActivityTreeItem, buildActivityTreeItems, buildConversationActivityId } from '../activity/activityTree';
 import { applyActivityTreeItemStyleProviders } from '../activity/activityTreeExtensionStyles';
@@ -773,12 +773,24 @@ function TopNavItem({
   badge?: number | null;
   forceActive?: boolean;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const active = forceActive || routeMatchesPrefix(location.pathname, to);
+  const handleClick = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      navigate(to, { flushSync: true });
+    },
+    [navigate, to],
+  );
+
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        ['ui-sidebar-nav-item', (forceActive || isActive) && 'ui-sidebar-nav-item-active'].filter(Boolean).join(' ')
-      }
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-current={active ? 'page' : undefined}
+      data-route={to}
+      className={['ui-sidebar-nav-item w-full text-left', active && 'ui-sidebar-nav-item-active'].filter(Boolean).join(' ')}
     >
       <svg
         width="15"
@@ -795,7 +807,7 @@ function TopNavItem({
       </svg>
       <span className="flex-1">{label}</span>
       {badge != null && badge > 0 && <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>}
-    </NavLink>
+    </button>
   );
 }
 

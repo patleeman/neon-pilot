@@ -1479,7 +1479,7 @@ export function Layout() {
             {effectiveSidebarOpen ? (
               <div
                 style={{ width: sidebar.width }}
-                className="flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
+                className="relative z-20 flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
               >
                 <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
                   <Sidebar />
@@ -1489,7 +1489,7 @@ export function Layout() {
 
             {effectiveSidebarOpen ? <ResizeHandle onMouseDown={sidebar.onMouseDown} /> : null}
 
-            <div ref={pageSearchRootRef} className="flex min-w-0 flex-1 overflow-hidden">
+            <div ref={pageSearchRootRef} className="relative z-0 flex min-w-0 flex-1 overflow-hidden">
               <RouteContentBoundary resetKey={`${location.pathname}${location.search}`} pathname={location.pathname}>
                 <main
                   className={

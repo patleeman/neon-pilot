@@ -157,6 +157,11 @@ function SavedConversationRoute() {
   return suspendRoute(<ConversationPage key={surfaceKey} />);
 }
 
+function ExtensionRoute() {
+  const location = useLocation();
+  return suspendRoute(<ExtensionPage key={`${location.pathname}${location.search}`} />);
+}
+
 export function App() {
   const [titleMap, setTitleMap] = useState<Map<string, string>>(new Map());
   const [eventVersions, setEventVersions] = useState(INITIAL_APP_EVENT_VERSIONS);
@@ -569,7 +574,7 @@ export function App() {
                           <Route path="conversations" element={<ConversationsRouteRedirect />} />
                           <Route path="conversations/new" element={<DraftConversationRoute />} />
                           <Route path="conversations/:id" element={<SavedConversationRoute />} />
-                          <Route path="*" element={suspendRoute(<ExtensionPage />)} />
+                          <Route path="*" element={<ExtensionRoute />} />
                         </Route>
                       </Routes>
                     </BrowserRouter>
