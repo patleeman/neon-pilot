@@ -402,7 +402,15 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   const id = normalizeExtensionId(extensionId);
   const entry = findExtensionEntry(id);
   if (!entry) {
-    throw new Error('Extension not found.');
+    const { readInvalidRuntimeExtensionEntries } = await import('./extensionRegistry.js');
+    const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);
+    if (!invalidEntry?.packageRoot) {
+      throw new Error('Extension not found.');
+    }
+    const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+    assertInside(runtimeRoot, invalidEntry.packageRoot);
+    rmSync(invalidEntry.packageRoot, { recursive: true, force: true });
+    return { ok: true as const, extensionId: id, deleted: true };
   }
   if (entry.manifest.packageType === 'system') {
     throw new Error('Packaged system extensions cannot be deleted.');

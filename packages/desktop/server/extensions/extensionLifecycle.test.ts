@@ -9,12 +9,14 @@ const findExtensionEntry = vi.fn();
 const getRuntimeExtensionsRoot = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const parseExtensionManifest = vi.fn((manifest) => manifest);
+const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
 
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionEntry,
   getRuntimeExtensionsRoot,
   listExtensionInstallSummaries,
   parseExtensionManifest,
+  readInvalidRuntimeExtensionEntries,
 }));
 
 type ExecFileSync = typeof import('node:child_process').execFileSync;
@@ -24,8 +26,14 @@ vi.mock('node:child_process', async (importOriginal) => {
   return { ...actual, execFileSync };
 });
 
-const { buildRuntimeExtension, createRuntimeExtension, exportRuntimeExtension, importRuntimeExtensionBundle, snapshotRuntimeExtension } =
-  await import('./extensionLifecycle.js');
+const {
+  buildRuntimeExtension,
+  createRuntimeExtension,
+  deleteRuntimeExtension,
+  exportRuntimeExtension,
+  importRuntimeExtensionBundle,
+  snapshotRuntimeExtension,
+} = await import('./extensionLifecycle.js');
 
 describe('extensionLifecycle', () => {
   const stateRoot = join(tmpdir(), `extension-lifecycle-${randomUUID()}`);
@@ -36,6 +44,7 @@ describe('extensionLifecycle', () => {
     findExtensionEntry.mockReset().mockReturnValue(null);
     getRuntimeExtensionsRoot.mockReset().mockReturnValue(runtimeRoot);
     listExtensionInstallSummaries.mockReset().mockReturnValue([{ id: 'my-extension', name: 'My Extension' }]);
+    readInvalidRuntimeExtensionEntries.mockReset().mockReturnValue([]);
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
@@ -122,6 +131,29 @@ describe('extensionLifecycle', () => {
 
     expect(imported).toEqual({ ok: true, extension: { id: 'imported-ext' }, packageRoot: join(runtimeRoot, 'imported-ext') });
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
+  });
+
+  it('deletes invalid runtime extension packages by id', async () => {
+    const packageRoot = join(runtimeRoot, 'bad-extension');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), '{bad json');
+    readInvalidRuntimeExtensionEntries.mockReturnValue([
+      {
+        id: 'bad-extension',
+        name: 'Bad Extension',
+        packageType: 'user',
+        packageRoot,
+        source: 'runtime',
+        errors: ['invalid'],
+      },
+    ]);
+
+    await expect(deleteRuntimeExtension('bad-extension', stateRoot)).resolves.toEqual({
+      ok: true,
+      extensionId: 'bad-extension',
+      deleted: true,
+    });
+    expect(existsSync(packageRoot)).toBe(false);
   });
 
   it('rejects unsafe or missing extension bundles', () => {
