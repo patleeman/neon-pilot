@@ -20,13 +20,32 @@ const packageNames = readdirSync(packagesDir, { withFileTypes: true })
   .map((entry) => entry.name)
   .sort();
 
-for (const packageName of packageNames) {
-  const packagePath = join(packagesDir, packageName, 'package.json');
+const packagePaths = [rootPackagePath, ...packageNames.map((packageName) => join(packagesDir, packageName, 'package.json'))];
+const workspaceVersion = `workspace:${version}`;
+const dependencySections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+
+for (const packagePath of packagePaths) {
   const packageJson = JSON.parse(readFileSync(packagePath, 'utf-8'));
-  if (packageJson.version === version) {
-    continue;
+  let changed = false;
+
+  if (packagePath !== rootPackagePath && packageJson.version !== version) {
+    packageJson.version = version;
+    changed = true;
   }
 
-  packageJson.version = version;
-  writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  for (const section of dependencySections) {
+    const dependencies = packageJson[section];
+    if (!dependencies || typeof dependencies !== 'object') continue;
+
+    for (const [name, range] of Object.entries(dependencies)) {
+      if (!name.startsWith('@neon-pilot/') || typeof range !== 'string' || !range.startsWith('workspace:')) continue;
+      if (range === workspaceVersion) continue;
+      dependencies[name] = workspaceVersion;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  }
 }
