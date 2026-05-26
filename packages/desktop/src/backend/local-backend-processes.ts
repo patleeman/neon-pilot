@@ -6,6 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 import type { DesktopApiStreamEvent } from '../hosts/types.js';
 
+export interface LocalBackendWorkbenchBrowserToolHost {
+  isActive(conversationId: string): Promise<boolean>;
+  listTabs(): Promise<Array<{ sessionKey: string; url: string; title: string }>>;
+  snapshot(conversationId: string, tabId?: string): Promise<unknown>;
+  screenshot(conversationId: string, tabId?: string): Promise<unknown>;
+  cdp(input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }): Promise<unknown>;
+}
+
 interface LocalBackendStatus {
   daemonHealthy: boolean;
 }
@@ -22,6 +30,13 @@ interface BackendFatalMessage {
 }
 
 type BackendChildMessage = BackendReadyMessage | BackendFatalMessage;
+
+interface NativeWorkbenchBrowserRequest {
+  type: 'native-workbench-browser-request';
+  id: string;
+  method: 'isActive' | 'listTabs' | 'snapshot' | 'screenshot' | 'cdp';
+  args: unknown[];
+}
 
 function isBackendChildMessage(value: unknown): value is BackendChildMessage {
   return Boolean(value && typeof value === 'object' && typeof (value as { type?: unknown }).type === 'string');
@@ -47,6 +62,7 @@ export class LocalBackendProcesses {
   private disposed = false;
   private baseUrl?: string;
   private token?: string;
+  private workbenchBrowserToolHost: LocalBackendWorkbenchBrowserToolHost | null = null;
 
   async ensureStarted(): Promise<void> {
     if (this.startPromise) {
@@ -197,6 +213,10 @@ export class LocalBackendProcesses {
     return () => controller.abort();
   }
 
+  setWorkbenchBrowserToolHost(host: LocalBackendWorkbenchBrowserToolHost | null): void {
+    this.workbenchBrowserToolHost = host;
+  }
+
   private emitSseEvent(raw: string, onEvent: (event: DesktopApiStreamEvent) => void): void {
     const lines = raw.split(/\r?\n/);
     const eventType =
@@ -251,6 +271,11 @@ export class LocalBackendProcesses {
     child.stderr?.on('data', (chunk) => {
       process.stderr.write(`[desktop-backend] ${String(chunk)}`);
     });
+    child.on('message', (message) => {
+      if (this.isNativeWorkbenchBrowserRequest(message)) {
+        void this.handleNativeWorkbenchBrowserRequest(child, message);
+      }
+    });
 
     const ready = await new Promise<BackendReadyMessage>((resolveReady, rejectReady) => {
       const cleanup = () => {
@@ -295,6 +320,47 @@ export class LocalBackendProcesses {
         this.token = undefined;
       }
     });
+  }
+
+  private isNativeWorkbenchBrowserRequest(value: unknown): value is NativeWorkbenchBrowserRequest {
+    return (
+      Boolean(value && typeof value === 'object') &&
+      (value as { type?: unknown }).type === 'native-workbench-browser-request' &&
+      typeof (value as { id?: unknown }).id === 'string' &&
+      typeof (value as { method?: unknown }).method === 'string' &&
+      Array.isArray((value as { args?: unknown }).args)
+    );
+  }
+
+  private async handleNativeWorkbenchBrowserRequest(child: ChildProcess, request: NativeWorkbenchBrowserRequest): Promise<void> {
+    try {
+      const host = this.workbenchBrowserToolHost;
+      if (!host) {
+        throw new Error('Workbench Browser native host is unavailable.');
+      }
+
+      let result: unknown;
+      if (request.method === 'isActive') {
+        result = await host.isActive(String(request.args[0] ?? ''));
+      } else if (request.method === 'listTabs') {
+        result = await host.listTabs();
+      } else if (request.method === 'snapshot') {
+        result = await host.snapshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
+      } else if (request.method === 'screenshot') {
+        result = await host.screenshot(String(request.args[0] ?? ''), typeof request.args[1] === 'string' ? request.args[1] : undefined);
+      } else {
+        result = await host.cdp(request.args[0] as { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string });
+      }
+
+      child.send?.({ type: 'native-workbench-browser-response', id: request.id, ok: true, result });
+    } catch (error) {
+      child.send?.({
+        type: 'native-workbench-browser-response',
+        id: request.id,
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private fetch(path: string, init: RequestInit): Promise<Response> {

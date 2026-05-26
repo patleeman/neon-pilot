@@ -1,4 +1,5 @@
 import { getDesktopAppBaseUrl } from '../app-protocol.js';
+import type { LocalBackendWorkbenchBrowserToolHost } from '../backend/local-backend-processes.js';
 import type { LocalApiModule, LocalApiModuleLoader } from '../local-api-module.js';
 import type {
   DesktopApiStreamEvent,
@@ -48,6 +49,7 @@ interface LocalBackendController {
   }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }>;
   callLocalApiMethod(method: string, args: unknown[]): Promise<unknown>;
   subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
+  setWorkbenchBrowserToolHost?(host: LocalBackendWorkbenchBrowserToolHost | null): void;
   restart(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -82,6 +84,10 @@ class LazyLocalBackendProcesses implements LocalBackendController {
 
   async subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void> {
     return (await this.load()).subscribeApiStream(path, onEvent);
+  }
+
+  async setWorkbenchBrowserToolHost(host: LocalBackendWorkbenchBrowserToolHost | null): Promise<void> {
+    (await this.load()).setWorkbenchBrowserToolHost?.(host);
   }
 
   async restart(): Promise<void> {
@@ -163,6 +169,10 @@ export class LocalHostController implements HostController {
 
   async ensureRunning(): Promise<void> {
     await this.backend.ensureStarted();
+  }
+
+  async setWorkbenchBrowserToolHost(host: LocalBackendWorkbenchBrowserToolHost | null): Promise<void> {
+    await this.backend.setWorkbenchBrowserToolHost?.(host);
   }
 
   async getBaseUrl(): Promise<string> {

@@ -110,6 +110,7 @@ function createBackendMock(): LocalBackendProcesses {
   return {
     ensureStarted: vi.fn(),
     getStatus: vi.fn(),
+    setWorkbenchBrowserToolHost: vi.fn(),
     restart: vi.fn(),
     stop: vi.fn(),
   } as unknown as LocalBackendProcesses;
@@ -122,6 +123,23 @@ describe('LocalHostController', () => {
 
     await expect(controller.getBaseUrl()).resolves.toBe('neon-pilot://app/');
 
+    expect(backend.ensureStarted).not.toHaveBeenCalled();
+  });
+
+  it('registers the Workbench Browser native host with the backend without booting the web child', async () => {
+    const backend = createBackendMock();
+    const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
+    const host = {
+      isActive: vi.fn().mockResolvedValue(true),
+      listTabs: vi.fn().mockResolvedValue([]),
+      snapshot: vi.fn().mockResolvedValue({}),
+      screenshot: vi.fn().mockResolvedValue({}),
+      cdp: vi.fn().mockResolvedValue({}),
+    };
+
+    await controller.setWorkbenchBrowserToolHost(host);
+
+    expect(backend.setWorkbenchBrowserToolHost).toHaveBeenCalledWith(host);
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
 

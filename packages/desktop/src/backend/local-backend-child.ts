@@ -25,10 +25,26 @@ interface BackendRequestBody {
   };
 }
 
+interface NativeWorkbenchBrowserRequest {
+  type: 'native-workbench-browser-request';
+  id: string;
+  method: 'isActive' | 'listTabs' | 'snapshot' | 'screenshot' | 'cdp';
+  args: unknown[];
+}
+
+interface NativeWorkbenchBrowserResponse {
+  type: 'native-workbench-browser-response';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+}
+
 let daemon: NeonPilotDaemon | undefined;
 let clearDaemonBinding: (() => void) | undefined;
 let daemonLogStream: WriteStream | undefined;
 let shuttingDown = false;
+const nativeWorkbenchBrowserResponses = new Map<string, (message: NativeWorkbenchBrowserResponse) => void>();
 
 function sendParentMessage(message: BackendReadyMessage | { type: 'fatal'; error: string }): void {
   if (typeof process.send === 'function') {
@@ -37,6 +53,50 @@ function sendParentMessage(message: BackendReadyMessage | { type: 'fatal'; error
   }
 
   process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function sendNativeWorkbenchBrowserRequest(method: NativeWorkbenchBrowserRequest['method'], args: unknown[]): Promise<unknown> {
+  if (typeof process.send !== 'function') {
+    return Promise.reject(new Error('Workbench Browser native bridge is unavailable.'));
+  }
+
+  const id = randomUUID();
+  const message = {
+    type: 'native-workbench-browser-request',
+    id,
+    method,
+    args,
+  } satisfies NativeWorkbenchBrowserRequest;
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      nativeWorkbenchBrowserResponses.delete(id);
+      reject(new Error(`Workbench Browser native bridge timed out for ${method}.`));
+    }, 30_000);
+    timeout.unref?.();
+
+    nativeWorkbenchBrowserResponses.set(id, (response) => {
+      clearTimeout(timeout);
+      if (response.ok) {
+        resolve(response.result);
+      } else {
+        reject(new Error(response.error || `Workbench Browser native bridge failed for ${method}.`));
+      }
+    });
+
+    process.send?.(message);
+  });
+}
+
+function installNativeWorkbenchBrowserBridge(localApi: LocalApiModule): void {
+  localApi.setDesktopWorkbenchBrowserToolHost?.({
+    isActive: async (conversationId) => Boolean(await sendNativeWorkbenchBrowserRequest('isActive', [conversationId])),
+    listTabs: async () =>
+      (await sendNativeWorkbenchBrowserRequest('listTabs', [])) as Array<{ sessionKey: string; url: string; title: string }>,
+    snapshot: async (conversationId, tabId) => sendNativeWorkbenchBrowserRequest('snapshot', [conversationId, tabId]),
+    screenshot: async (conversationId, tabId) => sendNativeWorkbenchBrowserRequest('screenshot', [conversationId, tabId]),
+    cdp: async (input) => sendNativeWorkbenchBrowserRequest('cdp', [input]),
+  });
 }
 
 function readRequestBody(request: IncomingMessage): Promise<BackendRequestBody> {
@@ -133,6 +193,7 @@ async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   await startDaemon();
   const localApi = await loadRawLocalApiModule();
+  installNativeWorkbenchBrowserBridge(localApi);
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -207,6 +268,13 @@ async function main(): Promise<void> {
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {
+    if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'native-workbench-browser-response') {
+      const response = message as NativeWorkbenchBrowserResponse;
+      nativeWorkbenchBrowserResponses.get(response.id)?.(response);
+      nativeWorkbenchBrowserResponses.delete(response.id);
+      return;
+    }
+
     if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'shutdown') {
       void shutdown(server);
     }

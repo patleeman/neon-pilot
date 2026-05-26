@@ -562,6 +562,33 @@ async function bootstrapDesktopApp(): Promise<void> {
 
   scheduleDesktopBackendStartup((ready) => {
     logStartupMilestone(ready ? 'backend-ready' : 'backend-unavailable');
+    if (ready) {
+      const controller = hostManager?.getActiveHostController() as
+        | {
+            setWorkbenchBrowserToolHost?(host: {
+              isActive(conversationId: string): Promise<boolean>;
+              listTabs(): Promise<Array<{ sessionKey: string; url: string; title: string }>>;
+              snapshot(conversationId: string, tabId?: string): Promise<unknown>;
+              screenshot(conversationId: string, tabId?: string): Promise<unknown>;
+              cdp(input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }): Promise<unknown>;
+            }): Promise<void>;
+          }
+        | undefined;
+      void controller
+        ?.setWorkbenchBrowserToolHost?.({
+          isActive: () => Promise.resolve(windowController!.isWorkbenchBrowserActive()),
+          listTabs: () => Promise.resolve(windowController!.listBrowserTabs()),
+          snapshot: (_conversationId, tabId) => windowController!.snapshotWorkbenchBrowser(tabId),
+          screenshot: (_conversationId, tabId) => windowController!.screenshotWorkbenchBrowser(tabId),
+          cdp: (input) =>
+            windowController!.cdpWorkbenchBrowser({
+              command: input.command,
+              continueOnError: input.continueOnError,
+              tabId: input.tabId,
+            }),
+        })
+        .catch((error) => logBootstrapError(error));
+    }
   });
 }
 
