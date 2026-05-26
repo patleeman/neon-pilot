@@ -2033,6 +2033,7 @@ export async function createDesktopLiveSession(input: {
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
+  allowedToolNames?: string[];
 }): Promise<{ id: string; sessionFile: string; bootstrap?: unknown; perf?: Record<string, number> }> {
   const startedAtMs = performance.now();
   const context = await getLocalLiveSessionCapabilityContext();

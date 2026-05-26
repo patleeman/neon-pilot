@@ -87,6 +87,7 @@ export interface CreateLiveSessionCapabilityInput {
   model?: string | null;
   thinkingLevel?: string | null;
   serviceTier?: string | null;
+  allowedToolNames?: string[];
 }
 
 export interface CreateLiveSessionCapabilityResult {
@@ -507,6 +508,7 @@ export async function createLiveSessionCapability(
       ...(input.model !== undefined ? { initialModel: input.model } : {}),
       ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
       ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
+      ...(Array.isArray(input.allowedToolNames) ? { allowedToolNames: input.allowedToolNames } : {}),
     }),
   );
   const createdAtMs = performance.now();

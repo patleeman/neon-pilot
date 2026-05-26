@@ -934,6 +934,7 @@ export const api = {
       attachmentRefs?: unknown;
       contextMessages?: Array<{ customType: string; content: string }>;
       relatedConversationIds?: unknown;
+      allowedToolNames?: string[];
     },
   ) => {
     const startedAtMs = performance.now();
@@ -949,6 +950,7 @@ export const api = {
       ...(options?.attachmentRefs !== undefined ? { attachmentRefs: options.attachmentRefs } : {}),
       ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
       ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
+      ...(options?.allowedToolNames !== undefined ? { allowedToolNames: options.allowedToolNames } : {}),
     });
     recordClientPerfTiming({
       name: 'desktop.createLiveSession',

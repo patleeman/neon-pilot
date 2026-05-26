@@ -36,6 +36,7 @@ interface CodeModeState {
 
 const CODE_TOOL_NAME = 'exec_code';
 const METADATA_NAMESPACE = 'system-code-mode';
+const DRAFT_STATE_KEY = 'draft-state';
 const DEFAULT_TOOL_NAMES = ['read', 'bash', 'edit', 'write'];
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 120_000;
@@ -59,6 +60,10 @@ function conversationIdFrom(input: unknown, ctx: ExtensionBackendContext): strin
   const conversationId = explicit || ctx.toolContext?.conversationId?.trim() || ctx.toolContext?.sessionId?.trim();
   if (!conversationId) throw new Error('conversationId required');
   return conversationId;
+}
+
+function isDraftInput(input: unknown): boolean {
+  return isRecord(input) && input.draft === true;
 }
 
 function normalizePersistedState(value: unknown): { enabled: boolean; updatedAt?: string } {
@@ -105,6 +110,9 @@ function toCodeModeState(
 }
 
 export async function readState(input: unknown, ctx: ExtensionBackendContext): Promise<CodeModeState> {
+  if (isDraftInput(input)) {
+    return toCodeModeState(normalizePersistedState(await ctx.storage.get(DRAFT_STATE_KEY)), { running: false });
+  }
   const conversationId = conversationIdFrom(input, ctx);
   const persisted = normalizePersistedState(await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE }));
   return toCodeModeState(persisted, await readLiveState(conversationId, ctx));
@@ -165,6 +173,28 @@ export async function toggleCodeMode(
   input: unknown,
   ctx: ExtensionBackendContext,
 ): Promise<CodeModeState & { notice: { tone: 'accent'; text: string } }> {
+  if (isDraftInput(input)) {
+    const current = await readState(input, ctx);
+    const action = readAction(input);
+    if (action === 'status') {
+      return {
+        ...current,
+        notice: { tone: 'accent', text: current.enabled ? 'Code mode is on for the draft.' : 'Code mode is off for the draft.' },
+      };
+    }
+    const enabled = action === 'toggle' ? !current.enabled : action === 'on';
+    const next = { enabled, updatedAt: new Date().toISOString() };
+    if (enabled) await ctx.storage.put(DRAFT_STATE_KEY, next);
+    else await ctx.storage.delete(DRAFT_STATE_KEY);
+    ctx.ui.invalidate(['extensions']);
+    return {
+      ...toCodeModeState(next, { running: false }),
+      notice: {
+        tone: 'accent',
+        text: enabled ? 'Code mode enabled for the next new conversation.' : 'Code mode disabled for the next new conversation.',
+      },
+    };
+  }
   const conversationId = conversationIdFrom(input, ctx);
   const current = await readState({ conversationId }, ctx);
   const action = readAction(input);
@@ -191,6 +221,13 @@ export async function toggleCodeMode(
             : 'Code mode disabled. Start a new turn to restore the normal tool surface.',
     },
   };
+}
+
+export async function consumeDraftState(_input: unknown, ctx: ExtensionBackendContext): Promise<{ enabled: boolean }> {
+  const state = normalizePersistedState(await ctx.storage.get(DRAFT_STATE_KEY));
+  await ctx.storage.delete(DRAFT_STATE_KEY);
+  ctx.ui.invalidate(['extensions']);
+  return { enabled: state.enabled };
 }
 
 function normalizeTimeout(value: unknown): number {

@@ -4209,6 +4209,31 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
   }
 
+  async function buildDraftCreateLiveSessionOptions(): Promise<{
+    options: typeof createLiveSessionPreferenceInput & { allowedToolNames?: string[] };
+    codeModeEnabled: boolean;
+  }> {
+    if (!draft) return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
+    try {
+      const response = await api.invokeExtensionAction('system-code-mode', 'readState', { draft: true });
+      if (response.ok === false) return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
+      const result = response.result;
+      const enabled = Boolean(result && typeof result === 'object' && (result as { enabled?: unknown }).enabled === true);
+      return {
+        options: enabled ? { ...createLiveSessionPreferenceInput, allowedToolNames: ['exec_code'] } : createLiveSessionPreferenceInput,
+        codeModeEnabled: enabled,
+      };
+    } catch {
+      return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
+    }
+  }
+
+  async function applyDraftCodeModeToCreatedConversation(conversationId: string, enabled: boolean): Promise<void> {
+    if (!enabled) return;
+    await api.invokeExtensionAction('system-code-mode', 'toggleCodeMode', { conversationId, action: 'on' }).catch(() => {});
+    await api.invokeExtensionAction('system-code-mode', 'consumeDraftState', { draft: true }).catch(() => {});
+  }
+
   async function executeConversationSlashCommand(
     command: ConversationSlashCommand,
   ): Promise<{ kind: 'handled' } | { kind: 'send'; text: string }> {
@@ -4278,7 +4303,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       let conversationId = id ?? null;
 
       if (!conversationId) {
-        const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
+        const draftOptions = await buildDraftCreateLiveSessionOptions();
+        const created = await api.createLiveSession(draftCwdValue || undefined, undefined, draftOptions.options);
+        await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
         conversationId = created.id;
       } else {
         conversationId = await ensureConversationIsLive('run bash commands');
@@ -4480,7 +4507,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           setPendingAssistantStatusLabel('Creating conversation…');
 
           try {
-            const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
+            const draftOptions = await buildDraftCreateLiveSessionOptions();
+            const created = await api.createLiveSession(draftCwdValue || undefined, undefined, draftOptions.options);
+            await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
             createdSessionId = created.id;
             primeCreatedConversationOpenCaches(created, {
               tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
@@ -4589,7 +4618,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           await waitForDraftPendingPromptPaint();
           recordSubmitPhase('draftPendingPromptPaintYield', draftPendingPromptPaintStartedAtMs);
           const createStartedAtMs = performance.now();
-          const created = await api.createLiveSession(draftCwdValue || undefined, undefined, createLiveSessionPreferenceInput);
+          const draftOptions = await buildDraftCreateLiveSessionOptions();
+          const created = await api.createLiveSession(draftCwdValue || undefined, undefined, draftOptions.options);
+          await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
           recordSubmitPhase('createLiveSession', createStartedAtMs);
           createdSessionId = created.id;
           const primeCachesStartedAtMs = performance.now();

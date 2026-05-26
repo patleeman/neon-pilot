@@ -23,6 +23,11 @@
         "id": "toggleCodeMode",
         "handler": "toggleCodeMode",
         "title": "Toggle Code Mode"
+      },
+      {
+        "id": "consumeDraftState",
+        "handler": "consumeDraftState",
+        "title": "Consume Draft Code Mode State"
       }
     ]
   },
