@@ -2078,7 +2078,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         capturePrependRestore();
       }
 
-      const tailBlockStep = Math.max(1, Math.ceil(options?.tailBlockStep ?? HISTORICAL_TAIL_BLOCKS_STEP));
+      const requestedTailBlockStep = Math.max(1, Math.ceil(options?.tailBlockStep ?? HISTORICAL_TAIL_BLOCKS_STEP));
+      const tailBlockStep =
+        typeof targetMessageIndex === 'number' ? requestedTailBlockStep : Math.min(requestedTailBlockStep, HISTORICAL_TAIL_BLOCKS_STEP);
 
       setHistoricalTailBlocks((currentTailBlocks) => {
         const minimumTailBlocks =
