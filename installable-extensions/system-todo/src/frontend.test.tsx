@@ -85,4 +85,34 @@ describe('TodoShelf', () => {
       expect(container.textContent).toBe('');
     });
   });
+
+  it('does not flash a loading shelf before todos load', async () => {
+    let resolveState!: (value: typeof state) => void;
+    const invoke = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveState = resolve;
+      }),
+    );
+    const { container } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
+
+    expect(container.textContent).toBe('');
+
+    resolveState(state);
+    expect(await screen.findByText('Todos')).toBeTruthy();
+    expect(screen.queryByText(/loading/i)).toBeNull();
+  });
+
+  it('hides stale todos while loading a different conversation', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce(state)
+      .mockReturnValueOnce(new Promise(() => {}));
+    const { container, rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
+
+    expect(await screen.findByText('Open todo')).toBeTruthy();
+
+    rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-2' }} />);
+
+    expect(container.textContent).toBe('');
+  });
 });

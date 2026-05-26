@@ -35,7 +35,7 @@ export function TodoShelf({
 }) {
   const conversationId = shelfContext.conversationId;
   const [state, setState] = useState<TodoState>(EMPTY_STATE);
-  const [loading, setLoading] = useState(true);
+  const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,17 +55,15 @@ export function TodoShelf({
   const refresh = useCallback(async () => {
     if (!conversationId) {
       setState(EMPTY_STATE);
-      setLoading(false);
+      setLoadedConversationId(null);
       return;
     }
-    setLoading(true);
     setError(null);
     try {
       setState(await invoke<TodoState>('getState'));
+      setLoadedConversationId(conversationId);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
     }
   }, [conversationId, invoke]);
 
@@ -79,7 +77,10 @@ export function TodoShelf({
     const interval = setInterval(() => {
       invoke<TodoState>('getState')
         .then((next) => {
-          if (!cancelled) setState(next);
+          if (!cancelled) {
+            setState(next);
+            setLoadedConversationId(conversationId);
+          }
         })
         .catch(() => {
           // Keep the last rendered state. Explicit user actions surface errors.
@@ -97,6 +98,7 @@ export function TodoShelf({
     setError(null);
     try {
       setState(await action());
+      setLoadedConversationId(conversationId);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -106,7 +108,7 @@ export function TodoShelf({
     }
   }
 
-  if (!conversationId || (!loading && state.items.length === 0 && !error)) return null;
+  if (!conversationId || loadedConversationId !== conversationId || state.items.length === 0) return null;
 
   return (
     <div className="border-b border-border-subtle/60 px-3 py-1.5 text-[12px] text-primary">
@@ -115,9 +117,7 @@ export function TodoShelf({
           {collapsed ? '▸' : '▾'}
         </button>
         <span className="font-medium text-primary">Todos</span>
-        <span className="text-dim">
-          {loading ? 'loading…' : `${openItems.length} open${doneItems.length ? ` · ${doneItems.length} done` : ''}`}
-        </span>
+        <span className="text-dim">{`${openItems.length} open${doneItems.length ? ` · ${doneItems.length} done` : ''}`}</span>
         <span className="flex-1" />
         {doneItems.length > 0 ? (
           <button
