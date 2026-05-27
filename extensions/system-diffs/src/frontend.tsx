@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 
-import { CheckpointTranscriptRenderer as BaseCheckpointTranscriptRenderer } from './panels.js';
+const BaseCheckpointTranscriptRenderer = lazy(() =>
+  import('./panels.js').then((module) => ({ default: module.CheckpointTranscriptRenderer })),
+);
 
-type CheckpointTranscriptRendererProps = Parameters<typeof BaseCheckpointTranscriptRenderer>[0];
+type CheckpointTranscriptRendererProps = {
+  block: {
+    status?: string;
+    running?: boolean;
+    error?: boolean | string;
+    input?: unknown;
+    output?: string;
+  };
+  context: {
+    onOpenCheckpoint?: (checkpointId: string) => void;
+    activeCheckpointId?: string | null;
+  };
+};
 
 export function CheckpointTranscriptRenderer(props: CheckpointTranscriptRendererProps) {
-  return <BaseCheckpointTranscriptRenderer {...props} />;
+  return (
+    <Suspense fallback={null}>
+      <BaseCheckpointTranscriptRenderer {...props} />
+    </Suspense>
+  );
 }

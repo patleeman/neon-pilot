@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { ConversationArtifactRecord } from '../shared/types';
-import { addNotification } from './notifications/notificationStore';
-import { ErrorState, LoadingState } from './ui';
+import { ErrorState } from './ui';
 
 function buildArtifactDocument(content: string): string {
   const trimmed = content.trim();
@@ -43,64 +42,13 @@ function HtmlArtifactViewer({ artifact }: { artifact: ConversationArtifactRecord
   );
 }
 
-function MermaidArtifactViewer({ artifact }: { artifact: ConversationArtifactRecord }) {
-  const [svg, setSvg] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setSvg('');
-    setError(null);
-
-    void import('mermaid')
-      .then(async (module) => {
-        const mermaid = module.default ?? module;
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
-        const renderId = `artifact-mermaid-${Math.random().toString(36).slice(2, 10)}`;
-        const result = await mermaid.render(renderId, artifact.content);
-        if (cancelled) {
-          return;
-        }
-
-        setSvg(result.svg);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) {
-          return;
-        }
-
-        const msg = err instanceof Error ? err.message : 'Could not render this Mermaid diagram.';
-        setError(msg);
-        addNotification({ type: 'warning', message: msg, details: err instanceof Error ? err.stack : undefined, source: 'core' });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [artifact.content]);
-
-  if (error) {
-    return <ErrorState message={error} className="px-4 py-4" />;
-  }
-
-  if (!svg) {
-    return <LoadingState label="Rendering diagram…" className="justify-center h-full" />;
-  }
-
-  return (
-    <div className="flex h-full items-start justify-center overflow-auto px-5 py-5">
-      <div className="w-full min-w-0" dangerouslySetInnerHTML={{ __html: svg }} />
-    </div>
-  );
-}
-
-function LatexArtifactViewer({ artifact }: { artifact: ConversationArtifactRecord }) {
+function SourceArtifactViewer({ artifact, label }: { artifact: ConversationArtifactRecord; label: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto px-5 py-5">
       <div className="mb-3 min-w-0">
-        <p className="ui-section-label">LaTeX source</p>
+        <p className="ui-section-label">{label}</p>
         <p className="mt-1 text-[12px] leading-relaxed text-secondary">
-          LaTeX artifacts are shown as raw source so the entire file remains visible and copyable.
+          The system-artifacts extension owns rendered artifact previews. Core fallback shows source.
         </p>
       </div>
 
@@ -116,9 +64,9 @@ export function ConversationArtifactViewer({ artifact }: { artifact: Conversatio
     case 'html':
       return <HtmlArtifactViewer artifact={artifact} />;
     case 'mermaid':
-      return <MermaidArtifactViewer artifact={artifact} />;
+      return <SourceArtifactViewer artifact={artifact} label="Mermaid source" />;
     case 'latex':
-      return <LatexArtifactViewer artifact={artifact} />;
+      return <SourceArtifactViewer artifact={artifact} label="LaTeX source" />;
     default:
       return <ErrorState message={`Unsupported artifact kind: ${artifact.kind}`} className="px-4 py-4" />;
   }

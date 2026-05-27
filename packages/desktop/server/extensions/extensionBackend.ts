@@ -757,13 +757,14 @@ export async function invokeExtensionAction(
         message: `${error.message} The extension was disabled to prevent a startup loop.`,
         severity: 'error',
       });
-    } else if (error instanceof ExtensionLoadError && error.code !== 'extension_disabled') {
+    } else if (!(error instanceof ExtensionLoadError) || error.code !== 'extension_disabled') {
+      setExtensionHealthError(extensionId, message);
       const circuit = recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
       if (circuit.quarantined) {
         publishAppEvent({
           type: 'notification',
           extensionId,
-          message: `Extension disabled by circuit breaker after ${circuit.failures} failures: ${message}`,
+          message: `Extension entered limp mode after ${circuit.failures} failures and was disabled: ${message}`,
           severity: 'error',
         });
       }

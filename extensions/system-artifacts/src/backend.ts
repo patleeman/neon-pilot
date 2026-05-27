@@ -12,6 +12,7 @@ type ArtifactAction = 'save' | 'get' | 'list' | 'delete';
 
 interface ArtifactInput {
   action: ArtifactAction;
+  conversationId?: string;
   artifactId?: string;
   kind?: string;
   title?: string;
@@ -35,8 +36,8 @@ function readRequiredKind(kind: string | undefined): ConversationArtifactKind {
   return normalized as ConversationArtifactKind;
 }
 
-function readConversationId(ctx: ArtifactBackendContext): string {
-  return readRequiredString(ctx.toolContext?.conversationId, 'conversationId');
+function readConversationId(input: ArtifactInput, ctx: ArtifactBackendContext): string {
+  return readRequiredString(ctx.toolContext?.conversationId ?? input.conversationId, 'conversationId');
 }
 
 function formatArtifactList(conversationId: string, artifacts: Awaited<ReturnType<typeof listConversationArtifacts>>): string {
@@ -62,7 +63,7 @@ function formatArtifact(record: NonNullable<Awaited<ReturnType<typeof getConvers
 }
 
 export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext) {
-  const conversationId = readConversationId(ctx);
+  const conversationId = readConversationId(input, ctx);
   const profile = ctx.profile;
 
   switch (input.action) {
@@ -124,6 +125,7 @@ export async function artifact(input: ArtifactInput, ctx: ArtifactBackendContext
         conversationId,
         artifactCount: artifacts.length,
         artifactIds: artifacts.map((item) => item.id),
+        artifacts,
       };
     }
 

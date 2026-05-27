@@ -24,7 +24,8 @@ const macDevAppDir = resolve(repoRoot, 'dist', 'dev-desktop');
 const extensionWatcherLogFile = resolve(macDevAppDir, 'extension-watch.log');
 const desktopVariant = 'testing';
 const testingProductSuffix = ' Testing';
-const desktopLaunchArgs = process.argv.slice(2);
+const desktopLaunchArgs = process.argv.slice(2).filter((arg) => arg !== '--prepare-only');
+const prepareOnly = process.argv.includes('--prepare-only');
 const ELECTRON_SWITCH_PREFIXES = [
   '--remote-debugging-port',
   '--inspect',
@@ -230,6 +231,9 @@ async function waitForDetachedLaunch(child) {
 
 async function launchMacDevApp() {
   const { executablePath } = ensureMacDevAppBundle();
+  if (prepareOnly) {
+    return;
+  }
   const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);
   const child = spawn(executablePath, [...electronSwitches, desktopMainFile, ...appArgs], {
     stdio: 'ignore',
@@ -247,6 +251,7 @@ async function launchMacDevApp() {
 
 if (process.platform === 'darwin') {
   await launchMacDevApp();
+  process.exit(0);
 }
 
 const { electronSwitches, appArgs } = splitDesktopLaunchArgs(desktopLaunchArgs);

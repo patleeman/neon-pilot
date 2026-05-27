@@ -243,6 +243,8 @@ async function main() {
   const port = await allocatePort();
   const env = {
     ...process.env,
+    NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
+    NEON_PILOT_REPO_ROOT: repo,
     NEON_PILOT_RUNTIME_CHANNEL: 'test',
     NEON_PILOT_STATE_ROOT: stateRoot,
     NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config'),
@@ -396,6 +398,36 @@ async function main() {
         );
       })
     ).durationMs;
+    const relatedConversationResultsMs = (
+      await measure('related conversation results', async () => {
+        await evalJs(
+          cdp,
+          `(async()=> {
+            const sessions = await fetch('/api/sessions').then(r => r.json());
+            const candidates = (Array.isArray(sessions) ? sessions : []).slice(0, 100);
+            const sessionIds = candidates.map(session => session.id).filter(Boolean);
+            const searchIndex = await fetch('/api/sessions/search-index', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ sessionIds })
+            }).then(r => r.json()).then(r => r.index || {});
+            return fetch('/api/related-conversations/results', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                sessions: candidates,
+                searchIndex,
+                summaries: {},
+                query: 'transcript loading backend performance',
+                workspaceCwd: candidates[0]?.cwd ?? null,
+                selectedRelatedThreadIds: [],
+                limit: 9
+              })
+            }).then(r => r.json());
+          })()`,
+        );
+      })
+    ).durationMs;
     const modelFetchMs = (
       await measure('models', async () => {
         await evalJs(cdp, `fetch('/api/models').then(r=>r.json())`);
@@ -449,6 +481,7 @@ async function main() {
       routeSettingsMs,
       routeKnowledgeMs,
       conversationSearchMs,
+      relatedConversationResultsMs,
       modelFetchMs,
       longTranscriptOpenMs,
       interactions: interaction,
@@ -467,6 +500,7 @@ async function main() {
     if (cpuAvg > maxCpu || cpuPeak > maxCpu * 3)
       failures.push(`idleCpu peak=${cpuPeak.toFixed(1)} avg=${cpuAvg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
+    if (relatedConversationResultsMs > 500) failures.push(`relatedConversationResultsMs ${relatedConversationResultsMs} > 500`);
     if (longTranscriptOpenMs > maxLongTranscriptOpenMs)
       failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > ${maxLongTranscriptOpenMs}`);
     if (draftSubmitVisibleMs > maxDraftSubmitVisibleMs)

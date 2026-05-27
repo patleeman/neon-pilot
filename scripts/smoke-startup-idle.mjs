@@ -18,6 +18,8 @@ const maxCpu = Math.max(10, Number(arg('max-cpu', '130')) || 130);
 const app = arg('app', '');
 const keep = process.argv.includes('--keep');
 const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-startup-idle-'));
+const desktopMainFile = join(repo, 'packages', 'desktop', 'dist', 'main.js');
+const devApp = join(repo, 'dist', 'dev-desktop', 'Neon Pilot Testing.app');
 
 function run(command, args, options = {}) {
   return new Promise((resolvePromise, reject) => {
@@ -78,12 +80,19 @@ async function main() {
 
   const env = { ...process.env, NEON_PILOT_STATE_ROOT: stateRoot, NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config') };
   let child;
-  if (app) {
-    const executablePath = join(app, 'Contents', 'MacOS', basename(app, '.app'));
+  const launchApp = app || (process.platform === 'darwin' ? devApp : '');
+  if (launchApp) {
+    if (!app) {
+      await run('pnpm', ['--dir', 'packages/desktop', 'run', 'build'], { cwd: repo, env });
+      await run('pnpm', ['--dir', 'packages/desktop', 'run', 'launch', '--', '--prepare-only'], { cwd: repo, env }).catch(() => undefined);
+    }
+    const executablePath = join(launchApp, 'Contents', 'MacOS', basename(launchApp, '.app'));
     if (!existsSync(executablePath)) throw new Error(`Packaged app executable not found: ${executablePath}`);
-    child = spawn(executablePath, ['--no-quit-confirmation'], {
+    child = spawn(executablePath, [desktopMainFile, '--no-quit-confirmation', `--neon-pilot-state-root=${stateRoot}`], {
       env: {
         ...env,
+        NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
+        NEON_PILOT_REPO_ROOT: repo,
         NEON_PILOT_RUNTIME_CHANNEL: 'test',
         NEON_PILOT_DESKTOP_USER_DATA_DIR: join(stateRoot, 'user-data'),
         NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'daemon.sock'),
