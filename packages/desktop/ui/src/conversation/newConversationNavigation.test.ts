@@ -10,7 +10,8 @@ vi.mock('../client/api', () => ({
 }));
 
 import { ACTIVE_SESSION_ID_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
-import { startNewLiveConversation } from './newConversationNavigation';
+import { readDraftConversationCwd } from './draftConversation';
+import { startDraftConversation, startNewLiveConversation } from './newConversationNavigation';
 
 function createStorage() {
   const map = new Map<string, string>();
@@ -92,5 +93,63 @@ describe('startNewLiveConversation', () => {
         focusComposer: false,
       },
     });
+  });
+});
+
+describe('startDraftConversation', () => {
+  beforeEach(() => {
+    apiMocks.createLiveSession.mockReset();
+    const sessionStorage = createStorage();
+    vi.stubGlobal('localStorage', createStorage());
+    vi.stubGlobal('sessionStorage', sessionStorage);
+    vi.stubGlobal('window', {
+      dispatchEvent: vi.fn(),
+      sessionStorage,
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      },
+    });
+    if (typeof CustomEvent === 'undefined') {
+      vi.stubGlobal(
+        'CustomEvent',
+        class CustomEvent<T = unknown> {
+          type: string;
+          detail: T | null;
+
+          constructor(type: string, init?: CustomEventInit<T>) {
+            this.type = type;
+            this.detail = init?.detail ?? null;
+          }
+        },
+      );
+    }
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('opens the draft route immediately without creating a live session', () => {
+    const navigate = vi.fn();
+
+    startDraftConversation({ navigate, focusComposer: true });
+
+    expect(apiMocks.createLiveSession).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/conversations/new', {
+      replace: undefined,
+      state: {
+        focusComposer: true,
+      },
+    });
+    expect(window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'neon-pilot:composer-focus' }));
+  });
+
+  it('keeps an explicit draft cwd for workspace chat buttons', () => {
+    const navigate = vi.fn();
+
+    startDraftConversation({ navigate, cwd: '/repo' });
+
+    expect(readDraftConversationCwd()).toBe('/repo');
   });
 });

@@ -1,4 +1,5 @@
 import { primeConversationBootstrapCache } from '../hooks/useConversationBootstrap';
+import { primeDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import { primeSessionDetailCache } from '../hooks/useSessions';
 import type { LiveSessionCreateResult } from '../shared/types';
 
@@ -25,6 +26,7 @@ export function primeCreatedConversationOpenCaches(
   }
 
   primeConversationBootstrapCache(created.id, created.bootstrap, { tailBlocks: options.tailBlocks }, options.bootstrapVersionKey);
+  primeDesktopConversationStateCache(created.id, created.bootstrap, { tailBlocks: options.tailBlocks, includeToolBlocks: false });
 
   if (created.bootstrap.sessionDetail) {
     primeSessionDetailCache(created.id, created.bootstrap.sessionDetail, { tailBlocks: options.tailBlocks }, options.sessionDetailVersion);

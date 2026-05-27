@@ -6,7 +6,7 @@ import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
-import { startNewLiveConversation } from '../conversation/newConversationNavigation';
+import { startDraftConversation } from '../conversation/newConversationNavigation';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
@@ -949,14 +949,11 @@ export function Layout() {
 
       creatingNewConversationRef.current = true;
       try {
-        await startNewLiveConversation({
+        startDraftConversation({
           navigate,
           focusComposer,
-          preserveDraftSurface: location.pathname === DRAFT_CONVERSATION_ROUTE,
+          replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
         });
-        if (focusComposer) {
-          window.setTimeout(() => window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus')), 80);
-        }
         return true;
       } catch (error) {
         addNotification({
