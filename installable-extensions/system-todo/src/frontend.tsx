@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type TodoStatus = 'todo' | 'done';
 
@@ -39,6 +39,8 @@ export function TodoShelf({
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const paRef = useRef(pa);
+  paRef.current = pa;
 
   const openItems = useMemo(() => state.items.filter((item) => !isDone(item)), [state.items]);
   const doneItems = useMemo(() => state.items.filter(isDone), [state.items]);
@@ -47,9 +49,9 @@ export function TodoShelf({
   const invoke = useCallback(
     async <T,>(action: string, input: Record<string, unknown> = {}) => {
       if (!conversationId) throw new Error('Open a conversation to use todos.');
-      return pa.extension.invoke<T>(action, { conversationId, ...input });
+      return paRef.current.extension.invoke<T>(action, { conversationId, ...input });
     },
-    [conversationId, pa],
+    [conversationId],
   );
 
   const refresh = useCallback(async () => {
@@ -102,7 +104,7 @@ export function TodoShelf({
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      pa.ui?.notify?.({ type: 'error', source: 'Todos', message: 'Todo update failed', details: message });
+      paRef.current.ui?.notify?.({ type: 'error', source: 'Todos', message: 'Todo update failed', details: message });
     } finally {
       setBusyId(null);
     }

@@ -115,4 +115,17 @@ describe('TodoShelf', () => {
 
     expect(container.textContent).toBe('');
   });
+
+  it('does not refetch when the extension host passes a fresh pa object for the same conversation', async () => {
+    const invoke = vi.fn().mockResolvedValue(state);
+    const { rerender } = render(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
+
+    expect(await screen.findByText('Open todo')).toBeTruthy();
+    expect(invoke).toHaveBeenCalledTimes(1);
+
+    rerender(<TodoShelf pa={{ extension: { invoke } }} shelfContext={{ conversationId: 'conv-1' }} />);
+
+    await Promise.resolve();
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
 });
