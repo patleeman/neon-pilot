@@ -300,6 +300,7 @@ import type {
   DeferredResumeSummary,
   DurableRunRecord,
   LiveSessionContext,
+  LiveSessionToolDefinition,
   MemoryData,
   MessageBlock,
   PromptAttachmentRefInput,
@@ -361,6 +362,7 @@ const ConversationDrawingsPickerModal = lazy(() =>
 );
 const loadChatView = () => import('../components/chat/ChatView').then((module) => ({ default: module.ChatView }));
 const ChatView = lazy(loadChatView);
+const EMPTY_TOOL_DEFINITIONS: LiveSessionToolDefinition[] = [];
 const ConversationActivityShelf = lazy(() =>
   import('../components/conversation/ConversationActivityShelf').then((module) => ({ default: module.ConversationActivityShelf })),
 );
@@ -5617,16 +5619,29 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           historicalBlockOffset: visibleTranscriptState.historicalBlockOffset,
         }
       : null;
-  const visibleTranscriptRenderItems =
-    visibleSessionDetail?.renderItems &&
-    visibleTranscriptMessages &&
-    !draft &&
-    !pendingInitialPrompt &&
-    !stream.hasSnapshot &&
-    visibleStreamBlocks.length === 0 &&
-    visibleTranscriptMessageIndexOffset === visibleSessionDetail.blockOffset
-      ? hydrateTranscriptRenderItems(visibleSessionDetail.renderItems, hydratedHistoricalBlocks, hydratedHistoricalEntryClusters)
-      : undefined;
+  const visibleTranscriptRenderItems = useMemo(
+    () =>
+      visibleSessionDetail?.renderItems &&
+      visibleTranscriptMessages &&
+      !draft &&
+      !pendingInitialPrompt &&
+      !stream.hasSnapshot &&
+      visibleStreamBlocks.length === 0 &&
+      visibleTranscriptMessageIndexOffset === visibleSessionDetail.blockOffset
+        ? hydrateTranscriptRenderItems(visibleSessionDetail.renderItems, hydratedHistoricalBlocks, hydratedHistoricalEntryClusters)
+        : undefined,
+    [
+      draft,
+      hydratedHistoricalBlocks,
+      hydratedHistoricalEntryClusters,
+      pendingInitialPrompt,
+      stream.hasSnapshot,
+      visibleSessionDetail,
+      visibleStreamBlocks.length,
+      visibleTranscriptMessageIndexOffset,
+      visibleTranscriptMessages,
+    ],
+  );
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
   const visibleTranscriptHasOlderBlocks =
     !showConversationLoadingState && !draft && Boolean(id) && visibleTranscriptState?.conversationId === id && showHistoricalLoadMore;
@@ -5881,7 +5896,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 messages={visibleTranscriptMessages}
                 precomputedRenderItems={visibleTranscriptRenderItems}
                 systemPrompt={isLiveSession ? stream.systemPrompt : null}
-                toolDefinitions={isLiveSession ? stream.toolDefinitions : []}
+                toolDefinitions={isLiveSession ? stream.toolDefinitions : EMPTY_TOOL_DEFINITIONS}
                 remoteControlled={Boolean(
                   (visibleTranscriptState?.conversationId ?? id) &&
                   remoteControlledConversationIds.includes((visibleTranscriptState?.conversationId ?? id) as string),
