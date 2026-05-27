@@ -69,6 +69,31 @@ describe('createDesktopAwareEventSource', () => {
     expect(sources[0]?.closed).toBe(true);
   });
 
+  it('closes custom-protocol EventSource streams after an error to stop native retry churn', async () => {
+    const sources: FakeEventSource[] = [];
+    vi.stubGlobal(
+      'EventSource',
+      class extends FakeEventSource {
+        constructor(url: string) {
+          super(url);
+          sources.push(this);
+        }
+      },
+    );
+    vi.stubGlobal('window', { location: { protocol: 'neon-pilot:', host: 'app' } });
+
+    const { createDesktopAwareEventSource } = await import('./desktopEventSource');
+    const source = createDesktopAwareEventSource('/api/app-events/events');
+    const onerror = vi.fn();
+    source.onerror = onerror;
+
+    sources[0]?.onerror?.(new Event('error'));
+
+    expect(onerror).toHaveBeenCalledTimes(1);
+    expect(sources[0]?.closed).toBe(true);
+    expect(source.readyState).toBe(FakeEventSource.CLOSED);
+  });
+
   it('subscribes to stream paths over the realtime WebSocket', async () => {
     const sockets: FakeWebSocket[] = [];
     vi.stubGlobal(

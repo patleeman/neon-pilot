@@ -115,9 +115,43 @@ class DesktopRealtimeEventSource implements EventSourceLike {
   }
 }
 
+class ClosingNativeEventSource implements EventSourceLike {
+  onopen: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+
+  private readonly source: EventSource;
+  private closed = false;
+
+  constructor(path: string) {
+    this.source = new EventSource(path);
+    this.source.onopen = (event) => {
+      if (!this.closed) this.onopen?.(event);
+    };
+    this.source.onmessage = (event) => {
+      if (!this.closed) this.onmessage?.(event);
+    };
+    this.source.onerror = (event) => {
+      if (this.closed) return;
+      this.onerror?.(event);
+      this.close();
+    };
+  }
+
+  get readyState(): number {
+    return this.closed ? EventSource.CLOSED : this.source.readyState;
+  }
+
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.source.close();
+  }
+}
+
 export function createDesktopAwareEventSource(path: string): EventSourceLike {
   if (shouldUseNativeEventSource()) {
-    return new EventSource(path) as EventSourceLike;
+    return new ClosingNativeEventSource(path);
   }
   return new DesktopRealtimeEventSource(path);
 }

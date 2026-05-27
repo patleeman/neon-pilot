@@ -725,6 +725,9 @@ export function WorkspaceExplorer({
     return map;
   }, [nodes, rootListing.data?.entries]);
   const workspaceTreePaths = useMemo(() => [...workspaceEntryMap.values()].map(workspaceEntryToTreePath), [workspaceEntryMap]);
+  const workspaceTreePathSignature = useMemo(() => workspaceTreePaths.join('\n'), [workspaceTreePaths]);
+  const workspaceTreeResetRef = useRef({ entryMap: workspaceEntryMap, paths: workspaceTreePaths });
+  workspaceTreeResetRef.current = { entryMap: workspaceEntryMap, paths: workspaceTreePaths };
   const selectedFile = fileState.data;
   const diffSpec = showDiff && diffState.data ? diffState.data : { addedLines: [], deletedBlocks: [] };
 
@@ -737,10 +740,11 @@ export function WorkspaceExplorer({
   }, [showDiff]);
 
   useEffect(() => {
-    resetTree(workspaceTreePaths, {
-      initialExpandedPaths: collectExpandedWorkspaceFolderPaths(model, workspaceEntryMap.values()),
+    const snapshot = workspaceTreeResetRef.current;
+    resetTree(snapshot.paths, {
+      initialExpandedPaths: collectExpandedWorkspaceFolderPaths(model, snapshot.entryMap.values()),
     });
-  }, [model, resetTree, workspaceEntryMap, workspaceTreePaths]);
+  }, [model, resetTree, workspaceTreePathSignature]);
 
   useEffect(() => {
     nativeContextMenuOpenRef.current = (item, context) => {
