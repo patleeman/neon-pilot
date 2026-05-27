@@ -21,6 +21,7 @@ export function ChatRenderItemView({
   item,
   itemIndex,
   renderItemsLength,
+  conversationId,
   messageIndexOffset,
   messages,
   isStreaming,
@@ -55,6 +56,7 @@ export function ChatRenderItemView({
   item: ChatRenderItem;
   itemIndex: number;
   renderItemsLength: number;
+  conversationId?: string | null;
   messageIndexOffset: number;
   messages: MessageBlock[];
   isStreaming: boolean;
@@ -146,6 +148,7 @@ export function ChatRenderItemView({
         <ContextShelf
           blocks={item.blocks}
           messageIndexOffset={messageIndexOffset + item.startIndex}
+          currentConversationId={conversationId}
           onOpenFilePath={onOpenFilePath}
           onOpenCheckpoint={onOpenCheckpoint}
           onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}

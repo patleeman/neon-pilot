@@ -419,6 +419,7 @@ export const ChatView = memo(function ChatView({
       item={item}
       itemIndex={itemIndex}
       renderItemsLength={renderItemsLength}
+      conversationId={conversationId}
       messageIndexOffset={messageIndexOffset}
       messages={messages}
       isStreaming={isStreaming}
@@ -561,6 +562,7 @@ export const ChatView = memo(function ChatView({
             <ContextShelf
               blocks={introContextBlocks}
               messageIndexOffset={0}
+              currentConversationId={conversationId}
               systemPrompt={systemPrompt ?? ''}
               toolDefinitions={toolDefinitions}
               remoteControlled={remoteControlled}

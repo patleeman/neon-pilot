@@ -1137,10 +1137,68 @@ describe('chat view streaming disclosure', () => {
     );
 
     // Topology block renders inline with navigation (TopologyBlock), not as a collapsed details chip.
-    expect(html).toContain('Forked');
+    expect(html).toContain('Forked to');
     expect(html).toContain('data-topology-kind="child_conversation_topology"');
     expect(html).toContain('Research branch');
-    expect(html).toContain('Try some more');
+    expect(html).not.toContain('Conversation Forked');
+    expect(html).not.toContain('Try some more<!-- -->');
+  });
+
+  it('renders parent conversation backlinks as forked from markers', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(ChatView, {
+          messages: [
+            {
+              type: 'context',
+              id: 'topology-parent-1',
+              ts: '2026-03-11T18:00:00.000Z',
+              customType: 'parent_conversation_backlink',
+              text: 'Fork conversation from parent: Core Extension Inventory\nOpen parent: /conversations/parent-1\nSource message: source-1',
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(html).toContain('← Forked from');
+    expect(html).toContain('data-topology-kind="parent_conversation_backlink"');
+    expect(html).toContain('Core Extension Inventory');
+  });
+
+  it('suppresses inherited child topology for the current conversation', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(ChatView, {
+          conversationId: 'child-1',
+          messages: [
+            {
+              type: 'context',
+              id: 'topology-child-1',
+              ts: '2026-03-11T18:00:00.000Z',
+              customType: 'child_conversation_topology',
+              text: 'Fork conversation created: Current child\nOpen: /conversations/child-1\nConversation: child-1\nSource message: source-1\nSource preview: Try some more',
+            },
+            {
+              type: 'context',
+              id: 'topology-parent-1',
+              ts: '2026-03-11T18:00:01.000Z',
+              customType: 'parent_conversation_backlink',
+              text: 'Fork conversation from parent: Parent thread\nOpen parent: /conversations/parent-1\nSource message: source-1',
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(html).not.toContain('Forked to');
+    expect(html).not.toContain('Current child');
+    expect(html).toContain('← Forked from');
+    expect(html).toContain('Parent thread');
   });
 
   it('renders remote control state inside the context shelf', () => {

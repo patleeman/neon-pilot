@@ -247,6 +247,7 @@ function LazyDetails({
 export const ContextShelf = memo(function ContextShelf({
   blocks,
   messageIndexOffset,
+  currentConversationId,
   systemPrompt,
   toolDefinitions = [],
   remoteControlled = false,
@@ -256,6 +257,7 @@ export const ContextShelf = memo(function ContextShelf({
 }: {
   blocks: Extract<MessageBlock, { type: 'context' | 'summary' }>[];
   messageIndexOffset?: number;
+  currentConversationId?: string | null;
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
   remoteControlled?: boolean;
@@ -290,7 +292,15 @@ export const ContextShelf = memo(function ContextShelf({
     return <QuietLifecycleMarker blocks={blocks} marker={marker} />;
   }
 
-  const topologyBlocks = blocks.filter((b) => isTopologyBlock(b));
+  const shouldRenderTopologyBlock = (block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean => {
+    if (!isTopologyBlock(block)) return false;
+    if (block.customType !== 'child_conversation_topology' || !currentConversationId) return true;
+    return parseTopologyBlockText(block.text).conversationId !== currentConversationId;
+  };
+  const topologyBlocks = blocks.filter((b) => {
+    if (!isTopologyBlock(b)) return false;
+    return shouldRenderTopologyBlock(b);
+  });
 
   return (
     <div data-context-shelf-wrapper="1">
@@ -369,6 +379,7 @@ export const ContextShelf = memo(function ContextShelf({
             // Topology blocks (parent backlinks, child tombstones) have navigable links;
             // render them inline with proper navigation instead of as collapsed details.
             if (isTopologyBlock(block)) {
+              if (!shouldRenderTopologyBlock(block)) return null;
               return (
                 <div key={block.id ?? index} className="px-2 py-0.5">
                   <TopologyBlock block={block} />
@@ -931,7 +942,7 @@ function parseTopologyBlockText(text: string): {
 
 export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
   const navigate = useNavigate();
-  const isChild = block.customType === 'child_conversation_topology';
+  const isChildTopology = block.customType === 'child_conversation_topology';
   const { title, conversationId, kind, sourceMessageId, sourcePreview } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
 
   const handleClick = useCallback(() => {
@@ -941,39 +952,20 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
   }, [conversationId, navigate]);
 
   const label = (() => {
-    if (kind === 'rewind') return isChild ? 'Conversation Rewound' : '← Rewound from';
-    if (kind === 'duplicate') return isChild ? 'Conversation Duplicated' : '← Duplicated from';
-    return isChild ? 'Conversation Forked' : '← Forked from';
+    if (kind === 'rewind') return isChildTopology ? 'Rewound to' : '← Rewound from';
+    if (kind === 'duplicate') return isChildTopology ? 'Duplicated to' : '← Duplicated from';
+    return isChildTopology ? 'Forked to' : '← Forked from';
   })();
-
-  const spotlightSource = useCallback(() => {
-    if (sourceMessageId) {
-      dispatchTranscriptSpotlight({ kind: 'block', blockId: sourceMessageId });
-    }
-  }, [sourceMessageId]);
 
   return (
     <div className="flex items-center gap-1.5 py-0.5 text-[11px] text-dim/70" data-topology-kind={block.customType}>
       <span className="shrink-0">{label}</span>
-      {isChild && sourceMessageId ? (
-        <>
-          <span className="shrink-0">from</span>
-          <button
-            type="button"
-            onClick={spotlightSource}
-            className="max-w-[28rem] truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
-            title={sourcePreview ?? sourceMessageId}
-          >
-            {sourcePreview ?? 'source message'}
-          </button>
-          <span className="shrink-0">to</span>
-        </>
-      ) : null}
       {conversationId ? (
         <button
           type="button"
           onClick={handleClick}
           className="truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+          title={sourceMessageId ? `Source: ${sourcePreview ?? sourceMessageId}` : undefined}
         >
           {title}
         </button>
