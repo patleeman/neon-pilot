@@ -44,6 +44,8 @@ interface InstallableExtensionCatalogResponse {
 }
 
 type ExtensionFilter = 'installed-addons' | 'available-addons' | 'all-installed' | 'built-in' | 'enabled' | 'disabled';
+type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
+type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 
 const EXTENSION_FILTERS: Array<{ id: ExtensionFilter; label: string }> = [
   { id: 'installed-addons', label: 'Installed add-ons' },
@@ -508,6 +510,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [marketplaceSource, setMarketplaceSource] = useState('');
+  const [marketplacePackageType, setMarketplacePackageType] = useState<MarketplaceBehaviorPackageType>('skill');
+  const [marketplaceEcosystem, setMarketplaceEcosystem] = useState<MarketplaceBehaviorEcosystem>('codex');
 
   const load = useCallback(async (options: { showLoading?: boolean } = {}) => {
     if (options.showLoading) {
@@ -588,6 +593,32 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     },
     [load, loadCatalog, pa, showActionError],
   );
+
+  const installMarketplaceSource = useCallback(async () => {
+    const source = marketplaceSource.trim();
+    if (!source) {
+      showActionError('Marketplace package source is required');
+      return;
+    }
+    setBusyId('marketplace-source');
+    setNotice(`Installing ${marketplaceEcosystem} ${marketplacePackageType} package…`);
+    try {
+      await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
+        source,
+        ecosystem: marketplaceEcosystem,
+        packageType: marketplacePackageType,
+      });
+      setNotice(`Installed ${marketplaceEcosystem} ${marketplacePackageType} package source.`);
+      setMarketplaceSource('');
+      notifyExtensionRegistryChanged();
+      await load();
+      loadCatalog();
+    } catch (err) {
+      showActionError('Failed to install marketplace package', err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }, [load, loadCatalog, marketplaceEcosystem, marketplacePackageType, marketplaceSource, pa, showActionError]);
 
   const toggleExtension = useCallback(
     (extension: ExtensionInstallSummary) => {
@@ -901,6 +932,44 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           ) : null}
 
           {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
+          {filter === 'available-addons' ? (
+            <section className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_9rem_auto]">
+                <input
+                  className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  value={marketplaceSource}
+                  onChange={(event) => setMarketplaceSource(event.currentTarget.value)}
+                  placeholder="Package source URL or local path"
+                />
+                <select
+                  className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  value={marketplaceEcosystem}
+                  onChange={(event) => setMarketplaceEcosystem(event.currentTarget.value as MarketplaceBehaviorEcosystem)}
+                >
+                  <option value="codex">Codex</option>
+                  <option value="claude">Claude</option>
+                </select>
+                <select
+                  className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  value={marketplacePackageType}
+                  onChange={(event) => setMarketplacePackageType(event.currentTarget.value as MarketplaceBehaviorPackageType)}
+                >
+                  <option value="skill">Skill</option>
+                  <option value="instruction-pack">Instructions</option>
+                  <option value="agent">Agent</option>
+                  <option value="template">Template</option>
+                </select>
+                <button
+                  type="button"
+                  className="rounded-lg bg-surface px-3 py-2 text-[13px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={busyId === 'marketplace-source'}
+                  onClick={() => void installMarketplaceSource()}
+                >
+                  {busyId === 'marketplace-source' ? 'Installing…' : 'Install'}
+                </button>
+              </div>
+            </section>
+          ) : null}
           {extensions.length === 0 && visibleCatalogExtensions.length === 0 ? (
             <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
           ) : (

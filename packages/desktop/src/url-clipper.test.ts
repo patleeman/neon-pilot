@@ -61,10 +61,10 @@ describe('importClipboardUrlToKnowledge', () => {
                       id: 'knowledge',
                       enabled: true,
                       manifest: {
-                        backend: { actions: [{ id: 'vaultImportSharedItem' }] },
+                        backend: { actions: [{ id: 'knowledgeImportSharedItem' }] },
                         contributes: { views: [{ routeCapabilities: ['knowledgeFiles'] }] },
                       },
-                      backendActions: [{ id: 'vaultImportSharedItem' }],
+                      backendActions: [{ id: 'knowledgeImportSharedItem' }],
                     },
                   ]),
                 ),
@@ -90,7 +90,7 @@ describe('importClipboardUrlToKnowledge', () => {
       },
       {
         method: 'POST',
-        path: '/api/extensions/knowledge/actions/vaultImportSharedItem',
+        path: '/api/extensions/knowledge/actions/knowledgeImportSharedItem',
         body: {
           kind: 'url',
           url: 'https://example.com/page',

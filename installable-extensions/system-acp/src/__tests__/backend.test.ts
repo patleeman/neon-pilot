@@ -100,7 +100,7 @@ function createProtocolHarness(input: Record<string, unknown> = {}) {
     },
     runs: {},
     automations: {},
-    vault: {},
+    knowledge: {},
     workspace: {},
     git: {},
     models: {},

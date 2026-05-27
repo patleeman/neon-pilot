@@ -19,24 +19,24 @@ const backendUrl = process.argv[2];
 const repoRoot = process.argv[3];
 const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-runtime-smoke-' + extensionId + '-'));
 const runtimeDir = join(tempRoot, 'runtime');
-const vaultRoot = join(tempRoot, 'vault');
+const knowledgeRoot = join(tempRoot, 'knowledge');
 const stateRoot = join(tempRoot, 'state');
 const configRoot = join(tempRoot, 'config');
 const cwd = join(tempRoot, 'workspace');
 const sessionFile = join(tempRoot, 'session.json');
 
 mkdirSync(runtimeDir, { recursive: true });
-mkdirSync(vaultRoot, { recursive: true });
+mkdirSync(knowledgeRoot, { recursive: true });
 mkdirSync(stateRoot, { recursive: true });
 mkdirSync(configRoot, { recursive: true });
 mkdirSync(cwd, { recursive: true });
-writeFileSync(join(vaultRoot, 'smoke.md'), '# Smoke\n');
+writeFileSync(join(knowledgeRoot, 'smoke.md'), '# Smoke\n');
 writeFileSync(sessionFile, JSON.stringify({ id: 'smoke-session', entries: [] }, null, 2));
 
 process.env.NEON_PILOT_REPO_ROOT = repoRoot;
 process.env.NEON_PILOT_STATE_ROOT = stateRoot;
 process.env.NEON_PILOT_CONFIG_ROOT = configRoot;
-process.env.NEON_PILOT_VAULT_ROOT = vaultRoot;
+process.env.NEON_PILOT_KNOWLEDGE_ROOT = knowledgeRoot;
 delete process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR;
 
 const module = await import(backendUrl);
@@ -322,8 +322,8 @@ const smokes = {
     await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
   },
   async 'system-knowledge'() {
-    const list = await module.vaultListFiles({}, ctx);
-    assert(list.root === vaultRoot && Array.isArray(list.files), 'vaultListFiles failed');
+    const list = await module.knowledgeListFiles({}, ctx);
+    assert(list.root === knowledgeRoot && Array.isArray(list.files), 'knowledgeListFiles failed');
     const refs = await module.resolvePromptReferences({ text: '@smoke.md' }, ctx);
     assert(Array.isArray(refs.contextBlocks), 'resolvePromptReferences failed');
   },

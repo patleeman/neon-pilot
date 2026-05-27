@@ -60,7 +60,7 @@ function recoveryDir(ctx: ExtensionBackendContext): string {
   return join(knowledgeStateDir(ctx), 'recovered');
 }
 
-function defaultVaultRoot(): string {
+function defaultKnowledgeRoot(): string {
   return join(homedir(), 'Documents', 'neon-pilot');
 }
 
@@ -83,10 +83,10 @@ function legacyMachineConfigPath(ctx: ExtensionBackendContext): string {
   return join(stateRoot(ctx), 'config', 'config.json');
 }
 
-function readLegacyVaultRoot(ctx: ExtensionBackendContext): string | null {
+function readConfiguredKnowledgeRoot(ctx: ExtensionBackendContext): string | null {
   const parsed = readJsonFile(ctx.runtimeSettingsFilePath) ?? readJsonFile(legacyMachineConfigPath(ctx));
-  const vaultRoot = parsed?.vaultRoot;
-  return typeof vaultRoot === 'string' && vaultRoot.trim() ? expandHome(vaultRoot.trim()) : null;
+  const knowledgeRoot = parsed?.knowledgeRoot;
+  return typeof knowledgeRoot === 'string' && knowledgeRoot.trim() ? expandHome(knowledgeRoot.trim()) : null;
 }
 
 function readLegacyKnowledgeConfig(ctx: ExtensionBackendContext): Pick<StoredKnowledgeConfig, 'repoUrl' | 'branch'> | null {
@@ -101,15 +101,15 @@ function readLegacyKnowledgeConfig(ctx: ExtensionBackendContext): Pick<StoredKno
 }
 
 function sourceOverrideRoot(): string | null {
-  const explicit = process.env.NEON_PILOT_VAULT_ROOT;
+  const explicit = process.env.NEON_PILOT_KNOWLEDGE_ROOT;
   return explicit && explicit.trim() ? expandHome(explicit.trim()) : null;
 }
 
-export function effectiveVaultRoot(ctx: ExtensionBackendContext, config?: Pick<StoredKnowledgeConfig, 'repoUrl'>): string {
+export function effectiveKnowledgeRoot(ctx: ExtensionBackendContext, config?: Pick<StoredKnowledgeConfig, 'repoUrl'>): string {
   const override = sourceOverrideRoot();
   if (override) return override;
   if ((config?.repoUrl ?? '').trim()) return managedRoot(ctx);
-  return readLegacyVaultRoot(ctx) ?? defaultVaultRoot();
+  return readConfiguredKnowledgeRoot(ctx) ?? defaultKnowledgeRoot();
 }
 
 function normalizeDirectoryList(value: unknown): string[] {
@@ -130,12 +130,12 @@ export function effectiveKnowledgeRoots(
 
   const roots = [...((config?.repoUrl ?? '').trim() ? [managedRoot(ctx)] : []), ...normalizeDirectoryList(config?.directories)];
   if (roots.length > 0) return Array.from(new Set(roots.map((item) => resolve(item))));
-  return [resolve(readLegacyVaultRoot(ctx) ?? defaultVaultRoot())];
+  return [resolve(readConfiguredKnowledgeRoot(ctx) ?? defaultKnowledgeRoot())];
 }
 
-export async function readEffectiveVaultRoot(ctx: ExtensionBackendContext): Promise<string> {
+export async function readEffectiveKnowledgeRoot(ctx: ExtensionBackendContext): Promise<string> {
   const config = await readConfig(ctx);
-  return effectiveKnowledgeRoots(ctx, config)[0] ?? effectiveVaultRoot(ctx, config);
+  return effectiveKnowledgeRoots(ctx, config)[0] ?? effectiveKnowledgeRoot(ctx, config);
 }
 
 export async function readEffectiveKnowledgeRoots(ctx: ExtensionBackendContext): Promise<string[]> {
@@ -317,7 +317,7 @@ export async function readKnowledgeState(ctx: ExtensionBackendContext): Promise<
     configured,
     directories: config.directories,
     effectiveRoots,
-    effectiveRoot: effectiveRoots[0] ?? effectiveVaultRoot(ctx, config),
+    effectiveRoot: effectiveRoots[0] ?? effectiveKnowledgeRoot(ctx, config),
     managedRoot: root,
     usesManagedRoot,
     syncStatus: configured ? (config.syncStatus ?? 'idle') : 'disabled',

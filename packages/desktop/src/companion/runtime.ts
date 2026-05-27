@@ -727,7 +727,7 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
       return invokeDesktopExtensionActionByRouteCapability(
         hostManager,
         'knowledgeFiles',
-        'vaultTree',
+        'knowledgeTree',
         directoryId ? { dir: directoryId } : {},
       );
     },
@@ -735,43 +735,43 @@ export function createDesktopCompanionRuntime(hostManager: HostManager): Compani
     async searchKnowledge(input: { query?: string | null; limit?: number | null }) {
       const query = input.query?.trim() ?? '';
       const limit = Math.min(50, Math.max(1, Number(input.limit ?? 20) || 20));
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultSearch', { q: query, limit });
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeSearch', { q: query, limit });
     },
 
     async readKnowledgeFile(fileId: string) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultReadFile', { id: fileId });
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeReadFile', { id: fileId });
     },
 
     async writeKnowledgeFile(input: { fileId: string; content: string }) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultWriteFile', {
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeWriteFile', {
         id: input.fileId,
         content: input.content,
       });
     },
 
     async createKnowledgeFolder(folderId: string) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultCreateFolder', { id: folderId });
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeCreateFolder', { id: folderId });
     },
 
     async renameKnowledgeEntry(input: { id: string; newName: string }) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultRename', input);
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeRename', input);
     },
 
     async deleteKnowledgeEntry(id: string) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultDeleteFile', { id });
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeDeleteFile', { id });
     },
 
     async createKnowledgeImageAsset(input: { fileName?: string | null; mimeType?: string | null; dataBase64: string }) {
       const safeFileName = input.fileName?.trim() || 'image.png';
       const mimeType = input.mimeType?.trim() || 'image/png';
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultUploadImage', {
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeUploadImage', {
         filename: safeFileName,
         dataUrl: `data:${mimeType};base64,${input.dataBase64.trim()}`,
       });
     },
 
     async importKnowledge(input: CompanionKnowledgeImportInput) {
-      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'vaultImportSharedItem', input);
+      return invokeDesktopExtensionActionByRouteCapability(hostManager, 'knowledgeFiles', 'knowledgeImportSharedItem', input);
     },
 
     async listScheduledTasks() {

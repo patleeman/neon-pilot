@@ -7,7 +7,7 @@ const setContentSpy = vi.hoisted(() => vi.fn());
 const focusSpy = vi.hoisted(() => vi.fn());
 const readFileMock = vi.hoisted(() => vi.fn());
 const backlinksMock = vi.hoisted(() => vi.fn());
-const vaultFilesMock = vi.hoisted(() => vi.fn());
+const knowledgeFilesMock = vi.hoisted(() => vi.fn());
 const writeFileMock = vi.hoisted(() => vi.fn());
 const renameMock = vi.hoisted(() => vi.fn());
 const uploadImageMock = vi.hoisted(() => vi.fn());
@@ -97,7 +97,7 @@ vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
           case 'knowledgeBacklinks':
             return backlinksMock(input.id);
           case 'knowledgeListFiles':
-            return vaultFilesMock();
+            return knowledgeFilesMock();
           case 'knowledgeWriteFile':
             return writeFileMock(input.id, input.content);
           case 'knowledgeRename':
@@ -111,12 +111,12 @@ vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
       return { result };
     },
   },
-  vaultApi: {
+  knowledgeApi: {
     assetUrl: (id: string) => `/api/knowledge/asset?id=${encodeURIComponent(id)}`,
   },
 }));
 
-import { VaultEditor } from './VaultEditor';
+import { KnowledgeEditor } from './KnowledgeEditor';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -132,11 +132,11 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function renderVaultEditor(props?: Partial<React.ComponentProps<typeof VaultEditor>>) {
+function renderKnowledgeEditor(props?: Partial<React.ComponentProps<typeof KnowledgeEditor>>) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
-  const renderProps: React.ComponentProps<typeof VaultEditor> = {
+  const renderProps: React.ComponentProps<typeof KnowledgeEditor> = {
     fileId: 'alpha.md',
     fileName: 'alpha.md',
     onFileNavigate: () => {},
@@ -145,15 +145,15 @@ function renderVaultEditor(props?: Partial<React.ComponentProps<typeof VaultEdit
   };
 
   act(() => {
-    root.render(<VaultEditor {...renderProps} />);
+    root.render(<KnowledgeEditor {...renderProps} />);
   });
 
   mountedRoots.push(root);
   return {
     container,
-    rerender(nextProps?: Partial<React.ComponentProps<typeof VaultEditor>>) {
+    rerender(nextProps?: Partial<React.ComponentProps<typeof KnowledgeEditor>>) {
       act(() => {
-        root.render(<VaultEditor {...renderProps} {...nextProps} />);
+        root.render(<KnowledgeEditor {...renderProps} {...nextProps} />);
       });
     },
   };
@@ -168,17 +168,17 @@ async function flushAsyncWork() {
   });
 }
 
-describe('VaultEditor', () => {
+describe('KnowledgeEditor', () => {
   beforeEach(() => {
     setContentSpy.mockReset();
     focusSpy.mockReset();
     readFileMock.mockReset();
     backlinksMock.mockReset();
-    vaultFilesMock.mockReset();
+    knowledgeFilesMock.mockReset();
     writeFileMock.mockReset();
     renameMock.mockReset();
     uploadImageMock.mockReset();
-    vaultFilesMock.mockResolvedValue({ files: [] });
+    knowledgeFilesMock.mockResolvedValue({ files: [] });
     backlinksMock.mockResolvedValue({ backlinks: [] });
   });
 
@@ -203,7 +203,7 @@ describe('VaultEditor', () => {
       return Promise.resolve({ content: 'Fallback body' });
     });
 
-    const view = renderVaultEditor({ fileId: 'first.md', fileName: 'first.md' });
+    const view = renderKnowledgeEditor({ fileId: 'first.md', fileName: 'first.md' });
     view.rerender({ fileId: 'second.md', fileName: 'second.md' });
 
     await flushAsyncWork();
@@ -220,7 +220,7 @@ describe('VaultEditor', () => {
   it('reuses cached file content when revisiting a recently opened file', async () => {
     readFileMock.mockImplementation((fileId: string) => Promise.resolve({ content: `${fileId} body` }));
 
-    const view = renderVaultEditor({ fileId: 'alpha.md', fileName: 'alpha.md' });
+    const view = renderKnowledgeEditor({ fileId: 'alpha.md', fileName: 'alpha.md' });
     await flushAsyncWork();
 
     view.rerender({ fileId: 'beta.md', fileName: 'beta.md' });
@@ -240,7 +240,7 @@ describe('VaultEditor', () => {
       backlinks: [{ id: 'notes/source.md', name: 'source.md', excerpt: 'Linked from source.' }],
     });
 
-    const { container } = renderVaultEditor({ fileId: 'alpha.md', fileName: 'alpha.md' });
+    const { container } = renderKnowledgeEditor({ fileId: 'alpha.md', fileName: 'alpha.md' });
     await flushAsyncWork();
 
     expect(backlinksMock).not.toHaveBeenCalled();

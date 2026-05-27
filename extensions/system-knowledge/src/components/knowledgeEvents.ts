@@ -27,16 +27,16 @@ export function onKBEvent<T = unknown>(type: string, handler: KbEventCallback<T>
   return () => window.removeEventListener(type, listener);
 }
 
-export type VaultWatcherEvent = {
-  /** Changed vault document paths */
+export type KnowledgeWatcherEvent = {
+  /** Changed knowledge document paths */
   paths: Array<string>;
-  /** All current vault document paths after the change */
+  /** All current knowledge document paths after the change */
   snapshot: Array<string>;
 };
 
 type Props = {
   apiPathPrefix: string;
-  onEvent: (event: VaultWatcherEvent) => void;
+  onEvent: (event: KnowledgeWatcherEvent) => void;
 };
 
 type State = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -49,7 +49,7 @@ type State = 'connecting' | 'connected' | 'disconnected' | 'error';
  * re-establishes the connection automatically — we do NOT close the source
  * in onerror.
  */
-export function useVaultWatcher({ apiPathPrefix, onEvent }: Props): State {
+export function useKnowledgeWatcher({ apiPathPrefix, onEvent }: Props): State {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 

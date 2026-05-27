@@ -25,7 +25,7 @@ function createTempRuntimeConfigRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-config-'));
   const runtimeConfigRoot = join(root, 'sync', 'profiles');
   mkdirSync(runtimeConfigRoot, { recursive: true });
-  process.env.NEON_PILOT_VAULT_ROOT = join(root, 'sync');
+  process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(root, 'sync');
   tempDirs.push(root);
   return runtimeConfigRoot;
 }
@@ -104,13 +104,13 @@ describe('resources negative tests', () => {
   });
 
   describe('materializeRuntimeResourcesToAgentDir edge cases', () => {
-    it('writes APPEND_SYSTEM with durable vault guidance even when no other system append content exists', () => {
+    it('writes APPEND_SYSTEM with durable knowledge guidance even when no other system append content exists', () => {
       const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       const runtime = createTempDir('neon-pilot-runtime-');
       const syncRoot = join(runtimeConfigRoot, '..');
 
-      process.env.NEON_PILOT_VAULT_ROOT = syncRoot;
+      process.env.NEON_PILOT_KNOWLEDGE_ROOT = syncRoot;
       writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
 
       const resolved = resolveRuntimeResources('shared', {
@@ -122,7 +122,7 @@ describe('resources negative tests', () => {
 
       const appendSystemPath = join(runtime, 'APPEND_SYSTEM.md');
       expect(existsSync(appendSystemPath)).toBe(true);
-      expect(readFileSync(appendSystemPath, 'utf-8')).toContain(`Vault root: ${syncRoot}`);
+      expect(readFileSync(appendSystemPath, 'utf-8')).toContain(`Primary knowledge path: ${syncRoot}`);
     });
 
     it('handles runtime directory that does not exist', () => {

@@ -452,12 +452,12 @@ describe('model routes', () => {
     expect(invalidRes.json).toHaveBeenCalledWith({ error: 'template must be a string' });
 
     const saveRes = createResponse();
-    patchHandler('/api/system-prompt-template')(createRequest({ body: { template: '# Custom\n\n{{ vault_root }}\n' } }), saveRes);
-    expect(writeMachineSystemPromptTemplateMock).toHaveBeenCalledWith('# Custom\n\n{{ vault_root }}\n');
+    patchHandler('/api/system-prompt-template')(createRequest({ body: { template: '# Custom\n\n{{ knowledge_root }}\n' } }), saveRes);
+    expect(writeMachineSystemPromptTemplateMock).toHaveBeenCalledWith('# Custom\n\n{{ knowledge_root }}\n');
     expect(materializeWebRuntimeConfig).toHaveBeenCalledWith('shared');
     expect(saveRes.json).toHaveBeenCalledWith({
       configFile: '/config/config.json',
-      template: '# Custom\n\n{{ vault_root }}\n',
+      template: '# Custom\n\n{{ knowledge_root }}\n',
     });
   });
 });

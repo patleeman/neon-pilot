@@ -1,12 +1,12 @@
-import type { VaultEntry } from '@neon-pilot/extensions/data';
+import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
 // ── List component ────────────────────────────────────────────────────────────
 
 interface WikiLinkListProps {
-  items: VaultEntry[];
-  command: (item: VaultEntry) => void;
+  items: KnowledgeEntry[];
+  command: (item: KnowledgeEntry) => void;
 }
 
 interface WikiLinkListRef {
@@ -101,7 +101,7 @@ export function buildWikiLinkRenderer() {
   let reactRoot: import('react-dom/client').Root | null = null;
   let listRef: WikiLinkListRef | null = null;
 
-  function mount(props: SuggestionProps<VaultEntry>) {
+  function mount(props: SuggestionProps<KnowledgeEntry>) {
     const { clientRect } = props;
     if (!clientRect) return;
 
@@ -142,7 +142,7 @@ export function buildWikiLinkRenderer() {
     container.style.top = `${top}px`;
   }
 
-  function update(props: SuggestionProps<VaultEntry>) {
+  function update(props: SuggestionProps<KnowledgeEntry>) {
     if (!reactRoot) return;
     position(props.clientRect ?? null);
     import('react').then(({ createElement, createRef }) => {

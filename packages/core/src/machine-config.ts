@@ -30,6 +30,7 @@ export function getDefaultMachineSkillDirs(): string[] {
 export type MachineConfigSectionKey = 'daemon' | 'ui';
 
 export interface MachineConfigDocument {
+  knowledgeRoot?: string;
   vaultRoot?: string;
   instructionFiles?: string[];
   skillDirs?: string[];
@@ -134,7 +135,12 @@ function normalizeStringArray(value: unknown): string[] | undefined {
 
 function normalizeMachineConfig(value: unknown): MachineConfigDocument {
   const document = isRecord(value) ? value : {};
-  const vaultRoot = typeof document.vaultRoot === 'string' && document.vaultRoot.trim().length > 0 ? document.vaultRoot.trim() : undefined;
+  const knowledgeRoot =
+    typeof document.knowledgeRoot === 'string' && document.knowledgeRoot.trim().length > 0
+      ? document.knowledgeRoot.trim()
+      : typeof document.vaultRoot === 'string' && document.vaultRoot.trim().length > 0
+        ? document.vaultRoot.trim()
+        : undefined;
   const instructionFiles = normalizeStringArray(document.instructionFiles);
   const skillDirs = normalizeStringArray(document.skillDirs);
   const systemPromptTemplate =
@@ -145,7 +151,7 @@ function normalizeMachineConfig(value: unknown): MachineConfigDocument {
   const ui = normalizeSection(document.ui);
 
   return {
-    ...(vaultRoot ? { vaultRoot } : {}),
+    ...(knowledgeRoot ? { knowledgeRoot } : {}),
     ...(instructionFiles ? { instructionFiles } : {}),
     ...(skillDirs ? { skillDirs } : {}),
     ...(systemPromptTemplate ? { systemPromptTemplate } : {}),

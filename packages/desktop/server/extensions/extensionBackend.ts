@@ -17,6 +17,7 @@ import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
+import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
 import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
@@ -36,7 +37,6 @@ import {
 import { createExtensionExecutionsCapability, createExtensionRunsCapability } from './extensionRuns.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
-import { createExtensionVaultCapability } from './extensionVault.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import { buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
@@ -96,7 +96,7 @@ export interface ExtensionBackendContext {
   runs: ReturnType<typeof createExtensionRunsCapability>;
   executions: ReturnType<typeof createExtensionExecutionsCapability>;
   models: ReturnType<typeof createExtensionModelsCapability>;
-  vault: ReturnType<typeof createExtensionVaultCapability>;
+  knowledge: ReturnType<typeof createExtensionKnowledgeCapability>;
   conversations: ReturnType<typeof createExtensionConversationsCapability>;
   filesystem: ReturnType<typeof createExtensionFilesystemCapability>;
   workspace: ReturnType<typeof createExtensionWorkspaceCapability>;
@@ -412,7 +412,7 @@ export function createBackendContext(
     runs: createExtensionRunsCapability(extensionId),
     executions: createExtensionExecutionsCapability(extensionId),
     models: createExtensionModelsCapability(),
-    vault: createExtensionVaultCapability(),
+    knowledge: createExtensionKnowledgeCapability(),
     conversations: createExtensionConversationsCapability(serverContext, extensionId),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext),
@@ -828,7 +828,7 @@ export async function invokeExtensionProtocolEntrypoint(
 const PRODUCT_CRITICAL_EXTENSION_SELF_TESTS: Record<string, Record<string, unknown>> = {
   'system-automations': { scheduledTask: { action: 'list' }, deferredResume: { action: 'list' } },
   'system-diffs': { checkpoint: { action: 'list' } },
-  'system-knowledge': { readState: {}, vaultTree: {}, vaultSearch: { q: '', limit: 1 } },
+  'system-knowledge': { readState: {}, knowledgeTree: {}, knowledgeSearch: { q: '', limit: 1 } },
 };
 
 export async function runExtensionSelfTest(

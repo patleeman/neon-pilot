@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   getConfigRoot,
+  getDefaultKnowledgeRoot,
   getDefaultStateRoot,
-  getDefaultVaultRoot,
   getDurableAgentFilePath,
   getDurableConversationAttentionDir,
   getDurableMemoryDir,
@@ -25,11 +25,11 @@ import {
   getDurableSettingsDir,
   getDurableSkillsDir,
   getDurableTasksDir,
+  getKnowledgeRoot,
   getLocalRuntimeConfigDir,
   getRuntimeConfigRoot,
   getStateRoot,
   getSyncRoot,
-  getVaultRoot,
   isPathInRepo,
   resolveNeutralChatCwd,
   resolveStatePaths,
@@ -109,19 +109,19 @@ describe('runtime config path helpers', () => {
     delete process.env.NEON_PILOT_CONFIG_FILE;
     delete process.env.NEON_PILOT_PROFILES_ROOT;
     delete process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
-    delete process.env.NEON_PILOT_VAULT_ROOT;
+    delete process.env.NEON_PILOT_KNOWLEDGE_ROOT;
   });
 
   afterEach(() => {
     process.env = originalEnv;
   });
 
-  it('derives runtime state paths from state root and durable knowledge paths from the vault root', () => {
+  it('derives runtime state paths from state root and durable knowledge paths from the knowledge root', () => {
     process.env.NEON_PILOT_STATE_ROOT = '/runtime/state';
 
     expect(getConfigRoot()).toBe('/runtime/state/config');
-    expect(getDefaultVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
-    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
+    expect(getDefaultKnowledgeRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
+    expect(getKnowledgeRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
     expect(getRuntimeConfigRoot()).toBe('/runtime/state/config/runtime');
     expect(getSyncRoot()).toBe('/runtime/state/sync');
     expect(getDurablePiAgentDir()).toBe('/runtime/state/sync/pi-agent');
@@ -144,41 +144,41 @@ describe('runtime config path helpers', () => {
     process.env.NEON_PILOT_CONFIG_ROOT = '/custom/config';
     process.env.NEON_PILOT_PROFILES_ROOT = '/custom/runtime';
     process.env.NEON_PILOT_LOCAL_PROFILE_DIR = '/custom/local';
-    process.env.NEON_PILOT_VAULT_ROOT = '/custom/vault';
+    process.env.NEON_PILOT_KNOWLEDGE_ROOT = '/custom/knowledge';
 
     expect(getConfigRoot()).toBe('/custom/config');
-    expect(getVaultRoot()).toBe('/custom/vault');
+    expect(getKnowledgeRoot()).toBe('/custom/knowledge');
     expect(getRuntimeConfigRoot()).toBe('/custom/runtime');
     expect(getDurableRuntimeConfigRoot()).toBe('/custom/config/runtime');
-    expect(getDurableAgentFilePath()).toBe('/custom/vault/AGENTS.md');
-    expect(getDurableSkillsDir()).toBe('/custom/vault/skills');
-    expect(getDurableNotesDir()).toBe('/custom/vault/notes');
-    expect(getDurableProjectsDir()).toBe('/custom/vault/projects');
+    expect(getDurableAgentFilePath()).toBe('/custom/knowledge/AGENTS.md');
+    expect(getDurableSkillsDir()).toBe('/custom/knowledge/skills');
+    expect(getDurableNotesDir()).toBe('/custom/knowledge/notes');
+    expect(getDurableProjectsDir()).toBe('/custom/knowledge/projects');
     expect(getLocalRuntimeConfigDir()).toBe('/custom/local');
   });
 
-  it('reads vault root from machine config when no env override is set', () => {
+  it('reads knowledge root from machine config when no env override is set', () => {
     const configDir = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
     const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
-    writeFileSync(join(configDir, 'config.json'), JSON.stringify({ vaultRoot: '~/Documents/custom-agent-vault' }));
+    writeFileSync(join(configDir, 'config.json'), JSON.stringify({ knowledgeRoot: '~/Documents/custom-agent-knowledge' }));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     process.env.NEON_PILOT_CONFIG_FILE = join(configDir, 'config.json');
 
-    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'custom-agent-vault'));
+    expect(getKnowledgeRoot()).toBe(join(homedir(), 'Documents', 'custom-agent-knowledge'));
     expect(getDurableRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
-    expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'custom-agent-vault', 'AGENTS.md'));
+    expect(getDurableAgentFilePath()).toBe(join(homedir(), 'Documents', 'custom-agent-knowledge', 'AGENTS.md'));
 
     rmSync(configDir, { recursive: true, force: true });
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
-  it('keeps vault directory fallbacks for skills and tasks while runtime config stays machine-local', () => {
+  it('keeps knowledge directory fallbacks for skills and tasks while runtime config stays machine-local', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-state-'));
     mkdirSync(join(stateRoot, 'sync', 'skills'), { recursive: true });
     mkdirSync(join(stateRoot, 'sync', 'tasks'), { recursive: true });
 
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
-    process.env.NEON_PILOT_VAULT_ROOT = join(stateRoot, 'sync');
+    process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(stateRoot, 'sync');
 
     expect(getRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
     expect(getDurableRuntimeConfigRoot()).toBe(join(stateRoot, 'config', 'runtime'));
@@ -192,10 +192,10 @@ describe('runtime config path helpers', () => {
 
   it('expands ~ in path overrides', () => {
     process.env.NEON_PILOT_CONFIG_ROOT = '~/pa-config';
-    process.env.NEON_PILOT_VAULT_ROOT = '~/Documents/neon-pilot';
+    process.env.NEON_PILOT_KNOWLEDGE_ROOT = '~/Documents/neon-pilot';
 
     expect(getConfigRoot()).toBe(join(homedir(), 'pa-config'));
-    expect(getVaultRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
+    expect(getKnowledgeRoot()).toBe(join(homedir(), 'Documents', 'neon-pilot'));
   });
 });
 

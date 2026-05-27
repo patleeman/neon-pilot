@@ -4,15 +4,15 @@ const fs = vi.hoisted(() => ({ existsSync: vi.fn(() => true), readFileSync: vi.f
 const template = vi.hoisted(() => ({ renderSystemPromptTemplate: vi.fn(() => 'generated template') }));
 const core = vi.hoisted(() => ({
   renderSystemPromptTemplate: template.renderSystemPromptTemplate,
-  getDurableAgentFilePath: vi.fn((vaultRoot: string) => `${vaultRoot}/AGENTS.md`),
-  getDurableSkillsDir: vi.fn((vaultRoot: string) => `${vaultRoot}/skills`),
+  getDurableAgentFilePath: vi.fn((knowledgeRoot: string) => `${knowledgeRoot}/AGENTS.md`),
+  getDurableSkillsDir: vi.fn((knowledgeRoot: string) => `${knowledgeRoot}/skills`),
   getDurableTasksDir: vi.fn((syncRoot: string) => `${syncRoot}/tasks`),
   getStateRoot: vi.fn(() => '/state'),
   getSyncRoot: vi.fn((stateRoot: string) => `${stateRoot}/sync`),
   readMachineSystemPromptTemplate: vi.fn(() => 'machine template'),
   resolveRuntimeResources: vi.fn(() => ({
     repoRoot: '/repo',
-    vaultRoot: '/vault',
+    knowledgeRoot: '/knowledge',
     agentsFiles: ['/repo/AGENTS.md'],
     systemPromptFile: '/repo/SYSTEM.md',
     appendSystemFiles: ['/repo/APPEND.md'],
@@ -59,9 +59,9 @@ describe('instruction inventory', () => {
     expect(template.renderSystemPromptTemplate).toHaveBeenCalledWith(
       {
         repo_root: '/repo',
-        vault_root: '/vault',
-        agents_edit_target: '/vault/AGENTS.md',
-        skills_dir: '/vault/skills',
+        knowledge_root: '/knowledge',
+        agents_edit_target: '/knowledge/AGENTS.md',
+        skills_dir: '/knowledge/skills',
         tasks_dir: '/state/sync/tasks',
         docs_dir: '/repo/docs',
         docs_index: '/repo/docs/README.md',

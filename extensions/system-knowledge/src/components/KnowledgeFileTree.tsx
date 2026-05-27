@@ -1,4 +1,4 @@
-import type { VaultEntry } from '@neon-pilot/extensions/data';
+import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
 import {
   addOpenFileId,
   canDropAllPaths,
@@ -36,8 +36,8 @@ import { Link } from 'react-router-dom';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
 import { getKnowledgeBaseSyncPresentation } from '../lib/knowledgeBaseSyncStatus';
-import { emitKBEvent, onKBEvent, useVaultWatcher } from './knowledgeEvents';
-import { canDropVaultEntry, normalizeVaultDir } from './vaultDragAndDrop';
+import { emitKBEvent, onKBEvent, useKnowledgeWatcher } from './knowledgeEvents';
+import { canDropKnowledgeEntry, normalizeKnowledgeDir } from './knowledgeDragAndDrop';
 
 function Ico({ d, size = 14 }: { d: string; size?: number }) {
   return (
@@ -234,7 +234,7 @@ function hasSameStringSet(left: ReadonlySet<string>, right: ReadonlySet<string>)
   return true;
 }
 
-function createFallbackEntry(path: string, kind: VaultEntry['kind'], name?: string): VaultEntry {
+function createFallbackEntry(path: string, kind: KnowledgeEntry['kind'], name?: string): KnowledgeEntry {
   const trimmed = path.endsWith('/') ? path.slice(0, -1) : path;
   return {
     id: path,
@@ -246,7 +246,7 @@ function createFallbackEntry(path: string, kind: VaultEntry['kind'], name?: stri
   };
 }
 
-function resolveFinderTargetPath(root: string | null | undefined, entry: VaultEntry): string | null {
+function resolveFinderTargetPath(root: string | null | undefined, entry: KnowledgeEntry): string | null {
   const normalizedRoot = root?.trim().replace(/\/+$/u, '') ?? '';
   if (!normalizedRoot) {
     return null;
@@ -265,7 +265,7 @@ function resolveFinderTargetPath(root: string | null | undefined, entry: VaultEn
   return parentPath ? `${normalizedRoot}/${parentPath}` : normalizedRoot;
 }
 
-function getCreateTargetDirectoryId(entry: VaultEntry): string {
+function getCreateTargetDirectoryId(entry: KnowledgeEntry): string {
   return entry.kind === 'folder' ? entry.id : idToDir(entry.id);
 }
 
@@ -323,7 +323,7 @@ function MoveModal({
 }: {
   paths: readonly string[];
   folderOptions: readonly FolderOption[];
-  entryMap: Map<string, VaultEntry>;
+  entryMap: Map<string, KnowledgeEntry>;
   onConfirm: (targetDir: string) => void;
   onClose: () => void;
 }) {
@@ -351,7 +351,7 @@ function MoveModal({
                 disabled={
                   !canDropAllPaths(paths, folder.id, (path, dir) => {
                     const entry = entryMap.get(path);
-                    return entry ? canDropVaultEntry(entry, dir) : false;
+                    return entry ? canDropKnowledgeEntry(entry, dir) : false;
                   })
                 }
               >
@@ -686,8 +686,8 @@ function OpenFilesSection({
   );
 }
 
-export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase }: FileTreeProps) {
-  const [entries, setEntries] = useState<VaultEntry[]>([]);
+export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase }: FileTreeProps) {
+  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [movePaths, setMovePaths] = useState<string[] | null>(null);
   const [importDirectoryId, setImportDirectoryId] = useState<string | null>(null);
@@ -700,7 +700,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   const expandedFolderIdsRef = useRef<Set<string>>(readStoredExpandedFolderIds());
   const visibleExpandedFolderIdsRef = useRef<Set<string>>(new Set(expandedFolderIdsRef.current));
   const activeFileIdRef = useRef(activeFileId);
-  const entryMapRef = useRef<Map<string, VaultEntry>>(new Map());
+  const entryMapRef = useRef<Map<string, KnowledgeEntry>>(new Map());
   const folderIdsRef = useRef<string[]>([]);
   const reconcilingExpansionRef = useRef(false);
   const treeHostWrapperRef = useRef<HTMLDivElement>(null);
@@ -864,7 +864,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
 
   const handleMovePaths = useCallback(
     async (paths: readonly string[], targetDirInput: string, options?: { emitEntriesChangedOnly?: boolean }) => {
-      const targetDir = normalizeVaultDir(targetDirInput);
+      const targetDir = normalizeKnowledgeDir(targetDirInput);
       const movedPairs: Array<{ oldId: string; newId: string }> = [];
 
       try {
@@ -950,7 +950,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   }, [knowledgeBaseState?.configured, loadSnapshot, onSyncKnowledgeBase, refetchKnowledgeBase, syncingKnowledgeBase]);
 
   const openCreateEntryModal = useCallback((kind: CreateEntryState['kind'], directoryIdInput: string) => {
-    const directoryId = normalizeVaultDir(directoryIdInput);
+    const directoryId = normalizeKnowledgeDir(directoryIdInput);
     setCreateEntryState({
       kind,
       directoryId,
@@ -964,7 +964,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
         return;
       }
 
-      const parentDir = normalizeVaultDir(createEntryState.directoryId);
+      const parentDir = normalizeKnowledgeDir(createEntryState.directoryId);
       const childName = value.replace(/^\/+|\/+$/gu, '');
       const childPath = parentDir ? `${parentDir}${childName}` : childName;
 
@@ -1033,7 +1033,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   );
 
   const handleOpenInFinder = useCallback(
-    async (entry: VaultEntry) => {
+    async (entry: KnowledgeEntry) => {
       const desktopBridge = getDesktopBridge();
       const targetPath = resolveFinderTargetPath(knowledgeBaseState?.effectiveRoot, entry);
       if (!desktopBridge?.openPath || !targetPath) {
@@ -1073,7 +1073,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   );
 
   const runKnowledgeContextMenuAction = useCallback(
-    (action: DesktopKnowledgeEntryContextMenuAction | null, entry: VaultEntry) => {
+    (action: DesktopKnowledgeEntryContextMenuAction | null, entry: KnowledgeEntry) => {
       if (!action) {
         return;
       }
@@ -1227,10 +1227,10 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
 
   useEffect(() => {
     canDropRef.current = (event) => {
-      const targetDir = normalizeVaultDir(event.target.directoryPath ?? '');
+      const targetDir = normalizeKnowledgeDir(event.target.directoryPath ?? '');
       return getTopLevelDraggedPaths(event.draggedPaths).every((path) => {
         const entry = entryMapRef.current.get(path);
-        return entry ? canDropVaultEntry(entry, targetDir) : false;
+        return entry ? canDropKnowledgeEntry(entry, targetDir) : false;
       });
     };
   }, []);
@@ -1427,7 +1427,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   }, [applyDeleteEffects, applyRenameEffects, loadSnapshot, refetchKnowledgeBase]);
 
   // Watch for external file system changes to the knowledge root.
-  useVaultWatcher({
+  useKnowledgeWatcher({
     apiPathPrefix: '/api/extensions/system-knowledge/knowledge',
     onEvent: useCallback(
       (event) => {

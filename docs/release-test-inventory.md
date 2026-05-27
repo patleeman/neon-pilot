@@ -76,7 +76,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Nav item: Knowledge.
 - Views: Knowledge page, Knowledge tree right rail, Knowledge file workbench detail.
-- Actions: `readState`, `updateState`, `sync`, `vaultListFiles`, `vaultTree`, `vaultReadFile`, `vaultWriteFile`, `vaultCreateFolder`, `vaultDeleteFile`, `vaultRename`, `vaultMove`, `vaultBacklinks`, `vaultSearch`, `vaultUploadImage`, `vaultImportUrl`, `resolvePromptReferences`.
+- Actions: `readState`, `updateState`, `sync`, `knowledgeListFiles`, `knowledgeTree`, `knowledgeReadFile`, `knowledgeWriteFile`, `knowledgeCreateFolder`, `knowledgeDeleteFile`, `knowledgeRename`, `knowledgeMove`, `knowledgeBacklinks`, `knowledgeSearch`, `knowledgeUploadImage`, `knowledgeImportUrl`, `resolvePromptReferences`.
 - Prompt reference provider: `knowledge-files`.
 - Quick open provider: `knowledge-files` in the command palette files section.
 - Mentions provider: `knowledge-files` in the conversation `@` menu for note, folder, and file kinds.
@@ -421,7 +421,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - quickOpen: knowledge-files
 - mentions: knowledge-files
 - settingsComponent: knowledge-base
-- backend actions: readState, updateState, sync, vaultListFiles, vaultTree, vaultReadFile, vaultWriteFile, vaultCreateFolder, vaultDeleteFile, vaultRename, vaultMove, vaultBacklinks, vaultSearch, vaultUploadImage, vaultImportUrl, resolvePromptReferences
+- backend actions: readState, updateState, sync, knowledgeListFiles, knowledgeTree, knowledgeReadFile, knowledgeWriteFile, knowledgeCreateFolder, knowledgeDeleteFile, knowledgeRename, knowledgeMove, knowledgeBacklinks, knowledgeSearch, knowledgeUploadImage, knowledgeImportUrl, resolvePromptReferences
 
 ### system-local-dictation — Local Dictation
 

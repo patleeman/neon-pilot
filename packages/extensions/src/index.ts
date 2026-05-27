@@ -208,9 +208,9 @@ export type ExtensionPermission =
   | 'storage:read'
   | 'storage:write'
   | 'storage:readwrite'
-  | 'vault:read'
-  | 'vault:write'
-  | 'vault:readwrite'
+  | 'knowledge:read'
+  | 'knowledge:write'
+  | 'knowledge:readwrite'
   | 'conversations:read'
   | 'conversations:write'
   | 'conversations:readwrite'
@@ -673,7 +673,7 @@ export interface ExtensionTranscriptBlockContribution {
 export interface ExtensionSubscriptionContribution {
   id: string;
   handler: string;
-  source: 'workspaceFiles' | 'vaultFiles' | 'settings' | 'conversation' | 'route' | 'selection' | string;
+  source: 'workspaceFiles' | 'knowledgeFiles' | 'settings' | 'conversation' | 'route' | 'selection' | string;
   pattern?: string;
   debounceMs?: number;
 }
@@ -1179,7 +1179,7 @@ export interface ExtensionBackendContext {
     cancel(input: { id: string; sessionFile?: string }): Promise<unknown>;
   };
   automations: Record<string, (...args: never[]) => Promise<unknown>>;
-  vault: Record<string, (...args: never[]) => Promise<unknown>>;
+  knowledge: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {
     list(...args: never[]): Promise<unknown>;
     getMeta(conversationId: string): Promise<unknown>;

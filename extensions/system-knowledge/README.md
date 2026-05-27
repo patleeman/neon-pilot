@@ -26,7 +26,7 @@ The extension owns backend actions for knowledge state, managed sync, knowledge 
 - `readState` reads configured repository/sync status.
 - `updateState` updates the managed knowledge repository configuration.
 - `sync` runs a git-backed knowledge-base sync and invalidates knowledge UI state.
-- `vault*` actions currently provide the compatibility action names for listing, reading, writing, searching, moving, renaming, deleting, importing, and uploading knowledge files. New user-facing language should call these knowledge files, not vault files.
+- `knowledge*` actions provide listing, reading, writing, searching, moving, renaming, deleting, importing, and uploading knowledge files.
 - `resolvePromptReferences` resolves knowledge file mentions during prompt submission.
 - `provideKnowledgeInstructions` contributes a small runtime instruction layer listing agent-visible knowledge paths.
 
@@ -38,10 +38,10 @@ Knowledge UI should stay in this extension. Host code may render contributed sur
 
 The knowledge base is a set of source-material directories. It resolves in this order:
 
-1. `NEON_PILOT_VAULT_ROOT` environment variable
+1. `NEON_PILOT_KNOWLEDGE_ROOT` environment variable
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when this extension has a repository URL saved in extension storage
 3. User-selected local directories saved in extension storage
-4. Legacy `vaultRoot` config value in the runtime settings or machine config file
+4. Legacy `knowledgeRoot` config value in the runtime settings or machine config file
 5. `~/Documents/neon-pilot`
 
 When more than one directory is active, file ids from secondary roots are qualified with a stable root id such as `knowledge-2:path/to/file.md`. The `@` mention provider and prompt-reference resolver use those ids so the agent can receive the correct source files.

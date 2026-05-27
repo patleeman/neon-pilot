@@ -608,7 +608,7 @@ describe('registerExtensionRoutes', () => {
     );
     writeFileSync(
       join(extensionRoot, 'dist', 'backend.mjs'),
-      `export async function saveTask(input, ctx) { await ctx.storage.put('tasks/one', input); return { saved: await ctx.storage.get('tasks/one'), automationsList: typeof ctx.automations.list, runsStart: typeof ctx.runs.start, vaultRead: typeof ctx.vault.read, conversationsList: typeof ctx.conversations.list }; }`,
+      `export async function saveTask(input, ctx) { await ctx.storage.put('tasks/one', input); return { saved: await ctx.storage.get('tasks/one'), automationsList: typeof ctx.automations.list, runsStart: typeof ctx.runs.start, knowledgeRead: typeof ctx.knowledge.read, conversationsList: typeof ctx.conversations.list }; }`,
     );
 
     const harness = createHarness();
@@ -624,7 +624,7 @@ describe('registerExtensionRoutes', () => {
         saved: { title: 'Ship it' },
         automationsList: 'function',
         runsStart: 'function',
-        vaultRead: 'function',
+        knowledgeRead: 'function',
         conversationsList: 'function',
       },
     });

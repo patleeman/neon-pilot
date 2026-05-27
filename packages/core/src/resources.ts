@@ -13,10 +13,10 @@ import {
   getDurableRuntimeScopeSettingsFilePath as getDurableRuntimeSettingsFilePath,
   getDurableSkillsDir,
   getDurableTasksDir,
+  getKnowledgeRoot,
   getLocalRuntimeConfigDir as getCanonicalLocalProfileDir,
   getStateRoot,
   getSyncRoot,
-  getVaultRoot,
 } from './runtime/paths.js';
 import { renderSystemPromptTemplate, type SystemPromptTemplateVariables } from './system-prompt-template.js';
 
@@ -30,7 +30,7 @@ export interface ResourceLayer {
 export interface ResolvedRuntimeResources {
   name: string;
   repoRoot: string;
-  vaultRoot: string;
+  knowledgeRoot: string;
   runtimeConfigRoot: string;
   layers: ResourceLayer[];
   extensionDirs: string[];
@@ -49,6 +49,7 @@ export interface ResolvedRuntimeResources {
 
 export interface ResolveResourceOptions {
   repoRoot?: string;
+  knowledgeRoot?: string;
   vaultRoot?: string;
   localProfileDir?: string;
   runtimeConfigRoot?: string;
@@ -378,13 +379,13 @@ export function getRepoDefaultsAgentDir(explicitRepoRoot?: string): string {
   return join(getRepoRoot(explicitRepoRoot), 'defaults', 'agent');
 }
 
-function resolveVaultRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.vaultRoot ?? process.env.NEON_PILOT_VAULT_ROOT;
+function resolveKnowledgeRoot(options: ResolveResourceOptions = {}): string {
+  const explicit = options.knowledgeRoot ?? options.vaultRoot ?? process.env.NEON_PILOT_KNOWLEDGE_ROOT ?? process.env.NEON_PILOT_VAULT_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }
 
-  return resolve(getVaultRoot());
+  return resolve(getKnowledgeRoot());
 }
 
 function resolveRuntimeConfigRoot(options: ResolveResourceOptions = {}): string {
@@ -577,12 +578,12 @@ function validateRuntimeScopeName(runtimeScope: string): void {
   }
 }
 
-function resolveSharedVaultAgentFile(options: ResolveResourceOptions = {}): string | undefined {
-  return existingFile(getDurableAgentFilePath(resolveVaultRoot(options)));
+function resolveSharedKnowledgeAgentFile(options: ResolveResourceOptions = {}): string | undefined {
+  return existingFile(getDurableAgentFilePath(resolveKnowledgeRoot(options)));
 }
 
 function resolveDurableAgentFiles(_runtimeScope: string, options: ResolveResourceOptions = {}): string[] {
-  const sharedAgent = resolveSharedVaultAgentFile(options);
+  const sharedAgent = resolveSharedKnowledgeAgentFile(options);
   return sharedAgent ? [sharedAgent] : [];
 }
 
@@ -615,7 +616,7 @@ function buildResourceLayers(input: {
   durableModelsFiles: string[];
   durableSkillDirs: string[];
   runtimeScope: string;
-  vaultRoot: string;
+  knowledgeRoot: string;
   options: ResolveResourceOptions;
 }): ResourceLayer[] {
   const layers: ResourceLayer[] = [];
@@ -632,7 +633,7 @@ function buildResourceLayers(input: {
     existsSync(getRuntimeConfigDir(input.runtimeScope, input.options)) ||
     input.runtimeScope === 'shared'
   ) {
-    layers.push({ name: 'durable', agentDir: input.vaultRoot });
+    layers.push({ name: 'durable', agentDir: input.knowledgeRoot });
   }
 
   const localBase = resolveLocalProfileDir(input.options);
@@ -718,7 +719,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const runtimeScope = 'shared';
 
   const repoRoot = getRepoRoot(options.repoRoot);
-  const vaultRoot = resolveVaultRoot(options);
+  const knowledgeRoot = resolveKnowledgeRoot(options);
   const runtimeConfigRoot = resolveRuntimeConfigRoot(options);
 
   const repoDefaultsAgentDir = existingDir(getRepoDefaultsAgentDir(repoRoot));
@@ -727,7 +728,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const configuredSkillDirs = resolveConfiguredSkillDirs();
   const durableSettingsFiles = resolveDurableSettingsFiles(runtimeScope, options);
   const durableModelsFiles = resolveDurableModelsFiles(runtimeScope, options);
-  const durableSkillDirs = listUnifiedSkillNodeDirs(runtimeScope, { vaultRoot });
+  const durableSkillDirs = listUnifiedSkillNodeDirs(runtimeScope, { vaultRoot: knowledgeRoot });
 
   const layers = buildResourceLayers({
     repoDefaultsAgentDir,
@@ -736,12 +737,12 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
     durableModelsFiles,
     durableSkillDirs,
     runtimeScope,
-    vaultRoot,
+    knowledgeRoot,
     options,
   });
 
   if (layers.length === 0) {
-    throw new Error(`Shared defaults not found. Checked ${getRepoDefaultsAgentDir(repoRoot)} and ${vaultRoot}`);
+    throw new Error(`Shared defaults not found. Checked ${getRepoDefaultsAgentDir(repoRoot)} and ${knowledgeRoot}`);
   }
 
   const localLayers = layers.filter((layer) => layer.name === 'local');
@@ -764,7 +765,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   return {
     name: runtimeScope,
     repoRoot,
-    vaultRoot,
+    knowledgeRoot,
     runtimeConfigRoot,
     layers,
     extensionDirs,
@@ -917,9 +918,9 @@ export function materializeRuntimeResourcesToAgentDir(
   // Build template variables for the system prompt
   const templateVariables: SystemPromptTemplateVariables = {
     repo_root: resources.repoRoot,
-    vault_root: resources.vaultRoot,
-    agents_edit_target: getDurableAgentFilePath(resources.vaultRoot),
-    skills_dir: getDurableSkillsDir(resources.vaultRoot),
+    knowledge_root: resources.knowledgeRoot,
+    agents_edit_target: getDurableAgentFilePath(resources.knowledgeRoot),
+    skills_dir: getDurableSkillsDir(resources.knowledgeRoot),
     tasks_dir: getDurableTasksDir(getSyncRoot(getStateRoot())),
     docs_dir: join(resources.repoRoot, 'docs'),
     docs_index: join(resources.repoRoot, 'docs', 'README.md'),

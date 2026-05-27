@@ -5,7 +5,7 @@ import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResp
 
 import { readEffectiveKnowledgeRoots } from './state';
 
-export interface VaultEntry {
+export interface KnowledgeEntry {
   id: string;
   kind: 'file' | 'folder';
   name: string;
@@ -86,7 +86,7 @@ async function resolveId(
   return { root: base, rootId: rootRef.id, rootCount: allRoots.length, id: displayId(rootRef, clean, allRoots.length), path: target };
 }
 
-function entryFromPath(rootRef: KnowledgeRoot, absolutePath: string, rootCount = 1): VaultEntry | null {
+function entryFromPath(rootRef: KnowledgeRoot, absolutePath: string, rootCount = 1): KnowledgeEntry | null {
   if (!existsSync(absolutePath)) return null;
   const stats = statSync(absolutePath);
   if (!stats.isDirectory() && !stats.isFile()) return null;
@@ -107,15 +107,15 @@ function entryFromPath(rootRef: KnowledgeRoot, absolutePath: string, rootCount =
   };
 }
 
-function sorted(entries: VaultEntry[]): VaultEntry[] {
+function sorted(entries: KnowledgeEntry[]): KnowledgeEntry[] {
   return entries.sort(
     (a, b) => (a.kind !== b.kind ? (a.kind === 'folder' ? -1 : 1) : a.name.localeCompare(b.name)) || a.id.localeCompare(b.id),
   );
 }
 
-function walkFiles(base: string, rootRef: KnowledgeRoot = { id: 'knowledge', path: base }, rootCount = 1): VaultEntry[] {
+function walkFiles(base: string, rootRef: KnowledgeRoot = { id: 'knowledge', path: base }, rootCount = 1): KnowledgeEntry[] {
   if (!existsSync(rootRef.path)) return [];
-  const out: VaultEntry[] = [];
+  const out: KnowledgeEntry[] = [];
   const stack = [rootRef.path];
   while (stack.length) {
     const current = stack.pop() as string;
@@ -136,7 +136,7 @@ function walkFiles(base: string, rootRef: KnowledgeRoot = { id: 'knowledge', pat
   return sorted(out);
 }
 
-async function collectMarkdown(ctx: ExtensionBackendContext): Promise<VaultEntry[]> {
+async function collectMarkdown(ctx: ExtensionBackendContext): Promise<KnowledgeEntry[]> {
   const allRoots = await roots(ctx);
   return allRoots
     .flatMap((rootRef) => walkFiles(rootRef.path, rootRef, allRoots.length))
@@ -196,7 +196,7 @@ export async function tree(input: { dir?: string } | undefined, ctx: ExtensionBa
     ? readdirSync(dir, { withFileTypes: true })
         .filter((entry) => !entry.isSymbolicLink())
         .map((entry) => entryFromPath(rootRef, join(dir, entry.name), allRoots.length))
-        .filter((entry): entry is VaultEntry => Boolean(entry))
+        .filter((entry): entry is KnowledgeEntry => Boolean(entry))
     : [];
   return { root: rootRef.path, entries: sorted(entries) };
 }

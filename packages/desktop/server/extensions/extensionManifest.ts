@@ -61,9 +61,9 @@ export const EXTENSION_PERMISSIONS = [
   'storage:read',
   'storage:write',
   'storage:readwrite',
-  'vault:read',
-  'vault:write',
-  'vault:readwrite',
+  'knowledge:read',
+  'knowledge:write',
+  'knowledge:readwrite',
   'conversations:read',
   'conversations:write',
   'conversations:readwrite',
@@ -331,7 +331,7 @@ export interface ExtensionTranscriptBlockContribution {
 export interface ExtensionSubscriptionContribution {
   id: string;
   handler: string;
-  source: 'workspaceFiles' | 'vaultFiles' | 'settings' | 'conversation' | 'route' | 'selection' | string;
+  source: 'workspaceFiles' | 'knowledgeFiles' | 'settings' | 'conversation' | 'route' | 'selection' | string;
   pattern?: string;
   debounceMs?: number;
 }

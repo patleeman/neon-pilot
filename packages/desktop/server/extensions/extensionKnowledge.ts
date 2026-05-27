@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
-import { getVaultRoot } from '@neon-pilot/core';
+import { getKnowledgeRoot } from '@neon-pilot/core';
 
-interface VaultEntry {
+interface KnowledgeEntry {
   id: string;
   kind: 'file' | 'folder';
   name: string;
@@ -12,7 +12,7 @@ interface VaultEntry {
 }
 
 function getRoot(): string {
-  return resolve(getVaultRoot());
+  return resolve(getKnowledgeRoot());
 }
 
 function isInsideRoot(root: string, target: string): boolean {
@@ -22,16 +22,16 @@ function isInsideRoot(root: string, target: string): boolean {
 
 function safePath(id = ''): string {
   const clean = id.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '').trim();
-  if (clean.includes('\0')) throw new Error('Invalid vault path.');
+  if (clean.includes('\0')) throw new Error('Invalid knowledge path.');
   const segments = clean ? clean.split('/') : [];
-  if (segments.some((segment) => segment === '.' || segment === '..')) throw new Error('Invalid vault path.');
+  if (segments.some((segment) => segment === '.' || segment === '..')) throw new Error('Invalid knowledge path.');
   const root = getRoot();
   const abs = resolve(root, clean);
-  if (!isInsideRoot(root, abs)) throw new Error('Invalid vault path.');
+  if (!isInsideRoot(root, abs)) throw new Error('Invalid knowledge path.');
   return abs;
 }
 
-function entryFromPath(root: string, abs: string): VaultEntry {
+function entryFromPath(root: string, abs: string): KnowledgeEntry {
   const stats = statSync(abs);
   const rel = relative(root, abs).replace(/\\/g, '/');
   const kind = stats.isDirectory() ? 'folder' : 'file';
@@ -44,11 +44,11 @@ function entryFromPath(root: string, abs: string): VaultEntry {
   };
 }
 
-export function createExtensionVaultCapability() {
+export function createExtensionKnowledgeCapability() {
   return {
     async read(path: string) {
       const abs = safePath(path);
-      if (!existsSync(abs) || !statSync(abs).isFile()) throw new Error('Vault file not found.');
+      if (!existsSync(abs) || !statSync(abs).isFile()) throw new Error('Knowledge file not found.');
       return { id: path, content: readFileSync(abs, 'utf-8'), updatedAt: new Date(statSync(abs).mtimeMs).toISOString() };
     },
     async write(path: string, content: string) {
@@ -61,7 +61,7 @@ export function createExtensionVaultCapability() {
     async list(path = '') {
       const root = getRoot();
       const abs = safePath(path);
-      if (!existsSync(abs) || !statSync(abs).isDirectory()) throw new Error('Vault directory not found.');
+      if (!existsSync(abs) || !statSync(abs).isDirectory()) throw new Error('Knowledge directory not found.');
       return readdirSync(abs, { withFileTypes: true })
         .filter((entry) => !entry.isSymbolicLink() && !entry.name.startsWith('.'))
         .flatMap((entry) => {

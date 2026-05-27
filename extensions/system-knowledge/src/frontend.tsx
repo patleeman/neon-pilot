@@ -16,13 +16,13 @@ import { KnowledgeSettingsPanel as KnowledgeSettingsPanelComponent } from './com
 import { knowledgeApi } from './lib/knowledgeApi';
 import { navigateKnowledgeFile } from './lib/knowledgeNavigation';
 
-const LazyVaultFileTree = lazyRouteWithRecovery('system-knowledge-vault-file-tree', async () => {
-  const module = await import('./components/VaultFileTree');
-  return { default: module.VaultFileTree };
+const LazyKnowledgeFileTree = lazyRouteWithRecovery('system-knowledge-file-tree', async () => {
+  const module = await import('./components/KnowledgeFileTree');
+  return { default: module.KnowledgeFileTree };
 });
-const LazyVaultEditor = lazyRouteWithRecovery('system-knowledge-vault-editor', async () => {
-  const module = await import('./components/VaultEditor');
-  return { default: module.VaultEditor };
+const LazyKnowledgeEditor = lazyRouteWithRecovery('system-knowledge-editor', async () => {
+  const module = await import('./components/KnowledgeEditor');
+  return { default: module.KnowledgeEditor };
 });
 
 function getKnowledgeFileId(search: string): string | null {
@@ -54,7 +54,7 @@ export function KnowledgeTreePanel({ pa }: ExtensionSurfaceProps) {
   return (
     <div className="h-full min-h-0 overflow-hidden">
       <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
-        <LazyVaultFileTree
+        <LazyKnowledgeFileTree
           activeFileId={activeFileId}
           onFileSelect={handleFileSelect}
           onSyncKnowledgeBase={() => pa.extension.invoke('sync', {})}
@@ -147,7 +147,12 @@ export function KnowledgePageSurface() {
   if (activeFileId) {
     return (
       <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
-        <LazyVaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />
+        <LazyKnowledgeEditor
+          fileId={activeFileId}
+          fileName={fileName}
+          onFileNavigate={handleFileNavigate}
+          onFileRenamed={handleFileRenamed}
+        />
       </Suspense>
     );
   }
@@ -199,7 +204,12 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
 
   return (
     <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
-      <LazyVaultEditor fileId={activeFileId} fileName={fileName} onFileNavigate={handleFileNavigate} onFileRenamed={handleFileRenamed} />
+      <LazyKnowledgeEditor
+        fileId={activeFileId}
+        fileName={fileName}
+        onFileNavigate={handleFileNavigate}
+        onFileRenamed={handleFileRenamed}
+      />
     </Suspense>
   );
 }
@@ -249,7 +259,7 @@ export const knowledgeQuickOpenProvider = {
 };
 
 export async function buildKnowledgeMentionItems(input: { memoryDocs: MemoryDocItem[] }): Promise<MentionItem[]> {
-  const vaultFiles = await knowledgeApi.listFiles();
+  const knowledgeFiles = await knowledgeApi.listFiles();
   return [
     ...input.memoryDocs.map((doc) => ({
       id: `@${doc.id}`,
@@ -259,7 +269,7 @@ export async function buildKnowledgeMentionItems(input: { memoryDocs: MemoryDocI
       summary: doc.summary,
       path: doc.path,
     })),
-    ...vaultFiles.files.map((file) => ({
+    ...knowledgeFiles.files.map((file) => ({
       id: `@${file.id}`,
       label: file.id,
       kind: (file.kind === 'folder' ? 'folder' : 'file') as const,

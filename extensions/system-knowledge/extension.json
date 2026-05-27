@@ -98,71 +98,6 @@
         "title": "Import shared item into knowledge"
       },
       {
-        "id": "vaultListFiles",
-        "handler": "vaultListFiles",
-        "title": "List knowledge files"
-      },
-      {
-        "id": "vaultTree",
-        "handler": "vaultTree",
-        "title": "Read knowledge tree"
-      },
-      {
-        "id": "vaultReadFile",
-        "handler": "vaultReadFile",
-        "title": "Read knowledge file"
-      },
-      {
-        "id": "vaultWriteFile",
-        "handler": "vaultWriteFile",
-        "title": "Write knowledge file"
-      },
-      {
-        "id": "vaultCreateFolder",
-        "handler": "vaultCreateFolder",
-        "title": "Create knowledge folder"
-      },
-      {
-        "id": "vaultDeleteFile",
-        "handler": "vaultDeleteFile",
-        "title": "Delete knowledge entry"
-      },
-      {
-        "id": "vaultRename",
-        "handler": "vaultRename",
-        "title": "Rename knowledge entry"
-      },
-      {
-        "id": "vaultMove",
-        "handler": "vaultMove",
-        "title": "Move knowledge entry"
-      },
-      {
-        "id": "vaultBacklinks",
-        "handler": "vaultBacklinks",
-        "title": "Read knowledge backlinks"
-      },
-      {
-        "id": "vaultSearch",
-        "handler": "vaultSearch",
-        "title": "Search knowledge"
-      },
-      {
-        "id": "vaultUploadImage",
-        "handler": "vaultUploadImage",
-        "title": "Upload knowledge image"
-      },
-      {
-        "id": "vaultImportUrl",
-        "handler": "vaultImportUrl",
-        "title": "Import URL into knowledge"
-      },
-      {
-        "id": "vaultImportSharedItem",
-        "handler": "vaultImportSharedItem",
-        "title": "Import shared item into knowledge"
-      },
-      {
         "id": "readMemory",
         "handler": "readMemory",
         "title": "Read memory"
@@ -261,85 +196,6 @@
       },
       {
         "method": "GET",
-        "path": "/vault/tree",
-        "handler": "vaultTreeRoute",
-        "title": "Read knowledge tree route"
-      },
-      {
-        "method": "GET",
-        "path": "/vault/file",
-        "handler": "vaultReadFileRoute",
-        "title": "Read knowledge file route"
-      },
-      {
-        "method": "PUT",
-        "path": "/vault/file",
-        "handler": "vaultWriteFileRoute",
-        "title": "Write knowledge file route"
-      },
-      {
-        "method": "DELETE",
-        "path": "/vault/file",
-        "handler": "vaultDeleteFileRoute",
-        "title": "Delete knowledge file route"
-      },
-      {
-        "method": "POST",
-        "path": "/vault/folder",
-        "handler": "vaultCreateFolderRoute",
-        "title": "Create knowledge folder route"
-      },
-      {
-        "method": "POST",
-        "path": "/vault/rename",
-        "handler": "vaultRenameRoute",
-        "title": "Rename knowledge entry route"
-      },
-      {
-        "method": "POST",
-        "path": "/vault/move",
-        "handler": "vaultMoveRoute",
-        "title": "Move knowledge entry route"
-      },
-      {
-        "method": "GET",
-        "path": "/vault/backlinks",
-        "handler": "vaultBacklinksRoute",
-        "title": "Read knowledge backlinks route"
-      },
-      {
-        "method": "GET",
-        "path": "/vault/search",
-        "handler": "vaultSearchRoute",
-        "title": "Search knowledge route"
-      },
-      {
-        "method": "GET",
-        "path": "/vault/note-search",
-        "handler": "vaultSearchRoute",
-        "title": "Search knowledge notes route"
-      },
-      {
-        "method": "POST",
-        "path": "/vault/image",
-        "handler": "vaultUploadImageRoute",
-        "title": "Upload knowledge image route"
-      },
-      {
-        "method": "POST",
-        "path": "/vault/share-import",
-        "handler": "vaultImportUrlRoute",
-        "title": "Import item into knowledge route"
-      },
-      {
-        "method": "GET",
-        "path": "/vault/events",
-        "handler": "vaultEventsRoute",
-        "title": "Watch legacy knowledge events",
-        "stream": "sse"
-      },
-      {
-        "method": "GET",
         "path": "/memory",
         "handler": "memoryRoute",
         "title": "Read memory context route"
@@ -376,7 +232,9 @@
         "id": "open-knowledge-files-palette",
         "title": "Open knowledge files palette",
         "action": "palette.open",
-        "args": { "scope": "files" }
+        "args": {
+          "scope": "files"
+        }
       }
     ],
     "keybindings": [
@@ -385,7 +243,9 @@
         "title": "Open knowledge files palette",
         "keys": ["mod+p"],
         "command": "palette.open",
-        "args": { "scope": "files" }
+        "args": {
+          "scope": "files"
+        }
       }
     ],
     "settingsComponent": {

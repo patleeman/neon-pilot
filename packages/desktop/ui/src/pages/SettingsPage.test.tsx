@@ -138,7 +138,7 @@ describe('SettingsPage', () => {
       if (fetcher === api.systemPromptTemplate) {
         return buildUseApiResult({
           configFile: '/tmp/config.json',
-          template: '# Neon Pilot defaults\n\nVault root: {{ vault_root }}\n',
+          template: '# Neon Pilot defaults\n\nPrimary knowledge path: {{ knowledge_root }}\n',
         });
       }
 

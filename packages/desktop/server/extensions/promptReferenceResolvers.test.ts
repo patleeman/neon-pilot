@@ -31,7 +31,7 @@ describe('resolveExtensionPromptReferences', () => {
         ok: true,
         result: {
           contextBlocks: ['Context A', { content: 'Context B' }, { content: '   ' }, 12],
-          references: [{ kind: 'note', id: 'n1', path: '/vault/n1.md' }, { kind: 'bad' }, null],
+          references: [{ kind: 'note', id: 'n1', path: '/knowledge/n1.md' }, { kind: 'bad' }, null],
         },
       })
       .mockResolvedValueOnce({ ok: true, result: { contextBlocks: [{ content: 'Context C' }], references: [{ kind: 'file', id: 'f1' }] } });
@@ -39,7 +39,7 @@ describe('resolveExtensionPromptReferences', () => {
     await expect(resolveExtensionPromptReferences({ text: 'Use @note:n1 and @file:f1 please' })).resolves.toEqual({
       contextBlocks: ['Context A', 'Context B', 'Context C'],
       references: [
-        { kind: 'note', id: 'n1', path: '/vault/n1.md' },
+        { kind: 'note', id: 'n1', path: '/knowledge/n1.md' },
         { kind: 'file', id: 'f1' },
       ],
     });

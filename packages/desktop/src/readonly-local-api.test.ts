@@ -74,7 +74,7 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
     expect(
       shouldDispatchReadonlyLocalApiInWorker({
         method: 'GET',
-        path: '/api/extensions/system-knowledge/vault/tree',
+        path: '/api/extensions/system-knowledge/knowledge/tree',
         hostId: 'local',
         ...workerAvailable,
       }),

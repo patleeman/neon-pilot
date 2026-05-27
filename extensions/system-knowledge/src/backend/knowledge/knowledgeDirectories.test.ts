@@ -6,8 +6,8 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { provideKnowledgeInstructions } from '../../backend';
+import { listFiles, resolvePromptReferences, search, writeFile } from './files';
 import { readKnowledgeState, updateKnowledgeState } from './state';
-import { listFiles, resolvePromptReferences, search, writeFile } from './vault';
 
 describe('knowledge directories', () => {
   const root = join(tmpdir(), `neon-knowledge-directories-test-${process.pid}`);

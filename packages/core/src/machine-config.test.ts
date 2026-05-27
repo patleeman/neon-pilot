@@ -129,7 +129,7 @@ describe('machine config', () => {
 
   it('reads and writes the system prompt template in config.json', () => {
     const configDir = createTempDir('pa-machine-config-');
-    const customTemplate = '# Custom runtime\n\nVault: {{ vault_root }}\n';
+    const customTemplate = '# Custom runtime\n\nKnowledge: {{ knowledge_root }}\n';
 
     writeMachineSystemPromptTemplate(customTemplate, { configRoot: configDir });
 

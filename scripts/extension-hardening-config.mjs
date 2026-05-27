@@ -34,7 +34,7 @@ export const FORBIDDEN_BUNDLED_PATH_FRAGMENTS = ['/node_modules/@neon-pilot/daem
 export const PRODUCT_CRITICAL_EXTENSION_SMOKE_ACTIONS = new Map([
   ['system-automations', { scheduledTask: { action: 'list' }, queueFollowup: { action: 'list' } }],
   ['system-diffs', { checkpoint: { action: 'list' } }],
-  ['system-knowledge', { readState: {}, vaultTree: {}, vaultSearch: { q: '', limit: 1 } }],
+  ['system-knowledge', { readState: {}, knowledgeTree: {}, knowledgeSearch: { q: '', limit: 1 } }],
 ]);
 
 export function backendBundleByteLimit(extensionId) {

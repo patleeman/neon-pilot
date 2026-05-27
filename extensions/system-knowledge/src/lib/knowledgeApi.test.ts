@@ -18,9 +18,9 @@ describe('knowledgeApi', () => {
   });
 
   it('returns action results', async () => {
-    mocks.invokeExtensionAction.mockResolvedValue({ ok: true, result: { root: '/vault', files: [] } });
+    mocks.invokeExtensionAction.mockResolvedValue({ ok: true, result: { root: '/knowledge', files: [] } });
 
-    await expect(knowledgeApi.listFiles()).resolves.toEqual({ root: '/vault', files: [] });
+    await expect(knowledgeApi.listFiles()).resolves.toEqual({ root: '/knowledge', files: [] });
     expect(mocks.invokeExtensionAction).toHaveBeenCalledWith('system-knowledge', 'knowledgeListFiles', {});
   });
 

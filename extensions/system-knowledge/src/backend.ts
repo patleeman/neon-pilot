@@ -4,15 +4,15 @@ import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResp
 import {
   buildRecentReadUsage,
   getDurableAgentFilePath,
-  getVaultRoot,
+  getKnowledgeRoot,
   listMemoryDocs,
   listSkillsForProfile,
   normalizeMemoryPath,
   resolveRuntimeResources,
 } from '@neon-pilot/extensions/backend/knowledge';
 
+import * as knowledgeFiles from './backend/knowledge/files';
 import { readKnowledgeState, syncKnowledgeState, updateKnowledgeState } from './backend/knowledge/state';
-import * as knowledgeFiles from './backend/knowledge/vault';
 
 export async function readState(_input: unknown, ctx: ExtensionBackendContext) {
   return readKnowledgeState(ctx);
@@ -115,20 +115,6 @@ export async function resolvePromptReferences(input: { text: string }, ctx: Exte
   return knowledgeFiles.resolvePromptReferences(input, ctx);
 }
 
-export const vaultListFiles = knowledgeListFiles;
-export const vaultTree = knowledgeTree;
-export const vaultReadFile = knowledgeReadFile;
-export const vaultWriteFile = knowledgeWriteFile;
-export const vaultCreateFolder = knowledgeCreateFolder;
-export const vaultDeleteFile = knowledgeDeleteFile;
-export const vaultRename = knowledgeRename;
-export const vaultMove = knowledgeMove;
-export const vaultBacklinks = knowledgeBacklinks;
-export const vaultSearch = knowledgeSearch;
-export const vaultUploadImage = knowledgeUploadImage;
-export const vaultImportUrl = knowledgeImportUrl;
-export const vaultImportSharedItem = knowledgeImportSharedItem;
-
 export async function readMemory(_input: unknown, ctx: ExtensionBackendContext) {
   const runtime = (ctx as unknown as { runtime?: { getRepoRoot?: () => string } }).runtime;
   const runtimeScope = ctx.runtimeScope ?? ctx.profile;
@@ -158,7 +144,7 @@ export async function readMemory(_input: unknown, ctx: ExtensionBackendContext) 
 }
 
 async function inferAgentSource(filePath: string): Promise<string> {
-  const baseAgentFile = await getDurableAgentFilePath(await getVaultRoot());
+  const baseAgentFile = await getDurableAgentFilePath(await getKnowledgeRoot());
   if (filePath === baseAgentFile) return 'knowledge';
   if (filePath.includes('/skills/')) return 'global';
   return 'project';
@@ -268,16 +254,3 @@ export async function knowledgeImportUrlRoute(req: ExtensionRouteRequest, ctx: E
     ),
   );
 }
-
-export const vaultTreeRoute = knowledgeTreeRoute;
-export const vaultReadFileRoute = knowledgeReadFileRoute;
-export const vaultWriteFileRoute = knowledgeWriteFileRoute;
-export const vaultDeleteFileRoute = knowledgeDeleteFileRoute;
-export const vaultCreateFolderRoute = knowledgeCreateFolderRoute;
-export const vaultRenameRoute = knowledgeRenameRoute;
-export const vaultMoveRoute = knowledgeMoveRoute;
-export const vaultBacklinksRoute = knowledgeBacklinksRoute;
-export const vaultSearchRoute = knowledgeSearchRoute;
-export const vaultUploadImageRoute = knowledgeUploadImageRoute;
-export const vaultEventsRoute = knowledgeEventsRoute;
-export const vaultImportUrlRoute = knowledgeImportUrlRoute;

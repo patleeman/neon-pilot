@@ -1,4 +1,4 @@
-import type { VaultEntry } from '@neon-pilot/extensions/data';
+import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
 import { mergeAttributes, Node } from '@tiptap/core';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { Suggestion } from '@tiptap/suggestion';
@@ -9,14 +9,14 @@ interface WikiLinkAttributes {
 }
 
 export type WikiLinkSuggestionRenderer = () => {
-  onStart: (props: SuggestionProps<VaultEntry>) => void;
-  onUpdate: (props: SuggestionProps<VaultEntry>) => void;
+  onStart: (props: SuggestionProps<KnowledgeEntry>) => void;
+  onUpdate: (props: SuggestionProps<KnowledgeEntry>) => void;
   onExit: () => void;
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
 
 export function buildWikiLinkExtension(
-  getEntries: () => VaultEntry[],
+  getEntries: () => KnowledgeEntry[],
   onFileNavigate: (id: string) => void,
   renderSuggestion: WikiLinkSuggestionRenderer,
 ) {
@@ -121,7 +121,7 @@ export function buildWikiLinkExtension(
       const rendered = renderSuggestion();
 
       return [
-        Suggestion<VaultEntry>({
+        Suggestion<KnowledgeEntry>({
           editor: this.editor,
           char: '[[',
           allowSpaces: true,

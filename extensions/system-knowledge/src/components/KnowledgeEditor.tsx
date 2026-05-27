@@ -1,4 +1,4 @@
-import type { VaultBacklink, VaultEntry } from '@neon-pilot/extensions/data';
+import type { KnowledgeBacklink, KnowledgeEntry } from '@neon-pilot/extensions/data';
 import { Image } from '@tiptap/extension-image';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
@@ -79,7 +79,7 @@ function ToolbarButton({
 // ── Autosave ──────────────────────────────────────────────────────────────────
 
 const AUTOSAVE_MS = 800;
-const MAX_CACHED_VAULT_DOCUMENTS = 24;
+const MAX_CACHED_KNOWLEDGE_DOCUMENTS = 24;
 
 function useAutosave(
   fileId: string | null,
@@ -104,13 +104,13 @@ function useAutosave(
         onSaved();
       }
     } catch (error) {
-      console.error('vault autosave failed', error);
+      console.error('knowledge autosave failed', error);
       onError(error instanceof Error ? error.message : String(error));
       window.dispatchEvent(
         new CustomEvent('neon-pilot-notification', {
           detail: {
             type: 'warning',
-            message: 'Vault autosave failed',
+            message: 'Knowledge autosave failed',
             details: error instanceof Error ? error.message : String(error),
             source: 'system-knowledge',
           },
@@ -161,17 +161,17 @@ function useAutosave(
   }, [fileId, dirty, revision, getContent, onSaved, onError]);
 }
 
-interface CachedVaultDocument {
+interface CachedKnowledgeDocument {
   body: string;
   frontmatter: Frontmatter;
   rawFrontmatter: string | null;
   frontmatterError: string | null;
 }
 
-const cachedVaultDocuments = new Map<string, CachedVaultDocument>();
-const pendingVaultDocumentReads = new Map<string, Promise<CachedVaultDocument>>();
-const cachedVaultBacklinks = new Map<string, VaultBacklink[]>();
-const pendingVaultBacklinkReads = new Map<string, Promise<VaultBacklink[]>>();
+const cachedKnowledgeDocuments = new Map<string, CachedKnowledgeDocument>();
+const pendingKnowledgeDocumentReads = new Map<string, Promise<CachedKnowledgeDocument>>();
+const cachedKnowledgeBacklinks = new Map<string, KnowledgeBacklink[]>();
+const pendingKnowledgeBacklinkReads = new Map<string, Promise<KnowledgeBacklink[]>>();
 
 function rememberCachedValue<T>(cache: Map<string, T>, key: string, value: T) {
   if (cache.has(key)) {
@@ -179,7 +179,7 @@ function rememberCachedValue<T>(cache: Map<string, T>, key: string, value: T) {
   }
   cache.set(key, value);
 
-  while (cache.size > MAX_CACHED_VAULT_DOCUMENTS) {
+  while (cache.size > MAX_CACHED_KNOWLEDGE_DOCUMENTS) {
     const oldestKey = cache.keys().next().value;
     if (!oldestKey) {
       break;
@@ -188,27 +188,27 @@ function rememberCachedValue<T>(cache: Map<string, T>, key: string, value: T) {
   }
 }
 
-function readCachedVaultDocument(fileId: string): CachedVaultDocument | null {
-  const cached = cachedVaultDocuments.get(fileId);
+function readCachedKnowledgeDocument(fileId: string): CachedKnowledgeDocument | null {
+  const cached = cachedKnowledgeDocuments.get(fileId);
   if (!cached) {
     return null;
   }
 
-  rememberCachedValue(cachedVaultDocuments, fileId, cached);
+  rememberCachedValue(cachedKnowledgeDocuments, fileId, cached);
   return cached;
 }
 
-function cacheVaultDocument(fileId: string, document: CachedVaultDocument) {
-  rememberCachedValue(cachedVaultDocuments, fileId, document);
+function cacheKnowledgeDocument(fileId: string, document: CachedKnowledgeDocument) {
+  rememberCachedValue(cachedKnowledgeDocuments, fileId, document);
 }
 
-async function loadVaultDocument(fileId: string): Promise<CachedVaultDocument> {
-  const cached = readCachedVaultDocument(fileId);
+async function loadKnowledgeDocument(fileId: string): Promise<CachedKnowledgeDocument> {
+  const cached = readCachedKnowledgeDocument(fileId);
   if (cached) {
     return cached;
   }
 
-  const pending = pendingVaultDocumentReads.get(fileId);
+  const pending = pendingKnowledgeDocumentReads.get(fileId);
   if (pending) {
     return pending;
   }
@@ -222,41 +222,41 @@ async function loadVaultDocument(fileId: string): Promise<CachedVaultDocument> {
         frontmatter: frontmatter ?? {},
         rawFrontmatter,
         frontmatterError,
-      } satisfies CachedVaultDocument;
-      cacheVaultDocument(fileId, document);
+      } satisfies CachedKnowledgeDocument;
+      cacheKnowledgeDocument(fileId, document);
       return document;
     })
     .finally(() => {
-      if (pendingVaultDocumentReads.get(fileId) === request) {
-        pendingVaultDocumentReads.delete(fileId);
+      if (pendingKnowledgeDocumentReads.get(fileId) === request) {
+        pendingKnowledgeDocumentReads.delete(fileId);
       }
     });
 
-  pendingVaultDocumentReads.set(fileId, request);
+  pendingKnowledgeDocumentReads.set(fileId, request);
   return request;
 }
 
-function readCachedBacklinks(fileId: string): VaultBacklink[] | null {
-  const cached = cachedVaultBacklinks.get(fileId);
+function readCachedBacklinks(fileId: string): KnowledgeBacklink[] | null {
+  const cached = cachedKnowledgeBacklinks.get(fileId);
   if (!cached) {
     return null;
   }
 
-  rememberCachedValue(cachedVaultBacklinks, fileId, cached);
+  rememberCachedValue(cachedKnowledgeBacklinks, fileId, cached);
   return [...cached];
 }
 
-function cacheBacklinks(fileId: string, backlinks: readonly VaultBacklink[]) {
-  rememberCachedValue(cachedVaultBacklinks, fileId, [...backlinks]);
+function cacheBacklinks(fileId: string, backlinks: readonly KnowledgeBacklink[]) {
+  rememberCachedValue(cachedKnowledgeBacklinks, fileId, [...backlinks]);
 }
 
-async function loadVaultBacklinks(fileId: string): Promise<VaultBacklink[]> {
+async function loadKnowledgeBacklinks(fileId: string): Promise<KnowledgeBacklink[]> {
   const cached = readCachedBacklinks(fileId);
   if (cached) {
     return cached;
   }
 
-  const pending = pendingVaultBacklinkReads.get(fileId);
+  const pending = pendingKnowledgeBacklinkReads.get(fileId);
   if (pending) {
     return pending;
   }
@@ -268,27 +268,27 @@ async function loadVaultBacklinks(fileId: string): Promise<VaultBacklink[]> {
       return [...backlinks];
     })
     .finally(() => {
-      if (pendingVaultBacklinkReads.get(fileId) === request) {
-        pendingVaultBacklinkReads.delete(fileId);
+      if (pendingKnowledgeBacklinkReads.get(fileId) === request) {
+        pendingKnowledgeBacklinkReads.delete(fileId);
       }
     });
 
-  pendingVaultBacklinkReads.set(fileId, request);
+  pendingKnowledgeBacklinkReads.set(fileId, request);
   return request;
 }
 
-function moveCachedVaultDocument(oldId: string, newId: string) {
-  const cached = cachedVaultDocuments.get(oldId);
+function moveCachedKnowledgeDocument(oldId: string, newId: string) {
+  const cached = cachedKnowledgeDocuments.get(oldId);
   if (cached) {
-    cachedVaultDocuments.delete(oldId);
-    cacheVaultDocument(newId, cached);
+    cachedKnowledgeDocuments.delete(oldId);
+    cacheKnowledgeDocument(newId, cached);
   }
 
-  pendingVaultDocumentReads.delete(oldId);
-  cachedVaultBacklinks.delete(oldId);
-  cachedVaultBacklinks.delete(newId);
-  pendingVaultBacklinkReads.delete(oldId);
-  pendingVaultBacklinkReads.delete(newId);
+  pendingKnowledgeDocumentReads.delete(oldId);
+  cachedKnowledgeBacklinks.delete(oldId);
+  cachedKnowledgeBacklinks.delete(newId);
+  pendingKnowledgeBacklinkReads.delete(oldId);
+  pendingKnowledgeBacklinkReads.delete(newId);
 }
 
 // ── Frontmatter ───────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ function EditableTitle({ fileName, fileId, onRenamed }: { fileName: string; file
     const newName = trimmed.endsWith('.md') ? trimmed : `${trimmed}.md`;
     try {
       const updated = await knowledgeApi.rename(fileId, newName);
-      moveCachedVaultDocument(fileId, updated.id);
+      moveCachedKnowledgeDocument(fileId, updated.id);
       emitKBEvent('kb:file-renamed', { oldId: fileId, newId: updated.id });
       onRenamed(updated.id);
     } catch {
@@ -357,7 +357,7 @@ function EditableTitle({ fileName, fileId, onRenamed }: { fileName: string; file
 
 function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (id: string) => void }) {
   const contentId = useId();
-  const [backlinks, setBacklinks] = useState<VaultBacklink[]>(() => readCachedBacklinks(fileId) ?? []);
+  const [backlinks, setBacklinks] = useState<KnowledgeBacklink[]>(() => readCachedBacklinks(fileId) ?? []);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(() => readCachedBacklinks(fileId) !== null);
   const [open, setOpen] = useState(false);
@@ -385,7 +385,7 @@ function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (i
     requestIdRef.current = requestId;
     setLoading(true);
     try {
-      const nextBacklinks = await loadVaultBacklinks(fileId);
+      const nextBacklinks = await loadKnowledgeBacklinks(fileId);
       if (requestIdRef.current !== requestId) {
         return;
       }
@@ -458,14 +458,14 @@ function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (i
 
 // ── Editor ────────────────────────────────────────────────────────────────────
 
-export interface VaultEditorProps {
+export interface KnowledgeEditorProps {
   fileId: string | null;
   fileName?: string;
   onFileNavigate: (id: string) => void;
   onFileRenamed: (oldId: string, newId: string) => void;
 }
 
-export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }: VaultEditorProps) {
+export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRenamed }: KnowledgeEditorProps) {
   const [frontmatter, setFrontmatter] = useState<Frontmatter>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -484,9 +484,9 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
   // Trigger a reload when the file changes externally
   const [reloadCounter, setReloadCounter] = useState(0);
 
-  // Vault entries for wikilink autocomplete — refresh on kb events
-  const [allEntries, setAllEntries] = useState<VaultEntry[]>([]);
-  const entriesRef = useRef<VaultEntry[]>([]);
+  // Knowledge entries for wikilink autocomplete — refresh on kb events
+  const [allEntries, setAllEntries] = useState<KnowledgeEntry[]>([]);
+  const entriesRef = useRef<KnowledgeEntry[]>([]);
   const loadEntries = useCallback(async () => {
     try {
       const { files } = await knowledgeApi.listFiles();
@@ -529,10 +529,10 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
           return;
         }
         // Clear the cached document so the load effect re-fetches
-        cachedVaultDocuments.delete(fileIdRef.current);
-        pendingVaultDocumentReads.delete(fileIdRef.current);
-        cachedVaultBacklinks.delete(fileIdRef.current);
-        pendingVaultBacklinkReads.delete(fileIdRef.current);
+        cachedKnowledgeDocuments.delete(fileIdRef.current);
+        pendingKnowledgeDocumentReads.delete(fileIdRef.current);
+        cachedKnowledgeBacklinks.delete(fileIdRef.current);
+        pendingKnowledgeBacklinkReads.delete(fileIdRef.current);
         setReloadCounter((c) => c + 1);
       }
     });
@@ -629,7 +629,7 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
   });
 
   const applyLoadedDocument = useCallback(
-    (nextFileId: string, nextDocument: CachedVaultDocument) => {
+    (nextFileId: string, nextDocument: CachedKnowledgeDocument) => {
       currentFileId.current = null;
       setFrontmatter(nextDocument.frontmatter);
       fmRef.current = nextDocument.frontmatter;
@@ -681,14 +681,14 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
     setSaveError(null);
     setRevision(0);
 
-    const cached = readCachedVaultDocument(fileId);
+    const cached = readCachedKnowledgeDocument(fileId);
     if (cached) {
       applyLoadedDocument(fileId, cached);
       setLoading(false);
       return;
     }
 
-    loadVaultDocument(fileId)
+    loadKnowledgeDocument(fileId)
       .then((nextDocument) => {
         if (loadRequestIdRef.current !== requestId) {
           return;
@@ -728,7 +728,7 @@ export function VaultEditor({ fileId, fileName, onFileNavigate, onFileRenamed }:
 
   const handleSaved = useCallback(() => {
     if (fileId) {
-      cacheVaultDocument(fileId, {
+      cacheKnowledgeDocument(fileId, {
         body: readMarkdownFromEditor(editor),
         frontmatter: fmRef.current,
         rawFrontmatter: rawFrontmatterRef.current,

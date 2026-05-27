@@ -168,9 +168,9 @@ async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<Instr
   const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot, cwd: ctx.cwd });
   const variables: SystemPromptTemplateVariables = {
     repo_root: resolved.repoRoot,
-    vault_root: resolved.vaultRoot,
-    agents_edit_target: getDurableAgentFilePath(resolved.vaultRoot),
-    skills_dir: getDurableSkillsDir(resolved.vaultRoot),
+    knowledge_root: resolved.knowledgeRoot,
+    agents_edit_target: getDurableAgentFilePath(resolved.knowledgeRoot),
+    skills_dir: getDurableSkillsDir(resolved.knowledgeRoot),
     tasks_dir: getDurableTasksDir(getSyncRoot(getStateRoot())),
     docs_dir: `${resolved.repoRoot}/docs`,
     docs_index: `${resolved.repoRoot}/docs/README.md`,

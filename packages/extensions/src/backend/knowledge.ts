@@ -22,7 +22,7 @@ export function getDurableAgentFilePath<TResult = unknown>(..._args: unknown[]):
   return unresolved();
 }
 
-export function getVaultRoot<TResult = unknown>(..._args: unknown[]): TResult {
+export function getKnowledgeRoot<TResult = unknown>(..._args: unknown[]): TResult {
   return unresolved();
 }
 

@@ -2,8 +2,8 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type SkillSource = 'extension' | 'vault' | 'project' | string;
-type SkillTab = 'all' | 'extension' | 'vault' | 'enabled' | 'disabled';
+type SkillSource = 'extension' | 'knowledge' | 'project' | string;
+type SkillTab = 'all' | 'extension' | 'knowledge' | 'enabled' | 'disabled';
 
 interface SkillItem {
   id: string;
@@ -23,14 +23,14 @@ interface ListSkillsResult {
 const TABS: Array<{ id: SkillTab; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'extension', label: 'Extensions' },
-  { id: 'vault', label: 'Vault' },
+  { id: 'knowledge', label: 'Knowledge' },
   { id: 'enabled', label: 'Enabled' },
   { id: 'disabled', label: 'Disabled' },
 ];
 
 function sourceLabel(skill: SkillItem): string {
   if (skill.source === 'extension') return 'Extension';
-  if (skill.source === 'vault') return 'Vault';
+  if (skill.source === 'knowledge') return 'Knowledge';
   if (skill.source === 'project') return 'Project';
   return skill.sourceLabel || skill.source;
 }
@@ -62,7 +62,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     () => ({
       all: skills.length,
       extension: skills.filter((skill) => skill.source === 'extension').length,
-      vault: skills.filter((skill) => skill.source === 'vault' || skill.source === 'project').length,
+      knowledge: skills.filter((skill) => skill.source === 'knowledge' || skill.source === 'project').length,
       enabled: skills.filter((skill) => skill.enabled).length,
       disabled: skills.filter((skill) => !skill.enabled).length,
     }),
@@ -75,7 +75,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       const matchesTab =
         activeTab === 'all' ||
         (activeTab === 'extension' && skill.source === 'extension') ||
-        (activeTab === 'vault' && (skill.source === 'vault' || skill.source === 'project')) ||
+        (activeTab === 'knowledge' && (skill.source === 'knowledge' || skill.source === 'project')) ||
         (activeTab === 'enabled' && skill.enabled) ||
         (activeTab === 'disabled' && !skill.enabled);
       if (!matchesTab) return false;

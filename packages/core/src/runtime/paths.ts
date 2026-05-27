@@ -6,7 +6,7 @@
  *
  * Environment variables for override:
  * - NEON_PILOT_STATE_ROOT: Override the base state directory
- * - NEON_PILOT_VAULT_ROOT: Override the durable vault root
+ * - NEON_PILOT_KNOWLEDGE_ROOT: Override the durable knowledge root
  * - NEON_PILOT_AUTH_PATH: Override auth directory
  * - NEON_PILOT_SESSION_PATH: Override session directory
  * - NEON_PILOT_CACHE_PATH: Override cache directory
@@ -100,7 +100,7 @@ function getMachineConfigFilePathForRuntimePaths(options: RuntimePathMachineConf
 }
 
 function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOptions = {}): {
-  vaultRoot?: string;
+  knowledgeRoot?: string;
 } {
   const filePath = getMachineConfigFilePathForRuntimePaths(options);
   if (!existsSync(filePath)) {
@@ -113,11 +113,15 @@ function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOpti
       return {};
     }
 
-    const record = parsed as { vaultRoot?: unknown };
-    const vaultRoot =
-      typeof record.vaultRoot === 'string' && record.vaultRoot.trim().length > 0 ? expandHomePath(record.vaultRoot.trim()) : undefined;
+    const record = parsed as { knowledgeRoot?: unknown; vaultRoot?: unknown };
+    const knowledgeRoot =
+      typeof record.knowledgeRoot === 'string' && record.knowledgeRoot.trim().length > 0
+        ? expandHomePath(record.knowledgeRoot.trim())
+        : typeof record.vaultRoot === 'string' && record.vaultRoot.trim().length > 0
+          ? expandHomePath(record.vaultRoot.trim())
+          : undefined;
     return {
-      ...(vaultRoot ? { vaultRoot } : {}),
+      ...(knowledgeRoot ? { knowledgeRoot } : {}),
     };
   } catch {
     return {};
@@ -127,25 +131,28 @@ function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOpti
 /**
  * Default durable knowledge vault root directory.
  *
- * Durable notes, projects, and skills live in the external vault by default.
+ * Durable notes, projects, and skills live in the external knowledge root by default.
  * Mutable profile config lives separately under machine-local config.
  */
-export function getDefaultVaultRoot(): string {
+export function getDefaultKnowledgeRoot(): string {
   return join(homedir(), 'Documents', 'neon-pilot');
 }
 
 /**
- * Get the configured durable knowledge vault root directory.
+ * Get the configured durable knowledge root directory.
  */
-export function getVaultRoot(options: RuntimePathMachineConfigOptions = {}): string {
-  const explicit = process.env.NEON_PILOT_VAULT_ROOT;
+export function getKnowledgeRoot(options: RuntimePathMachineConfigOptions = {}): string {
+  const explicit = process.env.NEON_PILOT_KNOWLEDGE_ROOT;
   if (explicit && explicit.trim().length > 0) {
     return expandHomePath(explicit.trim());
   }
 
   const configured = readMachineConfigRuntimeOverrides(options);
-  return configured.vaultRoot ?? getDefaultVaultRoot();
+  return configured.knowledgeRoot ?? getDefaultKnowledgeRoot();
 }
+
+export const getDefaultVaultRoot = getDefaultKnowledgeRoot;
+export const getVaultRoot = getKnowledgeRoot;
 
 /**
  * Default mutable runtime config root directory.

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { VaultEntry, VaultFileListResult } from '@neon-pilot/extensions/data';
+import type { KnowledgeEntry, KnowledgeFileListResult } from '@neon-pilot/extensions/data';
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { emitKBEvent } from './knowledgeEvents';
-import { VaultFileTree } from './VaultFileTree';
+import { KnowledgeFileTree } from './KnowledgeFileTree';
 
 const KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY = 'pa:knowledge-open-file-ids';
 const KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY = 'pa:knowledge-tree-expanded-folders';
@@ -20,7 +20,7 @@ const apiMocks = vi.hoisted(() => ({
   search: vi.fn(),
   syncKnowledgeBase: vi.fn(),
   tree: vi.fn(),
-  vaultFiles: vi.fn(),
+  knowledgeFiles: vi.fn(),
   writeFile: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ vi.mock('@neon-pilot/extensions/data', () => ({
           case 'sync':
             return apiMocks.syncKnowledgeBase();
           case 'knowledgeListFiles':
-            return apiMocks.vaultFiles();
+            return apiMocks.knowledgeFiles();
           case 'knowledgeCreateFolder':
             return apiMocks.createFolder(input.id);
           case 'knowledgeDeleteFile':
@@ -85,7 +85,7 @@ function createStorage(): Storage {
 const mountedRoots: Root[] = [];
 const UPDATED_AT = '2026-04-22T12:00:00.000Z';
 
-function createEntry(id: string, kind: VaultEntry['kind']): VaultEntry {
+function createEntry(id: string, kind: KnowledgeEntry['kind']): KnowledgeEntry {
   const trimmed = id.endsWith('/') ? id.slice(0, -1) : id;
   const name = trimmed.split('/').filter(Boolean).pop() ?? trimmed;
   return {
@@ -98,8 +98,8 @@ function createEntry(id: string, kind: VaultEntry['kind']): VaultEntry {
   };
 }
 
-const TREE: VaultFileListResult = {
-  root: '/vault',
+const TREE: KnowledgeFileListResult = {
+  root: '/knowledge',
   files: [
     createEntry('notes/', 'folder'),
     createEntry('notes/work/', 'folder'),
@@ -119,7 +119,7 @@ function renderTree() {
   act(() => {
     root.render(
       <MemoryRouter>
-        <VaultFileTree activeFileId={null} onFileSelect={onFileSelect} />
+        <KnowledgeFileTree activeFileId={null} onFileSelect={onFileSelect} />
       </MemoryRouter>,
     );
   });
@@ -132,7 +132,7 @@ function ManagedTree({ initialActiveFileId = null }: { initialActiveFileId?: str
   const [activeFileId, setActiveFileId] = React.useState<string | null>(initialActiveFileId);
   return (
     <MemoryRouter>
-      <VaultFileTree activeFileId={activeFileId} onFileSelect={setActiveFileId} />
+      <KnowledgeFileTree activeFileId={activeFileId} onFileSelect={setActiveFileId} />
     </MemoryRouter>
   );
 }
@@ -210,7 +210,7 @@ async function flushAsyncWork() {
   });
 }
 
-describe('VaultFileTree', () => {
+describe('KnowledgeFileTree', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.knowledgeBase.mockReset();
@@ -218,7 +218,7 @@ describe('VaultFileTree', () => {
       repoUrl: 'https://github.com/user/knowledge-base.git',
       branch: 'main',
       configured: true,
-      effectiveRoot: '/vault',
+      effectiveRoot: '/knowledge',
       managedRoot: '/runtime/knowledge-base/repo',
       usesManagedRoot: true,
       syncStatus: 'idle',
@@ -231,14 +231,14 @@ describe('VaultFileTree', () => {
       recoveredEntryCount: 0,
       recoveryDir: '/runtime/knowledge-base/recovered',
     });
-    apiMocks.vaultFiles.mockReset();
-    apiMocks.vaultFiles.mockResolvedValue(TREE);
+    apiMocks.knowledgeFiles.mockReset();
+    apiMocks.knowledgeFiles.mockResolvedValue(TREE);
     apiMocks.syncKnowledgeBase.mockReset();
     apiMocks.syncKnowledgeBase.mockResolvedValue({
       repoUrl: 'https://github.com/user/knowledge-base.git',
       branch: 'main',
       configured: true,
-      effectiveRoot: '/vault',
+      effectiveRoot: '/knowledge',
       managedRoot: '/runtime/knowledge-base/repo',
       usesManagedRoot: true,
       syncStatus: 'idle',
@@ -267,7 +267,7 @@ describe('VaultFileTree', () => {
       repoUrl: 'https://github.com/user/knowledge-base.git',
       branch: 'main',
       configured: true,
-      effectiveRoot: '/vault',
+      effectiveRoot: '/knowledge',
       managedRoot: '/runtime/knowledge-base/repo',
       usesManagedRoot: true,
       syncStatus: 'idle',
@@ -295,7 +295,7 @@ describe('VaultFileTree', () => {
 
     expect(apiMocks.syncKnowledgeBase).toHaveBeenCalledTimes(1);
     expect(apiMocks.knowledgeBase).toHaveBeenCalledTimes(2);
-    expect(apiMocks.vaultFiles).toHaveBeenCalledTimes(2);
+    expect(apiMocks.knowledgeFiles).toHaveBeenCalledTimes(2);
   });
 
   it('stays empty when managed sync is off', async () => {
@@ -303,7 +303,7 @@ describe('VaultFileTree', () => {
       repoUrl: '',
       branch: 'main',
       configured: false,
-      effectiveRoot: '/vault',
+      effectiveRoot: '/knowledge',
       managedRoot: '/runtime/knowledge-base/repo',
       usesManagedRoot: false,
       syncStatus: 'disabled',
@@ -317,7 +317,7 @@ describe('VaultFileTree', () => {
     expect(container.textContent).toContain('Connect a git repo to use Knowledge');
     expect(container.textContent).toContain('Neon Pilot needs a git repo to store and sync durable docs.');
     expect(queryInShadowRoots(container, 'button[aria-label="New file"]')).toBeNull();
-    expect(apiMocks.vaultFiles).not.toHaveBeenCalled();
+    expect(apiMocks.knowledgeFiles).not.toHaveBeenCalled();
   });
 
   it('persists expanded folders and restores them after remount', async () => {
@@ -344,7 +344,7 @@ describe('VaultFileTree', () => {
     await flushAsyncWork();
     await flushAsyncWork();
 
-    expect(apiMocks.vaultFiles).toHaveBeenCalledTimes(2);
+    expect(apiMocks.knowledgeFiles).toHaveBeenCalledTimes(2);
     expect(getButton(secondRender.container, 'todo.md')).toBeTruthy();
   });
 

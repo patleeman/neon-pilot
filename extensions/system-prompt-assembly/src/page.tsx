@@ -286,7 +286,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           <div>
             <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">System Prompt</h2>
             <p className="text-[14px] leading-6 text-secondary">
-              Customize the generated runtime instruction template. Nunjucks variables such as vault_root and skills_dir are available.
+              Customize the generated runtime instruction template. Nunjucks variables such as knowledge_root and skills_dir are available.
             </p>
           </div>
           {systemPromptTemplateLoading && !systemPromptTemplateState ? (

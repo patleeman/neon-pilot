@@ -33,7 +33,7 @@ function createTempRuntimeConfigRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-config-'));
   const runtimeConfigRoot = join(root, 'sync', '_profiles');
   mkdirSync(runtimeConfigRoot, { recursive: true });
-  process.env.NEON_PILOT_VAULT_ROOT = join(root, 'sync');
+  process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(root, 'sync');
   tempDirs.push(root);
   return runtimeConfigRoot;
 }
@@ -103,7 +103,7 @@ describe('runtime resource loader', () => {
     tempDirs.push(configRoot);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
-    writeFile(join(syncRoot, 'AGENTS.md'), '# Vault Root\n');
+    writeFile(join(syncRoot, 'AGENTS.md'), '# Knowledge Root\n');
     writeFile(join(repo, 'custom-instructions.md'), '# Custom Instructions\n');
     writeFile(
       join(configRoot, 'config.json'),
@@ -171,8 +171,8 @@ describe('runtime resource loader', () => {
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(
-      join(syncRoot, 'skills', 'vault-skill', 'SKILL.md'),
-      '---\nname: vault-skill\ndescription: Vault skill\n---\n# Vault Skill\n',
+      join(syncRoot, 'skills', 'knowledge-skill', 'SKILL.md'),
+      '---\nname: knowledge-skill\ndescription: Knowledge skill\n---\n# Knowledge Skill\n',
     );
     writeFile(
       join(externalSkillsDir, 'machine-skill', 'SKILL.md'),
@@ -193,7 +193,7 @@ describe('runtime resource loader', () => {
     });
 
     expect(resolved.skillDirs).toEqual(
-      expect.arrayContaining([join(syncRoot, 'skills', 'vault-skill'), join(externalSkillsDir, 'machine-skill')]),
+      expect.arrayContaining([join(syncRoot, 'skills', 'knowledge-skill'), join(externalSkillsDir, 'machine-skill')]),
     );
   });
 
@@ -247,7 +247,7 @@ metadata:
     const syncRoot = join(runtimeConfigRoot, '..');
     const runtime = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-'));
     tempDirs.push(runtime);
-    process.env.NEON_PILOT_VAULT_ROOT = syncRoot;
+    process.env.NEON_PILOT_KNOWLEDGE_ROOT = syncRoot;
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(join(repo, 'defaults/agent/APPEND_SYSTEM.md'), 'shared append\n');
@@ -288,7 +288,7 @@ description: Commit and push the agent's current work.
     expect(runtimePrompt).not.toContain('<available_skills>');
     expect(runtimePrompt).not.toContain(join(syncRoot, 'skills', 'checkpoint', 'SKILL.md'));
     expect(runtimePrompt).not.toContain("Commit and push the agent's current work.");
-    expect(runtimePrompt).toContain(`Vault root: ${syncRoot}`);
+    expect(runtimePrompt).toContain(`Primary knowledge path: ${syncRoot}`);
     expect(readFileSync(join(runtime, 'AGENTS.md'), 'utf-8')).toContain('# Durable shared');
     expect(runtimeSettings.defaultModel).toBe('gpt-5.4');
     expect(runtimeSettings.defaultProvider).toBe('openai-codex');
@@ -362,7 +362,7 @@ description: Commit your work.
 
     const resolved = resolveRuntimeResources('default', {
       repoRoot: repo,
-      vaultRoot: syncRoot,
+      knowledgeRoot: syncRoot,
       runtimeConfigRoot,
       localProfileDir: join(repo, '.local-profile'),
     });

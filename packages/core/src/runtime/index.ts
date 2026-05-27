@@ -9,6 +9,7 @@
 export {
   getConfigRoot,
   getDefaultConfigRoot,
+  getDefaultKnowledgeRoot,
   getDefaultLocalProfileDir,
   getDefaultLocalRuntimeConfigDir,
   getDefaultProfilesRoot,
@@ -35,6 +36,7 @@ export {
   getDurableSettingsDir,
   getDurableSkillsDir,
   getDurableTasksDir,
+  getKnowledgeRoot,
   getLocalProfileDir,
   getLocalRuntimeConfigDir,
   getPiAgentRuntimeDir,

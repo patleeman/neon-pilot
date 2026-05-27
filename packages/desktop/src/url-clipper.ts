@@ -53,7 +53,7 @@ export async function importClipboardUrlToKnowledge(input: {
   const url = normalizeClipboardUrl(input.clipboardText);
   await input.host.ensureActiveHostRunning();
   const controller = input.host.getActiveHostController();
-  const actionPath = await resolveExtensionActionPathByRouteCapability(controller, 'knowledgeFiles', 'vaultImportSharedItem');
+  const actionPath = await resolveExtensionActionPathByRouteCapability(controller, 'knowledgeFiles', 'knowledgeImportSharedItem');
   const response = await controller.dispatchApiRequest({
     method: 'POST',
     path: actionPath,
