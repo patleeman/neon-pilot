@@ -92,17 +92,17 @@ vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
     invokeExtensionAction: async (_extensionId: string, actionId: string, input: Record<string, unknown> = {}) => {
       const result = await (async () => {
         switch (actionId) {
-          case 'vaultReadFile':
+          case 'knowledgeReadFile':
             return readFileMock(input.id);
-          case 'vaultBacklinks':
+          case 'knowledgeBacklinks':
             return backlinksMock(input.id);
-          case 'vaultListFiles':
+          case 'knowledgeListFiles':
             return vaultFilesMock();
-          case 'vaultWriteFile':
+          case 'knowledgeWriteFile':
             return writeFileMock(input.id, input.content);
-          case 'vaultRename':
+          case 'knowledgeRename':
             return renameMock(input.id, input.newName);
-          case 'vaultUploadImage':
+          case 'knowledgeUploadImage':
             return uploadImageMock(input.filename, input.dataUrl);
           default:
             throw new Error(`Unhandled knowledge action ${actionId}`);
@@ -112,7 +112,7 @@ vi.mock('../../../../packages/desktop/ui/src/client/api', () => ({
     },
   },
   vaultApi: {
-    assetUrl: (id: string) => `/api/vault/asset?id=${encodeURIComponent(id)}`,
+    assetUrl: (id: string) => `/api/knowledge/asset?id=${encodeURIComponent(id)}`,
   },
 }));
 

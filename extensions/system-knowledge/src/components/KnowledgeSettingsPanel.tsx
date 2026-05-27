@@ -17,13 +17,16 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
   } = useApi(knowledgeApi.state, 'knowledge-settings-knowledge-base');
   const [repoUrlDraft, setRepoUrlDraft] = useState('');
   const [branchDraft, setBranchDraft] = useState('main');
+  const [directoriesDraft, setDirectoriesDraft] = useState('');
   const [action, setAction] = useState<'save' | 'sync' | null>(null);
   const [actionStartedAt, setActionStartedAt] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty = knowledgeBaseState
-    ? repoUrlDraft.trim() !== knowledgeBaseState.repoUrl || branchDraft.trim() !== knowledgeBaseState.branch
+    ? repoUrlDraft.trim() !== knowledgeBaseState.repoUrl ||
+      branchDraft.trim() !== knowledgeBaseState.branch ||
+      directoriesDraft.trim() !== (knowledgeBaseState.directories ?? []).join('\n')
     : false;
   const isOnboarding = variant === 'onboarding';
   const syncPresentation = useMemo(
@@ -52,8 +55,9 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
     if (knowledgeBaseState) {
       setRepoUrlDraft(knowledgeBaseState.repoUrl);
       setBranchDraft(knowledgeBaseState.branch);
+      setDirectoriesDraft((knowledgeBaseState.directories ?? []).join('\n'));
     }
-  }, [knowledgeBaseState?.repoUrl, knowledgeBaseState?.branch]);
+  }, [knowledgeBaseState?.repoUrl, knowledgeBaseState?.branch, knowledgeBaseState?.directories]);
 
   useEffect(() => {
     if (action === null || actionStartedAt === null) {
@@ -71,13 +75,19 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
     };
   }, [action, actionStartedAt]);
 
-  async function save(nextInput?: { repoUrl?: string | null; branch?: string | null }) {
+  async function save(nextInput?: { repoUrl?: string | null; branch?: string | null; directories?: string[] | null }) {
     if (!knowledgeBaseState || action !== null) {
       return;
     }
 
     const repoUrl = typeof nextInput?.repoUrl === 'string' ? nextInput.repoUrl.trim() : repoUrlDraft.trim();
     const branch = typeof nextInput?.branch === 'string' ? nextInput.branch.trim() : branchDraft.trim();
+    const directories =
+      nextInput?.directories ??
+      directoriesDraft
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter(Boolean);
     if (!nextInput && !dirty) {
       return;
     }
@@ -87,9 +97,10 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
     setAction('save');
 
     try {
-      const saved = await knowledgeApi.updateState({ repoUrl: repoUrl || null, branch: branch || null });
+      const saved = await knowledgeApi.updateState({ repoUrl: repoUrl || null, branch: branch || null, directories });
       setRepoUrlDraft(saved.repoUrl);
       setBranchDraft(saved.branch);
+      setDirectoriesDraft((saved.directories ?? []).join('\n'));
       await refetchKnowledgeBase({ resetLoading: false });
       if (isOnboarding && saved.configured) {
         window.location.reload();
@@ -137,7 +148,7 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [action, branchDraft, dirty, isOnboarding, knowledgeBaseState, repoUrlDraft]);
+  }, [action, branchDraft, directoriesDraft, dirty, isOnboarding, knowledgeBaseState, repoUrlDraft]);
 
   if (knowledgeBaseLoading && !knowledgeBaseState) {
     return <p className="ui-card-meta">Loading knowledge base…</p>;
@@ -188,6 +199,27 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
             </p>
           ) : null}
         </div>
+        {isOnboarding ? null : (
+          <div className="space-y-1.5">
+            <label className="ui-card-meta" htmlFor="settings-knowledge-base-directories">
+              Local directories
+            </label>
+            <textarea
+              id="settings-knowledge-base-directories"
+              name="knowledge-base-directories"
+              value={directoriesDraft}
+              onChange={(event) => {
+                setDirectoriesDraft(event.target.value);
+                if (saveError) setSaveError(null);
+              }}
+              className={`${INPUT_CLASS} min-h-20 min-w-0 flex-1 font-mono text-[13px]`}
+              placeholder={'/Users/you/Notes\n/Users/you/Projects/docs'}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={action !== null}
+            />
+          </div>
+        )}
         <div className="space-y-1.5">
           <label
             className={isOnboarding ? 'text-[12px] font-semibold text-secondary' : 'ui-card-meta'}
@@ -213,7 +245,13 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         {isOnboarding ? null : (
           <>
             <p className="ui-card-meta break-all">
-              Local mirror · <span className="font-mono text-[11px]">{knowledgeBaseState.managedRoot}</span>
+              Managed mirror · <span className="font-mono text-[11px]">{knowledgeBaseState.managedRoot}</span>
+            </p>
+            <p className="ui-card-meta break-all">
+              Agent-visible knowledge paths ·{' '}
+              <span className="font-mono text-[11px]">
+                {(knowledgeBaseState.effectiveRoots ?? [knowledgeBaseState.effectiveRoot]).join(', ')}
+              </span>
             </p>
             <p className={cx('ui-card-meta break-all', action === null && syncPresentation.toneClass)}>
               {actionProgressText ?? syncPresentation.text}
@@ -262,7 +300,14 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
               onClick={() => {
                 setRepoUrlDraft('');
                 setBranchDraft('main');
-                void save({ repoUrl: '', branch: 'main' });
+                void save({
+                  repoUrl: '',
+                  branch: 'main',
+                  directories: directoriesDraft
+                    .split(/\r?\n/u)
+                    .map((line) => line.trim())
+                    .filter(Boolean),
+                });
               }}
               disabled={action !== null || !knowledgeBaseState.configured}
               className={ACTION_BUTTON_CLASS}
@@ -273,8 +318,8 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         )}
         {isOnboarding ? null : (
           <p className="ui-card-meta">
-            Neon Pilot keeps a local clone under runtime state, syncs it in the background, and treats git as the backing store. Use an
-            SSH/HTTPS remote or a local git repository path. Folder and file @ mentions read from the local mirror.
+            Neon Pilot can index a managed git mirror and any local directories listed above. Folder and file @ mentions read from all
+            agent-visible knowledge paths.
           </p>
         )}
       </form>

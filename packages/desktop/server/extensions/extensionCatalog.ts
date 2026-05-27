@@ -12,7 +12,49 @@ interface CatalogSeed {
   id: string;
   name: string;
   description: string;
+  packageType?: MarketplacePackageType;
+  ecosystem?: MarketplaceEcosystem;
+  marketplaceSourceId?: string;
 }
+
+export type MarketplaceEcosystem = 'neon-pilot' | 'codex' | 'claude';
+export type MarketplacePackageType = 'extension' | 'skill' | 'instruction-pack' | 'agent' | 'template';
+
+export interface MarketplaceSource {
+  id: string;
+  name: string;
+  ecosystem: MarketplaceEcosystem;
+  description: string;
+  supportedPackageTypes: MarketplacePackageType[];
+  installStatus: 'supported' | 'planned';
+}
+
+const MARKETPLACE_SOURCES: MarketplaceSource[] = [
+  {
+    id: 'neon-pilot-release',
+    name: 'Neon Pilot Add-ons',
+    ecosystem: 'neon-pilot',
+    description: 'First-party Neon Pilot extension bundles published with the current app release.',
+    supportedPackageTypes: ['extension'],
+    installStatus: 'supported',
+  },
+  {
+    id: 'codex',
+    name: 'Codex Marketplace',
+    ecosystem: 'codex',
+    description: 'Codex-style capability packages such as skills, AGENTS.md instruction packs, templates, and agents.',
+    supportedPackageTypes: ['skill', 'instruction-pack', 'agent', 'template'],
+    installStatus: 'planned',
+  },
+  {
+    id: 'claude',
+    name: 'Claude Marketplace',
+    ecosystem: 'claude',
+    description: 'Claude-style capability packages such as SKILL.md skill folders, instruction packs, templates, and agents.',
+    supportedPackageTypes: ['skill', 'instruction-pack', 'agent', 'template'],
+    installStatus: 'planned',
+  },
+];
 
 const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
   {
@@ -85,7 +127,11 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
 export interface InstallableExtensionCatalogItem extends CatalogSeed {
   version: string;
   tag: string;
-  bundleUrl: string;
+  packageType: MarketplacePackageType;
+  ecosystem: MarketplaceEcosystem;
+  marketplaceSourceId: string;
+  bundleUrl?: string;
+  packageSource?: string;
   defaultEnabled: boolean;
   source: 'github-release';
   installed: boolean;
@@ -126,30 +172,38 @@ export function listInstallableExtensionCatalog(): {
   ok: true;
   version: string;
   tag: string;
+  marketplaceSources: MarketplaceSource[];
   extensions: InstallableExtensionCatalogItem[];
+  packages: InstallableExtensionCatalogItem[];
 } {
   const version = resolveInstalledAppVersion();
   const tag = `v${version}`;
   const summaries = listExtensionInstallSummaries();
   const installedById = new Map(summaries.map((summary) => [summary.id, summary]));
+  const packages: InstallableExtensionCatalogItem[] = INSTALLABLE_EXTENSION_CATALOG.map((item) => {
+    const installed = installedById.get(item.id);
+    return {
+      ...item,
+      version,
+      tag,
+      packageType: item.packageType ?? 'extension',
+      ecosystem: item.ecosystem ?? 'neon-pilot',
+      marketplaceSourceId: item.marketplaceSourceId ?? 'neon-pilot-release',
+      bundleUrl: bundleUrlFor(item.id, version),
+      defaultEnabled: false,
+      source: 'github-release',
+      installed: Boolean(installed),
+      ...(installed?.version ? { installedVersion: installed.version } : {}),
+      ...(installed ? { enabled: installed.enabled } : {}),
+    };
+  });
   return {
     ok: true,
     version,
     tag,
-    extensions: INSTALLABLE_EXTENSION_CATALOG.map((item) => {
-      const installed = installedById.get(item.id);
-      return {
-        ...item,
-        version,
-        tag,
-        bundleUrl: bundleUrlFor(item.id, version),
-        defaultEnabled: false,
-        source: 'github-release' as const,
-        installed: Boolean(installed),
-        ...(installed?.version ? { installedVersion: installed.version } : {}),
-        ...(installed ? { enabled: installed.enabled } : {}),
-      };
-    }),
+    marketplaceSources: MARKETPLACE_SOURCES,
+    extensions: packages,
+    packages,
   };
 }
 
@@ -202,6 +256,7 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
   if (!id) throw new Error('id is required.');
   const item = listInstallableExtensionCatalog().extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
+  if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   if (findExtensionEntry(id)) throw new Error(`Extension ${id} is already installed.`);
   return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
 }

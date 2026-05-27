@@ -42,7 +42,7 @@ type Props = {
 type State = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 /**
- * Subscribe to server-sent vault filesystem watch events.
+ * Subscribe to server-sent knowledge filesystem watch events.
  *
  * Uses EventSource for long-lived push. When the EventSource drops (network
  * blip, server restart, sleep/wake), the native EventSource auto-reconnect

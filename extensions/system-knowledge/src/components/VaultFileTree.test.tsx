@@ -33,19 +33,19 @@ vi.mock('@neon-pilot/extensions/data', () => ({
             return apiMocks.knowledgeBase();
           case 'sync':
             return apiMocks.syncKnowledgeBase();
-          case 'vaultListFiles':
+          case 'knowledgeListFiles':
             return apiMocks.vaultFiles();
-          case 'vaultCreateFolder':
+          case 'knowledgeCreateFolder':
             return apiMocks.createFolder(input.id);
-          case 'vaultDeleteFile':
+          case 'knowledgeDeleteFile':
             return apiMocks.deleteFile(input.id);
-          case 'vaultMove':
+          case 'knowledgeMove':
             return apiMocks.move(input.id, input.targetDir);
-          case 'vaultRename':
+          case 'knowledgeRename':
             return apiMocks.rename(input.id, input.newName);
-          case 'vaultSearch':
+          case 'knowledgeSearch':
             return apiMocks.search(input.q, input.limit);
-          case 'vaultWriteFile':
+          case 'knowledgeWriteFile':
             return apiMocks.writeFile(input.id, input.content);
           default:
             throw new Error(`Unhandled knowledge action ${actionId}`);

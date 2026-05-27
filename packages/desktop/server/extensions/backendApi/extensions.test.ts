@@ -1,13 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const resolver = vi.hoisted(() => ({ importServerExtensionModule: vi.fn() }));
+const resolverMocks = vi.hoisted(() => ({
+  importServerExtensionModule: vi.fn(),
+  importServerModule: vi.fn(),
+  installPackageSource: vi.fn(),
+}));
 
-vi.mock('./serverModuleResolver.js', () => resolver);
+vi.mock('./serverModuleResolver.js', () => ({
+  importServerExtensionModule: resolverMocks.importServerExtensionModule,
+  importServerModule: resolverMocks.importServerModule,
+}));
 
 describe('backendApi/extensions', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    resolverMocks.installPackageSource.mockReturnValue({
+      installed: true,
+      alreadyPresent: false,
+      source: '/packages/codex-review',
+      target: 'local',
+      settingsPath: '/profile/settings.json',
+    });
+    resolverMocks.importServerModule.mockResolvedValue({
+      installPackageSource: resolverMocks.installPackageSource,
+    });
   });
 
   it('routes runtime extension lifecycle operations to extensionLifecycle', async () => {
@@ -17,13 +34,13 @@ describe('backendApi/extensions', () => {
       createRuntimeExtension: vi.fn().mockResolvedValue({ id: 'runtime-extension' }),
       snapshotRuntimeExtension: vi.fn().mockResolvedValue({ files: [] }),
     };
-    resolver.importServerExtensionModule.mockResolvedValue(lifecycle);
+    resolverMocks.importServerExtensionModule.mockResolvedValue(lifecycle);
 
     await expect(api.buildRuntimeExtension('ext-1')).resolves.toEqual({ ok: true, action: 'build' });
     await expect(api.createRuntimeExtension({ id: 'ext-1' } as never)).resolves.toEqual({ id: 'runtime-extension' });
     await expect(api.snapshotRuntimeExtension('ext-1')).resolves.toEqual({ files: [] });
 
-    expect(resolver.importServerExtensionModule).toHaveBeenCalledWith('../extensionLifecycle.js');
+    expect(resolverMocks.importServerExtensionModule).toHaveBeenCalledWith('../extensionLifecycle.js');
     expect(lifecycle.buildRuntimeExtension).toHaveBeenCalledWith('ext-1');
     expect(lifecycle.createRuntimeExtension).toHaveBeenCalledWith({ id: 'ext-1' });
     expect(lifecycle.snapshotRuntimeExtension).toHaveBeenCalledWith('ext-1');
@@ -34,7 +51,7 @@ describe('backendApi/extensions', () => {
     const backend = { reloadExtensionBackend: vi.fn().mockResolvedValue({ reloaded: true }) };
     const doctor = { validateExtensionPackage: vi.fn().mockResolvedValue({ valid: true }) };
     const registry = { listExtensionInstallSummaries: vi.fn().mockResolvedValue([{ id: 'ext-1' }]) };
-    resolver.importServerExtensionModule.mockImplementation(async (specifier: string) => {
+    resolverMocks.importServerExtensionModule.mockImplementation(async (specifier: string) => {
       if (specifier === '../extensionBackend.js') return backend;
       if (specifier === '../extensionDoctor.js') return doctor;
       if (specifier === '../extensionRegistry.js') return registry;
@@ -48,5 +65,37 @@ describe('backendApi/extensions', () => {
     expect(backend.reloadExtensionBackend).toHaveBeenCalledWith('ext-1');
     expect(doctor.validateExtensionPackage).toHaveBeenCalledWith({ packagePath: '/tmp/ext' });
     expect(registry.listExtensionInstallSummaries).toHaveBeenCalledWith();
+  });
+
+  it('installs marketplace behavior package sources through core', async () => {
+    const { installMarketplacePackageSource } = await import('./extensions.js');
+
+    await expect(
+      installMarketplacePackageSource({
+        source: ' ./codex-review ',
+        sourceBaseDir: '/packages',
+      }),
+    ).resolves.toEqual({
+      installed: true,
+      alreadyPresent: false,
+      source: '/packages/codex-review',
+      target: 'local',
+      settingsPath: '/profile/settings.json',
+    });
+
+    expect(resolverMocks.importServerModule).toHaveBeenCalledWith('@neon-pilot/core');
+    expect(resolverMocks.installPackageSource).toHaveBeenCalledWith({
+      source: './codex-review',
+      sourceBaseDir: '/packages',
+      target: 'local',
+    });
+  });
+
+  it('rejects unknown package install targets', async () => {
+    const { installMarketplacePackageSource } = await import('./extensions.js');
+
+    await expect(installMarketplacePackageSource({ source: '/packages/review', target: 'workspace' })).rejects.toThrow(
+      'marketplace package target must be local',
+    );
   });
 });

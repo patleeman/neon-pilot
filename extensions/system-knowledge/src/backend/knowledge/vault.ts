@@ -3,13 +3,15 @@ import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 
 import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse } from '@neon-pilot/extensions';
 
-import { readEffectiveVaultRoot } from './state';
+import { readEffectiveKnowledgeRoots } from './state';
 
 export interface VaultEntry {
   id: string;
   kind: 'file' | 'folder';
   name: string;
   path: string;
+  rootId?: string;
+  rootPath?: string;
   sizeBytes: number;
   updatedAt: string;
 }
@@ -29,8 +31,18 @@ const MIME_EXTENSIONS = new Map([
   ['image/webp', 'webp'],
 ]);
 
+interface KnowledgeRoot {
+  id: string;
+  path: string;
+}
+
+async function roots(ctx: ExtensionBackendContext): Promise<KnowledgeRoot[]> {
+  const paths = await readEffectiveKnowledgeRoots(ctx);
+  return paths.map((path, index) => ({ id: index === 0 ? 'knowledge' : `knowledge-${index + 1}`, path: resolve(path) }));
+}
+
 async function root(ctx: ExtensionBackendContext): Promise<string> {
-  return resolve(await readEffectiveVaultRoot(ctx));
+  return (await roots(ctx))[0]?.path ?? '';
 }
 
 function normalizeId(id: string): string {
@@ -46,28 +58,50 @@ function inside(base: string, target: string): boolean {
   return rel === '' || (!rel.startsWith('..') && rel !== '..');
 }
 
-async function resolveId(ctx: ExtensionBackendContext, id: string): Promise<{ root: string; id: string; path: string }> {
-  const base = await root(ctx);
-  const clean = normalizeId(id);
-  const target = resolve(base, clean);
-  if (!inside(base, target)) throw new Error('invalid path');
-  return { root: base, id: clean, path: target };
+function splitRootQualifiedId(id: string): { rootId: string | null; relativeId: string } {
+  const normalized = id.replace(/\\/g, '/').replace(/^\/+/, '').trim();
+  const separator = normalized.indexOf(':');
+  if (separator <= 0) return { rootId: null, relativeId: normalized };
+  const rootId = normalized.slice(0, separator);
+  const relativeId = normalized.slice(separator + 1).replace(/^\/+/, '');
+  return { rootId, relativeId };
 }
 
-function entryFromPath(base: string, absolutePath: string): VaultEntry | null {
+function displayId(rootRef: KnowledgeRoot, rel: string, rootCount: number): string {
+  return rootCount > 1 && rootRef.id !== 'knowledge' ? `${rootRef.id}:${rel}` : rel;
+}
+
+async function resolveId(
+  ctx: ExtensionBackendContext,
+  id: string,
+): Promise<{ root: string; rootId: string; rootCount: number; id: string; path: string }> {
+  const allRoots = await roots(ctx);
+  const requested = splitRootQualifiedId(id);
+  const rootRef = requested.rootId ? allRoots.find((candidate) => candidate.id === requested.rootId) : allRoots[0];
+  if (!rootRef) throw new Error('invalid knowledge root');
+  const clean = normalizeId(requested.relativeId);
+  const base = rootRef.path;
+  const target = resolve(base, clean);
+  if (!inside(base, target)) throw new Error('invalid path');
+  return { root: base, rootId: rootRef.id, rootCount: allRoots.length, id: displayId(rootRef, clean, allRoots.length), path: target };
+}
+
+function entryFromPath(rootRef: KnowledgeRoot, absolutePath: string, rootCount = 1): VaultEntry | null {
   if (!existsSync(absolutePath)) return null;
   const stats = statSync(absolutePath);
   if (!stats.isDirectory() && !stats.isFile()) return null;
   const kind = stats.isDirectory() ? 'folder' : 'file';
   const name = basename(absolutePath);
   if (kind === 'folder' ? SKIPPED_DIRS.has(name) : SKIPPED_FILES.has(name) || name.startsWith('._')) return null;
-  const rel = relative(base, absolutePath).replace(/\\/g, '/');
+  const rel = relative(rootRef.path, absolutePath).replace(/\\/g, '/');
   if (!rel) return null;
   return {
-    id: kind === 'folder' ? `${rel}/` : rel,
+    id: displayId(rootRef, kind === 'folder' ? `${rel}/` : rel, rootCount),
     kind,
     name,
     path: rel,
+    rootId: rootRef.id,
+    rootPath: rootRef.path,
     sizeBytes: kind === 'file' ? stats.size : 0,
     updatedAt: new Date(stats.mtimeMs).toISOString(),
   };
@@ -79,10 +113,10 @@ function sorted(entries: VaultEntry[]): VaultEntry[] {
   );
 }
 
-function walkFiles(base: string): VaultEntry[] {
-  if (!existsSync(base)) return [];
+function walkFiles(base: string, rootRef: KnowledgeRoot = { id: 'knowledge', path: base }, rootCount = 1): VaultEntry[] {
+  if (!existsSync(rootRef.path)) return [];
   const out: VaultEntry[] = [];
-  const stack = [base];
+  const stack = [rootRef.path];
   while (stack.length) {
     const current = stack.pop() as string;
     for (const dirent of readdirSync(current, { withFileTypes: true })) {
@@ -90,11 +124,11 @@ function walkFiles(base: string): VaultEntry[] {
       const p = join(current, dirent.name);
       if (dirent.isDirectory()) {
         if (SKIPPED_DIRS.has(dirent.name)) continue;
-        const entry = entryFromPath(base, p);
+        const entry = entryFromPath(rootRef, p, rootCount);
         if (entry) out.push(entry);
         stack.push(p);
       } else if (dirent.isFile()) {
-        const entry = entryFromPath(base, p);
+        const entry = entryFromPath(rootRef, p, rootCount);
         if (entry) out.push(entry);
       }
     }
@@ -102,8 +136,11 @@ function walkFiles(base: string): VaultEntry[] {
   return sorted(out);
 }
 
-function collectMarkdown(base: string): VaultEntry[] {
-  return walkFiles(base).filter((entry) => entry.kind === 'file' && entry.name.toLowerCase().endsWith('.md'));
+async function collectMarkdown(ctx: ExtensionBackendContext): Promise<VaultEntry[]> {
+  const allRoots = await roots(ctx);
+  return allRoots
+    .flatMap((rootRef) => walkFiles(rootRef.path, rootRef, allRoots.length))
+    .filter((entry) => entry.kind === 'file' && entry.name.toLowerCase().endsWith('.md'));
 }
 
 function parseLimit(value: unknown): number {
@@ -138,21 +175,30 @@ async function assetPath(ctx: ExtensionBackendContext, id: string): Promise<stri
 }
 
 export async function listFiles(_input: unknown, ctx: ExtensionBackendContext) {
-  const base = await root(ctx);
-  return { root: base, files: walkFiles(base) };
+  const allRoots = await roots(ctx);
+  const primaryRoot = allRoots[0]?.path ?? '';
+  return {
+    root: primaryRoot,
+    roots: allRoots.map((rootRef) => ({ id: rootRef.id, path: rootRef.path })),
+    files: allRoots.flatMap((rootRef) => walkFiles(rootRef.path, rootRef, allRoots.length)),
+  };
 }
 
 export async function tree(input: { dir?: string } | undefined, ctx: ExtensionBackendContext) {
-  const base = await root(ctx);
-  const dir = input?.dir ? (await resolveId(ctx, input.dir)).path : base;
-  if (!inside(base, dir)) throw new Error('invalid path');
+  const allRoots = await roots(ctx);
+  const resolvedDir = input?.dir ? await resolveId(ctx, input.dir) : null;
+  const rootRef = resolvedDir
+    ? { id: resolvedDir.rootId, path: resolvedDir.root }
+    : (allRoots[0] ?? { id: 'knowledge', path: await root(ctx) });
+  const dir = resolvedDir?.path ?? rootRef.path;
+  if (!inside(rootRef.path, dir)) throw new Error('invalid path');
   const entries = existsSync(dir)
     ? readdirSync(dir, { withFileTypes: true })
         .filter((entry) => !entry.isSymbolicLink())
-        .map((entry) => entryFromPath(base, join(dir, entry.name)))
+        .map((entry) => entryFromPath(rootRef, join(dir, entry.name), allRoots.length))
         .filter((entry): entry is VaultEntry => Boolean(entry))
     : [];
-  return { entries: sorted(entries) };
+  return { root: rootRef.path, entries: sorted(entries) };
 }
 
 export async function readFile(input: { id: string }, ctx: ExtensionBackendContext) {
@@ -167,14 +213,14 @@ export async function writeFile(input: { id: string; content: string }, ctx: Ext
   mkdirSync(dirname(resolved.path), { recursive: true });
   writeFileSync(resolved.path, input.content, 'utf-8');
   ctx.ui.invalidate('knowledgeBase');
-  return entryFromPath(resolved.root, resolved.path);
+  return entryFromPath({ id: resolved.rootId, path: resolved.root }, resolved.path, resolved.rootCount);
 }
 
 export async function createFolder(input: { id: string }, ctx: ExtensionBackendContext) {
   const resolved = await resolveId(ctx, input.id);
   mkdirSync(resolved.path, { recursive: true });
   ctx.ui.invalidate('knowledgeBase');
-  return entryFromPath(resolved.root, resolved.path);
+  return entryFromPath({ id: resolved.rootId, path: resolved.root }, resolved.path, resolved.rootCount);
 }
 
 export async function deleteFile(input: { id: string }, ctx: ExtensionBackendContext) {
@@ -191,7 +237,7 @@ export async function rename(input: { id: string; newName: string }, ctx: Extens
   mkdirSync(dirname(target), { recursive: true });
   renameSync(source.path, target);
   ctx.ui.invalidate('knowledgeBase');
-  return entryFromPath(source.root, target);
+  return entryFromPath({ id: source.rootId, path: source.root }, target, source.rootCount);
 }
 
 export async function move(input: { id: string; targetDir: string }, ctx: ExtensionBackendContext) {
@@ -202,17 +248,16 @@ export async function move(input: { id: string; targetDir: string }, ctx: Extens
   mkdirSync(dirname(target), { recursive: true });
   renameSync(source.path, target);
   ctx.ui.invalidate('knowledgeBase');
-  return entryFromPath(source.root, target);
+  return entryFromPath({ id: source.rootId, path: source.root }, target, source.rootCount);
 }
 
 export async function backlinks(input: { id: string }, ctx: ExtensionBackendContext) {
-  const base = await root(ctx);
   const targetName = basename(input.id).replace(/\.md$/i, '');
   const pattern = new RegExp(`\\[\\[${targetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\|[^\\]]*)?\\]\\]`, 'gi');
   const results = [];
-  for (const entry of collectMarkdown(base)) {
+  for (const entry of await collectMarkdown(ctx)) {
     if (entry.id === input.id) continue;
-    const content = readFileSync(join(base, entry.id), 'utf-8');
+    const content = readFileSync(join(entry.rootPath ?? (await root(ctx)), entry.path), 'utf-8');
     const matchIndex = content.search(pattern);
     if (matchIndex < 0) continue;
     results.push({
@@ -228,13 +273,12 @@ export async function backlinks(input: { id: string }, ctx: ExtensionBackendCont
 }
 
 export async function search(input: { q: string; limit?: number }, ctx: ExtensionBackendContext) {
-  const base = await root(ctx);
   const q = String(input.q ?? '')
     .trim()
     .toLowerCase();
   const results = [];
-  for (const entry of collectMarkdown(base)) {
-    const content = readFileSync(join(base, entry.id), 'utf-8');
+  for (const entry of await collectMarkdown(ctx)) {
+    const content = readFileSync(join(entry.rootPath ?? (await root(ctx)), entry.path), 'utf-8');
     const title = entry.name.replace(/\.md$/i, '');
     const haystacks = [entry.id.toLowerCase(), title.toLowerCase(), content.toLowerCase()];
     const index = haystacks.findIndex((value) => !q || value.includes(q));
@@ -321,7 +365,7 @@ async function writeImportedNote(input: { ctx: ExtensionBackendContext; dir: str
   mkdirSync(dirname(resolved.path), { recursive: true });
   writeFileSync(resolved.path, `# ${input.title}\n\n${input.body}`, 'utf-8');
   input.ctx.ui.invalidate('knowledgeBase');
-  return entryFromPath(resolved.root, resolved.path);
+  return entryFromPath({ id: resolved.rootId, path: resolved.root }, resolved.path, resolved.rootCount);
 }
 
 function safeTitle(value: string) {
@@ -354,7 +398,7 @@ export async function resolvePromptReferences(input: { text: string }, ctx: Exte
           ...walkFiles(resolved.path)
             .filter((entry) => entry.kind === 'file')
             .slice(0, 20)
-            .map((entry) => ({ id: join(resolved.id, entry.id).replace(/\\/g, '/'), path: join(resolved.path, entry.id) })),
+            .map((entry) => ({ id: join(resolved.id, entry.path).replace(/\\/g, '/'), path: join(resolved.path, entry.path) })),
         );
       }
     } catch {
@@ -365,7 +409,11 @@ export async function resolvePromptReferences(input: { text: string }, ctx: Exte
     contextBlocks: files.length
       ? [{ content: files.map((file) => `## ${file.id}\n\n${readFileSync(file.path, 'utf-8')}`).join('\n\n') }]
       : [],
-    references: files.map((file) => ({ kind: 'knowledgeFile', id: file.id, path: relative(base, file.path).replace(/\\/g, '/') })),
+    references: files.map((file) => ({
+      kind: 'knowledgeFile',
+      id: file.id,
+      path: file.id || relative(base, file.path).replace(/\\/g, '/'),
+    })),
   };
 }
 

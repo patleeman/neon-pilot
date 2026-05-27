@@ -6,6 +6,7 @@ import {
   createRuntimeExtension,
   installCatalogExtension as installCatalogExtensionFromHost,
   installExtensionBundleFromUrl,
+  installMarketplacePackageSource,
   listExtensionInstallSummaries,
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   reloadExtensionBackend,
@@ -24,6 +25,8 @@ interface ExtensionIdInput {
 interface SettingsRecord {
   [key: string]: unknown;
 }
+
+const MARKETPLACE_BEHAVIOR_PACKAGE_TYPES = new Set(['skill', 'instruction-pack', 'agent', 'template']);
 
 export async function listExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
   return { ok: true, extensions: await listExtensionInstallSummaries() };
@@ -45,6 +48,29 @@ export async function installCatalogExtension(input: unknown, _ctx: ExtensionBac
 export async function installExtensionFromUrl(input: unknown, _ctx: ExtensionBackendContext) {
   const result = await installExtensionBundleFromUrl(asRecord(input));
   return { ok: true, ...result };
+}
+
+export async function installMarketplacePackage(input: unknown, _ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const packageType = typeof body.packageType === 'string' ? body.packageType : '';
+  if (!MARKETPLACE_BEHAVIOR_PACKAGE_TYPES.has(packageType)) {
+    throw new Error('marketplace package install only supports skill, instruction-pack, agent, and template packages.');
+  }
+  const source = typeof body.source === 'string' ? body.source.trim() : '';
+  if (!source) throw new Error('marketplace package source is required.');
+
+  const result = await installMarketplacePackageSource({
+    source,
+    target: body.target === 'local' || body.target === undefined ? 'local' : body.target,
+    sourceBaseDir: body.sourceBaseDir,
+  });
+
+  return {
+    ok: true,
+    packageType,
+    ecosystem: typeof body.ecosystem === 'string' ? body.ecosystem : undefined,
+    ...result,
+  };
 }
 
 export async function createExtension(input: unknown, _ctx: ExtensionBackendContext) {
@@ -119,6 +145,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'listInstallable') return listInstallableExtensions(input, ctx);
   if (action === 'installCatalog') return installCatalogExtension(input, ctx);
   if (action === 'installFromUrl') return installExtensionFromUrl(input, ctx);
+  if (action === 'installMarketplacePackage') return installMarketplacePackage(input, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(input, ctx);
   if (action === 'updateSearchPaths') return updateSearchPaths(input, ctx);
   if (action === 'reloadExtensions') return reloadExtensions(input, ctx);

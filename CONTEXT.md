@@ -12,7 +12,7 @@ Use these groups when adding terms:
 2. **Agent capability model** — agent-facing inputs and capabilities: prompts, tools, skills, MCP, and prompt assembly.
 3. **Conversation model** — user/agent dialogue objects, transcript structure, branching, and queued continuation behavior.
 4. **Execution model** — foreground and background work: executions, runs, subagents, commands, automations, and scheduled tasks.
-5. **Knowledge model** — durable knowledge, vault files, projects, instruction files, and sync.
+5. **Knowledge model** — durable reference knowledge, knowledge directories, projects, and sync.
 6. **Desktop layout model** — app shell, sidebars, rails, panes, views, and workbench surfaces.
 7. **Browser model** — the built-in Workbench Browser versus agent-owned browser automation.
 8. **Development workflow** — repo/development-only terms such as checkpoints.
@@ -205,19 +205,27 @@ The time window in which a missed scheduled automation may still fire after the 
 
 ### Knowledge base
 
-The git-backed durable repository of Patrick’s reusable knowledge, docs, instruction files, skills, and project notes.
+The durable collection of reusable reference material that the agent can browse, search, cite, or inject through explicit context such as `@` file mentions.
 
-### Vault
+Knowledge base content is source material, not behavior. Use instruction files, skills, tools, and extensions for agent behavior.
 
-The effective local root directory for durable knowledge files. The vault may be a managed clone of the knowledge base.
+### Knowledge directory
 
-Use **vault** when discussing local file resolution; use **knowledge base** when discussing the durable collection or sync.
+A local filesystem root included in the knowledge base. Neon Pilot may use one or more knowledge directories, including a managed git mirror and user-selected local directories.
+
+Use **knowledge directory** or **knowledge path** for local file resolution. Do not introduce new product copy that calls this a vault.
+
+### Marketplace
+
+The installable capability catalog for extensions, skills, instruction packs, agents, templates, and other behavior packages.
+
+Marketplace packages may target multiple ecosystems such as Codex and Claude. Installing a package can add skills, instruction files, tools, or extensions, but those installed behavior assets are not knowledge base content.
 
 ### Machine agent directory
 
-The machine-local secondary directory for personal agent files that are not part of the synced knowledge base. Its canonical path is `~/.config/agents`.
+The machine-local secondary directory for personal agent files that are not part of synced or indexed knowledge directories. Its canonical path is `~/.config/agents`.
 
-Use the vault as the primary durable source; use the machine agent directory for local fallback instructions, skills, and future file-backed agent capabilities.
+Use the machine agent directory for local fallback instructions, skills, and future file-backed agent capabilities.
 
 ### Managed sync
 

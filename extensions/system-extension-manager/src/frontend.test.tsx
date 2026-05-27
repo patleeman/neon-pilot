@@ -121,11 +121,11 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('defaults to installed add-ons and exposes available add-ons as a filter, not commands', async () => {
+  it('defaults to installed add-ons and exposes marketplace as a filter, not commands', async () => {
     renderPage();
 
     await screen.findByText('Menu Test');
-    expect(screen.getByRole('button', { name: 'Available add-ons' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Marketplace' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getByText('Add-on')).toBeTruthy();
@@ -158,7 +158,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'All installed' }));
     expect(screen.queryByText('Available Only')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Available add-ons' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace' }));
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 

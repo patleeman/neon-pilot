@@ -15,7 +15,11 @@ interface InstallableExtensionCatalogItem {
   description?: string;
   version: string;
   tag: string;
-  bundleUrl: string;
+  packageType?: 'extension' | 'skill' | 'instruction-pack' | 'agent' | 'template';
+  ecosystem?: 'neon-pilot' | 'codex' | 'claude';
+  marketplaceSourceId?: string;
+  bundleUrl?: string;
+  packageSource?: string;
   defaultEnabled?: boolean;
   source?: 'github-release';
   installed: boolean;
@@ -27,14 +31,23 @@ interface InstallableExtensionCatalogResponse {
   ok: true;
   version: string;
   tag: string;
+  marketplaceSources?: Array<{
+    id: string;
+    name: string;
+    ecosystem: string;
+    description: string;
+    supportedPackageTypes: string[];
+    installStatus: 'supported' | 'planned';
+  }>;
   extensions: InstallableExtensionCatalogItem[];
+  packages?: InstallableExtensionCatalogItem[];
 }
 
 type ExtensionFilter = 'installed-addons' | 'available-addons' | 'all-installed' | 'built-in' | 'enabled' | 'disabled';
 
 const EXTENSION_FILTERS: Array<{ id: ExtensionFilter; label: string }> = [
   { id: 'installed-addons', label: 'Installed add-ons' },
-  { id: 'available-addons', label: 'Available add-ons' },
+  { id: 'available-addons', label: 'Marketplace' },
   { id: 'all-installed', label: 'All installed' },
   { id: 'built-in', label: 'Built-in' },
   { id: 'enabled', label: 'Enabled' },
@@ -551,10 +564,19 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
       setBusyId(item.id);
-      setNotice(`Installing ${item.name} from ${item.tag}…`);
+      setNotice(`Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}…`);
       try {
-        await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-        setNotice(`Installed ${item.name}. Enable it from the extension registry when you're ready.`);
+        if (item.packageType && item.packageType !== 'extension') {
+          await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
+            source: item.packageSource,
+            ecosystem: item.ecosystem,
+            packageType: item.packageType,
+          });
+          setNotice(`Installed ${item.name} as a runtime package source.`);
+        } else {
+          await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
+          setNotice(`Installed ${item.name}. Enable it from the extension registry when you're ready.`);
+        }
         notifyExtensionRegistryChanged();
         await load();
         loadCatalog();
@@ -694,12 +716,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const visibleCatalogExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const installedIds = new Set(extensions.map((extension) => extension.id));
-    const items = catalog?.extensions ?? [];
+    const items = catalog?.packages ?? catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id)) return false;
       if (filter !== 'available-addons') return false;
       if (!normalizedQuery) return true;
-      return `${item.name} ${item.id} ${item.description ?? ''}`.toLowerCase().includes(normalizedQuery);
+      return `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
+        .toLowerCase()
+        .includes(normalizedQuery);
     });
   }, [catalog, extensions, filter, query]);
 
@@ -808,7 +832,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
                 <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
-                  Available add-on
+                  {item.ecosystem === 'neon-pilot' ? 'Neon Pilot' : (item.ecosystem ?? 'Marketplace')}
+                </span>
+                <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
+                  {item.packageType ?? 'extension'}
                 </span>
               </div>
               <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
@@ -817,15 +844,15 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </div>
           </td>
           <td className="px-3 py-3 align-middle text-[12px] text-secondary" />
-          <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">Available</td>
+          <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">{item.marketplaceSourceId ?? 'Available'}</td>
           <td className="whitespace-nowrap px-3 py-3 align-middle">
             <button
               type="button"
               className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={busy}
+              disabled={busy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
               onClick={() => void installCatalogExtension(item)}
             >
-              {busy ? 'Installing…' : 'Install'}
+              {busy ? 'Installing…' : item.packageType && item.packageType !== 'extension' && !item.packageSource ? 'Planned' : 'Install'}
             </button>
           </td>
           <td className="py-3 pl-3 align-middle" />

@@ -5,12 +5,13 @@ This extension owns the Knowledge workbench surfaces and knowledge-file mention 
 ## What it contributes
 
 - A left-nav **Knowledge** destination backed by the native `knowledge-page` extension view.
-- A right-rail **Knowledge** tree for browsing the local knowledge base.
+- A right-rail **Knowledge** tree for browsing local knowledge directories.
 - A paired workbench detail view for opening and editing knowledge files beside a conversation.
-- A `knowledge-files` mention provider that adds notes, folders, and files to the conversation `@` menu.
+- A `knowledge-files` mention provider that adds knowledge folders and files to the conversation `@` menu.
 - A quick-open provider for command-palette file open/search.
 - A prompt-reference resolver that turns `@knowledge-file.md` mentions into hidden prompt context.
-- A Settings page component for connecting or updating the git-backed knowledge repository.
+- A prompt assembly instruction provider that injects the active knowledge paths into the agent runtime context.
+- A Settings page component for connecting a git-backed knowledge mirror and adding local knowledge directories.
 
 ## Runtime behavior
 
@@ -20,28 +21,34 @@ The extension renders native React surfaces declared in `extension.json`:
 - `knowledge-tree` renders the right-rail browser.
 - `knowledge-file` renders the workbench detail panel for the selected file.
 
-The extension owns backend actions for knowledge state, managed sync, vault file operations, and prompt-reference resolution. It uses the generic extension backend context (`ctx.storage`, `ctx.shell`, UI invalidation, and local file APIs) instead of a Knowledge-specific core service:
+The extension owns backend actions for knowledge state, managed sync, knowledge file operations, and prompt-reference resolution. It uses the generic extension backend context (`ctx.storage`, `ctx.shell`, UI invalidation, and local file APIs) instead of a Knowledge-specific core service:
 
 - `readState` reads configured repository/sync status.
 - `updateState` updates the managed knowledge repository configuration.
 - `sync` runs a git-backed knowledge-base sync and invalidates knowledge UI state.
-- `vault*` actions list, read, write, search, move, rename, delete, import, and upload knowledge files.
+- `vault*` actions currently provide the compatibility action names for listing, reading, writing, searching, moving, renaming, deleting, importing, and uploading knowledge files. New user-facing language should call these knowledge files, not vault files.
 - `resolvePromptReferences` resolves knowledge file mentions during prompt submission.
+- `provideKnowledgeInstructions` contributes a small runtime instruction layer listing agent-visible knowledge paths.
 
 The same repository controls are available from **Settings → Capabilities → Knowledge Base** for users who want to edit sync configuration after onboarding.
 
 Knowledge UI should stay in this extension. Host code may render contributed surfaces, but it should not add shell-specific Knowledge pages or file-search paths.
 
-## Vault resolution
+## Knowledge directories
 
-The vault is the root directory for durable knowledge. It resolves in this order:
+The knowledge base is a set of source-material directories. It resolves in this order:
 
 1. `NEON_PILOT_VAULT_ROOT` environment variable
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when this extension has a repository URL saved in extension storage
-3. Legacy `vaultRoot` config value in the runtime settings or machine config file
-4. `~/Documents/neon-pilot`
+3. User-selected local directories saved in extension storage
+4. Legacy `vaultRoot` config value in the runtime settings or machine config file
+5. `~/Documents/neon-pilot`
 
-## Vault contents
+When more than one directory is active, file ids from secondary roots are qualified with a stable root id such as `knowledge-2:path/to/file.md`. The `@` mention provider and prompt-reference resolver use those ids so the agent can receive the correct source files.
+
+## Knowledge contents
+
+Docs are reusable reference material stored as files under any configured knowledge directory. They are pulled into a turn through explicit context such as `@` file/folder mentions or search-backed UI flows.
 
 Instruction files define standing behavior and policy for the agent. They are selected in Settings, listed in config, and auto-discovered from the active project by walking from the repository root to the working directory. Project discovery recognizes `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, and root `.github/copilot-instructions.md`.
 
@@ -53,17 +60,13 @@ They can also be selected explicitly:
 }
 ```
 
-Docs are reusable reference material stored as markdown files anywhere under `<vault-root>`.
-
-The vault is the primary durable source for global agent files. `~/.config/agents` is the canonical machine-local secondary directory for personal files that should not be synced through the knowledge base. Runtime instruction discovery includes `<vault-root>/AGENTS.md`, configured instruction files, project instruction files, local overlays, and `~/.config/agents/AGENTS.md` when present.
-
-Skills are reusable workflows stored under `<vault-root>/skills/<skill-name>/SKILL.md`, optionally with adjacent `mcp.json`, examples, or assets. Runtime skill discovery loads valid skill folders from the vault, configured skill roots, local overlays, and common platform locations such as `~/.config/agents/skill`, `~/.config/agents/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.config/codex/skills`, Pi/Neon Pilot knowledge-base mirrors, and `~/.config/agent-skills`. Skill metadata is reference material, not a visibility toggle. Any active skill can bundle MCP servers by placing `mcp.json` next to `SKILL.md`; discovery keys off that file, not a `*-mcp` naming scheme.
+Skills are reusable workflows, not knowledge-base content. Skills belong to prompt assembly and marketplace/skill installation flows even when their files happen to live near a knowledge directory for migration compatibility.
 
 Projects are structured work packages with milestones, tasks, and durable status. See [Projects](../../docs/projects.md).
 
 ## Managed sync
 
-Knowledge Base Sync uses git to synchronize vault content across machines. When configured, the runtime maintains a managed clone that serves as the effective vault root.
+Knowledge Base Sync uses git to synchronize a managed knowledge mirror across machines. When configured, the runtime maintains a managed clone and includes it in the effective knowledge directories.
 
 ```text
 Machine A ──► Git remote ◄── Machine B
@@ -71,10 +74,10 @@ Machine A ──► Git remote ◄── Machine B
           Managed clone
           <state-root>/knowledge-base/repo
                  │
-            Effective vault root
+        Knowledge directory
 ```
 
-Sync tracks local file snapshots, pulls remote changes, pushes local changes, and preserves recovery data when conflicts or errors occur. Sync state includes the configured repo URL, branch, last sync timestamp, last synced head, and file snapshot.
+Sync tracks local file snapshots, pulls remote changes, pushes local changes, and preserves recovery data when conflicts or errors occur. Sync state includes the configured repo URL, branch, configured local directories, effective knowledge paths, last sync timestamp, last synced head, and file snapshot.
 
 Sync status values:
 
@@ -97,7 +100,7 @@ Knowledge affects agent behavior through file-based layers, not runtime prompt m
 4. available skills from the runtime skill loader
 5. current date and working directory
 
-`APPEND_SYSTEM.md` intentionally points at the vault and skills directory instead of enumerating every skill; the skill loader owns the detailed skill list. Extensions cannot modify the system prompt at runtime. To influence behavior, write durable content to the vault or one of the file-based instruction layers.
+`APPEND_SYSTEM.md` intentionally points at the primary knowledge path and skills directory instead of enumerating every skill; the skill loader owns the detailed skill list. Extensions cannot modify the system prompt at runtime. To influence behavior, install or edit behavior assets through prompt assembly/marketplace paths, or add reference material to a knowledge directory.
 
 ## Permissions
 

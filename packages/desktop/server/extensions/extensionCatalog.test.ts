@@ -40,10 +40,28 @@ describe('extension catalog', () => {
 
     expect(version).toMatch(/^\d+\.\d+\.\d+/);
     expect(catalog.tag).toBe(`v${version}`);
+    expect(catalog.marketplaceSources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'codex',
+          ecosystem: 'codex',
+          supportedPackageTypes: expect.arrayContaining(['skill', 'instruction-pack', 'agent']),
+        }),
+        expect.objectContaining({
+          id: 'claude',
+          ecosystem: 'claude',
+          supportedPackageTypes: expect.arrayContaining(['skill', 'instruction-pack', 'agent']),
+        }),
+      ]),
+    );
+    expect(catalog.packages).toBe(catalog.extensions);
     expect(catalog.extensions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: 'system-browser',
+          packageType: 'extension',
+          ecosystem: 'neon-pilot',
+          marketplaceSourceId: 'neon-pilot-release',
           installed: true,
           enabled: true,
           bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-browser.neon-extension.zip`,

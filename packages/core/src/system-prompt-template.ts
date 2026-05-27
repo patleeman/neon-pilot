@@ -26,7 +26,7 @@ You are Patrick Lee's personal AI agent. Use the knowledge base, skills, notes, 
 
 ## Knowledge and persistence
 
-- Vault root: {{ vault_root }}
+- Primary knowledge path: {{ vault_root }}
 - Durable AGENTS.md target: {{ agents_edit_target }}
 - Skills directory: {{ skills_dir }}
 - Scheduled tasks directory: {{ tasks_dir }}

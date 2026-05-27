@@ -1096,19 +1096,28 @@ export interface MemoryData {
   memoryDocs: MemoryDocItem[];
 }
 
-export interface VaultFileSummary {
+export interface KnowledgeFileSummary {
   id: string;
   kind: 'file' | 'folder';
   name: string;
   path: string;
+  rootId?: string;
+  rootPath?: string;
   sizeBytes: number;
   updatedAt: string;
 }
 
-export interface VaultFileListResult {
+export interface KnowledgeFileListResult {
   root: string;
-  files: VaultFileSummary[];
+  roots?: Array<{ id: string; path: string }>;
+  files: KnowledgeFileSummary[];
 }
+
+/** @deprecated Use KnowledgeFileSummary. */
+export type VaultFileSummary = KnowledgeFileSummary;
+
+/** @deprecated Use KnowledgeFileListResult. */
+export type VaultFileListResult = KnowledgeFileListResult;
 
 export interface AppStatus {
   repoRoot: string;
@@ -1192,6 +1201,8 @@ export interface KnowledgeBaseState {
   repoUrl: string;
   branch: string;
   configured: boolean;
+  directories?: string[];
+  effectiveRoots?: string[];
   effectiveRoot: string;
   managedRoot: string;
   usesManagedRoot: boolean;
@@ -1330,58 +1341,61 @@ export interface ToolsState {
   packageInstall: PackageInstallState;
 }
 
-// ── Vault editor ──────────────────────────────────────────────────────────────
+// ── Knowledge editor ─────────────────────────────────────────────────────────
 
-export interface VaultEntry {
+export interface KnowledgeEntry {
   id: string;
   kind: 'file' | 'folder';
   name: string;
   path: string;
+  rootId?: string;
+  rootPath?: string;
   sizeBytes: number;
   updatedAt: string;
 }
 
-export interface VaultTreeResult {
+export interface KnowledgeTreeResult {
   root: string;
-  entries: VaultEntry[];
+  roots?: Array<{ id: string; path: string }>;
+  entries: KnowledgeEntry[];
 }
 
-export interface VaultFileContent {
+export interface KnowledgeFileContent {
   id: string;
   content: string;
   updatedAt: string;
 }
 
-export interface VaultBacklink {
+export interface KnowledgeBacklink {
   id: string;
   name: string;
   excerpt: string;
 }
 
-export interface VaultBacklinksResult {
+export interface KnowledgeBacklinksResult {
   id: string;
   targetName?: string;
-  backlinks: VaultBacklink[];
+  backlinks: KnowledgeBacklink[];
 }
 
-export interface VaultSearchResult {
+export interface KnowledgeSearchResult {
   id: string;
   name: string;
   excerpt: string;
   matchCount: number;
 }
 
-export interface VaultSearchResponse {
-  results: VaultSearchResult[];
+export interface KnowledgeSearchResponse {
+  results: KnowledgeSearchResult[];
 }
 
-export interface VaultImageUploadResult {
+export interface KnowledgeImageUploadResult {
   id: string;
   url: string;
 }
 
-export interface VaultShareImportResult {
-  note: VaultEntry;
+export interface KnowledgeShareImportResult {
+  note: KnowledgeEntry;
   sourceKind: 'text' | 'url' | 'image';
   title: string;
   asset?: {
@@ -1389,6 +1403,25 @@ export interface VaultShareImportResult {
     url: string;
   };
 }
+
+/** @deprecated Use KnowledgeEntry. */
+export type VaultEntry = KnowledgeEntry;
+/** @deprecated Use KnowledgeTreeResult. */
+export type VaultTreeResult = KnowledgeTreeResult;
+/** @deprecated Use KnowledgeFileContent. */
+export type VaultFileContent = KnowledgeFileContent;
+/** @deprecated Use KnowledgeBacklink. */
+export type VaultBacklink = KnowledgeBacklink;
+/** @deprecated Use KnowledgeBacklinksResult. */
+export type VaultBacklinksResult = KnowledgeBacklinksResult;
+/** @deprecated Use KnowledgeSearchResult. */
+export type VaultSearchResult = KnowledgeSearchResult;
+/** @deprecated Use KnowledgeSearchResponse. */
+export type VaultSearchResponse = KnowledgeSearchResponse;
+/** @deprecated Use KnowledgeImageUploadResult. */
+export type VaultImageUploadResult = KnowledgeImageUploadResult;
+/** @deprecated Use KnowledgeShareImportResult. */
+export type VaultShareImportResult = KnowledgeShareImportResult;
 
 // ── Workspace explorer ──────────────────────────────────────────────────────
 

@@ -12,7 +12,7 @@ describe('system-prompt-template', () => {
     });
 
     expect(rendered).toContain("You are Patrick Lee's personal AI agent");
-    expect(rendered).toContain('Vault root: /vault');
+    expect(rendered).toContain('Primary knowledge path: /vault');
     expect(rendered).toContain('Durable AGENTS.md target: /vault/AGENTS.md');
     expect(rendered).toContain('Skills directory: /vault/skills');
     expect(rendered).toContain('Scheduled tasks directory: /state/tasks');
@@ -26,7 +26,7 @@ describe('system-prompt-template', () => {
       tasks_dir: '',
     });
 
-    expect(rendered).toContain('Vault root:');
+    expect(rendered).toContain('Primary knowledge path:');
     expect(rendered).toContain('Durable AGENTS.md target:');
     expect(rendered).not.toMatch(/[ \t]+\n/);
     expect(rendered).not.toMatch(/\n{3,}/);
@@ -36,6 +36,6 @@ describe('system-prompt-template', () => {
   it('does not autoescape rendered values because the prompt is plain text', () => {
     const rendered = renderSystemPromptTemplate({ vault_root: '<vault>&path' });
 
-    expect(rendered).toContain('Vault root: <vault>&path');
+    expect(rendered).toContain('Primary knowledge path: <vault>&path');
   });
 });

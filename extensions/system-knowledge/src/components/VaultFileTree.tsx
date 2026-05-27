@@ -438,7 +438,7 @@ function ImportUrlModal({
         onClick={(event) => event.stopPropagation()}
       >
         <h3 className="text-[13px] font-semibold text-primary mb-1">Import URL</h3>
-        <p className="text-[11px] text-dim mb-3">Paste a web URL and Neon Pilot will fetch readable content into a new vault note.</p>
+        <p className="text-[11px] text-dim mb-3">Paste a web URL and Neon Pilot will fetch readable content into a new knowledge note.</p>
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -547,7 +547,7 @@ function CreateEntryModal({
 
   const title = state.kind === 'file' ? 'New file' : 'New folder';
   const label = state.kind === 'file' ? 'File name' : 'Folder name';
-  const targetLabel = state.directoryId || 'vault root';
+  const targetLabel = state.directoryId || 'knowledge root';
 
   return (
     <div
@@ -729,7 +729,7 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
   const entryMap = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries]);
   const folderIds = useMemo(() => entries.filter((entry) => entry.kind === 'folder').map((entry) => entry.id), [entries]);
   const folderOptions = useMemo<FolderOption[]>(
-    () => [{ id: '', label: '/ (vault root)' }, ...folderIds.map((folderId) => ({ id: folderId, label: folderId }))],
+    () => [{ id: '', label: '/ (knowledge root)' }, ...folderIds.map((folderId) => ({ id: folderId, label: folderId }))],
     [folderIds],
   );
   const knowledgeBaseDisabled = knowledgeBaseState?.configured === false;
@@ -1426,9 +1426,9 @@ export function VaultFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase 
     };
   }, [applyDeleteEffects, applyRenameEffects, loadSnapshot, refetchKnowledgeBase]);
 
-  // Watch for external file system changes to the vault root
+  // Watch for external file system changes to the knowledge root.
   useVaultWatcher({
-    apiPathPrefix: '/api/extensions/system-knowledge/vault',
+    apiPathPrefix: '/api/extensions/system-knowledge/knowledge',
     onEvent: useCallback(
       (event) => {
         const changedPaths = event.paths;

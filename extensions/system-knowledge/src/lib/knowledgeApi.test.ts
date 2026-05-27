@@ -21,7 +21,7 @@ describe('knowledgeApi', () => {
     mocks.invokeExtensionAction.mockResolvedValue({ ok: true, result: { root: '/vault', files: [] } });
 
     await expect(knowledgeApi.listFiles()).resolves.toEqual({ root: '/vault', files: [] });
-    expect(mocks.invokeExtensionAction).toHaveBeenCalledWith('system-knowledge', 'vaultListFiles', {});
+    expect(mocks.invokeExtensionAction).toHaveBeenCalledWith('system-knowledge', 'knowledgeListFiles', {});
   });
 
   it('throws extension action errors instead of returning undefined results', async () => {

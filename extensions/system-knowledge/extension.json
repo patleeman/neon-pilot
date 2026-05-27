@@ -28,6 +28,76 @@
         "title": "Sync knowledge base"
       },
       {
+        "id": "provideKnowledgeInstructions",
+        "handler": "provideKnowledgeInstructions",
+        "title": "Provide knowledge path instructions"
+      },
+      {
+        "id": "knowledgeListFiles",
+        "handler": "knowledgeListFiles",
+        "title": "List knowledge files"
+      },
+      {
+        "id": "knowledgeTree",
+        "handler": "knowledgeTree",
+        "title": "Read knowledge tree"
+      },
+      {
+        "id": "knowledgeReadFile",
+        "handler": "knowledgeReadFile",
+        "title": "Read knowledge file"
+      },
+      {
+        "id": "knowledgeWriteFile",
+        "handler": "knowledgeWriteFile",
+        "title": "Write knowledge file"
+      },
+      {
+        "id": "knowledgeCreateFolder",
+        "handler": "knowledgeCreateFolder",
+        "title": "Create knowledge folder"
+      },
+      {
+        "id": "knowledgeDeleteFile",
+        "handler": "knowledgeDeleteFile",
+        "title": "Delete knowledge entry"
+      },
+      {
+        "id": "knowledgeRename",
+        "handler": "knowledgeRename",
+        "title": "Rename knowledge entry"
+      },
+      {
+        "id": "knowledgeMove",
+        "handler": "knowledgeMove",
+        "title": "Move knowledge entry"
+      },
+      {
+        "id": "knowledgeBacklinks",
+        "handler": "knowledgeBacklinks",
+        "title": "Read knowledge backlinks"
+      },
+      {
+        "id": "knowledgeSearch",
+        "handler": "knowledgeSearch",
+        "title": "Search knowledge"
+      },
+      {
+        "id": "knowledgeUploadImage",
+        "handler": "knowledgeUploadImage",
+        "title": "Upload knowledge image"
+      },
+      {
+        "id": "knowledgeImportUrl",
+        "handler": "knowledgeImportUrl",
+        "title": "Import URL into knowledge"
+      },
+      {
+        "id": "knowledgeImportSharedItem",
+        "handler": "knowledgeImportSharedItem",
+        "title": "Import shared item into knowledge"
+      },
+      {
         "id": "vaultListFiles",
         "handler": "vaultListFiles",
         "title": "List knowledge files"
@@ -112,6 +182,85 @@
       },
       {
         "method": "GET",
+        "path": "/knowledge/tree",
+        "handler": "knowledgeTreeRoute",
+        "title": "Read knowledge tree route"
+      },
+      {
+        "method": "GET",
+        "path": "/knowledge/file",
+        "handler": "knowledgeReadFileRoute",
+        "title": "Read knowledge file route"
+      },
+      {
+        "method": "PUT",
+        "path": "/knowledge/file",
+        "handler": "knowledgeWriteFileRoute",
+        "title": "Write knowledge file route"
+      },
+      {
+        "method": "DELETE",
+        "path": "/knowledge/file",
+        "handler": "knowledgeDeleteFileRoute",
+        "title": "Delete knowledge file route"
+      },
+      {
+        "method": "POST",
+        "path": "/knowledge/folder",
+        "handler": "knowledgeCreateFolderRoute",
+        "title": "Create knowledge folder route"
+      },
+      {
+        "method": "POST",
+        "path": "/knowledge/rename",
+        "handler": "knowledgeRenameRoute",
+        "title": "Rename knowledge entry route"
+      },
+      {
+        "method": "POST",
+        "path": "/knowledge/move",
+        "handler": "knowledgeMoveRoute",
+        "title": "Move knowledge entry route"
+      },
+      {
+        "method": "GET",
+        "path": "/knowledge/backlinks",
+        "handler": "knowledgeBacklinksRoute",
+        "title": "Read knowledge backlinks route"
+      },
+      {
+        "method": "GET",
+        "path": "/knowledge/search",
+        "handler": "knowledgeSearchRoute",
+        "title": "Search knowledge route"
+      },
+      {
+        "method": "GET",
+        "path": "/knowledge/note-search",
+        "handler": "knowledgeSearchRoute",
+        "title": "Search knowledge notes route"
+      },
+      {
+        "method": "POST",
+        "path": "/knowledge/image",
+        "handler": "knowledgeUploadImageRoute",
+        "title": "Upload knowledge image route"
+      },
+      {
+        "method": "POST",
+        "path": "/knowledge/share-import",
+        "handler": "knowledgeImportUrlRoute",
+        "title": "Import item into knowledge route"
+      },
+      {
+        "method": "GET",
+        "path": "/knowledge/events",
+        "handler": "knowledgeEventsRoute",
+        "title": "Watch knowledge events",
+        "stream": "sse"
+      },
+      {
+        "method": "GET",
         "path": "/vault/tree",
         "handler": "vaultTreeRoute",
         "title": "Read knowledge tree route"
@@ -186,7 +335,7 @@
         "method": "GET",
         "path": "/vault/events",
         "handler": "vaultEventsRoute",
-        "title": "Watch knowledge vault events",
+        "title": "Watch legacy knowledge events",
         "stream": "sse"
       },
       {
@@ -203,6 +352,14 @@
         "id": "knowledge-files",
         "handler": "resolvePromptReferences",
         "title": "Knowledge files"
+      }
+    ],
+    "instructionProviders": [
+      {
+        "id": "knowledge-paths",
+        "handler": "provideKnowledgeInstructions",
+        "title": "Knowledge paths",
+        "priority": 925
       }
     ],
     "quickOpen": [

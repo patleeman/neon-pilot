@@ -16,6 +16,8 @@ export interface KnowledgeBaseState {
   repoUrl: string;
   branch: string;
   configured: boolean;
+  directories: string[];
+  effectiveRoots: string[];
   effectiveRoot: string;
   managedRoot: string;
   usesManagedRoot: boolean;
@@ -30,6 +32,7 @@ export interface KnowledgeBaseState {
 interface StoredKnowledgeConfig {
   repoUrl?: string;
   branch?: string;
+  directories?: string[];
   lastSyncAt?: string;
   lastError?: string;
   syncStatus?: KnowledgeBaseSyncStatus;
@@ -109,9 +112,35 @@ export function effectiveVaultRoot(ctx: ExtensionBackendContext, config?: Pick<S
   return readLegacyVaultRoot(ctx) ?? defaultVaultRoot();
 }
 
+function normalizeDirectoryList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const directories = value
+    .flatMap((item) => (typeof item === 'string' ? [expandHome(item.trim())] : []))
+    .filter(Boolean)
+    .map((item) => resolve(item));
+  return Array.from(new Set(directories));
+}
+
+export function effectiveKnowledgeRoots(
+  ctx: ExtensionBackendContext,
+  config?: Pick<StoredKnowledgeConfig, 'repoUrl' | 'directories'>,
+): string[] {
+  const override = sourceOverrideRoot();
+  if (override) return [resolve(override)];
+
+  const roots = [...((config?.repoUrl ?? '').trim() ? [managedRoot(ctx)] : []), ...normalizeDirectoryList(config?.directories)];
+  if (roots.length > 0) return Array.from(new Set(roots.map((item) => resolve(item))));
+  return [resolve(readLegacyVaultRoot(ctx) ?? defaultVaultRoot())];
+}
+
 export async function readEffectiveVaultRoot(ctx: ExtensionBackendContext): Promise<string> {
   const config = await readConfig(ctx);
-  return effectiveVaultRoot(ctx, config);
+  return effectiveKnowledgeRoots(ctx, config)[0] ?? effectiveVaultRoot(ctx, config);
+}
+
+export async function readEffectiveKnowledgeRoots(ctx: ExtensionBackendContext): Promise<string[]> {
+  const config = await readConfig(ctx);
+  return effectiveKnowledgeRoots(ctx, config);
 }
 
 function normalizeRepoUrl(value: unknown): string {
@@ -140,6 +169,7 @@ async function readConfig(
     ...config,
     repoUrl: normalizeRepoUrl(config.repoUrl),
     branch: normalizeBranch(config.branch),
+    directories: normalizeDirectoryList(config.directories),
     syncStatus: config.syncStatus ?? (config.repoUrl ? 'idle' : 'disabled'),
   };
 }
@@ -148,6 +178,7 @@ async function writeConfig(ctx: ExtensionBackendContext, config: StoredKnowledge
   await ctx.storage.put(CONFIG_KEY, {
     repoUrl: normalizeRepoUrl(config.repoUrl),
     branch: normalizeBranch(config.branch),
+    directories: normalizeDirectoryList(config.directories),
     ...(config.lastSyncAt ? { lastSyncAt: config.lastSyncAt } : {}),
     ...(config.lastError ? { lastError: config.lastError } : {}),
     ...(config.syncStatus ? { syncStatus: config.syncStatus } : {}),
@@ -279,11 +310,14 @@ export async function readKnowledgeState(ctx: ExtensionBackendContext): Promise<
   const root = managedRoot(ctx);
   const usesManagedRoot = configured && !sourceOverrideRoot();
   const gitStatus = configured ? await readGitStatus(ctx, root, config.branch) : null;
+  const effectiveRoots = effectiveKnowledgeRoots(ctx, config);
   return {
     repoUrl: config.repoUrl,
     branch: config.branch,
     configured,
-    effectiveRoot: effectiveVaultRoot(ctx, config),
+    directories: config.directories,
+    effectiveRoots,
+    effectiveRoot: effectiveRoots[0] ?? effectiveVaultRoot(ctx, config),
     managedRoot: root,
     usesManagedRoot,
     syncStatus: configured ? (config.syncStatus ?? 'idle') : 'disabled',
@@ -296,14 +330,21 @@ export async function readKnowledgeState(ctx: ExtensionBackendContext): Promise<
 }
 
 export async function updateKnowledgeState(
-  input: { repoUrl?: string | null; branch?: string | null },
+  input: { repoUrl?: string | null; branch?: string | null; directories?: string[] | null },
   ctx: ExtensionBackendContext,
 ): Promise<KnowledgeBaseState> {
   const current = await readConfig(ctx);
   const nextRepoUrl = input.repoUrl === undefined ? current.repoUrl : normalizeRepoUrl(input.repoUrl);
   const nextBranch = input.branch === undefined ? current.branch : normalizeBranch(input.branch);
+  const nextDirectories =
+    input.directories === undefined || input.directories === null ? current.directories : normalizeDirectoryList(input.directories);
   if (current.repoUrl && nextRepoUrl && current.repoUrl !== nextRepoUrl) archiveManagedRoot(ctx, 'repo-change');
-  await writeConfig(ctx, { repoUrl: nextRepoUrl, branch: nextBranch, syncStatus: nextRepoUrl ? 'idle' : 'disabled' });
+  await writeConfig(ctx, {
+    repoUrl: nextRepoUrl,
+    branch: nextBranch,
+    directories: nextDirectories,
+    syncStatus: nextRepoUrl ? 'idle' : 'disabled',
+  });
   const next = nextRepoUrl ? await syncKnowledgeState(ctx) : await readKnowledgeState(ctx);
   ctx.ui.invalidate('knowledgeBase');
   return next;
