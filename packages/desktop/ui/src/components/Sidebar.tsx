@@ -42,11 +42,10 @@ import {
   clearDraftConversationThinkingLevel,
   DRAFT_CONVERSATION_ID,
   DRAFT_CONVERSATION_ROUTE,
-  persistDraftConversationCwd,
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
 import { persistForkPromptDraft } from '../conversation/forking';
-import { startNewLiveConversation } from '../conversation/newConversationNavigation';
+import { startDraftConversation } from '../conversation/newConversationNavigation';
 import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
@@ -2020,7 +2019,6 @@ export function Sidebar() {
   const [sidebarNotice, setSidebarNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
   const [gatewayState, setGatewayState] = useState<GatewayState | null>(null);
   const [addWorkspaceBusy, setAddWorkspaceBusy] = useState(false);
-  const [newConversationBusy, setNewConversationBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -3135,39 +3133,24 @@ export function Sidebar() {
   }, [activeConversationId, sessions]);
 
   const handleNewConversation = useCallback(
-    async (cwd?: string | null) => {
-      if (newConversationBusy) {
-        return;
-      }
-
+    (cwd?: string | null) => {
       const explicitCwd = normalizeConversationGroupCwd(cwd);
-      if (explicitCwd) {
-        persistDraftConversationCwd(explicitCwd);
-        setDraftCwd(explicitCwd);
-      } else {
-        clearDraftConversationCwd();
-        setDraftCwd('');
-      }
-
-      setNewConversationBusy(true);
       try {
-        await startNewLiveConversation({
+        startDraftConversation({
           navigate,
           cwd: explicitCwd,
-          preserveDraftSurface: location.pathname === DRAFT_CONVERSATION_ROUTE,
-          bootstrapVersionKey: conversationBootstrapVersionKey,
-          sessionDetailVersion: versions.sessionFiles,
+          replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
+          focusComposer: true,
         });
+        setDraftCwd(explicitCwd);
       } catch (error) {
         setSidebarNotice({
           tone: 'danger',
           text: error instanceof Error ? error.message : String(error),
         });
-      } finally {
-        setNewConversationBusy(false);
       }
     },
-    [conversationBootstrapVersionKey, location.pathname, navigate, newConversationBusy, versions.sessionFiles],
+    [location.pathname, navigate],
   );
 
   const handleOpenThreadSwitcher = useCallback(() => {
@@ -3875,7 +3858,7 @@ export function Sidebar() {
       <aside className="flex-1 flex flex-col overflow-hidden">
         <SidebarPrimaryNav
           chatActive={chatButtonActive}
-          newConversationBusy={newConversationBusy}
+          newConversationBusy={false}
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
           onNewConversation={() => {

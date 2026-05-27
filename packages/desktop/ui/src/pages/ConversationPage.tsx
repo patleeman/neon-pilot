@@ -1030,6 +1030,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     historicalBlockOffset: number;
     historicalTotalBlocks: number;
   } | null>(null);
+  const visibleTranscriptActionStateRef = useRef<{
+    conversationId: string;
+    messages: MessageBlock[];
+    historicalBlockOffset: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!id || !computedMessages || computedMessages.length === 0) {
@@ -3158,6 +3163,29 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     textareaRef.current?.focus();
   }, [id]);
 
+  useEffect(() => {
+    const shouldFocus =
+      location.state && typeof location.state === 'object' && 'focusComposer' in location.state && location.state.focusComposer === true;
+    if (!shouldFocus) {
+      return;
+    }
+
+    const focusComposer = () => {
+      const composer = textareaRef.current;
+      if (!composer || composer.disabled) {
+        return;
+      }
+      composer.focus();
+      const end = composer.value.length;
+      composer.selectionStart = end;
+      composer.selectionEnd = end;
+    };
+
+    focusComposer();
+    const frame = window.requestAnimationFrame(focusComposer);
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.key, location.state]);
+
   const focusComposerFromTranscriptBackground = useCallback(() => {
     const composer = textareaRef.current;
     if (!composer || composer.disabled) {
@@ -3544,19 +3572,23 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const rewindConversationFromMessage = useCallback(
     async (messageIndex: number) => {
-      if (!id || !realMessages) {
+      const actionState = visibleTranscriptActionStateRef.current;
+      const actionMessages = actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.messages : realMessages;
+      const actionMessageIndexOffset =
+        actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.historicalBlockOffset : messageIndexOffset;
+      if (!id || !actionMessages) {
         return;
       }
 
-      const localMessageIndex = messageIndex - messageIndexOffset;
-      if (localMessageIndex < 0 || localMessageIndex >= realMessages.length) {
+      const localMessageIndex = messageIndex - actionMessageIndexOffset;
+      if (localMessageIndex < 0 || localMessageIndex >= actionMessages.length) {
         showNotice('danger', 'Load the relevant part of the conversation before rewinding from it.');
         return;
       }
 
       try {
         const liveConversationId = await ensureConversationIsLive('be rewound');
-        const clickedBlock = realMessages[localMessageIndex];
+        const clickedBlock = actionMessages[localMessageIndex];
         let target: { entryId: string; beforeEntry: boolean; promptDraft: string | null } | null = null;
 
         if (clickedBlock?.type === 'text' || clickedBlock?.type === 'user') {
@@ -3570,7 +3602,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           if (entryId) {
             const promptDraft =
               clickedBlock.type === 'text'
-                ? (realMessages
+                ? (actionMessages
                     .slice(0, localMessageIndex)
                     .reverse()
                     .find((message) => message.type === 'user')?.text ?? null)
@@ -3584,7 +3616,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
         if (!target) {
           const entries = await api.forkEntries(liveConversationId);
-          target = resolveRewindTargetForMessage(realMessages, localMessageIndex, entries);
+          target = resolveRewindTargetForMessage(actionMessages, localMessageIndex, entries);
         }
         if (!target) {
           throw new Error('No forkable message found for that point in the conversation.');
@@ -3617,7 +3649,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const editConversationFromUserMessage = useCallback(
     async (messageIndex: number, text: string) => {
-      if (!id || !realMessages) {
+      const actionState = visibleTranscriptActionStateRef.current;
+      const actionMessages = actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.messages : realMessages;
+      const actionMessageIndexOffset =
+        actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.historicalBlockOffset : messageIndexOffset;
+      if (!id || !actionMessages) {
         return;
       }
 
@@ -3627,13 +3663,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         return;
       }
 
-      const localMessageIndex = messageIndex - messageIndexOffset;
-      if (localMessageIndex < 0 || localMessageIndex >= realMessages.length) {
+      const localMessageIndex = messageIndex - actionMessageIndexOffset;
+      if (localMessageIndex < 0 || localMessageIndex >= actionMessages.length) {
         showNotice('danger', 'Load the relevant part of the conversation before editing it.');
         return;
       }
 
-      const clickedBlock = realMessages[localMessageIndex];
+      const clickedBlock = actionMessages[localMessageIndex];
       if (clickedBlock?.type !== 'user') {
         return;
       }
@@ -3680,17 +3716,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const forkConversationFromMessage = useCallback(
     async (messageIndex: number) => {
-      if (!id || !realMessages) {
+      const actionState = visibleTranscriptActionStateRef.current;
+      const actionMessages = actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.messages : realMessages;
+      const actionMessageIndexOffset =
+        actionState?.conversationId === id && actionState.messages.length > 0 ? actionState.historicalBlockOffset : messageIndexOffset;
+      if (!id || !actionMessages) {
         return;
       }
 
-      const localMessageIndex = messageIndex - messageIndexOffset;
-      if (localMessageIndex < 0 || localMessageIndex >= realMessages.length) {
+      const localMessageIndex = messageIndex - actionMessageIndexOffset;
+      if (localMessageIndex < 0 || localMessageIndex >= actionMessages.length) {
         showNotice('danger', 'Load the relevant part of the conversation before branching from it.');
         return;
       }
 
-      const clickedBlock = realMessages[localMessageIndex];
+      const clickedBlock = actionMessages[localMessageIndex];
       if (clickedBlock?.type !== 'text' && clickedBlock?.type !== 'user') {
         await rewindConversationFromMessage(messageIndex);
         return;
@@ -5569,6 +5609,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const visibleTranscriptMessages = visibleTranscriptState?.messages;
   const visibleTranscriptMessageIndexOffset = visibleTranscriptState?.historicalBlockOffset ?? 0;
   const visibleTranscriptTotalBlocks = visibleTranscriptState?.historicalTotalBlocks ?? 0;
+  visibleTranscriptActionStateRef.current =
+    visibleTranscriptState?.conversationId && visibleTranscriptState.messages.length > 0
+      ? {
+          conversationId: visibleTranscriptState.conversationId,
+          messages: visibleTranscriptState.messages,
+          historicalBlockOffset: visibleTranscriptState.historicalBlockOffset,
+        }
+      : null;
   const visibleTranscriptRenderItems =
     visibleSessionDetail?.renderItems &&
     visibleTranscriptMessages &&

@@ -9,6 +9,7 @@ import {
   clearDraftConversationContextDocs,
   clearDraftConversationCwd,
   clearDraftConversationModelPreferences,
+  persistDraftConversationCwd,
   readDraftConversationModel,
   readDraftConversationThinkingLevel,
 } from './draftConversation';
@@ -23,6 +24,45 @@ export interface StartNewLiveConversationInput {
   preserveDraftSurface?: boolean;
   bootstrapVersionKey?: string;
   sessionDetailVersion?: number;
+}
+
+export interface StartDraftConversationInput {
+  navigate: NavigateFunction;
+  cwd?: string | null;
+  replace?: boolean;
+  focusComposer?: boolean;
+}
+
+function focusComposerAfterNavigation(): void {
+  const dispatch = () => window.dispatchEvent(new CustomEvent('neon-pilot:composer-focus'));
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(dispatch);
+  });
+}
+
+export function startDraftConversation(input: StartDraftConversationInput): void {
+  const cwd = input.cwd?.trim() ?? '';
+  clearDraftConversationAttachments();
+  clearDraftConversationComposer();
+  clearDraftConversationContextDocs();
+  clearDraftConversationCwd();
+  clearDraftConversationModelPreferences();
+  if (cwd) {
+    // Preserve an explicit workspace choice while still resetting the rest of
+    // the draft so opening Chat is instant and deterministic.
+    persistDraftConversationCwd(cwd);
+  }
+
+  input.navigate('/conversations/new', {
+    replace: input.replace,
+    state: {
+      focusComposer: input.focusComposer === true,
+    },
+  });
+
+  if (input.focusComposer === true) {
+    focusComposerAfterNavigation();
+  }
 }
 
 export async function startNewLiveConversation(input: StartNewLiveConversationInput): Promise<string> {
