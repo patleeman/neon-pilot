@@ -1140,7 +1140,7 @@ describe('api desktop transport', () => {
   it('passes custom folder picker prompts through the local desktop bridge', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const pickFolder = vi.fn().mockResolvedValue({ path: '/picked/vault', cancelled: false });
+    const pickFolder = vi.fn().mockResolvedValue({ path: '/picked/knowledge', cancelled: false });
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
@@ -1159,7 +1159,7 @@ describe('api desktop transport', () => {
 
     expect(pickFolder).toHaveBeenCalledWith({ cwd: '/repo', prompt: 'Choose folder' });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(pickedFolder).toEqual({ path: '/picked/vault', cancelled: false });
+    expect(pickedFolder).toEqual({ path: '/picked/knowledge', cancelled: false });
   });
 
   it('uses HTTP for automation workspace product state on the local Electron host', async () => {

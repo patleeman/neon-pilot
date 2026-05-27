@@ -10,7 +10,7 @@ export type FileSystemSubject =
   | { type: 'extension'; extensionId: string }
   | { type: 'automation'; taskId: string };
 
-export type FileRootKind = 'workspace' | 'extension-storage' | 'artifact' | 'temp' | 'vault' | 'downloads' | 'secret';
+export type FileRootKind = 'workspace' | 'extension-storage' | 'artifact' | 'temp' | 'knowledge' | 'downloads' | 'secret';
 export type FileProviderId = 'node' | string;
 
 export interface FileRootDescriptor {

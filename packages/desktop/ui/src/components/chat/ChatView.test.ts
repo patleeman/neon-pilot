@@ -267,7 +267,7 @@ describe('chat view streaming disclosure', () => {
     expect(html.match(/ui-markdown-mention/g)).toHaveLength(1);
   });
 
-  it('renders vault file mentions as a single pill', () => {
+  it('renders knowledge file mentions as a single pill', () => {
     const html = renderAssistantText('Open @notes/reference/INDEX.md before editing.');
 
     expect(html).toContain('@notes/reference/INDEX.md');
