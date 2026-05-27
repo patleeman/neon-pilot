@@ -349,7 +349,11 @@ export function startConversationCatalogBackfill(input: { listSessions: () => Se
   catalogBackfillTimer = setTimeout(() => {
     catalogBackfillTimer = null;
     try {
-      upsertConversationCatalogSessions(input.listSessions().slice(0, limit));
+      const sessions = input.listSessions();
+      upsertConversationCatalogSessions(sessions.slice(0, limit));
+      if (input.limit === undefined || limit >= sessions.length) {
+        markConversationCatalogComplete();
+      }
     } catch {
       // Best-effort delayed reconciliation. Request paths still have targeted fallback.
     }

@@ -40,7 +40,7 @@ const {
   saveConversationAttachmentMock,
   addConversationCommitCheckpointCommentMock,
   scheduleDeferredResumeForSessionFileMock,
-  startConversationCatalogBackfillMock,
+  startConversationCatalogBackfillFromSourceMock,
   setConversationServiceContextMock,
   setServerTimingHeadersMock,
   toggleConversationAttentionMock,
@@ -86,7 +86,7 @@ const {
   saveConversationAttachmentMock: vi.fn(),
   addConversationCommitCheckpointCommentMock: vi.fn(),
   scheduleDeferredResumeForSessionFileMock: vi.fn(),
-  startConversationCatalogBackfillMock: vi.fn(),
+  startConversationCatalogBackfillFromSourceMock: vi.fn(),
   setConversationServiceContextMock: vi.fn(),
   setServerTimingHeadersMock: vi.fn(),
   toggleConversationAttentionMock: vi.fn(),
@@ -156,10 +156,6 @@ vi.mock('../conversations/conversationSearchIndex.js', () => ({
   searchIndexedConversationContent: searchIndexedConversationContentMock,
 }));
 
-vi.mock('../conversations/conversationCatalog.js', () => ({
-  startConversationCatalogBackfill: startConversationCatalogBackfillMock,
-}));
-
 vi.mock('../shared/httpHeaders.js', () => ({
   buildContentDispositionHeader: buildContentDispositionHeaderMock,
 }));
@@ -181,6 +177,7 @@ vi.mock('../conversations/conversationService.js', () => ({
   listConversationSessionsSnapshot: listConversationSessionsSnapshotMock,
   parseTailBlocksQuery: parseTailBlocksQueryMock,
   publishConversationSessionMetaChanged: publishConversationSessionMetaChangedMock,
+  startConversationCatalogBackfillFromSource: startConversationCatalogBackfillFromSourceMock,
   startConversationReadModelBackfill: startConversationReadModelBackfillMock,
   readConversationModelPreferenceStateById: readConversationModelPreferenceStateByIdMock,
   readConversationSessionImageAsset: readSessionImageAssetMock,

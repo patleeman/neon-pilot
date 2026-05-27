@@ -25,6 +25,7 @@ import {
   listConversationCatalogSessions,
   markConversationCatalogComplete,
   readConversationCatalogSession,
+  startConversationCatalogBackfill,
   upsertConversationCatalogSessions,
 } from './conversationCatalog.js';
 import { readConversationContextDocs } from './conversationContextDocs.js';
@@ -385,8 +386,9 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const catalogComplete = isConversationCatalogComplete();
-  const storedSessions = catalogComplete && hasConversationCatalogRows() ? listConversationCatalogSessions() : listSessions();
-  if (!catalogComplete) {
+  const catalogHasRows = hasConversationCatalogRows();
+  const storedSessions = catalogHasRows ? listConversationCatalogSessions() : listSessions();
+  if (!catalogComplete && !catalogHasRows) {
     upsertConversationCatalogSessions(storedSessions);
     markConversationCatalogComplete();
   }
@@ -410,6 +412,10 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
       };
     }),
   ];
+}
+
+export function startConversationCatalogBackfillFromSource(): void {
+  startConversationCatalogBackfill({ listSessions });
 }
 
 export function toggleConversationAttention(input: { profile: string; conversationId: string; read?: boolean }): boolean {

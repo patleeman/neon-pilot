@@ -381,7 +381,7 @@ describe('conversationService', () => {
     expect(readConversationSessionSignature('conversation-1')).toBeNull();
   });
 
-  it('falls back to transcript metadata when catalog is not marked complete', () => {
+  it('uses existing catalog rows while completeness backfill is pending', () => {
     hasConversationCatalogRowsMock.mockReturnValue(true);
     isConversationCatalogCompleteMock.mockReturnValue(false);
     listConversationCatalogSessionsMock.mockReturnValue([
@@ -419,10 +419,10 @@ describe('conversationService', () => {
       },
     ]);
 
-    expect(listConversationSessionsSnapshot().map((session) => session.id)).toEqual(['conversation-1', 'conversation-2']);
-    expect(listConversationCatalogSessionsMock).not.toHaveBeenCalled();
-    expect(upsertConversationCatalogSessionsMock).toHaveBeenCalledWith(listSessionsMock.mock.results[0]?.value);
-    expect(markConversationCatalogCompleteMock).toHaveBeenCalledOnce();
+    expect(listConversationSessionsSnapshot().map((session) => session.id)).toEqual(['catalog-only']);
+    expect(listSessionsMock).not.toHaveBeenCalled();
+    expect(upsertConversationCatalogSessionsMock).not.toHaveBeenCalled();
+    expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
   });
 
   it('uses catalog rows once the catalog is marked complete', () => {

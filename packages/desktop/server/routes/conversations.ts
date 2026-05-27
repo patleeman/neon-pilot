@@ -6,13 +6,13 @@ import {
   createConversationCommitCheckpointCommentCapability,
   readConversationCheckpointReviewContextCapability,
 } from '../conversations/conversationAssetsCapability.js';
-import { startConversationCatalogBackfill } from '../conversations/conversationCatalog.js';
 import { readConversationContextDocs, writeConversationContextDocs } from '../conversations/conversationContextDocs.js';
 import { ConversationInspectCapabilityInputError } from '../conversations/conversationInspectCapability.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import {
   publishConversationSessionMetaChanged,
   setConversationServiceContext,
+  startConversationCatalogBackfillFromSource,
   startConversationReadModelBackfill,
 } from '../conversations/conversationService.js';
 import { readConversationSessionImageAssetCapability } from '../conversations/conversationSessionAssetCapability.js';
@@ -148,9 +148,7 @@ export function registerConversationRoutes(
   context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences'>,
 ): void {
   initializeConversationRoutesContext(context);
-  startConversationCatalogBackfill({
-    listSessions: readConversationSessionsCapability,
-  });
+  startConversationCatalogBackfillFromSource();
   startConversationReadModelBackfill();
   startConversationSummaryBackfillLoop({
     listSessions: readConversationSessionsCapability,
