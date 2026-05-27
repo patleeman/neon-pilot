@@ -43,17 +43,27 @@ interface InstallableExtensionCatalogResponse {
   packages?: InstallableExtensionCatalogItem[];
 }
 
-type ExtensionFilter = 'installed-addons' | 'available-addons' | 'all-installed' | 'built-in' | 'enabled' | 'disabled';
+type ExtensionFilter = 'installed-addons' | 'all-installed' | 'built-in' | 'enabled' | 'disabled';
 type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 
 const EXTENSION_FILTERS: Array<{ id: ExtensionFilter; label: string }> = [
-  { id: 'installed-addons', label: 'Installed add-ons' },
-  { id: 'available-addons', label: 'Marketplace' },
+  { id: 'installed-addons', label: 'Add-ons' },
   { id: 'all-installed', label: 'All installed' },
   { id: 'built-in', label: 'Built-in' },
   { id: 'enabled', label: 'Enabled' },
   { id: 'disabled', label: 'Disabled' },
+];
+
+const EXTENSION_PAGE_SECTIONS = [
+  { id: 'extensions-overview', label: 'Overview' },
+  { id: 'installed-extensions', label: 'Installed' },
+  { id: 'available-extensions', label: 'Available' },
+  { id: 'extension-skills', label: 'Skills' },
+  { id: 'extension-tools', label: 'Tools' },
+  { id: 'extension-apps', label: 'Apps & Views' },
+  { id: 'extension-diagnostics', label: 'Diagnostics' },
+  { id: 'extension-developer', label: 'Developer' },
 ];
 
 interface LogicalSurfaceSummary {
@@ -78,7 +88,7 @@ function formatSurfaceKind(location: string): string {
 }
 
 function getLogicalSurfaces(extension: ExtensionInstallSummary): LogicalSurfaceSummary[] {
-  const legacySurfaces = extension.surfaces.map((surface) => ({
+  const legacySurfaces = (extension.surfaces ?? []).map((surface) => ({
     id: surface.id,
     title: surface.title ?? surface.label ?? surface.id,
     kind: `${surface.placement} ${surface.kind}`,
@@ -478,6 +488,70 @@ function formatFrontendSummary(extension: ExtensionInstallSummary): string {
   return extension.manifest?.frontend?.entry ?? 'None';
 }
 
+function packageKindLabel(item: InstallableExtensionCatalogItem): string {
+  if (!item.packageType || item.packageType === 'extension') return 'Extension';
+  if (item.ecosystem === 'codex') return `Codex ${item.packageType}`;
+  if (item.ecosystem === 'claude') return `Claude ${item.packageType}`;
+  return item.packageType;
+}
+
+function CapabilityListSection({
+  id,
+  title,
+  emptyTitle,
+  children,
+}: {
+  id: string;
+  title: string;
+  emptyTitle: string;
+  children: ReactNode[];
+}) {
+  return (
+    <PageSection id={id} title={title}>
+      {children.length ? <div className="divide-y divide-border-subtle/70">{children}</div> : <EmptyState title={emptyTitle} />}
+    </PageSection>
+  );
+}
+
+function PageSection({ id, title, children, action }: { id: string; title: string; children: ReactNode; action?: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-24 space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-border-subtle/70 pb-2">
+        <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SectionNav() {
+  return (
+    <nav aria-label="Extension sections" className="sticky top-0 z-10 border-b border-border-subtle/60 bg-base/95 py-2 backdrop-blur">
+      <div className="flex flex-wrap gap-1">
+        {EXTENSION_PAGE_SECTIONS.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            className="rounded-lg px-2.5 py-1.5 text-[12px] text-secondary transition-colors hover:bg-surface hover:text-primary"
+          >
+            {section.label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-0 border-b border-border-subtle/60 py-3">
+      <div className="text-[20px] font-semibold tabular-nums text-primary">{value}</div>
+      <div className="mt-0.5 text-[12px] text-secondary">{label}</div>
+    </div>
+  );
+}
+
 function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string {
   return JSON.stringify(
     {
@@ -577,10 +651,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             ecosystem: item.ecosystem,
             packageType: item.packageType,
           });
-          setNotice(`Installed ${item.name} as a runtime package source.`);
+          setNotice(`Installed ${item.name} as an extension-backed package.`);
         } else {
           await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-          setNotice(`Installed ${item.name}. Enable it from the extension registry when you're ready.`);
+          setNotice(`Installed ${item.name}. Enable it from Installed Extensions when you're ready.`);
         }
         notifyExtensionRegistryChanged();
         await load();
@@ -601,14 +675,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       return;
     }
     setBusyId('marketplace-source');
-    setNotice(`Installing ${marketplaceEcosystem} ${marketplacePackageType} package…`);
+    setNotice(`Importing ${marketplaceEcosystem} ${marketplacePackageType} package as an extension…`);
     try {
       await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
         source,
         ecosystem: marketplaceEcosystem,
         packageType: marketplacePackageType,
       });
-      setNotice(`Installed ${marketplaceEcosystem} ${marketplacePackageType} package source.`);
+      setNotice(`Installed ${marketplaceEcosystem} ${marketplacePackageType} package as an extension-backed package.`);
       setMarketplaceSource('');
       notifyExtensionRegistryChanged();
       await load();
@@ -750,13 +824,56 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const items = catalog?.packages ?? catalog?.extensions ?? [];
     return items.filter((item) => {
       if (installedIds.has(item.id)) return false;
-      if (filter !== 'available-addons') return false;
       if (!normalizedQuery) return true;
       return `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
         .toLowerCase()
         .includes(normalizedQuery);
     });
-  }, [catalog, extensions, filter, query]);
+  }, [catalog, extensions, query]);
+
+  const enabledExtensions = useMemo(() => extensions.filter((extension) => extension.enabled), [extensions]);
+  const extensionSkills = useMemo(
+    () =>
+      extensions.flatMap((extension) =>
+        (extension.skills ?? []).map((skill) => ({
+          extension,
+          skill,
+        })),
+      ),
+    [extensions],
+  );
+  const extensionTools = useMemo(
+    () =>
+      extensions.flatMap((extension) =>
+        (extension.tools ?? []).map((tool) => ({
+          extension,
+          tool,
+        })),
+      ),
+    [extensions],
+  );
+  const extensionSurfaces = useMemo(
+    () =>
+      extensions.flatMap((extension) =>
+        getLogicalSurfaces(extension).map((surface) => ({
+          extension,
+          surface,
+        })),
+      ),
+    [extensions],
+  );
+  const extensionsWithDiagnostics = useMemo(
+    () =>
+      extensions.filter(
+        (extension) =>
+          extension.status === 'invalid' ||
+          Boolean(extension.healthError) ||
+          Boolean(extension.buildError) ||
+          Boolean(extension.errors?.length) ||
+          Boolean(extension.diagnostics?.length),
+      ),
+    [extensions],
+  );
 
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
@@ -905,7 +1022,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         </thead>
         <tbody>
           {renderExtensionRows(items)}
-          {renderCatalogRows(visibleCatalogExtensions)}
+          {renderCatalogRows([])}
         </tbody>
       </table>
     </section>
@@ -922,8 +1039,13 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   return (
     <>
       <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
-        <AppPageLayout shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[72rem]'} contentClassName="space-y-10">
-          {!embedded ? <AppPageIntro title="Extensions" summary="Install, enable, and inspect local product modules." /> : null}
+        <AppPageLayout shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[76rem]'} contentClassName="space-y-8">
+          {!embedded ? (
+            <AppPageIntro
+              title="Extensions"
+              summary="Install, enable, and inspect Neon Pilot extensions, including native packages and imported plugin ecosystems."
+            />
+          ) : null}
 
           {notice ? (
             <div className="sticky top-0 z-20 border-b border-border-subtle/60 bg-base/95 py-2 text-[13px] text-secondary backdrop-blur">
@@ -931,79 +1053,245 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </div>
           ) : null}
 
+          <SectionNav />
+
           {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
-          {filter === 'available-addons' ? (
-            <section className="space-y-3">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_9rem_auto]">
-                <input
-                  className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-                  value={marketplaceSource}
-                  onChange={(event) => setMarketplaceSource(event.currentTarget.value)}
-                  placeholder="Package source URL or local path"
-                />
-                <select
-                  className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-                  value={marketplaceEcosystem}
-                  onChange={(event) => setMarketplaceEcosystem(event.currentTarget.value as MarketplaceBehaviorEcosystem)}
-                >
-                  <option value="codex">Codex</option>
-                  <option value="claude">Claude</option>
-                </select>
-                <select
-                  className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-                  value={marketplacePackageType}
-                  onChange={(event) => setMarketplacePackageType(event.currentTarget.value as MarketplaceBehaviorPackageType)}
-                >
-                  <option value="skill">Skill</option>
-                  <option value="instruction-pack">Instructions</option>
-                  <option value="agent">Agent</option>
-                  <option value="template">Template</option>
-                </select>
-                <button
-                  type="button"
-                  className="rounded-lg bg-surface px-3 py-2 text-[13px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={busyId === 'marketplace-source'}
-                  onClick={() => void installMarketplaceSource()}
-                >
-                  {busyId === 'marketplace-source' ? 'Installing…' : 'Install'}
-                </button>
-              </div>
-            </section>
-          ) : null}
-          {extensions.length === 0 && visibleCatalogExtensions.length === 0 ? (
-            <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-                  {EXTENSION_FILTERS.map(({ id: nextFilter, label }) => (
-                    <button
-                      key={nextFilter}
-                      type="button"
-                      className={cx(
-                        'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
-                        filter === nextFilter ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
-                      )}
-                      onClick={() => setFilter(nextFilter)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search extensions…"
-                  className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-                />
-              </div>
-              {visibleExtensions.length === 0 && visibleCatalogExtensions.length === 0 ? (
-                <EmptyState title="No matching extensions" body="Adjust the filter or search query." />
-              ) : (
-                renderExtensionTable(visibleExtensions)
-              )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search extensions and capabilities…"
+              className="w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50 md:w-80"
+            />
+            <button
+              type="button"
+              className="rounded-lg bg-surface px-3 py-2 text-[13px] text-secondary hover:text-primary"
+              onClick={() => {
+                notifyExtensionRegistryChanged();
+                void load();
+                loadCatalog();
+              }}
+            >
+              Reload
+            </button>
+          </div>
+
+          <PageSection id="extensions-overview" title="Overview">
+            <div className="grid gap-x-8 md:grid-cols-5">
+              <SummaryMetric label="Installed" value={extensions.length} />
+              <SummaryMetric label="Enabled" value={enabledExtensions.length} />
+              <SummaryMetric label="Skills" value={extensionSkills.length} />
+              <SummaryMetric label="Tools" value={extensionTools.length} />
+              <SummaryMetric label="Issues" value={extensionsWithDiagnostics.length} />
             </div>
-          )}
+          </PageSection>
+
+          <PageSection
+            id="installed-extensions"
+            title="Installed Extensions"
+            action={
+              <div className="flex flex-wrap gap-1">
+                {EXTENSION_FILTERS.map(({ id: nextFilter, label }) => (
+                  <button
+                    key={nextFilter}
+                    type="button"
+                    className={cx(
+                      'rounded-lg px-2.5 py-1.5 text-[12px] transition-colors',
+                      filter === nextFilter ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
+                    )}
+                    onClick={() => setFilter(nextFilter)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            {extensions.length === 0 ? (
+              <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
+            ) : visibleExtensions.length === 0 ? (
+              <EmptyState title="No matching extensions" body="Adjust the filter or search query." />
+            ) : (
+              renderExtensionTable(visibleExtensions)
+            )}
+          </PageSection>
+
+          <PageSection id="available-extensions" title="Available Extensions">
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_9rem_auto]">
+              <input
+                className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                value={marketplaceSource}
+                onChange={(event) => setMarketplaceSource(event.currentTarget.value)}
+                placeholder="Extension, plugin, or package URL or local path"
+              />
+              <select
+                className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                value={marketplaceEcosystem}
+                onChange={(event) => setMarketplaceEcosystem(event.currentTarget.value as MarketplaceBehaviorEcosystem)}
+              >
+                <option value="codex">Codex</option>
+                <option value="claude">Claude</option>
+              </select>
+              <select
+                className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                value={marketplacePackageType}
+                onChange={(event) => setMarketplacePackageType(event.currentTarget.value as MarketplaceBehaviorPackageType)}
+              >
+                <option value="skill">Skill</option>
+                <option value="instruction-pack">Instructions</option>
+                <option value="agent">Agent</option>
+                <option value="template">Template</option>
+              </select>
+              <button
+                type="button"
+                className="rounded-lg bg-surface px-3 py-2 text-[13px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busyId === 'marketplace-source'}
+                onClick={() => void installMarketplaceSource()}
+              >
+                {busyId === 'marketplace-source' ? 'Installing…' : 'Install'}
+              </button>
+            </div>
+            <section className="min-w-0 overflow-auto">
+              <table className="w-full border-collapse text-left text-[13px]">
+                <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
+                  <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
+                    <th className="py-2 pr-4 font-semibold">Name</th>
+                    <th className="px-3 py-2 font-semibold">Kind</th>
+                    <th className="py-2 px-3 font-semibold">Source</th>
+                    <th className="py-2 px-3 font-semibold">Install</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleCatalogExtensions.map((item) => {
+                    const busy = busyId === item.id;
+                    return (
+                      <tr key={`available:${item.id}`} className="border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
+                        <td className="min-w-0 py-3 pr-4 align-middle">
+                          <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
+                          <div className="mt-0.5 max-w-[44rem] text-[12px] leading-5 text-secondary">
+                            {item.description || 'No description provided.'}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">{packageKindLabel(item)}</td>
+                        <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] text-secondary">
+                          {item.marketplaceSourceId ?? item.tag ?? 'Available'}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 align-middle">
+                          <button
+                            type="button"
+                            className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={busy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
+                            onClick={() => void installCatalogExtension(item)}
+                          >
+                            {busy
+                              ? 'Installing…'
+                              : item.packageType && item.packageType !== 'extension' && !item.packageSource
+                                ? 'Planned'
+                                : 'Install'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {visibleCatalogExtensions.length === 0 ? (
+                <EmptyState title="No available extensions" body="Add a source or clear search." />
+              ) : null}
+            </section>
+          </PageSection>
+
+          <CapabilityListSection id="extension-skills" title="Skills" emptyTitle="No skills contributed">
+            {extensionSkills.map(({ extension, skill }) => (
+              <div key={`${extension.id}:${skill.name}`} className="grid gap-2 py-3 md:grid-cols-[minmax(0,1fr)_12rem_8rem]">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-primary">{skill.title ?? skill.name}</div>
+                  {skill.description ? <p className="mt-0.5 text-[12px] leading-5 text-secondary">{skill.description}</p> : null}
+                </div>
+                <div className="text-[12px] text-secondary">{extension.name}</div>
+                <div className="text-[12px] text-secondary">{extension.enabled ? 'Available' : 'Disabled'}</div>
+              </div>
+            ))}
+          </CapabilityListSection>
+
+          <CapabilityListSection id="extension-tools" title="Tools" emptyTitle="No tools contributed">
+            {extensionTools.map(({ extension, tool }) => (
+              <div key={`${extension.id}:${tool.name}`} className="grid gap-2 py-3 md:grid-cols-[minmax(0,1fr)_12rem_8rem]">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-primary">{tool.name}</div>
+                  {'description' in tool && typeof tool.description === 'string' ? (
+                    <p className="mt-0.5 text-[12px] leading-5 text-secondary">{tool.description}</p>
+                  ) : null}
+                </div>
+                <div className="text-[12px] text-secondary">{extension.name}</div>
+                <div className="text-[12px] text-secondary">{extension.enabled ? 'Enabled' : 'Disabled'}</div>
+              </div>
+            ))}
+          </CapabilityListSection>
+
+          <CapabilityListSection id="extension-apps" title="Apps & Views" emptyTitle="No app views contributed">
+            {extensionSurfaces.map(({ extension, surface }) => (
+              <div key={`${extension.id}:${surface.id}`} className="grid gap-2 py-3 md:grid-cols-[minmax(0,1fr)_12rem_10rem]">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-primary">{surface.title}</div>
+                  <div className="mt-0.5 text-[12px] text-secondary">{surface.kind}</div>
+                  {surface.warning ? <div className="mt-0.5 text-[12px] text-danger">{surface.warning}</div> : null}
+                </div>
+                <div className="text-[12px] text-secondary">{extension.name}</div>
+                <div className="text-[12px] text-secondary">{extension.enabled ? 'Enabled' : 'Disabled'}</div>
+              </div>
+            ))}
+          </CapabilityListSection>
+
+          <PageSection id="extension-diagnostics" title="Diagnostics">
+            {extensionsWithDiagnostics.length ? (
+              <div className="divide-y divide-border-subtle/70">
+                {extensionsWithDiagnostics.map((extension) => (
+                  <div key={extension.id} className="grid gap-2 py-3 md:grid-cols-[14rem_minmax(0,1fr)_8rem]">
+                    <div className="text-[13px] font-medium text-primary">{extension.name}</div>
+                    <div className="min-w-0 text-[12px] leading-5 text-secondary">
+                      {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.healthError, extension.buildError]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                    <button
+                      type="button"
+                      className="text-left text-[12px] text-secondary hover:text-primary md:text-right"
+                      onClick={() => setDetailsExtensionId(extension.id)}
+                    >
+                      Details
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="No extension issues" />
+            )}
+          </PageSection>
+
+          <PageSection id="extension-developer" title="Developer">
+            <div className="divide-y divide-border-subtle/70">
+              {extensions.map((extension) => (
+                <div key={extension.id} className="grid gap-2 py-3 md:grid-cols-[14rem_minmax(0,1fr)_8rem]">
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium text-primary">{extension.name}</div>
+                    <div className="font-mono text-[11px] text-dim">{extension.id}</div>
+                  </div>
+                  <div className="min-w-0 break-all font-mono text-[11px] leading-5 text-secondary">
+                    {extension.packageRoot ?? 'Bundled package root unavailable'}
+                  </div>
+                  <button
+                    type="button"
+                    className="text-left text-[12px] text-secondary hover:text-primary md:text-right"
+                    onClick={() => setDetailsExtensionId(extension.id)}
+                  >
+                    Inspect
+                  </button>
+                </div>
+              ))}
+            </div>
+          </PageSection>
         </AppPageLayout>
       </div>
 

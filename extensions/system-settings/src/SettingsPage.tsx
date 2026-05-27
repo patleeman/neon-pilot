@@ -70,7 +70,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
   { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
   { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
-  { id: 'settings-runtime', label: 'Agent Runtime', summary: 'Instructions and tools' },
+  { id: 'settings-runtime', label: 'Agent Capabilities', summary: 'Instructions, skills, and tools' },
   { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
@@ -3200,7 +3200,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               </div>
             </SettingsSection>
 
-            <SettingsSection id="settings-runtime" label="Agent Runtime" description="Instruction files and agent tools.">
+            <SettingsSection
+              id="settings-runtime"
+              label="Agent Capabilities"
+              description="Instruction files, skills, tools, and extension-provided capabilities."
+            >
               <div className="space-y-0">
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (

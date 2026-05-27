@@ -15,6 +15,8 @@ import {
 } from '@neon-pilot/extensions/backend/extensions';
 import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
 
+import { createImportedPackageExtension } from './importedPackageWrapper.js';
+
 const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
 
 interface ExtensionIdInput {
@@ -64,11 +66,19 @@ export async function installMarketplacePackage(input: unknown, _ctx: ExtensionB
     target: body.target === 'local' || body.target === undefined ? 'local' : body.target,
     sourceBaseDir: body.sourceBaseDir,
   });
+  const ecosystem = typeof body.ecosystem === 'string' ? body.ecosystem : 'external';
+  const wrapper = createImportedPackageExtension({
+    ecosystem,
+    packageType,
+    source: result.source,
+    runtimeDir: ctx.runtimeDir,
+  });
 
   return {
     ok: true,
     packageType,
-    ecosystem: typeof body.ecosystem === 'string' ? body.ecosystem : undefined,
+    ecosystem,
+    extension: wrapper,
     ...result,
   };
 }

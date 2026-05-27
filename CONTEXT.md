@@ -47,6 +47,14 @@ Do not use **core** for product workflows that should live in extensions.
 
 A package that contributes product features on top of core: pages, panels, tools, skills, commands, context providers, integrations, diagnostics, settings, and workflow UX.
 
+Extensions are Neon Pilot's product concept for installable capabilities. A native extension is implemented directly against the Neon Pilot extension API; an imported extension may wrap another ecosystem's package format, such as a Codex plugin, Claude skill package, MCP bundle, instruction pack, or prompt template pack.
+
+### Plugin
+
+An external ecosystem's package format that can be imported or wrapped by a Neon Pilot extension.
+
+Use **plugin** when referring to Codex-style or third-party plugin packages. Do not use **plugin** as a replacement for Neon Pilot **extension** in product copy.
+
 ### System extension
 
 A bundled extension shipped with the app or repo. System extensions can still own product-facing features; they are not automatically core.

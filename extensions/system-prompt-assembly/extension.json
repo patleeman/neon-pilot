@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "system-prompt-assembly",
-  "name": "Agent Runtime",
+  "name": "Agent Capabilities",
   "packageType": "system",
   "description": "Inspect and manage the capabilities injected into agent runs: extensions, instructions, skills, tools, MCP, templates, and context.",
   "version": "0.1.0",
@@ -16,11 +16,13 @@
     ]
   },
   "contributes": {
-    "nav": [{ "id": "agent-runtime-nav", "label": "Agent Runtime", "route": "/agent-runtime", "icon": "sparkle", "section": "settings" }],
+    "nav": [
+      { "id": "agent-runtime-nav", "label": "Agent Capabilities", "route": "/agent-runtime", "icon": "sparkle", "section": "settings" }
+    ],
     "views": [
       {
         "id": "agent-runtime-page",
-        "title": "Agent Runtime",
+        "title": "Agent Capabilities",
         "location": "main",
         "route": "/agent-runtime",
         "component": "PromptAssemblyPage",
@@ -30,7 +32,7 @@
       },
       {
         "id": "prompt-assembly-page",
-        "title": "Agent Runtime",
+        "title": "Agent Capabilities",
         "location": "main",
         "route": "/prompt-assembly",
         "component": "PromptAssemblyPage",

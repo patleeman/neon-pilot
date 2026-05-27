@@ -108,12 +108,11 @@ describe('ExtensionManagerPage', () => {
   it('keeps the row actions menu focused on opening the package folder', async () => {
     renderPage();
 
-    await screen.findByText('Menu Test');
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByLabelText('More actions'));
 
     expect(screen.getByText('Open folder')).toBeTruthy();
     expect(screen.queryByText('Build')).toBeNull();
-    expect(screen.queryByText('Reload')).toBeNull();
     expect(screen.queryByText('Validate')).toBeNull();
     expect(screen.queryByText('Run self-test')).toBeNull();
     expect(screen.queryByText('Snapshot')).toBeNull();
@@ -121,18 +120,18 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('defaults to installed add-ons and exposes marketplace as a filter, not commands', async () => {
+  it('defaults to add-ons and exposes available packages as a page section, not commands', async () => {
     renderPage();
 
-    await screen.findByText('Menu Test');
-    expect(screen.getByRole('button', { name: 'Marketplace' })).toBeTruthy();
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'Available' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getByText('Add-on')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
-  it('keeps catalog-only extensions out of the all installed filter', async () => {
+  it('shows catalog-only extensions in the available section instead of the installed filter', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,
       version: '0.9.1-rc.6',
@@ -154,11 +153,8 @@ describe('ExtensionManagerPage', () => {
       extensions: { callAction },
     });
 
-    await screen.findByText('Menu Test');
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'All installed' }));
-    expect(screen.queryByText('Available Only')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Marketplace' }));
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
@@ -172,7 +168,7 @@ describe('ExtensionManagerPage', () => {
       extensions: { callAction },
     });
 
-    await screen.findByText('Menu Test');
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(callAction).toHaveBeenCalledTimes(1);
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
   });
@@ -190,9 +186,8 @@ describe('ExtensionManagerPage', () => {
       extensions: { callAction },
     });
 
-    await screen.findByText('Menu Test');
-    fireEvent.click(screen.getByRole('button', { name: 'Marketplace' }));
-    fireEvent.change(screen.getByPlaceholderText('Package source URL or local path'), {
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByPlaceholderText('Extension, plugin, or package URL or local path'), {
       target: { value: 'https://example.com/claude-instructions.git' },
     });
     const selectors = screen.getAllByRole('combobox');
@@ -200,7 +195,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.change(selectors[1] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
     fireEvent.click(screen.getByRole('button', { name: 'Install' }));
 
-    await screen.findByText('Installed claude instruction-pack package source.');
+    await screen.findByText('Installed claude instruction-pack package as an extension-backed package.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', {
       source: 'https://example.com/claude-instructions.git',
       ecosystem: 'claude',

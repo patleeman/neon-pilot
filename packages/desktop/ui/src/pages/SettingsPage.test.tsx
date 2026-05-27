@@ -336,7 +336,7 @@ describe('SettingsPage', () => {
     expect(html.indexOf('href="#settings-workspace"')).toBeLessThan(html.indexOf('href="#settings-runtime"'));
     expect(html.indexOf('href="#settings-runtime"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
     expect(html).toContain('Theme');
-    expect(html).toContain('Agent Runtime');
+    expect(html).toContain('Agent Capabilities');
     expect(html).toContain('AGENTS.md files');
     expect(html).toContain('Image Probe');
     expect(html).not.toContain('Knowledge base');
@@ -359,7 +359,7 @@ describe('SettingsPage', () => {
     expect(html).toContain('Theme, accent, and visual defaults.');
     expect(html).toContain('Model and behavior defaults for new chats.');
     expect(html).toContain('Default working directory and local context paths.');
-    expect(html).toContain('Instruction files and agent tools.');
+    expect(html).toContain('Instruction files, skills, tools, and extension-provided capabilities.');
     expect(html).toContain('Append extra AGENTS.md-style files to the runtime prompt.');
     expect(html).toContain('Leave blank to use the runtime process cwd.');
     expect(html).not.toContain('Indexed root');

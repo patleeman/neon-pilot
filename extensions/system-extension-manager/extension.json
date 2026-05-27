@@ -42,8 +42,8 @@
     "skills": [
       {
         "id": "skills-and-capabilities",
-        "title": "Skills and Runtime Capabilities",
-        "description": "Guidance for distinguishing reusable workflow skills from runtime features and extensions.",
+        "title": "Skills and Extension Capabilities",
+        "description": "Guidance for distinguishing reusable workflow skills from extension features and imported plugin packages.",
         "path": "skills/skills-and-capabilities/SKILL.md"
       },
       {
