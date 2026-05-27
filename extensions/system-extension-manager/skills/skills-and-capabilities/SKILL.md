@@ -26,7 +26,7 @@ Skills are reusable workflow packages.
 Shared contract:
 
 ```text
-<vault-root>/skills/<skill>/SKILL.md
+<knowledge-root>/skills/<skill>/SKILL.md
 ```
 
 Use a skill when you want:

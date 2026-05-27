@@ -36,7 +36,7 @@ Electron main process
     │       ├── Local API
     │       ├── Session parsing and search
     │       ├── Git/checkpoint operations
-    │       ├── Vault and knowledge-base reads/writes
+    │       ├── Knowledge base reads/writes
     │       ├── Extension backend host
     │       └── Daemon runtime
     │             │

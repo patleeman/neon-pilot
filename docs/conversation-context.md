@@ -24,7 +24,7 @@ Attached docs:
 - Persist across all turns in the conversation
 - Appear in the Knowledge rail when workbench mode is active
 - Are loaded by the agent on every turn
-- Do not modify the vault — they are scoped to the conversation
+- Do not modify the knowledge base — they are scoped to the conversation
 
 Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge rail.
 
@@ -44,7 +44,7 @@ Images are sent to image-capable models as image content. The composer downscale
 
 When the agent builds context for a turn, it merges inputs in this order:
 
-1. **Instruction files** — standing behavior and policy from the vault, `~/.config/agents`, config, or project discovery
+1. **Instruction files** — standing behavior and policy from the knowledge base, `~/.config/agents`, config, or project discovery
 2. **Attached context docs** — durable docs pinned to this conversation
 3. **Inline `@` file references** — files referenced in the current message
 4. **Binary attachments** — images and files attached to the current message

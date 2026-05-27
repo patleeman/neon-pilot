@@ -4,7 +4,7 @@ import { parseDocument, stringify } from 'yaml';
 
 import { migrateLegacyProfileMemoryDirs } from './memory-docs.js';
 import { type ProjectDocument, type ProjectMilestoneDocument, type ProjectTaskDocument, readProject } from './project-artifacts.js';
-import { getDurableNodesDir, getDurableNotesDir, getDurableProjectsDir, getDurableSkillsDir, getVaultRoot } from './runtime/paths.js';
+import { getDurableNodesDir, getDurableNotesDir, getDurableProjectsDir, getDurableSkillsDir, getKnowledgeRoot } from './runtime/paths.js';
 
 const INDEX_FILE_NAME = 'INDEX.md';
 const LEGACY_SKILL_FILE_NAMES = [INDEX_FILE_NAME, 'SKILL.md'] as const;
@@ -12,6 +12,7 @@ const FRONTMATTER_DELIMITER = '---';
 const NODE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 export interface ResolveNodesOptions {
+  knowledgeRoot?: string;
   vaultRoot?: string;
 }
 
@@ -152,12 +153,12 @@ interface LegacyNodeCandidate {
   project?: ProjectDocument;
 }
 
-function resolveVaultRoot(options: ResolveNodesOptions = {}): string {
-  return resolve(options.vaultRoot ?? getVaultRoot());
+function resolveKnowledgeRoot(options: ResolveNodesOptions = {}): string {
+  return resolve(options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot());
 }
 
 export function resolveUnifiedNodesDir(options: ResolveNodesOptions = {}): string {
-  return getDurableNodesDir(resolveVaultRoot(options));
+  return getDurableNodesDir(resolveKnowledgeRoot(options));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -945,11 +946,11 @@ export function validateUnifiedNodeId(id: string): void {
 }
 
 export function loadUnifiedNodes(options: ResolveNodesOptions = {}): LoadUnifiedNodesResult {
-  const vaultRoot = resolveVaultRoot(options);
-  migrateLegacyProfileMemoryDirs({ vaultRoot: options.vaultRoot });
-  const notesDir = getDurableNotesDir(vaultRoot);
-  const projectsDir = getDurableProjectsDir(vaultRoot);
-  const skillsDir = getDurableSkillsDir(vaultRoot);
+  const knowledgeRoot = resolveKnowledgeRoot(options);
+  migrateLegacyProfileMemoryDirs({ knowledgeRoot: options.knowledgeRoot, vaultRoot: options.vaultRoot });
+  const notesDir = getDurableNotesDir(knowledgeRoot);
+  const projectsDir = getDurableProjectsDir(knowledgeRoot);
+  const skillsDir = getDurableSkillsDir(knowledgeRoot);
 
   const nodes: UnifiedNodeRecord[] = [];
   const parseErrors: UnifiedNodeParseError[] = [];
@@ -988,7 +989,7 @@ export function loadUnifiedNodes(options: ResolveNodesOptions = {}): LoadUnified
   }
 
   nodes.sort((left, right) => left.id.localeCompare(right.id));
-  return { nodesDir: resolveUnifiedNodesDir({ vaultRoot }), nodes, parseErrors };
+  return { nodesDir: resolveUnifiedNodesDir({ knowledgeRoot }), nodes, parseErrors };
 }
 
 export function findUnifiedNodeById(nodes: UnifiedNodeRecord[], id: string): UnifiedNodeRecord {
@@ -1021,7 +1022,7 @@ interface NormalizedCreateUnifiedNodeInput {
 }
 
 interface UnifiedNodeKindWriter {
-  targetPath: (vaultRoot: string, input: NormalizedCreateUnifiedNodeInput) => string;
+  targetPath: (knowledgeRoot: string, input: NormalizedCreateUnifiedNodeInput) => string;
   write: (targetPath: string, input: NormalizedCreateUnifiedNodeInput) => UnifiedNodeRecord;
 }
 
@@ -1048,11 +1049,11 @@ function writeFrontmatterBackedNode(targetPath: string, input: NormalizedCreateU
 
 const CREATE_UNIFIED_NODE_WRITERS: Record<string, UnifiedNodeKindWriter> = {
   project: {
-    targetPath: (vaultRoot, input) => join(getDurableProjectsDir(vaultRoot), input.id, 'project.md'),
+    targetPath: (knowledgeRoot, input) => join(getDurableProjectsDir(knowledgeRoot), input.id, 'project.md'),
     write: writeFrontmatterBackedNode,
   },
   skill: {
-    targetPath: (vaultRoot, input) => join(getDurableSkillsDir(vaultRoot), input.id, 'SKILL.md'),
+    targetPath: (knowledgeRoot, input) => join(getDurableSkillsDir(knowledgeRoot), input.id, 'SKILL.md'),
     write: (targetPath, input) =>
       writeSkillNode(targetPath, {
         id: input.id,
@@ -1068,7 +1069,7 @@ const CREATE_UNIFIED_NODE_WRITERS: Record<string, UnifiedNodeKindWriter> = {
       }),
   },
   note: {
-    targetPath: (vaultRoot, input) => join(getDurableNotesDir(vaultRoot), `${input.id}.md`),
+    targetPath: (knowledgeRoot, input) => join(getDurableNotesDir(knowledgeRoot), `${input.id}.md`),
     write: writeFrontmatterBackedNode,
   },
 };
@@ -1089,7 +1090,7 @@ export function createUnifiedNode(input: CreateUnifiedNodeInput, options: Resolv
     throw new Error('summary is required');
   }
 
-  const vaultRoot = resolveVaultRoot(options);
+  const knowledgeRoot = resolveKnowledgeRoot(options);
   const tags = normalizeTags(input.tags);
   const kinds = collectKindsFromTags(tags);
   const primaryKind = kinds[0] ?? 'note';
@@ -1115,13 +1116,13 @@ export function createUnifiedNode(input: CreateUnifiedNodeInput, options: Resolv
     relationships: input.relationships,
   };
   const writer = resolveCreateUnifiedNodeWriter(primaryKind);
-  const targetPath = writer.targetPath(vaultRoot, normalized);
+  const targetPath = writer.targetPath(knowledgeRoot, normalized);
   if (existsSync(targetPath) && !overwrite) {
     throw new Error(`Node already exists at ${targetPath}. Pass force=true to overwrite.`);
   }
   const node = writer.write(targetPath, normalized);
 
-  return { nodesDir: resolveUnifiedNodesDir({ vaultRoot }), node, overwritten: overwrite };
+  return { nodesDir: resolveUnifiedNodesDir({ knowledgeRoot }), node, overwritten: overwrite };
 }
 
 function readNodeFrontmatter(filePath: string): { frontmatter: Record<string, unknown>; body: string } {
@@ -1477,10 +1478,10 @@ function copyLegacyNodeCandidate(
 }
 
 function collectLegacyCandidates(options: ResolveNodesOptions = {}): LegacyNodeCandidate[] {
-  const vaultRoot = resolveVaultRoot(options);
-  const notesDir = getDurableNotesDir(vaultRoot);
-  const projectsDir = getDurableProjectsDir(vaultRoot);
-  const skillsDir = getDurableSkillsDir(vaultRoot);
+  const knowledgeRoot = resolveKnowledgeRoot(options);
+  const notesDir = getDurableNotesDir(knowledgeRoot);
+  const projectsDir = getDurableProjectsDir(knowledgeRoot);
+  const skillsDir = getDurableSkillsDir(knowledgeRoot);
   const output: LegacyNodeCandidate[] = [];
 
   if (existsSync(notesDir)) {

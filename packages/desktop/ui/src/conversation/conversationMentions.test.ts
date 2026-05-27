@@ -24,7 +24,7 @@ describe('conversationMentions', () => {
           path: '/tmp/project-state-model.md',
         },
       ],
-      vaultFiles: [
+      knowledgeFiles: [
         {
           id: 'notes/reference/',
           kind: 'folder',
@@ -73,7 +73,7 @@ describe('conversationMentions', () => {
           path: '/tmp/project-state-model.md',
         },
       ],
-      vaultFiles: [
+      knowledgeFiles: [
         {
           id: 'notes/reference/INDEX.md',
           kind: 'file',
@@ -103,7 +103,7 @@ describe('conversationMentions', () => {
         prompt: `Task ${index + 1}`,
       })),
       memoryDocs: [],
-      vaultFiles: [],
+      knowledgeFiles: [],
     });
 
     expect(filterMentionItems(items, '@', { limit: MAX_MENTION_MENU_ITEMS }).map((item) => item.id)).toHaveLength(MAX_MENTION_MENU_ITEMS);
@@ -133,7 +133,7 @@ describe('conversationMentions', () => {
           path: '/tmp/project-state-model.md',
         },
       ],
-      vaultFiles: [
+      knowledgeFiles: [
         {
           id: 'notes/reference/',
           kind: 'folder',

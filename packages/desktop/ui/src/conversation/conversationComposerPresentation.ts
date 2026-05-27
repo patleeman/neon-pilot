@@ -7,7 +7,7 @@ const COMPOSER_SHELF_TEXT_MAX_LINES = 8;
 
 export function resolveConversationAutocompleteCatalogDemand(input: string): {
   needsMemoryData: boolean;
-  needsVaultFiles: boolean;
+  needsKnowledgeFiles: boolean;
 } {
   const slashInput = parseSlashInput(input);
   const showModelPicker = slashInput?.command === '/model' && input.startsWith('/model ');
@@ -15,7 +15,7 @@ export function resolveConversationAutocompleteCatalogDemand(input: string): {
 
   return {
     needsMemoryData: hasMentionQuery || Boolean(slashInput && !showModelPicker),
-    needsVaultFiles: hasMentionQuery,
+    needsKnowledgeFiles: hasMentionQuery,
   };
 }
 

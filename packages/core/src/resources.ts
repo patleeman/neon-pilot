@@ -728,7 +728,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const configuredSkillDirs = resolveConfiguredSkillDirs();
   const durableSettingsFiles = resolveDurableSettingsFiles(runtimeScope, options);
   const durableModelsFiles = resolveDurableModelsFiles(runtimeScope, options);
-  const durableSkillDirs = listUnifiedSkillNodeDirs(runtimeScope, { vaultRoot: knowledgeRoot });
+  const durableSkillDirs = listUnifiedSkillNodeDirs(runtimeScope, { knowledgeRoot });
 
   const layers = buildResourceLayers({
     repoDefaultsAgentDir,

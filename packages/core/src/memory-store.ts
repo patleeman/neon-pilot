@@ -4,7 +4,7 @@ import { parseDocument, stringify } from 'yaml';
 
 import { getMemoryDocsDir, type ResolveMemoryDocsOptions } from './memory-docs.js';
 import { createUnifiedNode, loadUnifiedNodes, type UnifiedNodeRecord } from './nodes.js';
-import { getVaultRoot } from './runtime/paths.js';
+import { getKnowledgeRoot } from './runtime/paths.js';
 
 const FRONTMATTER_DELIMITER = '---';
 const MEMORY_DOC_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
@@ -124,12 +124,12 @@ export interface LintMemoryDocsResult {
   referenceErrors: MemoryDocReferenceError[];
 }
 
-function resolveMemoryContext(options: ResolveMemoryDocsOptions = {}): { memoryDir: string; vaultRoot: string } {
-  const vaultRoot = options.vaultRoot ?? getVaultRoot();
+function resolveMemoryContext(options: ResolveMemoryDocsOptions = {}): { memoryDir: string; knowledgeRoot: string } {
+  const knowledgeRoot = options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot();
 
   return {
-    memoryDir: getMemoryDocsDir({ vaultRoot }),
-    vaultRoot,
+    memoryDir: getMemoryDocsDir({ knowledgeRoot }),
+    knowledgeRoot,
   };
 }
 
@@ -344,8 +344,8 @@ export function validateMemoryDocId(id: string): void {
 }
 
 export function loadMemoryDocs(options: LoadMemoryDocsOptions = {}): LoadMemoryDocsResult {
-  const { memoryDir, vaultRoot } = resolveMemoryContext(options);
-  const loaded = loadUnifiedNodes({ vaultRoot });
+  const { memoryDir, knowledgeRoot } = resolveMemoryContext(options);
+  const loaded = loadUnifiedNodes({ knowledgeRoot });
 
   const docs = loaded.nodes
     .filter((node) => isNoteNode(node))
@@ -572,7 +572,7 @@ export function createMemoryDoc(input: CreateMemoryDocInput, options: ResolveMem
     throw new Error('summary is required');
   }
 
-  const { memoryDir, vaultRoot } = resolveMemoryContext(options);
+  const { memoryDir, knowledgeRoot } = resolveMemoryContext(options);
   const role = input.role?.trim().toLowerCase();
   const created = createUnifiedNode(
     {
@@ -592,7 +592,7 @@ export function createMemoryDoc(input: CreateMemoryDocInput, options: ResolveMem
       updatedAt: input.updated?.trim() || currentDateYyyyMmDd(),
       force: input.force,
     },
-    { vaultRoot },
+    { knowledgeRoot },
   );
 
   const doc = mapUnifiedNodeToMemoryDoc(created.node);

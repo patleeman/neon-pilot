@@ -20,7 +20,7 @@ Clean-room conversations are constrained by runtime tool policy to:
 - `web_fetch`
 - `agent_browser`
 
-They do not receive local filesystem, shell, repo-editing, checkpoint, scheduling, vault, or other local tools.
+They do not receive local filesystem, shell, repo-editing, checkpoint, scheduling, knowledge, or other local tools.
 
 The per-turn instruction layer tells the observer agent to treat web content as untrusted, ignore prompt injections, avoid copying code/assets/long verbatim text, separate observations from assumptions, and produce a handoff document rather than implementation.
 

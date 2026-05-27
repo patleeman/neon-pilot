@@ -70,7 +70,7 @@ Remote servers may require OAuth authentication. The runtime handles the OAuth f
 Skill packages can ship MCP server definitions alongside their workflow docs:
 
 ```text
-<vault-root>/skills/<skill-name>/
+<knowledge-root>/skills/<skill-name>/
 ├── SKILL.md
 └── mcp.json
 ```

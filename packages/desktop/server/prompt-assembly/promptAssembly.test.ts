@@ -125,8 +125,11 @@ describe('buildPromptAssemblyPlan', () => {
     promptTemplatePath = join(root, 'prompts', 'summary.md');
     promptAssemblyHooks = [];
 
-    mkdirSync(join(durableSkillsDir, 'vault-skill'), { recursive: true });
-    writeFileSync(join(durableSkillsDir, 'vault-skill', 'SKILL.md'), '---\nname: Vault Skill\ndescription: Vault skill description\n---\n');
+    mkdirSync(join(durableSkillsDir, 'knowledge-skill'), { recursive: true });
+    writeFileSync(
+      join(durableSkillsDir, 'knowledge-skill', 'SKILL.md'),
+      '---\nname: Knowledge Skill\ndescription: Knowledge skill description\n---\n',
+    );
     mkdirSync(join(configuredSkillsDir, 'configured-skill'), { recursive: true });
     writeFileSync(
       join(configuredSkillsDir, 'configured-skill', 'SKILL.md'),
@@ -144,7 +147,7 @@ describe('buildPromptAssemblyPlan', () => {
 
     expect(plan.skills.skillPaths).toEqual(
       expect.arrayContaining([
-        join(durableSkillsDir, 'vault-skill'),
+        join(durableSkillsDir, 'knowledge-skill'),
         join(configuredSkillsDir, 'configured-skill'),
         join(extensionRoot, 'skills', 'extension-skill'),
       ]),

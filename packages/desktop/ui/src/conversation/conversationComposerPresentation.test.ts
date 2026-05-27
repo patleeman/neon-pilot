@@ -21,19 +21,19 @@ describe('conversation composer presentation helpers', () => {
   it('loads autocomplete catalogs only when the current input needs them', () => {
     expect(resolveConversationAutocompleteCatalogDemand('hello')).toEqual({
       needsMemoryData: false,
-      needsVaultFiles: false,
+      needsKnowledgeFiles: false,
     });
     expect(resolveConversationAutocompleteCatalogDemand('ask @proj')).toEqual({
       needsMemoryData: true,
-      needsVaultFiles: true,
+      needsKnowledgeFiles: true,
     });
     expect(resolveConversationAutocompleteCatalogDemand('/model gpt')).toEqual({
       needsMemoryData: false,
-      needsVaultFiles: false,
+      needsKnowledgeFiles: false,
     });
     expect(resolveConversationAutocompleteCatalogDemand('/skill build')).toEqual({
       needsMemoryData: true,
-      needsVaultFiles: false,
+      needsKnowledgeFiles: false,
     });
   });
 

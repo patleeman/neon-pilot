@@ -2099,7 +2099,7 @@ export async function submitDesktopLiveSessionPrompt(input: {
   delivery: 'started' | 'queued';
   referencedTaskIds: string[];
   referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
+  referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
 }> {
   return submitLiveSessionPromptCapability(input, await getLocalLiveSessionCapabilityContext());
@@ -2120,7 +2120,7 @@ export async function submitDesktopLiveSessionParallelPrompt(input: {
   childConversationId: string;
   referencedTaskIds: string[];
   referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
+  referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
 }> {
   return submitLiveSessionParallelPromptCapability(input, await getLocalLiveSessionCapabilityContext());

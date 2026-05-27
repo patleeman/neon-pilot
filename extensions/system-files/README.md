@@ -8,7 +8,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # File Explorer
 
-The File Explorer is a file tree browser in the workbench rail. It provides quick access to workspace and vault files without leaving the conversation.
+The File Explorer is a file tree browser in the workbench rail. It provides quick access to workspace and knowledge files without leaving the conversation.
 
 ## Opening the Explorer
 
@@ -56,7 +56,7 @@ The folder picker is a modal dialog for selecting directories. Used for:
 The workspace explorer shows the full project directory tree. It combines:
 
 - Workspace files (local filesystem)
-- Vault files (knowledge base)
+- Knowledge files (knowledge base)
 - Project files (when a project is active)
 
 The tree updates when files are created, modified, or deleted outside the app.

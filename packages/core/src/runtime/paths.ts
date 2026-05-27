@@ -129,7 +129,7 @@ function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOpti
 }
 
 /**
- * Default durable knowledge vault root directory.
+ * Default durable knowledge root directory.
  *
  * Durable notes, projects, and skills live in the external knowledge root by default.
  * Mutable profile config lives separately under machine-local config.
@@ -217,8 +217,8 @@ export function getDurableRuntimeConfigRoot(configRoot: string = getConfigRoot()
 /** @deprecated Use getDurableRuntimeConfigRoot. */
 export const getDurableProfilesDir = getDurableRuntimeConfigRoot;
 
-export function getDurableAgentFilePath(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'AGENTS.md');
+export function getDurableAgentFilePath(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'AGENTS.md');
 }
 
 export function getDurableRuntimeScopeDir(runtimeScope: string, runtimeConfigRoot: string = getDurableRuntimeConfigRoot()): string {
@@ -248,36 +248,36 @@ export function getDurableRuntimeScopeModelsFilePath(
 /** @deprecated Use getDurableRuntimeScopeModelsFilePath. */
 export const getDurableProfileModelsFilePath = getDurableRuntimeScopeModelsFilePath;
 
-export function getDurableSettingsDir(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'settings');
+export function getDurableSettingsDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'settings');
 }
 
-export function getDurableModelsDir(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'models');
+export function getDurableModelsDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'models');
 }
 
-export function getDurableSkillsDir(vaultRoot: string = getVaultRoot()): string {
-  return resolveDurableDir(vaultRoot, 'skills', '_skills');
+export function getDurableSkillsDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return resolveDurableDir(knowledgeRoot, 'skills', '_skills');
 }
 
-export function getDurableNodesDir(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'nodes');
+export function getDurableNodesDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'nodes');
 }
 
-export function getDurableNotesDir(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'notes');
+export function getDurableNotesDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'notes');
 }
 
-export function getDurableMemoryDir(vaultRoot: string = getVaultRoot()): string {
-  return getDurableNotesDir(vaultRoot);
+export function getDurableMemoryDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return getDurableNotesDir(knowledgeRoot);
 }
 
 export function getDurableTasksDir(syncRoot: string = getSyncRoot()): string {
   return resolveDurableDir(syncRoot, 'tasks', '_tasks');
 }
 
-export function getDurableProjectsDir(vaultRoot: string = getVaultRoot()): string {
-  return join(vaultRoot, 'projects');
+export function getDurableProjectsDir(knowledgeRoot: string = getKnowledgeRoot()): string {
+  return join(knowledgeRoot, 'projects');
 }
 
 /**

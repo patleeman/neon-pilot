@@ -25,7 +25,7 @@ export async function getDurableAgentFilePath(...args: unknown[]) {
 }
 
 export async function getKnowledgeRoot(...args: unknown[]) {
-  return callModuleExport<string>('@neon-pilot/core', 'getVaultRoot', ...args);
+  return callModuleExport<string>('@neon-pilot/core', 'getKnowledgeRoot', ...args);
 }
 
 export async function resolveRuntimeResources(...args: unknown[]) {

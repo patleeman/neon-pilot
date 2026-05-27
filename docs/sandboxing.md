@@ -36,7 +36,7 @@ The wrapper receives `{ command, args, cwd, env, shell, wrappers }` and returns 
 
 ## Filesystem root grants
 
-Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage, artifact output, temp workspaces, vault access, or secrets. The process launcher remains the execution boundary; the Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
+Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage, artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
 
 ## Extension process API policy
 

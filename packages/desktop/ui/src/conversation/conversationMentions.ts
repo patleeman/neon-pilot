@@ -1,4 +1,4 @@
-import type { MemoryDocItem, ScheduledTaskSummary, VaultFileSummary } from '../shared/types';
+import type { KnowledgeFileSummary, MemoryDocItem, ScheduledTaskSummary } from '../shared/types';
 
 export const MAX_MENTION_MENU_ITEMS = 12;
 
@@ -60,11 +60,11 @@ function extractMentionIds(text: string): string[] {
 export function buildMentionItems(input: {
   tasks: ScheduledTaskSummary[];
   memoryDocs?: MemoryDocItem[];
-  vaultFiles?: VaultFileSummary[];
+  knowledgeFiles?: KnowledgeFileSummary[];
   extensionItems?: MentionItem[];
 }): MentionItem[] {
   const memoryDocs = input.memoryDocs ?? [];
-  const vaultFiles = input.vaultFiles ?? [];
+  const knowledgeFiles = input.knowledgeFiles ?? [];
   const items: MentionItem[] = [
     ...input.tasks.map((task) => ({
       id: `@${task.id}`,
@@ -81,7 +81,7 @@ export function buildMentionItems(input: {
       summary: doc.summary,
       path: doc.path,
     })),
-    ...vaultFiles.map((file) => ({
+    ...knowledgeFiles.map((file) => ({
       id: `@${file.id}`,
       label: file.id,
       kind: (file.kind === 'folder' ? 'folder' : 'file') as const,

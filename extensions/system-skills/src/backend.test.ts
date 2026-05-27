@@ -27,11 +27,11 @@ describe('system-skills backend', () => {
     delete process.env.MCP_CONFIG_PATH;
     buildSkillInventoryAsync.mockReset().mockResolvedValue([
       {
-        id: 'vault-skill',
-        title: 'Vault Skill',
-        description: 'From vault',
-        location: { kind: 'file', path: '/vault/skills/a/SKILL.md' },
-        source: { kind: 'knowledge', label: 'Vault', extensionId: 'system-knowledge' },
+        id: 'knowledge-skill',
+        title: 'Knowledge Skill',
+        description: 'From knowledge',
+        location: { kind: 'file', path: '/knowledge/skills/a/SKILL.md' },
+        source: { kind: 'knowledge', label: 'Knowledge', extensionId: 'system-knowledge' },
         enabled: true,
         diagnostics: [],
       },
@@ -44,7 +44,7 @@ describe('system-skills backend', () => {
         diagnostics: [{ severity: 'warning' }],
       },
     ]);
-    buildSkillInjectionPlanAsync.mockReset().mockResolvedValue({ skillPaths: ['/vault/skills/a'] });
+    buildSkillInjectionPlanAsync.mockReset().mockResolvedValue({ skillPaths: ['/knowledge/skills/a'] });
     setSkillEnabled.mockReset();
     writeMergedMcpConfigFile.mockReset().mockReturnValue({ bundledServerCount: 1 });
   });
@@ -54,12 +54,12 @@ describe('system-skills backend', () => {
       ok: true,
       skills: [
         {
-          id: 'vault-skill',
-          name: 'Vault Skill',
-          description: 'From vault',
-          path: '/vault/skills/a/SKILL.md',
-          source: 'vault',
-          sourceLabel: 'Vault',
+          id: 'knowledge-skill',
+          name: 'Knowledge Skill',
+          description: 'From knowledge',
+          path: '/knowledge/skills/a/SKILL.md',
+          source: 'knowledge',
+          sourceLabel: 'Knowledge',
           extensionId: 'system-knowledge',
           enabled: true,
           diagnostics: [],
@@ -92,7 +92,7 @@ describe('system-skills backend', () => {
       outputPath: '/runtime/mcp_servers.json',
       cwd: process.cwd(),
       env: expect.not.objectContaining({ MCP_CONFIG_PATH: '/runtime/mcp_servers.json' }),
-      skillDirs: ['/vault/skills/a'],
+      skillDirs: ['/knowledge/skills/a'],
     });
     expect(process.env.MCP_CONFIG_PATH).toBe('/runtime/mcp_servers.json');
   });

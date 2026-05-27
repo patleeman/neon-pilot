@@ -1113,12 +1113,6 @@ export interface KnowledgeFileListResult {
   files: KnowledgeFileSummary[];
 }
 
-/** @deprecated Use KnowledgeFileSummary. */
-export type VaultFileSummary = KnowledgeFileSummary;
-
-/** @deprecated Use KnowledgeFileListResult. */
-export type VaultFileListResult = KnowledgeFileListResult;
-
 export interface AppStatus {
   repoRoot: string;
   projectCount: number;
@@ -1403,25 +1397,6 @@ export interface KnowledgeShareImportResult {
     url: string;
   };
 }
-
-/** @deprecated Use KnowledgeEntry. */
-export type VaultEntry = KnowledgeEntry;
-/** @deprecated Use KnowledgeTreeResult. */
-export type VaultTreeResult = KnowledgeTreeResult;
-/** @deprecated Use KnowledgeFileContent. */
-export type VaultFileContent = KnowledgeFileContent;
-/** @deprecated Use KnowledgeBacklink. */
-export type VaultBacklink = KnowledgeBacklink;
-/** @deprecated Use KnowledgeBacklinksResult. */
-export type VaultBacklinksResult = KnowledgeBacklinksResult;
-/** @deprecated Use KnowledgeSearchResult. */
-export type VaultSearchResult = KnowledgeSearchResult;
-/** @deprecated Use KnowledgeSearchResponse. */
-export type VaultSearchResponse = KnowledgeSearchResponse;
-/** @deprecated Use KnowledgeImageUploadResult. */
-export type VaultImageUploadResult = KnowledgeImageUploadResult;
-/** @deprecated Use KnowledgeShareImportResult. */
-export type VaultShareImportResult = KnowledgeShareImportResult;
 
 // ── Workspace explorer ──────────────────────────────────────────────────────
 

@@ -259,7 +259,7 @@ export interface LocalApiModule {
     delivery: 'started' | 'queued';
     referencedTaskIds: string[];
     referencedMemoryDocIds: string[];
-    referencedVaultFileIds: string[];
+    referencedKnowledgeFileIds: string[];
     referencedAttachmentIds: string[];
     relatedConversationPointerWarnings?: string[];
   }>;

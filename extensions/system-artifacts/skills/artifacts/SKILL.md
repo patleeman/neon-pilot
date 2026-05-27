@@ -74,7 +74,7 @@ This is the right way to iterate on the same rendered output without creating a 
 
 Project artifacts are plain durable files stored with one project under:
 
-- `<vault-root>/projects/<projectId>/artifacts/`
+- `<knowledge-root>/projects/<projectId>/artifacts/`
 
 Use them for:
 

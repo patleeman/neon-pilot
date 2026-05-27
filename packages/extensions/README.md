@@ -536,6 +536,8 @@ await ctx.conversations.create({ title: 'Web-only research', allowedToolNames: [
 
 This is the right boundary for restricted agent modes; prompt instructions alone are not a tool policy.
 
+Use `contributes.draftConversationCreate` when an enabled extension needs to modify a user-created draft conversation before it exists. The `prepareAction` runs from the new conversation screen and may return create options such as `{ createOptions: { allowedToolNames }, applyAfterCreate: true }`; when `applyAfterCreate` is true, the optional `applyAction` runs after the host creates the conversation. Keep workflow state and tool names in the extension rather than hardcoding them in the core conversation page.
+
 Use `ctx.conversations.runTurn(conversationId, text, { onEvent })` when an extension needs to drive a visible conversation and stream the resulting turn. `runTurn` atomically resumes the conversation, subscribes to live events, sends the prompt, and resolves only after `turn_end` or `error`; prefer it over separately calling `ensureLive` + `subscribe` + `sendMessage` when the caller needs reliable remote/client streaming.
 
 Use `backend.services` for long-lived backend work. The host starts enabled services at startup, calls returned stop functions on shutdown/disable/reload, runs declared health checks, and applies `restart: "always" | "on-failure"` when health fails. Extension Manager reports live service state alongside manifest declarations.
@@ -566,7 +568,7 @@ Missing required dependencies block enabling an extension. Optional dependencies
 
 ## Agent skills and tools
 
-Extensions can contribute agent skills and agent tools. These are runtime-mounted from the enabled extension package; they are not copied into the knowledge vault.
+Extensions can contribute agent skills and agent tools. These are runtime-mounted from the enabled extension package; they are not copied into the knowledge base.
 
 Use extension skills for local instructions that explain how to use the extension, its tools, or its domain model:
 

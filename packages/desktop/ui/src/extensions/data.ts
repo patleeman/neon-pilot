@@ -34,16 +34,6 @@ export type {
   TraceThroughput,
   TraceTokenDaily,
   TraceToolHealth,
-  VaultBacklink,
-  VaultBacklinksResult,
-  VaultEntry,
-  VaultFileContent,
-  VaultFileListResult,
-  VaultFileSummary,
-  VaultImageUploadResult,
-  VaultSearchResponse,
-  VaultShareImportResult,
-  VaultTreeResult,
 } from '../shared/types';
 export { timeAgo, timeAgoCompact } from '../shared/utils';
 export type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../transcript/askUserQuestions';

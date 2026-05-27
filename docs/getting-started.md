@@ -26,7 +26,7 @@ The desktop app manages the local daemon automatically.
 
 - `<state-root>` — machine-local runtime state. Default: `$XDG_STATE_HOME/neon-pilot` when `XDG_STATE_HOME` is set, otherwise `~/.local/state/neon-pilot`
 - `<config-root>` — machine-local config. Default: `$XDG_CONFIG_HOME/neon-pilot` when set, otherwise `<state-root>/config`
-- `<vault-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
+- `<knowledge-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
 
 ## Verify the install
 
@@ -37,5 +37,5 @@ The desktop app starts and loads the conversation view. Create a new conversatio
 - [Views](views.md) — understand Conversation and Workbench layout modes
 - [Conversations](conversations.md) — how to work with agent conversations
 - [Desktop App](desktop-app.md) — Electron shell and shortcuts
-- [Knowledge](../extensions/system-knowledge/README.md) — vault, skills, instruction files, and sync
+- [Knowledge](../extensions/system-knowledge/README.md) — knowledge, skills, instruction files, and sync
 - [Configuration](configuration.md) — config files and environment variables

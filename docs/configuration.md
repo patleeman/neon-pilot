@@ -20,15 +20,15 @@ Neon Pilot no longer has user-selectable profiles. Some storage paths and compat
 
 Current machine config keys:
 
-| Key                    | Type     | Used for                                                            |
-| ---------------------- | -------- | ------------------------------------------------------------------- |
-| `vaultRoot`            | string   | Legacy explicit knowledge vault root                                |
-| `knowledgeBaseRepoUrl` | string   | Managed git-backed knowledge base repo                              |
-| `knowledgeBaseBranch`  | string   | Managed knowledge base branch, default `main`                       |
-| `instructionFiles`     | string[] | Extra AGENTS.md-style files appended to runtime instructions        |
-| `skillDirs`            | string[] | Extra skill directories loaded alongside the vault skills directory |
-| `daemon`               | object   | Daemon machine config section                                       |
-| `ui`                   | object   | UI machine config section, including fallback resume prompt         |
+| Key                    | Type     | Used for                                                                     |
+| ---------------------- | -------- | ---------------------------------------------------------------------------- |
+| `knowledgeRoot`        | string   | Explicit knowledge base root                                                 |
+| `knowledgeBaseRepoUrl` | string   | Managed git-backed knowledge base repo                                       |
+| `knowledgeBaseBranch`  | string   | Managed knowledge base branch, default `main`                                |
+| `instructionFiles`     | string[] | Extra AGENTS.md-style files appended to runtime instructions                 |
+| `skillDirs`            | string[] | Extra skill directories loaded alongside the knowledge base skills directory |
+| `daemon`               | object   | Daemon machine config section                                                |
+| `ui`                   | object   | UI machine config section, including fallback resume prompt                  |
 
 Example:
 
@@ -41,7 +41,7 @@ Example:
 }
 ```
 
-Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. The knowledge vault remains the primary durable source; use the machine agent dir for personal files that should stay local to this machine.
+Machine config augments the built-in machine-local defaults. Neon Pilot always checks `~/.config/agents/AGENTS.md` as the canonical secondary instruction file and `~/.config/agents/skill` plus `~/.config/agents/skills` as canonical secondary skill roots. The knowledge base remains the primary durable source; use the machine agent dir for personal files that should stay local to this machine.
 
 ## Runtime agent settings
 
@@ -99,13 +99,13 @@ Enabled extensions may contribute `modelProfiles` that match provider/model refs
 
 If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.
 
-## Knowledge vault resolution
+## Knowledge base resolution
 
-The effective knowledge vault root resolves in this order:
+The effective knowledge base root resolves in this order:
 
-1. `NEON_PILOT_VAULT_ROOT`
+1. `NEON_PILOT_KNOWLEDGE_ROOT`
 2. Managed knowledge-base mirror at `<state-root>/knowledge-base/repo` when `knowledgeBaseRepoUrl` is configured
-3. Legacy `vaultRoot` from machine config
+3. `knowledgeRoot` from machine config
 4. `~/Documents/neon-pilot`
 
 Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync inputs.
@@ -114,11 +114,11 @@ Knowledge UI and sync behavior live in the Knowledge system extension. Machine c
 
 Global agent files use a primary/secondary model:
 
-| Kind         | Primary durable location                    | Secondary machine-local location                |
-| ------------ | ------------------------------------------- | ----------------------------------------------- |
-| Instructions | `<vault-root>/AGENTS.md`                    | `~/.config/agents/AGENTS.md`                    |
-| Skills       | `<vault-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skill/<skill-name>/SKILL.md`  |
-| Skills       | `<vault-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skills/<skill-name>/SKILL.md` |
+| Kind         | Primary durable location                        | Secondary machine-local location                |
+| ------------ | ----------------------------------------------- | ----------------------------------------------- |
+| Instructions | `<knowledge-root>/AGENTS.md`                    | `~/.config/agents/AGENTS.md`                    |
+| Skills       | `<knowledge-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skill/<skill-name>/SKILL.md`  |
+| Skills       | `<knowledge-root>/skills/<skill-name>/SKILL.md` | `~/.config/agents/skills/<skill-name>/SKILL.md` |
 
 Runtime discovery also includes explicitly configured instruction files, explicitly configured skill dirs, project instruction files found from the working directory, local overlays, extension-contributed skills, and compatibility skill roots such as `~/.claude/skills` and `~/.codex/skills`.
 

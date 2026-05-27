@@ -1157,7 +1157,7 @@ The `ExtensionBackendContext` provides:
 | `ctx.conversations` | Conversation read/write operations                                                                      |
 | `ctx.filesystem`    | Scoped filesystem authority for workspace, extension file storage, temp, artifact, and other host roots |
 | `ctx.workspace`     | Workspace file operations (read, write, list); convenience wrapper over the filesystem authority        |
-| `ctx.vault`         | Knowledge vault operations                                                                              |
+| `ctx.knowledge`     | Knowledge base operations                                                                               |
 | `ctx.git`           | Git status, diff, log                                                                                   |
 | `ctx.shell`         | Shell command execution                                                                                 |
 | `ctx.notify`        | Toast, system notifications, badge (see below)                                                          |
@@ -1302,12 +1302,12 @@ Long-lived backend services are declared under `backend.services` so the host ca
 }
 ```
 
-Event subscriptions are declared under `contributes.subscriptions` for host-owned event sources such as workspace files, vault files, settings, conversations, routes, and selection changes. The host dispatches these through the extension event bus as `host:{source}` events; `pattern` narrows the event name. Current built-in producers include `host:workspaceFiles` for workspace writes/deletes/renames/moves, `host:settings` for settings updates, frontend `host:selection` notifications when shared selection changes, and `host:conversation:*` lifecycle events for live transcript/stream state.
+Event subscriptions are declared under `contributes.subscriptions` for host-owned event sources such as workspace files, knowledge files, settings, conversations, routes, and selection changes. The host dispatches these through the extension event bus as `host:{source}` events; `pattern` narrows the event name. Current built-in producers include `host:workspaceFiles` for workspace writes/deletes/renames/moves, `host:settings` for settings updates, frontend `host:selection` notifications when shared selection changes, and `host:conversation:*` lifecycle events for live transcript/stream state.
 
 ```json
 {
   "contributes": {
-    "subscriptions": [{ "id": "watch-notes", "source": "vaultFiles", "pattern": "notes/**", "handler": "onVaultChange" }]
+    "subscriptions": [{ "id": "watch-notes", "source": "knowledgeFiles", "pattern": "notes/**", "handler": "onKnowledgeChange" }]
   }
 }
 ```
@@ -1427,9 +1427,9 @@ enforces permissions for storage and conversation operations.
     "attention:write",
     "conversations:read",
     "conversations:readwrite",
-    "vault:read",
-    "vault:write",
-    "vault:readwrite",
+    "knowledge:read",
+    "knowledge:write",
+    "knowledge:readwrite",
     "runs:read",
     "runs:start",
     "runs:cancel",

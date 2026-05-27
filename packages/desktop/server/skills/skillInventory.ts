@@ -264,7 +264,7 @@ function listSkillDefinitionsFromParents(parents: readonly string[], kind: Skill
       providerId: kind,
       title: metadata.name || basename(dir),
       description: metadata.description,
-      source: { kind, label: kind === 'knowledge' ? 'Vault' : root, root },
+      source: { kind, label: kind === 'knowledge' ? 'Knowledge' : root, root },
       location: { kind: 'file', path, root },
     });
   };

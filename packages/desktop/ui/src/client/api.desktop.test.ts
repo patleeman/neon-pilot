@@ -44,7 +44,9 @@ describe('api desktop transport', () => {
               name: 'Knowledge',
               backend: { entry: 'src/backend.ts', actions: [{ id: 'readMemory', handler: 'readMemory' }] },
               contributes: {
-                views: [{ id: 'vault', title: 'Knowledge', location: 'main', component: 'Vault', routeCapabilities: ['knowledgeFiles'] }],
+                views: [
+                  { id: 'knowledge', title: 'Knowledge', location: 'main', component: 'Knowledge', routeCapabilities: ['knowledgeFiles'] },
+                ],
               },
             },
             surfaces: [],
@@ -62,7 +64,7 @@ describe('api desktop transport', () => {
                 source: 'global',
                 name: 'checkpoint',
                 description: "Commit and push the agent's current work.",
-                path: '/vault/skills/checkpoint/SKILL.md',
+                path: '/knowledge/skills/checkpoint/SKILL.md',
               },
             ],
             memoryDocs: [],

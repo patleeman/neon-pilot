@@ -1,9 +1,10 @@
 import { mkdirSync } from 'fs';
 import { resolve } from 'path';
 
-import { getDurableNotesDir, getVaultRoot } from './runtime/paths.js';
+import { getDurableNotesDir, getKnowledgeRoot } from './runtime/paths.js';
 
 export interface ResolveMemoryDocsOptions {
+  knowledgeRoot?: string;
   vaultRoot?: string;
 }
 
@@ -17,16 +18,16 @@ export interface LegacyMemoryMigrationResult {
   migratedFiles: LegacyMemoryMigrationRecord[];
 }
 
-function resolveVaultRootForMemory(options: ResolveMemoryDocsOptions = {}): string {
-  return resolve(options.vaultRoot ?? getVaultRoot());
+function resolveKnowledgeRootForMemory(options: ResolveMemoryDocsOptions = {}): string {
+  return resolve(options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot());
 }
 
 export function getMemoryDocsDir(options: ResolveMemoryDocsOptions = {}): string {
-  return getDurableNotesDir(resolveVaultRootForMemory(options));
+  return getDurableNotesDir(resolveKnowledgeRootForMemory(options));
 }
 
 export function migrateLegacyProfileMemoryDirs(options: ResolveMemoryDocsOptions = {}): LegacyMemoryMigrationResult {
-  const notesDir = getMemoryDocsDir({ vaultRoot: resolveVaultRootForMemory(options) });
+  const notesDir = getMemoryDocsDir({ knowledgeRoot: resolveKnowledgeRootForMemory(options) });
 
   mkdirSync(notesDir, { recursive: true });
 

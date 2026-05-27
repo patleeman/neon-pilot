@@ -49,12 +49,12 @@ const SKILLS: PromptReferenceSkill[] = [
     name: 'backfill-tests',
     source: 'durable node',
     description: 'Backfill tests for existing code.',
-    path: '/vault/_skills/backfill-tests/SKILL.md',
+    path: '/knowledge/_skills/backfill-tests/SKILL.md',
   },
 ];
 
 describe('promptReferences', () => {
-  it('extracts unique mention ids in encounter order, including vault-style paths', () => {
+  it('extracts unique mention ids in encounter order, including path-style references', () => {
     expect(extractMentionIds('Check @daily-review and @notes/project-state-model/INDEX.md then @daily-review again')).toEqual([
       'daily-review',
       'notes/project-state-model/INDEX.md',
@@ -126,7 +126,7 @@ describe('promptReferences', () => {
     const skillContext = buildReferencedSkillsContext(SKILLS, '/repo');
     expect(skillContext).toContain('Referenced skills:');
     expect(skillContext).toContain('@backfill-tests');
-    expect(skillContext).toContain('path: /vault/_skills/backfill-tests/SKILL.md');
+    expect(skillContext).toContain('path: /knowledge/_skills/backfill-tests/SKILL.md');
     expect(skillContext).toContain('source: durable node');
     expect(skillContext).toContain('description: Backfill tests for existing code.');
   });

@@ -13,7 +13,7 @@ export async function listSkills(_input: unknown, ctx: ExtensionBackendContext) 
       name: skill.title,
       description: skill.description,
       path: skill.location?.kind === 'file' ? skill.location.path : '',
-      source: skill.source.kind === 'knowledge' ? 'vault' : skill.source.kind === 'configured-folder' ? 'project' : skill.source.kind,
+      source: skill.source.kind === 'knowledge' ? 'knowledge' : skill.source.kind === 'configured-folder' ? 'project' : skill.source.kind,
       sourceLabel: skill.source.label,
       extensionId: skill.source.extensionId,
       enabled: skill.enabled,

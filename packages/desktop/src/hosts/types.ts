@@ -229,7 +229,7 @@ export interface DesktopLiveSessionPromptResult {
   delivery: 'started' | 'queued';
   referencedTaskIds: string[];
   referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
+  referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
   relatedConversationPointerWarnings?: string[];
 }

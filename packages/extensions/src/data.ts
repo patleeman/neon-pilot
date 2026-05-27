@@ -36,16 +36,6 @@ export type TraceModelUsage = unknown;
 export type TraceThroughput = unknown;
 export type TraceTokenDaily = unknown;
 export type TraceToolHealth = unknown;
-export type VaultBacklink = unknown;
-export type VaultBacklinksResult = unknown;
-export type VaultEntry = unknown;
-export type VaultFileContent = unknown;
-export type VaultFileListResult = unknown;
-export type VaultFileSummary = unknown;
-export type VaultImageUploadResult = unknown;
-export type VaultSearchResponse = unknown;
-export type VaultShareImportResult = unknown;
-export type VaultTreeResult = unknown;
 
 export declare const CONVERSATION_LAYOUT_CHANGED_EVENT: string;
 export declare const api: unknown;

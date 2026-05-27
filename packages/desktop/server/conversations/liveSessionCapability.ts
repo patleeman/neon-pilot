@@ -564,7 +564,7 @@ interface PreparedLiveSessionPrompt {
     memoryDocIds: string[];
     skillNames: string[];
   };
-  referencedVaultFiles: Array<{ id: string; path: string }>;
+  referencedKnowledgeFiles: Array<{ id: string; path: string }>;
   referencedAttachments: ReturnType<typeof resolveConversationAttachmentPromptFiles>;
   normalizedContextMessages: Array<{ customType: string; content: string }>;
   promptImages: PromptImageAttachment[] | undefined;
@@ -670,7 +670,7 @@ async function prepareLiveSessionPrompt(
   const extensionPromptReferences = hasPromptMentions
     ? await resolveExtensionPromptReferences({ text })
     : { contextBlocks: [], references: [] };
-  const referencedVaultFiles = extensionPromptReferences.references.filter(
+  const referencedKnowledgeFiles = extensionPromptReferences.references.filter(
     (reference): reference is { kind: string; id: string; path: string } =>
       reference.kind === 'knowledgeFile' && typeof reference.path === 'string',
   );
@@ -701,7 +701,7 @@ async function prepareLiveSessionPrompt(
 
   const referencedPaths = new Set<string>([
     ...referencedMemoryDocs.map((doc) => doc.path),
-    ...referencedVaultFiles.map((file) => file.path),
+    ...referencedKnowledgeFiles.map((file) => file.path),
   ]);
   const attachedConversationContextDocs = readConversationContextDocs(conversationId).filter((doc) => !referencedPaths.has(doc.path));
 
@@ -733,7 +733,7 @@ async function prepareLiveSessionPrompt(
     surfaceId,
     runtimeScope,
     promptReferences,
-    referencedVaultFiles: referencedVaultFiles.map((file) => ({ id: file.id, path: file.path })),
+    referencedKnowledgeFiles: referencedKnowledgeFiles.map((file) => ({ id: file.id, path: file.path })),
     referencedAttachments,
     normalizedContextMessages,
     promptImages,
@@ -751,7 +751,7 @@ export async function submitLiveSessionPromptCapability(
   delivery: 'started' | 'queued';
   referencedTaskIds: string[];
   referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
+  referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
   relatedConversationPointerWarnings?: string[];
   perf?: Record<string, number>;
@@ -788,7 +788,7 @@ export async function submitLiveSessionPromptCapability(
       relatedConversationCount: (input.relatedConversationIds as string[] | undefined)?.length ?? 0,
       referencedTaskCount: prepared.promptReferences.taskIds.length,
       referencedMemoryDocCount: prepared.promptReferences.memoryDocIds.length,
-      referencedVaultFileCount: prepared.referencedVaultFiles.length,
+      referencedKnowledgeFileCount: prepared.referencedKnowledgeFiles.length,
       referencedAttachmentCount: prepared.referencedAttachments.length,
       backgroundRunContextCount: prepared.backgroundRunContextEntries.length,
       surfaceId: prepared.surfaceId,
@@ -898,7 +898,7 @@ export async function submitLiveSessionPromptCapability(
     delivery: submittedPrompt.acceptedAs,
     referencedTaskIds: prepared.promptReferences.taskIds,
     referencedMemoryDocIds: prepared.promptReferences.memoryDocIds,
-    referencedVaultFileIds: prepared.referencedVaultFiles.map((file) => file.id),
+    referencedKnowledgeFileIds: prepared.referencedKnowledgeFiles.map((file) => file.id),
     referencedAttachmentIds: prepared.referencedAttachments.map((attachment) => attachment.attachmentId),
     ...(promptContext.warnings.length > 0 ? { relatedConversationPointerWarnings: promptContext.warnings } : {}),
     perf: {
@@ -924,7 +924,7 @@ export async function submitLiveSessionParallelPromptCapability(
   childConversationId: string;
   referencedTaskIds: string[];
   referencedMemoryDocIds: string[];
-  referencedVaultFileIds: string[];
+  referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
   relatedConversationPointerWarnings?: string[];
 }> {
@@ -957,7 +957,7 @@ export async function submitLiveSessionParallelPromptCapability(
     childConversationId: parallel.childConversationId,
     referencedTaskIds: prepared.promptReferences.taskIds,
     referencedMemoryDocIds: prepared.promptReferences.memoryDocIds,
-    referencedVaultFileIds: prepared.referencedVaultFiles.map((file) => file.id),
+    referencedKnowledgeFileIds: prepared.referencedKnowledgeFiles.map((file) => file.id),
     referencedAttachmentIds: prepared.referencedAttachments.map((attachment) => attachment.attachmentId),
     ...(promptContext.warnings.length > 0 ? { relatedConversationPointerWarnings: promptContext.warnings } : {}),
   };

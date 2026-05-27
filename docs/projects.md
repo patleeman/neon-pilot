@@ -1,10 +1,10 @@
 # Projects
 
-Projects are structured work packages that live in the vault. They have milestones, tasks, and durable status that persists across conversations and agent work.
+Projects are structured work packages that live in the knowledge base. They have milestones, tasks, and durable status that persists across conversations and agent work.
 
 ## Project Structure
 
-Each project lives at `<vault-root>/projects/<projectId>/`:
+Each project lives at `<knowledge-root>/projects/<projectId>/`:
 
 ```
 projects/
@@ -60,10 +60,10 @@ milestones:
 
 ## Project Tasks vs Daemon Tasks
 
-| Type          | Storage               | Scope                | Managed by             |
-| ------------- | --------------------- | -------------------- | ---------------------- |
-| Project tasks | `state.yaml` in vault | Project-specific     | Agent in conversations |
-| Automations   | Daemon runtime DB     | Global/cross-project | Daemon scheduler       |
+| Type          | Storage                   | Scope                | Managed by             |
+| ------------- | ------------------------- | -------------------- | ---------------------- |
+| Project tasks | `state.yaml` in knowledge | Project-specific     | Agent in conversations |
+| Automations   | Daemon runtime DB         | Global/cross-project | Daemon scheduler       |
 
 These are independent systems. A project task tracks work within a project. An automation is a user-managed scheduled behavior backed by a daemon scheduled task.
 
@@ -80,4 +80,4 @@ Project-owned deliverables live in the `artifacts/` directory. These are durable
 - Meeting notes
 - Delivered outputs
 
-Unlike conversation artifacts (which are rendered in the transcript), project artifacts are files in the vault.
+Unlike conversation artifacts (which are rendered in the transcript), project artifacts are files in the knowledge base.

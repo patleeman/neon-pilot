@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeConversationContentSearchLimit, normalizeDurableRunLogTailParam, normalizeVaultSearchLimit } from './api';
+import { normalizeConversationContentSearchLimit, normalizeDurableRunLogTailParam, normalizeKnowledgeSearchLimit } from './api';
 
 describe('normalizeDurableRunLogTailParam', () => {
   it('rejects malformed run log tails and caps expensive tails', () => {
@@ -19,11 +19,11 @@ describe('normalizeConversationContentSearchLimit', () => {
   });
 });
 
-describe('normalizeVaultSearchLimit', () => {
-  it('rejects malformed vault search limits and caps expensive searches', () => {
-    expect(normalizeVaultSearchLimit(12)).toBe(12);
-    expect(normalizeVaultSearchLimit(12.5)).toBe(20);
-    expect(normalizeVaultSearchLimit(Number.MAX_SAFE_INTEGER + 1)).toBe(20);
-    expect(normalizeVaultSearchLimit(5000)).toBe(50);
+describe('normalizeKnowledgeSearchLimit', () => {
+  it('rejects malformed knowledge search limits and caps expensive searches', () => {
+    expect(normalizeKnowledgeSearchLimit(12)).toBe(12);
+    expect(normalizeKnowledgeSearchLimit(12.5)).toBe(20);
+    expect(normalizeKnowledgeSearchLimit(Number.MAX_SAFE_INTEGER + 1)).toBe(20);
+    expect(normalizeKnowledgeSearchLimit(5000)).toBe(50);
   });
 });

@@ -16,7 +16,7 @@ Examples:
 - conversation assets: artifacts, checkpoints, attachments, attachment downloads, review context, and diffs
 - scheduled tasks, durable runs, execution projections, task/run logs, cancel/rerun/attention mutations
 - models, providers, provider auth, default cwd, open conversation tabs, title settings, conversation model preferences
-- knowledge/vault/workspace trees, files, searches, diffs, and explicit file mutations
+- knowledge/workspace trees, files, searches, diffs, and explicit file mutations
 - extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and companion APIs
 
 HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.

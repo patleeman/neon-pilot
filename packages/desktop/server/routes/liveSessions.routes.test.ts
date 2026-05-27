@@ -428,7 +428,7 @@ describe('live session routes', () => {
         referencedAttachmentIds: [],
         referencedMemoryDocIds: [],
         referencedTaskIds: [],
-        referencedVaultFileIds: [],
+        referencedKnowledgeFileIds: [],
         perf: expect.any(Object),
       }),
     );
@@ -556,12 +556,12 @@ describe('live session routes', () => {
     expect(badAttachmentRes.status).toHaveBeenCalledWith(400);
     expect(badAttachmentRes.json).toHaveBeenCalledWith({ error: 'Attachment not found' });
 
-    extractMentionIdsMock.mockReturnValue(['task-1', 'note-1', 'vault-1']);
+    extractMentionIdsMock.mockReturnValue(['task-1', 'note-1', 'knowledge-1']);
     resolvePromptReferencesMock.mockReturnValue({ projectIds: [], taskIds: ['task-1'], memoryDocIds: ['note-1'], skillNames: [] });
     expandPromptReferencesWithNodeGraphMock.mockReturnValue({ projectIds: [], memoryDocIds: ['note-1'], skillNames: [] });
     resolveExtensionPromptReferencesMock.mockResolvedValue({
-      contextBlocks: ['Vault files context'],
-      references: [{ kind: 'knowledgeFile', id: 'vault-1', path: '/vault/vault-1.md' }],
+      contextBlocks: ['Knowledge files context'],
+      references: [{ kind: 'knowledgeFile', id: 'knowledge-1', path: '/knowledge/knowledge-1.md' }],
     });
     resolveConversationAttachmentPromptFilesMock.mockReturnValue([
       {
@@ -665,7 +665,7 @@ describe('live session routes', () => {
         referencedAttachmentIds: ['att-1'],
         referencedMemoryDocIds: ['note-1'],
         referencedTaskIds: ['task-1'],
-        referencedVaultFileIds: ['vault-1'],
+        referencedKnowledgeFileIds: ['knowledge-1'],
         perf: expect.any(Object),
       }),
     );

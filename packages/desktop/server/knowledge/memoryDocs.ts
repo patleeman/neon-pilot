@@ -13,7 +13,7 @@ import {
   getDurableAgentFilePath,
   getDurableNotesDir,
   getDurableSkillsDir,
-  getVaultRoot,
+  getKnowledgeRoot,
   listUnifiedSkillNodeDirs,
   loadMemoryPackageReferences,
   loadUnifiedNodes,
@@ -37,10 +37,10 @@ export function isEditableMemoryFilePath(filePath: string, _runtimeScope: string
   const normalized = normalizeMemoryPath(filePath);
   if (!normalized) return false;
 
-  const vaultRoot = getVaultRoot();
-  const noteDir = normalizeMemoryPath(getDurableNotesDir(vaultRoot));
-  const baseAgentFile = normalizeMemoryPath(getDurableAgentFilePath(vaultRoot));
-  const sharedSkillsDir = normalizeMemoryPath(getDurableSkillsDir(vaultRoot));
+  const knowledgeRoot = getKnowledgeRoot();
+  const noteDir = normalizeMemoryPath(getDurableNotesDir(knowledgeRoot));
+  const baseAgentFile = normalizeMemoryPath(getDurableAgentFilePath(knowledgeRoot));
+  const sharedSkillsDir = normalizeMemoryPath(getDurableSkillsDir(knowledgeRoot));
 
   return normalized === baseAgentFile || normalized.startsWith(`${noteDir}/`) || normalized.startsWith(`${sharedSkillsDir}/`);
 }
@@ -114,7 +114,7 @@ function mapLoadedMemoryDoc(doc: ReturnType<typeof loadUnifiedNodes>['nodes'][nu
 }
 
 function resolveMemoryDocsDir(): string {
-  return getDurableNotesDir(getVaultRoot());
+  return getDurableNotesDir(getKnowledgeRoot());
 }
 
 export function ensureMemoryDocsDir(): string {
@@ -161,8 +161,8 @@ export function findMemoryDocById(memoryId: string, options: { includeSearchText
 // ── Skills ────────────────────────────────────────────────────────────────────
 
 function inferSkillSource(filePath: string): string {
-  const vaultRoot = getVaultRoot();
-  const sharedSkillsDir = normalizeMemoryPath(getDurableSkillsDir(vaultRoot));
+  const knowledgeRoot = getKnowledgeRoot();
+  const sharedSkillsDir = normalizeMemoryPath(getDurableSkillsDir(knowledgeRoot));
   const normalizedFilePath = normalizeMemoryPath(filePath);
 
   if (normalizedFilePath.startsWith(`${sharedSkillsDir}/`)) {
@@ -223,7 +223,7 @@ export function listSkillsForProfile(profile: string): SkillItem[] {
   const seenNames = new Set<string>();
   const skills: SkillItem[] = [];
 
-  const skillDirs = [...resolved.skillDirs, ...listUnifiedSkillNodeDirs(profile, { vaultRoot: getVaultRoot() })];
+  const skillDirs = [...resolved.skillDirs, ...listUnifiedSkillNodeDirs(profile, { knowledgeRoot: getKnowledgeRoot() })];
 
   for (const skillDir of skillDirs) {
     for (const filePath of listSkillFiles(skillDir)) {

@@ -233,7 +233,7 @@ function knowledgeExtensionSummary() {
       name: 'Knowledge',
       backend: { entry: 'src/backend.ts', actions: [{ id: 'readMemory', handler: 'readMemory' }] },
       contributes: {
-        views: [{ id: 'vault', title: 'Knowledge', location: 'main', component: 'Vault', routeCapabilities: ['knowledgeFiles'] }],
+        views: [{ id: 'knowledge', title: 'Knowledge', location: 'main', component: 'Knowledge', routeCapabilities: ['knowledgeFiles'] }],
       },
     },
     surfaces: [],

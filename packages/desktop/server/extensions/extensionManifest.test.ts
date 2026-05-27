@@ -39,7 +39,7 @@ describe('extension manifest schema constants', () => {
         composerInputTools: [{ id: 'draw', component: 'DrawButton', title: 'Draw', when: '!streamIsStreaming' }],
         selectionActions: [{ id: 'send-selection', title: 'Send Selection', action: 'sendSelection', kinds: ['text', 'messages'] }],
         transcriptBlocks: [{ id: 'approval', component: 'ApprovalBlock', schemaVersion: 1 }],
-        subscriptions: [{ id: 'watch-notes', source: 'knowledgeFiles', pattern: 'notes/**', handler: 'onVaultChange' }],
+        subscriptions: [{ id: 'watch-notes', source: 'knowledgeFiles', pattern: 'notes/**', handler: 'onKnowledgeChange' }],
         secrets: { apiKey: { label: 'API key', env: 'AGENT_BOARD_API_KEY' } },
       },
       backend: {

@@ -55,7 +55,7 @@ beforeEach(() => {
   process.env = {
     ...originalEnv,
     NEON_PILOT_STATE_ROOT: stateRoot,
-    NEON_PILOT_VAULT_ROOT: join(stateRoot, 'sync'),
+    NEON_PILOT_KNOWLEDGE_ROOT: join(stateRoot, 'sync'),
     NEON_PILOT_PROFILES_ROOT: join(stateRoot, 'sync', 'runtime'),
   };
   clearMemoryBrowserCaches();

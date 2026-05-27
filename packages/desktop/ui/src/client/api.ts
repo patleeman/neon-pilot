@@ -288,7 +288,7 @@ export function normalizeConversationContentSearchLimit(value: unknown): number 
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(100, value) : 80;
 }
 
-export function normalizeVaultSearchLimit(value: unknown): number {
+export function normalizeKnowledgeSearchLimit(value: unknown): number {
   return Number.isSafeInteger(value) && value > 0 ? Math.min(50, value) : 20;
 }
 
@@ -1008,7 +1008,7 @@ export const api = {
       delivery: 'started' | 'queued';
       referencedTaskIds: string[];
       referencedMemoryDocIds: string[];
-      referencedVaultFileIds: string[];
+      referencedKnowledgeFileIds: string[];
       referencedAttachmentIds: string[];
       relatedConversationPointerWarnings?: string[];
       perf?: Record<string, number>;

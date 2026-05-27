@@ -66,7 +66,7 @@ type FileSystemSubject =
   | { type: 'extension'; extensionId: string }
   | { type: 'automation'; taskId: string };
 
-type FileRootKind = 'workspace' | 'extension-storage' | 'artifact' | 'temp' | 'vault' | 'downloads' | 'secret';
+type FileRootKind = 'workspace' | 'extension-storage' | 'artifact' | 'temp' | 'knowledge' | 'downloads' | 'secret';
 
 interface FileRootDescriptor {
   kind: FileRootKind;
@@ -165,7 +165,7 @@ Initial root kinds:
 | `extension-storage` | extension host                       | private to one extension, read/write, no cross-extension access                        |
 | `artifact`          | artifacts extension/core export flow | write through artifact APIs, read for rendering/export                                 |
 | `temp`              | runtime                              | private 0700 scratch, cleaned by lifecycle owner                                       |
-| `vault`             | knowledge extension                  | explicit read/write grants; never ambient for arbitrary extensions                     |
+| `knowledge`         | knowledge extension                  | explicit read/write grants; never ambient for arbitrary extensions                     |
 | `downloads`         | browser/import flows                 | staged writes then explicit copy into workspace/artifact roots                         |
 | `secret`            | secrets/credentials surfaces         | opt-in only, strict modes, no list by default                                          |
 
@@ -250,7 +250,7 @@ Converge these surfaces on the authority:
 - browser/download/import staging;
 - archive extraction;
 - temp workspace creation;
-- knowledge vault file access;
+- knowledge base file access;
 - command sandbox root grants.
 
 Avoid a half migration where some paths use the authority and equivalent paths bypass it. The repo should eventually have a lint/build guard for direct `node:fs` use in extension backend code and for workspace-facing server modules, with explicit low-level-backend allowlists.
@@ -270,7 +270,7 @@ The implementation can land in slices, but each slice should preserve the final 
 2. Add `FsSafeBackend` and package dependency.
 3. Wire extension backend `ctx.filesystem`; reimplement `ctx.workspace` on top of it.
 4. Move server workspace/file-explorer APIs onto the authority.
-5. Move artifact/temp/archive/vault file operations onto dedicated root kinds.
+5. Move artifact/temp/archive/knowledge file operations onto dedicated root kinds.
 6. Feed file audit events into the host event bus and workspace file subscriptions.
 7. Connect process wrappers/sandboxing to authority grants.
 8. Add build/lint guards against new direct scoped-path `node:fs` usage outside low-level backends.

@@ -739,7 +739,7 @@ describe('LocalHostController', () => {
       delivery: 'started',
       referencedTaskIds: [],
       referencedMemoryDocIds: [],
-      referencedVaultFileIds: [],
+      referencedKnowledgeFileIds: [],
       referencedAttachmentIds: [],
     });
     const takeOverDesktopLiveSession = vi.fn().mockResolvedValue({ controllerSurfaceId: 'surface-1' });
