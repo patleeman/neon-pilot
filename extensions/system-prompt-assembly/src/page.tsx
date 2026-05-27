@@ -1,21 +1,28 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { api, useApi } from '@neon-pilot/extensions/settings';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  AppPageToc,
+  cx,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
-type Filter = 'all' | CapabilityKind | 'active' | 'disabled' | 'issues';
+type RuntimeSectionId = 'system-prompt' | 'instructions' | 'skills' | 'tools' | 'mcp' | 'issues';
 
-const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: 'all', label: 'All' },
-  { id: 'instruction', label: 'Instructions' },
-  { id: 'skill', label: 'Skills' },
-  { id: 'tool', label: 'Tools' },
-  { id: 'mcp-server', label: 'MCP' },
-  { id: 'active', label: 'Active' },
-  { id: 'disabled', label: 'Disabled' },
-  { id: 'issues', label: 'Issues' },
-];
+const RUNTIME_SECTIONS = [
+  { id: 'system-prompt', label: 'System Prompt', summary: 'Generated template' },
+  { id: 'instructions', label: 'Instructions', summary: 'Instruction files and layers' },
+  { id: 'skills', label: 'Skills', summary: 'Agent-selectable procedures' },
+  { id: 'tools', label: 'Tools', summary: 'Injected callable tools' },
+  { id: 'mcp', label: 'MCP', summary: 'Server connections' },
+  { id: 'issues', label: 'Issues', summary: 'Diagnostics and invalid entries' },
+] as const;
 
 interface RuntimeCapability {
   id: string;
@@ -49,9 +56,10 @@ interface SystemPromptTemplateState {
 export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<AgentRuntimeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const runtimeScrollRef = useRef<HTMLDivElement | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<RuntimeSectionId>('system-prompt');
   const {
     data: systemPromptTemplateState,
     loading: systemPromptTemplateLoading,
@@ -136,16 +144,6 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     const capabilities = data?.capabilities ?? [];
     const needle = query.trim().toLowerCase();
     return capabilities.filter((capability) => {
-      if (filter !== 'all') {
-        if (filter === 'active' && capability.status !== 'active' && capability.status !== 'enabled') return false;
-        else if (filter === 'disabled' && capability.enabled) return false;
-        else if (
-          filter === 'issues' &&
-          !(capability.diagnostics?.length || capability.status === 'invalid' || capability.status === 'error')
-        )
-          return false;
-        else if (!['active', 'disabled', 'issues'].includes(filter) && capability.kind !== filter) return false;
-      }
       if (!needle) return true;
       return [
         capability.title,
@@ -158,109 +156,283 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(needle));
     });
-  }, [data?.capabilities, filter, query]);
+  }, [data?.capabilities, query]);
 
   const visibleAgentCapabilities = useMemo(() => visible.filter((capability) => capability.kind !== 'extension'), [visible]);
+  const instructionCapabilities = useMemo(
+    () =>
+      visibleAgentCapabilities.filter(
+        (capability) => capability.kind === 'instruction' || capability.kind === 'prompt-template' || capability.kind === 'context',
+      ),
+    [visibleAgentCapabilities],
+  );
+  const skillCapabilities = useMemo(
+    () => visibleAgentCapabilities.filter((capability) => capability.kind === 'skill'),
+    [visibleAgentCapabilities],
+  );
+  const toolCapabilities = useMemo(
+    () => visibleAgentCapabilities.filter((capability) => capability.kind === 'tool'),
+    [visibleAgentCapabilities],
+  );
+  const mcpCapabilities = useMemo(
+    () => visibleAgentCapabilities.filter((capability) => capability.kind === 'mcp-server'),
+    [visibleAgentCapabilities],
+  );
+  const issueCapabilities = useMemo(
+    () =>
+      visibleAgentCapabilities.filter(
+        (capability) => capability.diagnostics?.length || capability.status === 'invalid' || capability.status === 'error',
+      ),
+    [visibleAgentCapabilities],
+  );
+
+  useEffect(() => {
+    const container = runtimeScrollRef.current;
+    if (!container || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const sections = RUNTIME_SECTIONS.map((item) => {
+      const section = container.querySelector<HTMLElement>(`#${item.id}`);
+      return section ? { id: item.id, section } : null;
+    }).filter((item): item is { id: RuntimeSectionId; section: HTMLElement } => item !== null);
+
+    if (sections.length === 0) {
+      return undefined;
+    }
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      const visibleIds = new Set<RuntimeSectionId>();
+      const updateActiveSection = () => {
+        let nextId = sections[0].id;
+        for (const item of sections) {
+          if (visibleIds.has(item.id)) {
+            nextId = item.id;
+          }
+        }
+        setActiveSectionId((current) => (current === nextId ? current : nextId));
+      };
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            const sectionId = entry.target.id as RuntimeSectionId;
+            if (entry.isIntersecting) visibleIds.add(sectionId);
+            else visibleIds.delete(sectionId);
+          }
+          updateActiveSection();
+        },
+        { root: container, rootMargin: '-96px 0px -60% 0px', threshold: 0 },
+      );
+
+      for (const item of sections) observer.observe(item.section);
+      return () => observer.disconnect();
+    }
+
+    let frame: number | null = null;
+    const updateActiveSection = () => {
+      frame = null;
+      const containerTop = container.getBoundingClientRect().top;
+      let nextId = sections[0].id;
+      for (const item of sections) {
+        if (item.section.getBoundingClientRect().top - containerTop <= 96) nextId = item.id;
+      }
+      setActiveSectionId((current) => (current === nextId ? current : nextId));
+    };
+    const scheduleUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    scheduleUpdate();
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    return () => {
+      container.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [data]);
+
+  function navigateToSection(sectionId: RuntimeSectionId) {
+    setActiveSectionId(sectionId);
+    runtimeScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`)?.scrollIntoView({ block: 'start' });
+  }
 
   if (error) return <ErrorState title="Failed to load Agent Runtime" message={error} />;
   if (!data) return <LoadingState label="Loading Agent Runtime…" className="h-full justify-center" />;
 
   return (
-    <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
-      <AppPageIntro
-        title="Agent Runtime"
-        summary="Inspect every capability the agent can see: extensions, instruction files, skills, injected tools, MCP servers, templates, and context."
-        actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
-      />
-
-      <section className="space-y-3 border-t border-border-subtle/70 pt-6">
-        <div>
-          <h2 className="text-[18px] font-semibold tracking-tight text-primary">System prompt template</h2>
-          <p className="text-[13px] leading-6 text-secondary">
-            Customize the generated runtime instruction template. Nunjucks variables such as vault_root and skills_dir are available.
-          </p>
-        </div>
-        {systemPromptTemplateLoading && !systemPromptTemplateState ? (
-          <p className="text-[13px] text-secondary">Loading system prompt template...</p>
-        ) : systemPromptTemplateError && !systemPromptTemplateState ? (
-          <p className="text-[13px] text-danger">Failed to load system prompt template: {systemPromptTemplateError}</p>
-        ) : systemPromptTemplateState ? (
-          <div className="space-y-3">
-            <p className="break-all text-[12px] text-dim">
-              Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
-            </p>
-            <textarea
-              id="agent-runtime-system-prompt-template"
-              value={systemPromptTemplateDraft}
-              onChange={(event) => {
-                setSystemPromptTemplateDraft(event.target.value);
-                if (systemPromptTemplateSaveError) {
-                  setSystemPromptTemplateSaveError(null);
-                }
-              }}
-              className="min-h-[340px] w-full resize-y rounded-md border border-border-subtle bg-elevated px-3 py-2 font-mono text-[12px] leading-5 text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50"
-              spellCheck={false}
-              disabled={savingSystemPromptTemplate}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] text-dim">
-                {savingSystemPromptTemplate ? 'Saving...' : systemPromptTemplateDirty ? 'Auto-save pending...' : 'Auto-saved'}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSystemPromptTemplateDraft(systemPromptTemplateState.template);
-                  setSystemPromptTemplateSaveError(null);
-                }}
-                disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
-                className="ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none"
-              >
-                Revert edits
-              </button>
-            </div>
-          </div>
-        ) : null}
-        {systemPromptTemplateSaveError ? <p className="text-[12px] text-danger">{systemPromptTemplateSaveError}</p> : null}
-      </section>
-
-      <section className="space-y-4 border-t border-border-subtle/70 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-semibold tracking-tight text-primary">Agent context</h2>
-            <p className="text-[13px] leading-6 text-secondary">
-              {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
-              <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
-            </p>
-          </div>
-          <input
-            className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search agent context…"
+    <div ref={runtimeScrollRef} className="h-full overflow-y-auto">
+      <AppPageLayout
+        asideLayout="centered"
+        contentClassName="flex flex-col gap-10"
+        aside={
+          <AppPageToc
+            items={RUNTIME_SECTIONS}
+            activeId={activeSectionId}
+            onNavigate={navigateToSection}
+            ariaLabel="Agent Runtime sections"
           />
+        }
+      >
+        <AppPageIntro
+          title="Agent Runtime"
+          summary="Inspect every capability the agent can see: instruction files, skills, injected tools, MCP servers, templates, and context."
+          actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
+        />
+
+        <section id="system-prompt" className="scroll-mt-24 space-y-3 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0">
+          <div>
+            <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">System Prompt</h2>
+            <p className="text-[14px] leading-6 text-secondary">
+              Customize the generated runtime instruction template. Nunjucks variables such as vault_root and skills_dir are available.
+            </p>
+          </div>
+          {systemPromptTemplateLoading && !systemPromptTemplateState ? (
+            <p className="text-[13px] text-secondary">Loading system prompt template...</p>
+          ) : systemPromptTemplateError && !systemPromptTemplateState ? (
+            <p className="text-[13px] text-danger">Failed to load system prompt template: {systemPromptTemplateError}</p>
+          ) : systemPromptTemplateState ? (
+            <div className="space-y-3">
+              <p className="break-all text-[12px] text-dim">
+                Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
+              </p>
+              <textarea
+                id="agent-runtime-system-prompt-template"
+                value={systemPromptTemplateDraft}
+                onChange={(event) => {
+                  setSystemPromptTemplateDraft(event.target.value);
+                  if (systemPromptTemplateSaveError) {
+                    setSystemPromptTemplateSaveError(null);
+                  }
+                }}
+                className="min-h-[340px] w-full resize-y rounded-md border border-border-subtle bg-elevated px-3 py-2 font-mono text-[12px] leading-5 text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50"
+                spellCheck={false}
+                disabled={savingSystemPromptTemplate}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12px] text-dim">
+                  {savingSystemPromptTemplate ? 'Saving...' : systemPromptTemplateDirty ? 'Auto-save pending...' : 'Auto-saved'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSystemPromptTemplateDraft(systemPromptTemplateState.template);
+                    setSystemPromptTemplateSaveError(null);
+                  }}
+                  disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
+                  className="ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none"
+                >
+                  Revert edits
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {systemPromptTemplateSaveError ? <p className="text-[12px] text-danger">{systemPromptTemplateSaveError}</p> : null}
+        </section>
+
+        <section className="space-y-4 border-t border-border-subtle pt-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[22px] font-semibold tracking-tight text-primary">Agent Context</h2>
+              <p className="text-[13px] leading-6 text-secondary">
+                {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and
+                context.
+                <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
+              </p>
+            </div>
+            <input
+              className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search agent context…"
+            />
+          </div>
+        </section>
+
+        <CapabilitySection
+          id="instructions"
+          title="Instructions"
+          description="Instruction files, prompt templates, and context blocks assembled before the agent starts."
+          rows={instructionCapabilities}
+          busyId={busyId}
+          onToggle={toggleCapability}
+          emptyTitle="No instructions found"
+        />
+        <CapabilitySection
+          id="skills"
+          title="Skills"
+          description="Agent-selectable procedures that add local workflow instructions and supporting assets."
+          rows={skillCapabilities}
+          busyId={busyId}
+          onToggle={toggleCapability}
+          emptyTitle="No skills found"
+        />
+        <CapabilitySection
+          id="tools"
+          title="Tools"
+          description="Callable tools injected into the agent runtime for the current workspace."
+          rows={toolCapabilities}
+          busyId={busyId}
+          onToggle={toggleCapability}
+          emptyTitle="No tools found"
+        />
+        <CapabilitySection
+          id="mcp"
+          title="MCP"
+          description="Model Context Protocol servers available to the runtime."
+          rows={mcpCapabilities}
+          busyId={busyId}
+          onToggle={toggleCapability}
+          emptyTitle="No MCP servers found"
+        />
+        <CapabilitySection
+          id="issues"
+          title="Issues"
+          description="Diagnostics, invalid registrations, and runtime entries that need attention."
+          rows={issueCapabilities}
+          busyId={busyId}
+          onToggle={toggleCapability}
+          emptyTitle="No runtime issues found"
+        />
+      </AppPageLayout>
+    </div>
+  );
+}
+
+function CapabilitySection({
+  id,
+  title,
+  description,
+  rows,
+  busyId,
+  onToggle,
+  emptyTitle,
+}: {
+  id: RuntimeSectionId;
+  title: string;
+  description: string;
+  rows: RuntimeCapability[];
+  busyId: string | null;
+  onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
+  emptyTitle: string;
+}) {
+  return (
+    <section id={id} className="scroll-mt-24 space-y-5 border-t border-border-subtle pt-10">
+      <div className="max-w-3xl space-y-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{title}</h2>
+          <span className="text-[12px] text-dim">{formatCount(rows.length, 'entry')}</span>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={cx(
-                'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
-                filter === item.id ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
-              )}
-              onClick={() => setFilter(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        {visibleAgentCapabilities.length ? (
-          <CapabilityTable rows={visibleAgentCapabilities} busyId={busyId} onToggle={toggleCapability} />
-        ) : (
-          <EmptyState title="No agent context found" body="Adjust the filter or search query." />
-        )}
-      </section>
-    </AppPageLayout>
+        <p className="text-[14px] leading-6 text-secondary">{description}</p>
+      </div>
+      {rows.length ? (
+        <CapabilityTable rows={rows} busyId={busyId} onToggle={onToggle} />
+      ) : (
+        <EmptyState title={emptyTitle} body="Try a broader search query." />
+      )}
+    </section>
   );
 }
 
