@@ -4,6 +4,7 @@ import { api } from '../client/api';
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import type {
+  ConversationBootstrapState,
   DesktopConversationState,
   DisplayBlock,
   PromptAttachmentRefInput,
@@ -23,6 +24,34 @@ const desktopConversationStateInflight = new Map<string, Promise<DesktopConversa
 export function clearDesktopConversationStateCacheForTests(): void {
   desktopConversationStateCache.clear();
   desktopConversationStateInflight.clear();
+}
+
+function createEmptyDesktopConversationStreamState(): DesktopConversationState['stream'] {
+  return {
+    blocks: [],
+    blockOffset: 0,
+    totalBlocks: 0,
+    hasSnapshot: false,
+    isStreaming: false,
+    isCompacting: false,
+    error: null,
+    title: null,
+    tokens: null,
+    cost: null,
+    contextUsage: null,
+    pendingQueue: { steering: [], followUp: [] },
+    parallelJobs: [],
+    presence: {
+      surfaces: [],
+      controllerSurfaceId: null,
+      controllerSurfaceType: null,
+      controllerAcquiredAt: null,
+    },
+    goalState: null,
+    systemPrompt: null,
+    toolDefinitions: [],
+    cwdChange: null,
+  };
 }
 
 export function normalizeDesktopConversationStateTailBlocks(value: unknown): number | undefined {
@@ -258,6 +287,35 @@ function rememberDesktopConversationState(
     }
     cache.delete(oldestKey);
   }
+}
+
+export function primeDesktopConversationStateCache(
+  conversationId: string,
+  bootstrap: ConversationBootstrapState,
+  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
+): void {
+  const normalizedConversationId = conversationId.trim();
+  if (!normalizedConversationId || bootstrap.conversationId !== normalizedConversationId) {
+    return;
+  }
+
+  const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
+  const stream = createEmptyDesktopConversationStreamState();
+  const sessionDetail = bootstrap.sessionDetail;
+  rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
+    conversationId: normalizedConversationId,
+    sessionDetail,
+    liveSession: bootstrap.liveSession,
+    stream: sessionDetail
+      ? {
+          ...stream,
+          blockOffset: sessionDetail.blockOffset,
+          totalBlocks: sessionDetail.totalBlocks,
+          contextUsage: sessionDetail.contextUsage,
+        }
+      : stream,
+  });
 }
 
 function fetchDesktopConversationStateCached(

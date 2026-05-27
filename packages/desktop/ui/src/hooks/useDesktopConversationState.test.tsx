@@ -37,6 +37,7 @@ import {
   clearDesktopConversationStateCacheForTests,
   normalizeDesktopConversationStateTailBlocks,
   prefetchDesktopConversationState,
+  primeDesktopConversationStateCache,
   useDesktopConversationState,
 } from './useDesktopConversationState.js';
 
@@ -336,6 +337,54 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.conversationId).toBe('conv-prefetch');
+  });
+
+  it('uses a primed create bootstrap as the initial desktop conversation state', async () => {
+    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+
+    primeDesktopConversationStateCache(
+      'conv-created',
+      {
+        conversationId: 'conv-created',
+        sessionDetail: {
+          meta: {
+            id: 'conv-created',
+            file: '/repo/session.jsonl',
+            timestamp: '2026-05-26T00:00:00.000Z',
+            cwd: '/repo',
+            cwdSlug: 'repo',
+            model: 'gpt',
+            title: 'New Conversation',
+            messageCount: 0,
+          },
+          blocks: [],
+          blockOffset: 0,
+          totalBlocks: 0,
+          contextUsage: null,
+        },
+        liveSession: { live: true, id: 'conv-created', cwd: '/repo', sessionFile: '/repo/session.jsonl', isStreaming: false },
+      },
+      { tailBlocks: 20, includeToolBlocks: false },
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-created" tailBlocks={20} includeToolBlocks={false} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
+    expect(desktopConversationState).toHaveBeenCalledTimes(1);
   });
 
   it('flushes text deltas on the next animation frame', async () => {
