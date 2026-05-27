@@ -9,7 +9,12 @@ import {
   clearDraftConversationContextDocs,
   clearDraftConversationCwd,
   clearDraftConversationModelPreferences,
+  DRAFT_CONVERSATION_ROUTE,
+  hasDraftConversationAttachments,
+  hasDraftConversationContextDocs,
   persistDraftConversationCwd,
+  readDraftConversationComposer,
+  readDraftConversationCwd,
   readDraftConversationModel,
   readDraftConversationThinkingLevel,
 } from './draftConversation';
@@ -40,8 +45,29 @@ function focusComposerAfterNavigation(): void {
   });
 }
 
+function hasDraftConversationState(): boolean {
+  return (
+    readDraftConversationComposer().trim().length > 0 ||
+    readDraftConversationCwd().trim().length > 0 ||
+    readDraftConversationModel().trim().length > 0 ||
+    readDraftConversationThinkingLevel().trim().length > 0 ||
+    hasDraftConversationAttachments() ||
+    hasDraftConversationContextDocs()
+  );
+}
+
 export function startDraftConversation(input: StartDraftConversationInput): void {
   const cwd = input.cwd?.trim() ?? '';
+  const alreadyOnEmptyDraft =
+    !cwd && typeof window !== 'undefined' && window.location?.pathname === DRAFT_CONVERSATION_ROUTE && !hasDraftConversationState();
+
+  if (alreadyOnEmptyDraft) {
+    if (input.focusComposer === true) {
+      focusComposerAfterNavigation();
+    }
+    return;
+  }
+
   clearDraftConversationAttachments();
   clearDraftConversationComposer();
   clearDraftConversationContextDocs();

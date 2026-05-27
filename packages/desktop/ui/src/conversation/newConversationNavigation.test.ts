@@ -152,4 +152,22 @@ describe('startDraftConversation', () => {
 
     expect(readDraftConversationCwd()).toBe('/repo');
   });
+
+  it('does not churn empty draft state when already on the draft route', () => {
+    const navigate = vi.fn();
+    vi.stubGlobal('window', {
+      dispatchEvent: vi.fn(),
+      sessionStorage,
+      location: { pathname: '/conversations/new' },
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      },
+    });
+
+    startDraftConversation({ navigate, focusComposer: true });
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'neon-pilot:composer-focus' }));
+  });
 });
