@@ -4181,7 +4181,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         setProviderApiKey(event.target.value);
                                       }}
                                       className={INPUT_CLASS}
-                                      placeholder="sk-... or op://vault/item/field"
+                                      placeholder="sk-... or op://Private/API key/password"
                                       autoComplete="off"
                                       spellCheck={false}
                                       disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}

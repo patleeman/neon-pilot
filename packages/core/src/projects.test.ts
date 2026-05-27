@@ -36,7 +36,7 @@ function createTempRepo(): string {
   tempDirs.push(dir);
   process.env.NEON_PILOT_STATE_ROOT = dir;
   process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'sync', 'runtime');
-  process.env.NEON_PILOT_VAULT_ROOT = join(dir, 'sync');
+  process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(dir, 'sync');
   return dir;
 }
 

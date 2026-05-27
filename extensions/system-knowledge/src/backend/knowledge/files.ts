@@ -418,18 +418,22 @@ export async function resolvePromptReferences(input: { text: string }, ctx: Exte
 }
 
 export async function eventsRoute(_req: ExtensionRouteRequest, ctx: ExtensionBackendContext): Promise<ExtensionRouteResponse> {
-  const base = await root(ctx);
+  const allRoots = await roots(ctx);
   async function* events(): AsyncIterable<{ data: unknown }> {
-    yield { data: { type: 'ready', root: base } };
-    const queue: Array<{ eventType: string; path: string | null }> = [];
+    yield {
+      data: { type: 'ready', root: allRoots[0]?.path ?? '', roots: allRoots.map((rootRef) => ({ id: rootRef.id, path: rootRef.path })) },
+    };
+    const queue: Array<{ eventType: string; path: string | null; rootId: string; rootPath: string }> = [];
     let notify: (() => void) | null = null;
-    const watcher = watch(base, { recursive: true }, (eventType, filename) => {
-      queue.push({ eventType, path: typeof filename === 'string' ? filename : null });
-      notify?.();
-      notify = null;
-    });
+    const watchers = allRoots.map((rootRef) =>
+      watch(rootRef.path, { recursive: true }, (eventType, filename) => {
+        queue.push({ eventType, path: typeof filename === 'string' ? filename : null, rootId: rootRef.id, rootPath: rootRef.path });
+        notify?.();
+        notify = null;
+      }),
+    );
     const onAbort = () => {
-      watcher.close();
+      for (const watcher of watchers) watcher.close();
       notify?.();
       notify = null;
     };
@@ -447,7 +451,7 @@ export async function eventsRoute(_req: ExtensionRouteRequest, ctx: ExtensionBac
       }
     } finally {
       _req.signal?.removeEventListener('abort', onAbort);
-      watcher.close();
+      for (const watcher of watchers) watcher.close();
     }
   }
   return { status: 200, stream: 'sse', events: events() };

@@ -154,7 +154,6 @@ describe('Sidebar', () => {
     expect(html).not.toContain('Alerts');
     expect(html).not.toContain('Notifications');
     expect(html).not.toContain('Runs');
-    expect(html).not.toContain('Vault');
     expect(html).toContain('Threads');
     expect(html).toContain('aria-label="Organize and sort threads"');
     expect(html).toContain('aria-label="Find threads and archived conversations"');
@@ -843,7 +842,6 @@ describe('Sidebar', () => {
     expect(html).not.toContain('Open Docs');
     expect(html).not.toContain('Draft doc');
     expect(html).not.toContain('Open Workspaces');
-    expect(html).not.toContain('Vault');
   });
 
   it('highlights Chat on the new conversation route', () => {

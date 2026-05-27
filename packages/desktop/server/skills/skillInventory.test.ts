@@ -53,7 +53,7 @@ describe('buildSkillInventory', () => {
   it('runs all beforeSkillInjection hooks in priority order', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-skill-inventory-'));
     stateRoot = join(root, 'state');
-    durableSkillsDir = join(root, 'vault', 'skills');
+    durableSkillsDir = join(root, 'knowledge', 'skills');
     extensionRoot = join(root, 'extension');
     mkdirSync(join(extensionRoot, 'skills', 'alpha'), { recursive: true });
     mkdirSync(join(extensionRoot, 'skills', 'beta'), { recursive: true });

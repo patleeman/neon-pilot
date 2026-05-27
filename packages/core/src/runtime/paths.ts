@@ -113,13 +113,11 @@ function readMachineConfigRuntimeOverrides(options: RuntimePathMachineConfigOpti
       return {};
     }
 
-    const record = parsed as { knowledgeRoot?: unknown; vaultRoot?: unknown };
+    const record = parsed as { knowledgeRoot?: unknown };
     const knowledgeRoot =
       typeof record.knowledgeRoot === 'string' && record.knowledgeRoot.trim().length > 0
         ? expandHomePath(record.knowledgeRoot.trim())
-        : typeof record.vaultRoot === 'string' && record.vaultRoot.trim().length > 0
-          ? expandHomePath(record.vaultRoot.trim())
-          : undefined;
+        : undefined;
     return {
       ...(knowledgeRoot ? { knowledgeRoot } : {}),
     };
@@ -150,9 +148,6 @@ export function getKnowledgeRoot(options: RuntimePathMachineConfigOptions = {}):
   const configured = readMachineConfigRuntimeOverrides(options);
   return configured.knowledgeRoot ?? getDefaultKnowledgeRoot();
 }
-
-export const getDefaultVaultRoot = getDefaultKnowledgeRoot;
-export const getVaultRoot = getKnowledgeRoot;
 
 /**
  * Default mutable runtime config root directory.

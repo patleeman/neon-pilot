@@ -13,7 +13,6 @@ const NODE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 export interface ResolveNodesOptions {
   knowledgeRoot?: string;
-  vaultRoot?: string;
 }
 
 export interface UnifiedNodeParseError {
@@ -154,7 +153,7 @@ interface LegacyNodeCandidate {
 }
 
 function resolveKnowledgeRoot(options: ResolveNodesOptions = {}): string {
-  return resolve(options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot());
+  return resolve(options.knowledgeRoot ?? getKnowledgeRoot());
 }
 
 export function resolveUnifiedNodesDir(options: ResolveNodesOptions = {}): string {
@@ -947,7 +946,7 @@ export function validateUnifiedNodeId(id: string): void {
 
 export function loadUnifiedNodes(options: ResolveNodesOptions = {}): LoadUnifiedNodesResult {
   const knowledgeRoot = resolveKnowledgeRoot(options);
-  migrateLegacyProfileMemoryDirs({ knowledgeRoot: options.knowledgeRoot, vaultRoot: options.vaultRoot });
+  migrateLegacyProfileMemoryDirs({ knowledgeRoot: options.knowledgeRoot });
   const notesDir = getDurableNotesDir(knowledgeRoot);
   const projectsDir = getDurableProjectsDir(knowledgeRoot);
   const skillsDir = getDurableSkillsDir(knowledgeRoot);

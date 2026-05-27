@@ -341,7 +341,7 @@ describe('model routes', () => {
   });
 
   afterEach(() => {
-    delete process.env.NEON_PILOT_VAULT_ROOT;
+    delete process.env.NEON_PILOT_KNOWLEDGE_ROOT;
     vi.useRealTimers();
     for (const files of allocatedFiles.splice(0)) {
       cleanupRouteFiles(files);

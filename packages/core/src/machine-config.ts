@@ -31,7 +31,6 @@ export type MachineConfigSectionKey = 'daemon' | 'ui';
 
 export interface MachineConfigDocument {
   knowledgeRoot?: string;
-  vaultRoot?: string;
   instructionFiles?: string[];
   skillDirs?: string[];
   systemPromptTemplate?: string;
@@ -136,11 +135,7 @@ function normalizeStringArray(value: unknown): string[] | undefined {
 function normalizeMachineConfig(value: unknown): MachineConfigDocument {
   const document = isRecord(value) ? value : {};
   const knowledgeRoot =
-    typeof document.knowledgeRoot === 'string' && document.knowledgeRoot.trim().length > 0
-      ? document.knowledgeRoot.trim()
-      : typeof document.vaultRoot === 'string' && document.vaultRoot.trim().length > 0
-        ? document.vaultRoot.trim()
-        : undefined;
+    typeof document.knowledgeRoot === 'string' && document.knowledgeRoot.trim().length > 0 ? document.knowledgeRoot.trim() : undefined;
   const instructionFiles = normalizeStringArray(document.instructionFiles);
   const skillDirs = normalizeStringArray(document.skillDirs);
   const systemPromptTemplate =

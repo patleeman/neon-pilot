@@ -50,7 +50,6 @@ export interface ResolvedRuntimeResources {
 export interface ResolveResourceOptions {
   repoRoot?: string;
   knowledgeRoot?: string;
-  vaultRoot?: string;
   localProfileDir?: string;
   runtimeConfigRoot?: string;
   /** Optional pre-resolved extension directory paths. When provided, core will use these instead of auto-discovering extensions. */
@@ -380,7 +379,7 @@ export function getRepoDefaultsAgentDir(explicitRepoRoot?: string): string {
 }
 
 function resolveKnowledgeRoot(options: ResolveResourceOptions = {}): string {
-  const explicit = options.knowledgeRoot ?? options.vaultRoot ?? process.env.NEON_PILOT_KNOWLEDGE_ROOT ?? process.env.NEON_PILOT_VAULT_ROOT;
+  const explicit = options.knowledgeRoot ?? process.env.NEON_PILOT_KNOWLEDGE_ROOT;
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
     return resolve(expandHomePath(explicit.trim()));
   }

@@ -7,15 +7,15 @@ describe('core runtime barrel', () => {
     expect(runtime).toEqual(
       expect.objectContaining({
         getConfigRoot: expect.any(Function),
+        getDefaultKnowledgeRoot: expect.any(Function),
         getDefaultStateRoot: expect.any(Function),
-        getDefaultVaultRoot: expect.any(Function),
         getDurableAgentFilePath: expect.any(Function),
         getDurableSessionsDir: expect.any(Function),
         getDurableSkillsDir: expect.any(Function),
         getPiAgentRuntimeDir: expect.any(Function),
         getStateRoot: expect.any(Function),
         getSyncRoot: expect.any(Function),
-        getVaultRoot: expect.any(Function),
+        getKnowledgeRoot: expect.any(Function),
         isPathInRepo: expect.any(Function),
         resolveNeutralChatCwd: expect.any(Function),
         resolveStatePaths: expect.any(Function),

@@ -125,7 +125,7 @@ export interface LintMemoryDocsResult {
 }
 
 function resolveMemoryContext(options: ResolveMemoryDocsOptions = {}): { memoryDir: string; knowledgeRoot: string } {
-  const knowledgeRoot = options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot();
+  const knowledgeRoot = options.knowledgeRoot ?? getKnowledgeRoot();
 
   return {
     memoryDir: getMemoryDocsDir({ knowledgeRoot }),

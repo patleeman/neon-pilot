@@ -117,7 +117,7 @@ beforeEach(() => {
     NEON_PILOT_STATE_ROOT: createTempDir('neon-pilot-web-task-state-'),
     NEON_PILOT_DAEMON_SOCKET_PATH: join(tmpdir(), `npd-${randomUUID()}.sock`),
   };
-  process.env.NEON_PILOT_VAULT_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync');
+  process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync');
   process.env.NEON_PILOT_PROFILES_ROOT = join(process.env.NEON_PILOT_STATE_ROOT, 'sync', 'runtime');
   pingDaemonMock.mockReset();
   startScheduledTaskRunMock.mockReset();

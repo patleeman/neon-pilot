@@ -29,7 +29,7 @@ function createTempStateRoot(): string {
   const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-nodes-'));
   tempDirs.push(dir);
   process.env.NEON_PILOT_STATE_ROOT = dir;
-  process.env.NEON_PILOT_VAULT_ROOT = join(dir, 'sync');
+  process.env.NEON_PILOT_KNOWLEDGE_ROOT = join(dir, 'sync');
   process.env.NEON_PILOT_PROFILES_ROOT = join(dir, 'config', 'runtime');
   return dir;
 }
@@ -73,7 +73,7 @@ afterEach(async () => {
 describe('unified nodes', () => {
   it('creates, updates, tags, and deletes a node', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
     const created = createUnifiedNode(
       {
@@ -86,7 +86,7 @@ describe('unified nodes', () => {
         related: ['sibling-node'],
         relationships: [{ type: 'depends-on', targetId: 'sibling-node' }],
       },
-      { vaultRoot },
+      { knowledgeRoot },
     );
 
     expect(created.node.kinds).toEqual(['note']);
@@ -103,7 +103,7 @@ describe('unified nodes', () => {
         removeTags: ['area:test'],
         body: '# Renamed Node\n\nUpdated body.',
       },
-      { vaultRoot },
+      { knowledgeRoot },
     );
 
     expect(updated.title).toBe('Renamed Node');
@@ -116,25 +116,25 @@ describe('unified nodes', () => {
         add: ['lang:typescript'],
         remove: ['team:platform'],
       },
-      { vaultRoot },
+      { knowledgeRoot },
     );
 
     expect(retagged.tags).toContain('lang:typescript');
     expect(retagged.tags).not.toContain('team:platform');
 
-    const loaded = loadUnifiedNodes({ vaultRoot });
+    const loaded = loadUnifiedNodes({ knowledgeRoot });
     expect(loaded.nodes).toHaveLength(1);
     expect(findUnifiedNodes(loaded.nodes, 'type:note AND profile:assistant')).toHaveLength(1);
     expect(findUnifiedNodes(loaded.nodes, 'parent:parent-node')).toHaveLength(1);
     expect(findUnifiedNodes(loaded.nodes, 'depends-on AND sibling-node')).toHaveLength(1);
 
-    expect(deleteUnifiedNode('sample-node', { vaultRoot })).toEqual({ ok: true, id: 'sample-node' });
-    expect(loadUnifiedNodes({ vaultRoot }).nodes).toHaveLength(0);
+    expect(deleteUnifiedNode('sample-node', { knowledgeRoot })).toEqual({ ok: true, id: 'sample-node' });
+    expect(loadUnifiedNodes({ knowledgeRoot }).nodes).toHaveLength(0);
   });
 
   it('rejects invalid timestamps when creating nodes', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
     expect(() =>
       createUnifiedNode(
@@ -144,35 +144,35 @@ describe('unified nodes', () => {
           summary: 'Bad timestamp.',
           createdAt: 'not-a-date',
         },
-        { vaultRoot },
+        { knowledgeRoot },
       ),
     ).toThrow('Invalid node createdAt');
   });
 
   it('creates notes, projects, and skills in their canonical paths', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
-    const note = createUnifiedNode({ id: 'note-a', title: 'Note A', summary: 'Note summary.', tags: ['type:note'] }, { vaultRoot });
+    const note = createUnifiedNode({ id: 'note-a', title: 'Note A', summary: 'Note summary.', tags: ['type:note'] }, { knowledgeRoot });
     const project = createUnifiedNode(
       { id: 'project-a', title: 'Project A', summary: 'Project summary.', tags: ['type:project'] },
-      { vaultRoot },
+      { knowledgeRoot },
     );
     const skill = createUnifiedNode(
       { id: 'skill-a', title: 'Skill A', summary: 'Skill summary.', tags: ['type:skill', 'profile:assistant'] },
-      { vaultRoot },
+      { knowledgeRoot },
     );
 
-    expect(note.node.filePath).toBe(join(vaultRoot, 'notes', 'note-a.md'));
-    expect(project.node.filePath).toBe(join(vaultRoot, 'projects', 'project-a', 'project.md'));
-    expect(skill.node.filePath).toBe(join(vaultRoot, 'skills', 'skill-a', 'SKILL.md'));
+    expect(note.node.filePath).toBe(join(knowledgeRoot, 'notes', 'note-a.md'));
+    expect(project.node.filePath).toBe(join(knowledgeRoot, 'projects', 'project-a', 'project.md'));
+    expect(skill.node.filePath).toBe(join(knowledgeRoot, 'skills', 'skill-a', 'SKILL.md'));
     expect(skill.node.tags).toContain('profile:assistant');
     expect(readFileSync(skill.node.filePath, 'utf-8')).toContain('profiles:\n  - assistant');
   });
 
-  it('loads notes, skills, and projects from the canonical vault layout', () => {
+  it('loads notes, skills, and projects from the canonical knowledge layout', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
     writeFile(
       join(stateRoot, 'sync', 'notes', 'desktop.md'),
@@ -274,12 +274,12 @@ status: active
 `,
     );
 
-    const migration = migrateLegacyNodes({ vaultRoot });
+    const migration = migrateLegacyNodes({ knowledgeRoot });
     expect(migration.created).toEqual(['agent-browser']);
     expect(migration.updated).toEqual([]);
     expect(migration.conflicts).toEqual([]);
 
-    const loaded = loadUnifiedNodes({ vaultRoot });
+    const loaded = loadUnifiedNodes({ knowledgeRoot });
     expect(loaded.nodes.map((node) => node.id)).toEqual(['agent-browser', 'desktop', 'ship-it']);
     expect(findUnifiedNodes(loaded.nodes, 'type:skill AND profile:assistant').map((node) => node.id)).toEqual(['agent-browser']);
     expect(findUnifiedNodes(loaded.nodes, 'parent:infrastructure').map((node) => node.id)).toEqual(['desktop']);
@@ -289,13 +289,13 @@ status: active
     expect(projectNode?.body).toContain('# Ship It');
     expect(projectNode?.body).toContain('Ship the feature.');
 
-    const skillDirs = listUnifiedSkillNodeDirs('assistant', { vaultRoot });
+    const skillDirs = listUnifiedSkillNodeDirs('assistant', { knowledgeRoot });
     expect(skillDirs).toEqual([join(stateRoot, 'sync', '_skills', 'agent-browser')]);
   });
 
   it('reports duplicate ids across notes and projects and lints references', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
     writeFile(
       join(stateRoot, 'sync', 'notes', 'shared-topic.md'),
@@ -355,23 +355,23 @@ plan:
 `,
     );
 
-    const migration = migrateLegacyNodes({ vaultRoot });
+    const migration = migrateLegacyNodes({ knowledgeRoot });
     expect(migration.created).toEqual([]);
     expect(migration.updated).toEqual([]);
     expect(migration.conflicts).toEqual([]);
 
-    const loaded = loadUnifiedNodes({ vaultRoot });
+    const loaded = loadUnifiedNodes({ knowledgeRoot });
     expect(loaded.nodes).toHaveLength(2);
     expect(loaded.nodes.map((node) => node.id)).toEqual(['shared-topic', 'shared-topic']);
 
-    const lint = lintUnifiedNodes({ vaultRoot });
+    const lint = lintUnifiedNodes({ knowledgeRoot });
     expect(lint.duplicateIds).toEqual([expect.objectContaining({ id: 'shared-topic' })]);
     expect(lint.referenceErrors).toEqual([expect.objectContaining({ id: 'shared-topic', field: 'related', targetId: 'missing-node' })]);
   });
 
   it('parses typed relationships from frontmatter objects', () => {
     const stateRoot = createTempStateRoot();
-    const vaultRoot = join(stateRoot, 'sync');
+    const knowledgeRoot = join(stateRoot, 'sync');
 
     writeFile(
       join(stateRoot, 'sync', 'notes', 'graph-node.md'),
@@ -396,7 +396,7 @@ Tracks graph relationships.
 `,
     );
 
-    const loaded = loadUnifiedNodes({ vaultRoot });
+    const loaded = loadUnifiedNodes({ knowledgeRoot });
     expect(loaded.nodes[0]?.links.relationships).toEqual([
       { type: 'depends-on', targetId: 'upstream-node' },
       { type: 'implements', targetId: 'downstream-node' },

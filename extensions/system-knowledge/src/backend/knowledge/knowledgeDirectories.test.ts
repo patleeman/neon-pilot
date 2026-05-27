@@ -6,7 +6,7 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { provideKnowledgeInstructions } from '../../backend';
-import { listFiles, resolvePromptReferences, search, writeFile } from './files';
+import { eventsRoute, listFiles, resolvePromptReferences, search, writeFile } from './files';
 import { readKnowledgeState, updateKnowledgeState } from './state';
 
 describe('knowledge directories', () => {
@@ -95,5 +95,25 @@ describe('knowledge directories', () => {
     });
     const result = (await provideKnowledgeInstructions({}, ctx)) as { layers: Array<{ content: string }> };
     expect(result.layers[0]?.content).toContain(`Additional 1: ${second}`);
+  });
+
+  it('announces all knowledge roots on the file event stream', async () => {
+    const controller = new AbortController();
+    const response = await eventsRoute({ query: {}, signal: controller.signal } as never, ctx);
+    const iterator = response.events?.[Symbol.asyncIterator]();
+    await expect(iterator?.next()).resolves.toEqual({
+      done: false,
+      value: {
+        data: {
+          type: 'ready',
+          root: first,
+          roots: [
+            { id: 'knowledge', path: first },
+            { id: 'knowledge-2', path: second },
+          ],
+        },
+      },
+    });
+    controller.abort();
   });
 });

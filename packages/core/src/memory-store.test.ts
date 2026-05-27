@@ -11,10 +11,10 @@ const tempDirs: string[] = [];
 
 function createTempDir(prefix: string): string {
   const root = mkdtempSync(join(tmpdir(), prefix));
-  const vaultRoot = join(root, 'sync');
-  mkdirSync(vaultRoot, { recursive: true });
+  const knowledgeRoot = join(root, 'sync');
+  mkdirSync(knowledgeRoot, { recursive: true });
   tempDirs.push(root);
-  return vaultRoot;
+  return knowledgeRoot;
 }
 
 function writeFile(path: string, content: string): void {
@@ -22,8 +22,8 @@ function writeFile(path: string, content: string): void {
   writeFileSync(path, content, 'utf-8');
 }
 
-function memoryPath(vaultRoot: string, memoryId: string): string {
-  return join(vaultRoot, 'notes', memoryId, 'INDEX.md');
+function memoryPath(knowledgeRoot: string, memoryId: string): string {
+  return join(knowledgeRoot, 'notes', memoryId, 'INDEX.md');
 }
 
 afterEach(async () => {
@@ -32,10 +32,10 @@ afterEach(async () => {
 
 describe('memory store organization metadata', () => {
   it('parses note nodes from sync/notes and tracks package-local references', () => {
-    const vaultRoot = createTempDir('neon-pilot-memory-store-');
+    const knowledgeRoot = createTempDir('neon-pilot-memory-store-');
 
     writeFile(
-      memoryPath(vaultRoot, 'neon-pilot'),
+      memoryPath(knowledgeRoot, 'neon-pilot'),
       `---
 id: neon-pilot
 kind: note
@@ -61,7 +61,7 @@ Hub doc.
     );
 
     writeFile(
-      join(vaultRoot, 'notes', 'neon-pilot', 'references', 'desktop-ui.md'),
+      join(knowledgeRoot, 'notes', 'neon-pilot', 'references', 'desktop-ui.md'),
       `---
 name: desktop-ui
 description: Durable UI notes.
@@ -76,14 +76,14 @@ Keep the right rail visible and resizable.
     );
 
     writeFile(
-      join(vaultRoot, 'notes', 'neon-pilot', 'references', 'state-model.md'),
+      join(knowledgeRoot, 'notes', 'neon-pilot', 'references', 'state-model.md'),
       `# Project state model
 
 Keep planning state durable.
 `,
     );
 
-    const loaded = loadMemoryDocs({ vaultRoot });
+    const loaded = loadMemoryDocs({ knowledgeRoot });
     expect(loaded.parseErrors).toHaveLength(0);
     expect(loaded.docs.map((doc) => doc.id)).toEqual(['neon-pilot']);
 
@@ -98,7 +98,7 @@ Keep planning state durable.
     });
     expect(hub?.referencePaths).toHaveLength(2);
 
-    const references = loadMemoryPackageReferences(join(vaultRoot, 'notes', 'neon-pilot'));
+    const references = loadMemoryPackageReferences(join(knowledgeRoot, 'notes', 'neon-pilot'));
     expect(references.map((reference) => reference.title)).toEqual(['desktop-ui', 'Project state model']);
     expect(references[0]).toMatchObject({
       relativePath: 'references/desktop-ui.md',
@@ -113,7 +113,7 @@ Keep planning state durable.
   });
 
   it('creates note nodes in sync/notes', () => {
-    const vaultRoot = createTempDir('neon-pilot-memory-create-');
+    const knowledgeRoot = createTempDir('neon-pilot-memory-create-');
 
     const created = createMemoryDoc(
       {
@@ -127,7 +127,7 @@ Keep planning state durable.
         role: 'hub',
         related: ['neon-pilot'],
       },
-      { vaultRoot },
+      { knowledgeRoot },
     );
 
     expect(created).toMatchObject({
@@ -138,7 +138,7 @@ Keep planning state durable.
     });
 
     const fileContent = readFileSync(created.filePath, 'utf-8');
-    expect(created.filePath).toBe(join(vaultRoot, 'notes', 'memory-index.md'));
+    expect(created.filePath).toBe(join(knowledgeRoot, 'notes', 'memory-index.md'));
     expect(fileContent).toContain('id: memory-index');
     expect(fileContent).toContain('type:note');
     expect(fileContent).toContain('summary: Top-level memory hub.');
@@ -152,10 +152,10 @@ Keep planning state durable.
   });
 
   it('ignores project child markdown when listing top-level notes', () => {
-    const vaultRoot = createTempDir('neon-pilot-memory-scope-');
+    const knowledgeRoot = createTempDir('neon-pilot-memory-scope-');
 
     writeFile(
-      join(vaultRoot, 'notes', 'top-level.md'),
+      join(knowledgeRoot, 'notes', 'top-level.md'),
       `---
 id: top-level
 title: Top-level note
@@ -172,7 +172,7 @@ tags:
     );
 
     writeFile(
-      join(vaultRoot, 'projects', 'ship-it', 'project.md'),
+      join(knowledgeRoot, 'projects', 'ship-it', 'project.md'),
       `---
 id: ship-it
 kind: project
@@ -187,7 +187,7 @@ updatedAt: 2026-04-01T01:00:00.000Z
     );
 
     writeFile(
-      join(vaultRoot, 'projects', 'ship-it', 'notes', 'scratch.md'),
+      join(knowledgeRoot, 'projects', 'ship-it', 'notes', 'scratch.md'),
       `---
 id: ship-it-scratch
 title: Scratch note
@@ -203,13 +203,13 @@ tags:
 `,
     );
 
-    const loaded = loadMemoryDocs({ vaultRoot });
+    const loaded = loadMemoryDocs({ knowledgeRoot });
     expect(loaded.docs.map((doc) => doc.id)).toEqual(['top-level']);
   });
 
-  it('ignores legacy runtime notes outside the vault on load', () => {
-    const vaultRoot = createTempDir('neon-pilot-memory-runtime-');
-    const runtimeNotePath = join(vaultRoot, '..', 'neon-pilot-runtime', 'notes', 'desktop.md');
+  it('ignores legacy runtime notes outside the knowledge base on load', () => {
+    const knowledgeRoot = createTempDir('neon-pilot-memory-runtime-');
+    const runtimeNotePath = join(knowledgeRoot, '..', 'neon-pilot-runtime', 'notes', 'desktop.md');
 
     writeFile(
       runtimeNotePath,
@@ -225,17 +225,17 @@ updatedAt: 2026-03-31
 `,
     );
 
-    const loaded = loadMemoryDocs({ vaultRoot });
+    const loaded = loadMemoryDocs({ knowledgeRoot });
     expect(loaded.docs.map((doc) => doc.id)).not.toContain('desktop');
     expect(existsSync(runtimeNotePath)).toBe(true);
-    expect(existsSync(join(vaultRoot, 'notes', 'desktop.md'))).toBe(false);
+    expect(existsSync(join(knowledgeRoot, 'notes', 'desktop.md'))).toBe(false);
   });
 
   it('reports broken related references during lint', () => {
-    const vaultRoot = createTempDir('neon-pilot-memory-lint-');
+    const knowledgeRoot = createTempDir('neon-pilot-memory-lint-');
 
     writeFile(
-      memoryPath(vaultRoot, 'runpod'),
+      memoryPath(knowledgeRoot, 'runpod'),
       `---
 id: runpod
 kind: note
@@ -258,7 +258,7 @@ Broken related references.
 `,
     );
 
-    const result = lintMemoryDocs({ vaultRoot });
+    const result = lintMemoryDocs({ knowledgeRoot });
     expect(result.parseErrors).toEqual([]);
     expect(result.duplicateIds).toHaveLength(0);
     expect(result.referenceErrors).toEqual([

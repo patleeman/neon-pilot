@@ -58,7 +58,7 @@ function buildDesktopLaunchEnv(baseEnv = process.env) {
   const {
     NEON_PILOT_STATE_ROOT: _stateRoot,
     NEON_PILOT_CONFIG_ROOT: _configRoot,
-    NEON_PILOT_VAULT_ROOT: _vaultRoot,
+    NEON_PILOT_KNOWLEDGE_ROOT: _knowledgeRoot,
     NEON_PILOT_RUNTIME_CHANNEL: _runtimeChannel,
     NEON_PILOT_DESKTOP_VARIANT: _desktopVariant,
     ...cleanBaseEnv

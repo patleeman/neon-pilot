@@ -5,7 +5,6 @@ import { getDurableNotesDir, getKnowledgeRoot } from './runtime/paths.js';
 
 export interface ResolveMemoryDocsOptions {
   knowledgeRoot?: string;
-  vaultRoot?: string;
 }
 
 export interface LegacyMemoryMigrationRecord {
@@ -19,7 +18,7 @@ export interface LegacyMemoryMigrationResult {
 }
 
 function resolveKnowledgeRootForMemory(options: ResolveMemoryDocsOptions = {}): string {
-  return resolve(options.knowledgeRoot ?? options.vaultRoot ?? getKnowledgeRoot());
+  return resolve(options.knowledgeRoot ?? getKnowledgeRoot());
 }
 
 export function getMemoryDocsDir(options: ResolveMemoryDocsOptions = {}): string {
