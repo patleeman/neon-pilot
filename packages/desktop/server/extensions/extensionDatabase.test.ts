@@ -1,0 +1,62 @@
+import { randomUUID } from 'node:crypto';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@neon-pilot/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@neon-pilot/core')>();
+  return { ...actual, getStateRoot: vi.fn() };
+});
+
+const core = await import('@neon-pilot/core');
+const { closeExtensionDatabaseManagersForTests, createExtensionDatabaseManager } = await import('./extensionDatabase.js');
+
+describe('extensionDatabase', () => {
+  const stateRoot = join(tmpdir(), `extension-database-${randomUUID()}`);
+
+  beforeEach(() => {
+    vi.mocked(core.getStateRoot).mockReturnValue(stateRoot);
+    closeExtensionDatabaseManagersForTests();
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    closeExtensionDatabaseManagersForTests();
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('opens extension-scoped sqlite databases and applies migrations', async () => {
+    const manager = createExtensionDatabaseManager('ext');
+    const db = await manager.open('main', {
+      migrations: [
+        {
+          version: 1,
+          description: 'create todos',
+          up: (database) => {
+            database.exec('CREATE TABLE IF NOT EXISTS todos (id TEXT PRIMARY KEY, title TEXT NOT NULL)');
+          },
+        },
+      ],
+    });
+
+    db.prepare('INSERT INTO todos (id, title) VALUES (?, ?)').run('one', 'Write tests');
+
+    await manager.close('main');
+    const reopened = await manager.open('main');
+    expect(reopened.prepare('SELECT title FROM todos WHERE id = ?').get('one')).toEqual({ title: 'Write tests' });
+  });
+
+  it('isolates databases by extension id and rejects unsafe names', async () => {
+    const first = await createExtensionDatabaseManager('first').open();
+    first.exec('CREATE TABLE marker (value TEXT)');
+    first.prepare('INSERT INTO marker (value) VALUES (?)').run('first');
+
+    const second = await createExtensionDatabaseManager('second').open();
+    expect(second.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'marker'").get()).toBeUndefined();
+
+    await expect(createExtensionDatabaseManager('first').open('../escape')).rejects.toThrow('Extension database name is invalid');
+    await expect(createExtensionDatabaseManager('first').open('bad/name')).rejects.toThrow('Extension database name is invalid');
+  });
+});

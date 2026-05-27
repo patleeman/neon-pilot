@@ -1132,14 +1132,18 @@ const enabled = settings['myExt.featureEnabled'] === true;
 
 Extensions have two storage mechanisms for different purposes:
 
-| Mechanism    | Location                             | Purpose                                  |
-| ------------ | ------------------------------------ | ---------------------------------------- |
-| **Settings** | `<stateRoot>/settings.json` (shared) | User-facing config declared in manifest  |
-| **Storage**  | SQLite-backed, per-extension         | Internal runtime state (caches, session) |
+| Mechanism    | Location                                               | Purpose                                     |
+| ------------ | ------------------------------------------------------ | ------------------------------------------- |
+| **Settings** | `<stateRoot>/settings.json` (shared)                   | User-facing config declared in manifest     |
+| **Storage**  | SQLite-backed, per-extension                           | Internal runtime state (caches, session)    |
+| **Database** | `<stateRoot>/extension-data/{id}/databases/`           | Extension-owned relational data and indexes |
+| **Files**    | `<stateRoot>/extension-data/{id}/files/` and `/cache/` | Extension-owned blobs, exports, and caches  |
 
 - Use **settings** for values the user configures through the Settings UI.
 - Use **storage** (`ctx.storage` / `pa.storage`) for internal state like
   cached API responses, session tokens, or counter values.
+- Use **database** (`ctx.database`) for extension-owned SQLite tables,
+  migrations, indexes, queues, and query-heavy state.
 - Use the [Filesystem Authority](filesystem-authority.md) for extension-owned files/blobs, workspace files, temp workspaces, artifacts, and any path addressed by a user, agent, archive, or external protocol.
 - Settings are discoverable (all extensions contribute to a unified schema);
   storage is private to each extension.
@@ -1151,6 +1155,7 @@ The `ExtensionBackendContext` provides:
 | Property            | Purpose                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
 | `ctx.storage`       | Persistent key-value store per extension (SQLite-backed)                                                |
+| `ctx.database`      | Extension-owned SQLite databases with optional versioned migrations                                     |
 | `ctx.attention`     | Enqueue/list/cancel async conversation attention events (wakeups, callbacks)                            |
 | `ctx.automations`   | Scheduled task management                                                                               |
 | `ctx.runs`          | Background run management                                                                               |
@@ -1646,6 +1651,32 @@ await ctx.storage.delete('my-key');
 ```
 
 State is SQLite-backed and survives app restarts.
+
+For relational state, use app-owned SQLite databases:
+
+```typescript
+const db = await ctx.database.open('main', {
+  migrations: [
+    {
+      version: 1,
+      description: 'create tasks',
+      up: (database) => database.exec('CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL)'),
+    },
+  ],
+});
+
+db.prepare('INSERT INTO tasks (id, title) VALUES (?, ?)').run('task-1', 'Build the thing');
+```
+
+For extension-owned files, use durable app files, disposable cache files, or temp workspaces:
+
+```typescript
+const appFiles = await ctx.filesystem.app();
+await appFiles.writeText('exports/report.md', markdown);
+
+const cacheFiles = await ctx.filesystem.cache();
+await cacheFiles.writeJson('remote-index.json', index);
+```
 
 ## Examples
 

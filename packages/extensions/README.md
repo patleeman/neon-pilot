@@ -760,6 +760,36 @@ await pa.storage.delete('tasks/123');
 
 Backend actions use `ctx.storage` against the same per-extension document store. One extension cannot read another extension's state unless a future shared-state API explicitly allows it.
 
+For relational state, backend actions can open app-owned SQLite databases:
+
+```ts
+const db = await ctx.database.open('main', {
+  migrations: [
+    {
+      version: 1,
+      description: 'create tasks',
+      up: (database) => database.exec('CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL)'),
+    },
+  ],
+});
+
+db.prepare('INSERT INTO tasks (id, title) VALUES (?, ?)').run(id, title);
+```
+
+Database files are scoped to the extension under `<state-root>/extension-data/{extension-id}/databases/`. Use `ctx.storage` for small JSON documents and settings-like state; use `ctx.database` when the extension owns relational data, indexes, queues, or query-heavy state.
+
+For larger files and blobs, use the filesystem buckets:
+
+```ts
+const files = await ctx.filesystem.app();
+await files.writeText('exports/report.md', markdown);
+
+const cache = await ctx.filesystem.cache();
+await cache.writeJson('remote-index.json', index);
+```
+
+`ctx.filesystem.app()` is durable extension-owned file storage, `ctx.filesystem.cache()` is disposable extension-owned cache storage, `ctx.filesystem.temp()` creates a temporary workspace, and `ctx.filesystem.workspace()` requests permissioned workspace access.
+
 ## Trust and permissions
 
 V1 native extensions are trusted local code. They are not sandboxed.

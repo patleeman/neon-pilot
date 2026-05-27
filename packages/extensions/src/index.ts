@@ -1113,6 +1113,37 @@ export interface ExtensionScopedFileSystem {
   createTempWorkspace(options?: { prefix?: string }): Promise<ExtensionScopedFileSystem>;
 }
 
+export interface ExtensionSqliteRunResult {
+  changes: number;
+  lastInsertRowid: number | bigint;
+}
+
+export interface ExtensionSqliteStatement {
+  run(...params: unknown[]): ExtensionSqliteRunResult;
+  get(...params: unknown[]): unknown;
+  all(...params: unknown[]): unknown[];
+}
+
+export interface ExtensionSqliteDatabase {
+  exec(sql: string): void;
+  prepare(sql: string): ExtensionSqliteStatement;
+  close(): void;
+  pragma(statement: string): void;
+  transaction<TArgs extends unknown[]>(fn: (...args: TArgs) => void): (...args: TArgs) => void;
+}
+
+export interface ExtensionDatabaseMigration {
+  version: number;
+  description?: string;
+  up: (db: ExtensionSqliteDatabase) => void;
+}
+
+export interface ExtensionDatabaseManager {
+  open(name?: string, options?: { migrations?: ExtensionDatabaseMigration[] }): Promise<ExtensionSqliteDatabase>;
+  close(name?: string): Promise<void>;
+  closeAll(): Promise<void>;
+}
+
 export interface RuntimeSummary {
   id: string;
   providerId: string;
@@ -1156,6 +1187,7 @@ export interface ExtensionBackendContext {
     delete(key: string): Promise<{ ok: true; deleted: boolean }>;
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
+  database: ExtensionDatabaseManager;
   runs: Record<string, (...args: never[]) => Promise<unknown>>;
   attention: {
     enqueue(input: {
@@ -1231,8 +1263,15 @@ export interface ExtensionBackendContext {
     };
   };
   filesystem: {
-    requestRoot(input: { kind?: 'workspace'; cwd?: string; access?: string[]; reason?: string }): Promise<ExtensionScopedFileSystem>;
+    requestRoot(input: {
+      kind?: 'workspace' | 'app' | 'cache' | 'temp';
+      cwd?: string;
+      access?: string[];
+      reason?: string;
+    }): Promise<ExtensionScopedFileSystem>;
     workspace(input?: { cwd?: string; access?: string[]; reason?: string }): Promise<ExtensionScopedFileSystem>;
+    app(input?: { access?: string[]; reason?: string }): Promise<ExtensionScopedFileSystem>;
+    cache(input?: { access?: string[]; reason?: string }): Promise<ExtensionScopedFileSystem>;
     temp(input?: { access?: string[]; reason?: string; prefix?: string }): Promise<ExtensionScopedFileSystem>;
   };
   workspace: Record<string, (...args: never[]) => Promise<unknown>>;

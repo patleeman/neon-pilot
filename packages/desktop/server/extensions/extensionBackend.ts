@@ -15,6 +15,7 @@ import { createExtensionAutomationsCapability } from './extensionAutomations.js'
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
+import { createExtensionDatabaseManager } from './extensionDatabase.js';
 import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
@@ -91,6 +92,7 @@ export interface ExtensionBackendContext {
     delete(key: string): Promise<{ ok: true; deleted: boolean }>;
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
+  database: ReturnType<typeof createExtensionDatabaseManager>;
   attention: ReturnType<typeof createExtensionAttentionCapability>;
   automations: ReturnType<typeof createExtensionAutomationsCapability>;
   runs: ReturnType<typeof createExtensionRunsCapability>;
@@ -407,6 +409,7 @@ export function createBackendContext(
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
     },
     storage: createStorage(extensionId),
+    database: createExtensionDatabaseManager(extensionId),
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext),
     runs: createExtensionRunsCapability(extensionId),
