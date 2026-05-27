@@ -176,4 +176,35 @@ describe('ExtensionManagerPage', () => {
     expect(callAction).toHaveBeenCalledTimes(1);
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
   });
+
+  it('installs marketplace behavior package sources from the marketplace form', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') return { ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] };
+      if (action === 'installMarketplacePackage') return { ok: true, installed: true };
+      return { ok: true };
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    await screen.findByText('Menu Test');
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace' }));
+    fireEvent.change(screen.getByPlaceholderText('Package source URL or local path'), {
+      target: { value: 'https://example.com/claude-instructions.git' },
+    });
+    const selectors = screen.getAllByRole('combobox');
+    fireEvent.change(selectors[0] as HTMLSelectElement, { target: { value: 'claude' } });
+    fireEvent.change(selectors[1] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+
+    await screen.findByText('Installed claude instruction-pack package source.');
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', {
+      source: 'https://example.com/claude-instructions.git',
+      ecosystem: 'claude',
+      packageType: 'instruction-pack',
+    });
+  });
 });
