@@ -12,6 +12,7 @@ import {
   DRAFT_CONVERSATION_ROUTE,
   hasDraftConversationAttachments,
   hasDraftConversationContextDocs,
+  persistDraftConversationComposer,
   persistDraftConversationCwd,
   readDraftConversationComposer,
   readDraftConversationCwd,
@@ -36,6 +37,7 @@ export interface StartDraftConversationInput {
   cwd?: string | null;
   replace?: boolean;
   focusComposer?: boolean;
+  initialComposerText?: string | null;
 }
 
 function focusComposerAfterNavigation(): void {
@@ -77,6 +79,10 @@ export function startDraftConversation(input: StartDraftConversationInput): void
     // Preserve an explicit workspace choice while still resetting the rest of
     // the draft so opening Chat is instant and deterministic.
     persistDraftConversationCwd(cwd);
+  }
+  const initialComposerText = input.initialComposerText?.trim() ?? '';
+  if (initialComposerText) {
+    persistDraftConversationComposer(initialComposerText);
   }
 
   input.navigate('/conversations/new', {

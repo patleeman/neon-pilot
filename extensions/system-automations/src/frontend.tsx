@@ -67,6 +67,9 @@ const THINKING_LEVEL_OPTIONS = [
   { value: 'xhigh', label: 'Extra high' },
 ];
 
+const DEFAULT_TIMEOUT_SECONDS = '1800';
+const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = '900';
+
 const CRON_PRESETS = [
   { label: 'Every 15 minutes', summary: 'Good for short polling', cron: '*/15 * * * *', preview: 'Runs every 15 minutes.' },
   { label: 'Hourly', summary: 'On the hour', cron: '0 * * * *', preview: 'Runs every hour on the hour.' },
@@ -116,8 +119,8 @@ const emptyForm: AutomationFormState = {
   threadConversationId: '',
   model: '',
   thinkingLevel: '',
-  timeoutSeconds: '',
-  catchUpWindowSeconds: '',
+  timeoutSeconds: DEFAULT_TIMEOUT_SECONDS,
+  catchUpWindowSeconds: DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS,
   enabled: true,
 };
 
@@ -417,6 +420,27 @@ function schedulePreview(form: AutomationFormState) {
   const preset = CRON_PRESETS.find((candidate) => candidate.cron === cron);
   if (preset) return preset.preview;
   return cron ? 'Uses a custom saved schedule.' : 'Choose a recurring schedule.';
+}
+
+function buildCreateWithChatPrompt(form: AutomationFormState) {
+  const input = readFormInput(form);
+  const lines = [
+    'Use the scheduled-tasks skill to create this automation with the scheduled_task tool. Validate the schedule and ask me only if required information is missing.',
+    '',
+    `Title: ${input.title || '<fill in a concise title>'}`,
+    `Prompt: ${input.prompt || '<describe what should run>'}`,
+    input.cron ? `Schedule: recurring cron ${input.cron}` : `Schedule: once at ${input.at || '<choose a time>'}`,
+    `Target: ${input.targetType}`,
+    `Thread mode: ${input.threadMode}`,
+    input.threadConversationId ? `Existing thread id: ${input.threadConversationId}` : null,
+    input.cwd ? `Working directory: ${input.cwd}` : null,
+    input.model ? `Model: ${input.model}` : null,
+    input.thinkingLevel ? `Thinking level: ${input.thinkingLevel}` : null,
+    input.timeoutSeconds ? `Timeout seconds: ${input.timeoutSeconds}` : null,
+    input.catchUpWindowSeconds && input.cron ? `Catch-up window seconds: ${input.catchUpWindowSeconds}` : null,
+    `Enabled: ${input.enabled ? 'true' : 'false'}`,
+  ].filter(Boolean);
+  return lines.join('\n');
 }
 
 function MoreIcon() {
@@ -772,6 +796,19 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
     setForm(emptyForm);
   }, []);
 
+  const createWithChat = useCallback(async () => {
+    const prompt = buildCreateWithChatPrompt(form);
+    const opened = await pa.commands.execute('conversation.newAndFocus', {
+      initialComposerText: prompt,
+      cwd: form.cwd.trim() || undefined,
+    });
+    if (opened) {
+      closeEditor();
+      return;
+    }
+    pa.ui.notify({ type: 'error', message: 'Could not open chat for automation creation.', source: 'system-automations' });
+  }, [closeEditor, form, pa]);
+
   const save = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
@@ -957,7 +994,16 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
         )}
 
         {editorOpen && (
-          <form onSubmit={save}>
+          <form
+            onSubmit={(event) => {
+              if (editingId) {
+                void save(event);
+                return;
+              }
+              event.preventDefault();
+              void createWithChat();
+            }}
+          >
             <AppPageLayout
               shellClassName="max-w-[72rem]"
               contentClassName="space-y-0"
@@ -984,14 +1030,17 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     Define what the agent should do, when it should run, and where results should appear.
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <ToolbarButton type="button" onClick={closeEditor}>
-                    Cancel
+                {editingId ? (
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <ToolbarButton type="submit" disabled={busy === 'save'}>
+                      {busy === 'save' ? 'Saving…' : 'Save changes'}
+                    </ToolbarButton>
+                  </div>
+                ) : (
+                  <ToolbarButton type="button" onClick={() => void createWithChat()}>
+                    Create with chat
                   </ToolbarButton>
-                  <ToolbarButton type="submit" disabled={busy === 'save'}>
-                    {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Create'}
-                  </ToolbarButton>
-                </div>
+                )}
               </div>
 
               <FormSection
@@ -1290,12 +1339,15 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <ToolbarButton type="button" onClick={closeEditor}>
-                    Cancel
-                  </ToolbarButton>
-                  <ToolbarButton type="submit" disabled={busy === 'save'}>
-                    {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Create automation'}
-                  </ToolbarButton>
+                  {editingId ? (
+                    <ToolbarButton type="submit" disabled={busy === 'save'}>
+                      {busy === 'save' ? 'Saving…' : 'Save changes'}
+                    </ToolbarButton>
+                  ) : (
+                    <ToolbarButton type="button" onClick={() => void createWithChat()}>
+                      Create with chat
+                    </ToolbarButton>
+                  )}
                 </div>
               </div>
             </AppPageLayout>
