@@ -844,6 +844,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     <>
       <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
         <AppPageLayout
+          asideLayout={embedded ? undefined : 'centered'}
+          aside={embedded ? undefined : <div aria-hidden="true" />}
           shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
           contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-8'}
         >
