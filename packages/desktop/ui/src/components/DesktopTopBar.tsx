@@ -273,7 +273,11 @@ export function DesktopTopBar({
   useEffect(() => {
     function handlePaletteState(event: Event) {
       const detail = (event as CustomEvent<CommandPaletteStateDetail>).detail;
-      setPaletteOpen(Boolean(detail?.open));
+      const open = Boolean(detail?.open);
+      setPaletteOpen(open);
+      if (!open) {
+        setSearchQuery('');
+      }
     }
 
     window.addEventListener(COMMAND_PALETTE_STATE_EVENT, handlePaletteState);

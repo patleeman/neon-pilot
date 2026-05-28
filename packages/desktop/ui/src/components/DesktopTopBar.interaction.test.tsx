@@ -1,0 +1,48 @@
+// @vitest-environment jsdom
+import { fireEvent, render, screen } from '@testing-library/react';
+import React, { act } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+
+import { COMMAND_PALETTE_STATE_EVENT } from '../commands/commandPaletteEvents.js';
+import { DesktopTopBar } from './DesktopTopBar.js';
+
+function renderTopBar() {
+  render(
+    <MemoryRouter>
+      <DesktopTopBar
+        environment={{
+          isElectron: true,
+          activeHostId: 'local',
+          activeHostLabel: 'Local',
+          activeHostKind: 'local',
+          activeHostSummary: 'Local runtime is healthy.',
+        }}
+        sidebarOpen
+        onToggleSidebar={() => {}}
+        showRailToggle={false}
+        railOpen={false}
+        onToggleRail={() => {}}
+        layoutMode="compact"
+        onLayoutModeChange={() => {}}
+      />
+    </MemoryRouter>,
+  );
+}
+
+describe('DesktopTopBar interactions', () => {
+  it('clears the top-bar search query when the command palette closes', () => {
+    renderTopBar();
+
+    const input = screen.getByLabelText('Search threads, models, settings') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'extensions' } });
+
+    expect(input.value).toBe('extensions');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open: false } }));
+    });
+
+    expect(input.value).toBe('');
+  });
+});
