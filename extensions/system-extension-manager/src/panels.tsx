@@ -422,10 +422,6 @@ function formatIncludesSummary(extension: ExtensionInstallSummary): string {
   return parts.length ? parts.join(' · ') : 'No declared capabilities';
 }
 
-function extensionInitial(extension: ExtensionInstallSummary): string {
-  return (extension.name.trim()[0] ?? extension.id.trim()[0] ?? 'E').toUpperCase();
-}
-
 function formatFrontendSummary(extension: ExtensionInstallSummary): string {
   return extension.manifest?.frontend?.entry ?? 'None';
 }
@@ -716,32 +712,27 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       return (
         <tr key={`installed:${extension.id}`} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
           <td className="min-w-0 py-4 pr-6 align-middle">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border-subtle bg-surface text-[13px] font-semibold text-secondary">
-                {extensionInitial(extension)}
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  className="truncate text-left text-[14px] font-semibold text-primary transition-colors hover:text-accent"
+                  onClick={() => setDetailsExtensionId(extension.id)}
+                >
+                  {extension.name}
+                </button>
+                <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
               </div>
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <button
-                    type="button"
-                    className="truncate text-left text-[14px] font-semibold text-primary transition-colors hover:text-accent"
-                    onClick={() => setDetailsExtensionId(extension.id)}
-                  >
-                    {extension.name}
-                  </button>
-                  <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
-                </div>
-                <div className="mt-0.5 max-w-[42rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
-                  {extension.description || 'No description provided.'}
-                </div>
-                {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
-                  <div className="mt-1 text-[12px] text-danger">
-                    {extension.status === 'invalid'
-                      ? (extension.errors?.[0] ?? 'Invalid extension manifest.')
-                      : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
-                  </div>
-                ) : null}
+              <div className="mt-0.5 max-w-[42rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                {extension.description || 'No description provided.'}
               </div>
+              {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
+                <div className="mt-1 text-[12px] text-danger">
+                  {extension.status === 'invalid'
+                    ? (extension.errors?.[0] ?? 'Invalid extension manifest.')
+                    : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
+                </div>
+              ) : null}
             </div>
           </td>
           <td className="px-3 py-4 align-middle text-[12px] leading-5 text-secondary">{formatIncludesSummary(extension)}</td>
