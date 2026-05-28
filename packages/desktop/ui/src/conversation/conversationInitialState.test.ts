@@ -4,6 +4,7 @@ import {
   buildConversationInitialModelPreferenceState,
   buildConversationServiceTierPreferenceInput,
   resolveConversationDraftHydrationState,
+  resolveConversationInitialComposerDraftState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
   resolveConversationInitialPendingPromptState,
@@ -165,6 +166,28 @@ describe('conversation initial state helpers', () => {
       resolveConversationInitialPendingPromptState({
         draft: true,
         conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toBeNull();
+  });
+
+  it('accepts initial composer draft state only for the active saved conversation', () => {
+    const locationState = {
+      initialComposerDraftState: { conversationId: 'conv-1', text: 'revise this prompt' },
+    };
+
+    expect(
+      resolveConversationInitialComposerDraftState({
+        draft: false,
+        conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toEqual({ conversationId: 'conv-1', text: 'revise this prompt' });
+
+    expect(
+      resolveConversationInitialComposerDraftState({
+        draft: false,
+        conversationId: 'conv-2',
         locationState,
       }),
     ).toBeNull();

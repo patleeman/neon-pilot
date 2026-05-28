@@ -942,7 +942,13 @@ export function Layout() {
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(
-    async (focusComposer = false) => {
+    async (
+      focusComposer = false,
+      draft?: {
+        initialComposerText?: string | null;
+        cwd?: string | null;
+      },
+    ) => {
       if (creatingNewConversationRef.current) {
         return false;
       }
@@ -952,6 +958,8 @@ export function Layout() {
         startDraftConversation({
           navigate,
           focusComposer,
+          cwd: draft?.cwd,
+          initialComposerText: draft?.initialComposerText,
           replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
         });
         return true;
@@ -1016,11 +1024,11 @@ export function Layout() {
       cycleThinking() {
         return cycleSelectByLabel('Conversation thinking level');
       },
-      newConversation() {
-        return startNewConversationFromLayout(false);
+      newConversation(args?: { initialComposerText?: string | null; cwd?: string | null }) {
+        return startNewConversationFromLayout(false, args);
       },
-      newConversationAndFocus() {
-        return startNewConversationFromLayout(true);
+      newConversationAndFocus(args?: { initialComposerText?: string | null; cwd?: string | null }) {
+        return startNewConversationFromLayout(true, args);
       },
       toggleDictation() {
         window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));

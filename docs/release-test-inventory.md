@@ -106,15 +106,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `inspectPromptAssembly`, `updatePromptAssemblySkillEnabled`.
 - Test assembled prompt inspection, instruction layers, skill enable/disable, diagnostics display, reload persistence.
 
-### `/gateways` — Telegram Gateway (`system-gateways`, default disabled)
-
-- Nav item: Telegram Gateway.
-- Views: gateway page, attach conversation view.
-- Secret: `telegramBotToken` / Telegram bot token.
-- Conversation list context menu: Attach to Telegram Gateway.
-- Test enablement, bot token/config validation, attach/detach conversation, inbound message, outbound reply.
-- Telegram commands: `/start`, `/help`, `/stop` or `/pause`, `/new`, `/model <model>`, `/rename <title>` including bot mentions and invalid commands.
-
 ### `/ext/system-local-models` — Local Models (`system-local-models`, default disabled)
 
 - Nav item/page: Local Models.
@@ -267,11 +258,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Actions: `listSkills`, `updateSkillEnabled`.
 - Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.
-
-### ACP Protocol (`system-acp`, default disabled)
-
-- ACP action/surface.
-- Test enablement, protocol handshake, request routing, error handling, disabled-by-default behavior.
 
 ### Session Exchange (`system-session-exchange`, default disabled)
 
@@ -497,13 +483,6 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - transcriptRenderers: browser-snapshot-tool-block for browser_snapshot, browser-cdp-tool-block for browser_cdp, browser-screenshot-tool-block for browser_screenshot
 - skills: browser
 - backend actions: browserSnapshot, browserCdp, browserScreenshot
-
-### system-gateways — Telegram Gateway (default disabled)
-
-- views: page (/gateways)
-- nav: nav (/gateways)
-- contextMenus: attach-conversation on conversationList
-- secrets: telegramBotToken
 
 ### system-images — Images (default disabled)
 

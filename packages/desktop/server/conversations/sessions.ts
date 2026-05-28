@@ -1548,6 +1548,7 @@ export function appendConversationWorkspaceMetadata(input: {
   );
 
   if (!input.visibleMessage) {
+    clearSessionCaches();
     return;
   }
 
@@ -1577,6 +1578,7 @@ export function appendConversationWorkspaceMetadata(input: {
     ),
     'utf-8',
   );
+  clearSessionCaches();
 }
 
 function readSourceRunIdFromSessionFilePath(filePath: string): string | undefined {

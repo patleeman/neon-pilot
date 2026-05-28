@@ -31,8 +31,8 @@ export interface ExtensionCommandExecutorOptions {
   pageConversation?(direction: 'up' | 'down'): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
-  newConversation?(): boolean | Promise<boolean>;
-  newConversationAndFocus?(): boolean | Promise<boolean>;
+  newConversation?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
+  newConversationAndFocus?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
   toggleDictation?(): boolean;
   navigateConversation?(direction: 'next' | 'previous'): boolean;
   activeConversationId?: string | null;
@@ -101,7 +101,12 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
       category: 'App',
       argsSchema: { type: 'object', properties: { mode: { enum: ['compact', 'workbench'] } } },
     },
-    { id: 'conversation.new', title: 'New Conversation', category: 'Conversation' },
+    {
+      id: 'conversation.new',
+      title: 'New Conversation',
+      category: 'Conversation',
+      argsSchema: { type: 'object', properties: { initialComposerText: { type: 'string' }, cwd: { type: 'string' } } },
+    },
     {
       id: 'conversation.open',
       title: 'Open Conversation',
@@ -115,7 +120,12 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
-    { id: 'conversation.newAndFocus', title: 'New Conversation and Focus Composer', category: 'Conversation' },
+    {
+      id: 'conversation.newAndFocus',
+      title: 'New Conversation and Focus Composer',
+      category: 'Conversation',
+      argsSchema: { type: 'object', properties: { initialComposerText: { type: 'string' }, cwd: { type: 'string' } } },
+    },
     { id: 'model.cycle', title: 'Cycle Model', category: 'Model' },
     { id: 'thinking.cycle', title: 'Cycle Thinking Level', category: 'Model' },
     { id: 'dictation.toggle', title: 'Start or Stop Dictation', category: 'Dictation' },
@@ -175,9 +185,12 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       id: 'conversation.new',
       title: 'New Conversation',
       category: 'Conversation',
-      execute() {
+      execute(args) {
         if (options.newConversation) {
-          return options.newConversation();
+          return options.newConversation({
+            initialComposerText: readStringArg(args, 'initialComposerText'),
+            cwd: readStringArg(args, 'cwd'),
+          });
         }
         options.navigate('/conversations/new');
         return true;
@@ -264,8 +277,13 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
       category: 'Conversation',
-      execute() {
-        return options.newConversationAndFocus?.() ?? false;
+      execute(args) {
+        return (
+          options.newConversationAndFocus?.({
+            initialComposerText: readStringArg(args, 'initialComposerText'),
+            cwd: readStringArg(args, 'cwd'),
+          }) ?? false
+        );
       },
     },
     {

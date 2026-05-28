@@ -81,6 +81,8 @@ describe('resolveSessionEntryIdFromBlockId', () => {
     expect(resolveSessionEntryIdFromBlockId('text-1770000000000')).toBeNull();
     expect(resolveSessionEntryIdFromBlockId('thinking-1770000000000')).toBeNull();
     expect(resolveSessionEntryIdFromBlockId('error-1770000000000')).toBeNull();
+    expect(resolveSessionEntryIdFromBlockId('live-user')).toBeNull();
+    expect(resolveSessionEntryIdFromBlockId('live-assistant-x1')).toBeNull();
   });
 });
 
@@ -203,7 +205,7 @@ describe('resolveRewindTargetForMessage', () => {
     });
   });
 
-  it('rewinds through the selected user prompt so the new conversation is not blank', () => {
+  it('rewinds before the selected user prompt and restores it as the new draft', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-11T18:00:00.000Z', text: 'First prompt' },
       { type: 'text', ts: '2026-03-11T18:00:01.000Z', text: 'First reply' },
@@ -217,8 +219,8 @@ describe('resolveRewindTargetForMessage', () => {
       ]),
     ).toEqual({
       entryId: 'entry-2',
-      beforeEntry: false,
-      promptDraft: null,
+      beforeEntry: true,
+      promptDraft: 'Second prompt',
     });
   });
 });

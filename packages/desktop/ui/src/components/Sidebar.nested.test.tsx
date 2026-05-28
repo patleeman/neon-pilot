@@ -136,7 +136,8 @@ describe('Sidebar branch conversation interactions', () => {
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
     expect(() => row(container, 'parent')).toThrow();
-    expect(row(container, 'child').textContent).toContain('fork: Child branch');
+    expect(row(container, 'child').textContent).toContain('Child branch');
+    expect(row(container, 'child').textContent).not.toContain('fork:');
     expect(row(container, 'child').querySelector('[aria-label="Archive thread"]')).not.toBeNull();
   });
 
@@ -150,7 +151,8 @@ describe('Sidebar branch conversation interactions', () => {
     await flush();
 
     expect(row(container, 'grandparent').textContent).toContain('Grandparent thread');
-    expect(row(container, 'parent').textContent).toContain('fork: Parent branch');
+    expect(row(container, 'parent').textContent).toContain('Parent branch');
+    expect(row(container, 'parent').textContent).not.toContain('fork:');
     expect(() => row(container, 'grandchild')).toThrow();
   });
 

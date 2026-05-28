@@ -10,7 +10,7 @@ vi.mock('../client/api', () => ({
 }));
 
 import { ACTIVE_SESSION_ID_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY } from '../local/localSettings';
-import { readDraftConversationCwd } from './draftConversation';
+import { readDraftConversationComposer, readDraftConversationCwd } from './draftConversation';
 import { startDraftConversation, startNewLiveConversation } from './newConversationNavigation';
 
 function createStorage() {
@@ -151,6 +151,14 @@ describe('startDraftConversation', () => {
     startDraftConversation({ navigate, cwd: '/repo' });
 
     expect(readDraftConversationCwd()).toBe('/repo');
+  });
+
+  it('prepopulates the draft composer when requested', () => {
+    const navigate = vi.fn();
+
+    startDraftConversation({ navigate, initialComposerText: 'Use the scheduled-tasks skill.' });
+
+    expect(readDraftConversationComposer()).toBe('Use the scheduled-tasks skill.');
   });
 
   it('does not churn empty draft state when already on the draft route', () => {

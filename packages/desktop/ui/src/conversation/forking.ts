@@ -48,7 +48,7 @@ export function resolveSessionEntryIdFromBlockId(blockId: string | undefined): s
     candidate = trimmed;
   }
 
-  if (/^(?:text|thinking|error)-\d+$/.test(candidate)) {
+  if (/^(?:text|thinking|error)-\d+$/.test(candidate) || /^live-(?:user|assistant)(?:-|$)/.test(candidate)) {
     return null;
   }
 
@@ -149,8 +149,8 @@ export function resolveRewindTargetForMessage(
 
   return {
     entryId: entry.entryId,
-    beforeEntry: false,
-    promptDraft: null,
+    beforeEntry: true,
+    promptDraft: block?.type === 'user' ? block.text : entry.text,
   };
 }
 

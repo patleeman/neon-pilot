@@ -26,6 +26,7 @@ function createPa(
     extension: { invoke: vi.fn(), getManifest: vi.fn(), listSurfaces: vi.fn() },
     runs: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
     storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() },
+    commands: { execute: vi.fn(async () => true), list: vi.fn(async () => []), setContext: vi.fn() },
     ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn(async () => true), ...uiOverrides },
     automations: {
       list: vi.fn(async () => [
@@ -178,5 +179,71 @@ describe('AutomationsPage', () => {
     const openThreadLink = container.querySelector('a[aria-label="Open thread for Thread check"]');
 
     expect(openThreadLink?.getAttribute('href')).toBe('/conversations/conv-123');
+  });
+
+  it('opens a chat draft instead of directly creating a new automation', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    if (!newButton) throw new Error('New automation button not found');
+
+    await act(async () => {
+      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('Create with chat');
+    expect(container.textContent).not.toContain('Create automation');
+
+    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
+    if (!chatButton) throw new Error('Create with chat button not found');
+
+    await act(async () => {
+      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(pa.automations.create).not.toHaveBeenCalled();
+    expect(pa.commands.execute).toHaveBeenCalledWith(
+      'conversation.newAndFocus',
+      expect.objectContaining({
+        initialComposerText: expect.stringContaining('Use the scheduled-tasks skill'),
+      }),
+    );
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain('Timeout seconds: 1800');
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+      'Catch-up window seconds: 900',
+    );
+  });
+
+  it('lets recurring schedules be composed from controls', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    if (!newButton) throw new Error('New automation button not found');
+
+    await act(async () => {
+      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const cadence = container.querySelector<HTMLSelectElement>('select[name="automation-recurring-cadence"]');
+    const time = container.querySelector<HTMLInputElement>('input[name="automation-recurring-time"]');
+    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
+    if (!cadence || !time || !chatButton) throw new Error('Schedule builder controls not found');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(cadence, 'daily');
+      cadence.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(time, '14:30');
+      time.dispatchEvent(new Event('input', { bubbles: true }));
+      time.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+      'Schedule: recurring cron 30 14 * * *',
+    );
   });
 });
