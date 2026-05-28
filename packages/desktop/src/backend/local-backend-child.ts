@@ -40,13 +40,28 @@ interface NativeWorkbenchBrowserResponse {
   error?: string;
 }
 
+interface LocalApiRpcRequest {
+  type: 'local-api-rpc-request';
+  id: string;
+  method: string;
+  args?: unknown[];
+}
+
+interface LocalApiRpcResponse {
+  type: 'local-api-rpc-response';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+}
+
 let daemon: NeonPilotDaemon | undefined;
 let clearDaemonBinding: (() => void) | undefined;
 let daemonLogStream: WriteStream | undefined;
 let shuttingDown = false;
 const nativeWorkbenchBrowserResponses = new Map<string, (message: NativeWorkbenchBrowserResponse) => void>();
 
-function sendParentMessage(message: BackendReadyMessage | { type: 'fatal'; error: string }): void {
+function sendParentMessage(message: BackendReadyMessage | LocalApiRpcResponse | { type: 'fatal'; error: string }): void {
   if (typeof process.send === 'function') {
     process.send(message);
     return;
@@ -120,6 +135,10 @@ function readRequestBody(request: IncomingMessage): Promise<BackendRequestBody> 
 }
 
 function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
+  if (response.headersSent) {
+    if (!response.writableEnded) response.end();
+    return;
+  }
   response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(body));
 }
@@ -128,6 +147,10 @@ function writeLocalApiDispatchResponse(
   response: ServerResponse,
   result: Awaited<ReturnType<LocalApiModule['dispatchDesktopLocalApiRequest']>>,
 ): void {
+  if (response.headersSent) {
+    if (!response.writableEnded) response.end();
+    return;
+  }
   response.writeHead(result.statusCode, result.headers);
   response.end(Buffer.from(result.body));
 }
@@ -136,6 +159,33 @@ function assertAuthorized(request: IncomingMessage, token: string): void {
   const auth = request.headers.authorization ?? '';
   if (auth !== `Bearer ${token}`) {
     throw new Error('Unauthorized');
+  }
+}
+
+function isLocalApiRpcRequest(value: unknown): value is LocalApiRpcRequest {
+  return (
+    Boolean(value && typeof value === 'object') &&
+    (value as { type?: unknown }).type === 'local-api-rpc-request' &&
+    typeof (value as { id?: unknown }).id === 'string' &&
+    typeof (value as { method?: unknown }).method === 'string'
+  );
+}
+
+async function handleLocalApiRpcRequest(localApi: LocalApiModule, request: LocalApiRpcRequest): Promise<void> {
+  try {
+    const method = (localApi as unknown as Record<string, unknown>)[request.method];
+    if (typeof method !== 'function') {
+      throw new Error(`Unknown local API method: ${request.method}`);
+    }
+    const result = await method.apply(localApi, Array.isArray(request.args) ? request.args : []);
+    sendParentMessage({ type: 'local-api-rpc-response', id: request.id, ok: true, result });
+  } catch (error) {
+    sendParentMessage({
+      type: 'local-api-rpc-response',
+      id: request.id,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -272,6 +322,11 @@ async function main(): Promise<void> {
       const response = message as NativeWorkbenchBrowserResponse;
       nativeWorkbenchBrowserResponses.get(response.id)?.(response);
       nativeWorkbenchBrowserResponses.delete(response.id);
+      return;
+    }
+
+    if (isLocalApiRpcRequest(message)) {
+      void handleLocalApiRpcRequest(localApi, message);
       return;
     }
 

@@ -38,4 +38,25 @@ describe('draftConversationCreateFlow', () => {
 
     await expect(resultPromise).resolves.toEqual({ createdPromise });
   });
+
+  it('applies the reserved conversation without waiting for live-session creation to finish', async () => {
+    const order: string[] = [];
+    const createdPromise = new Promise<{ id: string }>(() => {});
+    const createLiveSession = vi.fn(() => {
+      order.push('create');
+      return createdPromise;
+    });
+    const applyReservedConversation = vi.fn(async () => {
+      order.push('apply');
+    });
+
+    const result = await startReservedDraftConversationLiveSessionCreate({
+      reserved: { id: 'conv-1', sessionFile: '/tmp/conv-1.jsonl' },
+      createLiveSession,
+      applyReservedConversation,
+    });
+
+    expect(order).toEqual(['create', 'apply']);
+    expect(result.createdPromise).toBe(createdPromise);
+  });
 });

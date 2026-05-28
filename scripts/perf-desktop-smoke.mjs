@@ -756,13 +756,20 @@ async function main() {
         cdp,
         `(async()=>{let button=null; for(let i=0;i<60;i++){await new Promise(r=>requestAnimationFrame(r)); button=document.querySelector('button[aria-label="Send"]'); if(button&&!button.disabled) break;} if(!button) throw new Error('send button not found'); if(button.disabled) throw new Error('send button disabled'); globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__=performance.now(); button.click(); return true;})()`,
       );
-      await waitForExpression(
-        cdp,
-        child,
-        `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`,
-        45_000,
-        16,
-      );
+      try {
+        await waitForExpression(
+          cdp,
+          child,
+          `location.pathname.startsWith('/conversations/') && !location.pathname.endsWith('/new')`,
+          45_000,
+          16,
+        );
+      } catch (error) {
+        const diagnostics = await readDraftPromptDiagnostics(cdp, prompt).catch((diagnosticError) => ({
+          diagnosticError: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError),
+        }));
+        throw new Error(`${error instanceof Error ? error.message : String(error)}\nDiagnostics: ${JSON.stringify(diagnostics, null, 2)}`);
+      }
       const routeMs = await evalJs(
         cdp,
         `Math.round(performance.now() - (globalThis.__NEON_PILOT_SMOKE_DRAFT_CLICK_START_MS__ ?? performance.now()))`,
@@ -826,7 +833,7 @@ async function main() {
         await waitForExpression(
           cdp,
           child,
-          `Boolean(globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.some(s=>s.name==='conversation.submitComposer.phase'&&(s.meta?.phase==='afterNavigateCreatedConversation'||s.meta?.phase==='skipDuplicateCreatedConversationNavigate')))`,
+          `Boolean(globalThis.__NEON_PILOT_APP_PERF__?.clientSamples?.some(s=>s.name==='conversation.submitComposer.phase'&&(s.meta?.phase==='createReservedLiveSession'||s.meta?.phase==='afterNavigateCreatedConversation'||s.meta?.phase==='skipDuplicateCreatedConversationNavigate')))`,
           45_000,
           16,
         );
@@ -898,7 +905,8 @@ async function main() {
         ?.filter(
           (sample) =>
             sample.name === 'conversation.submitComposer.phase' &&
-            (sample.meta?.phase === 'afterNavigateCreatedConversation' ||
+            (sample.meta?.phase === 'createReservedLiveSession' ||
+              sample.meta?.phase === 'afterNavigateCreatedConversation' ||
               sample.meta?.phase === 'skipDuplicateCreatedConversationNavigate'),
         )
         ?.at(-1);
@@ -917,6 +925,7 @@ async function main() {
             sample.name === 'conversation.submitComposer.phase' &&
             typeof sample.meta?.conversationId === 'string' &&
             (sample.meta?.phase === 'afterNavigateReservedConversation' ||
+              sample.meta?.phase === 'createReservedLiveSession' ||
               sample.meta?.phase === 'afterNavigateCreatedConversation' ||
               sample.meta?.phase === 'skipDuplicateCreatedConversationNavigate'),
         )

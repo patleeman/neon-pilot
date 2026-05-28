@@ -350,7 +350,12 @@ export class LocalBackendProcesses {
     const forkMatch = path.match(/^\/api\/live-sessions\/([^/]+)\/fork$/);
     if (input.method === 'POST' && forkMatch) {
       const result = await this.callLocalApiMethod('forkDesktopLiveSession', [
-        { conversationId: decodeURIComponent(forkMatch[1] ?? ''), entryId: jsonBody.entryId, beforeEntry: jsonBody.beforeEntry },
+        {
+          conversationId: decodeURIComponent(forkMatch[1] ?? ''),
+          entryId: jsonBody.entryId,
+          beforeEntry: jsonBody.beforeEntry,
+          preserveSource: jsonBody.preserveSource,
+        },
       ]);
       if (result && typeof result === 'object' && typeof (result as { newSessionId?: unknown }).newSessionId === 'string') {
         this.backendLiveConversationIds.add(String((result as { newSessionId: string }).newSessionId));

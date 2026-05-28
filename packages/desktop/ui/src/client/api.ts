@@ -962,6 +962,7 @@ export const api = {
       contextMessages?: Array<{ customType: string; content: string }>;
       relatedConversationIds?: unknown;
       allowedToolNames?: string[];
+      reservedSessionFile?: string;
     },
   ) => {
     const startedAtMs = performance.now();
@@ -978,11 +979,25 @@ export const api = {
       ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
       ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
       ...(options?.allowedToolNames !== undefined ? { allowedToolNames: options.allowedToolNames } : {}),
+      ...(options?.reservedSessionFile !== undefined ? { reservedSessionFile: options.reservedSessionFile } : {}),
     });
     recordClientPerfTiming({
       name: 'desktop.createLiveSession',
       startedAtMs,
       meta: { hasPrompt: Boolean(text?.trim()), hasCwd: Boolean(cwd?.trim()), serverPerf: result.perf ?? null },
+    });
+    return result;
+  },
+
+  reserveConversation: async (cwd?: string) => {
+    const startedAtMs = performance.now();
+    const result = await post<{ id: string; sessionFile: string; cwd: string; perf?: Record<string, number> }>('/conversations/reserve', {
+      cwd,
+    });
+    recordClientPerfTiming({
+      name: 'desktop.reserveConversation',
+      startedAtMs,
+      meta: { conversationId: result.id, hasCwd: Boolean(cwd?.trim()), serverPerf: result.perf ?? null },
     });
     return result;
   },

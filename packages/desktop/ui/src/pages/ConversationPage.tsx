@@ -203,6 +203,7 @@ import {
   readDraftConversationModel,
   readDraftConversationThinkingLevel,
 } from '../conversation/draftConversation';
+import { startReservedDraftConversationLiveSessionCreate } from '../conversation/draftConversationCreateFlow';
 import {
   type ExtensionSlashCommandResult,
   findExtensionSlashCommand as findExtensionSlashCommandMatch,
@@ -272,7 +273,7 @@ import { INITIAL_STREAM_STATE, retryLiveSessionActionAfterTakeover } from '../ho
 import { useConversationBootstrap } from '../hooks/useConversationBootstrap';
 import { useConversationEventVersion } from '../hooks/useConversationEventVersion';
 import { useConversationScroll } from '../hooks/useConversationScroll';
-import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
+import { primeReservedDesktopConversationStateCache, useDesktopConversationState } from '../hooks/useDesktopConversationState';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import { primeSessionDetailCache, useSessionDetail } from '../hooks/useSessions';
 import { useReloadState } from '../local/reloadState';
@@ -1410,16 +1411,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [conversationCwdPickBusy, setConversationCwdPickBusy] = useState(false);
   const [conversationCwdBusy, setConversationCwdBusy] = useState(false);
   const [conversationCwdError, setConversationCwdError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!draft) {
-      return;
-    }
-
-    void api.prewarmLiveSession(draftCwdValue || undefined).catch(() => {
-      // Best-effort latency prewarm only; send still creates the session normally.
-    });
-  }, [draft, draftCwdValue]);
 
   useEffect(() => {
     if (!draft) {
@@ -4500,6 +4491,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     codeModeEnabled: boolean;
   }> {
     if (!draft) return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
+    if (!extensionRegistry.extensions.some((extension) => extension.id === 'system-code-mode' && extension.enabled)) {
+      return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
+    }
     try {
       const response = await api.invokeExtensionAction('system-code-mode', 'readState', { draft: true });
       if (response.ok === false) return { options: createLiveSessionPreferenceInput, codeModeEnabled: false };
@@ -4903,20 +4897,34 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           const draftPendingPromptPaintStartedAtMs = performance.now();
           await waitForDraftPendingPromptPaint();
           recordSubmitPhase('draftPendingPromptPaintYield', draftPendingPromptPaintStartedAtMs);
-          const createStartedAtMs = performance.now();
-          const draftOptions = await buildDraftCreateLiveSessionOptions();
-          const created = await api.createLiveSession(draftCwdValue || undefined, undefined, draftOptions.options);
-          await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
-          recordSubmitPhase('createLiveSession', createStartedAtMs);
-          createdSessionId = created.id;
+          const reserveStartedAtMs = performance.now();
+          const draftOptionsPromise = buildDraftCreateLiveSessionOptions();
+          const reserved = await api.reserveConversation(draftCwdValue || undefined);
+          recordSubmitPhase('reserveConversation', reserveStartedAtMs, { conversationId: reserved.id, serverPerf: reserved.perf ?? null });
+          createdSessionId = reserved.id;
           const primeCachesStartedAtMs = performance.now();
-          primeCreatedConversationOpenCaches(created, {
-            tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
-            bootstrapVersionKey: conversationVersionKey,
-            sessionDetailVersion: conversationEventVersion,
-          });
-          recordSubmitPhase('primeCreatedConversationCaches', primeCachesStartedAtMs, { conversationId: created.id });
-          const newId = created.id;
+          primeReservedDesktopConversationStateCache(
+            {
+              conversationId: reserved.id,
+              sessionFile: reserved.sessionFile,
+              cwd: reserved.cwd,
+            },
+            { tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS },
+          );
+          recordSubmitPhase('primeReservedConversationCaches', primeCachesStartedAtMs, { conversationId: reserved.id });
+          const createStartedAtMs = performance.now();
+          primeCreatedConversationOpenCaches(
+            {
+              id: reserved.id,
+              sessionFile: reserved.sessionFile,
+            },
+            {
+              tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS,
+              bootstrapVersionKey: conversationVersionKey,
+              sessionDetailVersion: conversationEventVersion,
+            },
+          );
+          const newId = reserved.id;
           const persistDrawingsStartedAtMs = performance.now();
           const attachmentRefs = await persistPromptDrawings(newId);
           recordSubmitPhase('persistPromptDrawings', persistDrawingsStartedAtMs, { conversationId: newId, count: attachmentRefs.length });
@@ -4947,59 +4955,78 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 ? null
                 : window.sessionStorage.getItem(`pa:reload:conversation:${newId}:pending-prompt`) !== null,
           });
-          recordSubmitPhase('beforeNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
-          navigate(`/conversations/${newId}`, {
-            replace: true,
-            state: {
-              initialModelPreferenceState: buildConversationInitialModelPreferenceState({
-                conversationId: newId,
-                currentModel,
-                currentThinkingLevel,
-                currentServiceTier,
-                hasExplicitServiceTier,
-                defaultModel,
-                defaultThinkingLevel,
-                defaultServiceTier,
-              }),
-              initialDeferredResumeState: {
-                conversationId: newId,
-                resumes: [],
-              },
-              initialPendingPromptState: {
-                conversationId: newId,
-                prompt: initialPrompt,
-              },
-              preserveConversationSurfaceKey: 'draft',
+          const { createdPromise } = await startReservedDraftConversationLiveSessionCreate({
+            reserved,
+            createLiveSession: async (reservedSessionFile) => {
+              const draftOptions = await draftOptionsPromise;
+              return api.createLiveSession(draftCwdValue || undefined, undefined, {
+                ...draftOptions.options,
+                reservedSessionFile,
+              });
+            },
+            applyReservedConversation: async (conversationId) => {
+              recordSubmitPhase('beforeNavigateReservedConversation', submitStartedAtMs, { conversationId });
+              navigate(`/conversations/${conversationId}`, {
+                replace: true,
+                state: {
+                  initialModelPreferenceState: buildConversationInitialModelPreferenceState({
+                    conversationId,
+                    currentModel,
+                    currentThinkingLevel,
+                    currentServiceTier,
+                    hasExplicitServiceTier,
+                    defaultModel,
+                    defaultThinkingLevel,
+                    defaultServiceTier,
+                  }),
+                  initialDeferredResumeState: {
+                    conversationId,
+                    resumes: [],
+                  },
+                  initialPendingPromptState: {
+                    conversationId,
+                    prompt: initialPrompt,
+                  },
+                  preserveConversationSurfaceKey: 'draft',
+                },
+              });
+              recordSubmitPhase('afterNavigateReservedConversation', submitStartedAtMs, { conversationId });
+              navigatedToCreatedConversation = true;
             },
           });
-          recordSubmitPhase('afterNavigateCreatedConversation', submitStartedAtMs, { conversationId: newId });
-          navigatedToCreatedConversation = true;
 
           const dispatchInitialPromptAfterRoutePaint = () => {
             window.setTimeout(() => {
-              void api
-                .promptSession(
-                  newId,
-                  initialPrompt.text,
-                  initialPrompt.behavior,
-                  initialPrompt.images,
-                  initialPrompt.attachmentRefs,
-                  undefined,
-                  initialPrompt.contextMessages,
-                )
-                .then((sendResult) => {
+              void (async () => {
+                try {
+                  const created = await createdPromise;
+                  const draftOptions = await draftOptionsPromise;
+                  recordSubmitPhase('createReservedLiveSession', createStartedAtMs, {
+                    conversationId: created.id,
+                    serverPerf: created.perf ?? null,
+                  });
+                  await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
+                  const sendResult = await api.promptSession(
+                    newId,
+                    initialPrompt.text,
+                    initialPrompt.behavior,
+                    initialPrompt.images,
+                    initialPrompt.attachmentRefs,
+                    undefined,
+                    initialPrompt.contextMessages,
+                  );
                   for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
                     showNotice('danger', warning, 5000);
                   }
                   if (sendResult.accepted) setPendingConversationPromptDispatching(newId, true);
-                })
-                .catch((error) => {
+                } catch (error) {
                   persistPendingConversationPrompt(newId, initialPrompt);
                   setPendingConversationPromptDispatching(newId, false);
                   setPendingInitialPrompt(initialPrompt);
                   setPendingInitialPromptDispatchingState(false);
                   showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-                });
+                }
+              })();
             }, 0);
           };
 

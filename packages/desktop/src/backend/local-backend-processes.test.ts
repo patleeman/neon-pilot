@@ -521,7 +521,7 @@ describe('LocalBackendProcesses', () => {
     const forkResponse = await backend.dispatchApiRequest({
       method: 'POST',
       path: '/api/live-sessions/source-live/fork',
-      body: { entryId: 'entry-2', beforeEntry: true },
+      body: { entryId: 'entry-2', beforeEntry: true, preserveSource: true },
     });
     expect(forkResponse.statusCode).toBe(200);
 
@@ -534,7 +534,7 @@ describe('LocalBackendProcesses', () => {
     expect(backend.calls).toEqual([
       {
         method: 'forkDesktopLiveSession',
-        args: [{ conversationId: 'source-live', entryId: 'entry-2', beforeEntry: true }],
+        args: [{ conversationId: 'source-live', entryId: 'entry-2', beforeEntry: true, preserveSource: true }],
       },
       {
         method: 'readDesktopConversationBootstrap',
