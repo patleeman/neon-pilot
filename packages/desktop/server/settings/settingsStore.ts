@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 
 import { type ExtensionSettingsRegistration, listExtensionSettingsRegistrations } from '../extensions/extensionRegistry.js';
+import { migrateSecretBackend, type SecretBackendId } from '../secrets/secretStore.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -61,6 +62,10 @@ function mergeDefaults(overrides: Record<string, unknown>, schema: ExtensionSett
   return result;
 }
 
+function isSecretBackendId(value: unknown): value is SecretBackendId {
+  return value === 'keychain' || value === 'file' || value === 'env-only';
+}
+
 // ── Factory ────────────────────────────────────────────────────────────
 
 export function createSettingsStore(stateRoot: string = getStateRoot()): SettingsStore {
@@ -79,6 +84,14 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
       const overrides = readRawOverrides(stateRoot);
       const schema = listExtensionSettingsRegistrations(stateRoot);
       const schemaByKey = new Map(schema.map((s) => [s.key, s]));
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'secrets.provider')) {
+        const nextBackend = updates['secrets.provider'];
+        if (!isSecretBackendId(nextBackend)) {
+          throw new Error(`Invalid value for setting "secrets.provider": ${JSON.stringify(nextBackend)}`);
+        }
+        migrateSecretBackend(nextBackend, stateRoot);
+      }
 
       for (const [key, value] of Object.entries(updates)) {
         const setting = schemaByKey.get(key);

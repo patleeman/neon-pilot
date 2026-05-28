@@ -96,6 +96,8 @@ Model/provider configuration is split on purpose:
 
 Provider credentials should be managed through Settings. New provider API-key saves use the shared secrets backend and remove the legacy plaintext `auth.json` API-key entry. Manual edits to `auth.json` are possible but discouraged; the runtime still reads legacy API keys and OAuth tokens as compatibility fallbacks. New extension secrets should use `contributes.secrets`; the active backend is configured by `secrets.provider` (`keychain`, `file`, or `env-only`). Stored secrets take precedence over declared environment variables; the environment variable is a fallback when no stored secret exists.
 
+Changing `secrets.provider` migrates indexed persisted secrets between durable backends (`keychain` and `file`) before the setting is saved. `env-only` has no persistence target, so switching to it leaves existing stored secrets in place but inactive until the provider is switched back.
+
 Enabled extensions may contribute `modelProfiles` that match provider/model refs with simple globs over `<provider>/<model>`, for example `openai-codex/*` or `*/gpt-5.5`. These are model compatibility profiles, not user-selectable app profiles. The owning extension implements runtime behavior through normal extension hooks and tools; disabled extensions do not participate, and models do not declare profiles.
 
 If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists still take precedence.

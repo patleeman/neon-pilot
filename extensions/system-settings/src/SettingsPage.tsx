@@ -1625,9 +1625,9 @@ function ExtensionSecretsSection() {
   };
 
   const saveBackend = async (provider: string) => {
-    if (provider !== activeBackend) {
+    if (provider === 'env-only' && activeBackend !== 'env-only') {
       const confirmed = window.confirm(
-        'Changing the secret storage backend does not migrate existing secrets. Continue? You can ask an agent to migrate them if needed.',
+        'Env-only storage cannot receive migrated secrets. Continue only if environment variables provide them.',
       );
       if (!confirmed) {
         setSelectedBackend(activeBackend);
@@ -1640,9 +1640,7 @@ function ExtensionSecretsSection() {
     try {
       await api.updateSettings({ 'secrets.provider': provider });
       setSelectedBackend(provider);
-      setNotice(
-        'Secret storage backend saved. Existing secrets were not migrated. Restart any active agents that need newly stored secrets.',
-      );
+      setNotice('Secret storage backend saved. Stored secrets were migrated when the target backend supports persistence.');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {

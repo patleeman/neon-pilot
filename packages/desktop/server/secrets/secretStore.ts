@@ -73,6 +73,45 @@ function fileSecretsPath(stateRoot: string): string {
   return join(stateRoot, 'secrets.json');
 }
 
+function secretIndexPath(stateRoot: string): string {
+  return join(stateRoot, 'secrets.index.json');
+}
+
+function readSecretIndex(stateRoot: string): string[] {
+  const path = secretIndexPath(stateRoot);
+  if (!existsSync(path)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf-8')) as unknown;
+    return Array.isArray(parsed)
+      ? [...new Set(parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSecretIndex(stateRoot: string, keys: string[]): void {
+  const path = secretIndexPath(stateRoot);
+  const normalized = [...new Set(keys.map((key) => key.trim()).filter(Boolean))].sort();
+  if (normalized.length === 0) {
+    if (existsSync(path)) rmSync(path);
+    return;
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(normalized, null, 2)}\n`, { mode: 0o600 });
+}
+
+function addSecretIndexKey(stateRoot: string, key: string): void {
+  writeSecretIndex(stateRoot, [...readSecretIndex(stateRoot), key]);
+}
+
+function removeSecretIndexKey(stateRoot: string, key: string): void {
+  writeSecretIndex(
+    stateRoot,
+    readSecretIndex(stateRoot).filter((entry) => entry !== key),
+  );
+}
+
 function readFileSecrets(stateRoot: string): Record<string, string> {
   const path = fileSecretsPath(stateRoot);
   if (!existsSync(path)) return {};
@@ -98,6 +137,7 @@ function createFileSecretBackend(stateRoot: string): SecretBackend {
       secrets[key] = value;
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
+      addSecretIndexKey(stateRoot, key);
     },
     delete(key) {
       const path = fileSecretsPath(stateRoot);
@@ -105,9 +145,11 @@ function createFileSecretBackend(stateRoot: string): SecretBackend {
       delete secrets[key];
       if (Object.keys(secrets).length === 0) {
         if (existsSync(path)) rmSync(path);
+        removeSecretIndexKey(stateRoot, key);
         return;
       }
       writeFileSync(path, `${JSON.stringify(secrets, null, 2)}\n`, { mode: 0o600 });
+      removeSecretIndexKey(stateRoot, key);
     },
   };
 }
@@ -128,7 +170,7 @@ function createEnvOnlySecretBackend(): SecretBackend {
   };
 }
 
-function createKeychainSecretBackend(): SecretBackend {
+function createKeychainSecretBackend(stateRoot: string): SecretBackend {
   return {
     id: 'keychain',
     writable: true,
@@ -148,6 +190,7 @@ function createKeychainSecretBackend(): SecretBackend {
       execFileSync('security', ['add-generic-password', '-U', '-s', KEYCHAIN_SERVICE, '-a', key, '-w', value], {
         stdio: ['ignore', 'ignore', 'pipe'],
       });
+      addSecretIndexKey(stateRoot, key);
     },
     delete(key) {
       try {
@@ -157,18 +200,22 @@ function createKeychainSecretBackend(): SecretBackend {
       } catch {
         // Deleting an absent secret is a no-op.
       }
+      removeSecretIndexKey(stateRoot, key);
     },
   };
 }
 
-export function createSecretBackend(stateRoot: string = getStateRoot()): SecretBackend {
-  const backendId = readSecretBackendId(stateRoot);
+function createSecretBackendForId(backendId: SecretBackendId, stateRoot: string): SecretBackend {
   if (backendId === 'env-only') return createEnvOnlySecretBackend();
   if (backendId === 'keychain') {
-    if (process.platform === 'darwin') return createKeychainSecretBackend();
+    if (process.platform === 'darwin') return createKeychainSecretBackend(stateRoot);
     return createFileSecretBackend(stateRoot);
   }
   return createFileSecretBackend(stateRoot);
+}
+
+export function createSecretBackend(stateRoot: string = getStateRoot()): SecretBackend {
+  return createSecretBackendForId(readSecretBackendId(stateRoot), stateRoot);
 }
 
 function findSecretRegistration(
@@ -220,13 +267,17 @@ export function setSecret(extensionId: string, secretId: string, value: string, 
   const normalized = value.trim();
   if (!normalized) throw new Error('secret value is required');
   findSecretRegistration(extensionId, secretId, stateRoot);
-  createSecretBackend(stateRoot).set(makeSecretKey(extensionId, secretId), normalized);
+  const key = makeSecretKey(extensionId, secretId);
+  createSecretBackend(stateRoot).set(key, normalized);
+  addSecretIndexKey(stateRoot, key);
   return listSecretStatuses(stateRoot);
 }
 
 export function deleteSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): SecretStatus[] {
   findSecretRegistration(extensionId, secretId, stateRoot);
-  createSecretBackend(stateRoot).delete(makeSecretKey(extensionId, secretId));
+  const key = makeSecretKey(extensionId, secretId);
+  createSecretBackend(stateRoot).delete(key);
+  removeSecretIndexKey(stateRoot, key);
   return listSecretStatuses(stateRoot);
 }
 
@@ -237,11 +288,66 @@ export function resolveProviderApiKey(provider: string, stateRoot: string = getS
 export function setProviderApiKeySecret(provider: string, apiKey: string, stateRoot: string = getStateRoot()): void {
   const normalized = apiKey.trim();
   if (!normalized) throw new Error('apiKey is required');
-  createSecretBackend(stateRoot).set(makeProviderApiKeySecretKey(provider), normalized);
+  const key = makeProviderApiKeySecretKey(provider);
+  createSecretBackend(stateRoot).set(key, normalized);
+  addSecretIndexKey(stateRoot, key);
 }
 
 export function deleteProviderApiKeySecret(provider: string, stateRoot: string = getStateRoot()): void {
-  createSecretBackend(stateRoot).delete(makeProviderApiKeySecretKey(provider));
+  const key = makeProviderApiKeySecretKey(provider);
+  createSecretBackend(stateRoot).delete(key);
+  removeSecretIndexKey(stateRoot, key);
+}
+
+function collectMigratableSecretKeys(stateRoot: string): string[] {
+  const extensionKeys = listExtensionSecretRegistrations(stateRoot).map((secret) => makeSecretKey(secret.extensionId, secret.id));
+  const fileKeys = Object.keys(readFileSecrets(stateRoot));
+  return [...new Set([...readSecretIndex(stateRoot), ...extensionKeys, ...fileKeys])].sort();
+}
+
+export interface SecretBackendMigrationResult {
+  from: SecretBackendId;
+  to: SecretBackendId;
+  migrated: number;
+  skipped: number;
+}
+
+export function migrateSecretBackend(to: SecretBackendId, stateRoot: string = getStateRoot()): SecretBackendMigrationResult {
+  const from = readSecretBackendId(stateRoot);
+  if (to !== 'keychain' && to !== 'file' && to !== 'env-only') {
+    throw new Error(`Unsupported secret backend: ${to}`);
+  }
+  if (from === to) return { from, to, migrated: 0, skipped: 0 };
+  if (to === 'env-only') {
+    return { from, to, migrated: 0, skipped: collectMigratableSecretKeys(stateRoot).length };
+  }
+
+  const source = createSecretBackendForId(from, stateRoot);
+  const target = createSecretBackendForId(to, stateRoot);
+  if (source.id === target.id) return { from, to, migrated: 0, skipped: 0 };
+  if (!target.writable) {
+    throw new Error(`Secret backend "${to}" is read-only.`);
+  }
+
+  let migrated = 0;
+  let skipped = 0;
+  const migratedKeys: string[] = [];
+  for (const key of collectMigratableSecretKeys(stateRoot)) {
+    const value = source.get(key);
+    if (!value) {
+      skipped += 1;
+      continue;
+    }
+    target.set(key, value);
+    migrated += 1;
+    migratedKeys.push(key);
+  }
+
+  for (const key of migratedKeys) {
+    source.delete(key);
+  }
+  writeSecretIndex(stateRoot, migratedKeys);
+  return { from, to, migrated, skipped };
 }
 
 export function expandHomePath(pathValue: string): string {

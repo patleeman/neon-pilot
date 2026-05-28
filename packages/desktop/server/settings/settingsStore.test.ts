@@ -46,6 +46,7 @@ const mockRegistrations = [
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
   listExtensionSettingsRegistrations: vi.fn(() => mockRegistrations),
+  listExtensionSecretRegistrations: vi.fn(() => []),
 }));
 
 // ── SUT ───────────────────────────────────────────────────────────────
@@ -161,6 +162,18 @@ describe('SettingsStore', () => {
       store.update({ 'app.featureX': true });
       const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
       expect(raw['app.featureX']).toBe(true);
+    });
+
+    it('allows switching to env-only without deleting persisted secrets', () => {
+      writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ 'secrets.provider': 'file' }));
+      writeFileSync(join(stateRoot, 'secrets.json'), JSON.stringify({ 'provider:openrouter:apiKey': 'secret' }));
+      const store = createSettingsStore(stateRoot);
+
+      store.update({ 'secrets.provider': 'env-only' });
+
+      const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
+      expect(raw['secrets.provider']).toBe('env-only');
+      expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.json'), 'utf-8'))).toEqual({ 'provider:openrouter:apiKey': 'secret' });
     });
   });
 
