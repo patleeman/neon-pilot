@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -21,6 +21,8 @@ function makeTempDir(prefix: string): string {
   mkdirSync(dir, { recursive: true });
   return dir;
 }
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 describe('mcp config helpers', () => {
   it('reads configured servers from mcp_servers.json', () => {
@@ -201,7 +203,7 @@ describe('native MCP client', () => {
     const cwd = makeTempDir('pa-mcp-server');
     const sdkRoot = pathToFileURL(
       join(
-        process.cwd(),
+        repoRoot,
         'node_modules',
         '.pnpm',
         '@modelcontextprotocol+sdk@1.27.1_zod@4.3.6',
@@ -212,7 +214,7 @@ describe('native MCP client', () => {
         'esm',
       ),
     ).href;
-    const zodUrl = pathToFileURL(join(process.cwd(), 'node_modules', '.pnpm', 'zod@4.3.6', 'node_modules', 'zod', 'v4', 'index.js')).href;
+    const zodUrl = pathToFileURL(join(repoRoot, 'node_modules', '.pnpm', 'zod@4.3.6', 'node_modules', 'zod', 'v4', 'index.js')).href;
     const serverPath = join(cwd, 'server.mjs');
 
     writeFileSync(
