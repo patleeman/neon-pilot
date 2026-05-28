@@ -205,10 +205,20 @@ function listAttachmentDirectories(dir: string): string[] {
     return [];
   }
 
-  return readdirSync(dir)
-    .map((entry) => join(dir, entry))
-    .filter((entryPath) => statSync(entryPath).isDirectory())
-    .sort((left, right) => left.localeCompare(right));
+  const directories: string[] = [];
+
+  for (const entry of readdirSync(dir)) {
+    const entryPath = join(dir, entry);
+    try {
+      if (statSync(entryPath).isDirectory()) {
+        directories.push(entryPath);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return directories.sort((left, right) => left.localeCompare(right));
 }
 
 function normalizeStoredRevision(value: unknown): StoredConversationAttachmentRevision {

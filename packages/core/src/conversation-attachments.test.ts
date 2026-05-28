@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -167,6 +167,28 @@ describe('conversation attachment storage', () => {
     });
     mkdirSync(brokenDir, { recursive: true });
     writeFileSync(join(brokenDir, 'metadata.json'), '{ nope');
+
+    expect(listConversationAttachments({ stateRoot, profile: 'assistant', conversationId: 'conv-123' }).map((item) => item.id)).toEqual([
+      saved.id,
+    ]);
+  });
+
+  it('skips stale attachment directory entries while listing', () => {
+    const stateRoot = createTempStateRoot();
+
+    const saved = saveConversationAttachment({
+      stateRoot,
+      profile: 'assistant',
+      conversationId: 'conv-123',
+      title: 'Good attachment',
+      sourceData: toBase64('{"type":"excalidraw"}'),
+      previewData: toBase64('preview'),
+    });
+
+    symlinkSync(
+      join(stateRoot, 'missing-attachment-dir'),
+      join(resolveConversationAttachmentsDir({ stateRoot, profile: 'assistant', conversationId: 'conv-123' }), 'stale-link'),
+    );
 
     expect(listConversationAttachments({ stateRoot, profile: 'assistant', conversationId: 'conv-123' }).map((item) => item.id)).toEqual([
       saved.id,
