@@ -64,6 +64,15 @@ function createExtension() {
   } as never;
 }
 
+function createSystemExtension() {
+  return {
+    ...createExtension(),
+    id: 'system-menu-test',
+    name: 'System Menu Test',
+    packageType: 'system',
+  } as never;
+}
+
 function renderPage(options?: { toast?: ReturnType<typeof vi.fn>; notify?: ReturnType<typeof vi.fn> }) {
   const toast = options?.toast ?? vi.fn();
   const notify = options?.notify ?? vi.fn();
@@ -130,6 +139,20 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getByText('Installed')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('scopes installed and enabled counts to the selected extension tab', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createExtension(), createSystemExtension()]);
+    renderPage();
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Built-in' }));
+
+    expect(screen.getByText('System Menu Test')).toBeTruthy();
+    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
+    expect(screen.queryByText('2 installed · 2 enabled')).toBeNull();
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {

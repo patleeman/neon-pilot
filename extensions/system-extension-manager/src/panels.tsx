@@ -739,6 +739,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, [catalog, extensions, query]);
 
+  const sectionSummary =
+    activeFilter === 'available'
+      ? `${visibleCatalogExtensions.length} available`
+      : `${visibleExtensions.length} installed · ${visibleExtensions.filter((extension) => extension.enabled).length} enabled`;
+
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
       const route = firstRoute(extension);
@@ -1012,9 +1017,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                           ? 'Needs Attention'
                           : 'Installed Add-ons'}
                   </h2>
-                  <p className="mt-1 text-[12px] text-secondary">
-                    {extensions.length} installed · {extensions.filter((extension) => extension.enabled).length} enabled
-                  </p>
+                  <p className="mt-1 text-[12px] text-secondary">{sectionSummary}</p>
                 </div>
               </div>
               {activeFilter === 'available' ? (
