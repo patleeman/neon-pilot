@@ -6,7 +6,6 @@ import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
-import type { AppLayoutMode } from '../ui-state/appLayoutMode';
 import { cx, ToolbarButton } from './ui';
 
 function LeftSidebarToggleIcon({ open }: { open: boolean }) {
@@ -25,27 +24,6 @@ function RightRailToggleIcon({ open }: { open: boolean }) {
       <rect x="1.5" y="2" width="11" height="10" rx="1.8" />
       <path d="M9.25 2v10" />
       {open ? <path d="M8 7H5.5" /> : <path d="M6.1 5.4 7.8 7l-1.7 1.6" />}
-    </svg>
-  );
-}
-
-function CompactViewIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
-      <rect x="2" y="2.5" width="10" height="9" rx="1.8" />
-      <path d="M4.5 5h5" />
-      <path d="M4.5 7h4" />
-      <path d="M4.5 9h3" />
-    </svg>
-  );
-}
-
-function WorkbenchViewIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
-      <rect x="1.7" y="2.3" width="10.6" height="9.4" rx="1.7" />
-      <path d="M4.8 2.3v9.4" />
-      <path d="M9.1 2.3v9.4" />
     </svg>
   );
 }
@@ -132,8 +110,6 @@ export function DesktopTopBar({
   showRailToggle,
   railOpen,
   onToggleRail,
-  layoutMode,
-  onLayoutModeChange,
   trailingExtra,
 }: {
   environment: DesktopEnvironmentState | null;
@@ -143,8 +119,6 @@ export function DesktopTopBar({
   showRailToggle: boolean;
   railOpen: boolean;
   onToggleRail: () => void;
-  layoutMode: AppLayoutMode;
-  onLayoutModeChange: (mode: AppLayoutMode) => void;
   trailingExtra?: React.ReactNode;
 }) {
   const location = useLocation();
@@ -393,34 +367,6 @@ export function DesktopTopBar({
           </ToolbarButton>
         ) : null}
         {trailingExtra}
-        <div className="ui-desktop-layout-switcher" role="radiogroup" aria-label="View mode">
-          <button
-            type="button"
-            className="ui-desktop-layout-switcher__button"
-            role="radio"
-            aria-checked={layoutMode === 'compact'}
-            aria-label="Compact"
-            title="Compact view"
-            onClick={() => {
-              onLayoutModeChange('compact');
-            }}
-          >
-            <CompactViewIcon />
-          </button>
-          <button
-            type="button"
-            className="ui-desktop-layout-switcher__button"
-            role="radio"
-            aria-checked={layoutMode === 'workbench'}
-            aria-label="Workbench"
-            title="Workbench view"
-            onClick={() => {
-              onLayoutModeChange('workbench');
-            }}
-          >
-            <WorkbenchViewIcon />
-          </button>
-        </div>
         <ToolbarButton
           className="ui-desktop-top-bar__icon-button"
           onClick={onToggleRail}

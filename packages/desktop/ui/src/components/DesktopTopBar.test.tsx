@@ -20,8 +20,6 @@ function renderTopBar(
         showRailToggle={false}
         railOpen={false}
         onToggleRail={() => {}}
-        layoutMode="compact"
-        onLayoutModeChange={() => {}}
         {...overrides}
       />
     </MemoryRouter>,
@@ -180,8 +178,7 @@ describe('DesktopTopBar', () => {
 
     expect(html.indexOf('Hide sidebar')).toBeLessThan(html.indexOf('Go back'));
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
-    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('View mode'));
-    expect(html.indexOf('View mode')).toBeLessThan(html.indexOf('Collapse right sidebar'));
+    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Collapse right sidebar'));
   });
 
   it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
@@ -197,24 +194,20 @@ describe('DesktopTopBar', () => {
     expect(html).toContain('disabled=""');
   });
 
-  it('shows the view mode switcher in the top-right controls', () => {
-    const html = renderTopBar(
-      {
-        isElectron: true,
-        activeHostId: 'local',
-        activeHostLabel: 'Local',
-        activeHostKind: 'local',
-        activeHostSummary: 'Local runtime is healthy.',
-        launchMode: 'stable',
-        launchLabel: null,
-      },
-      { layoutMode: 'workbench' },
-    );
+  it('does not render the old compact/workbench mode switcher', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'stable',
+      launchLabel: null,
+    });
 
-    expect(html).toContain('aria-label="Workbench"');
-    expect(html).toContain('aria-label="Compact"');
-    expect(html.match(/role="radio"/g)?.length).toBe(2);
-    expect(html).toContain('aria-checked="true"');
+    expect(html).not.toContain('aria-label="Workbench"');
+    expect(html).not.toContain('aria-label="Compact"');
+    expect(html).not.toContain('aria-label="View mode"');
   });
 
   it('can relabel the primary collapse control for workbench mode', () => {
@@ -227,7 +220,6 @@ describe('DesktopTopBar', () => {
         activeHostSummary: 'Local runtime is healthy.',
       },
       {
-        layoutMode: 'workbench',
         sidebarOpen: true,
         sidebarToggleLabel: { open: 'Hide workbench', closed: 'Show workbench' },
       },

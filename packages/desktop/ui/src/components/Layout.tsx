@@ -1062,6 +1062,7 @@ export function Layout() {
   const effectiveSidebarOpen = sidebarOpen;
   const showContextRail = canShowContextRail && railOpen;
   const showWorkbench = appLayoutMode === 'workbench' && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
+  const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const activeConversationId = getActiveConversationId(location.pathname);
   const activeWorkbenchKnowledgeFileId = showWorkbench
     ? (searchParams.get('file') ?? (activeConversationId ? selectedFileByConversation[activeConversationId] : null) ?? null)
@@ -1681,12 +1682,12 @@ export function Layout() {
   );
 
   const handlePrimarySidebarToggle = useCallback(() => {
-    if (showWorkbench) {
-      handleAppLayoutModeChange('compact');
+    if (canToggleWorkbench) {
+      handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
       return;
     }
     setSidebarOpen((current) => !current);
-  }, [handleAppLayoutModeChange, showWorkbench]);
+  }, [canToggleWorkbench, handleAppLayoutModeChange, showWorkbench]);
 
   useEffect(() => {
     function handleDesktopShortcut(event: Event) {
@@ -1796,14 +1797,12 @@ export function Layout() {
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar
             environment={desktopEnvironment}
-            sidebarOpen={showWorkbench || effectiveSidebarOpen}
+            sidebarOpen={canToggleWorkbench ? showWorkbench : effectiveSidebarOpen}
             onToggleSidebar={handlePrimarySidebarToggle}
-            sidebarToggleLabel={showWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
+            sidebarToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
             showRailToggle={activeRightRailControl !== null}
             railOpen={activeRightRailControl?.railOpen ?? false}
             onToggleRail={activeRightRailControl?.toggleRail ?? (() => {})}
-            layoutMode={appLayoutMode}
-            onLayoutModeChange={handleAppLayoutModeChange}
             trailingExtra={
               <NotificationBell
                 onClick={() => {

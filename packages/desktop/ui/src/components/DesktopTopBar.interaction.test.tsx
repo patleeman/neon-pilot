@@ -23,8 +23,6 @@ function renderTopBar() {
         showRailToggle={false}
         railOpen={false}
         onToggleRail={() => {}}
-        layoutMode="compact"
-        onLayoutModeChange={() => {}}
       />
     </MemoryRouter>,
   );
