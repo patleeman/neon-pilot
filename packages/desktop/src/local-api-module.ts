@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import type { DesktopApiStreamEvent, DesktopLiveSessionQueueRestoreResult } from './hosts/types.js';
@@ -338,6 +338,10 @@ const WORKER_LOCAL_API_METHODS = new Set<keyof LocalApiModule>([
 ]);
 
 function resolveDevLocalApiModuleFilePath(currentDir: string): string {
+  if (basename(currentDir) === 'backend' && basename(dirname(currentDir)) === 'dist') {
+    return resolve(currentDir, '..', '..', 'server', 'dist', 'app', 'localApi.js');
+  }
+
   return resolve(currentDir, '..', 'server', 'dist', 'app', 'localApi.js');
 }
 
@@ -345,6 +349,10 @@ function resolvePackagedLocalApiModuleFilePath(currentDir: string, appPath?: str
   const resolvedAppPath = appPath?.trim();
   if (resolvedAppPath) {
     return resolve(resolvedAppPath, 'server', 'dist', 'app', 'localApi.js');
+  }
+
+  if (basename(currentDir) === 'backend' && basename(dirname(currentDir)) === 'dist') {
+    return resolve(currentDir, '..', '..', 'server', 'dist', 'app', 'localApi.js');
   }
 
   return resolve(currentDir, '..', 'server', 'dist', 'app', 'localApi.js');

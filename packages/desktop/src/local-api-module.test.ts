@@ -15,6 +15,15 @@ describe('resolveLocalApiModuleUrl', () => {
     ).toBe(pathToFileURL(resolve('/repo/packages/desktop/dist', '..', 'server', 'dist', 'app', 'localApi.js')).href);
   });
 
+  it('resolves the dev local API module from the backend child bundle directory', () => {
+    expect(
+      resolveLocalApiModuleUrl({
+        currentDir: '/repo/packages/desktop/dist/backend',
+        isPackaged: false,
+      }),
+    ).toBe(pathToFileURL(resolve('/repo/packages/desktop/server/dist/app/localApi.js')).href);
+  });
+
   it('resolves the packaged local API module from the bundled server directory', () => {
     expect(
       resolveLocalApiModuleUrl({
@@ -23,6 +32,15 @@ describe('resolveLocalApiModuleUrl', () => {
         appPath: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
       }),
     ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href);
+  });
+
+  it('resolves the packaged local API module from the backend child bundle directory', () => {
+    expect(
+      resolveLocalApiModuleUrl({
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist/backend',
+        isPackaged: true,
+      }),
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar/server/dist/app/localApi.js')).href);
   });
 
   it('can auto-resolve the packaged bundle path without importing electron', () => {
