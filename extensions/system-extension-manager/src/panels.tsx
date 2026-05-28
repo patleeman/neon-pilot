@@ -1,7 +1,7 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
-import { SettingsField, type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
+import { type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
 import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -321,13 +321,11 @@ function firstRoute(extension: ExtensionInstallSummary): string | null {
 }
 
 function formatPermissionSummary(extension: ExtensionInstallSummary): string {
-  return extension.permissions?.length ? extension.permissions.join(', ') : 'None declared';
+  return extension.permissions?.length ? extension.permissions.join(', ') : '';
 }
 
 function formatBackendActionSummary(extension: ExtensionInstallSummary): string {
-  return extension.backendActions?.length
-    ? extension.backendActions.map((action) => `${action.id} → ${action.handler}`).join(', ')
-    : 'None';
+  return extension.backendActions?.length ? extension.backendActions.map((action) => `${action.id} → ${action.handler}`).join(', ') : '';
 }
 
 function formatServiceSummary(extension: ExtensionInstallSummary): string {
@@ -343,14 +341,12 @@ function formatServiceSummary(extension: ExtensionInstallSummary): string {
           return `${service.id} → ${service.handler}${service.restart ? ` (${service.restart})` : ''} · ${state}`;
         })
         .join(', ')
-    : 'None';
+    : '';
 }
 
 function formatProtocolSummary(extension: ExtensionInstallSummary): string {
   const protocolEntrypoints = extension.manifest?.backend?.protocolEntrypoints ?? [];
-  return protocolEntrypoints.length
-    ? protocolEntrypoints.map((entrypoint) => `${entrypoint.id} → ${entrypoint.handler}`).join(', ')
-    : 'None';
+  return protocolEntrypoints.length ? protocolEntrypoints.map((entrypoint) => `${entrypoint.id} → ${entrypoint.handler}`).join(', ') : '';
 }
 
 function formatSubscriptionSummary(extension: ExtensionInstallSummary): string {
@@ -358,7 +354,7 @@ function formatSubscriptionSummary(extension: ExtensionInstallSummary): string {
     ? extension.subscriptions
         .map((subscription) => `${subscription.id}: ${subscription.source}${subscription.pattern ? `:${subscription.pattern}` : ''}`)
         .join(', ')
-    : 'None';
+    : '';
 }
 
 function formatDependencySummary(extension: ExtensionInstallSummary): string {
@@ -366,30 +362,30 @@ function formatDependencySummary(extension: ExtensionInstallSummary): string {
     ? extension.dependsOn
         .map((dependency) => (typeof dependency === 'string' ? dependency : `${dependency.id}${dependency.optional ? ' (optional)' : ''}`))
         .join(', ')
-    : 'None';
+    : '';
 }
 
 function formatAgentHookSummary(extension: ExtensionInstallSummary): string {
-  return extension.manifest?.backend?.agentExtension ?? 'None';
+  return extension.manifest?.backend?.agentExtension ?? '';
 }
 
 function formatToolSummary(extension: ExtensionInstallSummary): string {
-  return extension.tools?.length ? extension.tools.map((tool) => tool.name).join(', ') : 'None';
+  return extension.tools?.length ? extension.tools.map((tool) => tool.name).join(', ') : '';
 }
 
 function formatModelProfileSummary(extension: ExtensionInstallSummary): string {
   return extension.modelProfiles?.length
     ? extension.modelProfiles.map((profile) => `${profile.id} (${profile.match.join(', ')})`).join('; ')
-    : 'None';
+    : '';
 }
 
 function formatKeybindingSummary(extension: ExtensionInstallSummary): string {
   const keybindings = extension.manifest?.contributes?.keybindings ?? [];
-  return keybindings.length ? keybindings.map((keybinding) => `${keybinding.title}: ${keybinding.keys.join(' / ')}`).join(', ') : 'None';
+  return keybindings.length ? keybindings.map((keybinding) => `${keybinding.title}: ${keybinding.keys.join(' / ')}`).join(', ') : '';
 }
 
 function formatSkillSummary(extension: ExtensionInstallSummary): string {
-  return extension.skills?.length ? extension.skills.map((skill) => skill.name).join(', ') : 'None';
+  return extension.skills?.length ? extension.skills.map((skill) => skill.name).join(', ') : '';
 }
 
 function extensionSourceLabel(extensionOrPackageType?: ExtensionInstallSummary | string): string {
@@ -422,11 +418,18 @@ function formatIncludesSummary(extension: ExtensionInstallSummary): string {
     counts.agentHooks ? 'agent hook' : null,
     hasExtensionSettings(extension) ? 'settings' : null,
   ].filter(Boolean);
-  return parts.length ? parts.join(' · ') : 'No declared capabilities';
+  return parts.length ? parts.join(' · ') : '';
 }
 
 function formatFrontendSummary(extension: ExtensionInstallSummary): string {
-  return extension.manifest?.frontend?.entry ?? 'None';
+  return extension.manifest?.frontend?.entry ?? '';
+}
+
+function formatLabeledSummary(parts: Array<[string, string]>): string {
+  return parts
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => `${label}: ${value}`)
+    .join(' · ');
 }
 
 function packageKindLabel(item: InstallableExtensionCatalogItem): string {
@@ -752,9 +755,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 <GearIcon />
                 Settings
               </button>
-            ) : (
-              <span className="text-[12px] text-dim">None</span>
-            )}
+            ) : null}
           </td>
           <td className="whitespace-nowrap px-3 py-4 align-middle">
             {extension.status === 'invalid' ? (
@@ -1185,23 +1186,108 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
   entries.sort((a, b) => a.order - b.order);
 
   return (
-    <div className="space-y-4">
-      {entries.map((entry) => (
-        <SettingsField
-          key={entry.key}
-          entry={entry}
-          value={draft[entry.key]}
-          onChange={(key, val) => {
-            setDraft((prev) => ({ ...prev, [key]: val }));
-            setSaveNotice(null);
-            setSaveError(null);
-          }}
-        />
-      ))}
+    <div className="space-y-3">
+      <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
+        {entries.map((entry) => (
+          <ExtensionSettingRow
+            key={entry.key}
+            entry={entry}
+            value={draft[entry.key]}
+            onChange={(val) => {
+              setDraft((prev) => ({ ...prev, [entry.key]: val }));
+              setSaveNotice(null);
+              setSaveError(null);
+            }}
+          />
+        ))}
+      </dl>
       {saving ? <p className="text-[12px] text-dim">Saving…</p> : null}
       {saveNotice ? <p className="text-[12px] text-success">{saveNotice}</p> : null}
       {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
     </div>
+  );
+}
+
+const settingControlClass =
+  'w-full rounded-lg border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
+
+function formatSettingLabel(key: string): string {
+  return key
+    .split('.')
+    .pop()!
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function ExtensionSettingRow({
+  entry,
+  value,
+  onChange,
+}: {
+  entry: UnifiedSettingsEntry;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const currentValue = value ?? entry.default;
+  return (
+    <div className="grid gap-3 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+      <dt className="text-[12px] font-medium text-primary">{formatSettingLabel(entry.key)}</dt>
+      <dd className="min-w-0 space-y-2">
+        {entry.description ? <p className="text-[12px] leading-5 text-secondary">{entry.description}</p> : null}
+        {renderExtensionSettingControl(entry, currentValue, onChange)}
+      </dd>
+    </div>
+  );
+}
+
+function renderExtensionSettingControl(entry: UnifiedSettingsEntry, value: unknown, onChange: (value: unknown) => void) {
+  if (entry.enum?.length) {
+    return (
+      <select className={settingControlClass} value={String(value ?? '')} onChange={(event) => onChange(event.target.value)}>
+        {entry.enum.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (entry.type === 'boolean') {
+    return (
+      <label className="inline-flex items-center gap-2 text-[13px] text-primary">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-border-subtle bg-elevated accent-accent"
+          checked={Boolean(value)}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        Enabled
+      </label>
+    );
+  }
+
+  if (entry.type === 'number') {
+    return (
+      <input
+        type="number"
+        className={settingControlClass}
+        value={typeof value === 'number' ? value : ''}
+        placeholder={entry.placeholder}
+        onChange={(event) => onChange(event.target.value === '' ? undefined : Number(event.target.value))}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      className={settingControlClass}
+      value={typeof value === 'string' ? value : ''}
+      placeholder={entry.placeholder}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -1357,7 +1443,7 @@ function ExtensionDetailsContent({
           <MetaItem label="Source" value={extensionSourceLabel(extension)} />
           <MetaItem label="Status" value={healthLabel} />
           <MetaItem label="Version" value={extension.version ? `v${extension.version}` : 'Unknown'} />
-          <MetaItem label="Settings" value={hasSettings ? 'Configurable' : 'None'} />
+          <MetaItem label="Settings" value={hasSettings ? 'Configurable' : ''} />
         </div>
       </header>
 
@@ -1401,16 +1487,23 @@ function ExtensionDetailsContent({
             value={
               surfaces.length
                 ? surfaces.map((surface) => `${surface.title} (${surface.kind})`).join(', ')
-                : `Frontend: ${formatFrontendSummary(extension)}`
+                : formatLabeledSummary([['Frontend', formatFrontendSummary(extension)]])
             }
           />
           <IncludedCapability
             label="Backend"
-            value={`Actions: ${formatBackendActionSummary(extension)} · Services: ${formatServiceSummary(extension)} · Protocols: ${formatProtocolSummary(extension)}`}
+            value={formatLabeledSummary([
+              ['Actions', formatBackendActionSummary(extension)],
+              ['Services', formatServiceSummary(extension)],
+              ['Protocols', formatProtocolSummary(extension)],
+            ])}
           />
           <IncludedCapability
             label="Agent"
-            value={`Model profiles: ${formatModelProfileSummary(extension)} · Hook: ${formatAgentHookSummary(extension)}`}
+            value={formatLabeledSummary([
+              ['Model profiles', formatModelProfileSummary(extension)],
+              ['Hook', formatAgentHookSummary(extension)],
+            ])}
           />
           <IncludedCapability label="Shortcuts" value={formatKeybindingSummary(extension)} />
         </div>
