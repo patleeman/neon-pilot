@@ -740,6 +740,8 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
         '--max-cpu=130',
         '--max-draft-submit-visible-ms=15000',
         '--max-long-transcript-open-ms=10000',
+        '--max-conversation-content-open-phase-ms=1500',
+        '--max-conversation-extension-open-phase-ms=1500',
       ],
       {
         cwd: buildRoot,
