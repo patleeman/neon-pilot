@@ -256,7 +256,7 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
 
   switch (provider.authType) {
     case 'api_key':
-      return provider.hasStoredCredential ? 'Stored API key in auth.json.' : 'API key is available at runtime.';
+      return provider.hasStoredCredential ? 'Stored API key in secure provider secrets.' : 'API key is available at runtime.';
     case 'oauth':
       return provider.hasStoredCredential
         ? 'Logged in with OAuth credentials saved in auth.json.'
@@ -265,8 +265,8 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
       return 'Credentials resolved from environment or external provider config.';
     default:
       return provider.apiKeySupported
-        ? 'No stored auth.json credential detected yet. Save an API key here instead of relying on environment variables.'
-        : 'No stored auth.json credential detected. This provider may still use environment values or apiKey settings from models.json.';
+        ? 'No stored provider API key detected yet. Save an API key here instead of relying on environment variables.'
+        : 'No stored provider credential detected. This provider may still use environment values or apiKey settings from models.json.';
   }
 }
 

@@ -63,6 +63,12 @@ export function makeSecretKey(extensionId: string, secretId: string): string {
   return `extension:${extension}:${secret}`;
 }
 
+export function makeProviderApiKeySecretKey(provider: string): string {
+  const normalized = provider.trim();
+  if (!normalized) throw new Error('provider is required');
+  return `provider:${normalized}:apiKey`;
+}
+
 function fileSecretsPath(stateRoot: string): string {
   return join(stateRoot, 'secrets.json');
 }
@@ -222,6 +228,20 @@ export function deleteSecret(extensionId: string, secretId: string, stateRoot: s
   findSecretRegistration(extensionId, secretId, stateRoot);
   createSecretBackend(stateRoot).delete(makeSecretKey(extensionId, secretId));
   return listSecretStatuses(stateRoot);
+}
+
+export function resolveProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
+  return createSecretBackend(stateRoot).get(makeProviderApiKeySecretKey(provider))?.trim() || undefined;
+}
+
+export function setProviderApiKeySecret(provider: string, apiKey: string, stateRoot: string = getStateRoot()): void {
+  const normalized = apiKey.trim();
+  if (!normalized) throw new Error('apiKey is required');
+  createSecretBackend(stateRoot).set(makeProviderApiKeySecretKey(provider), normalized);
+}
+
+export function deleteProviderApiKeySecret(provider: string, stateRoot: string = getStateRoot()): void {
+  createSecretBackend(stateRoot).delete(makeProviderApiKeySecretKey(provider));
 }
 
 export function expandHomePath(pathValue: string): string {

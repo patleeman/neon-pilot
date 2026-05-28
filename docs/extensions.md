@@ -1132,14 +1132,14 @@ const enabled = settings['myExt.featureEnabled'] === true;
 
 Extensions have two storage mechanisms for different purposes:
 
-| Mechanism    | Location                                               | Purpose                                     |
-| ------------ | ------------------------------------------------------ | ------------------------------------------- |
-| **Settings** | `<stateRoot>/settings.json` (shared)                   | User-facing config declared in manifest     |
-| **Storage**  | SQLite-backed, per-extension                           | Internal runtime state (caches, session)    |
-| **Database** | `<stateRoot>/extension-data/{id}/databases/`           | Extension-owned relational data and indexes |
-| **Files**    | `<stateRoot>/extension-data/{id}/files/` and `/cache/` | Extension-owned blobs, exports, and caches  |
+| Mechanism    | Location                                               | Purpose                                            |
+| ------------ | ------------------------------------------------------ | -------------------------------------------------- |
+| **Settings** | `<stateRoot>/settings.json` (shared)                   | User-facing non-secret config declared in manifest |
+| **Storage**  | SQLite-backed, per-extension                           | Internal runtime state (caches, session)           |
+| **Database** | `<stateRoot>/extension-data/{id}/databases/`           | Extension-owned relational data and indexes        |
+| **Files**    | `<stateRoot>/extension-data/{id}/files/` and `/cache/` | Extension-owned blobs, exports, and caches         |
 
-- Use **settings** for values the user configures through the Settings UI.
+- Use **settings** for non-secret values the user configures through the Settings UI.
 - Use **storage** (`ctx.storage` / `pa.storage`) for internal state like
   cached API responses, session tokens, or counter values.
 - Use **database** (`ctx.database`) for extension-owned SQLite tables,
@@ -1330,7 +1330,7 @@ Secrets are public manifest API, not an internal convention:
 }
 ```
 
-Resolve them in backend code with `ctx.secrets.get('apiKey')`. Stored values take precedence; environment variables declared by the extension are used as a fallback when no stored value exists.
+Resolve them in backend code with `ctx.secrets.get('apiKey')`. Stored values take precedence; environment variables declared by the extension are used as a fallback when no stored value exists. Do not store API keys, bearer tokens, refresh tokens, bot tokens, or other reusable credentials in extension settings, `ctx.storage`, cache JSON, or extension-owned config files; keep those stores for non-secret preferences and state.
 
 Extensions can declare dependencies on other extensions:
 

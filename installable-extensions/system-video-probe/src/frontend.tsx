@@ -75,7 +75,6 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
       if (!settingsDirty) {
         setCloudModel((current) => current || result.settings.cloudModel);
         setLocalModel((current) => current || result.settings.localModel);
-        setHfToken((current) => current || result.settings.hfToken);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -101,7 +100,6 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
     if (status && !settingsDirty) {
       if (!cloudModel) setCloudModel(status.settings.cloudModel);
       if (!localModel) setLocalModel(status.settings.localModel);
-      if (!hfToken) setHfToken(status.settings.hfToken);
     }
   }, [status, settingsDirty, cloudModel, localModel]);
 
@@ -122,7 +120,22 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
   async function saveSettings(patch: Partial<Settings>) {
     setError(null);
     try {
-      const result = await pa.extension.invoke<{ ok: boolean; settings: Settings }>('videoProbeWriteSettings', patch);
+      if (typeof patch.hfToken === 'string') {
+        const response = await fetch('/api/secrets/system-video-probe/hfToken', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: patch.hfToken }),
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error || 'Failed to save Hugging Face token.');
+        }
+        setHfToken('');
+      }
+
+      const settingsPatch: Partial<Settings> = { ...patch };
+      delete settingsPatch.hfToken;
+      const result = await pa.extension.invoke<{ ok: boolean; settings: Settings }>('videoProbeWriteSettings', settingsPatch);
       if (result.settings) {
         setStatus((prev) => (prev ? { ...prev, settings: result.settings } : prev));
         setSettingsDirty(false);
@@ -412,13 +425,13 @@ export function VideoProbePage({ pa }: ExtensionSurfaceProps) {
                   <TextInput
                     type="password"
                     value={hfToken}
-                    placeholder="hf_..."
+                    placeholder={status?.settings.hfToken ? 'Token stored securely' : 'hf_...'}
                     onChange={(e) => {
                       setHfToken(e.target.value);
                       setSettingsDirty(true);
                     }}
                   />
-                  <ToolbarButton disabled={!settingsDirty} onClick={() => void saveSettings({ hfToken })}>
+                  <ToolbarButton disabled={!settingsDirty || !hfToken.trim()} onClick={() => void saveSettings({ hfToken })}>
                     Save
                   </ToolbarButton>
                 </div>

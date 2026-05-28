@@ -15,6 +15,7 @@ describe('system-video-probe settings backend', () => {
   const ctx = {
     runtimeDir: join(home, 'runtime'),
     storage: { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined) },
+    secrets: { get: vi.fn() },
     shell: { exec: vi.fn().mockResolvedValue({ stdout: '', stderr: '' }) },
   } as never;
 
@@ -50,16 +51,24 @@ describe('system-video-probe settings backend', () => {
       backend.writeSettings({ backend: 'local', cloudModel: ' openrouter/model ', localModel: ' local/model ', hfToken: 'token' }, ctx),
     ).resolves.toMatchObject({
       ok: true,
-      settings: { backend: 'local', cloudModel: 'openrouter/model', localModel: 'local/model', hfToken: 'token' },
+      settings: { backend: 'local', cloudModel: 'openrouter/model', localModel: 'local/model', hfToken: '' },
     });
 
     await expect(backend.writeSettings({ backend: 'bad', cloudModel: ' ', localModel: '', hfToken: 1 }, ctx)).resolves.toMatchObject({
-      settings: { backend: 'local', cloudModel: 'openrouter/model', localModel: 'local/model', hfToken: 'token' },
+      settings: { backend: 'local', cloudModel: 'openrouter/model', localModel: 'local/model', hfToken: '' },
     });
 
     const settingsFile = join(home, '.cache', 'neon-pilot', 'video-probe', 'settings.json');
     expect(existsSync(settingsFile)).toBe(true);
     expect(JSON.parse(readFileSync(settingsFile, 'utf-8'))).toMatchObject({ backend: 'local', cloudModel: 'openrouter/model' });
+    expect(JSON.parse(readFileSync(settingsFile, 'utf-8'))).not.toHaveProperty('hfToken');
+  });
+
+  it('reports Hugging Face token presence from extension secrets without exposing the value', async () => {
+    const backend = await loadBackend(home);
+    vi.mocked(ctx.secrets.get).mockReturnValue('hf-secret');
+
+    await expect(backend.readSettings({}, ctx)).resolves.toMatchObject({ settings: { hfToken: 'configured' } });
   });
 
   it('falls back to defaults when settings JSON is corrupt', async () => {

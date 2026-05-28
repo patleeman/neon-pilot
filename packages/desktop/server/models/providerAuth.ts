@@ -1,6 +1,7 @@
 import type { OAuthDeviceCodeInfo, OAuthPrompt, OAuthSelectPrompt } from '@earendil-works/pi-ai';
 import { AuthStorage, type OAuthCredential } from '@earendil-works/pi-coding-agent';
 
+import { deleteProviderApiKeySecret, resolveProviderApiKey, setProviderApiKeySecret } from '../secrets/secretStore.js';
 import { createModelRegistryForAuthFile } from './modelRegistry.js';
 
 export type ProviderAuthType = 'none' | 'api_key' | 'oauth' | 'environment';
@@ -161,10 +162,15 @@ function readModelCounts(authFile: string): Map<string, number> {
 function deriveAuthType(
   authStorage: AuthStorage,
   provider: string,
+  stateRoot?: string,
 ): {
   authType: ProviderAuthType;
   hasStoredCredential: boolean;
 } {
+  if (stateRoot && resolveProviderApiKey(provider, stateRoot)) {
+    return { authType: 'api_key', hasStoredCredential: true };
+  }
+
   const credential = authStorage.get(provider);
   const hasStoredCredential = credential !== undefined;
 
@@ -195,7 +201,7 @@ function makeAuthStorage(authFile: string): AuthStorage {
   return AuthStorage.create(authFile);
 }
 
-export function readProviderAuthState(authFile: string): ProviderAuthState {
+export function readProviderAuthState(authFile: string, stateRoot?: string): ProviderAuthState {
   const authStorage = makeAuthStorage(authFile);
   const modelCounts = readModelCounts(authFile);
   const oauthProvidersById = new Map(authStorage.getOAuthProviders().map((provider) => [provider.id, provider]));
@@ -212,7 +218,7 @@ export function readProviderAuthState(authFile: string): ProviderAuthState {
     .sort((left, right) => left.localeCompare(right))
     .map((provider) => {
       const oauthProvider = oauthProvidersById.get(provider);
-      const { authType, hasStoredCredential } = deriveAuthType(authStorage, provider);
+      const { authType, hasStoredCredential } = deriveAuthType(authStorage, provider, stateRoot);
 
       return {
         id: provider,
@@ -232,7 +238,7 @@ export function readProviderAuthState(authFile: string): ProviderAuthState {
   };
 }
 
-export function setProviderApiKey(authFile: string, providerInput: string, apiKeyInput: string): ProviderAuthState {
+export function setProviderApiKey(authFile: string, providerInput: string, apiKeyInput: string, stateRoot?: string): ProviderAuthState {
   const provider = normalizeProvider(providerInput);
   if (!provider) {
     throw new Error('provider is required');
@@ -243,24 +249,29 @@ export function setProviderApiKey(authFile: string, providerInput: string, apiKe
     throw new Error('apiKey is required');
   }
 
-  const authStorage = makeAuthStorage(authFile);
-  authStorage.set(provider, {
-    type: 'api_key',
-    key: apiKey,
-  });
+  if (stateRoot) {
+    setProviderApiKeySecret(provider, apiKey, stateRoot);
+    makeAuthStorage(authFile).remove(provider);
+    return readProviderAuthState(authFile, stateRoot);
+  }
 
+  const authStorage = makeAuthStorage(authFile);
+  authStorage.set(provider, { type: 'api_key', key: apiKey });
   return readProviderAuthState(authFile);
 }
 
-export function removeProviderCredential(authFile: string, providerInput: string): ProviderAuthState {
+export function removeProviderCredential(authFile: string, providerInput: string, stateRoot?: string): ProviderAuthState {
   const provider = normalizeProvider(providerInput);
   if (!provider) {
     throw new Error('provider is required');
   }
 
+  if (stateRoot) {
+    deleteProviderApiKeySecret(provider, stateRoot);
+  }
   const authStorage = makeAuthStorage(authFile);
   authStorage.remove(provider);
-  return readProviderAuthState(authFile);
+  return readProviderAuthState(authFile, stateRoot);
 }
 
 function toPromptState(prompt: OAuthPrompt, manualCode: boolean): ProviderOAuthPromptState {

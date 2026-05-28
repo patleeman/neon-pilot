@@ -89,11 +89,12 @@ Model/provider configuration is split on purpose:
 | ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Provider/model definitions    | `<config-root>/runtime/shared/models.json`                    | Custom providers, model overrides, context windows, costs, compatibility flags |
 | Active runtime model registry | `<state-root>/neon-pilot-runtime/models.json`                 | Materialized model definitions read by the runtime                             |
-| Legacy provider credentials   | `<state-root>/neon-pilot-runtime/auth.json`                   | Existing API keys and OAuth tokens managed through Settings                    |
+| Provider API keys             | macOS Keychain, `<state-root>/secrets.json`, or env-only      | API keys managed through Settings → Providers                                  |
+| Legacy provider credentials   | `<state-root>/neon-pilot-runtime/auth.json`                   | OAuth tokens and old API keys kept as compatibility fallback                   |
 | Extension secrets             | macOS Keychain, `<state-root>/secrets.json`, or env-only      | Extension-declared secrets such as integration API keys                        |
 | Environment credentials       | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, etc. | Runtime-only credential source; not persisted                                  |
 
-Provider credentials should be managed through Settings. Manual edits to `auth.json` are possible but discouraged. New extension secrets should use `contributes.secrets`; the active backend is configured by `secrets.provider` (`keychain`, `file`, or `env-only`). Stored extension secrets take precedence over declared environment variables; the environment variable is a fallback when no stored secret exists.
+Provider credentials should be managed through Settings. New provider API-key saves use the shared secrets backend and remove the legacy plaintext `auth.json` API-key entry. Manual edits to `auth.json` are possible but discouraged; the runtime still reads legacy API keys and OAuth tokens as compatibility fallbacks. New extension secrets should use `contributes.secrets`; the active backend is configured by `secrets.provider` (`keychain`, `file`, or `env-only`). Stored secrets take precedence over declared environment variables; the environment variable is a fallback when no stored secret exists.
 
 Enabled extensions may contribute `modelProfiles` that match provider/model refs with simple globs over `<provider>/<model>`, for example `openai-codex/*` or `*/gpt-5.5`. These are model compatibility profiles, not user-selectable app profiles. The owning extension implements runtime behavior through normal extension hooks and tools; disabled extensions do not participate, and models do not declare profiles.
 
@@ -126,19 +127,19 @@ Runtime discovery also includes explicitly configured instruction files, explici
 
 Not every Settings-page control writes to the same JSON file:
 
-| Area                                                    | Source of truth                                                       |
-| ------------------------------------------------------- | --------------------------------------------------------------------- |
-| Appearance theme picker                                 | Browser/Electron `localStorage` plus contributed extension themes     |
-| Conversation defaults                                   | `<state-root>/neon-pilot-runtime/settings.json`                       |
-| Workspace default cwd                                   | `<state-root>/neon-pilot-runtime/settings.json`                       |
-| Skills and extra instruction files                      | `<config-root>/config.json`                                           |
-| Provider/model definitions                              | `<config-root>/runtime/shared/models.json`                            |
-| Provider credentials                                    | `<state-root>/neon-pilot-runtime/auth.json` and environment variables |
-| Extension secrets                                       | macOS Keychain, `<state-root>/secrets.json`, or environment only      |
-| Desktop update/startup/keyboard preferences             | `<state-root>/desktop/config.json`                                    |
-| Extension enablement and extension keybinding overrides | `<state-root>/extensions/registry.json`                               |
-| Extension scalar settings                               | `<state-root>/settings.json`                                          |
-| Automations, reminders, durable executions              | Daemon runtime database                                               |
+| Area                                                    | Source of truth                                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Appearance theme picker                                 | Browser/Electron `localStorage` plus contributed extension themes                          |
+| Conversation defaults                                   | `<state-root>/neon-pilot-runtime/settings.json`                                            |
+| Workspace default cwd                                   | `<state-root>/neon-pilot-runtime/settings.json`                                            |
+| Skills and extra instruction files                      | `<config-root>/config.json`                                                                |
+| Provider/model definitions                              | `<config-root>/runtime/shared/models.json`                                                 |
+| Provider credentials                                    | macOS Keychain, `<state-root>/secrets.json`, legacy `auth.json`, and environment variables |
+| Extension secrets                                       | macOS Keychain, `<state-root>/secrets.json`, or environment only                           |
+| Desktop update/startup/keyboard preferences             | `<state-root>/desktop/config.json`                                                         |
+| Extension enablement and extension keybinding overrides | `<state-root>/extensions/registry.json`                                                    |
+| Extension scalar settings                               | `<state-root>/settings.json`                                                               |
+| Automations, reminders, durable executions              | Daemon runtime database                                                                    |
 
 ## Rule of thumb
 

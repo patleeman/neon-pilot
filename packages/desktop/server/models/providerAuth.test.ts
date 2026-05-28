@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -109,6 +109,29 @@ describe('setProviderApiKey', () => {
     expect(parsed['provider-two']).toEqual({ type: 'api_key', key: 'key-two' });
   });
 
+  it('stores provider API keys in the secret backend when a state root is provided', () => {
+    const dir = createTempDir();
+    const authFile = join(dir, 'auth.json');
+    const stateRoot = join(dir, 'state');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+
+    const state = setProviderApiKey(authFile, 'openrouter', 'test-secret', stateRoot);
+
+    expect(existsSync(authFile)).toBe(true);
+    expect(JSON.parse(readFileSync(authFile, 'utf-8'))).toEqual({});
+    expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.json'), 'utf-8'))).toEqual({
+      'provider:openrouter:apiKey': 'test-secret',
+    });
+
+    const provider = state.providers.find((entry) => entry.id === 'openrouter');
+    expect(provider).toMatchObject({
+      id: 'openrouter',
+      authType: 'api_key',
+      hasStoredCredential: true,
+    });
+  });
+
   it('rejects empty provider ids and API keys', () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
@@ -131,6 +154,21 @@ describe('removeProviderCredential', () => {
 
     const provider = state.providers.find((entry) => entry.id === 'custom-test-provider');
     expect(provider).toBeUndefined();
+  });
+
+  it('removes provider API keys from the secret backend and legacy auth file', () => {
+    const dir = createTempDir();
+    const authFile = join(dir, 'auth.json');
+    const stateRoot = join(dir, 'state');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+
+    setProviderApiKey(authFile, 'custom-test-provider', 'test-secret', stateRoot);
+    const state = removeProviderCredential(authFile, 'custom-test-provider', stateRoot);
+
+    expect(JSON.parse(readFileSync(authFile, 'utf-8'))).toEqual({});
+    expect(existsSync(join(stateRoot, 'secrets.json'))).toBe(false);
+    expect(state.providers.find((entry) => entry.id === 'custom-test-provider')).toBeUndefined();
   });
 
   it('rejects empty provider ids', () => {

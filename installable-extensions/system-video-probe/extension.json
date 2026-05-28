@@ -41,6 +41,15 @@
         "route": "/ext/system-video-probe"
       }
     ],
+    "secrets": {
+      "hfToken": {
+        "label": "Hugging Face token",
+        "description": "Optional read-only token used to download local video models.",
+        "env": "HF_TOKEN",
+        "placeholder": "hf_...",
+        "order": 10
+      }
+    },
     "tools": []
   },
   "permissions": ["secrets:read", "shell:execute"]

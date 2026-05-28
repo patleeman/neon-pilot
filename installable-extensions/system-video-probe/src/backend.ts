@@ -61,6 +61,8 @@ const DEFAULT_SETTINGS: VideoProbeSettings = {
   hfToken: '',
 };
 
+const HF_TOKEN_SECRET_ID = 'hfToken';
+
 function loadSettings(): VideoProbeSettings {
   try {
     if (!existsSync(SETTINGS_FILE)) return { ...DEFAULT_SETTINGS };
@@ -78,7 +80,30 @@ function loadSettings(): VideoProbeSettings {
 
 function saveSettings(settings: VideoProbeSettings): void {
   mkdirSync(CACHE_DIR, { recursive: true });
-  writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  const safeSettings = {
+    backend: settings.backend,
+    cloudModel: settings.cloudModel,
+    localModel: settings.localModel,
+  };
+  writeFileSync(SETTINGS_FILE, JSON.stringify(safeSettings, null, 2), 'utf8');
+}
+
+function readLegacyHfToken(): string {
+  return loadSettings().hfToken.trim();
+}
+
+function readHfToken(ctx: ExtensionBackendContext): string {
+  return ctx.secrets.get(HF_TOKEN_SECRET_ID)?.trim() || readLegacyHfToken();
+}
+
+function readToolHfToken(ctx: unknown): string {
+  const maybeCtx = ctx as { secrets?: { get?: (secretId: string) => string | undefined } } | undefined;
+  return maybeCtx?.secrets?.get?.(HF_TOKEN_SECRET_ID)?.trim() || readLegacyHfToken();
+}
+
+function publicSettings(ctx: ExtensionBackendContext): VideoProbeSettings {
+  const settings = loadSettings();
+  return { ...settings, hfToken: readHfToken(ctx) ? 'configured' : '' };
 }
 
 function readOpenRouterAuthStatus(runtimeDir: string): OpenRouterAuthStatus {
@@ -102,21 +127,21 @@ function readOpenRouterAuthStatus(runtimeDir: string): OpenRouterAuthStatus {
   }
 }
 
-export async function readSettings(_input: unknown, _ctx: ExtensionBackendContext) {
-  return { ok: true, settings: loadSettings() };
+export async function readSettings(_input: unknown, ctx: ExtensionBackendContext) {
+  return { ok: true, settings: publicSettings(ctx) };
 }
 
-export async function writeSettings(input: unknown, _ctx: ExtensionBackendContext) {
+export async function writeSettings(input: unknown, ctx: ExtensionBackendContext) {
   const raw = input as Partial<VideoProbeSettings>;
   const current = loadSettings();
   const next: VideoProbeSettings = {
     backend: raw.backend === 'local' ? 'local' : raw.backend === 'openrouter' ? 'openrouter' : current.backend,
     cloudModel: typeof raw.cloudModel === 'string' && raw.cloudModel.trim() ? raw.cloudModel.trim() : current.cloudModel,
     localModel: typeof raw.localModel === 'string' && raw.localModel.trim() ? raw.localModel.trim() : current.localModel,
-    hfToken: typeof raw.hfToken === 'string' ? raw.hfToken : current.hfToken,
+    hfToken: current.hfToken,
   };
   saveSettings(next);
-  return { ok: true, settings: next };
+  return { ok: true, settings: publicSettings(ctx) };
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +226,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     isPidRunning(ctx, setupPid),
     readServerHealth(),
   ]);
-  const settings = loadSettings();
+  const settings = publicSettings(ctx);
   return {
     ok: true,
     modelId: settings.localModel,
@@ -220,7 +245,8 @@ export async function setup(_input: unknown, ctx: ExtensionBackendContext) {
   const setupRunning = await isPidRunning(ctx, await readPid(ctx, SETUP_PID_KEY));
   if (setupRunning) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
   mkdirSync(CACHE_DIR, { recursive: true });
-  const { localModel, hfToken } = loadSettings();
+  const { localModel } = loadSettings();
+  const hfToken = readHfToken(ctx);
   const env = hfEnv(hfToken);
   const script = [
     `: > ${shellQuote(LOG_FILE)}`,
@@ -246,7 +272,8 @@ export async function startServer(_input: unknown, ctx: ExtensionBackendContext)
   if (!existsSync(VENV_MLX_VLM_SERVER)) {
     return { ok: false, error: 'mlx-vlm is not installed. Run setup first.', status: await status({}, ctx) };
   }
-  const { localModel, hfToken } = loadSettings();
+  const { localModel } = loadSettings();
+  const hfToken = readHfToken(ctx);
   const command = `exec env ${hfEnv(hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
@@ -384,12 +411,13 @@ export function createVideoProbeAgentExtension(): (pi: ExtensionAPI) => void {
         const filePath = validatePath(params.path);
         const question = params.question.trim();
         const settings = loadSettings();
+        const hfToken = readToolHfToken(ctx);
 
         if (settings.backend === 'local') {
           // Check server health; auto-start if installed but not running
           let health = await readServerHealth();
           if (!health.reachable && existsSync(VENV_MLX_VLM_SERVER)) {
-            const startCommand = `exec env ${hfEnv(settings.hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(settings.localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
+            const startCommand = `exec env ${hfEnv(hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(settings.localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
             await pi.exec('sh', ['-c', `nohup sh -c ${shellQuote(startCommand)} >/dev/null 2>&1 &`]);
             // Wait up to 60s for server to come up
             for (let i = 0; i < 60; i++) {

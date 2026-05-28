@@ -22,6 +22,7 @@ export interface ProviderDesktopCapabilityContext {
   getRuntimeScope: () => string;
   materializeWebRuntimeConfig: (profile: string) => void;
   getAuthFile: () => string;
+  getStateRoot?: () => string;
 }
 
 class ProviderDesktopCapabilityInputError extends Error {}
@@ -153,7 +154,7 @@ export function deleteModelProviderModelCapability(
 }
 
 export function readProviderAuthCapability(context: ProviderDesktopCapabilityContext): ProviderAuthState {
-  return readProviderAuthState(context.getAuthFile());
+  return readProviderAuthState(context.getAuthFile(), context.getStateRoot?.());
 }
 
 export function setProviderApiKeyCapability(
@@ -171,7 +172,7 @@ export function setProviderApiKeyCapability(
     throw new ProviderDesktopCapabilityInputError('apiKey required');
   }
 
-  const state = setProviderApiKey(context.getAuthFile(), provider, apiKey);
+  const state = setProviderApiKey(context.getAuthFile(), provider, apiKey, context.getStateRoot?.());
   reloadAllLiveSessionAuth();
   return state;
 }
@@ -182,7 +183,7 @@ export function removeProviderCredentialCapability(context: ProviderDesktopCapab
     throw new ProviderDesktopCapabilityInputError('provider required');
   }
 
-  const state = removeProviderCredential(context.getAuthFile(), provider);
+  const state = removeProviderCredential(context.getAuthFile(), provider, context.getStateRoot?.());
   reloadAllLiveSessionAuth();
   return state;
 }

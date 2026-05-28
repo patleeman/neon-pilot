@@ -48,6 +48,7 @@ function createContext(overrides?: Partial<ProviderDesktopCapabilityContext>): P
     getRuntimeScope: () => 'test-profile',
     materializeWebRuntimeConfig: vi.fn(),
     getAuthFile: () => '/tmp/test-auth.json',
+    getStateRoot: () => '/tmp/test-state',
     ...overrides,
   };
 }
@@ -128,7 +129,7 @@ describe('readProviderAuthCapability', () => {
     vi.mocked(providerAuth.readProviderAuthState).mockReturnValue({ providers: {} } as never);
     const context = createContext();
     const result = readProviderAuthCapability(context);
-    expect(providerAuth.readProviderAuthState).toHaveBeenCalledWith('/tmp/test-auth.json');
+    expect(providerAuth.readProviderAuthState).toHaveBeenCalledWith('/tmp/test-auth.json', '/tmp/test-state');
     expect(result).toEqual({ providers: {} });
   });
 });
@@ -138,7 +139,7 @@ describe('setProviderApiKeyCapability', () => {
     vi.mocked(providerAuth.setProviderApiKey).mockReturnValue({ providers: { openai: {} } } as never);
     const context = createContext();
     const result = setProviderApiKeyCapability(context, ' openai ', ' sk-123 ');
-    expect(providerAuth.setProviderApiKey).toHaveBeenCalledWith('/tmp/test-auth.json', 'openai', 'sk-123');
+    expect(providerAuth.setProviderApiKey).toHaveBeenCalledWith('/tmp/test-auth.json', 'openai', 'sk-123', '/tmp/test-state');
     expect(middleware.reloadAllLiveSessionAuth).toHaveBeenCalled();
     expect(result).toEqual({ providers: { openai: {} } });
   });
@@ -157,7 +158,7 @@ describe('removeProviderCredentialCapability', () => {
     vi.mocked(providerAuth.removeProviderCredential).mockReturnValue({ providers: {} } as never);
     const context = createContext();
     removeProviderCredentialCapability(context, ' openai ');
-    expect(providerAuth.removeProviderCredential).toHaveBeenCalledWith('/tmp/test-auth.json', 'openai');
+    expect(providerAuth.removeProviderCredential).toHaveBeenCalledWith('/tmp/test-auth.json', 'openai', '/tmp/test-state');
     expect(middleware.reloadAllLiveSessionAuth).toHaveBeenCalled();
   });
 });

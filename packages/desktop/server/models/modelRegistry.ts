@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
+import { resolveProviderApiKey } from '../secrets/secretStore.js';
 import { normalizeModelContextWindow } from './modelContextWindows.js';
 
 type RegistryModel = ReturnType<ModelRegistry['getAvailable']>[number];
@@ -20,12 +21,19 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry
   const originalGetAll = registry.getAll.bind(registry);
   const originalGetAvailable = registry.getAvailable.bind(registry);
   const originalFind = registry.find.bind(registry);
+  const originalGetApiKeyAndHeaders = registry.getApiKeyAndHeaders.bind(registry);
 
   registry.getAll = () => originalGetAll().map(applyNeonPilotModelMetadataOverrides);
   registry.getAvailable = () => originalGetAvailable().map(applyNeonPilotModelMetadataOverrides);
   registry.find = (provider: string, modelId: string) => {
     const model = originalFind(provider, modelId);
     return model ? applyNeonPilotModelMetadataOverrides(model) : undefined;
+  };
+  registry.getApiKeyAndHeaders = async (model) => {
+    const result = await originalGetApiKeyAndHeaders(model);
+    const apiKey = resolveProviderApiKey(model.provider);
+    if (!apiKey || (result.ok === false && !result.error.includes('No API key found'))) return result;
+    return { ...result, ok: true, apiKey };
   };
 
   return registry;

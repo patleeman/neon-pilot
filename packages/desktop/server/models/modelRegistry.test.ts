@@ -2,10 +2,11 @@ import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authStorageCreateMock, getPiAgentRuntimeDirMock, modelRegistryCreateMock } = vi.hoisted(() => ({
+const { authStorageCreateMock, getPiAgentRuntimeDirMock, modelRegistryCreateMock, resolveProviderApiKeyMock } = vi.hoisted(() => ({
   authStorageCreateMock: vi.fn(),
   getPiAgentRuntimeDirMock: vi.fn(),
   modelRegistryCreateMock: vi.fn(),
+  resolveProviderApiKeyMock: vi.fn(),
 }));
 
 vi.mock('@neon-pilot/core', () => ({
@@ -21,6 +22,10 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
   },
 }));
 
+vi.mock('../secrets/secretStore.js', () => ({
+  resolveProviderApiKey: resolveProviderApiKeyMock,
+}));
+
 import { createModelRegistryForAuthFile, createRuntimeModelRegistry } from './modelRegistry.js';
 
 describe('model registry helpers', () => {
@@ -28,6 +33,7 @@ describe('model registry helpers', () => {
     authStorageCreateMock.mockReset();
     getPiAgentRuntimeDirMock.mockReset();
     modelRegistryCreateMock.mockReset();
+    resolveProviderApiKeyMock.mockReset();
   });
 
   it('creates the runtime model registry inside the pi-agent runtime directory', () => {
@@ -36,6 +42,7 @@ describe('model registry helpers', () => {
       getAll: vi.fn(() => []),
       getAvailable: vi.fn(() => []),
       find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
@@ -51,6 +58,7 @@ describe('model registry helpers', () => {
       getAll: vi.fn(() => []),
       getAvailable: vi.fn(() => []),
       find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
     };
     authStorageCreateMock.mockReturnValue(authStorage);
     modelRegistryCreateMock.mockReturnValue(registry);
@@ -69,6 +77,7 @@ describe('model registry helpers', () => {
         { id: 'gpt-5.4', provider: 'openai-codex', contextWindow: 272_000 },
       ]),
       find: vi.fn(() => ({ id: 'gpt-5.5', provider: 'openai-codex', contextWindow: 272_000 })),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
@@ -93,6 +102,7 @@ describe('model registry helpers', () => {
       getAll: vi.fn(() => [{ id: 'gpt-5.4', provider: 'openai-codex', contextWindow: Number.MAX_SAFE_INTEGER + 1 }]),
       getAvailable: vi.fn(() => [{ id: 'gpt-5.4', provider: 'openai-codex', contextWindow: Number.MAX_SAFE_INTEGER + 1 }]),
       find: vi.fn(() => ({ id: 'gpt-5.4', provider: 'openai-codex', contextWindow: Number.MAX_SAFE_INTEGER + 1 })),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
     modelRegistryCreateMock.mockReturnValue(registry);
@@ -105,6 +115,27 @@ describe('model registry helpers', () => {
       id: 'gpt-5.4',
       provider: 'openai-codex',
       contextWindow: 128_000,
+    });
+  });
+
+  it('prefers secure provider secrets when resolving model auth', async () => {
+    const authStorage = { kind: 'auth-storage' };
+    const registry = {
+      getAll: vi.fn(() => []),
+      getAvailable: vi.fn(() => []),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true, apiKey: 'legacy-key', headers: { 'x-test': 'yes' } })),
+    };
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    resolveProviderApiKeyMock.mockReturnValue('secure-key');
+    modelRegistryCreateMock.mockReturnValue(registry);
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    await expect(created.getApiKeyAndHeaders({ provider: 'openrouter' } as never)).resolves.toEqual({
+      ok: true,
+      apiKey: 'secure-key',
+      headers: { 'x-test': 'yes' },
     });
   });
 });

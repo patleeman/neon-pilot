@@ -552,6 +552,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getRuntimeScope: context.getRuntimeScope,
     materializeWebRuntimeConfig: context.materializeWebRuntimeConfig,
     getAuthFile: context.getAuthFile,
+    getStateRoot: context.getStateRoot,
   };
   const capabilityContextAtMs = performance.now();
 
