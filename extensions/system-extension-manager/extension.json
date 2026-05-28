@@ -29,6 +29,19 @@
     ]
   },
   "contributes": {
+    "nav": [{ "id": "extensions-nav", "label": "Extensions", "route": "/extensions", "icon": "sparkle", "section": "settings" }],
+    "views": [
+      {
+        "id": "extensions-page",
+        "title": "Extensions",
+        "location": "main",
+        "route": "/extensions",
+        "component": "ExtensionManagerPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
     "settingsComponent": {
       "id": "extension-search-paths",
       "component": "ExtensionManagerSettingsPanel",
@@ -37,8 +50,6 @@
       "description": "Install, enable, inspect, and manage extensions.",
       "order": 35
     },
-    "nav": [],
-    "views": [],
     "skills": [
       {
         "id": "skills-and-capabilities",

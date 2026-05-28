@@ -259,8 +259,8 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     runtimeScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`)?.scrollIntoView({ block: 'start' });
   }
 
-  if (error) return <ErrorState title="Failed to load Agent Capabilities" message={error} />;
-  if (!data) return <LoadingState label="Loading Agent Capabilities…" className="h-full justify-center" />;
+  if (error) return <ErrorState title="Failed to load prompt assembly" message={error} />;
+  if (!data) return <LoadingState label="Loading prompt assembly…" className="h-full justify-center" />;
 
   return (
     <div ref={runtimeScrollRef} className="h-full overflow-y-auto">
@@ -272,12 +272,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             items={RUNTIME_SECTIONS}
             activeId={activeSectionId}
             onNavigate={navigateToSection}
-            ariaLabel="Agent Capabilities sections"
+            ariaLabel="Prompt assembly sections"
           />
         }
       >
         <AppPageIntro
-          title="Agent Capabilities"
+          title="Prompt Assembly"
           summary="Inspect every capability the agent can see: instruction files, skills, injected tools, MCP servers, templates, and context."
           actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
         />

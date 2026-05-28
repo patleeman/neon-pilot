@@ -24,8 +24,14 @@ describe('system-extension-manager manifest', () => {
     expect(manifest.frontend.entry).toBe('dist/frontend.js');
   });
 
-  it('contributes extension management to settings instead of a standalone route', () => {
-    expect(manifest.contributes.views).toEqual([]);
+  it('contributes the canonical extension page and settings section', () => {
+    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ label: 'Extensions', route: '/extensions' }));
+    expect(manifest.contributes.views).toContainEqual(
+      expect.objectContaining({
+        route: '/extensions',
+        component: 'ExtensionManagerPage',
+      }),
+    );
     expect(manifest.contributes.settingsComponent).toMatchObject({
       sectionId: 'settings-extensions',
       component: 'ExtensionManagerSettingsPanel',

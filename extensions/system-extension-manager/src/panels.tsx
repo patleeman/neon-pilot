@@ -2,7 +2,7 @@ import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/e
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
 import { SettingsField, type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, AppPageToc, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -56,15 +56,17 @@ const EXTENSION_FILTERS: Array<{ id: ExtensionFilter; label: string }> = [
 ];
 
 const EXTENSION_PAGE_SECTIONS = [
-  { id: 'extensions-overview', label: 'Overview' },
-  { id: 'installed-extensions', label: 'Installed' },
-  { id: 'available-extensions', label: 'Available' },
-  { id: 'extension-skills', label: 'Skills' },
-  { id: 'extension-tools', label: 'Tools' },
-  { id: 'extension-apps', label: 'Apps & Views' },
-  { id: 'extension-diagnostics', label: 'Diagnostics' },
-  { id: 'extension-developer', label: 'Developer' },
-];
+  { id: 'extensions-overview', label: 'Overview', summary: 'Counts and health' },
+  { id: 'installed-extensions', label: 'Installed', summary: 'Enablement and status' },
+  { id: 'available-extensions', label: 'Available', summary: 'Install extensions and plugins' },
+  { id: 'extension-skills', label: 'Skills', summary: 'Agent workflows' },
+  { id: 'extension-tools', label: 'Tools', summary: 'Agent-callable tools' },
+  { id: 'extension-apps', label: 'Apps & Views', summary: 'UI surfaces' },
+  { id: 'extension-diagnostics', label: 'Diagnostics', summary: 'Issues and validation' },
+  { id: 'extension-developer', label: 'Developer', summary: 'Paths and manifests' },
+] as const;
+
+type ExtensionPageSectionId = (typeof EXTENSION_PAGE_SECTIONS)[number]['id'];
 
 interface LogicalSurfaceSummary {
   id: string;
@@ -515,31 +517,13 @@ function CapabilityListSection({
 
 function PageSection({ id, title, children, action }: { id: string; title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 space-y-4">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle/70 pb-2">
-        <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
+    <section id={id} className="scroll-mt-24 space-y-8 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0">
+      <div className="flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{title}</h2>
         {action}
       </div>
       {children}
     </section>
-  );
-}
-
-function SectionNav() {
-  return (
-    <nav aria-label="Extension sections" className="sticky top-0 z-10 border-b border-border-subtle/60 bg-base/95 py-2 backdrop-blur">
-      <div className="flex flex-wrap gap-1">
-        {EXTENSION_PAGE_SECTIONS.map((section) => (
-          <a
-            key={section.id}
-            href={`#${section.id}`}
-            className="rounded-lg px-2.5 py-1.5 text-[12px] text-secondary transition-colors hover:bg-surface hover:text-primary"
-          >
-            {section.label}
-          </a>
-        ))}
-      </div>
-    </nav>
   );
 }
 
@@ -587,6 +571,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [marketplaceSource, setMarketplaceSource] = useState('');
   const [marketplacePackageType, setMarketplacePackageType] = useState<MarketplaceBehaviorPackageType>('skill');
   const [marketplaceEcosystem, setMarketplaceEcosystem] = useState<MarketplaceBehaviorEcosystem>('codex');
+  const pageScrollRef = useRef<HTMLDivElement | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<ExtensionPageSectionId>('extensions-overview');
 
   const load = useCallback(async (options: { showLoading?: boolean } = {}) => {
     if (options.showLoading) {
@@ -639,6 +625,46 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       document.removeEventListener('visibilitychange', refresh);
     };
   }, [load, loadCatalog]);
+
+  useEffect(() => {
+    if (embedded) return;
+    const container = pageScrollRef.current;
+    if (!container) return;
+    let frame: number | null = null;
+    const updateActiveSection = () => {
+      frame = null;
+      let nextId = activeSectionId;
+      let bestOffset = Number.NEGATIVE_INFINITY;
+      for (const section of EXTENSION_PAGE_SECTIONS) {
+        const element = container.querySelector<HTMLElement>(`#${section.id}`);
+        if (!element) continue;
+        const offset = element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+        if (offset <= 140 && offset > bestOffset) {
+          bestOffset = offset;
+          nextId = section.id;
+        }
+      }
+      setActiveSectionId((current) => (current === nextId ? current : nextId));
+    };
+    const scheduleUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    scheduleUpdate();
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    return () => {
+      container.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [activeSectionId, embedded, extensions.length, catalog?.extensions.length, query, filter]);
+
+  function navigateToSection(sectionId: ExtensionPageSectionId) {
+    setActiveSectionId(sectionId);
+    pageScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`)?.scrollIntoView({ block: 'start' });
+  }
 
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
@@ -1038,8 +1064,22 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   return (
     <>
-      <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
-        <AppPageLayout shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[76rem]'} contentClassName="space-y-8">
+      <div ref={pageScrollRef} className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
+        <AppPageLayout
+          asideLayout={embedded ? undefined : 'centered'}
+          shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
+          contentClassName={embedded ? 'space-y-8' : 'flex flex-col gap-10'}
+          aside={
+            embedded ? undefined : (
+              <AppPageToc
+                items={EXTENSION_PAGE_SECTIONS}
+                activeId={activeSectionId}
+                onNavigate={navigateToSection}
+                ariaLabel="Extension sections"
+              />
+            )
+          }
+        >
           {!embedded ? (
             <AppPageIntro
               title="Extensions"
@@ -1053,11 +1093,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </div>
           ) : null}
 
-          <SectionNav />
-
           {catalogError ? <ErrorState title="Could not load available extensions" message={catalogError} /> : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-6">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}

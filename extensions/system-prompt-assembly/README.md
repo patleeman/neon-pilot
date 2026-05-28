@@ -1,14 +1,14 @@
-# Agent Capabilities Extension
+# Prompt Assembly Extension
 
-This extension owns the `/agent-runtime` page for editing the system prompt template and inspecting the capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, skills, tools, MCP servers, and diagnostics.
+This extension owns internal prompt assembly actions for editing the system prompt template and inspecting the capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, skills, tools, MCP servers, and diagnostics.
 
-`/prompt-assembly` remains as a compatibility route, but the product surface is **Agent Capabilities**.
+The product surface is **Extensions**. Prompt assembly should not contribute its own navigation item or standalone route; expose user-facing controls through Settings → Extensions and the Extension Manager page.
 
 App-control configuration does not belong here. Commands, keyboard shortcuts, and extensions live in **Settings → Commands** and **Settings → Extensions**.
 
 ## Architecture
 
-Agent Capabilities edits the generated system prompt template through the host settings API, then inspects the runtime capability registry. It does not let extensions mutate the system prompt directly. Instruction content flows through declared instruction providers, then core performs deterministic assembly.
+Prompt Assembly edits the generated system prompt template through the host settings API, then inspects the runtime capability registry. It does not let extensions mutate the system prompt directly. Instruction content flows through declared instruction providers, then core performs deterministic assembly.
 
 Capability rows expose:
 
@@ -19,8 +19,8 @@ Capability rows expose:
 
 ## UX rules
 
-- Keep Agent Capabilities focused on what the agent uses when a turn starts.
+- Keep prompt assembly focused on what the agent uses when a turn starts.
 - Do not show app-control surfaces here: commands, keybindings, extension enablement, and extension settings belong in Settings.
 - Prefer filters/search over nested pages.
 - Show concrete runtime state: what the agent can see if a turn starts now.
-- Visually inspect `/agent-runtime` after layout or interaction changes.
+- Visually inspect Settings → Extensions after layout or interaction changes.

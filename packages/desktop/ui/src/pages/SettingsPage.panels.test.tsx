@@ -110,16 +110,16 @@ describe('SettingsPage — untested panel rendering', () => {
     expect(html).not.toContain('Background runtime');
   });
 
-  it('renders the skills section heading', () => {
+  it('renders the extensions section heading', () => {
     const html = renderPage('/settings');
-    expect(html).toContain('Agent Capabilities');
+    expect(html).toContain('Extensions');
     expect(html).toContain('AGENTS.md files');
   });
 
-  it('renders the runtime quick link', () => {
+  it('renders the extensions quick link', () => {
     const html = renderPage('/settings');
-    expect(html).toContain('Agent Capabilities');
-    expect(html).toContain('Instruction files, skills, tools, and extension-provided capabilities.');
+    expect(html).toContain('Extensions');
+    expect(html).toContain('Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings.');
   });
 
   it('does not render interface reset controls in core settings', () => {

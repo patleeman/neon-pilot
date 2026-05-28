@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-prompt-assembly",
-  "name": "Agent Capabilities",
+  "name": "Prompt Assembly",
   "packageType": "system",
-  "description": "Inspect and manage the capabilities injected into agent runs: extensions, instructions, skills, tools, MCP, templates, and context.",
+  "description": "Internal prompt assembly inspection and controls used by the Extensions surface.",
   "version": "0.1.0",
   "frontend": { "entry": "dist/frontend.js", "styles": [] },
   "backend": {
@@ -15,32 +15,6 @@
       { "id": "updateRuntimeCapability", "handler": "updateRuntimeCapability", "title": "Enable or disable a runtime capability" }
     ]
   },
-  "contributes": {
-    "nav": [
-      { "id": "agent-runtime-nav", "label": "Agent Capabilities", "route": "/agent-runtime", "icon": "sparkle", "section": "settings" }
-    ],
-    "views": [
-      {
-        "id": "agent-runtime-page",
-        "title": "Agent Capabilities",
-        "location": "main",
-        "route": "/agent-runtime",
-        "component": "PromptAssemblyPage",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
-      },
-      {
-        "id": "prompt-assembly-page",
-        "title": "Agent Capabilities",
-        "location": "main",
-        "route": "/prompt-assembly",
-        "component": "PromptAssemblyPage",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
-      }
-    ]
-  },
+  "contributes": {},
   "permissions": ["extensions:read", "extensions:write"]
 }

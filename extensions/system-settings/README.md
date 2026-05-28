@@ -70,16 +70,15 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 
 ## Sections
 
-| Section            | Source                                                                |
-| ------------------ | --------------------------------------------------------------------- |
-| Appearance         | Built-in (theme picker)                                               |
-| Conversation       | Built-in (model, thinking)                                            |
-| Workspace          | Built-in (default working dir)                                        |
-| Agent Capabilities | Built-in (AGENTS.md files, skills, tools, and extension capabilities) |
-| Commands           | Built-in command/keybinding editor                                    |
-| Extensions         | Built-in extension enablement and extension settings                  |
-| Providers          | Built-in (model providers, credentials)                               |
-| Desktop            | Built-in (updates, app behavior)                                      |
+| Section      | Source                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| Appearance   | Built-in (theme picker)                                                                        |
+| Conversation | Built-in (model, thinking)                                                                     |
+| Workspace    | Built-in (default working dir)                                                                 |
+| Extensions   | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
+| Commands     | Built-in command/keybinding editor                                                             |
+| Providers    | Built-in (model providers, credentials)                                                        |
+| Desktop      | Built-in (updates, app behavior)                                                               |
 
 Knowledge setup lives in the Knowledge extension and is surfaced in Settings
 through its component-backed Knowledge Base panel. Manifest-declared extension

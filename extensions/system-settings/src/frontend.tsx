@@ -6,7 +6,6 @@ type SettingsSectionId =
   | 'settings-appearance'
   | 'settings-conversation'
   | 'settings-workspace'
-  | 'settings-runtime'
   | 'settings-extensions'
   | 'settings-commands'
   | 'settings-security'

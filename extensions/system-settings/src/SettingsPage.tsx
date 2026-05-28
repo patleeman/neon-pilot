@@ -70,8 +70,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
   { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
   { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
-  { id: 'settings-runtime', label: 'Agent Capabilities', summary: 'Instructions, skills, and tools' },
-  { id: 'settings-extensions', label: 'Extensions', summary: 'Installed product modules and extension settings' },
+  { id: 'settings-extensions', label: 'Extensions', summary: 'Extensions, instructions, skills, and tools' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
@@ -1832,14 +1831,7 @@ function ExtensionSettingsComponentPanel({ registration }: { registration: Exten
 
 export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[] } = {}) {
   const { settingsComponents } = useExtensionRegistry();
-  const extensionSettingsComponents = useMemo(
-    () => settingsComponents.filter((settingsComponent) => settingsComponent.sectionId === 'settings-extensions'),
-    [settingsComponents],
-  );
-  const capabilitySettingsComponents = useMemo(
-    () => settingsComponents.filter((settingsComponent) => settingsComponent.sectionId !== 'settings-extensions'),
-    [settingsComponents],
-  );
+  const extensionSettingsComponents = useMemo(() => settingsComponents, [settingsComponents]);
   const {
     theme,
     themePreference,
@@ -3201,10 +3193,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
             </SettingsSection>
 
             <SettingsSection
-              id="settings-runtime"
-              label="Agent Capabilities"
-              description="Instruction files, skills, tools, and extension-provided capabilities."
+              id="settings-extensions"
+              label="Extensions"
+              description="Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings."
             >
+              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
               <div className="space-y-0">
                 <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
                   {instructionFilesLoading && !instructionFilesState ? (
@@ -3327,16 +3320,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                 </SettingsPanel>
               </div>
 
-              {capabilitySettingsComponents.map((settingsComponent) => (
-                <ExtensionSettingsComponentPanel
-                  key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
-                  registration={settingsComponent}
-                />
-              ))}
-            </SettingsSection>
-
-            <SettingsSection id="settings-extensions" label="Extensions" description="Installed product modules and extension settings.">
-              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
               {extensionSettingsComponents.map((settingsComponent) => (
                 <ExtensionSettingsComponentPanel
                   key={`${settingsComponent.extensionId}:${settingsComponent.id}`}

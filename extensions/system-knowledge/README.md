@@ -100,7 +100,7 @@ Knowledge affects agent behavior through file-based layers, not runtime prompt m
 4. available skills from the runtime skill loader
 5. current date and working directory
 
-`APPEND_SYSTEM.md` intentionally points at the primary knowledge path and skills directory instead of enumerating every skill; the skill loader owns the detailed skill list. Extensions cannot modify the system prompt at runtime. To influence behavior, install or edit behavior assets through prompt assembly/marketplace paths, or add reference material to a knowledge directory.
+`APPEND_SYSTEM.md` intentionally points at the primary knowledge path and skills directory instead of enumerating every skill; the skill loader owns the detailed skill list. Extensions cannot modify the system prompt at runtime. To influence behavior, install or edit behavior assets through Extensions, or add reference material to a knowledge directory.
 
 ## Permissions
 
