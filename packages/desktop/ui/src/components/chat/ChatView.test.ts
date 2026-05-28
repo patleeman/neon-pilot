@@ -360,7 +360,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('background task mentioned in this step');
   });
 
-  it('shows run tool previews and linked run metadata for started agent runs', () => {
+  it('shows run tool previews without a mentioned execution shelf for started agent runs', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         messages: [
@@ -391,10 +391,10 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('start_agent Inspect git diff');
     expect(html).toContain('Inspect git diff');
-    expect(html).toContain('agent task');
-    expect(html).toContain('ui-polish');
-    expect(html).toContain('cwd neon-pilot');
-    expect(html).toContain('gpt-5.4');
+    expect(html).not.toContain('mentioned execution');
+    expect(html).not.toContain('agent task');
+    expect(html).not.toContain('cwd neon-pilot');
+    expect(html).not.toContain('gpt-5.4');
   });
 
   it('uses run tool input context even when the persisted step lacks structured run details', () => {
@@ -421,9 +421,9 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('start printf ok');
     expect(html).toContain('printf ok');
-    expect(html).toContain('background command');
-    expect(html).toContain('ui-preview-check');
-    expect(html).toContain('cwd neon-pilot');
+    expect(html).not.toContain('mentioned execution');
+    expect(html).not.toContain('background command');
+    expect(html).not.toContain('cwd neon-pilot');
   });
 
   it('does not surface linked run cards as separate internal-work cluster shelf content', () => {

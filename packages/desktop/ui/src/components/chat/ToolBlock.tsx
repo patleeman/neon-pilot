@@ -288,8 +288,9 @@ export function ToolBlock({
         : pinnedVisual
           ? visualPreview
           : preview;
-  const hiddenRunCount = Math.max(0, linkedRuns.runs.length - MAX_VISIBLE_LINKED_RUNS);
-  const visibleRuns = showAllRuns || hiddenRunCount === 0 ? linkedRuns.runs : linkedRuns.runs.slice(0, MAX_VISIBLE_LINKED_RUNS);
+  const displayedLinkedRuns = linkedRuns.scope === 'listed' ? linkedRuns.runs : [];
+  const hiddenRunCount = Math.max(0, displayedLinkedRuns.length - MAX_VISIBLE_LINKED_RUNS);
+  const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
   const backgroundRun = backgroundRunId ? runs?.runs.find((candidate) => candidate.runId === backgroundRunId) : null;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
@@ -400,27 +401,17 @@ export function ToolBlock({
         </div>
       )}
 
-      {linkedRuns.runs.length > 0 && !pinnedTool && !backgroundShellStart && (
+      {displayedLinkedRuns.length > 0 && !pinnedTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
           <p className="mb-1.5 uppercase tracking-[0.14em] opacity-40">
-            {linkedRuns.runs.length === 1
-              ? linkedRuns.scope === 'listed'
-                ? 'listed execution'
-                : 'mentioned execution'
-              : linkedRuns.scope === 'listed'
-                ? 'listed executions'
-                : 'mentioned executions'}
+            {displayedLinkedRuns.length === 1 ? 'listed execution' : 'listed executions'}
           </p>
           {hiddenRunCount > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md bg-black/5 px-2 py-1.5 text-[10px] text-secondary/80">
               <span>
                 {showAllRuns
-                  ? `Showing all ${linkedRuns.runs.length} ${
-                      linkedRuns.scope === 'listed' ? 'executions returned by the tool.' : 'executions mentioned in this step.'
-                    }`
-                  : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${linkedRuns.runs.length} ${
-                      linkedRuns.scope === 'listed' ? 'executions returned by the tool.' : 'executions mentioned in this step.'
-                    }`}
+                  ? `Showing all ${displayedLinkedRuns.length} executions returned by the tool.`
+                  : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${displayedLinkedRuns.length} executions returned by the tool.`}
               </span>
               <span className="flex-1" />
               <button type="button" onClick={() => setShowAllRuns((current) => !current)} className="ui-action-button text-[10px]">
