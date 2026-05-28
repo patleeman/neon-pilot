@@ -31,14 +31,11 @@ Installable extensions are deliberately not included in packaged app resources a
 
 Current installable extensions:
 
-- `system-acp` — ACP protocol experiments.
 - `system-agent-browser` — agent-browser CLI tool integration for autonomous browser/app automation.
 - `system-alleycat` — mobile pairing bridge for Kitty Litter clients.
 - `system-browser` — browser automation tool and Workbench browser views.
-- `system-clean-room-spec` — generate sanitized specs from untrusted extension source.
 - `system-duckduckgo-search` — agent tool for DuckDuckGo web search.
 - `system-exa-search` — agent tool for Exa web search.
-- `system-gateways` — Telegram gateway UI/runtime while gateway routing is still experimental.
 - `system-images` — image generation tooling while provider behavior and UX are still experimental.
 - `system-local-models` — local MLX and GGUF model management UI. Runtime implementation lives in `shared/local-model-runtimes`.
 - `system-self-preservation` — agent self-preservation instruction and context hooks.

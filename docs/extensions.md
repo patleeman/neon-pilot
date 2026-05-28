@@ -1690,7 +1690,6 @@ See bundled system extensions in `extensions/` and optional installable extensio
 - **`system-conversation-tools`** — Agent lifecycle hooks + contextMenus
 - **`system-extension-manager`** — Extension management UI + nav
 - **`system-runs`** — Background runs + composer shelf (ActivityShelf)
-- **`system-gateways`** — Experimental Telegram gateway management UI + nav (`installable-extensions/system-gateways`)
 - **`system-settings`** — Settings panels + nav
 
 Each extension has a complete `extension.json` manifest and

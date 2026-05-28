@@ -58,11 +58,6 @@ const MARKETPLACE_SOURCES: MarketplaceSource[] = [
 
 const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
   {
-    id: 'system-acp',
-    name: 'ACP Protocol',
-    description: 'Agent Client Protocol experiments.',
-  },
-  {
     id: 'system-alleycat',
     name: 'Kitty Litter Mobile Pairing',
     description: 'Mobile pairing bridge for Kitty Litter clients.',
@@ -73,11 +68,6 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Browser automation tool and Workbench browser views.',
   },
   {
-    id: 'system-clean-room-spec',
-    name: 'Clean-room Spec Generator',
-    description: 'Generate sanitized specs from untrusted extension source.',
-  },
-  {
     id: 'system-duckduckgo-search',
     name: 'DuckDuckGo Search',
     description: 'Agent tool for DuckDuckGo web search.',
@@ -86,11 +76,6 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     id: 'system-exa-search',
     name: 'Exa Search',
     description: 'Agent tool for Exa web search.',
-  },
-  {
-    id: 'system-gateways',
-    name: 'Telegram Gateway',
-    description: 'Telegram gateway UI/runtime while gateway routing is still experimental.',
   },
   {
     id: 'system-images',

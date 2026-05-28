@@ -50,7 +50,6 @@ System extensions are bundled under `extensions/system-*`. Installable extension
 
 Feature-specific documentation lives beside the owning extension package:
 
-- [ACP Protocol](../installable-extensions/system-acp/README.md)
 - [Agent Browser](../installable-extensions/system-agent-browser/README.md)
 - [Artifacts](../extensions/system-artifacts/README.md)
 - [Auto Mode](../extensions/system-auto-mode/README.md)
@@ -59,7 +58,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Caffeinate](../extensions/system-caffeinate/README.md)
 - [Codex Profile](../extensions/system-codex-profile/README.md)
 - [Composer Attachments](../extensions/system-composer-attachments/README.md)
-- [Clean-room Spec Generator](../installable-extensions/system-clean-room-spec/README.md)
 - [Context Hardening](../extensions/system-context-hardening/README.md)
 - [Context Usage](../extensions/system-context-usage/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
@@ -89,7 +87,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Skills](../extensions/system-skills/README.md)
 - [SpeechMike](../installable-extensions/system-speechmike/README.md)
 - [Suggested Context](../extensions/system-suggested-context/README.md)
-- [Telegram Gateway](../installable-extensions/system-gateways/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
 - [Video Probe](../installable-extensions/system-video-probe/README.md)
 - [Web Fetch](../extensions/system-web-tools/README.md)
