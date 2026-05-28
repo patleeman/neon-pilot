@@ -278,6 +278,9 @@ function ExcalidrawEditor({
     }
   }
 
+  const persistButtonLabel = persistLabel ?? 'Save';
+  const attachButtonLabel = saveLabel ?? 'Attach to chat';
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex justify-end gap-2 border-b border-border-subtle px-3 py-2">
@@ -312,24 +315,26 @@ function ExcalidrawEditor({
           onClick={() => {
             void handlePersist();
           }}
-          className="ui-icon-button ui-icon-button-compact"
+          className="ui-toolbar-button ui-icon-button-compact gap-1.5 px-2.5"
           disabled={!onPersist || busy || !LoadedExcalidraw || loadError !== null}
-          title={!onPersist ? 'Save requires an existing conversation' : persisting ? 'Saving...' : (persistLabel ?? 'Save')}
-          aria-label={persistLabel ?? 'Save'}
+          title={!onPersist ? 'Save requires an existing conversation' : persisting ? 'Saving...' : persistButtonLabel}
+          aria-label={persistButtonLabel}
         >
           <Ico d={persisting ? ICON.refresh : ICON.save} size={12} />
+          <span>{persisting ? 'Saving...' : persistButtonLabel}</span>
         </button>
         <button
           type="button"
           onClick={() => {
             void handleAttach();
           }}
-          className="ui-icon-button ui-icon-button-compact bg-accent text-white hover:bg-accent/90 disabled:bg-accent/50 disabled:text-white/70"
+          className="ui-toolbar-button ui-icon-button-compact gap-1.5 bg-accent px-2.5 text-white hover:bg-accent/90 disabled:bg-accent/50 disabled:text-white/70"
           disabled={busy || !LoadedExcalidraw || loadError !== null}
-          title={attaching ? 'Attaching...' : (saveLabel ?? 'Attach drawing')}
-          aria-label={saveLabel ?? 'Attach drawing'}
+          title={attaching ? 'Attaching...' : attachButtonLabel}
+          aria-label={attachButtonLabel}
         >
           <Ico d={attaching ? ICON.refresh : ICON.attach} size={12} />
+          <span>{attaching ? 'Attaching...' : attachButtonLabel}</span>
         </button>
       </div>
 
@@ -599,7 +604,7 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
         localDraftId: drawing.id,
         initialTitle: getDrawingTitle(drawing),
         initialScene: drawing.scene,
-        saveLabel: 'Attach drawing',
+        saveLabel: 'Attach to chat',
       } satisfies DrawingDetailState);
       return;
     }
@@ -720,7 +725,7 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
                   localDraftId: draft.id,
                   initialTitle: draft.title,
                   initialScene: draft.scene,
-                  saveLabel: 'Attach drawing',
+                  saveLabel: 'Attach to chat',
                 } satisfies DrawingDetailState);
               }}
               title="New drawing"
@@ -769,7 +774,7 @@ export function ExcalidrawWorkbenchDetail({
       localDraftId: draft.id,
       initialTitle: draft.title,
       initialScene: draft.scene,
-      saveLabel: 'Attach drawing',
+      saveLabel: 'Attach to chat',
     } satisfies DrawingDetailState;
     setState(nextState);
     pa.workbench.setDetailState(detailStateKey, nextState);
@@ -793,7 +798,7 @@ export function ExcalidrawWorkbenchDetail({
       initialScene={state?.initialScene}
       initialAttachmentId={state?.initialAttachmentId}
       initialRevision={state?.initialRevision}
-      saveLabel={state?.saveLabel ?? 'Attach drawing'}
+      saveLabel={state?.saveLabel ?? 'Attach to chat'}
       persistLabel="Save"
       onPersist={
         context.conversationId

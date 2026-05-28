@@ -62,7 +62,7 @@ export function ExcalidrawInputTool({
       onClick={async () => {
         const result = await pa.ui.openModal({
           component: 'ExcalidrawEditorModal',
-          props: { conversationId: toolContext.conversationId, saveLabel: 'Attach drawing' },
+          props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
           size: 'fullscreen',
         });
         if (result && typeof result === 'object') {
