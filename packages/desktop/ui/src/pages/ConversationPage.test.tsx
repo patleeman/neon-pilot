@@ -22,6 +22,7 @@ import {
   shouldFetchConversationAttachments,
   shouldFetchConversationLiveSessionGitContext,
   shouldLoadConversationModels,
+  shouldMountComposerShelvesImmediately,
   shouldShowMissingConversationState,
   shouldUseHealthyDesktopConversationState,
 } from './ConversationPage.js';
@@ -56,6 +57,30 @@ function findFirstNodeByClass(node: ParsedNode, className: string): ParsedNode |
 }
 
 describe('desktop conversation state fallback', () => {
+  it('mounts composer shelves as soon as restored conversation chrome is ready', () => {
+    expect(
+      shouldMountComposerShelvesImmediately({
+        draft: false,
+        composerChromeReady: true,
+        showConversationLoadingState: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldMountComposerShelvesImmediately({
+        draft: false,
+        composerChromeReady: false,
+        showConversationLoadingState: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldMountComposerShelvesImmediately({
+        draft: false,
+        composerChromeReady: true,
+        showConversationLoadingState: true,
+      }),
+    ).toBe(false);
+  });
+
   it('reconnects the current transcript when a cwd change keeps the same conversation id', () => {
     expect(
       resolveConversationCwdChangeAction({

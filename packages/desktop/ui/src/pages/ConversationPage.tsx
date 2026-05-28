@@ -416,6 +416,15 @@ export { shouldEnableMessageForkControls };
 
 export { buildMissionAutoModeInputFromDraft, createDraftMissionTask };
 
+export function shouldMountComposerShelvesImmediately(input: {
+  draft: boolean;
+  composerChromeReady: boolean;
+  showConversationLoadingState: boolean;
+}): boolean {
+  if (input.draft) return true;
+  return input.composerChromeReady && !input.showConversationLoadingState;
+}
+
 export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const { id: routeId } = useParams<{ id?: string }>();
   const id = draft ? undefined : routeId;
@@ -5641,28 +5650,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [composerChromeReady, draft, hasRenderableMessages, id, showConversationLoadingState]);
 
   useEffect(() => {
-    if (draft) {
-      setComposerShelvesReady(true);
-      return;
-    }
-    if (!composerChromeReady || composerShelvesReady || showConversationLoadingState) return;
-
-    let timeoutId: number | null = null;
-    let idleId: number | null = null;
-    const schedule = () => {
-      const requestIdle = window.requestIdleCallback;
-      if (typeof requestIdle === 'function') {
-        idleId = requestIdle(() => setComposerShelvesReady(true), { timeout: 2000 });
-        return;
-      }
-      timeoutId = window.setTimeout(() => setComposerShelvesReady(true), 1600);
-    };
-    timeoutId = window.setTimeout(schedule, 600);
-
-    return () => {
-      if (timeoutId !== null) window.clearTimeout(timeoutId);
-      if (idleId !== null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
-    };
+    if (composerShelvesReady) return;
+    if (!shouldMountComposerShelvesImmediately({ draft, composerChromeReady, showConversationLoadingState })) return;
+    setComposerShelvesReady(true);
   }, [composerChromeReady, composerShelvesReady, draft, showConversationLoadingState]);
 
   const hasComposerShelfContent =
