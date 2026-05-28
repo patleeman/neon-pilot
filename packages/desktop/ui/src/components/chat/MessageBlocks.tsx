@@ -65,6 +65,12 @@ const AUTO_RESUME_CONTEXT_TYPES = new Set([
 ]);
 
 const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'conversation_workspace_change']);
+const contextShelfItemClassName =
+  'group/item rounded-lg border border-border-subtle/45 bg-surface/25 px-3 py-2 text-[12px] text-secondary shadow-sm shadow-black/5 transition-colors hover:border-border-subtle/70 hover:bg-surface/35 open:border-accent/25 open:bg-surface/40';
+const contextShelfSummaryClassName =
+  'grid cursor-pointer list-none grid-cols-[auto_minmax(8rem,11rem)_minmax(0,1fr)_auto] items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden';
+const contextShelfBodyClassName =
+  'mt-2 max-h-[min(34rem,52vh)] overflow-auto rounded-md border border-border-subtle/35 bg-base/45 px-3 py-2 text-[12px] leading-relaxed text-primary/90';
 
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
   return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
@@ -332,11 +338,14 @@ export const ContextShelf = memo(function ContextShelf({
         <div className="mx-auto mt-3 w-[78%] space-y-1.5">
           {hasSystemPrompt ? (
             <LazyDetails
-              className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+              className={contextShelfItemClassName}
               dataAttrs={{ 'data-context-type': 'system_prompt' }}
               summary={
-                <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                  <span className="min-w-36 shrink-0 font-medium text-primary/80">System prompt</span>
+                <summary className={contextShelfSummaryClassName}>
+                  <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                    ›
+                  </span>
+                  <span className="min-w-0 truncate font-medium text-primary/90">System prompt</span>
                   <span className="min-w-0 flex-1 truncate text-dim/90">
                     {toolDefinitions.length > 0
                       ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
@@ -345,10 +354,10 @@ export const ContextShelf = memo(function ContextShelf({
                 </summary>
               }
             >
-              <div className="space-y-4 pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+              <div className={contextShelfBodyClassName}>
                 {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
                 {toolDefinitions.length > 0 ? (
-                  <div>
+                  <div className={normalizedSystemPrompt ? 'mt-4' : undefined}>
                     <div className="mb-2 font-medium text-primary">Available tool definitions</div>
                     {renderText(formatToolDefinitions(toolDefinitions))}
                   </div>
@@ -357,15 +366,15 @@ export const ContextShelf = memo(function ContextShelf({
             </LazyDetails>
           ) : null}
           {remoteControlled ? (
-            <details
-              className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
-              data-context-type="remote_control"
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                <span className="min-w-36 shrink-0 font-medium text-primary/80">Remote control</span>
+            <details className={contextShelfItemClassName} data-context-type="remote_control">
+              <summary className={contextShelfSummaryClassName}>
+                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                  ›
+                </span>
+                <span className="min-w-0 truncate font-medium text-primary/90">Remote control</span>
                 <span className="min-w-0 flex-1 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
               </summary>
-              <div className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">Controlled remotely from Kitty Litter.</div>
+              <div className={contextShelfBodyClassName}>Controlled remotely from Kitty Litter.</div>
             </details>
           ) : null}
           {blocks.map((block, index) => {
@@ -390,20 +399,23 @@ export const ContextShelf = memo(function ContextShelf({
             return (
               <LazyDetails
                 key={block.id ?? index}
-                className="rounded-md px-2 py-1 text-[12px] text-secondary transition-colors hover:bg-surface/15 open:bg-surface/20"
+                className={contextShelfItemClassName}
                 dataAttrs={{
                   'data-context-type': block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`,
                   'data-summary-kind': block.type === 'summary' ? block.kind : undefined,
                 }}
                 summary={
-                  <summary className="flex cursor-pointer list-none items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                    <span className="min-w-36 shrink-0 font-medium text-primary/80">{contextShelfLabel(block)}</span>
+                  <summary className={contextShelfSummaryClassName}>
+                    <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                      ›
+                    </span>
+                    <span className="min-w-0 truncate font-medium text-primary/90">{contextShelfLabel(block)}</span>
                     <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
                     {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
                   </summary>
                 }
               >
-                <div {...replySelectionScopeProps} className="pt-2 pl-2 text-[12px] leading-relaxed text-primary/90">
+                <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
                   {block.type === 'summary' && block.kind === 'compaction' ? (
                     <p className="mb-2 text-[12px] leading-relaxed text-secondary">
                       {resolveCompactionSummaryDetail(block.title, block.detail)}
@@ -958,10 +970,7 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
   })();
 
   return (
-    <div
-      className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] text-dim/70"
-      data-topology-kind={block.customType}
-    >
+    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] text-dim/70" data-topology-kind={block.customType}>
       <span className="h-px bg-border-subtle" aria-hidden="true" />
       <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
         <span className="shrink-0">{label}</span>
