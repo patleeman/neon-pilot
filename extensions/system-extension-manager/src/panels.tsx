@@ -969,6 +969,17 @@ function InstallExtensionModal({
   onInstallCatalog: (item: InstallableExtensionCatalogItem) => void;
   onClose: () => void;
 }) {
+  const [marketplaceQuery, setMarketplaceQuery] = useState('');
+  const visibleCatalogItems = useMemo(() => {
+    const normalizedQuery = marketplaceQuery.trim().toLowerCase();
+    if (!normalizedQuery) return catalogItems;
+    return catalogItems.filter((item) =>
+      `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [catalogItems, marketplaceQuery]);
+
   const handleBackdropClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       if (event.target === event.currentTarget) onClose();
@@ -1033,32 +1044,43 @@ function InstallExtensionModal({
 
           {catalogItems.length ? (
             <section className="space-y-2">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
-              <div className="divide-y divide-border-subtle/70">
-                {catalogItems.slice(0, 6).map((item) => {
-                  const itemBusy = catalogBusyId === item.id;
-                  return (
-                    <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-medium text-primary">{item.name}</div>
-                        <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={itemBusy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
-                        onClick={() => onInstallCatalog(item)}
-                      >
-                        {itemBusy
-                          ? 'Installing...'
-                          : item.packageType && item.packageType !== 'extension' && !item.packageSource
-                            ? 'Planned'
-                            : 'Install'}
-                      </button>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
+                <input
+                  className="h-8 min-w-0 rounded-lg border border-border-subtle bg-base px-3 text-[12px] text-primary outline-none placeholder:text-dim focus:border-accent sm:w-56"
+                  value={marketplaceQuery}
+                  onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
+                  placeholder="Search marketplace"
+                />
               </div>
+              <div className="max-h-[18rem] overflow-y-auto border-y border-border-subtle/70">
+                <div className="divide-y divide-border-subtle/70">
+                  {visibleCatalogItems.map((item) => {
+                    const itemBusy = catalogBusyId === item.id;
+                    return (
+                      <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-primary">{item.name}</div>
+                          <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={itemBusy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
+                          onClick={() => onInstallCatalog(item)}
+                        >
+                          {itemBusy
+                            ? 'Installing...'
+                            : item.packageType && item.packageType !== 'extension' && !item.packageSource
+                              ? 'Planned'
+                              : 'Install'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {visibleCatalogItems.length === 0 ? <p className="py-2 text-[12px] text-dim">No marketplace matches.</p> : null}
             </section>
           ) : null}
         </div>
