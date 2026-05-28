@@ -302,10 +302,12 @@ import type {
   DeferredResumeSummary,
   DurableRunRecord,
   LiveSessionContext,
+  LiveSessionForkResult,
   LiveSessionToolDefinition,
   MemoryData,
   MessageBlock,
   PromptAttachmentRefInput,
+  SessionMeta,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
 import {
@@ -621,6 +623,51 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     : desktopConversationChecking
       ? true
       : webConversationBootstrapLoading;
+  const primeForkedConversationOpenCaches = useCallback(
+    (forked: LiveSessionForkResult) => {
+      if (!forked.bootstrap) {
+        return;
+      }
+
+      primeCreatedConversationOpenCaches(
+        {
+          id: forked.newSessionId,
+          sessionFile: forked.sessionFile,
+          bootstrap: forked.bootstrap,
+        },
+        {
+          tailBlocks: historicalTailBlocks,
+          bootstrapVersionKey: conversationVersionKey,
+          sessionDetailVersion: conversationEventVersion,
+        },
+      );
+      const seedForkedSessionMeta = (sessionMeta: SessionMeta) => {
+        const existingSessions = sessions ?? [];
+        setSessions([...existingSessions.filter((session) => session.id !== sessionMeta.id), sessionMeta]);
+      };
+      const forkedSessionMeta = forked.bootstrap.sessionDetail?.meta;
+      if (forkedSessionMeta) {
+        seedForkedSessionMeta(forkedSessionMeta);
+      } else if (forked.bootstrap.liveSession.live) {
+        const liveSession = forked.bootstrap.liveSession;
+        const now = new Date().toISOString();
+        const optimisticMeta: SessionMeta = {
+          id: forked.newSessionId,
+          file: forked.sessionFile,
+          timestamp: now,
+          cwd: liveSession.cwd,
+          cwdSlug: '',
+          model: '',
+          title: liveSession.title ?? NEW_CONVERSATION_TITLE,
+          messageCount: 0,
+          isRunning: liveSession.isStreaming,
+          isLive: true,
+        };
+        seedForkedSessionMeta(optimisticMeta);
+      }
+    },
+    [conversationEventVersion, conversationVersionKey, historicalTailBlocks, sessions, setSessions],
+  );
   const confirmedLiveValue = useDesktopConversation ? (visibleConversationBootstrap?.liveSession.live ?? null) : null;
 
   useEffect(() => {
@@ -3635,7 +3682,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           return;
         }
 
-        const { newSessionId } = await api.forkSession(
+        const forked = await api.forkSession(
           liveConversationId,
           target.entryId,
           {
@@ -3645,6 +3692,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           },
           currentSurfaceId,
         );
+        const { newSessionId } = forked;
+        primeForkedConversationOpenCaches(forked);
         if (target.promptDraft) {
           persistForkPromptDraft(newSessionId, target.promptDraft);
         }
@@ -3661,7 +3710,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         showNotice('danger', `Rewind failed: ${(error as Error).message}`);
       }
     },
-    [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
+    [
+      currentSurfaceId,
+      ensureConversationCanControl,
+      ensureConversationIsLive,
+      id,
+      messageIndexOffset,
+      navigate,
+      primeForkedConversationOpenCaches,
+      realMessages,
+      showNotice,
+    ],
   );
 
   const editConversationFromUserMessage = useCallback(
@@ -3709,7 +3768,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         }
 
         setPendingAssistantStatusLabel('Rerunning from edited prompt…');
-        const { newSessionId } = await api.forkSession(
+        const forked = await api.forkSession(
           liveConversationId,
           entryId,
           {
@@ -3719,6 +3778,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           },
           currentSurfaceId,
         );
+        const { newSessionId } = forked;
+        primeForkedConversationOpenCaches(forked);
         ensureConversationTabOpen(newSessionId);
         navigate(`/conversations/${newSessionId}`, { replace: true });
         await api.promptSession(newSessionId, editedText, undefined, undefined, undefined, currentSurfaceId);
@@ -3729,7 +3790,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         setPendingAssistantStatusLabel(null);
       }
     },
-    [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
+    [
+      currentSurfaceId,
+      ensureConversationCanControl,
+      ensureConversationIsLive,
+      id,
+      messageIndexOffset,
+      navigate,
+      primeForkedConversationOpenCaches,
+      realMessages,
+      showNotice,
+    ],
   );
 
   const forkConversationFromMessage = useCallback(
@@ -3771,19 +3842,25 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           return;
         }
 
-        const { newSessionId } =
-          clickedBlock.type === 'user'
-            ? await api.forkSession(
-                liveConversationId,
-                entryId,
-                {
-                  preserveSource: true,
-                  beforeEntry: true,
-                  branchKind: 'fork',
-                },
-                currentSurfaceId,
-              )
-            : await api.branchSession(liveConversationId, entryId, currentSurfaceId);
+        let newSessionId: string;
+        if (clickedBlock.type === 'user') {
+          const forked = await api.forkSession(
+            liveConversationId,
+            entryId,
+            {
+              preserveSource: true,
+              beforeEntry: true,
+              branchKind: 'fork',
+            },
+            currentSurfaceId,
+          );
+          primeForkedConversationOpenCaches(forked);
+          newSessionId = forked.newSessionId;
+        } else {
+          const branched = await api.branchSession(liveConversationId, entryId, currentSurfaceId);
+          primeForkedConversationOpenCaches(branched);
+          newSessionId = branched.newSessionId;
+        }
         if (clickedBlock.type === 'user') {
           persistForkPromptDraft(newSessionId, clickedBlock.text);
         }
@@ -3801,7 +3878,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         showNotice('danger', `Fork failed: ${(error as Error).message}`);
       }
     },
-    [currentSurfaceId, ensureConversationCanControl, ensureConversationIsLive, id, messageIndexOffset, navigate, realMessages, showNotice],
+    [
+      currentSurfaceId,
+      ensureConversationCanControl,
+      ensureConversationIsLive,
+      id,
+      messageIndexOffset,
+      navigate,
+      primeForkedConversationOpenCaches,
+      realMessages,
+      rewindConversationFromMessage,
+      showNotice,
+    ],
   );
 
   async function saveModelPreference(modelId: string) {

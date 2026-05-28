@@ -16,6 +16,7 @@ import {
   writeConversationAutoModeState,
 } from './conversationAutoMode.js';
 import { type ConversationModelPreferenceInput, type ConversationModelPreferenceState } from './conversationModelPreferences.js';
+import { reserveConversationSession } from './conversationReservation.js';
 import { appendConversationWorkspaceMetadata, readConversationSessionMetaByFilePath } from './conversationTranscriptOps.js';
 import { executeLiveSessionBash } from './liveSessionBash.js';
 import { finalizeLiveSessionBashExecution } from './liveSessionBashFinalization.js';
@@ -1060,6 +1061,7 @@ export async function forkSession(
   ensureLiveSessionSurfaceCanControl(entry, surfaceId);
   const result = await forkLiveSession(entry, entryId, options, {
     createSession,
+    reserveSession: (cwd) => reserveConversationSession({ cwd }),
     resumeSession,
     destroySession,
     resolveDefaultServiceTier: async (candidate) => {

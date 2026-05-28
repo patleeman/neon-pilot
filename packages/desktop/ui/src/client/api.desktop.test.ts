@@ -392,7 +392,9 @@ describe('api desktop transport', () => {
     const compactLiveSession = vi.fn().mockResolvedValue({ ok: true, result: { compacted: true } });
     const exportLiveSession = vi.fn().mockResolvedValue({ ok: true, path: '/tmp/live-1.html' });
     const reloadLiveSession = vi.fn().mockResolvedValue({ ok: true });
-    const branchLiveSession = vi.fn().mockResolvedValue({ newSessionId: 'branch-1', sessionFile: '/tmp/branch-1.jsonl' });
+    const branchLiveSession = vi
+      .fn()
+      .mockResolvedValue({ newSessionId: 'branch-1', sessionFile: '/tmp/branch-1.jsonl', bootstrap: createBootstrapState() });
     const forkLiveSession = vi.fn().mockResolvedValue({ newSessionId: 'fork-1', sessionFile: '/tmp/fork-1.jsonl' });
     const abortLiveSession = vi.fn().mockResolvedValue({ ok: true });
     const destroyLiveSession = vi.fn().mockResolvedValue({ ok: true });
@@ -639,8 +641,8 @@ describe('api desktop transport', () => {
     expect(getEnvironment).not.toHaveBeenCalled();
     expect(readAppStatus).toHaveBeenCalledTimes(1);
     expect(readDaemonState).toHaveBeenCalledTimes(1);
-    expect(readSessions).toHaveBeenCalledTimes(1);
-    expect(limitedSessions).toEqual([{ id: 'limited' }]);
+    expect(readSessions).toHaveBeenCalledTimes(2);
+    expect(limitedSessions).toEqual([{ id: 'conversation-1', title: 'Conversation 1' }]);
     expect(readSessionMeta).toHaveBeenCalledWith('conversation-1');
     expect(readSessionSearchIndex).toHaveBeenCalledWith(['conversation-1']);
     expect(readModels).toHaveBeenCalledTimes(1);
@@ -864,7 +866,7 @@ describe('api desktop transport', () => {
     expect(compacted).toEqual({ ok: true, result: { compacted: true } });
     expect(exported).toEqual({ ok: true, path: '/tmp/live-1.html' });
     expect(reloaded).toEqual({ ok: true });
-    expect(branched).toEqual({ newSessionId: 'branch-1', sessionFile: '/tmp/branch-1.jsonl' });
+    expect(branched).toEqual({ newSessionId: 'branch-1', sessionFile: '/tmp/branch-1.jsonl', bootstrap: createBootstrapState() });
     expect(forked).toEqual({ newSessionId: 'fork-1', sessionFile: '/tmp/fork-1.jsonl' });
     expect(aborted).toEqual({ ok: true });
     expect(destroyed).toEqual({ ok: true });

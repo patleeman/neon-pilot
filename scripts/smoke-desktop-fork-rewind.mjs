@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -31,6 +31,12 @@ const promptOne = 'E2E user prompt one: put this back in composer on user branch
 const answerOne = 'E2E assistant answer one: fork through this assistant message';
 const promptTwo = 'E2E user prompt two: rewind from assistant should restore this';
 const answerTwo = 'E2E assistant answer two: this must be absent after assistant rewind';
+const sourceMessagePreviewByText = new Map([
+  [promptOne, 'E2E user prompt one'],
+  [answerOne, 'E2E assistant answer one'],
+  [promptTwo, 'E2E user prompt two'],
+  [answerTwo, 'E2E assistant answer two'],
+]);
 
 if (!app) {
   console.error('Usage: node scripts/smoke-desktop-fork-rewind.mjs --app="/path/to/Neon Pilot Testing.app" [--keep]');
@@ -60,6 +66,17 @@ async function fetchJson(url) {
 
 function childExited(child) {
   return child.exitCode !== null && child.exitCode !== undefined;
+}
+
+function readDebuggingPort(fallbackPort) {
+  const devToolsPortFile = join(root, 'user-data', 'DevToolsActivePort');
+  try {
+    const [portLine] = readFileSync(devToolsPortFile, 'utf8').split('\n');
+    const port = Number(portLine);
+    return Number.isFinite(port) && port > 0 ? port : fallbackPort;
+  } catch {
+    return fallbackPort;
+  }
 }
 
 function connectCdp(url) {
@@ -106,10 +123,12 @@ async function evalJs(cdp, expression) {
 
 async function waitForPage(port, child, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
+  let lastPort = port;
   while (Date.now() < deadline) {
     if (childExited(child)) throw new Error(`app exited ${child.exitCode}`);
+    lastPort = readDebuggingPort(port);
     try {
-      const targets = await fetchJson(`http://127.0.0.1:${port}/json/list`);
+      const targets = await fetchJson(`http://127.0.0.1:${lastPort}/json/list`);
       const page = targets.find((target) => target.type === 'page' && target.webSocketDebuggerUrl);
       if (page) return page;
     } catch {
@@ -117,7 +136,7 @@ async function waitForPage(port, child, timeoutMs = 45_000) {
     }
     await sleep(100);
   }
-  throw new Error('timed out waiting for CDP page');
+  throw new Error(`timed out waiting for CDP page on ${lastPort}`);
 }
 
 async function waitForExpression(cdp, child, expression, timeoutMs = 30_000, pollMs = 50) {
@@ -247,11 +266,26 @@ async function readUiState(cdp) {
       conversationId: location.pathname.split('/').filter(Boolean).at(-1) || null,
       bodyText: document.body.innerText || '',
       composerValue: document.querySelector('textarea[placeholder*="Message"]')?.value ?? '',
-      sidebarRows: Array.from(document.querySelectorAll('[data-sidebar-session-id]')).map((row) => ({
-        id: row.getAttribute('data-sidebar-session-id'),
-        text: row.textContent || '',
-        active: row.querySelector('a')?.classList.contains('ui-sidebar-session-row-active') ?? false,
-      })),
+      sidebarRows: (() => {
+        let currentGroupKey = null;
+        const rows = [];
+        for (const row of Array.from(document.querySelectorAll('[data-sidebar-group-key], [data-sidebar-session-id]'))) {
+          const groupKey = row.getAttribute('data-sidebar-group-key');
+          if (groupKey !== null) {
+            currentGroupKey = groupKey;
+          }
+          const sessionId = row.getAttribute('data-sidebar-session-id');
+          if (sessionId) {
+            rows.push({
+              id: sessionId,
+              groupKey: row.getAttribute('data-sidebar-group-key') || currentGroupKey,
+              text: row.textContent || '',
+              active: row.querySelector('a')?.classList.contains('ui-sidebar-session-row-active') ?? false,
+            });
+          }
+        }
+        return rows;
+      })(),
       topologyLabels: Array.from(document.querySelectorAll('[data-topology-kind]')).map((row) => row.textContent || ''),
       transcriptBlocks: Array.from(document.querySelectorAll('[data-transcript-block-id]')).map((row) => ({
         id: row.getAttribute('data-transcript-block-id'),
@@ -261,13 +295,77 @@ async function readUiState(cdp) {
   );
 }
 
+async function readSessionMeta(cdp, sessionId) {
+  const result = await evalJs(
+    cdp,
+    `(async () => {
+      const response = await fetch('/api/sessions/${encodeURIComponent(sessionId)}/meta');
+      const body = await response.json().catch(() => ({}));
+      return { ok: response.ok, status: response.status, body };
+    })()`,
+  );
+  if (!result.ok) {
+    throw new Error(`session meta failed for ${sessionId}: ${JSON.stringify(result)}`);
+  }
+  return result.body;
+}
+
+function readJsonl(file) {
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line));
+}
+
+function assertJsonlTopology({ childMeta, sourceId, kind, sourceMessageText }) {
+  assertState(childMeta.cwd === sourceCwd, `child cwd mismatch for ${childMeta.id}`, childMeta);
+  assertState(childMeta.workspaceCwd === sourceCwd, `child workspaceCwd mismatch for ${childMeta.id}`, childMeta);
+  assertState(childMeta.parentSessionId === sourceId, `child parentSessionId mismatch for ${childMeta.id}`, childMeta);
+  assertState(childMeta.offshootKind === kind, `child offshoot kind mismatch for ${childMeta.id}`, childMeta);
+
+  const childLines = readJsonl(childMeta.file);
+  const offshoot = childLines.find((line) => line.customType === 'conversation_offshoot_metadata');
+  assertState(offshoot?.data?.kind === kind, `child offshoot metadata missing ${kind}`, { childMeta, childLines: childLines.slice(-8) });
+  assertState(offshoot?.data?.parentSessionId === sourceId, 'child offshoot metadata parent mismatch', offshoot);
+  assertState(
+    typeof offshoot?.data?.parentMessageId === 'string' && offshoot.data.parentMessageId.length > 0,
+    'child offshoot metadata missing parentMessageId',
+    offshoot,
+  );
+
+  const expectedBacklink = kind === 'rewind' ? 'Rewind conversation from parent' : 'Fork conversation from parent';
+  const backlink = childLines.find((line) => line.customType === 'parent_conversation_backlink');
+  assertState(backlink?.content?.includes(expectedBacklink), `child backlink missing ${expectedBacklink}`, {
+    childMeta,
+    childLines: childLines.slice(-8),
+  });
+  assertState(backlink?.content?.includes(sourceId), 'child backlink missing parent conversation id', backlink);
+
+  const sourceLines = readJsonl(sourceSessionFile);
+  const expectedTopology = kind === 'rewind' ? 'Rewind conversation created' : 'Fork conversation created';
+  const preview = sourceMessagePreviewByText.get(sourceMessageText) ?? sourceMessageText.slice(0, 18);
+  const topology = sourceLines.find(
+    (line) =>
+      line.customType === 'child_conversation_topology' &&
+      typeof line.content === 'string' &&
+      line.content.includes(expectedTopology) &&
+      line.content.includes(childMeta.id),
+  );
+  assertState(topology, `source topology missing ${expectedTopology} for ${childMeta.id}`, { sourceLines: sourceLines.slice(-12) });
+  assertState(topology.content.includes(`Source message: ${offshoot.data.parentMessageId}`), 'source topology source message mismatch', {
+    topology,
+    offshoot,
+  });
+  assertState(topology.content.includes(preview), 'source topology missing source preview', { topology, preview });
+}
+
 function assertState(condition, message, details) {
   if (!condition) {
     throw new Error(`${message}\n${JSON.stringify(details, null, 2).slice(0, 6000)}`);
   }
 }
 
-async function expectChild(cdp, child, { id, kind, composer, includes = [], excludes = [] }) {
+async function expectChild(cdp, child, { id, sourceId, kind, composer, includes = [], excludes = [], sourceMessageText }) {
   await waitForExpression(
     cdp,
     child,
@@ -294,6 +392,8 @@ async function expectChild(cdp, child, { id, kind, composer, includes = [], excl
   );
   const childRow = state.sidebarRows.find((row) => row.id === id);
   assertState(childRow && !/\\b(fork|rewind):/i.test(childRow.text), `${kind} child sidebar row leaked branch prefix`, state);
+  assertState(childRow?.groupKey?.includes(sourceWorkspace), `${kind} child sidebar row is not grouped with source cwd`, state);
+  assertJsonlTopology({ childMeta: await readSessionMeta(cdp, id), sourceId, kind, sourceMessageText });
 }
 
 async function expectParentMarker(cdp, child, sourceId, kind, childId) {
@@ -313,12 +413,20 @@ async function expectParentMarker(cdp, child, sourceId, kind, childId) {
   );
 }
 
-async function runCase(cdp, child, sourceId, { label, messageText, action, kind, composer, includes, excludes }) {
+async function runCase(cdp, child, sourceId, { label, messageText, action, kind, composer, includes, excludes, sourceMessageText }) {
   await openConversation(cdp, child, sourceId, messageText);
   const childId = await clickMessageAction(cdp, child, messageText, action);
-  await expectChild(cdp, child, { id: childId, kind, composer, includes, excludes });
+  await expectChild(cdp, child, {
+    id: childId,
+    sourceId,
+    kind,
+    composer,
+    includes,
+    excludes,
+    sourceMessageText: sourceMessageText ?? messageText,
+  });
   await expectParentMarker(cdp, child, sourceId, kind, childId);
-  return childId;
+  return { label, childId };
 }
 
 async function main() {
@@ -357,6 +465,28 @@ async function main() {
     const results = [];
     results.push(
       await runCase(cdp, child, sourceId, {
+        label: 'fork root user',
+        messageText: promptOne,
+        action: 'fork',
+        kind: 'fork',
+        composer: promptOne,
+        includes: [sourceTitle],
+        excludes: [promptOne, answerOne, promptTwo, answerTwo],
+      }),
+    );
+    results.push(
+      await runCase(cdp, child, sourceId, {
+        label: 'rewind root user',
+        messageText: promptOne,
+        action: 'rewind',
+        kind: 'rewind',
+        composer: promptOne,
+        includes: [sourceTitle],
+        excludes: [promptOne, answerOne, promptTwo, answerTwo],
+      }),
+    );
+    results.push(
+      await runCase(cdp, child, sourceId, {
         label: 'fork user',
         messageText: promptTwo,
         action: 'fork',
@@ -364,6 +494,7 @@ async function main() {
         composer: promptTwo,
         includes: [promptOne, answerOne, sourceTitle],
         excludes: [promptTwo, answerTwo],
+        sourceMessageText: promptTwo,
       }),
     );
     results.push(
@@ -386,6 +517,7 @@ async function main() {
         composer: promptTwo,
         includes: [promptOne, answerOne, sourceTitle],
         excludes: [promptTwo, answerTwo],
+        sourceMessageText: promptTwo,
       }),
     );
     results.push(
@@ -397,13 +529,18 @@ async function main() {
         composer: promptTwo,
         includes: [promptOne, answerOne, sourceTitle],
         excludes: [promptTwo, answerTwo],
+        sourceMessageText: promptTwo,
       }),
     );
 
     console.log(JSON.stringify({ ok: true, sourceId, childIds: results, stateRoot }, null, 2));
   } finally {
     cdp?.close();
-    if (!childExited(child)) child.kill('SIGTERM');
+    if (!childExited(child)) {
+      child.kill('SIGTERM');
+      await sleep(500);
+    }
+    if (!childExited(child)) child.kill('SIGKILL');
     if (!keep) rmSync(root, { recursive: true, force: true });
   }
 }

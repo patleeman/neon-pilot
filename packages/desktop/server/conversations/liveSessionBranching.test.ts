@@ -112,7 +112,8 @@ describe('live session branching', () => {
   it('forks before a root entry by creating a fresh session with inherited defaults', async () => {
     agent.managers.set('/sessions/source.jsonl', manager({ id: 'root', parentId: undefined }));
     const callbacks = {
-      createSession: vi.fn(async () => ({ id: 'created-id', sessionFile: '/sessions/created.jsonl' })),
+      createSession: vi.fn(),
+      reserveSession: vi.fn(() => ({ id: 'created-id', sessionFile: '/sessions/created.jsonl' })),
       resumeSession: vi.fn(),
       destroySession: vi.fn(),
       resolveDefaultServiceTier: vi.fn(() => 'auto'),
@@ -125,14 +126,13 @@ describe('live session branching', () => {
       }),
     );
 
-    expect(callbacks.createSession).toHaveBeenCalledWith('/repo', {
-      initialModel: 'model-1',
-      initialThinkingLevel: 'high',
-      initialServiceTier: 'auto',
-    });
+    expect(callbacks.reserveSession).toHaveBeenCalledWith('/repo');
+    expect(callbacks.createSession).not.toHaveBeenCalled();
+    expect(callbacks.resumeSession).not.toHaveBeenCalled();
     expect(callbacks.destroySession).toHaveBeenCalledWith('source-id');
+    expect(callbacks.destroySession).not.toHaveBeenCalledWith('created-id');
     expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind' }),
+      expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind', parentMessageId: 'root' }),
     );
     expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith(
       expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind', parentMessageId: 'root' }),
@@ -163,7 +163,13 @@ describe('live session branching', () => {
   });
 
   it('forks/rewinds via branched session file, optionally preserving source and topology', async () => {
-    agent.managers.set('/sessions/source.jsonl', manager({ id: 'entry-1', parentId: 'parent-1' }, '/sessions/forked.jsonl'));
+    agent.managers.set(
+      '/sessions/source.jsonl',
+      manager(
+        { type: 'message', id: 'entry-1', parentId: 'parent-1', message: { role: 'user', content: 'prompt' } },
+        '/sessions/forked.jsonl',
+      ),
+    );
     const callbacks = {
       createSession: vi.fn(),
       resumeSession: vi.fn(async () => ({ id: 'forked-id' })),
@@ -204,7 +210,13 @@ describe('live session branching', () => {
   });
 
   it('uses explicit branch kind for user-message forks before an entry', async () => {
-    agent.managers.set('/sessions/source.jsonl', manager({ id: 'entry-2', parentId: 'entry-1' }, '/sessions/forked.jsonl'));
+    agent.managers.set(
+      '/sessions/source.jsonl',
+      manager(
+        { type: 'message', id: 'entry-2', parentId: 'entry-1', message: { role: 'user', content: 'prompt' } },
+        '/sessions/forked.jsonl',
+      ),
+    );
     const callbacks = {
       createSession: vi.fn(),
       resumeSession: vi.fn(async () => ({ id: 'forked-id' })),

@@ -1507,13 +1507,7 @@ export function appendConversationOffshootMetadata(input: {
   // traversal continues to work correctly after this entry is appended.
   // Without this, parentId: null makes the offshoot entry the new "root" leaf,
   // causing getBranch() to return only this single entry and the transcript to appear empty.
-  let leafId: string | null = null;
-  try {
-    const manager = SessionManager.open(input.sessionFile);
-    leafId = manager.getLeafId() ?? null;
-  } catch {
-    // Non-fatal: if we can't read the leaf, fall back to null.
-  }
+  const leafId = readCurrentSessionLeafId(input.sessionFile);
 
   appendFileSync(
     input.sessionFile,

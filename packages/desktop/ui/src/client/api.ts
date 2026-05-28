@@ -1089,7 +1089,7 @@ export const api = {
 
   forkEntries: async (id: string) => get<LiveSessionForkEntry[]>(`/live-sessions/${encodeURIComponent(id)}/fork-entries`),
   branchSession: async (id: string, entryId: string, surfaceId?: string) => {
-    return post<{ newSessionId: string; sessionFile: string }>(`/live-sessions/${encodeURIComponent(id)}/branch`, {
+    return post<LiveSessionForkResult>(`/live-sessions/${encodeURIComponent(id)}/branch`, {
       entryId,
       ...(surfaceId ? { surfaceId } : {}),
     });
@@ -1100,7 +1100,7 @@ export const api = {
     options?: { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: 'fork' | 'rewind' },
     surfaceId?: string,
   ) => {
-    return post<{ newSessionId: string; sessionFile: string }>(`/live-sessions/${encodeURIComponent(id)}/fork`, {
+    return post<LiveSessionForkResult>(`/live-sessions/${encodeURIComponent(id)}/fork`, {
       entryId,
       preserveSource: options?.preserveSource,
       beforeEntry: options?.beforeEntry,

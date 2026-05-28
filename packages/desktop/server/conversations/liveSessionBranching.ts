@@ -22,6 +22,7 @@ export interface LiveSessionBranchCallbacks {
     cwd: string,
     options: LiveSessionLoaderOptions,
   ) => Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }>;
+  reserveSession?: (cwd: string) => { id: string; sessionFile: string; perf?: Record<string, number> };
   resumeSession: (
     sessionFile: string,
     options: LiveSessionLoaderOptions & { cwdOverride?: string },
@@ -35,23 +36,80 @@ export interface LiveSessionBranchCallbacks {
 type LiveSessionBranchResult = { newSessionId: string; sessionFile: string; perf?: Record<string, number> };
 type LiveSessionForkKind = 'fork' | 'rewind';
 
+function readEntryRole(entry: unknown): string | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const candidate = entry as { type?: unknown; message?: { role?: unknown } };
+  return candidate.type === 'message' && typeof candidate.message?.role === 'string' ? candidate.message.role : null;
+}
+
+function readEntryParentId(entry: unknown): string | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const parentId = (entry as { parentId?: unknown }).parentId;
+  return typeof parentId === 'string' && parentId.trim().length > 0 ? parentId : null;
+}
+
+function findNearestUserAncestorId(sourceManager: SessionManager, entry: unknown): string | null {
+  let parentId = readEntryParentId(entry);
+  const seen = new Set<string>();
+  while (parentId) {
+    if (seen.has(parentId)) return null;
+    seen.add(parentId);
+    const parent = sourceManager.getEntry(parentId);
+    if (!parent) return null;
+    if (readEntryRole(parent) === 'user') return parentId;
+    parentId = readEntryParentId(parent);
+  }
+  return null;
+}
+
+function branchTargetHasVisibleMessage(sourceManager: SessionManager, targetEntryId: string | null): boolean {
+  let currentId = targetEntryId;
+  const seen = new Set<string>();
+  while (currentId) {
+    if (seen.has(currentId)) return false;
+    seen.add(currentId);
+    const current = sourceManager.getEntry(currentId);
+    if (!current) return false;
+    if (readEntryRole(current)) return true;
+    currentId = readEntryParentId(current);
+  }
+  return false;
+}
+
+function resolveBeforeEntryTargetId(sourceManager: SessionManager, sourceEntry: unknown): string | null {
+  if (readEntryRole(sourceEntry) === 'assistant') {
+    const userId = findNearestUserAncestorId(sourceManager, sourceEntry);
+    const userEntry = userId ? sourceManager.getEntry(userId) : null;
+    return readEntryParentId(userEntry);
+  }
+  return readEntryParentId(sourceEntry);
+}
+
+function resolveForkedConversationWorkspaceMetadata(input: { sourceSessionFile: string; fallbackCwd: string }): {
+  cwd: string;
+  workspaceCwd: string | null;
+} {
+  const sourceMeta = readConversationSessionMetaByFilePath(input.sourceSessionFile);
+  const cwd = sourceMeta?.cwd ?? input.fallbackCwd;
+  const workspaceCwd =
+    sourceMeta && Object.prototype.hasOwnProperty.call(sourceMeta, 'workspaceCwd')
+      ? (sourceMeta.workspaceCwd ?? null)
+      : isNeutralChatWorkspaceCwd({ cwd, runtimeDir: getPiAgentRuntimeDir() })
+        ? null
+        : cwd;
+  return { cwd, workspaceCwd };
+}
+
 function appendForkedConversationWorkspaceMetadata(input: {
   sourceSessionFile: string;
   childSessionFile: string;
   fallbackCwd: string;
 }): void {
-  const sourceMeta = readConversationSessionMetaByFilePath(input.sourceSessionFile);
-  const cwd = sourceMeta?.cwd ?? input.fallbackCwd;
-  const workspaceCwd =
-    sourceMeta && Object.prototype.hasOwnProperty.call(sourceMeta, 'workspaceCwd')
-      ? sourceMeta.workspaceCwd
-      : isNeutralChatWorkspaceCwd({ cwd, runtimeDir: getPiAgentRuntimeDir() })
-        ? null
-        : cwd;
+  const workspace = resolveForkedConversationWorkspaceMetadata(input);
   appendConversationWorkspaceMetadata({
     sessionFile: input.childSessionFile,
-    cwd,
-    workspaceCwd,
+    cwd: workspace.cwd,
+    workspaceCwd: workspace.workspaceCwd,
   });
 }
 
@@ -166,18 +224,22 @@ export async function forkLiveSession(
   }
   const sourceEntryCheckedAtMs = performance.now();
 
-  if (beforeEntry && !sourceEntry.parentId) {
+  const beforeEntryTargetId = beforeEntry ? resolveBeforeEntryTargetId(sourceManager, sourceEntry) : null;
+
+  if (beforeEntry && !branchTargetHasVisibleMessage(sourceManager, beforeEntryTargetId)) {
     const defaultsStartedAtMs = performance.now();
-    const created = await callbacks.createSession(entry.cwd, {
-      ...loaderOptions,
-      initialModel: loaderOptions.initialModel === undefined ? (entry.session.model?.id ?? null) : loaderOptions.initialModel,
-      initialThinkingLevel:
-        loaderOptions.initialThinkingLevel === undefined ? (entry.session.thinkingLevel ?? null) : loaderOptions.initialThinkingLevel,
-      initialServiceTier:
-        loaderOptions.initialServiceTier === undefined
-          ? await callbacks.resolveDefaultServiceTier(entry)
-          : loaderOptions.initialServiceTier,
-    });
+    const created =
+      callbacks.reserveSession?.(entry.cwd) ??
+      (await callbacks.createSession(entry.cwd, {
+        ...loaderOptions,
+        initialModel: loaderOptions.initialModel === undefined ? (entry.session.model?.id ?? null) : loaderOptions.initialModel,
+        initialThinkingLevel:
+          loaderOptions.initialThinkingLevel === undefined ? (entry.session.thinkingLevel ?? null) : loaderOptions.initialThinkingLevel,
+        initialServiceTier:
+          loaderOptions.initialServiceTier === undefined
+            ? await callbacks.resolveDefaultServiceTier(entry)
+            : loaderOptions.initialServiceTier,
+      }));
     const createdAtMs = performance.now();
 
     if (!preserveSource) {
@@ -233,7 +295,7 @@ export async function forkLiveSession(
     };
   }
 
-  const targetEntryId = beforeEntry ? sourceEntry.parentId : entryId;
+  const targetEntryId = beforeEntry ? beforeEntryTargetId : entryId;
   if (!targetEntryId) {
     throw new Error(`Session entry not found: ${entryId}`);
   }

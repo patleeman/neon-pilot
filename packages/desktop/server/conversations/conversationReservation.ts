@@ -1,11 +1,11 @@
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { getDurableSessionsDir } from '@neon-pilot/core';
 
 import { resolveNeutralChatCwd } from './conversationCwd.js';
 import { readConversationSessionMetaByFile } from './conversationService.js';
-import { ensureSessionFileExists } from './liveSessionPersistence.js';
 
 function resolvePersistentSessionDir(cwd: string): string {
   const safePath = `--${cwd.replace(/^[/\\]/, '').replace(/[/\\:]/g, '-')}--`;
@@ -22,34 +22,34 @@ export function reserveConversationSession(input: { cwd?: string | null; profile
   const profile = input.profile?.trim() || 'shared';
   const cwd = input.cwd?.trim() || resolveNeutralChatCwd(profile);
   const cwdAtMs = performance.now();
-  const sessionManager = SessionManager.create(cwd, resolvePersistentSessionDir(cwd));
-  const sessionManagerAtMs = performance.now();
-  ensureSessionFileExists(sessionManager);
+  const sessionDir = resolvePersistentSessionDir(cwd);
+  const sessionDirAtMs = performance.now();
+  mkdirSync(sessionDir, { recursive: true });
+  const sessionDirEnsuredAtMs = performance.now();
+  const id = randomUUID();
+  const timestamp = new Date().toISOString();
+  const sessionFile = join(sessionDir, `${id}.jsonl`);
+  writeFileSync(sessionFile, `${JSON.stringify({ type: 'session', version: 3, id, timestamp, cwd })}\n`, { flag: 'wx' });
   const sessionFileEnsuredAtMs = performance.now();
-  const sessionFile = sessionManager.getSessionFile()?.trim();
-  const sessionFileAtMs = performance.now();
-  if (!sessionFile) {
-    throw new Error('Reserved conversation did not produce a session file.');
-  }
 
   const meta = readConversationSessionMetaByFile(sessionFile);
   const metaAtMs = performance.now();
-  const id = meta?.id || sessionManager.getSessionId();
+  const conversationId = meta?.id || id;
   const idAtMs = performance.now();
-  if (!id) {
+  if (!conversationId) {
     throw new Error('Reserved conversation did not produce a conversation id.');
   }
 
   return {
-    id,
+    id: conversationId,
     sessionFile,
     cwd,
     perf: {
       cwdMs: Math.round(cwdAtMs - startedAtMs),
-      sessionManagerMs: Math.round(sessionManagerAtMs - cwdAtMs),
-      ensureSessionFileMs: Math.round(sessionFileEnsuredAtMs - sessionManagerAtMs),
-      sessionFileMs: Math.round(sessionFileAtMs - sessionFileEnsuredAtMs),
-      metaMs: Math.round(metaAtMs - sessionFileAtMs),
+      sessionDirMs: Math.round(sessionDirAtMs - cwdAtMs),
+      ensureSessionDirMs: Math.round(sessionDirEnsuredAtMs - sessionDirAtMs),
+      ensureSessionFileMs: Math.round(sessionFileEnsuredAtMs - sessionDirEnsuredAtMs),
+      metaMs: Math.round(metaAtMs - sessionFileEnsuredAtMs),
       idMs: Math.round(idAtMs - metaAtMs),
       totalMs: Math.round(idAtMs - startedAtMs),
     },
