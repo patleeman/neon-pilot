@@ -398,7 +398,10 @@ const EXTENSIONS_WITH_GLOBAL_APP_SETTINGS = new Set(['system-settings']);
 function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
   if (EXTENSIONS_WITH_GLOBAL_APP_SETTINGS.has(extension.id)) return false;
   const settings = extension.manifest?.contributes?.settings;
-  return Boolean(settings && typeof settings === 'object' && !Array.isArray(settings) && Object.keys(settings).length > 0);
+  const hasSchemaSettings = Boolean(
+    settings && typeof settings === 'object' && !Array.isArray(settings) && Object.keys(settings).length > 0,
+  );
+  return hasSchemaSettings || Boolean(extension.manifest?.contributes?.settingsComponent);
 }
 
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
@@ -1102,6 +1105,7 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
 
   const contributes = extension.manifest?.contributes?.settings;
   const rawSettings = contributes && typeof contributes === 'object' && !Array.isArray(contributes) ? contributes : {};
+  const settingsComponent = extension.manifest?.contributes?.settingsComponent;
 
   const entries: UnifiedSettingsEntry[] = useMemo(
     () =>
@@ -1181,13 +1185,20 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
     return () => window.clearTimeout(timeout);
   }, [draft, values, saving]);
 
-  if (Object.keys(rawSettings).length === 0) return null;
+  if (Object.keys(rawSettings).length === 0 && !settingsComponent) return null;
 
   entries.sort((a, b) => a.order - b.order);
 
   return (
     <div className="space-y-3">
       <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
+        {settingsComponent ? (
+          <ExtensionSettingsComponentRow
+            label={settingsComponent.label}
+            description={settingsComponent.description}
+            component={settingsComponent.component}
+          />
+        ) : null}
         {entries.map((entry) => (
           <ExtensionSettingRow
             key={entry.key}
@@ -1204,6 +1215,18 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
       {saving ? <p className="text-[12px] text-dim">Saving…</p> : null}
       {saveNotice ? <p className="text-[12px] text-success">{saveNotice}</p> : null}
       {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
+    </div>
+  );
+}
+
+function ExtensionSettingsComponentRow({ label, description, component }: { label: string; description?: string; component: string }) {
+  return (
+    <div className="grid gap-3 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+      <dt className="text-[12px] font-medium text-primary">{label}</dt>
+      <dd className="min-w-0">
+        {description ? <p className="text-[12px] leading-5 text-secondary">{description}</p> : null}
+        <p className="mt-1 font-mono text-[11px] text-dim">{component}</p>
+      </dd>
     </div>
   );
 }
