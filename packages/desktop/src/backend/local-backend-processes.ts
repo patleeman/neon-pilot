@@ -373,7 +373,7 @@ export class LocalBackendProcesses {
       return this.makeJsonResponse({ index: Object.fromEntries(ids.map((id) => [id, ''])) }, 'main-process');
     }
     if (input.method === 'GET' && path === '/api/ui/open-conversations') {
-      void this.ensureStarted();
+      this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
       return this.makeJsonResponse(
         {
@@ -400,7 +400,7 @@ export class LocalBackendProcesses {
       if (reserved && typeof reserved === 'object' && typeof reserved.id === 'string') {
         this.reservedConversationIds.add(reserved.id);
       }
-      void this.ensureStarted();
+      this.warmBackendChild();
       return this.makeJsonResponse(reserved, 'main-process');
     }
 
@@ -459,6 +459,13 @@ export class LocalBackendProcesses {
     }
 
     return null;
+  }
+
+  private warmBackendChild(): void {
+    void this.ensureStarted().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[desktop-backend] backend warmup failed: ${message}\n`);
+    });
   }
 
   private warmCriticalExtensionRegistryModule(): Promise<

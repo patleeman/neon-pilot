@@ -658,7 +658,14 @@ describe('LocalBackendProcesses', () => {
   });
 
   it('serves the critical extension registry from warmed main-process modules', async () => {
-    const backend = new LocalBackendProcesses();
+    class MainProcessRegistryBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        // The registry fast path warms the backend in the background, but this
+        // test only needs the main-process registry modules.
+      }
+    }
+
+    const backend = new MainProcessRegistryBackend();
 
     await backend.dispatchApiRequest({
       method: 'GET',
@@ -691,6 +698,29 @@ describe('LocalBackendProcesses', () => {
     expect(
       (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
     ).toBe(warmedPromise);
+  });
+
+  it('keeps main-process fast paths usable when backend warmup fails', async () => {
+    const stderrWrite = vi.fn();
+    process.stderr.write = stderrWrite as unknown as typeof process.stderr.write;
+    class FailingWarmupBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('backend child missing');
+      }
+    }
+
+    const backend = new FailingWarmupBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/ui/open-conversations',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      sessionIds: [],
+      activeConversationId: null,
+    });
+    await vi.waitFor(() => expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('backend warmup failed')));
   });
 
   it('reserves conversations in the main process and warms the backend child without prewarming live resources', async () => {
