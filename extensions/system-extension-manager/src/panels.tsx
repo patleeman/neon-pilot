@@ -397,7 +397,10 @@ function extensionSourceLabel(extensionOrPackageType?: ExtensionInstallSummary |
   return packageType === 'system' ? 'Built-in' : 'Installed';
 }
 
+const EXTENSIONS_WITH_GLOBAL_APP_SETTINGS = new Set(['system-settings']);
+
 function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
+  if (EXTENSIONS_WITH_GLOBAL_APP_SETTINGS.has(extension.id)) return false;
   const settings = extension.manifest?.contributes?.settings;
   return Boolean(settings && typeof settings === 'object' && !Array.isArray(settings) && Object.keys(settings).length > 0);
 }
@@ -1294,167 +1297,182 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
           ) : !extension ? (
             <p className="text-[13px] text-dim">Extension not found.</p>
           ) : (
-            <div className="space-y-5 pb-4">
-              {notice ? <p className="text-[12px] leading-5 text-secondary">{notice}</p> : null}
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate text-[18px] font-semibold tracking-tight text-primary">{extension.name}</h3>
-                  <span
-                    className={cx(
-                      'h-1.5 w-1.5 rounded-full',
-                      extension.status === 'invalid' ? 'bg-danger' : extension.enabled ? 'bg-success' : 'bg-dim',
-                    )}
-                  />
-                </div>
-                <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-secondary">
-                  <span className="rounded-md bg-surface px-2 py-1">{extensionSourceLabel(extension.packageType)}</span>
-                  <span className="rounded-md bg-surface px-2 py-1">{extension.enabled ? 'Enabled' : 'Disabled'}</span>
-                  <span className="rounded-md bg-surface px-2 py-1">
-                    {isLocked(extension) ? 'Required' : isQuarantined(extension) ? 'Quarantined' : (extension.status ?? 'loaded')}
-                  </span>
-                  {extension.version ? <span className="rounded-md bg-surface px-2 py-1">v{extension.version}</span> : null}
-                </div>
-                {extension.description ? <p className="mt-3 text-[13px] leading-6 text-secondary">{extension.description}</p> : null}
-              </div>
-
-              {hasExtensionSettings(extension) ? (
-                <DetailBlock title="Settings">
-                  <ExtensionSettingsBlock extension={extension} />
-                </DetailBlock>
-              ) : null}
-
-              {extension.status === 'invalid' ? (
-                <DetailBlock
-                  title="Validation errors"
-                  action={
-                    <button
-                      type="button"
-                      className="text-[11px] text-secondary transition-colors hover:text-primary"
-                      onClick={() => void copyExtensionDiagnostics(extension)}
-                    >
-                      Copy diagnostics
-                    </button>
-                  }
-                >
-                  <div className="space-y-2">
-                    {(extension.errors ?? ['Extension manifest is invalid.']).map((message) => (
-                      <p
-                        key={message}
-                        className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12px] leading-5 text-danger"
-                      >
-                        {message}
-                      </p>
-                    ))}
-                  </div>
-                </DetailBlock>
-              ) : null}
-
-              {extension.diagnostics?.length ? (
-                <DetailBlock
-                  title="Diagnostics"
-                  action={
-                    <button
-                      type="button"
-                      className="text-[11px] text-secondary transition-colors hover:text-primary"
-                      onClick={() => void copyExtensionDiagnostics(extension)}
-                    >
-                      Copy diagnostics
-                    </button>
-                  }
-                >
-                  <div className="space-y-2">
-                    {extension.diagnostics.map((message) => (
-                      <p
-                        key={message}
-                        className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12px] leading-5 text-danger"
-                      >
-                        {message}
-                      </p>
-                    ))}
-                  </div>
-                </DetailBlock>
-              ) : null}
-
-              {extension.buildError ? (
-                <DetailBlock title="Build error">
-                  <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2">
-                    <p className="whitespace-pre-wrap break-words text-[12px] leading-5 text-danger">{extension.buildError}</p>
-                  </div>
-                </DetailBlock>
-              ) : null}
-
-              <DetailBlock title="Includes">
-                <dl className="space-y-3 text-[12px]">
-                  <DetailRow label="Skills" value={formatSkillSummary(extension)} />
-                  <DetailRow label="Tools" value={formatToolSummary(extension)} />
-                  <DetailRow
-                    label="UI"
-                    value={
-                      getLogicalSurfaces(extension).length
-                        ? getLogicalSurfaces(extension)
-                            .map((surface) => `${surface.title} (${surface.kind})`)
-                            .join(', ')
-                        : `Frontend: ${formatFrontendSummary(extension)}`
-                    }
-                  />
-                  <DetailRow
-                    label="Agent"
-                    value={`Model profiles: ${formatModelProfileSummary(extension)} · Hook: ${formatAgentHookSummary(extension)}`}
-                  />
-                  <DetailRow label="Shortcuts" value={formatKeybindingSummary(extension)} />
-                  <DetailRow
-                    label="Backend"
-                    value={`Actions: ${formatBackendActionSummary(extension)} · Services: ${formatServiceSummary(extension)} · Protocols: ${formatProtocolSummary(extension)}`}
-                  />
-                  <DetailRow label="Subscriptions" value={formatSubscriptionSummary(extension)} />
-                  <DetailRow label="Dependencies" value={formatDependencySummary(extension)} />
-                  <DetailRow label="Permissions" value={formatPermissionSummary(extension)} />
-                </dl>
-              </DetailBlock>
-
-              <DetailBlock title="Skills">
-                {extension.skills?.length ? (
-                  <div className="space-y-3">
-                    {extension.skills.map((skill) => (
-                      <div key={skill.name} className="group/skill">
-                        <button
-                          type="button"
-                          className="text-left text-[13px] font-medium text-primary transition-colors hover:text-accent"
-                          onClick={() => openPath(skill.path)}
-                        >
-                          {skill.title ?? skill.name}
-                        </button>
-                        <div className="font-mono text-[11px] text-dim">{skill.name}</div>
-                        {skill.description ? <p className="mt-1 text-[12px] leading-5 text-secondary">{skill.description}</p> : null}
-                        <p className="mt-1 break-all font-mono text-[11px] leading-5 text-dim">{skill.path}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[13px] text-dim">No skills.</p>
-                )}
-              </DetailBlock>
-
-              {extension.packageRoot ? (
-                <DetailBlock title="Package">
-                  <p className="break-all font-mono text-[11px] leading-5 text-secondary">{extension.packageRoot}</p>
-                </DetailBlock>
-              ) : null}
-
-              <details>
-                <summary className="cursor-pointer select-none text-[12px] text-dim transition-colors hover:text-secondary">
-                  Raw manifest
-                </summary>
-                <pre className="mt-3 max-h-[22rem] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-secondary">
-                  {JSON.stringify(extension.manifest, null, 2)}
-                </pre>
-              </details>
-            </div>
+            <ExtensionDetailsContent
+              extension={extension}
+              notice={notice}
+              onCopyDiagnostics={copyExtensionDiagnostics}
+              onOpenPath={openPath}
+            />
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ExtensionDetailsContent({
+  extension,
+  notice,
+  onCopyDiagnostics,
+  onOpenPath,
+}: {
+  extension: ExtensionInstallSummary;
+  notice: string | null;
+  onCopyDiagnostics: (extension: ExtensionInstallSummary) => Promise<void>;
+  onOpenPath: (path: string) => void;
+}) {
+  const surfaces = getLogicalSurfaces(extension);
+  const hasSettings = hasExtensionSettings(extension);
+  const healthLabel = isLocked(extension)
+    ? 'Required'
+    : isQuarantined(extension)
+      ? 'Quarantined'
+      : extension.status === 'invalid'
+        ? 'Invalid'
+        : extension.enabled
+          ? 'Enabled'
+          : 'Disabled';
+
+  return (
+    <div className="space-y-6 pb-4">
+      {notice ? <p className="text-[12px] leading-5 text-secondary">{notice}</p> : null}
+
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-[20px] font-semibold tracking-tight text-primary">{extension.name}</h3>
+              <span
+                className={cx(
+                  'h-1.5 w-1.5 rounded-full',
+                  extension.status === 'invalid' ? 'bg-danger' : extension.enabled ? 'bg-success' : 'bg-dim',
+                )}
+              />
+            </div>
+            <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
+          </div>
+        </div>
+        {extension.description ? <p className="text-[13px] leading-6 text-secondary">{extension.description}</p> : null}
+        <div className="grid gap-2 text-[12px] text-secondary sm:grid-cols-4">
+          <MetaItem label="Source" value={extensionSourceLabel(extension)} />
+          <MetaItem label="Status" value={healthLabel} />
+          <MetaItem label="Version" value={extension.version ? `v${extension.version}` : 'Unknown'} />
+          <MetaItem label="Settings" value={hasSettings ? 'Configurable' : 'None'} />
+        </div>
+      </header>
+
+      {hasSettings ? (
+        <DetailBlock title="Settings">
+          <ExtensionSettingsBlock extension={extension} />
+        </DetailBlock>
+      ) : null}
+
+      {extension.status === 'invalid' || extension.diagnostics?.length || extension.buildError ? (
+        <DetailBlock
+          title="Diagnostics"
+          action={
+            <button
+              type="button"
+              className="text-[11px] text-secondary transition-colors hover:text-primary"
+              onClick={() => void onCopyDiagnostics(extension)}
+            >
+              Copy diagnostics
+            </button>
+          }
+        >
+          <div className="space-y-2">
+            {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.buildError ?? null]
+              .filter(Boolean)
+              .map((message) => (
+                <p key={message} className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12px] leading-5 text-danger">
+                  {message}
+                </p>
+              ))}
+          </div>
+        </DetailBlock>
+      ) : null}
+
+      <DetailBlock title="Includes">
+        <div className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70">
+          <IncludedCapability label="Skills" value={formatSkillSummary(extension)} />
+          <IncludedCapability label="Tools" value={formatToolSummary(extension)} />
+          <IncludedCapability
+            label="UI"
+            value={
+              surfaces.length
+                ? surfaces.map((surface) => `${surface.title} (${surface.kind})`).join(', ')
+                : `Frontend: ${formatFrontendSummary(extension)}`
+            }
+          />
+          <IncludedCapability
+            label="Backend"
+            value={`Actions: ${formatBackendActionSummary(extension)} · Services: ${formatServiceSummary(extension)} · Protocols: ${formatProtocolSummary(extension)}`}
+          />
+          <IncludedCapability
+            label="Agent"
+            value={`Model profiles: ${formatModelProfileSummary(extension)} · Hook: ${formatAgentHookSummary(extension)}`}
+          />
+          <IncludedCapability label="Shortcuts" value={formatKeybindingSummary(extension)} />
+        </div>
+      </DetailBlock>
+
+      <DetailBlock title="Information">
+        <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
+          <DetailTableRow label="Permissions" value={formatPermissionSummary(extension)} />
+          <DetailTableRow label="Subscriptions" value={formatSubscriptionSummary(extension)} />
+          <DetailTableRow label="Dependencies" value={formatDependencySummary(extension)} />
+          {extension.packageRoot ? (
+            <DetailTableRow
+              label="Package"
+              value={extension.packageRoot}
+              action={
+                <button
+                  type="button"
+                  className="text-[11px] text-secondary transition-colors hover:text-primary"
+                  onClick={() => onOpenPath(extension.packageRoot!)}
+                >
+                  Open
+                </button>
+              }
+            />
+          ) : null}
+        </dl>
+      </DetailBlock>
+
+      <details>
+        <summary className="cursor-pointer select-none text-[12px] text-dim transition-colors hover:text-secondary">Raw manifest</summary>
+        <pre className="mt-3 max-h-[22rem] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-secondary">
+          {JSON.stringify(extension.manifest, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</div>
+      <div className="mt-1 truncate text-primary">{value}</div>
+    </div>
+  );
+}
+
+function IncludedCapability({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-2 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+      <dt className="text-[12px] font-medium text-primary">{label}</dt>
+      <dd className="break-words text-[12px] leading-5 text-secondary">{value}</dd>
+    </div>
+  );
+}
+
+function DetailTableRow({ label, value, action }: { label: string; value: string; action?: ReactNode }) {
+  return (
+    <div className="grid gap-2 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
+      <dt className="text-dim">{label}</dt>
+      <dd className="break-words text-secondary">{value}</dd>
+      {action ? <div>{action}</div> : null}
     </div>
   );
 }
@@ -1468,14 +1486,5 @@ function DetailBlock({ title, action, children }: { title: string; action?: Reac
       </div>
       {children}
     </section>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-dim">{label}</dt>
-      <dd className="mt-0.5 break-words text-secondary">{value}</dd>
-    </div>
   );
 }
