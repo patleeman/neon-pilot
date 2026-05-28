@@ -14,7 +14,6 @@ import {
   type DesktopEnvironmentState,
   EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
-  type ExtensionSettingsComponentRegistration,
   formatContextWindowLabel,
   formatThinkingLevelLabel,
   getDesktopBridge,
@@ -38,7 +37,6 @@ import {
   type SecretsState,
   type SecretStatusEntry,
   SettingsField,
-  SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
   type TelemetryDbMaintenanceResult,
   type ThemeAccent,
@@ -47,7 +45,6 @@ import {
   ToolbarButton,
   UnifiedSettingsEntry,
   useApi,
-  useExtensionRegistry,
   useTheme,
 } from '@neon-pilot/extensions/settings';
 import {
@@ -70,7 +67,6 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
   { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
   { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
-  { id: 'settings-extensions', label: 'Extensions', summary: 'Extensions, instructions, skills, and tools' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
@@ -235,31 +231,6 @@ function listKnownModelProviderIds(
   }
 
   return [...providerIds].sort((left, right) => left.localeCompare(right));
-}
-
-function splitModelRef(modelRef: string): { provider: string; model: string } {
-  const slashIndex = modelRef.indexOf('/');
-  if (slashIndex <= 0 || slashIndex >= modelRef.length - 1) {
-    return { provider: '', model: modelRef };
-  }
-
-  return {
-    provider: modelRef.slice(0, slashIndex),
-    model: modelRef.slice(slashIndex + 1),
-  };
-}
-
-function findModelByRef(models: ModelOption[], modelRef: string): ModelOption | null {
-  if (!modelRef) {
-    return null;
-  }
-
-  const { provider, model } = splitModelRef(modelRef);
-  if (provider) {
-    return models.find((candidate) => candidate.provider === provider && candidate.id === model) ?? null;
-  }
-
-  return models.find((candidate) => candidate.id === modelRef) ?? null;
 }
 
 function formatModelSummary(model: ModelOption | null, fallback: string): string {
@@ -1802,36 +1773,7 @@ function ExtensionSecretsSection() {
   );
 }
 
-function ExtensionSettingsComponentPanel({ registration }: { registration: ExtensionSettingsComponentRegistration }) {
-  const [enabled, setEnabled] = useState(true);
-
-  const refreshEnabled = useCallback(async () => {
-    try {
-      const status = await api.extensionStatus(registration.extensionId);
-      setEnabled(status.enabled);
-    } catch {
-      setEnabled(false);
-    }
-  }, [registration.extensionId]);
-
-  useEffect(() => {
-    void refreshEnabled();
-    window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refreshEnabled);
-    return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refreshEnabled);
-  }, [refreshEnabled]);
-
-  if (!enabled) return null;
-
-  return (
-    <SettingsPanel id={registration.sectionId} title={registration.label} description={registration.description}>
-      <SettingsPanelHost registration={registration} />
-    </SettingsPanel>
-  );
-}
-
 export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[] } = {}) {
-  const { settingsComponents } = useExtensionRegistry();
-  const extensionSettingsComponents = useMemo(() => settingsComponents, [settingsComponents]);
   const {
     theme,
     themePreference,
@@ -1845,12 +1787,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setDarkTheme,
     setAccent = () => {},
   } = useTheme();
-  const {
-    data: instructionFilesState,
-    loading: instructionFilesLoading,
-    error: instructionFilesError,
-    refetch: refetchInstructions,
-  } = useApi(api.instructions);
   const { data: modelState, loading: modelsLoading, error: modelsError, refetch: refetchModels } = useApi(api.models);
   const {
     data: modelProviderState,
@@ -1870,15 +1806,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     error: providerAuthError,
     refetch: refetchProviderAuth,
   } = useApi(api.providerAuth);
-  const [instructionFilesDraft, setInstructionFilesDraft] = useState<string[]>([]);
-  const [savingInstructionFiles, setSavingInstructionFiles] = useState(false);
-  const [instructionFilesSaveError, setInstructionFilesSaveError] = useState<string | null>(null);
   const [savingPreference, setSavingPreference] = useState<'model' | 'visionModel' | 'thinking' | 'serviceTier' | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const [defaultCwdDraft, setDefaultCwdDraft] = useState('');
   const [savingDefaultCwd, setSavingDefaultCwd] = useState(false);
   const [defaultCwdSaveError, setDefaultCwdSaveError] = useState<string | null>(null);
-  const [pathPickerTarget, setPathPickerTarget] = useState<'default-cwd' | 'instruction-files' | null>(null);
+  const [pathPickerTarget, setPathPickerTarget] = useState<'default-cwd' | null>(null);
   const [selectedModelProviderId, setSelectedModelProviderId] = useState('');
   const [providerEditorMode, setProviderEditorMode] = useState<'provider' | 'custom'>('custom');
   const [modelProviderPickerId, setModelProviderPickerId] = useState('');
@@ -2038,11 +1971,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, [visibleQuickLinks]);
 
   const groupedModels = useMemo(() => groupModelsByProvider(modelState?.models ?? []), [modelState?.models]);
-  const imageCapableModels = useMemo(
-    () => (modelState?.models ?? []).filter((model) => model.input?.includes('image')),
-    [modelState?.models],
-  );
-  const groupedImageCapableModels = useMemo(() => groupModelsByProvider(imageCapableModels), [imageCapableModels]);
 
   const selectedModel = useMemo(() => {
     if (!modelState?.currentModel) {
@@ -2051,11 +1979,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
     return modelState.models.find((model) => model.id === modelState.currentModel) ?? null;
   }, [modelState]);
-
-  const selectedVisionModel = useMemo(
-    () => findModelByRef(modelState?.models ?? [], modelState?.currentVisionModel ?? ''),
-    [modelState?.currentVisionModel, modelState?.models],
-  );
 
   const availableModelProviderIds = useMemo(
     () => listKnownModelProviderIds(modelProviderState, providerAuthState, modelState?.models),
@@ -2153,24 +2076,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, [editableModelProviderId, providerAuthState]);
 
   const defaultCwdDirty = defaultCwdState ? defaultCwdDraft.trim() !== defaultCwdState.currentCwd : false;
-  const instructionFilesDirty = instructionFilesState
-    ? instructionFilesDraft.length !== instructionFilesState.instructionFiles.length ||
-      instructionFilesDraft.some((value, index) => value !== instructionFilesState.instructionFiles[index])
-    : false;
   const pickingDefaultCwd = pathPickerTarget === 'default-cwd';
-  const pickingInstructionFiles = pathPickerTarget === 'instruction-files';
 
   useEffect(() => {
     if (defaultCwdState) {
       setDefaultCwdDraft(defaultCwdState.currentCwd);
     }
   }, [defaultCwdState?.currentCwd]);
-
-  useEffect(() => {
-    if (instructionFilesState) {
-      setInstructionFilesDraft(instructionFilesState.instructionFiles);
-    }
-  }, [instructionFilesState?.configFile, instructionFilesState?.instructionFiles]);
 
   useEffect(() => {
     if (!modelProviderState || !selectedModelProviderId) {
@@ -2325,75 +2237,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const selectedProviderLogin =
     oauthLoginState && selectedProvider && oauthLoginState.provider === selectedProvider.id ? oauthLoginState : null;
 
-  async function handleAddInstructionFiles() {
-    if (!instructionFilesState || savingInstructionFiles || pickingInstructionFiles) {
-      return;
-    }
-
-    setInstructionFilesSaveError(null);
-    setPathPickerTarget('instruction-files');
-
-    try {
-      const result = await api.pickFiles(defaultCwdState?.effectiveCwd);
-      if (result.cancelled || result.paths.length === 0) {
-        return;
-      }
-
-      setInstructionFilesDraft((current) => {
-        const next = [...current];
-        for (const path of result.paths) {
-          if (!next.includes(path)) {
-            next.push(path);
-          }
-        }
-        return next;
-      });
-    } catch (error) {
-      setInstructionFilesSaveError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setPathPickerTarget((current) => (current === 'instruction-files' ? null : current));
-    }
-  }
-
-  function handleMoveInstructionFile(index: number, direction: -1 | 1) {
-    setInstructionFilesDraft((current) => {
-      const nextIndex = index + direction;
-      if (index < 0 || index >= current.length || nextIndex < 0 || nextIndex >= current.length) {
-        return current;
-      }
-
-      const next = [...current];
-      const [entry] = next.splice(index, 1);
-      next.splice(nextIndex, 0, entry as string);
-      return next;
-    });
-    setInstructionFilesSaveError(null);
-  }
-
-  function handleRemoveInstructionFile(index: number) {
-    setInstructionFilesDraft((current) => current.filter((_, currentIndex) => currentIndex !== index));
-    setInstructionFilesSaveError(null);
-  }
-
-  async function handleSaveInstructionFiles() {
-    if (!instructionFilesState || savingInstructionFiles || !instructionFilesDirty) {
-      return;
-    }
-
-    setInstructionFilesSaveError(null);
-    setSavingInstructionFiles(true);
-
-    try {
-      const saved = await api.updateInstructions(instructionFilesDraft);
-      setInstructionFilesDraft(saved.instructionFiles);
-      await refetchInstructions({ resetLoading: false });
-    } catch (error) {
-      setInstructionFilesSaveError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setSavingInstructionFiles(false);
-    }
-  }
-
   async function handleModelPreferenceChange(
     input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string },
     field: 'model' | 'visionModel' | 'thinking' | 'serviceTier',
@@ -2480,20 +2323,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setPathPickerTarget((current) => (current === 'default-cwd' ? null : current));
     }
   }
-
-  useEffect(() => {
-    if (!instructionFilesState || !instructionFilesDirty || savingInstructionFiles || pickingInstructionFiles) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void handleSaveInstructionFiles();
-    }, 350);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [instructionFilesDirty, instructionFilesDraft, instructionFilesState, pickingInstructionFiles, savingInstructionFiles]);
 
   useEffect(() => {
     if (!defaultCwdState || !defaultCwdDirty || savingDefaultCwd || pickingDefaultCwd) {
@@ -3190,142 +3019,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                   {defaultCwdSaveError && <p className="text-[12px] text-danger">{defaultCwdSaveError}</p>}
                 </SettingsPanel>
               </div>
-            </SettingsSection>
-
-            <SettingsSection
-              id="settings-extensions"
-              label="Extensions"
-              description="Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings."
-            >
-              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
-              <div className="space-y-0">
-                <SettingsPanel title="AGENTS.md files" description="Append extra AGENTS.md-style files to the runtime prompt.">
-                  {instructionFilesLoading && !instructionFilesState ? (
-                    <p className="ui-card-meta">Loading AGENTS.md files…</p>
-                  ) : instructionFilesError && !instructionFilesState ? (
-                    <p className="text-[12px] text-danger">Failed to load AGENTS.md files: {instructionFilesError}</p>
-                  ) : instructionFilesState ? (
-                    <div className="space-y-3">
-                      <p className="ui-card-meta break-all">
-                        Configured in <span className="font-mono text-[11px]">{instructionFilesState.configFile}</span>.
-                      </p>
-                      {instructionFilesDraft.length === 0 ? (
-                        <p className="ui-card-meta">No extra AGENTS.md files configured.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {instructionFilesDraft.map((path, index) => (
-                            <div key={`${path}:${index}`} className="flex items-start gap-2">
-                              <div className="min-w-0 flex-1 rounded-xl border border-border-subtle/70 bg-surface/50 px-3 py-2 font-mono text-[12px] text-primary break-all">
-                                {path}
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleMoveInstructionFile(index, -1);
-                                  }}
-                                  disabled={savingInstructionFiles || index === 0}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleMoveInstructionFile(index, 1);
-                                  }}
-                                  disabled={savingInstructionFiles || index === instructionFilesDraft.length - 1}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  ↓
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleRemoveInstructionFile(index);
-                                  }}
-                                  disabled={savingInstructionFiles}
-                                  className={ACTION_BUTTON_CLASS}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleAddInstructionFiles();
-                          }}
-                          disabled={savingInstructionFiles || pickingInstructionFiles}
-                          className={ACTION_BUTTON_CLASS}
-                        >
-                          {pickingInstructionFiles ? 'Picking…' : 'Add files'}
-                        </button>
-                        <span className="ui-card-meta">
-                          {savingInstructionFiles ? 'Saving…' : instructionFilesDirty ? 'Auto-save pending…' : 'Auto-saved'}
-                        </span>
-                      </div>
-                      <p className="ui-card-meta">Files append in the saved order after the root AGENTS.md.</p>
-                    </div>
-                  ) : null}
-
-                  {instructionFilesSaveError && <p className="text-[12px] text-danger">{instructionFilesSaveError}</p>}
-                </SettingsPanel>
-
-                <SettingsPanel title="Image Probe" description="Configure the vision model used by the image inspection tool.">
-                  {modelsLoading && !modelState ? (
-                    <p className="ui-card-meta">Loading models…</p>
-                  ) : modelsError && !modelState ? (
-                    <p className="text-[12px] text-danger">Failed to load models: {modelsError}</p>
-                  ) : modelState ? (
-                    <>
-                      <label className="ui-card-meta" htmlFor="settings-vision-model">
-                        Vision model
-                      </label>
-                      <select
-                        id="settings-vision-model"
-                        value={modelState.currentVisionModel}
-                        onChange={(event) => {
-                          void handleModelPreferenceChange({ visionModel: event.target.value }, 'visionModel');
-                        }}
-                        disabled={savingPreference !== null || imageCapableModels.length === 0}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="">Not configured</option>
-                        {groupedImageCapableModels.map(([provider, models]) => (
-                          <optgroup key={provider} label={provider}>
-                            {models.map((model) => (
-                              <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
-                                {model.name} · {formatContextWindowLabel(model.context)} ctx
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <p className="ui-card-meta">
-                        {savingPreference === 'visionModel'
-                          ? 'Saving vision model…'
-                          : modelState.currentVisionModel
-                            ? `Image probing uses ${formatModelSummary(selectedVisionModel, modelState.currentVisionModel)}.`
-                            : 'Required before inspecting uploaded images with the current model.'}
-                      </p>
-                    </>
-                  ) : null}
-
-                  {modelError && <p className="text-[12px] text-danger">{modelError}</p>}
-                </SettingsPanel>
-              </div>
-
-              {extensionSettingsComponents.map((settingsComponent) => (
-                <ExtensionSettingsComponentPanel
-                  key={`${settingsComponent.extensionId}:${settingsComponent.id}`}
-                  registration={settingsComponent}
-                />
-              ))}
             </SettingsSection>
 
             <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">

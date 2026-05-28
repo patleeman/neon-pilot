@@ -1,4 +1,4 @@
-import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/extensions';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
 import { SettingsField, type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
@@ -746,6 +746,23 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           </td>
           <td className="px-3 py-4 align-middle text-[12px] leading-5 text-secondary">{formatIncludesSummary(extension)}</td>
           <td className="whitespace-nowrap px-3 py-4 align-middle">
+            {hasSettings ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:border-accent/50 hover:text-accent"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailsExtensionId(extension.id);
+                }}
+              >
+                <GearIcon />
+                Settings
+              </button>
+            ) : (
+              <span className="text-[12px] text-dim">None</span>
+            )}
+          </td>
+          <td className="whitespace-nowrap px-3 py-4 align-middle">
             {extension.status === 'invalid' ? (
               <span className="text-[12px] text-danger">Invalid</span>
             ) : (
@@ -755,20 +772,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <td className="py-4 pl-3 align-middle">
             <div className="flex items-center justify-end gap-1.5">
               {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
-              {hasSettings ? (
-                <button
-                  type="button"
-                  className="ui-icon-button ui-icon-button-compact"
-                  title={`Settings for ${extension.name}`}
-                  aria-label={`Settings for ${extension.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDetailsExtensionId(extension.id);
-                  }}
-                >
-                  <GearIcon />
-                </button>
-              ) : null}
               {route && extension.enabled ? (
                 <Link
                   className="ui-icon-button ui-icon-button-compact"
@@ -812,6 +815,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
             <th className="py-2 pr-4 font-semibold">Name</th>
             <th className="px-3 py-2 font-semibold">Includes</th>
+            <th className="py-2 px-3 font-semibold">Settings</th>
             <th className="py-2 px-3 font-semibold">Enabled</th>
             <th className="py-2 pl-3 text-right font-semibold">Actions</th>
           </tr>
@@ -983,14 +987,14 @@ function InstallExtensionModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/45 px-4 py-10 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-16 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Install extension"
-        className="relative w-full max-w-2xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
+        className="relative w-full max-w-xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
@@ -1271,7 +1275,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
           </button>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5">
+        <div className="max-h-[72vh] overflow-y-auto px-6 py-5">
           {loading ? (
             <LoadingState label="Loading extension details…" />
           ) : !extension ? (
@@ -1461,8 +1465,4 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <dd className="mt-0.5 break-words text-secondary">{value}</dd>
     </div>
   );
-}
-
-export function ExtensionManagerSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
-  return <ExtensionManagerPage pa={pa as ExtensionSurfaceProps['pa']} embedded />;
 }

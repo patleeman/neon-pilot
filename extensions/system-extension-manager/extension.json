@@ -42,14 +42,6 @@
         "activation": "on-route"
       }
     ],
-    "settingsComponent": {
-      "id": "extension-search-paths",
-      "component": "ExtensionManagerSettingsPanel",
-      "sectionId": "settings-extensions",
-      "label": "Installed and available",
-      "description": "Install, enable, inspect, and manage extensions.",
-      "order": 35
-    },
     "skills": [
       {
         "id": "skills-and-capabilities",
