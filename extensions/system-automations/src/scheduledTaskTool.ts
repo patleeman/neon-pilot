@@ -71,6 +71,14 @@ const ScheduledTaskToolParams = {
       minimum: 1,
       description: 'Run once after wake when the latest missed cron slot is still within this many seconds.',
     },
+    policies: {
+      type: 'array',
+      description: 'First-party automation policies such as catch_up, overlap, once_per_period, and flexible_timing.',
+      items: {
+        type: 'object',
+        additionalProperties: true,
+      },
+    },
     prompt: { type: 'string', description: 'Task prompt body.' },
     deliverResultToConversation: {
       type: 'boolean',
@@ -267,6 +275,10 @@ async function formatTaskDetail(
     lines.push(`catchUpWindowSeconds: ${task.catchUpWindowSeconds}`);
   }
 
+  if (Array.isArray(task.policies) && task.policies.length > 0) {
+    lines.push(`policies: ${JSON.stringify(task.policies)}`);
+  }
+
   if (task.modelRef) {
     lines.push(`model: ${task.modelRef}`);
   }
@@ -358,6 +370,9 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
               const threadConversationId = readOptionalString(params.threadConversationId);
               const cwd = params.cwd ?? existing?.cwd;
               const scheduledAt = await resolveOptionalScheduleAt(params.at);
+              const policies = Array.isArray((params as { policies?: unknown }).policies)
+                ? ((params as { policies: unknown[] }).policies as never)
+                : undefined;
               const shouldBindThread = shouldApplyThreadBinding({
                 targetType,
                 threadMode,
@@ -423,6 +438,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                       : existing.catchUpWindowSeconds !== undefined
                         ? { catchUpWindowSeconds: existing.catchUpWindowSeconds }
                         : {}),
+                    ...(policies !== undefined ? { policies } : {}),
                     prompt: params.prompt ?? existing.prompt,
                     targetType,
                     conversationBehavior: deliverAs,
@@ -437,6 +453,7 @@ export function createScheduledTaskAgentExtension(options: { getRuntimeScope: ()
                     cwd,
                     timeoutSeconds: params.timeoutSeconds,
                     ...(params.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: params.catchUpWindowSeconds } : {}),
+                    ...(policies !== undefined ? { policies } : {}),
                     prompt: params.prompt ?? '',
                     targetType,
                     conversationBehavior: deliverAs,

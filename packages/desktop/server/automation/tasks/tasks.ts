@@ -180,7 +180,9 @@ function summarizeMissedCronRuns(expression: ParsedCronExpression, evaluatedAt: 
 }
 
 function resolveCatchUpScheduledAt(task: StoredAutomation, missedRuns: MissedTaskRunSummary, currentTime: Date): string | undefined {
-  if (!task.catchUpWindowSeconds || task.catchUpWindowSeconds <= 0) {
+  const catchUpPolicy = task.policies.find((policy) => policy.kind === 'catch_up' && policy.enabled !== false);
+  const windowSeconds = catchUpPolicy?.kind === 'catch_up' ? catchUpPolicy.windowSeconds : task.catchUpWindowSeconds;
+  if (!windowSeconds || windowSeconds <= 0) {
     return undefined;
   }
 
@@ -190,7 +192,44 @@ function resolveCatchUpScheduledAt(task: StoredAutomation, missedRuns: MissedTas
   }
 
   const ageMs = currentTime.getTime() - lastScheduledAtMs;
-  return ageMs <= task.catchUpWindowSeconds * 1000 ? missedRuns.lastScheduledAt : undefined;
+  return ageMs <= windowSeconds * 1000 ? missedRuns.lastScheduledAt : undefined;
+}
+
+function periodKey(date: Date, period: 'day' | 'week' | 'month'): string {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  if (period === 'month') {
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }
+  if (period === 'day') {
+    return date.toISOString().slice(0, 10);
+  }
+
+  const firstDay = new Date(Date.UTC(year, date.getUTCMonth(), date.getUTCDate()));
+  const day = firstDay.getUTCDay() || 7;
+  firstDay.setUTCDate(firstDay.getUTCDate() + 4 - day);
+  const weekYear = firstDay.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
+  const week = Math.ceil(((firstDay.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${weekYear}-W${String(week).padStart(2, '0')}`;
+}
+
+function shouldSkipForOncePerPeriodPolicy(task: StoredAutomation, record: TaskRuntimeState, currentTime: Date): string | undefined {
+  const policy = task.policies.find((candidate) => candidate.kind === 'once_per_period' && candidate.enabled !== false);
+  if (!policy || policy.kind !== 'once_per_period' || policy.count > 1 || !record.lastSuccessAt) {
+    return undefined;
+  }
+
+  const lastSuccessAt = new Date(record.lastSuccessAt);
+  if (!Number.isFinite(lastSuccessAt.getTime())) {
+    return undefined;
+  }
+
+  if (periodKey(lastSuccessAt, policy.period) !== periodKey(currentTime, policy.period)) {
+    return undefined;
+  }
+
+  return `Task skipped because the once-per-${policy.period} policy is already satisfied.`;
 }
 
 function toMissedTaskActivitySummary(taskId: string, missedRunCount: number): string {
@@ -1176,6 +1215,15 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
         }
 
         record.lastScheduledMinute = minuteKey;
+
+        const oncePerPeriodSkipReason = shouldSkipForOncePerPeriodPolicy(task, record, tickTime);
+        if (oncePerPeriodSkipReason) {
+          record.lastStatus = 'skipped';
+          record.lastRunAt = nowIso;
+          record.lastError = oncePerPeriodSkipReason;
+          state.skippedRuns += 1;
+          continue;
+        }
 
         if (activeRuns.has(task.key)) {
           record.lastStatus = 'skipped';

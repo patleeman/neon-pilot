@@ -35,6 +35,17 @@ export type {
 export type AutomationThreadMode = 'dedicated' | 'existing' | 'none';
 export type AutomationTargetType = 'background-agent' | 'conversation';
 export type AutomationConversationBehavior = 'steer' | 'followUp';
+export type AutomationPolicy =
+  | { kind: 'catch_up'; enabled?: boolean; windowSeconds: number; mode?: 'latest' }
+  | { kind: 'overlap'; enabled?: boolean; behavior: 'skip' }
+  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string }
+  | {
+      kind: 'flexible_timing';
+      enabled?: boolean;
+      startTime?: string;
+      endTime?: string;
+      placement?: 'automatic' | 'earliest' | 'randomized';
+    };
 
 const MAX_AUTOMATION_DURATION_SECONDS = 7 * 24 * 60 * 60;
 export const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = 15 * 60;
@@ -42,7 +53,7 @@ export const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = 15 * 60;
 // ── Schema migrations ────────────────────────────────────────────────────────
 
 /** Current schema version for the automation database. */
-const AUTOMATION_SCHEMA_VERSION = 2;
+const AUTOMATION_SCHEMA_VERSION = 3;
 
 const AUTOMATION_MIGRATIONS: Migration[] = [
   {
@@ -210,6 +221,16 @@ const AUTOMATION_MIGRATIONS: Migration[] = [
       });
     },
   },
+  {
+    version: 3,
+    description: 'Add first-party automation policy storage',
+    up: (db) => {
+      const columnNames = readTableColumnNames(db, 'automations');
+      if (!columnNames.has('policies_json')) {
+        db.exec('ALTER TABLE automations ADD COLUMN policies_json TEXT');
+      }
+    },
+  },
 ];
 
 export interface StoredAutomation extends ParsedTaskDefinition {
@@ -218,6 +239,7 @@ export interface StoredAutomation extends ParsedTaskDefinition {
   targetType: AutomationTargetType;
   conversationBehavior?: AutomationConversationBehavior;
   catchUpWindowSeconds?: number;
+  policies: AutomationPolicy[];
   createdAt: string;
   updatedAt: string;
   legacyFilePath?: string;
@@ -245,6 +267,7 @@ export interface AutomationMutationInput {
   cwd?: string | null;
   timeoutSeconds?: number | null;
   catchUpWindowSeconds?: number | null;
+  policies?: AutomationPolicy[] | null;
   prompt: string;
   targetType?: AutomationTargetType | null;
   conversationBehavior?: AutomationConversationBehavior | null;
@@ -268,6 +291,7 @@ type StoredAutomationRow = {
   thinking_level: string | null;
   timeout_seconds: number;
   catch_up_window_seconds: number | null;
+  policies_json: string | null;
   target_type: string | null;
   conversation_behavior: string | null;
   created_at: string;
@@ -376,6 +400,78 @@ function readAutomationConversationBehavior(value: string | null | undefined): A
   return value === 'steer' || value === 'followUp' ? value : undefined;
 }
 
+function normalizeAutomationPolicies(
+  input: AutomationPolicy[] | null | undefined,
+  fallbackCatchUpWindowSeconds?: number,
+): AutomationPolicy[] {
+  const normalized: AutomationPolicy[] = [];
+  const policies = Array.isArray(input) ? input : [];
+  for (const policy of policies) {
+    if (!policy || typeof policy !== 'object') continue;
+    if (policy.kind === 'catch_up') {
+      const windowSeconds = readOptionalPositiveInteger(policy.windowSeconds, MAX_AUTOMATION_DURATION_SECONDS);
+      if (windowSeconds) normalized.push({ kind: 'catch_up', enabled: policy.enabled !== false, windowSeconds, mode: 'latest' });
+      continue;
+    }
+    if (policy.kind === 'overlap') {
+      normalized.push({
+        kind: 'overlap',
+        enabled: policy.enabled !== false,
+        behavior: 'skip',
+      });
+      continue;
+    }
+    if (policy.kind === 'once_per_period') {
+      const count = readOptionalPositiveInteger(policy.count, 100);
+      const period = policy.period === 'week' || policy.period === 'month' ? policy.period : 'day';
+      if (count) {
+        normalized.push({
+          kind: 'once_per_period',
+          enabled: policy.enabled !== false,
+          count,
+          period,
+          timezone: readOptionalString(policy.timezone),
+        });
+      }
+      continue;
+    }
+    if (policy.kind === 'flexible_timing') {
+      normalized.push({
+        kind: 'flexible_timing',
+        enabled: policy.enabled !== false,
+        startTime: readOptionalString(policy.startTime),
+        endTime: readOptionalString(policy.endTime),
+        placement: policy.placement === 'earliest' || policy.placement === 'randomized' ? policy.placement : 'automatic',
+      });
+    }
+  }
+
+  if (!normalized.some((policy) => policy.kind === 'overlap')) {
+    normalized.push({ kind: 'overlap', enabled: true, behavior: 'skip' });
+  }
+  if (fallbackCatchUpWindowSeconds) {
+    const existingCatchUp = normalized.find((policy) => policy.kind === 'catch_up');
+    if (!existingCatchUp) normalized.push({ kind: 'catch_up', enabled: true, windowSeconds: fallbackCatchUpWindowSeconds, mode: 'latest' });
+  }
+  return normalized;
+}
+
+function parseAutomationPoliciesJson(value: string | null | undefined, fallbackCatchUpWindowSeconds?: number): AutomationPolicy[] {
+  if (!value?.trim()) {
+    return normalizeAutomationPolicies(undefined, fallbackCatchUpWindowSeconds);
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return normalizeAutomationPolicies(Array.isArray(parsed) ? (parsed as AutomationPolicy[]) : undefined, fallbackCatchUpWindowSeconds);
+  } catch {
+    return normalizeAutomationPolicies(undefined, fallbackCatchUpWindowSeconds);
+  }
+}
+
+function serializeAutomationPolicies(policies: AutomationPolicy[]): string {
+  return JSON.stringify(normalizeAutomationPolicies(policies));
+}
+
 function automationFileName(input: { id: string; legacyFilePath?: string }): string {
   return input.legacyFilePath ? basename(input.legacyFilePath) : `${input.id}.automation.md`;
 }
@@ -427,6 +523,7 @@ function openAutomationDb(dbPath: string = getAutomationDbPath()): SqliteDatabas
       thinking_level TEXT,
       timeout_seconds INTEGER NOT NULL,
       catch_up_window_seconds INTEGER,
+      policies_json TEXT,
       target_type TEXT NOT NULL DEFAULT 'background-agent',
       conversation_behavior TEXT,
       created_at TEXT NOT NULL,
@@ -557,6 +654,7 @@ function rowToStoredAutomation(row: StoredAutomationRow): StoredAutomation {
     cwd: readOptionalString(row.cwd),
     timeoutSeconds: row.timeout_seconds,
     catchUpWindowSeconds: readOptionalPositiveInteger(row.catch_up_window_seconds),
+    policies: parseAutomationPoliciesJson(row.policies_json, readOptionalPositiveInteger(row.catch_up_window_seconds)),
     targetType: normalizeAutomationTargetTypeForSelection(row.target_type),
     conversationBehavior: readAutomationConversationBehavior(row.conversation_behavior),
     createdAt,
@@ -654,7 +752,7 @@ function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): St
     return db
       .prepare(
         `
-      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+      SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
       FROM automations
       WHERE runtime_scope = ?
       ORDER BY title COLLATE NOCASE ASC, created_at ASC, id ASC
@@ -666,7 +764,7 @@ function readStoredAutomationRows(db: SqliteDatabase, runtimeScope?: string): St
   return db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     ORDER BY runtime_scope ASC, title COLLATE NOCASE ASC, created_at ASC, id ASC
   `,
@@ -709,6 +807,7 @@ function normalizeMutationInput(input: AutomationMutationInput): Required<Pick<A
   catchUpWindowSeconds?: number;
   targetType: AutomationTargetType;
   conversationBehavior?: AutomationConversationBehavior;
+  policies: AutomationPolicy[];
 } {
   const runtimeScope = 'shared';
   const title = readRequiredString(input.title, 'title');
@@ -766,6 +865,7 @@ function normalizeMutationInput(input: AutomationMutationInput): Required<Pick<A
     catchUpWindowSeconds,
     targetType,
     conversationBehavior,
+    policies: normalizeAutomationPolicies(input.policies, catchUpWindowSeconds),
   };
 }
 
@@ -786,7 +886,7 @@ export function getStoredAutomation(
   const row = db
     .prepare(
       `
-    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    SELECT id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
     FROM automations
     WHERE id = ?
   `,
@@ -810,8 +910,8 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
   db.prepare(
     `
     INSERT INTO automations (
-      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'dedicated', NULL, NULL)
+      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'dedicated', NULL, NULL)
   `,
   ).run(
     id,
@@ -827,6 +927,7 @@ export function createStoredAutomation(input: AutomationMutationInput & { dbPath
     normalized.thinkingLevel ?? null,
     normalized.timeoutSeconds,
     normalized.catchUpWindowSeconds ?? null,
+    serializeAutomationPolicies(normalized.policies),
     normalized.targetType,
     normalized.conversationBehavior ?? null,
     now,
@@ -865,6 +966,7 @@ export function updateStoredAutomation(
     cwd: input.cwd !== undefined ? input.cwd : existing.cwd,
     timeoutSeconds: input.timeoutSeconds !== undefined ? input.timeoutSeconds : existing.timeoutSeconds,
     catchUpWindowSeconds: input.catchUpWindowSeconds !== undefined ? input.catchUpWindowSeconds : existing.catchUpWindowSeconds,
+    policies: input.policies !== undefined ? input.policies : existing.policies,
     prompt: input.prompt ?? existing.prompt,
     targetType: input.targetType !== undefined ? input.targetType : existing.targetType,
     conversationBehavior: input.conversationBehavior !== undefined ? input.conversationBehavior : existing.conversationBehavior,
@@ -875,7 +977,7 @@ export function updateStoredAutomation(
   db.prepare(
     `
     UPDATE automations
-    SET title = ?, enabled = ?, schedule_type = ?, cron = ?, at = ?, prompt = ?, cwd = ?, model_ref = ?, thinking_level = ?, timeout_seconds = ?, catch_up_window_seconds = ?, target_type = ?, conversation_behavior = ?, updated_at = ?
+    SET title = ?, enabled = ?, schedule_type = ?, cron = ?, at = ?, prompt = ?, cwd = ?, model_ref = ?, thinking_level = ?, timeout_seconds = ?, catch_up_window_seconds = ?, policies_json = ?, target_type = ?, conversation_behavior = ?, updated_at = ?
     WHERE id = ?
   `,
   ).run(
@@ -890,6 +992,7 @@ export function updateStoredAutomation(
     normalized.thinkingLevel ?? null,
     normalized.timeoutSeconds,
     normalized.catchUpWindowSeconds ?? null,
+    serializeAutomationPolicies(normalized.policies),
     normalized.targetType,
     normalized.conversationBehavior ?? null,
     updatedAt,
@@ -1095,8 +1198,8 @@ export function ensureLegacyTaskImports(options: {
 
   const insertAutomation = db.prepare(`
     INSERT INTO automations (
-      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
+      id, runtime_scope, title, enabled, schedule_type, cron, at, prompt, cwd, model_ref, thinking_level, timeout_seconds, catch_up_window_seconds, policies_json, target_type, conversation_behavior, created_at, updated_at, legacy_file_path, thread_mode, thread_session_file, thread_conversation_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dedicated', NULL, NULL)
   `);
   const markImported = db.prepare(`
     INSERT INTO legacy_automation_imports (legacy_file_path, automation_id, imported_at)
@@ -1131,6 +1234,9 @@ export function ensureLegacyTaskImports(options: {
           parsed.thinkingLevel ?? null,
           parsed.timeoutSeconds,
           null,
+          serializeAutomationPolicies(
+            normalizeAutomationPolicies(undefined, parsed.schedule.type === 'cron' ? DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS : undefined),
+          ),
           'background-agent',
           null,
           importedAt,

@@ -269,6 +269,7 @@ export interface ScheduledTaskSummary {
   cwd?: string;
   timeoutSeconds?: number;
   catchUpWindowSeconds?: number;
+  policies?: unknown[];
   threadMode: ScheduledTaskThreadMode;
   threadConversationId?: string;
   threadTitle?: string;
@@ -313,6 +314,7 @@ export interface ScheduledTaskDetail {
   cwd?: string;
   timeoutSeconds?: number;
   catchUpWindowSeconds?: number;
+  policies?: unknown[];
   prompt: string;
   lastStatus?: string;
   lastRunAt?: string;

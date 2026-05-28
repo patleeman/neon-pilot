@@ -120,6 +120,7 @@ type TestTask = {
   thinkingLevel?: string;
   cwd?: string;
   timeoutSeconds?: number;
+  policies?: unknown[];
   threadMode?: 'dedicated' | 'existing' | 'none';
   threadConversationId?: string;
   threadTitle?: string;
@@ -137,6 +138,7 @@ function createTask(overrides: Partial<TestTask> = {}): TestTask {
     thinkingLevel: overrides.thinkingLevel ?? 'high',
     cwd: overrides.cwd ?? '/repo',
     timeoutSeconds: overrides.timeoutSeconds ?? 120,
+    policies: overrides.policies ?? [],
     threadMode: overrides.threadMode ?? 'dedicated',
     threadConversationId: overrides.threadConversationId ?? `automation.${overrides.id ?? 'task-1'}`,
     threadTitle: overrides.threadTitle ?? `Automation: ${overrides.title ?? 'Task 1'}`,
@@ -168,6 +170,7 @@ function toMetadata(task: TestTask) {
     thinkingLevel: task.thinkingLevel,
     cwd: task.cwd,
     timeoutSeconds: task.timeoutSeconds,
+    policies: task.policies,
     promptBody: task.prompt,
   };
 }
@@ -270,6 +273,9 @@ describe('scheduledTaskCapability', () => {
         thinkingLevel: 'high',
         cwd: '/repo',
         timeoutSeconds: 120,
+        policies: [],
+        targetType: undefined,
+        conversationBehavior: undefined,
         threadMode: 'dedicated',
         threadConversationId: 'automation.task-1',
         threadTitle: 'Automation: Cron task',
@@ -292,6 +298,9 @@ describe('scheduledTaskCapability', () => {
         thinkingLevel: 'high',
         cwd: '/repo',
         timeoutSeconds: 120,
+        policies: [],
+        targetType: undefined,
+        conversationBehavior: undefined,
         threadMode: 'dedicated',
         threadConversationId: 'automation.task-2',
         threadTitle: 'Automation: One-off task',
@@ -339,6 +348,9 @@ describe('scheduledTaskCapability', () => {
       thinkingLevel: 'high',
       cwd: '/repo',
       timeoutSeconds: 120,
+      policies: [],
+      targetType: undefined,
+      conversationBehavior: undefined,
       prompt: 'Saved prompt',
       activity: [],
       lastStatus: 'success',
@@ -363,6 +375,9 @@ describe('scheduledTaskCapability', () => {
       thinkingLevel: 'high',
       cwd: '/repo',
       timeoutSeconds: 120,
+      policies: [],
+      targetType: undefined,
+      conversationBehavior: undefined,
       prompt: 'Saved prompt',
       activity: [],
       lastStatus: 'success',
@@ -386,6 +401,7 @@ describe('scheduledTaskCapability', () => {
         thinkingLevel: 'medium',
         cwd: '/tmp/work',
         timeoutSeconds: 45,
+        policies: [{ kind: 'once_per_period', count: 1, period: 'day' }],
         prompt: 'Body',
       }),
     ).resolves.toEqual({
@@ -404,6 +420,9 @@ describe('scheduledTaskCapability', () => {
         thinkingLevel: 'high',
         cwd: '/repo',
         timeoutSeconds: 120,
+        policies: [],
+        targetType: undefined,
+        conversationBehavior: undefined,
         prompt: 'Saved prompt',
         activity: [],
         lastStatus: 'success',
@@ -423,6 +442,7 @@ describe('scheduledTaskCapability', () => {
       thinkingLevel: 'medium',
       cwd: '/tmp/work',
       timeoutSeconds: 45,
+      policies: [{ kind: 'once_per_period', count: 1, period: 'day' }],
       prompt: 'Body',
       targetType: 'background-agent',
     });
@@ -462,6 +482,9 @@ describe('scheduledTaskCapability', () => {
         thinkingLevel: 'high',
         cwd: '/repo',
         timeoutSeconds: 120,
+        policies: [],
+        targetType: undefined,
+        conversationBehavior: undefined,
         prompt: 'Updated prompt',
         activity: [],
         lastStatus: 'success',

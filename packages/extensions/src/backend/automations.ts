@@ -12,6 +12,7 @@ export type TaskRuntimeEntry = unknown;
 export type ScheduledTaskThreadInput = unknown;
 export type QueuedPromptPreview = unknown;
 export type StoredAutomation = unknown;
+export type AutomationPolicy = unknown;
 export type DeferredResumeSummary = unknown;
 
 export const cancelDeferredResumeForSessionFile = (..._args: unknown[]): unknown => hostResolved();

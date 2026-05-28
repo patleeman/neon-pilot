@@ -58,12 +58,13 @@ A chronological log of every execution:
 
 ## Creating an Automation
 
-From the list view, click "New Automation". The editor uses the Settings page layout with a right-side "On this page" rail and four sections:
+From the list view, click "New Automation". The editor uses the Settings page layout with a right-side "On this page" rail and five sections:
 
 - **General** — automation name, recurring instruction, and enabled state
 - **Schedule** — recurring vs one-time scheduling, human-readable schedule presets, and a preview
+- **Policies** — attached first-party run rules such as catch-up, overlap handling, and once-per-period limits
 - **Delivery** — background/conversation target plus thread binding; existing threads are selected from a dropdown
-- **Runtime** — optional working directory with folder picker, model dropdown, thinking level, timeout, and catch-up window
+- **Runtime** — optional working directory with folder picker, model dropdown, thinking level, and timeout
 
 The UI avoids raw cron entry for common creation/editing paths; selected presets are translated to scheduler syntax internally.
 
@@ -98,6 +99,7 @@ Each scheduled task has these fields:
 | `cwd`                  | string                                   | Working directory                                             |
 | `timeoutSeconds`       | number                                   | Per-run timeout                                               |
 | `catchUpWindowSeconds` | number                                   | Missed-run catch-up window; cron tasks default to 900 seconds |
+| `policies`             | array                                    | First-party run policies persisted with the automation        |
 | `threadMode`           | `"dedicated"`, `"existing"`, or `"none"` | Thread binding                                                |
 | `threadConversationId` | string                                   | Existing conversation ID for thread binding                   |
 | `enabled`              | boolean                                  | Whether the task is active                                    |
@@ -134,7 +136,15 @@ ISO timestamps or natural language:
 
 ## Catch-Up Window
 
-If the daemon was offline when a scheduled time passed, the catch-up window controls whether the missed execution fires when the daemon restarts. Set in seconds. Cron automations default to 15 minutes (`900`) so a short app restart, laptop wake, or daemon restart does not silently skip the run. A 5-minute window (`300`) means: if the daemon was offline for less than 5 minutes past the scheduled time, the task runs on restart.
+If the daemon was offline when a scheduled time passed, the catch-up policy controls whether the missed execution fires when the daemon restarts. Set its window in seconds. Cron automations default to 15 minutes (`900`) so a short app restart, laptop wake, or daemon restart does not silently skip the run. A 5-minute window (`300`) means: if the daemon was offline for less than 5 minutes past the scheduled time, the task runs on restart.
+
+## Policies
+
+Automation policies are first-party rules attached to a scheduled automation. The scheduler currently enforces:
+
+- `catch_up` — run the latest missed cron slot if it is still inside the policy window.
+- `overlap` — skip a due run while the previous run is still active.
+- `once_per_period` — allow at most one successful run in a day, week, or month. Use this with a broad recurring schedule when the automation should run once per period and the exact eligible minute does not matter.
 
 ## Execution Flow
 

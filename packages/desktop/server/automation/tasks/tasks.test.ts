@@ -1529,6 +1529,9 @@ Run hourly task
     saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath });
 
     expect(listStoredAutomations({ dbPath })[0]?.catchUpWindowSeconds).toBe(15 * 60);
+    expect(listStoredAutomations({ dbPath })[0]?.policies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'catch_up', windowSeconds: 15 * 60 })]),
+    );
 
     const currentTime = new Date('2026-03-02T10:10:00.000Z');
     const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
@@ -1638,6 +1641,105 @@ Run hourly task
     await module.handleEvent(createTimerEvent(), context);
 
     expect(runTask).not.toHaveBeenCalled();
+
+    await module.stop?.(context);
+  });
+
+  it('uses the catch-up policy window for missed cron runs', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+
+    createStoredAutomation({
+      dbPath,
+      id: 'policy-catch-up',
+      profile: 'assistant',
+      title: 'Policy catch up',
+      enabled: true,
+      cron: '0 * * * *',
+      catchUpWindowSeconds: 5 * 60,
+      policies: [{ kind: 'catch_up', enabled: true, windowSeconds: 15 * 60, mode: 'latest' }],
+      prompt: 'Catch up through policy.',
+    });
+    setStoredAutomationThreadBinding('policy-catch-up', { dbPath, mode: 'none' });
+    saveAutomationSchedulerState({ lastEvaluatedAt: '2026-03-02T09:59:30.000Z' }, { dbPath });
+
+    const currentTime = new Date('2026-03-02T10:10:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 1,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+    await waitForCondition(() => runTask.mock.calls.length === 1);
+
+    expect(runTask).toHaveBeenCalledTimes(1);
+    expect(runTask.mock.calls[0]?.[0].task.id).toBe('policy-catch-up');
+
+    await module.stop?.(context);
+  });
+
+  it('applies a once-per-day policy to recurring cron automations', async () => {
+    const taskDir = createTempDir('tasks-module-definitions-');
+    const stateRoot = createTempDir('tasks-module-state-');
+    const dbPath = resolveRuntimeDbPath(stateRoot);
+
+    createStoredAutomation({
+      dbPath,
+      id: 'daily-flex',
+      profile: 'assistant',
+      title: 'Daily flexible run',
+      enabled: true,
+      cron: '* * * * *',
+      policies: [{ kind: 'once_per_period', enabled: true, count: 1, period: 'day' }],
+      prompt: 'Run once per day.',
+    });
+    setStoredAutomationThreadBinding('daily-flex', { dbPath, mode: 'none' });
+
+    let currentTime = new Date('2026-03-02T10:00:00.000Z');
+    const runTask = vi.fn(async (request: TaskRunRequest) => createRunResult(request, true, currentTime.toISOString()));
+    const module = createTasksModule(
+      {
+        enabled: true,
+        taskDir,
+        tickIntervalSeconds: 1,
+        maxRetries: 3,
+        reapAfterDays: 7,
+        defaultTimeoutSeconds: 1800,
+      },
+      {
+        now: () => currentTime,
+        runTask,
+      },
+    );
+    const { context } = createContext(taskDir, stateRoot);
+
+    await module.start(context);
+    await waitForCondition(() => runTask.mock.calls.length === 1);
+
+    currentTime = new Date('2026-03-02T10:01:00.000Z');
+    await module.handleEvent(createTimerEvent(), context);
+
+    expect(runTask).toHaveBeenCalledTimes(1);
+    expect(loadAutomationRuntimeStateMap({ dbPath })['daily-flex']).toEqual(
+      expect.objectContaining({
+        lastStatus: 'skipped',
+        lastSuccessAt: '2026-03-02T10:00:00.000Z',
+        lastError: 'Task skipped because the once-per-day policy is already satisfied.',
+      }),
+    );
 
     await module.stop?.(context);
   });

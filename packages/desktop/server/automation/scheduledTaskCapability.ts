@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding, upsertAlert } from '@neon-pilot/core';
 import {
   type AutomationActivityEntry,
+  type AutomationPolicy,
   createStoredAutomation,
   deleteStoredAutomation,
   ensureAutomationThread,
@@ -38,6 +39,7 @@ export interface ScheduledTaskCreateCapabilityInput extends ScheduledTaskThreadI
   cwd?: string | null;
   timeoutSeconds?: number | null;
   catchUpWindowSeconds?: number | null;
+  policies?: AutomationPolicy[] | null;
   prompt: string;
   targetType?: string | null;
   conversationBehavior?: 'steer' | 'followUp' | null;
@@ -61,6 +63,7 @@ export interface ScheduledTaskUpdateCapabilityInput extends ScheduledTaskThreadI
   cwd?: string | null;
   timeoutSeconds?: number | null;
   catchUpWindowSeconds?: number | null;
+  policies?: AutomationPolicy[] | null;
   prompt?: string;
   targetType?: string | null;
   conversationBehavior?: 'steer' | 'followUp' | null;
@@ -95,6 +98,7 @@ function buildScheduledTaskSummary(
     cwd: task.cwd,
     ...(task.timeoutSeconds !== undefined ? { timeoutSeconds: task.timeoutSeconds } : {}),
     ...(task.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: task.catchUpWindowSeconds } : {}),
+    policies: task.policies,
     threadMode: threadDetail.threadMode,
     threadConversationId: threadDetail.threadConversationId,
     threadTitle: threadDetail.threadTitle,
@@ -141,6 +145,7 @@ export function buildScheduledTaskDetail(
     cwd: metadata.cwd,
     timeoutSeconds: metadata.timeoutSeconds,
     ...(metadata.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: metadata.catchUpWindowSeconds } : {}),
+    policies: task.policies,
     prompt: metadata.promptBody,
     activity,
     conversationBehavior: task.conversationBehavior,
@@ -313,6 +318,7 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
     cwd: input.cwd,
     timeoutSeconds: input.timeoutSeconds,
     ...(input.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: input.catchUpWindowSeconds } : {}),
+    ...(input.policies !== undefined ? { policies: input.policies } : {}),
     prompt: input.prompt ?? '',
     targetType,
     ...(targetType === 'conversation' ? { conversationBehavior: input.conversationBehavior } : {}),
@@ -374,6 +380,7 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
     cwd: input.cwd,
     timeoutSeconds: input.timeoutSeconds,
     ...(input.catchUpWindowSeconds !== undefined ? { catchUpWindowSeconds: input.catchUpWindowSeconds } : {}),
+    ...(input.policies !== undefined ? { policies: input.policies } : {}),
     prompt: input.prompt,
     targetType,
     ...(targetType === 'conversation' ? { conversationBehavior: input.conversationBehavior } : {}),

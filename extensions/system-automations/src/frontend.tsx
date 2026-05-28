@@ -41,6 +41,7 @@ interface AutomationFormState {
   thinkingLevel: string;
   timeoutSeconds: string;
   catchUpWindowSeconds: string;
+  policies: AutomationPolicy[];
   enabled: boolean;
 }
 
@@ -55,17 +56,31 @@ interface EasySchedule {
   dayOfMonth: number;
 }
 
+type AutomationPolicy =
+  | { kind: 'catch_up'; enabled?: boolean; windowSeconds: number; mode?: 'latest' }
+  | { kind: 'overlap'; enabled?: boolean; behavior: 'skip' }
+  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string }
+  | {
+      kind: 'flexible_timing';
+      enabled?: boolean;
+      startTime?: string;
+      endTime?: string;
+      placement?: 'automatic' | 'earliest' | 'randomized';
+    };
+
 type AutomationTaskForEditor = ScheduledTaskSummary & {
   threadMode?: 'dedicated' | 'existing' | 'none';
   timeoutSeconds?: number;
+  policies?: AutomationPolicy[];
 };
 
 type AutomationFilter = 'all' | 'current' | 'past-due' | 'failed' | 'disabled';
-type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-delivery' | 'automation-runtime';
+type EditorSectionId = 'automation-general' | 'automation-schedule' | 'automation-policies' | 'automation-delivery' | 'automation-runtime';
 
 const EDITOR_TOC_ITEMS: Array<{ id: EditorSectionId; label: string; summary: string }> = [
   { id: 'automation-general', label: 'General', summary: 'Name and instruction' },
   { id: 'automation-schedule', label: 'Schedule', summary: 'When it runs' },
+  { id: 'automation-policies', label: 'Policies', summary: 'Attached rules' },
   { id: 'automation-delivery', label: 'Delivery', summary: 'Where results go' },
   { id: 'automation-runtime', label: 'Runtime', summary: 'Model, cwd, and timeout' },
 ];
@@ -151,6 +166,10 @@ const emptyForm: AutomationFormState = {
   thinkingLevel: '',
   timeoutSeconds: DEFAULT_TIMEOUT_SECONDS,
   catchUpWindowSeconds: DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS,
+  policies: [
+    { kind: 'catch_up', enabled: true, windowSeconds: Number(DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS), mode: 'latest' },
+    { kind: 'overlap', enabled: true, behavior: 'skip' },
+  ],
   enabled: true,
 };
 
@@ -470,6 +489,56 @@ function numberOrNull(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function readAutomationPolicies(input: unknown, catchUpWindowSeconds: string): AutomationPolicy[] {
+  if (Array.isArray(input)) {
+    return input
+      .map((policy): AutomationPolicy | null => {
+        if (!policy || typeof policy !== 'object') return null;
+        const record = policy as Record<string, unknown>;
+        if (record.kind === 'catch_up') {
+          const windowSeconds =
+            typeof record.windowSeconds === 'number' && Number.isFinite(record.windowSeconds) ? record.windowSeconds : 900;
+          return { kind: 'catch_up', enabled: record.enabled !== false, windowSeconds, mode: 'latest' };
+        }
+        if (record.kind === 'overlap') {
+          return { kind: 'overlap', enabled: record.enabled !== false, behavior: 'skip' };
+        }
+        if (record.kind === 'once_per_period') {
+          return {
+            kind: 'once_per_period',
+            enabled: record.enabled !== false,
+            count: typeof record.count === 'number' ? record.count : 1,
+            period: record.period === 'week' || record.period === 'month' ? record.period : 'day',
+            timezone: typeof record.timezone === 'string' ? record.timezone : 'local',
+          };
+        }
+        if (record.kind === 'flexible_timing') {
+          return {
+            kind: 'flexible_timing',
+            enabled: record.enabled !== false,
+            startTime: typeof record.startTime === 'string' ? record.startTime : '09:00',
+            endTime: typeof record.endTime === 'string' ? record.endTime : '18:00',
+            placement: record.placement === 'earliest' || record.placement === 'randomized' ? record.placement : 'automatic',
+          };
+        }
+        return null;
+      })
+      .filter((policy): policy is AutomationPolicy => Boolean(policy));
+  }
+  return [
+    { kind: 'catch_up', enabled: true, windowSeconds: Number(catchUpWindowSeconds) || 900, mode: 'latest' },
+    { kind: 'overlap', enabled: true, behavior: 'skip' },
+  ];
+}
+
+function syncLegacyCatchUpPolicy(policies: AutomationPolicy[], catchUpWindowSeconds: string): AutomationPolicy[] {
+  const seconds = Number(catchUpWindowSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return policies.filter((policy) => policy.kind !== 'catch_up');
+  const next = policies.filter((policy) => policy.kind !== 'catch_up');
+  next.push({ kind: 'catch_up', enabled: true, windowSeconds: Math.floor(seconds), mode: 'latest' });
+  return next;
+}
+
 function normalizeThreadModeForTarget(targetType: 'background-agent' | 'conversation', threadMode: 'dedicated' | 'existing' | 'none') {
   return targetType === 'conversation' && threadMode === 'none' ? 'dedicated' : threadMode;
 }
@@ -493,6 +562,10 @@ function formFromTask(task: AutomationTaskForEditor): AutomationFormState {
     thinkingLevel: task.thinkingLevel || '',
     timeoutSeconds: task.timeoutSeconds ? String(task.timeoutSeconds) : '',
     catchUpWindowSeconds: task.catchUpWindowSeconds ? String(task.catchUpWindowSeconds) : '',
+    policies: readAutomationPolicies(
+      task.policies,
+      task.catchUpWindowSeconds ? String(task.catchUpWindowSeconds) : DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS,
+    ),
     enabled: task.enabled !== false,
   };
 }
@@ -514,6 +587,7 @@ function readFormInput(form: AutomationFormState) {
     thinkingLevel: form.thinkingLevel.trim() || null,
     timeoutSeconds: numberOrNull(form.timeoutSeconds),
     catchUpWindowSeconds: numberOrNull(form.catchUpWindowSeconds),
+    policies: syncLegacyCatchUpPolicy(form.policies, form.catchUpWindowSeconds),
   };
 }
 
@@ -543,8 +617,8 @@ function SchedulerHealthDot({ health }: { health: ScheduledTaskSchedulerHealth |
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <label className="grid gap-1.5 text-[12px] text-secondary">
-      <span className="font-medium text-primary">{label}</span>
+    <label className="grid gap-1 text-[12px] text-secondary">
+      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-dim">{label}</span>
       {children}
       {hint ? <span className="text-[11px] leading-5 text-dim">{hint}</span> : null}
     </label>
@@ -563,10 +637,10 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="grid scroll-mt-8 gap-6 border-t border-border-subtle py-7 md:grid-cols-[13rem_minmax(0,1fr)]">
+    <section id={id} className="grid scroll-mt-8 gap-5 border-t border-border-subtle/70 py-6 md:grid-cols-[11rem_minmax(0,1fr)]">
       <div className="space-y-2">
-        <h3 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
-        <p className="text-[13px] leading-6 text-secondary">{description}</p>
+        <h3 className="text-[18px] font-semibold leading-tight text-primary">{title}</h3>
+        <p className="text-[12px] leading-5 text-secondary">{description}</p>
       </div>
       <div className="min-w-0">{children}</div>
     </section>
@@ -574,7 +648,7 @@ function FormSection({
 }
 
 function fieldClass() {
-  return 'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
+  return 'w-full border-0 border-b border-border-subtle/80 bg-transparent px-1 py-1.5 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim hover:border-border-default focus:border-accent';
 }
 
 function schedulePreview(form: AutomationFormState) {
@@ -605,6 +679,7 @@ function buildCreateWithChatPrompt(form: AutomationFormState) {
     input.thinkingLevel ? `Thinking level: ${input.thinkingLevel}` : null,
     input.timeoutSeconds ? `Timeout seconds: ${input.timeoutSeconds}` : null,
     input.catchUpWindowSeconds && input.cron ? `Catch-up window seconds: ${input.catchUpWindowSeconds}` : null,
+    input.policies.length > 0 ? `Policies: ${JSON.stringify(input.policies)}` : null,
     `Enabled: ${input.enabled ? 'true' : 'false'}`,
   ].filter(Boolean);
   return lines.join('\n');
@@ -892,6 +967,92 @@ function SectionHeader({ title, count, tone = 'default' }: { title: string; coun
   );
 }
 
+function PolicyRuleRow({
+  policy,
+  index,
+  onChange,
+  onRemove,
+}: {
+  policy: AutomationPolicy;
+  index: number;
+  onChange: (index: number, patch: Partial<AutomationPolicy>) => void;
+  onRemove: (index: number) => void;
+}) {
+  const inlineField =
+    'h-7 border-0 border-b border-accent/25 bg-transparent px-1 text-[13px] text-primary outline-none hover:border-accent/60 focus:border-accent';
+  return (
+    <div className="group flex min-h-9 flex-wrap items-center gap-2 rounded-md border border-transparent px-1 py-1 text-[13px] text-secondary hover:border-border-subtle/70 hover:bg-surface/25">
+      <span className="w-5 text-center text-dim">⋮⋮</span>
+      {policy.kind === 'once_per_period' ? (
+        <>
+          <span className="font-medium text-primary">Run at most</span>
+          <input
+            className={cx(inlineField, 'w-12 text-center')}
+            type="number"
+            min="1"
+            value={policy.count}
+            onChange={(event) => onChange(index, { count: Number.parseInt(event.target.value || '1', 10) || 1 })}
+          />
+          <span>time per</span>
+          <select
+            className={inlineField}
+            value={policy.period}
+            onChange={(event) => onChange(index, { period: event.target.value as 'day' | 'week' | 'month' })}
+          >
+            <option value="day">day</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+          </select>
+        </>
+      ) : policy.kind === 'flexible_timing' ? (
+        <>
+          <span className="font-medium text-primary">Run anytime between</span>
+          <input
+            className={cx(inlineField, 'w-20')}
+            type="time"
+            value={policy.startTime ?? '09:00'}
+            onChange={(event) => onChange(index, { startTime: event.target.value })}
+          />
+          <span>and</span>
+          <input
+            className={cx(inlineField, 'w-20')}
+            type="time"
+            value={policy.endTime ?? '18:00'}
+            onChange={(event) => onChange(index, { endTime: event.target.value })}
+          />
+        </>
+      ) : policy.kind === 'catch_up' ? (
+        <>
+          <span className="font-medium text-primary">Catch up missed runs for</span>
+          <input
+            className={cx(inlineField, 'w-16 text-center')}
+            type="number"
+            min="1"
+            value={policy.windowSeconds}
+            onChange={(event) => onChange(index, { windowSeconds: Number.parseInt(event.target.value || '1', 10) || 1 })}
+          />
+          <span>seconds</span>
+        </>
+      ) : (
+        <>
+          <span className="font-medium text-primary">If a run is already active</span>
+          <select className={inlineField} value={policy.behavior} onChange={() => onChange(index, { behavior: 'skip' })}>
+            <option value="skip">skip the new run</option>
+          </select>
+        </>
+      )}
+      <button
+        type="button"
+        className="ml-auto h-7 w-7 rounded-md text-dim opacity-0 transition-opacity hover:bg-elevated hover:text-primary group-hover:opacity-100"
+        aria-label="Remove policy"
+        onClick={() => onRemove(index)}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
   const [tasks, setTasks] = useState<ScheduledTaskSummary[]>([]);
   const [health, setHealth] = useState<ScheduledTaskSchedulerHealth | null>(null);
@@ -1061,6 +1222,33 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
         scheduleBuilder,
         cron: buildCronFromEasySchedule(scheduleBuilder),
       };
+    });
+  }, []);
+
+  const updatePolicy = useCallback((index: number, patch: Partial<AutomationPolicy>) => {
+    setForm((current) => ({
+      ...current,
+      policies: current.policies.map((policy, policyIndex) =>
+        policyIndex === index ? ({ ...policy, ...patch } as AutomationPolicy) : policy,
+      ),
+    }));
+  }, []);
+
+  const removePolicy = useCallback((index: number) => {
+    setForm((current) => ({ ...current, policies: current.policies.filter((_, policyIndex) => policyIndex !== index) }));
+  }, []);
+
+  const addPolicy = useCallback((kind: AutomationPolicy['kind']) => {
+    setForm((current) => {
+      const policy: AutomationPolicy =
+        kind === 'once_per_period'
+          ? { kind, enabled: true, count: 1, period: 'day', timezone: 'local' }
+          : kind === 'flexible_timing'
+            ? { kind, enabled: true, startTime: '09:00', endTime: '18:00', placement: 'automatic' }
+            : kind === 'catch_up'
+              ? { kind, enabled: true, windowSeconds: Number(current.catchUpWindowSeconds) || 900, mode: 'latest' }
+              : { kind, enabled: true, behavior: 'skip' };
+      return { ...current, policies: [...current.policies, policy] };
     });
   }, []);
 
@@ -1318,7 +1506,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
 
                   {form.scheduleType === 'cron' ? (
                     <div className="grid gap-4">
-                      <div className="grid gap-3 rounded-md border border-border-subtle bg-surface/25 p-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                         <Field label="Schedule">
                           <select
                             className={fieldClass()}
@@ -1391,7 +1579,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                                   'rounded-md border px-2.5 py-1.5 text-[12px] transition-colors',
                                   form.scheduleBuilder.weekdays.includes(option.value)
                                     ? 'border-accent/45 bg-accent/10 text-primary'
-                                    : 'border-border-subtle bg-elevated text-secondary hover:text-primary',
+                                    : 'border-border-subtle/70 bg-transparent text-secondary hover:text-primary',
                                 )}
                                 aria-pressed={form.scheduleBuilder.weekdays.includes(option.value)}
                                 onClick={() => toggleScheduleWeekday(option.value)}
@@ -1424,7 +1612,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                         {form.cron && !CRON_PRESETS.some((preset) => preset.cron === form.cron) && !easyScheduleFromCron(form.cron) ? (
                           <button
                             type="button"
-                            className="rounded-md border border-accent/60 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
+                            className="rounded-md border border-accent/45 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
                             onClick={() => setForm({ ...form, cron: form.cron })}
                           >
                             <span className="block text-[13px] font-semibold">Custom saved schedule</span>
@@ -1439,7 +1627,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                               'rounded-md border px-3 py-3 text-left transition-colors',
                               form.cron === preset.cron
                                 ? 'border-accent/45 bg-accent/10 text-primary shadow-[0_0_0_1px_rgb(var(--color-accent)/0.18)]'
-                                : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:text-primary',
+                                : 'border-border-subtle/70 bg-transparent text-secondary hover:border-border-default hover:bg-surface/20 hover:text-primary',
                             )}
                             onClick={() =>
                               setForm({
@@ -1468,9 +1656,40 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </Field>
                   )}
 
-                  <div className="flex items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] leading-6 text-secondary">
+                  <div className="flex items-center gap-2 border-t border-border-subtle/70 pt-3 text-[13px] leading-6 text-secondary">
                     <span className="h-2 w-2 rounded-full bg-accent shadow-[0_0_8px_rgb(var(--color-accent)/0.7)]" />
                     <span className="font-medium text-primary">{schedulePreview(form)}</span>
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection
+                id="automation-policies"
+                title="Policies"
+                description="Attach first-party rules that decide what happens to each eligible run."
+              >
+                <div className="grid gap-3">
+                  <div className="grid gap-1">
+                    {form.policies.map((policy, index) => (
+                      <PolicyRuleRow
+                        key={`${policy.kind}:${index}`}
+                        policy={policy}
+                        index={index}
+                        onChange={updatePolicy}
+                        onRemove={removePolicy}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <ToolbarButton type="button" onClick={() => addPolicy('once_per_period')}>
+                      + Once per period
+                    </ToolbarButton>
+                    <ToolbarButton type="button" onClick={() => addPolicy('catch_up')}>
+                      + Catch up
+                    </ToolbarButton>
+                    <ToolbarButton type="button" onClick={() => addPolicy('overlap')}>
+                      + Overlap
+                    </ToolbarButton>
                   </div>
                 </div>
               </FormSection>
@@ -1541,7 +1760,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       </select>
                     </Field>
                   ) : null}
-                  <div className="rounded-lg border border-border-subtle bg-surface/30 p-3 text-[12px] text-secondary">
+                  <div className="border-t border-border-subtle/70 pt-3 text-[12px] text-secondary">
                     <div className="flex justify-between gap-4 border-b border-border-subtle/70 pb-2">
                       <span className="text-dim">Run target</span>
                       <span className="text-primary">{form.targetType === 'conversation' ? 'Conversation' : 'Background agent'}</span>

@@ -4,6 +4,7 @@ export type LoadedScheduledTasksForProfile = { tasks: Array<Record<string, unkno
 export type TaskRuntimeEntry = Record<string, unknown>;
 export type ScheduledTaskThreadInput = Record<string, unknown>;
 export type StoredAutomation = Record<string, unknown>;
+export type AutomationPolicy = Record<string, unknown>;
 export type QueuedPromptPreview = Record<string, unknown>;
 
 import { callDaemonExport } from './daemonBridge.js';
