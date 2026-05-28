@@ -129,7 +129,9 @@ const ctx = {
       async get() {
         return metadataValue;
       },
-      async set() {},
+      async set(input) {
+        metadataValue = input.values;
+      },
       async delete() {},
     },
   },
@@ -364,6 +366,14 @@ const smokes = {
   async 'system-telemetry'() {
     const result = await module.summary({ query: {} });
     assert(result.status === 200 && result.body, 'telemetry summary failed');
+  },
+  async 'system-todo'() {
+    const empty = await module.getState({}, ctx);
+    assert(Array.isArray(empty.items) && empty.items.length === 0, 'todo getState should start empty');
+    const added = await module.addItem({ text: 'Smoke todo' }, ctx);
+    assert(added.items.length === 1 && added.items[0].text === 'Smoke todo', 'todo addItem failed');
+    const context = await module.provideTurnContext({}, ctx);
+    assert(context.blocks?.[0]?.content?.includes('Smoke todo'), 'todo turn context missing open todo');
   },
   async 'system-web-tools'() {
     const result = await module.webFetch({ url: 'data:text/plain,smoke' }, ctx);

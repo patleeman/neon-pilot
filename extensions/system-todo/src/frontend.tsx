@@ -18,9 +18,33 @@ interface TodoState {
 }
 
 const EMPTY_STATE: TodoState = { schemaVersion: 1, updatedAt: new Date(0).toISOString(), items: [] };
+const todoStateCache = new Map<string, TodoState>();
+const todoStateLoadCache = new Map<string, Promise<TodoState>>();
 
 function isDone(item: TodoItem): boolean {
   return item.status === 'done';
+}
+
+function cacheKey(conversationId: string, metadataVersion: unknown): string {
+  return `${conversationId}:${typeof metadataVersion === 'number' || typeof metadataVersion === 'string' ? metadataVersion : 'unversioned'}`;
+}
+
+function normalizeTodoState(value: unknown): TodoState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return EMPTY_STATE;
+  }
+
+  const record = value as Partial<TodoState>;
+  return {
+    schemaVersion: 1,
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : EMPTY_STATE.updatedAt,
+    items: Array.isArray(record.items) ? record.items : [],
+  };
+}
+
+export function clearTodoShelfStateCacheForTests(): void {
+  todoStateCache.clear();
+  todoStateLoadCache.clear();
 }
 
 export function TodoShelf({
@@ -31,11 +55,13 @@ export function TodoShelf({
     extension: { invoke<T = unknown>(action: string, input?: Record<string, unknown>): Promise<T> };
     ui?: { notify?(input: unknown): void };
   };
-  shelfContext: { conversationId: string };
+  shelfContext: { conversationId: string; metadataVersion?: number | string };
 }) {
   const conversationId = shelfContext.conversationId;
-  const [state, setState] = useState<TodoState>(EMPTY_STATE);
-  const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null);
+  const activeCacheKey = conversationId ? cacheKey(conversationId, shelfContext.metadataVersion) : null;
+  const cachedState = activeCacheKey ? todoStateCache.get(activeCacheKey) : undefined;
+  const [state, setState] = useState<TodoState>(cachedState ?? EMPTY_STATE);
+  const [loadedConversationId, setLoadedConversationId] = useState<string | null>(cachedState ? conversationId : null);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,19 +81,42 @@ export function TodoShelf({
   );
 
   const refresh = useCallback(async () => {
+    const key = activeCacheKey;
     if (!conversationId) {
       setState(EMPTY_STATE);
       setLoadedConversationId(null);
       return;
     }
+    const cached = key ? todoStateCache.get(key) : undefined;
+    if (cached) {
+      setState(cached);
+      setLoadedConversationId(conversationId);
+      return;
+    }
+
     setError(null);
     try {
-      setState(await invoke<TodoState>('getState'));
+      const load =
+        key && todoStateLoadCache.has(key)
+          ? (todoStateLoadCache.get(key) as Promise<TodoState>)
+          : invoke<TodoState>('getState')
+              .then(normalizeTodoState)
+              .finally(() => {
+                if (key) todoStateLoadCache.delete(key);
+              });
+      if (key && !todoStateLoadCache.has(key)) {
+        todoStateLoadCache.set(key, load);
+      }
+      const nextState = await load;
+      if (key && nextState.items.length > 0) {
+        todoStateCache.set(key, nextState);
+      }
+      setState(nextState);
       setLoadedConversationId(conversationId);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [conversationId, invoke]);
+  }, [activeCacheKey, conversationId, invoke]);
 
   useEffect(() => {
     void refresh();
@@ -80,7 +129,11 @@ export function TodoShelf({
       invoke<TodoState>('getState')
         .then((next) => {
           if (!cancelled) {
-            setState(next);
+            const normalized = normalizeTodoState(next);
+            if (activeCacheKey && normalized.items.length > 0) {
+              todoStateCache.set(activeCacheKey, normalized);
+            }
+            setState(normalized);
             setLoadedConversationId(conversationId);
           }
         })
@@ -92,14 +145,18 @@ export function TodoShelf({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [conversationId, invoke]);
+  }, [activeCacheKey, conversationId, invoke]);
 
   async function run(label: string, action: () => Promise<TodoState>) {
     if (busyId) return;
     setBusyId(label);
     setError(null);
     try {
-      setState(await action());
+      const nextState = normalizeTodoState(await action());
+      if (activeCacheKey && nextState.items.length > 0) {
+        todoStateCache.set(activeCacheKey, nextState);
+      }
+      setState(nextState);
       setLoadedConversationId(conversationId);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
