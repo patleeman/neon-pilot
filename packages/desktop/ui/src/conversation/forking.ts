@@ -12,6 +12,32 @@ interface RewindTarget {
   promptDraft: string | null;
 }
 
+export function resolveRewindTargetFromResolvedEntry(messages: MessageBlock[], messageIndex: number, entryId: string): RewindTarget | null {
+  const block = messages[messageIndex];
+  if (block?.type === 'user') {
+    return {
+      entryId,
+      beforeEntry: true,
+      promptDraft: block.text,
+    };
+  }
+
+  if (block?.type === 'text') {
+    const promptDraft =
+      messages
+        .slice(0, messageIndex)
+        .reverse()
+        .find((message) => message.type === 'user')?.text ?? null;
+    return {
+      entryId,
+      beforeEntry: true,
+      promptDraft,
+    };
+  }
+
+  return null;
+}
+
 export function resolveForkEntryForMessage(
   messages: MessageBlock[],
   messageIndex: number,
@@ -134,24 +160,10 @@ export function resolveRewindTargetForMessage(
   const block = messages[messageIndex];
   if (block?.type === 'text') {
     const assistantEntryId = resolveSessionEntryIdFromBlockId(block.id);
-    const promptDraft = assistantEntryId
-      ? (messages
-          .slice(0, messageIndex)
-          .reverse()
-          .find((message) => message.type === 'user')?.text ?? null)
-      : null;
-    return {
-      entryId: assistantEntryId ?? entry.entryId,
-      beforeEntry: Boolean(assistantEntryId),
-      promptDraft,
-    };
+    return resolveRewindTargetFromResolvedEntry(messages, messageIndex, assistantEntryId ?? entry.entryId);
   }
 
-  return {
-    entryId: entry.entryId,
-    beforeEntry: true,
-    promptDraft: block?.type === 'user' ? block.text : entry.text,
-  };
+  return resolveRewindTargetFromResolvedEntry(messages, messageIndex, entry.entryId);
 }
 
 export function buildConversationComposerStorageKey(sessionId: string): string {
