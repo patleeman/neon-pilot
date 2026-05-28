@@ -46,11 +46,9 @@ function formatConversationActivityTitle(session: SessionMeta): string {
     case 'subagent':
       return `subagent: ${title}`;
     case 'fork':
-      return `fork: ${title}`;
     case 'rewind':
-      return `rewind: ${title}`;
     case 'duplicate':
-      return `duplicate: ${title}`;
+      return title;
     case 'side':
       return `side: ${title}`;
     default:

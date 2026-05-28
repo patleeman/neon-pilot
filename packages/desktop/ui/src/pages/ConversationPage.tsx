@@ -85,6 +85,7 @@ import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
   resolveConversationDraftHydrationState,
+  resolveConversationInitialComposerDraftState,
   resolveConversationInitialDeferredResumeState,
   resolveConversationInitialModelPreferenceState,
   resolveConversationInitialPendingPromptState,
@@ -1569,6 +1570,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     },
     [draft, id, setInputState],
   );
+  const appliedInitialComposerDraftLocationKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const initialComposerDraft = resolveConversationInitialComposerDraftState({
+      draft,
+      conversationId: id,
+      locationState: location.state,
+    });
+    if (!initialComposerDraft || appliedInitialComposerDraftLocationKeyRef.current === location.key) {
+      return;
+    }
+
+    appliedInitialComposerDraftLocationKeyRef.current = location.key;
+    setInput(initialComposerDraft.text);
+  }, [draft, id, location.key, location.state, setInput]);
   const [debouncedRelatedThreadsQuery, setDebouncedRelatedThreadsQuery] = useState(() => input.trim());
   const [relatedThreadSearchIndex, setRelatedThreadSearchIndex] = useState<Record<string, string>>({});
   const [relatedThreadSummaries, setRelatedThreadSummaries] = useState<Record<string, ConversationSummaryRecord>>({});
@@ -3641,7 +3657,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           persistForkPromptDraft(newSessionId, target.promptDraft);
         }
         ensureConversationTabOpen(newSessionId);
-        navigate(`/conversations/${newSessionId}`);
+        navigate(`/conversations/${newSessionId}`, {
+          state: target.promptDraft
+            ? {
+                initialComposerDraftState: { conversationId: newSessionId, text: target.promptDraft },
+                focusComposer: true,
+              }
+            : undefined,
+        });
       } catch (error) {
         showNotice('danger', `Rewind failed: ${(error as Error).message}`);
       }
@@ -3771,7 +3794,15 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           persistForkPromptDraft(newSessionId, clickedBlock.text);
         }
         ensureConversationTabOpen(newSessionId);
-        navigate(`/conversations/${newSessionId}`);
+        navigate(`/conversations/${newSessionId}`, {
+          state:
+            clickedBlock.type === 'user'
+              ? {
+                  initialComposerDraftState: { conversationId: newSessionId, text: clickedBlock.text },
+                  focusComposer: true,
+                }
+              : undefined,
+        });
       } catch (error) {
         showNotice('danger', `Fork failed: ${(error as Error).message}`);
       }

@@ -18,10 +18,16 @@ export interface ConversationDraftHydrationState {
   enableAutoModeOnLoad?: boolean;
 }
 
+export interface ConversationInitialComposerDraftState {
+  conversationId: string;
+  text: string;
+}
+
 interface ConversationLocationState {
   initialModelPreferenceState?: ConversationInitialModelPreferenceState;
   initialDeferredResumeState?: ConversationInitialDeferredResumeState;
   draftHydrationState?: ConversationDraftHydrationState;
+  initialComposerDraftState?: ConversationInitialComposerDraftState;
   initialPendingPromptState?: {
     conversationId: string;
     prompt?: PendingConversationPrompt | null;
@@ -126,6 +132,23 @@ export function resolveConversationDraftHydrationState(input: {
     conversationId: candidate.conversationId,
     enableAutoModeOnLoad: candidate.enableAutoModeOnLoad,
   };
+}
+
+export function resolveConversationInitialComposerDraftState(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  locationState: unknown;
+}): ConversationInitialComposerDraftState | null {
+  if (input.draft || !input.conversationId || !input.locationState || typeof input.locationState !== 'object') {
+    return null;
+  }
+
+  const candidate = (input.locationState as ConversationLocationState).initialComposerDraftState;
+  if (!candidate || typeof candidate !== 'object' || candidate.conversationId !== input.conversationId) {
+    return null;
+  }
+
+  return typeof candidate.text === 'string' ? { conversationId: candidate.conversationId, text: candidate.text } : null;
 }
 
 export function resolveConversationInitialPendingPromptState(input: {

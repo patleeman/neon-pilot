@@ -135,17 +135,19 @@ describe('buildActivityTreeItems', () => {
     );
   });
 
-  it('labels conversation offshoot rows by kind', () => {
+  it('keeps fork and rewind conversation rows titled like normal threads', () => {
     const items = buildActivityTreeItems({
       conversations: [
         session({ id: 'conv-1', title: 'Build the thing' }),
         session({ id: 'subagent-conv', title: 'Smoke test', parentSessionId: 'conv-1', offshootKind: 'subagent' }),
         session({ id: 'fork-conv', title: 'Alternate path', parentSessionId: 'conv-1', offshootKind: 'fork' }),
+        session({ id: 'rewind-conv', title: 'Earlier path', parentSessionId: 'conv-1', offshootKind: 'rewind' }),
       ],
     });
 
     expect(items.find((item) => item.id === buildConversationActivityId('subagent-conv'))?.title).toBe('subagent: Smoke test');
-    expect(items.find((item) => item.id === buildConversationActivityId('fork-conv'))?.title).toBe('fork: Alternate path');
+    expect(items.find((item) => item.id === buildConversationActivityId('fork-conv'))?.title).toBe('Alternate path');
+    expect(items.find((item) => item.id === buildConversationActivityId('rewind-conv'))?.title).toBe('Earlier path');
   });
 
   it('skips hidden and unlinked executions', () => {
