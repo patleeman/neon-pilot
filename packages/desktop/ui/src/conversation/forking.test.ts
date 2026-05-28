@@ -10,6 +10,7 @@ import {
   resolveBranchEntryIdFromSessionDetailResult,
   resolveForkEntryForMessage,
   resolveRewindTargetForMessage,
+  resolveRewindTargetFromResolvedEntry,
   resolveSessionEntryIdFromBlockId,
 } from './forking';
 
@@ -172,6 +173,24 @@ describe('resolveBranchEntryIdForMessage', () => {
 });
 
 describe('resolveRewindTargetForMessage', () => {
+  it('builds the same rewind target for directly resolved user and assistant entries', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'user-entry', ts: '2026-03-11T18:00:00.000Z', text: 'Prompt' },
+      { type: 'text', id: 'assistant-entry-x4', ts: '2026-03-11T18:00:01.000Z', text: 'Reply' },
+    ];
+
+    expect(resolveRewindTargetFromResolvedEntry(messages, 0, 'user-entry')).toEqual({
+      entryId: 'user-entry',
+      beforeEntry: true,
+      promptDraft: 'Prompt',
+    });
+    expect(resolveRewindTargetFromResolvedEntry(messages, 1, 'assistant-entry')).toEqual({
+      entryId: 'assistant-entry',
+      beforeEntry: true,
+      promptDraft: 'Prompt',
+    });
+  });
+
   it('keeps the selected prompt in history when rewinding from an assistant reply', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-11T18:00:00.000Z', text: 'First prompt' },
@@ -192,7 +211,7 @@ describe('resolveRewindTargetForMessage', () => {
     });
   });
 
-  it('falls back to the selected prompt when an assistant reply has no session entry id', () => {
+  it('falls back to rewinding before the selected prompt when an assistant reply has no session entry id', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-11T18:00:00.000Z', text: 'Prompt' },
       { type: 'text', ts: '2026-03-11T18:00:01.000Z', text: 'Reply' },
@@ -200,8 +219,8 @@ describe('resolveRewindTargetForMessage', () => {
 
     expect(resolveRewindTargetForMessage(messages, 1, [{ entryId: 'entry-1', text: 'Prompt' }])).toEqual({
       entryId: 'entry-1',
-      beforeEntry: false,
-      promptDraft: null,
+      beforeEntry: true,
+      promptDraft: 'Prompt',
     });
   });
 
