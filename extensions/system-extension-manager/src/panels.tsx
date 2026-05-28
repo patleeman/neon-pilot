@@ -893,8 +893,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   return (
     <>
-      <div className={embedded ? 'min-w-0' : 'flex h-full min-w-0 overflow-hidden'}>
-        <div className={embedded ? 'min-w-0' : 'min-w-0 flex-1 overflow-y-auto'}>
+      <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
+        <div className="min-w-0">
           <AppPageLayout
             shellClassName={embedded ? 'max-w-none px-0 py-0' : 'max-w-[74rem]'}
             contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-7'}
@@ -1033,14 +1033,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </section>
           </AppPageLayout>
         </div>
-        {!embedded && selectedExtension ? (
-          <ExtensionDetailsRail
-            extension={selectedExtension}
-            onClose={() => setDetailsExtensionId(null)}
-            onOpenPath={openFolder}
-            onOpenSettings={(extension) => navigate(settingsSectionTarget(extension))}
-          />
-        ) : null}
       </div>
 
       {installModalOpen ? (
@@ -1057,8 +1049,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           onClose={() => setInstallModalOpen(false)}
         />
       ) : null}
-      {embedded && selectedExtension ? (
-        <ExtensionDetailsModal extensionId={selectedExtension.id} onClose={() => setDetailsExtensionId(null)} />
+      {selectedExtension ? (
+        <ExtensionDetailsModal
+          extensionId={selectedExtension.id}
+          onClose={() => setDetailsExtensionId(null)}
+          onOpenSettings={(extension) => navigate(settingsSectionTarget(extension))}
+        />
       ) : null}
     </>
   );
@@ -1445,61 +1441,15 @@ function renderExtensionSettingControl(entry: UnifiedSettingsEntry, value: unkno
   );
 }
 
-function ExtensionDetailsRail({
-  extension,
+function ExtensionDetailsModal({
+  extensionId,
   onClose,
-  onOpenPath,
   onOpenSettings,
 }: {
-  extension: ExtensionInstallSummary;
+  extensionId: string;
   onClose: () => void;
-  onOpenPath: (extension: ExtensionInstallSummary) => void;
-  onOpenSettings: (extension: ExtensionInstallSummary) => void;
+  onOpenSettings?: (extension: ExtensionInstallSummary) => void;
 }) {
-  const [notice, setNotice] = useState<string | null>(null);
-  const openPath = useCallback(
-    (path: string) => {
-      if (!extension.packageRoot || path !== extension.packageRoot) {
-        setNotice(path);
-        return;
-      }
-      onOpenPath(extension);
-    },
-    [extension, onOpenPath],
-  );
-  const copyExtensionDiagnostics = useCallback(async (target: ExtensionInstallSummary) => {
-    const diagnostics = formatExtensionDiagnostics(target);
-    try {
-      await navigator.clipboard.writeText(diagnostics);
-      setNotice(`Copied diagnostics for ${target.name}.`);
-    } catch {
-      setNotice(diagnostics);
-    }
-  }, []);
-
-  return (
-    <aside className="hidden w-[23rem] shrink-0 border-l border-border-subtle bg-base/95 xl:block">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-base/95 px-4 py-3 backdrop-blur">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Extension</div>
-        <button type="button" onClick={onClose} className="ui-icon-button ui-icon-button-compact" aria-label="Close extension details">
-          <CloseIcon />
-        </button>
-      </div>
-      <div className="h-[calc(100vh-3rem)] overflow-y-auto px-4 py-4">
-        <ExtensionDetailsContent
-          extension={extension}
-          notice={notice}
-          compact
-          onCopyDiagnostics={copyExtensionDiagnostics}
-          onOpenPath={openPath}
-          onOpenSettings={onOpenSettings}
-        />
-      </div>
-    </aside>
-  );
-}
-
-function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; onClose: () => void }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1569,16 +1519,16 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/45 px-4 py-10 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/55 px-4 py-10"
       onClick={handleBackdropClick}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Extension details"
-        className="relative w-full max-w-2xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
+        className="relative w-full max-w-3xl rounded-xl border border-border-subtle bg-base shadow-2xl"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-border-subtle bg-base/95 px-6 py-4 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b border-border-subtle bg-base/95 px-6 py-4">
           <h2 className="text-[16px] font-semibold text-primary">Extension details</h2>
           <button type="button" onClick={onClose} className="ui-icon-button" aria-label="Close details" title="Close">
             <CloseIcon />
@@ -1596,6 +1546,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
               notice={notice}
               onCopyDiagnostics={copyExtensionDiagnostics}
               onOpenPath={openPath}
+              onOpenSettings={onOpenSettings}
             />
           )}
         </div>
