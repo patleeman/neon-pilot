@@ -38,14 +38,7 @@ export type AutomationConversationBehavior = 'steer' | 'followUp';
 export type AutomationPolicy =
   | { kind: 'catch_up'; enabled?: boolean; windowSeconds: number; mode?: 'latest' }
   | { kind: 'overlap'; enabled?: boolean; behavior: 'skip' }
-  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string }
-  | {
-      kind: 'flexible_timing';
-      enabled?: boolean;
-      startTime?: string;
-      endTime?: string;
-      placement?: 'automatic' | 'earliest' | 'randomized';
-    };
+  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string };
 
 const MAX_AUTOMATION_DURATION_SECONDS = 7 * 24 * 60 * 60;
 export const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = 15 * 60;
@@ -434,15 +427,6 @@ function normalizeAutomationPolicies(
         });
       }
       continue;
-    }
-    if (policy.kind === 'flexible_timing') {
-      normalized.push({
-        kind: 'flexible_timing',
-        enabled: policy.enabled !== false,
-        startTime: readOptionalString(policy.startTime),
-        endTime: readOptionalString(policy.endTime),
-        placement: policy.placement === 'earliest' || policy.placement === 'randomized' ? policy.placement : 'automatic',
-      });
     }
   }
 

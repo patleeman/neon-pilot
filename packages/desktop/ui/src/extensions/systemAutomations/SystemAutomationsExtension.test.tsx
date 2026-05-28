@@ -246,4 +246,59 @@ describe('AutomationsPage', () => {
       'Schedule: recurring cron 30 14 * * *',
     );
   });
+
+  it('saves edited catch-up policy values as the automation policy source of truth', async () => {
+    const update = vi.fn(async () => ({ ok: true }));
+    const pa = createPa({
+      update,
+      list: vi.fn(async () => [
+        {
+          id: 'policy-check',
+          title: 'Policy check',
+          scheduleType: 'cron',
+          targetType: 'background-agent',
+          running: false,
+          enabled: true,
+          cron: '0 9 * * *',
+          prompt: 'Check policy',
+          catchUpWindowSeconds: 900,
+          policies: [
+            { kind: 'catch_up', enabled: true, windowSeconds: 900, mode: 'latest' },
+            { kind: 'overlap', enabled: true, behavior: 'skip' },
+          ],
+        },
+      ]),
+    });
+    const { container } = await renderPage(pa);
+    const editButton = container.querySelector('button[aria-label="Edit Policy check"]');
+    if (!editButton) throw new Error('Edit button not found');
+
+    await act(async () => {
+      editButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container.querySelector('input[name="automation-catch-up-window-seconds"]')).toBeNull();
+    const catchUpInput = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="number"]')).find(
+      (input) => input.value === '900',
+    );
+    const saveButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Save changes');
+    if (!catchUpInput || !saveButton) throw new Error('Catch-up policy controls not found');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(catchUpInput, '120');
+      catchUpInput.dispatchEvent(new Event('input', { bubbles: true }));
+      catchUpInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(update).toHaveBeenCalledWith(
+      'policy-check',
+      expect.objectContaining({
+        catchUpWindowSeconds: 120,
+        policies: expect.arrayContaining([expect.objectContaining({ kind: 'catch_up', windowSeconds: 120 })]),
+      }),
+    );
+  });
 });

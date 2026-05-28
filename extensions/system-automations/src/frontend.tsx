@@ -59,14 +59,7 @@ interface EasySchedule {
 type AutomationPolicy =
   | { kind: 'catch_up'; enabled?: boolean; windowSeconds: number; mode?: 'latest' }
   | { kind: 'overlap'; enabled?: boolean; behavior: 'skip' }
-  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string }
-  | {
-      kind: 'flexible_timing';
-      enabled?: boolean;
-      startTime?: string;
-      endTime?: string;
-      placement?: 'automatic' | 'earliest' | 'randomized';
-    };
+  | { kind: 'once_per_period'; enabled?: boolean; count: number; period: 'day' | 'week' | 'month'; timezone?: string };
 
 type AutomationTaskForEditor = ScheduledTaskSummary & {
   threadMode?: 'dedicated' | 'existing' | 'none';
@@ -512,15 +505,6 @@ function readAutomationPolicies(input: unknown, catchUpWindowSeconds: string): A
             timezone: typeof record.timezone === 'string' ? record.timezone : 'local',
           };
         }
-        if (record.kind === 'flexible_timing') {
-          return {
-            kind: 'flexible_timing',
-            enabled: record.enabled !== false,
-            startTime: typeof record.startTime === 'string' ? record.startTime : '09:00',
-            endTime: typeof record.endTime === 'string' ? record.endTime : '18:00',
-            placement: record.placement === 'earliest' || record.placement === 'randomized' ? record.placement : 'automatic',
-          };
-        }
         return null;
       })
       .filter((policy): policy is AutomationPolicy => Boolean(policy));
@@ -531,12 +515,9 @@ function readAutomationPolicies(input: unknown, catchUpWindowSeconds: string): A
   ];
 }
 
-function syncLegacyCatchUpPolicy(policies: AutomationPolicy[], catchUpWindowSeconds: string): AutomationPolicy[] {
-  const seconds = Number(catchUpWindowSeconds);
-  if (!Number.isFinite(seconds) || seconds <= 0) return policies.filter((policy) => policy.kind !== 'catch_up');
-  const next = policies.filter((policy) => policy.kind !== 'catch_up');
-  next.push({ kind: 'catch_up', enabled: true, windowSeconds: Math.floor(seconds), mode: 'latest' });
-  return next;
+function catchUpWindowFromPolicies(policies: AutomationPolicy[]) {
+  const catchUpPolicy = policies.find((policy) => policy.kind === 'catch_up' && policy.enabled !== false);
+  return catchUpPolicy?.kind === 'catch_up' ? catchUpPolicy.windowSeconds : null;
 }
 
 function normalizeThreadModeForTarget(targetType: 'background-agent' | 'conversation', threadMode: 'dedicated' | 'existing' | 'none') {
@@ -586,8 +567,9 @@ function readFormInput(form: AutomationFormState) {
     model: form.model.trim() || null,
     thinkingLevel: form.thinkingLevel.trim() || null,
     timeoutSeconds: numberOrNull(form.timeoutSeconds),
-    catchUpWindowSeconds: numberOrNull(form.catchUpWindowSeconds),
-    policies: syncLegacyCatchUpPolicy(form.policies, form.catchUpWindowSeconds),
+    catchUpWindowSeconds:
+      form.scheduleType === 'cron' ? (catchUpWindowFromPolicies(form.policies) ?? numberOrNull(form.catchUpWindowSeconds)) : null,
+    policies: form.scheduleType === 'cron' ? form.policies : form.policies.filter((policy) => policy.kind !== 'catch_up'),
   };
 }
 
@@ -1004,23 +986,6 @@ function PolicyRuleRow({
             <option value="month">month</option>
           </select>
         </>
-      ) : policy.kind === 'flexible_timing' ? (
-        <>
-          <span className="font-medium text-primary">Run anytime between</span>
-          <input
-            className={cx(inlineField, 'w-20')}
-            type="time"
-            value={policy.startTime ?? '09:00'}
-            onChange={(event) => onChange(index, { startTime: event.target.value })}
-          />
-          <span>and</span>
-          <input
-            className={cx(inlineField, 'w-20')}
-            type="time"
-            value={policy.endTime ?? '18:00'}
-            onChange={(event) => onChange(index, { endTime: event.target.value })}
-          />
-        </>
       ) : policy.kind === 'catch_up' ? (
         <>
           <span className="font-medium text-primary">Catch up missed runs for</span>
@@ -1243,11 +1208,9 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
       const policy: AutomationPolicy =
         kind === 'once_per_period'
           ? { kind, enabled: true, count: 1, period: 'day', timezone: 'local' }
-          : kind === 'flexible_timing'
-            ? { kind, enabled: true, startTime: '09:00', endTime: '18:00', placement: 'automatic' }
-            : kind === 'catch_up'
-              ? { kind, enabled: true, windowSeconds: Number(current.catchUpWindowSeconds) || 900, mode: 'latest' }
-              : { kind, enabled: true, behavior: 'skip' };
+          : kind === 'catch_up'
+            ? { kind, enabled: true, windowSeconds: Number(current.catchUpWindowSeconds) || 900, mode: 'latest' }
+            : { kind, enabled: true, behavior: 'skip' };
       return { ...current, policies: [...current.policies, policy] };
     });
   }, []);
@@ -1842,20 +1805,6 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       />
                     </Field>
                   </div>
-                  {form.scheduleType === 'cron' ? (
-                    <Field label="Catch-up window seconds" hint="How long a missed run remains eligible after wake.">
-                      <input
-                        className={fieldClass()}
-                        type="number"
-                        min="1"
-                        inputMode="numeric"
-                        name="automation-catch-up-window-seconds"
-                        placeholder="Default"
-                        value={form.catchUpWindowSeconds}
-                        onChange={(event) => setForm({ ...form, catchUpWindowSeconds: event.target.value })}
-                      />
-                    </Field>
-                  ) : null}
                 </div>
               </FormSection>
 
