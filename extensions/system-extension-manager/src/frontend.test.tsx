@@ -120,18 +120,19 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('defaults to add-ons and exposes available packages as a page section, not commands', async () => {
+  it('shows all installed extensions without category filters or commands', async () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /Available/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Available/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Built-in' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'All installed' })).toBeNull();
     expect(screen.queryByText('USER')).toBeNull();
-    expect(screen.getByText('Add-on')).toBeTruthy();
+    expect(screen.getByText('Installed')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
-  it('shows catalog-only extensions in the available section instead of the installed filter', async () => {
+  it('shows catalog-only extensions in the install modal instead of the installed table', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,
       version: '0.9.1-rc.6',
@@ -154,7 +155,8 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'All installed' }));
+    expect(screen.queryByText('Available Only')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Install Extension' }));
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
@@ -187,18 +189,18 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByPlaceholderText('Extension, plugin, or package URL or local path'), {
+    fireEvent.click(screen.getByRole('button', { name: 'Install Extension' }));
+    fireEvent.change(screen.getByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path'), {
       target: { value: 'https://example.com/claude-instructions.git' },
     });
     const selectors = screen.getAllByRole('combobox');
-    fireEvent.change(selectors[0] as HTMLSelectElement, { target: { value: 'claude' } });
-    fireEvent.change(selectors[1] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
+    fireEvent.change(selectors[0] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
     fireEvent.click(screen.getByRole('button', { name: 'Install' }));
 
-    await screen.findByText('Installed claude instruction-pack package as an extension-backed package.');
+    await screen.findByText('Installed agent plugin package as a Neon Pilot extension.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', {
       source: 'https://example.com/claude-instructions.git',
-      ecosystem: 'claude',
+      ecosystem: 'codex',
       packageType: 'instruction-pack',
     });
   });
