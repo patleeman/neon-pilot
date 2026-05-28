@@ -6,7 +6,16 @@ import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlo
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
-import type { ExtensionSettingsComponentRegistration } from './useExtensionRegistry';
+export interface ExtensionSettingsPanelRegistration {
+  extensionId: string;
+  id: string;
+  component: string;
+  sectionId: string;
+  label: string;
+  description?: string;
+  order?: number;
+  frontendEntry?: string;
+}
 
 interface ExtensionSettingsPanelContext {
   sectionId: string;
@@ -18,7 +27,7 @@ type ExtensionSettingsPanelComponent = ComponentType<{
   settingsContext: ExtensionSettingsPanelContext;
 }>;
 
-function loadPanelModule(registration: ExtensionSettingsComponentRegistration, revision: number): Promise<Record<string, unknown>> {
+function loadPanelModule(registration: ExtensionSettingsPanelRegistration, revision: number): Promise<Record<string, unknown>> {
   ensureExtensionFrontendReactGlobals();
   const systemLoader = systemExtensionModules.get(registration.extensionId);
   if (systemLoader) return systemLoader();
@@ -30,7 +39,7 @@ function loadPanelModule(registration: ExtensionSettingsComponentRegistration, r
   return import(/* @vite-ignore */ source) as Promise<Record<string, unknown>>;
 }
 
-export function SettingsPanelHost({ registration }: { registration: ExtensionSettingsComponentRegistration }) {
+export function SettingsPanelHost({ registration }: { registration: ExtensionSettingsPanelRegistration }) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);
   const Component = useMemo(

@@ -2,7 +2,16 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
 import { type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  cx,
+  EmptyState,
+  ErrorState,
+  type ExtensionSettingsPanelRegistration,
+  LoadingState,
+  SettingsPanelHost,
+} from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -1192,13 +1201,7 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
   return (
     <div className="space-y-3">
       <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
-        {settingsComponent ? (
-          <ExtensionSettingsComponentRow
-            label={settingsComponent.label}
-            description={settingsComponent.description}
-            component={settingsComponent.component}
-          />
-        ) : null}
+        {settingsComponent ? <ExtensionSettingsComponentPanel extension={extension} settingsComponent={settingsComponent} /> : null}
         {entries.map((entry) => (
           <ExtensionSettingRow
             key={entry.key}
@@ -1219,14 +1222,26 @@ function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSumm
   );
 }
 
-function ExtensionSettingsComponentRow({ label, description, component }: { label: string; description?: string; component: string }) {
+function ExtensionSettingsComponentPanel({
+  extension,
+  settingsComponent,
+}: {
+  extension: ExtensionInstallSummary;
+  settingsComponent: NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['settingsComponent'];
+}) {
+  const registration: ExtensionSettingsPanelRegistration = {
+    extensionId: extension.id,
+    id: settingsComponent.id,
+    component: settingsComponent.component,
+    sectionId: settingsComponent.sectionId,
+    label: settingsComponent.label,
+    ...(settingsComponent.description ? { description: settingsComponent.description } : {}),
+    ...(typeof settingsComponent.order === 'number' ? { order: settingsComponent.order } : {}),
+    ...(extension.manifest?.frontend?.entry ? { frontendEntry: extension.manifest.frontend.entry } : {}),
+  };
   return (
-    <div className="grid gap-3 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
-      <dt className="text-[12px] font-medium text-primary">{label}</dt>
-      <dd className="min-w-0">
-        {description ? <p className="text-[12px] leading-5 text-secondary">{description}</p> : null}
-        <p className="mt-1 font-mono text-[11px] text-dim">{component}</p>
-      </dd>
+    <div className="px-3 py-3">
+      <SettingsPanelHost registration={registration} />
     </div>
   );
 }

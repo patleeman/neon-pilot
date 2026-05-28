@@ -19,6 +19,17 @@ export declare const LoadingState: HostComponent;
 export declare const Pill: HostComponent;
 export declare const SurfacePanel: (...args: never[]) => unknown;
 export declare const ToolbarButton: HostComponent;
+export interface ExtensionSettingsPanelRegistration {
+  extensionId: string;
+  id: string;
+  component: string;
+  sectionId: string;
+  label: string;
+  description?: string;
+  order?: number;
+  frontendEntry?: string;
+}
+export declare const SettingsPanelHost: HostComponent;
 export declare const KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY: string;
 export declare const KNOWLEDGE_TREE_EXPANDED_FOLDERS_STORAGE_KEY: string;
 export declare function addOpenFileId(...args: never[]): unknown;

@@ -45,4 +45,5 @@ export {
   writeStoredExpandedFolderIds,
 } from '../local/knowledgeTreeState';
 export { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
+export { type ExtensionSettingsPanelRegistration, SettingsPanelHost } from './SettingsPanelHost';
 export type { ExtensionSurfaceProps } from './types';
