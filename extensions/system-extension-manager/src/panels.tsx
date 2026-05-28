@@ -1014,7 +1014,7 @@ function InstallExtensionModal({
         role="dialog"
         aria-modal="true"
         aria-label="Install extension"
-        className="relative w-full max-w-xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
+        className="relative w-full max-w-3xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
@@ -1029,7 +1029,7 @@ function InstallExtensionModal({
         </div>
 
         <div className="space-y-5 px-6 py-5">
-          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_9rem_auto]">
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_auto]">
             <input
               className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               value={source}
@@ -1065,13 +1065,13 @@ function InstallExtensionModal({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
                 <input
-                  className="h-8 min-w-0 rounded-lg border border-border-subtle bg-base px-3 text-[12px] text-primary outline-none placeholder:text-dim focus:border-accent sm:w-56"
+                  className="h-8 min-w-0 rounded-lg border border-border-subtle bg-base px-3 text-[12px] text-primary outline-none placeholder:text-dim focus:border-accent sm:w-72"
                   value={marketplaceQuery}
                   onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
                   placeholder="Search marketplace"
                 />
               </div>
-              <div className="max-h-[18rem] overflow-y-auto border-y border-border-subtle/70">
+              <div className="max-h-[28rem] overflow-y-auto border-y border-border-subtle/70">
                 <div className="divide-y divide-border-subtle/70">
                   {visibleCatalogItems.map((item) => {
                     const itemBusy = catalogBusyId === item.id;
@@ -1458,6 +1458,37 @@ function ExtensionDetailsContent({
         : extension.enabled
           ? 'Enabled'
           : 'Disabled';
+  const includeRows = [
+    ['Skills', formatSkillSummary(extension)],
+    ['Tools', formatToolSummary(extension)],
+    [
+      'UI',
+      surfaces.length
+        ? surfaces.map((surface) => `${surface.title} (${surface.kind})`).join(', ')
+        : formatLabeledSummary([['Frontend', formatFrontendSummary(extension)]]),
+    ],
+    [
+      'Backend',
+      formatLabeledSummary([
+        ['Actions', formatBackendActionSummary(extension)],
+        ['Services', formatServiceSummary(extension)],
+        ['Protocols', formatProtocolSummary(extension)],
+      ]),
+    ],
+    [
+      'Agent',
+      formatLabeledSummary([
+        ['Model profiles', formatModelProfileSummary(extension)],
+        ['Hook', formatAgentHookSummary(extension)],
+      ]),
+    ],
+    ['Shortcuts', formatKeybindingSummary(extension)],
+  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
+  const informationRows = [
+    ['Permissions', formatPermissionSummary(extension)],
+    ['Subscriptions', formatSubscriptionSummary(extension)],
+    ['Dependencies', formatDependencySummary(extension)],
+  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
 
   return (
     <div className="space-y-6 pb-4">
@@ -1518,59 +1549,40 @@ function ExtensionDetailsContent({
         </DetailBlock>
       ) : null}
 
-      <DetailBlock title="Includes">
-        <div className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70">
-          <IncludedCapability label="Skills" value={formatSkillSummary(extension)} />
-          <IncludedCapability label="Tools" value={formatToolSummary(extension)} />
-          <IncludedCapability
-            label="UI"
-            value={
-              surfaces.length
-                ? surfaces.map((surface) => `${surface.title} (${surface.kind})`).join(', ')
-                : formatLabeledSummary([['Frontend', formatFrontendSummary(extension)]])
-            }
-          />
-          <IncludedCapability
-            label="Backend"
-            value={formatLabeledSummary([
-              ['Actions', formatBackendActionSummary(extension)],
-              ['Services', formatServiceSummary(extension)],
-              ['Protocols', formatProtocolSummary(extension)],
-            ])}
-          />
-          <IncludedCapability
-            label="Agent"
-            value={formatLabeledSummary([
-              ['Model profiles', formatModelProfileSummary(extension)],
-              ['Hook', formatAgentHookSummary(extension)],
-            ])}
-          />
-          <IncludedCapability label="Shortcuts" value={formatKeybindingSummary(extension)} />
-        </div>
-      </DetailBlock>
+      {includeRows.length ? (
+        <DetailBlock title="Includes">
+          <div className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70">
+            {includeRows.map(([label, value]) => (
+              <IncludedCapability key={label} label={label} value={value} />
+            ))}
+          </div>
+        </DetailBlock>
+      ) : null}
 
-      <DetailBlock title="Information">
-        <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
-          <DetailTableRow label="Permissions" value={formatPermissionSummary(extension)} />
-          <DetailTableRow label="Subscriptions" value={formatSubscriptionSummary(extension)} />
-          <DetailTableRow label="Dependencies" value={formatDependencySummary(extension)} />
-          {extension.packageRoot ? (
-            <DetailTableRow
-              label="Package"
-              value={extension.packageRoot}
-              action={
-                <button
-                  type="button"
-                  className="text-[11px] text-secondary transition-colors hover:text-primary"
-                  onClick={() => onOpenPath(extension.packageRoot!)}
-                >
-                  Open
-                </button>
-              }
-            />
-          ) : null}
-        </dl>
-      </DetailBlock>
+      {informationRows.length || extension.packageRoot ? (
+        <DetailBlock title="Information">
+          <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
+            {informationRows.map(([label, value]) => (
+              <DetailTableRow key={label} label={label} value={value} />
+            ))}
+            {extension.packageRoot ? (
+              <DetailTableRow
+                label="Package"
+                value={extension.packageRoot}
+                action={
+                  <button
+                    type="button"
+                    className="text-[11px] text-secondary transition-colors hover:text-primary"
+                    onClick={() => onOpenPath(extension.packageRoot!)}
+                  >
+                    Open
+                  </button>
+                }
+              />
+            ) : null}
+          </dl>
+        </DetailBlock>
+      ) : null}
 
       <details>
         <summary className="cursor-pointer select-none text-[12px] text-dim transition-colors hover:text-secondary">Raw manifest</summary>
