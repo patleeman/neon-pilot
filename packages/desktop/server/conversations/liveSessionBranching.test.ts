@@ -41,6 +41,10 @@ describe('live session branching', () => {
     return { getEntry: vi.fn(() => entry), createBranchedSession: vi.fn(() => branchFile) };
   }
 
+  function mapManager(entries: Record<string, unknown>, branchFile = '/sessions/branch.jsonl') {
+    return { getEntry: vi.fn((id: string) => entries[id] ?? null), createBranchedSession: vi.fn(() => branchFile) };
+  }
+
   function entry(overrides: Record<string, unknown> = {}) {
     return {
       sessionId: 'source-id',
@@ -143,6 +147,50 @@ describe('live session branching', () => {
       workspaceCwd: '/workspace-repo',
     });
     expect(sessions.appendChildConversationTopologyEntry).not.toHaveBeenCalled();
+  });
+
+  it('forks before the first visible user message even when setup entries precede it', async () => {
+    agent.managers.set(
+      '/sessions/source.jsonl',
+      mapManager({
+        'entry-model-change': { type: 'model_change', id: 'entry-model-change', parentId: null },
+        'entry-session-info': { type: 'session_info', id: 'entry-session-info', parentId: 'entry-model-change' },
+        'entry-user-1': {
+          type: 'message',
+          id: 'entry-user-1',
+          parentId: 'entry-session-info',
+          message: { role: 'user', content: 'first prompt' },
+        },
+      }),
+    );
+    const callbacks = {
+      createSession: vi.fn(),
+      reserveSession: vi.fn(() => ({ id: 'created-id', sessionFile: '/sessions/created.jsonl' })),
+      resumeSession: vi.fn(),
+      destroySession: vi.fn(),
+      resolveDefaultServiceTier: vi.fn(() => 'auto'),
+    };
+
+    await forkLiveSession(
+      entry() as never,
+      'entry-user-1',
+      { beforeEntry: true, preserveSource: true, branchKind: 'fork' } as never,
+      callbacks,
+    );
+
+    const sourceManager = agent.managers.get('/sessions/source.jsonl')!;
+    expect(sourceManager.createBranchedSession).not.toHaveBeenCalled();
+    expect(callbacks.reserveSession).toHaveBeenCalledWith('/repo');
+    expect(callbacks.resumeSession).not.toHaveBeenCalled();
+    expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'fork', parentMessageId: 'entry-user-1' }),
+    );
+    expect(sessions.appendChildConversationTopologyEntry).toHaveBeenCalledWith({
+      parentSessionFile: '/sessions/source.jsonl',
+      childSessionId: 'created-id',
+      kind: 'fork',
+      parentMessageId: 'entry-user-1',
+    });
   });
 
   it('keeps forked neutral chat conversations in the Chats group when source metadata lacks workspaceCwd', async () => {

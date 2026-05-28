@@ -178,13 +178,13 @@ function seedSourceSession() {
   mkdirSync(join(stateRoot, 'sync', 'pi-agent', 'sessions', sourceWorkspace), { recursive: true });
   const now = Date.now();
   const lines = [
-    { type: 'session', id: sourceSessionId, timestamp: new Date(now).toISOString(), cwd: sourceCwd },
-    { type: 'model_change', modelId: 'openrouter/test-fork-rewind-model' },
-    { type: 'session_info', name: sourceTitle },
+    { type: 'session', id: sourceSessionId, timestamp: new Date(now).toISOString(), cwd: sourceCwd, version: 3 },
+    { type: 'model_change', id: 'entry-model-change', parentId: null, modelId: 'openrouter/test-fork-rewind-model' },
+    { type: 'session_info', id: 'entry-session-info', parentId: 'entry-model-change', name: sourceTitle },
     {
       type: 'message',
       id: 'entry-user-1',
-      parentId: null,
+      parentId: 'entry-session-info',
       timestamp: new Date(now + 1_000).toISOString(),
       message: { role: 'user', content: promptOne },
     },
