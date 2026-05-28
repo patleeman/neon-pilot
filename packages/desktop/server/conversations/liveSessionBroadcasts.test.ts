@@ -79,6 +79,27 @@ describe('live session broadcasts', () => {
     expect(e.listeners[1].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 2 });
   });
 
+  it('reuses one built snapshot for listeners with the same tail block window', () => {
+    const e = {
+      ...entry(),
+      listeners: [
+        { send: vi.fn(), tailBlocks: 24 },
+        { send: vi.fn(), tailBlocks: 24 },
+        { send: vi.fn(), tailBlocks: 48 },
+      ],
+    } as { listeners: Array<{ send: ReturnType<typeof vi.fn>; tailBlocks: number }> };
+    const callbacks = { ensureStaleTurnState: vi.fn(), buildLiveSessionSnapshot: vi.fn((_entry, tailBlocks) => ({ tailBlocks })) };
+
+    broadcastSnapshot(e as never, callbacks);
+
+    expect(callbacks.buildLiveSessionSnapshot).toHaveBeenCalledTimes(2);
+    expect(callbacks.buildLiveSessionSnapshot).toHaveBeenNthCalledWith(1, e, 24);
+    expect(callbacks.buildLiveSessionSnapshot).toHaveBeenNthCalledWith(2, e, 48);
+    expect(e.listeners[0].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 24 });
+    expect(e.listeners[1].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 24 });
+    expect(e.listeners[2].send).toHaveBeenCalledWith({ type: 'snapshot', goalState: { objective: 'goal' }, tailBlocks: 48 });
+  });
+
   it('publishes running changes only when computed state changes', () => {
     const e = entry() as { running: boolean };
     readApi.computeLiveSessionRunning.mockReturnValueOnce(false);

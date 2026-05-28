@@ -45,6 +45,7 @@ describe('live session loader cache', () => {
       additionalSkillPaths: [' /skills '],
       additionalPromptTemplatePaths: [' /prompts '],
       additionalThemePaths: [' /themes '],
+      noThemes: true,
     });
 
     expect(loader).toBe(agent.DefaultResourceLoader.instances[0]);
@@ -56,6 +57,7 @@ describe('live session loader cache', () => {
       additionalSkillPaths: [' /skills '],
       additionalPromptTemplatePaths: [' /prompts '],
       additionalThemePaths: [' /themes '],
+      noThemes: true,
     });
     expect(agent.DefaultResourceLoader.instances[0].reload).toHaveBeenCalledOnce();
   });

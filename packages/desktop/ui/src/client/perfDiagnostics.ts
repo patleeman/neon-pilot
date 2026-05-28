@@ -89,6 +89,7 @@ const perfStore: PerfStore = {
   interactionSamples: [],
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
+const recordedClientPerfTimingOnceNames = new Set<string>();
 let rendererBlockTelemetryStarted = false;
 let pendingInputFrameLagCheck = false;
 publishPerfStore();
@@ -197,6 +198,31 @@ export function recordClientPerfTiming(input: {
   if (shouldLogPerfSamples()) {
     console.info('[pa-perf][client]', sample);
   }
+}
+
+export function recordClientPerfTimingOnce(
+  keyOrInput:
+    | string
+    | {
+        name: string;
+        startedAtMs: number;
+        meta?: Record<string, unknown>;
+        minDurationMs?: number;
+      },
+  input?: {
+    name: string;
+    startedAtMs: number;
+    meta?: Record<string, unknown>;
+    minDurationMs?: number;
+  },
+): void {
+  const sampleInput = typeof keyOrInput === 'string' ? input : keyOrInput;
+  const key = typeof keyOrInput === 'string' ? keyOrInput : keyOrInput.name;
+  if (!sampleInput || recordedClientPerfTimingOnceNames.has(key)) {
+    return;
+  }
+  recordedClientPerfTimingOnceNames.add(key);
+  recordClientPerfTiming(sampleInput);
 }
 
 export function measureClientPerfTiming<T>(

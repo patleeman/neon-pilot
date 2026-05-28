@@ -1,3 +1,4 @@
+import { listConversationMetadataNamespaces } from '../extensions/extensionConversationMetadata.js';
 import { readSessionDetailForRoute } from './conversationService.js';
 import { inlineConversationSessionDetailAssetsCapability } from './conversationSessionAssetCapability.js';
 import { readConversationSessionMetaCapability } from './conversationSessionCapability.js';
@@ -92,6 +93,7 @@ export interface DesktopConversationState {
         isStreaming: boolean;
         hasStaleTurnState?: boolean;
       };
+  extensionMetadataNamespaces?: string[];
   stream: DesktopConversationStreamState;
   perf?: Record<string, number>;
 }
@@ -185,6 +187,43 @@ function readLiveTerminalBashDetails(
     displayMode: TERMINAL_BASH_DISPLAY_MODE,
     ...(args.excludeFromContext === true ? { excludeFromContext: true } : {}),
   };
+}
+
+function queuedPromptPreviewsEqual(
+  left: DesktopConversationStreamState['pendingQueue']['steering'],
+  right: DesktopConversationStreamState['pendingQueue']['steering'],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => {
+    const other = right[index];
+    return item.id === other?.id && item.text === other.text && item.imageCount === other.imageCount;
+  });
+}
+
+function parallelPromptPreviewsEqual(
+  left: DesktopConversationStreamState['parallelJobs'],
+  right: DesktopConversationStreamState['parallelJobs'],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      item.id === other?.id &&
+      item.prompt === other.prompt &&
+      item.childConversationId === other.childConversationId &&
+      item.status === other.status &&
+      item.imageCount === other.imageCount
+    );
+  });
+}
+
+function tokenCountsEqual(left: DesktopConversationStreamState['tokens'], right: DesktopConversationStreamState['tokens']): boolean {
+  return (
+    left === right ||
+    (left !== null && right !== null && left.input === right.input && left.output === right.output && left.total === right.total)
+  );
 }
 
 function displayBlockToMessageBlock(block: {
@@ -297,8 +336,6 @@ export function createDesktopConversationStreamStateFromSnapshot(snapshot: LiveS
 }
 
 export function applyDesktopConversationStreamEvent(prev: DesktopConversationStreamState, event: SseEvent): DesktopConversationStreamState {
-  const blocks = [...prev.blocks];
-
   switch (event.type) {
     case 'snapshot': {
       const snapshotBlocks = event.blocks.map((block) => displayBlockToMessageBlock(block));
@@ -322,10 +359,14 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'compaction_start':
+      if (prev.isCompacting) {
+        return prev;
+      }
       return { ...prev, isCompacting: true };
 
     case 'compaction_end':
       if (event.errorMessage) {
+        const blocks = [...prev.blocks];
         blocks.push({ type: 'error', message: event.errorMessage, ts: new Date().toISOString() });
         return {
           ...prev,
@@ -335,16 +376,29 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
           error: event.errorMessage,
         };
       }
-      return { ...prev, isCompacting: false };
+      return prev.isCompacting ? { ...prev, isCompacting: false } : prev;
 
     case 'agent_start':
+      if (prev.isStreaming && prev.error === null) {
+        return prev;
+      }
       return { ...prev, isStreaming: true, error: null };
 
     case 'agent_end':
     case 'turn_end':
+      if (!prev.isStreaming) {
+        return prev;
+      }
       return { ...prev, isStreaming: false };
 
     case 'cwd_changed':
+      if (
+        prev.cwdChange?.newConversationId === event.newConversationId &&
+        prev.cwdChange.cwd === event.cwd &&
+        prev.cwdChange.autoContinued === event.autoContinued
+      ) {
+        return prev;
+      }
       return {
         ...prev,
         cwdChange: {
@@ -355,6 +409,7 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
       };
 
     case 'user_message': {
+      const blocks = [...prev.blocks];
       const nextBlock = displayBlockToMessageBlock(event.block);
       const last = blocks.at(-1);
       const sameUserBlock =
@@ -375,15 +430,28 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'queue_state':
+      if (
+        queuedPromptPreviewsEqual(prev.pendingQueue.steering, event.steering) &&
+        queuedPromptPreviewsEqual(prev.pendingQueue.followUp, event.followUp)
+      ) {
+        return prev;
+      }
       return { ...prev, pendingQueue: { steering: event.steering, followUp: event.followUp } };
 
     case 'parallel_state':
+      if (parallelPromptPreviewsEqual(prev.parallelJobs, event.jobs)) {
+        return prev;
+      }
       return { ...prev, parallelJobs: event.jobs };
 
     case 'presence_state':
+      if (prev.presence === event.state) {
+        return prev;
+      }
       return { ...prev, presence: event.state };
 
     case 'text_delta': {
+      const blocks = [...prev.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'text') {
         blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
@@ -398,6 +466,7 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'thinking_delta': {
+      const blocks = [...prev.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'thinking') {
         blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
@@ -412,6 +481,7 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'tool_start': {
+      const blocks = [...prev.blocks];
       const input = (event.args ?? {}) as Record<string, unknown>;
       const toolName = normalizeTranscriptToolName(event.toolName);
       const details = readLiveTerminalBashDetails(toolName, input);
@@ -433,8 +503,9 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'tool_update': {
-      const index = findLastToolUseIndex(blocks, event.toolCallId);
+      const index = findLastToolUseIndex(prev.blocks, event.toolCallId);
       if (index >= 0) {
+        const blocks = [...prev.blocks];
         const block = blocks[index];
         const partialResult = event.partialResult as { content?: Array<{ text?: string }> } | string | undefined;
         const partialText = typeof partialResult === 'string' ? partialResult : (partialResult?.content?.[0]?.text ?? '');
@@ -442,17 +513,20 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
           ...block,
           output: `${block.output ?? ''}${partialText}`,
         };
+        return {
+          ...prev,
+          blocks,
+          totalBlocks: Math.max(prev.totalBlocks, prev.blockOffset + blocks.length),
+        };
       }
-      return {
-        ...prev,
-        blocks,
-        totalBlocks: Math.max(prev.totalBlocks, prev.blockOffset + blocks.length),
-      };
+      return prev;
     }
 
     case 'tool_end': {
-      const index = findLastToolUseIndex(blocks, event.toolCallId);
+      const index = findLastToolUseIndex(prev.blocks, event.toolCallId);
+      let blocks = prev.blocks;
       if (index >= 0) {
+        blocks = [...prev.blocks];
         const block = blocks[index];
         blocks[index] = {
           ...block,
@@ -463,6 +537,9 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
         };
       }
       const goalState = readGoalStateFromToolDetails(normalizeTranscriptToolName(event.toolName), event.details);
+      if (blocks === prev.blocks && goalState === undefined) {
+        return prev;
+      }
       return {
         ...prev,
         blocks,
@@ -472,15 +549,25 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'title_update':
+      if (prev.title === event.title) {
+        return prev;
+      }
       return { ...prev, title: event.title };
 
     case 'context_usage':
+      if (prev.contextUsage === event.usage) {
+        return prev;
+      }
       return { ...prev, contextUsage: event.usage };
 
     case 'stats_update':
+      if (tokenCountsEqual(prev.tokens, event.tokens) && prev.cost === event.cost) {
+        return prev;
+      }
       return { ...prev, tokens: event.tokens, cost: event.cost };
 
-    case 'error':
+    case 'error': {
+      const blocks = [...prev.blocks];
       blocks.push({ type: 'error', message: event.message, ts: new Date().toISOString() });
       return {
         ...prev,
@@ -489,6 +576,7 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
         isStreaming: false,
         error: event.message,
       };
+    }
 
     default:
       return prev;
@@ -518,7 +606,6 @@ export async function readDesktopConversationState(input: {
   conversationId: string;
   profile: string;
   tailBlocks?: number;
-  includeToolBlocks?: boolean;
 }): Promise<DesktopConversationState> {
   const startedAtMs = performance.now();
   const conversationId = input.conversationId.trim();
@@ -532,6 +619,11 @@ export async function readDesktopConversationState(input: {
 
   const sessionMeta = readConversationSessionMetaCapability(conversationId);
   const sessionMetaAtMs = performance.now();
+  const extensionMetadataNamespaces = listConversationMetadataNamespaces({
+    conversationId,
+    profile: input.profile,
+  });
+  const metadataNamespacesAtMs = performance.now();
   const liveSession = sessionMeta?.isLive ? readLiveSessionStateSnapshot(conversationId, tailBlocks) : null;
   const liveSnapshotAtMs = performance.now();
 
@@ -554,10 +646,12 @@ export async function readDesktopConversationState(input: {
         isStreaming: liveSession.isStreaming,
         hasStaleTurnState: liveSession.hasStaleTurnState,
       },
+      ...(extensionMetadataNamespaces.length > 0 ? { extensionMetadataNamespaces } : {}),
       stream: createDesktopConversationStreamStateFromSnapshot(liveSession),
       perf: {
         sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
-        liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),
+        extensionMetadataNamespacesMs: Math.round(metadataNamespacesAtMs - sessionMetaAtMs),
+        liveSnapshotMs: Math.round(liveSnapshotAtMs - metadataNamespacesAtMs),
         totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
       },
     };
@@ -567,7 +661,6 @@ export async function readDesktopConversationState(input: {
     conversationId,
     profile: input.profile,
     tailBlocks,
-    includeToolBlocks: input.includeToolBlocks,
   });
   const sessionReadAtMs = performance.now();
 
@@ -576,10 +669,12 @@ export async function readDesktopConversationState(input: {
       conversationId,
       sessionDetail: null,
       liveSession: { live: false },
+      ...(extensionMetadataNamespaces.length > 0 ? { extensionMetadataNamespaces } : {}),
       stream: createEmptyDesktopConversationStreamState(),
       perf: {
         sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
-        liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),
+        extensionMetadataNamespacesMs: Math.round(metadataNamespacesAtMs - sessionMetaAtMs),
+        liveSnapshotMs: Math.round(liveSnapshotAtMs - metadataNamespacesAtMs),
         sessionReadMs: Math.round(sessionReadAtMs - liveSnapshotAtMs),
         totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
       },
@@ -592,6 +687,7 @@ export async function readDesktopConversationState(input: {
     conversationId,
     sessionDetail: detail,
     liveSession: { live: false },
+    ...(extensionMetadataNamespaces.length > 0 ? { extensionMetadataNamespaces } : {}),
     stream: createEmptyDesktopConversationStreamState(),
     perf: {
       sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),

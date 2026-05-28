@@ -125,6 +125,7 @@ export interface ExtensionContributions {
   topBarElements?: ExtensionTopBarElementContribution[];
   messageActions?: ExtensionMessageActionContribution[];
   composerShelves?: ExtensionComposerShelfContribution[];
+  draftConversationCreate?: ExtensionDraftConversationCreateContribution[];
   newConversationPanels?: ExtensionNewConversationPanelContribution[];
   composerControls?: ExtensionComposerControlContribution[];
   composerButtons?: ExtensionComposerButtonContribution[];
@@ -176,6 +177,19 @@ export interface ExtensionComposerShelfContribution {
   component: string;
   title?: string;
   placement?: 'top' | 'bottom';
+  /**
+   * Only mount this shelf when the conversation has non-empty extension
+   * metadata in this namespace. Keeps empty, conversation-scoped shelves out
+   * of hot navigation paths without hardcoding extension behavior in core.
+   */
+  conversationMetadataNamespace?: string;
+}
+
+export interface ExtensionDraftConversationCreateContribution {
+  id: string;
+  prepareAction: string;
+  applyAction?: string;
+  priority?: number;
 }
 
 export interface ExtensionNewConversationPanelContribution {

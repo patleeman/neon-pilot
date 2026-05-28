@@ -28,10 +28,27 @@
         "id": "consumeDraftState",
         "handler": "consumeDraftState",
         "title": "Consume Draft Code Mode State"
+      },
+      {
+        "id": "prepareDraftConversation",
+        "handler": "prepareDraftConversation",
+        "title": "Prepare Draft Code Mode Conversation"
+      },
+      {
+        "id": "applyDraftConversation",
+        "handler": "applyDraftConversation",
+        "title": "Apply Draft Code Mode Conversation"
       }
     ]
   },
   "contributes": {
+    "draftConversationCreate": [
+      {
+        "id": "code-mode-draft-conversation",
+        "prepareAction": "prepareDraftConversation",
+        "applyAction": "applyDraftConversation"
+      }
+    ],
     "slashCommands": [
       {
         "name": "code",

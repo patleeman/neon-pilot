@@ -79,14 +79,15 @@ pnpm run desktop:demo</code></pre>
     │       ├── Automations
     │       └── Settings
     │
-    ├── Local API worker threads
+    ├── Backend child process
     │       │
+    │       ├── Local API
     │       ├── Session parsing and search
     │       ├── Git/checkpoint operations
-    │       └── Vault and knowledge-base reads/writes
-    │
-    ├── Daemon (in-process runtime)
-    │       │
+    │       ├── Knowledge base reads/writes
+    │       ├── Extension backend host
+    │       └── Daemon runtime
+    │             │
     │       ├── Scheduled tasks
     │       ├── Wakeups
     │       └── Follow-up queue</code></pre>
@@ -97,13 +98,13 @@ pnpm run desktop:demo</code></pre>
             deferred work
           </li>
           <li>
-            Freeze-prone local API work runs behind worker-thread RPC; do not import or execute heavy desktop server capabilities directly
-            on the Electron main thread
+            Freeze-prone local API work runs in the backend child process; do not import or execute heavy desktop server capabilities
+            directly on the Electron main thread
           </li>
           <li>Avoid <code>spawnSync</code>/<code>execSync</code> in desktop main-process flows</li>
           <li>
-            The daemon owns durable background behavior and starts after the renderer has had a chance to paint; user actions that need it
-            can force-start it immediately
+            The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint;
+            user actions that need it can force-start it immediately
           </li>
           <li>
             The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions,

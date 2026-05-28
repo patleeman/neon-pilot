@@ -35,6 +35,19 @@ export async function buildSnapshotEventsForTopic(topic: AppEventTopic): Promise
 
 export const INITIAL_APP_EVENT_TOPICS: AppEventTopic[] = ['sessions', 'tasks', 'runs', 'daemon'];
 
+export function readInitialAppEventTopics(searchParams: URLSearchParams): AppEventTopic[] {
+  const requested = searchParams.get('initialSnapshotTopics');
+  if (!requested) {
+    return INITIAL_APP_EVENT_TOPICS;
+  }
+
+  const allowed = new Set<AppEventTopic>(INITIAL_APP_EVENT_TOPICS);
+  return requested
+    .split(',')
+    .map((topic) => topic.trim())
+    .filter((topic): topic is AppEventTopic => allowed.has(topic as AppEventTopic));
+}
+
 export function registerSystemRoutes(
   router: Pick<Express, 'get' | 'post'>,
   context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'listTasksForRuntimeScope'>,

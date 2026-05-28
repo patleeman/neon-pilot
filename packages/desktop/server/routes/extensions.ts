@@ -3,6 +3,7 @@ import { resolve, sep } from 'node:path';
 
 import type { Express, Request, Response } from 'express';
 
+import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import {
   invokeExtensionAction,
@@ -24,7 +25,6 @@ import {
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import {
   clearBuildError,
-  type ExtensionInstallSummary,
   findExtensionCommandRegistration,
   findExtensionEntry,
   isExtensionEnabled,
@@ -58,47 +58,6 @@ async function readExtensionInstallSummariesWithRuntimeState() {
       return { id: service.id, running: Boolean(status), startedAt: status?.startedAt ?? null };
     }),
   }));
-}
-
-function buildCriticalExtensionInstallSummaries(
-  snapshot: ReturnType<typeof readExtensionRegistrySnapshot>,
-): Array<
-  Pick<ExtensionInstallSummary, 'id' | 'name' | 'packageType' | 'enabled' | 'status' | 'manifest' | 'permissions' | 'surfaces' | 'routes'>
-> {
-  return snapshot.extensions.map((manifest) => {
-    const contributes = manifest.contributes ?? {};
-    const criticalContributes = {
-      ...(contributes.nav ? { nav: contributes.nav } : {}),
-      ...(contributes.views ? { views: contributes.views } : {}),
-      ...(contributes.topBarElements ? { topBarElements: contributes.topBarElements } : {}),
-      ...(contributes.composerButtons ? { composerButtons: contributes.composerButtons } : {}),
-      ...(contributes.composerControls ? { composerControls: contributes.composerControls } : {}),
-      ...(contributes.composerInputTools ? { composerInputTools: contributes.composerInputTools } : {}),
-    };
-    return {
-      id: manifest.id,
-      name: manifest.name,
-      packageType: manifest.packageType,
-      enabled: true,
-      status: 'enabled' as const,
-      manifest: {
-        schemaVersion: manifest.schemaVersion,
-        id: manifest.id,
-        name: manifest.name,
-        packageType: manifest.packageType,
-        ...(manifest.version ? { version: manifest.version } : {}),
-        ...(manifest.description ? { description: manifest.description } : {}),
-        ...(manifest.frontend ? { frontend: manifest.frontend } : {}),
-        ...(Object.keys(criticalContributes).length > 0 ? { contributes: criticalContributes } : {}),
-        ...(manifest.surfaces ? { surfaces: manifest.surfaces } : {}),
-      },
-      permissions: [],
-      surfaces: manifest.surfaces ?? [],
-      routes: snapshot.routes
-        .filter((route) => route.extensionId === manifest.id)
-        .map((route) => ({ route: route.route, surfaceId: route.surfaceId })),
-    };
-  });
 }
 
 function isHostCommandAction(action: string): boolean {
@@ -327,13 +286,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/registry/critical', (_req, res) => {
     try {
-      const snapshot = readExtensionRegistrySnapshot();
-      res.json({
-        extensions: buildCriticalExtensionInstallSummaries(snapshot),
-        routes: snapshot.routes,
-        surfaces: [...snapshot.surfaces, ...snapshot.views],
-        settings: {},
-      });
+      res.json(buildCriticalExtensionRegistryResponse(readExtensionRegistrySnapshot()));
     } catch (err) {
       sendRouteError(res, 'extensions critical registry error', err);
     }

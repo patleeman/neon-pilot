@@ -10,6 +10,7 @@ import {
   resolveDurableRunsRoot,
 } from '@neon-pilot/daemon';
 
+import { withExtensionRegistryReadCache } from '../extensions/extensionRegistry.js';
 import { resolveExtensionPromptReferences } from '../extensions/promptReferenceResolvers.js';
 import {
   buildReferencedMemoryDocsContext,
@@ -21,7 +22,7 @@ import {
 } from '../knowledge/promptReferences.js';
 import { invalidateAppTopics, logError, logWarn } from '../middleware/index.js';
 import { buildPromptContextPlan } from '../prompt-assembly/promptContextInventory.js';
-import type { MemoryDocSummary } from '../routes/context.js';
+import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type MemoryDocSummary } from '../routes/context.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { buildAttachedConversationContextDocsContext, readConversationContextDocs } from './conversationContextDocs.js';
 import { resolveConversationCwd, resolveNeutralChatCwd } from './conversationCwd.js';
@@ -48,6 +49,7 @@ import {
   startParallelPromptSession,
   submitPromptSession as submitLocalPromptSession,
   takeOverSessionControl,
+  updateLiveSessionModelPreferences,
 } from './liveSessions.js';
 
 export interface LiveSessionCapabilityContext {
@@ -88,6 +90,7 @@ export interface CreateLiveSessionCapabilityInput {
   thinkingLevel?: string | null;
   serviceTier?: string | null;
   allowedToolNames?: string[];
+  reservedSessionFile?: string;
 }
 
 export interface CreateLiveSessionCapabilityResult {
@@ -211,13 +214,47 @@ async function buildLiveSessionOptionsAsync(
   context: LiveSessionCapabilityContext,
   overrides: Record<string, unknown> = {},
 ): Promise<Record<string, unknown>> {
-  return {
-    ...(context.buildLiveSessionResourceOptionsAsync
-      ? await context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope())
-      : context.buildLiveSessionResourceOptions(context.getRuntimeScope())),
-    extensionFactories: context.buildLiveSessionExtensionFactories(),
-    ...overrides,
-  };
+  return (await buildLiveSessionOptionsWithPerf(context, overrides)).options;
+}
+
+async function buildLiveSessionOptionsWithPerf(
+  context: LiveSessionCapabilityContext,
+  overrides: Record<string, unknown> = {},
+): Promise<{ options: Record<string, unknown>; perf: Record<string, number> }> {
+  return withExtensionRegistryReadCache(async () => {
+    const startedAtMs = performance.now();
+    const resourceOptionsStartedAtMs = performance.now();
+    const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
+      ? context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope())
+      : Promise.resolve(context.buildLiveSessionResourceOptions(context.getRuntimeScope()));
+    const resourceOptionsDispatchedAtMs = performance.now();
+    const extensionFactoriesStartedAtMs = performance.now();
+    const extensionFactories = context.buildLiveSessionExtensionFactories();
+    const extensionFactoriesAtMs = performance.now();
+    const resourceOptions = await resourceOptionsPromise;
+    const resourceOptionsAtMs = performance.now();
+    const resourceOptionsPerf =
+      resourceOptions && typeof resourceOptions === 'object'
+        ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
+        : undefined;
+    return {
+      options: {
+        ...resourceOptions,
+        extensionFactories,
+        ...overrides,
+      },
+      perf: {
+        capabilityResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
+        capabilityResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - resourceOptionsStartedAtMs),
+        capabilityResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
+        capabilityExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - extensionFactoriesStartedAtMs),
+        capabilityOptionsMergeMs: Math.round(performance.now() - resourceOptionsAtMs),
+        ...(resourceOptionsPerf
+          ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`resourceOptions.${key}`, value]))
+          : {}),
+      },
+    };
+  });
 }
 
 function buildBackgroundRunInternalContext(entries: Array<{ prompt: string }>): string {
@@ -487,6 +524,11 @@ export async function prewarmLiveSessionCapability(
   return { ok: true };
 }
 
+export async function prewarmLiveSessionOptionsCapability(context: LiveSessionCapabilityContext): Promise<{ ok: true }> {
+  await buildLiveSessionOptionsAsync(context);
+  return { ok: true };
+}
+
 export async function createLiveSessionCapability(
   input: CreateLiveSessionCapabilityInput,
   context: LiveSessionCapabilityContext,
@@ -503,13 +545,45 @@ export async function createLiveSessionCapability(
     : resolveNeutralChatCwd(profile);
 
   const optionsStartedAtMs = performance.now();
-  const options = await buildLiveSessionOptionsAsync(context, {
+  const { options, perf: optionsPerf } = await buildLiveSessionOptionsWithPerf(context, {
     ...(input.model !== undefined ? { initialModel: input.model } : {}),
     ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
     ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
     ...(Array.isArray(input.allowedToolNames) ? { allowedToolNames: input.allowedToolNames } : {}),
   });
   const optionsAtMs = performance.now();
+
+  const reservedSessionFile = typeof input.reservedSessionFile === 'string' ? input.reservedSessionFile.trim() : '';
+  if (reservedSessionFile) {
+    const resumeStartedAtMs = performance.now();
+    const resumed = await resumeLocalSession(reservedSessionFile, {
+      ...options,
+      cwdOverride: cwd,
+    });
+    const resumedAtMs = performance.now();
+    if (input.model !== undefined || input.thinkingLevel !== undefined || input.serviceTier !== undefined) {
+      await updateLiveSessionModelPreferences(resumed.id, {
+        ...(input.model !== undefined ? { model: input.model } : {}),
+        ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+        ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
+      });
+    }
+    const preferencesAtMs = performance.now();
+    return {
+      id: resumed.id,
+      sessionFile: reservedSessionFile,
+      bootstrap: buildCreatedLiveSessionBootstrap(resumed.id, reservedSessionFile),
+      perf: {
+        ...(resumed.perf ?? {}),
+        capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
+        ...optionsPerf,
+        capabilityResumeReservedSessionMs: Math.round(resumedAtMs - resumeStartedAtMs),
+        capabilityReservedPreferencesMs: Math.round(preferencesAtMs - resumedAtMs),
+        capabilityTotalMs: Math.round(preferencesAtMs - optionsStartedAtMs),
+      },
+    };
+  }
+
   const createStartedAtMs = performance.now();
   const created = await createLocalSession(cwd, options);
   const createdAtMs = performance.now();
@@ -527,6 +601,7 @@ export async function createLiveSessionCapability(
     perf: {
       ...(created.perf ?? {}),
       capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
+      ...optionsPerf,
       capabilityCreateLocalSessionMs: Math.round(createdAtMs - createStartedAtMs),
       capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - createdAtMs),
       capabilityBootstrapMs: Math.round(bootstrapAtMs - workspaceMetadataAtMs),
@@ -538,7 +613,8 @@ export async function createLiveSessionCapability(
 export async function resumeLiveSessionCapability(
   input: ResumeLiveSessionCapabilityInput,
   context: LiveSessionCapabilityContext,
-): Promise<{ id: string }> {
+): Promise<{ id: string; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const sessionFile = input.sessionFile?.trim();
   if (!sessionFile) {
     throw new LiveSessionCapabilityInputError('sessionFile required');
@@ -546,12 +622,27 @@ export async function resumeLiveSessionCapability(
 
   const cwd = typeof input.cwd === 'string' && input.cwd.trim().length > 0 ? input.cwd.trim() : undefined;
 
+  const optionsStartedAtMs = performance.now();
+  const options = await buildLiveSessionOptionsAsync(context);
+  const optionsAtMs = performance.now();
   const result = await resumeLocalSession(sessionFile, {
-    ...(await buildLiveSessionOptionsAsync(context)),
+    ...options,
     ...(cwd ? { cwdOverride: cwd } : {}),
   });
+  const resumedAtMs = performance.now();
   await context.flushLiveDeferredResumes();
-  return result;
+  const flushedAtMs = performance.now();
+  return {
+    ...result,
+    perf: {
+      capabilityValidateMs: Math.round(optionsStartedAtMs - startedAtMs),
+      capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
+      ...(result.perf ?? {}),
+      capabilityResumeLocalSessionMs: Math.round(resumedAtMs - optionsAtMs),
+      capabilityFlushDeferredResumesMs: Math.round(flushedAtMs - resumedAtMs),
+      capabilityTotalMs: Math.round(flushedAtMs - startedAtMs),
+    },
+  };
 }
 
 interface PreparedLiveSessionPrompt {
@@ -805,13 +896,20 @@ export async function submitLiveSessionPromptCapability(
   const queuedContextAtMs = performance.now();
 
   const recoveredSessionFile = recoveredLiveEntry?.session.sessionFile;
+  let runningStateSyncTimer: ReturnType<typeof setTimeout> | null = null;
   if (recoveredSessionFile) {
-    const syncTimer = setTimeout(() => {
+    runningStateSyncTimer = setTimeout(() => {
+      runningStateSyncTimer = null;
+      const currentEntry = liveRegistry.get(liveConversationId);
+      if (!currentEntry || !currentEntry.session.isStreaming) {
+        return;
+      }
+
       void syncWebLiveConversationRun({
         conversationId: liveConversationId,
         sessionFile: recoveredSessionFile,
-        cwd: recoveredLiveEntry.cwd,
-        title: recoveredLiveEntry.title,
+        cwd: currentEntry.cwd,
+        title: currentEntry.title,
         profile: prepared.runtimeScope,
         state: 'running',
         pendingOperation: {
@@ -834,7 +932,7 @@ export async function submitLiveSessionPromptCapability(
         });
       });
     }, 5_000);
-    syncTimer.unref?.();
+    runningStateSyncTimer.unref?.();
   }
 
   const syncedRunAtMs = performance.now();
@@ -851,6 +949,12 @@ export async function submitLiveSessionPromptCapability(
   const daemonRunsRoot = resolveDurableRunsRoot(resolveDaemonRoot());
 
   void promptPromise
+    .finally(() => {
+      if (runningStateSyncTimer) {
+        clearTimeout(runningStateSyncTimer);
+        runningStateSyncTimer = null;
+      }
+    })
     .then(async () => {
       if (!prepared.sourceSessionFile || prepared.backgroundRunContextEntries.length === 0) {
         return;
@@ -1073,7 +1177,8 @@ export async function branchLiveSessionCapability(
 export async function forkLiveSessionCapability(
   input: ForkLiveSessionCapabilityInput,
   context: LiveSessionCapabilityContext,
-): Promise<{ newSessionId: string; sessionFile: string }> {
+): Promise<{ newSessionId: string; sessionFile: string; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const conversationId = input.conversationId.trim();
   if (!conversationId) {
     throw new LiveSessionCapabilityInputError('conversationId required');
@@ -1084,17 +1189,33 @@ export async function forkLiveSessionCapability(
     throw new LiveSessionCapabilityInputError('entryId required');
   }
 
-  return forkLiveSession(
+  const optionsStartedAtMs = performance.now();
+  const { options, perf: optionsPerf } = await buildLiveSessionOptionsWithPerf(context);
+  const optionsAtMs = performance.now();
+  const forked = await forkLiveSession(
     conversationId,
     entryId,
     {
       preserveSource: input.preserveSource,
       beforeEntry: input.beforeEntry,
       branchKind: input.branchKind,
-      ...(await buildLiveSessionOptionsAsync(context)),
+      ...options,
     },
     input.surfaceId,
   );
+  const forkedAtMs = performance.now();
+
+  return {
+    ...forked,
+    perf: {
+      capabilityValidateMs: Math.round(optionsStartedAtMs - startedAtMs),
+      capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
+      ...optionsPerf,
+      ...(forked.perf ?? {}),
+      capabilityForkLiveSessionMs: Math.round(forkedAtMs - optionsAtMs),
+      capabilityTotalMs: Math.round(forkedAtMs - startedAtMs),
+    },
+  };
 }
 
 export async function abortLiveSessionCapability(input: { conversationId: string }): Promise<{ ok: true }> {

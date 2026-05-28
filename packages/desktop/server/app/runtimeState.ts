@@ -8,12 +8,19 @@ import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
-import { isExtensionEnabled, listExtensionEntries, resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
+import {
+  isExtensionEnabled,
+  listExtensionAgentRegistrations,
+  listExtensionEntries,
+  listExtensionToolRegistrations,
+  resolveExtensionModelProfile,
+} from '../extensions/extensionRegistry.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
-import { buildPromptAssemblyPlan, buildPromptAssemblyPlanAsync } from '../prompt-assembly/promptAssembly.js';
-import type { LiveSessionResourceOptions } from '../routes/context.js';
+import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
+import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type LiveSessionResourceOptions } from '../routes/context.js';
+import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 
 export interface RuntimeStateLogger {
@@ -43,6 +50,17 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
   let liveSessionResourceOptionsCache: { key: string; value: LiveSessionResourceOptions } | null = null;
+  let liveSessionResourceOptionsPromiseCache: { key: string; promise: Promise<LiveSessionResourceOptions> } | null = null;
+  let liveSessionExtensionFactoriesCache: { key: string; value: ExtensionFactory[] } | null = null;
+
+  function withResourceOptionsPerf(value: LiveSessionResourceOptions, perf: Record<string, number>): LiveSessionResourceOptions {
+    Object.defineProperty(value, LIVE_SESSION_RESOURCE_OPTIONS_PERF, {
+      value: perf,
+      enumerable: false,
+      configurable: true,
+    });
+    return value;
+  }
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
@@ -121,33 +139,42 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function materializeRuntimeResources(): void {
+    const extensionEntries = resolveRuntimeExtensionEntries();
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
-      extensionEntries: resolveRuntimeExtensionEntries(),
+      extensionEntries,
     });
-    const assembly = buildPromptAssemblyPlan({
+    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const skills = buildSkillInjectionPlan({
       runtimeScope,
       repoRoot,
-      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
     });
+    const promptTemplates = buildPromptTemplatePlan({
+      runtimeScope,
+      repoRoot,
+      modelRef,
+    });
+    liveSessionResourceOptionsCache = {
+      key: JSON.stringify({ runtimeScope, modelRef, extensionEntries }),
+      value: withResourceOptionsPerf(
+        {
+          additionalExtensionPaths: resolved.extensionEntries,
+          additionalSkillPaths: skills.skillPaths,
+          additionalPromptTemplatePaths: promptTemplates.templatePaths,
+          additionalThemePaths: resolved.themeEntries,
+        },
+        { cacheHit: 0 },
+      ),
+    };
     materializeRuntimeResourcesToAgentDir(resolved, agentDir);
-    writeRuntimeMcpConfig(assembly.skills.skillPaths);
-    watchRuntimeMcpConfig(assembly.skills.skillPaths);
+    writeRuntimeMcpConfig(skills.skillPaths);
+    watchRuntimeMcpConfig(skills.skillPaths);
   }
 
   setRuntimeAgentHookBuilders({
     buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories,
   });
-
-  try {
-    materializeRuntimeResources();
-  } catch (error) {
-    logger.warn('failed to materialize runtime resources', {
-      runtimeScope,
-      message: (error as Error).message,
-    });
-  }
 
   function getRuntimeScope(): string {
     return runtimeScope;
@@ -262,6 +289,33 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function buildLiveSessionExtensionFactories(): ExtensionFactory[] {
     clearBashProcessWrappers();
+    const extensionEntries = resolveRuntimeExtensionEntries();
+    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const cacheKey = JSON.stringify({
+      runtimeScope,
+      repoRoot,
+      runtimeConfigRoot: getRuntimeConfigRoot(),
+      stateRoot: getStateRoot(),
+      modelRef,
+      extensionEntries,
+      agentRegistrations: listExtensionAgentRegistrations().map((registration) => ({
+        extensionId: registration.extensionId,
+        exportName: registration.exportName,
+      })),
+      toolRegistrations: listExtensionToolRegistrations().map((tool) => ({
+        extensionId: tool.extensionId,
+        id: tool.id,
+        name: tool.name,
+        action: tool.action,
+        nativeRegistration: tool.nativeRegistration,
+        replaces: tool.replaces,
+        when: tool.when,
+      })),
+    });
+    if (liveSessionExtensionFactoriesCache?.key === cacheKey) {
+      return liveSessionExtensionFactoriesCache.value;
+    }
+
     const agentExtensions = createManifestAgentExtensions({ onError: logger.warn });
 
     // Surface agent extension loading errors as session-level diagnostics
@@ -272,7 +326,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       });
     }
 
-    return [
+    const factories = [
       ...createManifestToolAgentExtensions({
         getRuntimeScope: getRuntimeScope,
         getPreferredVisionModel,
@@ -286,13 +340,26 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
       ...agentExtensions.factories,
     ].map(guardExtensionApi);
+    liveSessionExtensionFactoriesCache = { key: cacheKey, value: factories };
+    return factories;
   }
 
   function buildLiveSessionResourceOptions(): LiveSessionResourceOptions {
+    const startedAtMs = performance.now();
     const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntriesAtMs = performance.now();
     const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRefAtMs = performance.now();
     const cacheKey = JSON.stringify({ runtimeScope, modelRef, extensionEntries });
+    const cacheKeyAtMs = performance.now();
     if (liveSessionResourceOptionsCache?.key === cacheKey) {
+      withResourceOptionsPerf(liveSessionResourceOptionsCache.value, {
+        cacheHit: 1,
+        extensionEntriesMs: Math.round(extensionEntriesAtMs - startedAtMs),
+        modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
+        cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
+        totalMs: Math.round(performance.now() - startedAtMs),
+      });
       return liveSessionResourceOptionsCache.value;
     }
 
@@ -300,40 +367,111 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       repoRoot,
       extensionEntries,
     });
+    const resourcesAtMs = performance.now();
 
-    const assembly = buildPromptAssemblyPlan({
+    const assemblyContext = {
       runtimeScope,
       repoRoot,
       modelRef,
-    });
-
-    const value = {
-      additionalExtensionPaths: resolved.extensionEntries,
-      additionalSkillPaths: assembly.skills.skillPaths,
-      additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
-      additionalThemePaths: resolved.themeEntries,
     };
+    const skills = buildSkillInjectionPlan(assemblyContext);
+    const skillsAtMs = performance.now();
+    const promptTemplates = buildPromptTemplatePlan(assemblyContext);
+    const promptTemplatesAtMs = performance.now();
+
+    const value = withResourceOptionsPerf(
+      {
+        additionalExtensionPaths: resolved.extensionEntries,
+        additionalSkillPaths: skills.skillPaths,
+        additionalPromptTemplatePaths: promptTemplates.templatePaths,
+        additionalThemePaths: resolved.themeEntries,
+      },
+      {
+        cacheHit: 0,
+        extensionEntriesMs: Math.round(extensionEntriesAtMs - startedAtMs),
+        modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
+        cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
+        resourcesMs: Math.round(resourcesAtMs - cacheKeyAtMs),
+        skillsMs: Math.round(skillsAtMs - resourcesAtMs),
+        promptTemplatesMs: Math.round(promptTemplatesAtMs - skillsAtMs),
+        totalMs: Math.round(promptTemplatesAtMs - startedAtMs),
+      },
+    );
     liveSessionResourceOptionsCache = { key: cacheKey, value };
     return value;
   }
 
   async function buildLiveSessionResourceOptionsAsync(): Promise<LiveSessionResourceOptions> {
-    const resolved = resolveRuntimeResources(runtimeScope, {
-      repoRoot,
-      extensionEntries: resolveRuntimeExtensionEntries(),
-    });
-    const assembly = await buildPromptAssemblyPlanAsync({
-      runtimeScope,
-      repoRoot,
-      modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
-    });
+    const startedAtMs = performance.now();
+    const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntriesAtMs = performance.now();
+    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRefAtMs = performance.now();
+    const cacheKey = JSON.stringify({ runtimeScope, modelRef, extensionEntries });
+    const cacheKeyAtMs = performance.now();
+    if (liveSessionResourceOptionsCache?.key === cacheKey) {
+      withResourceOptionsPerf(liveSessionResourceOptionsCache.value, {
+        cacheHit: 1,
+        extensionEntriesMs: Math.round(extensionEntriesAtMs - startedAtMs),
+        modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
+        cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
+        totalMs: Math.round(performance.now() - startedAtMs),
+      });
+      return liveSessionResourceOptionsCache.value;
+    }
+    if (liveSessionResourceOptionsPromiseCache?.key === cacheKey) {
+      return liveSessionResourceOptionsPromiseCache.promise;
+    }
 
-    return {
-      additionalExtensionPaths: resolved.extensionEntries,
-      additionalSkillPaths: assembly.skills.skillPaths,
-      additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
-      additionalThemePaths: resolved.themeEntries,
-    };
+    const promise = (async () => {
+      const resolved = resolveRuntimeResources(runtimeScope, {
+        repoRoot,
+        extensionEntries,
+      });
+      const resourcesAtMs = performance.now();
+      const assemblyContext = {
+        runtimeScope,
+        repoRoot,
+        modelRef,
+      };
+      const skillsPromise = buildSkillInjectionPlanAsync(assemblyContext);
+      const skillsDispatchedAtMs = performance.now();
+      const promptTemplatesPromise = buildPromptTemplatePlanAsync(assemblyContext);
+      const promptTemplatesDispatchedAtMs = performance.now();
+      const [skills, promptTemplates] = await Promise.all([skillsPromise, promptTemplatesPromise]);
+      const plansAtMs = performance.now();
+
+      const value = withResourceOptionsPerf(
+        {
+          additionalExtensionPaths: resolved.extensionEntries,
+          additionalSkillPaths: skills.skillPaths,
+          additionalPromptTemplatePaths: promptTemplates.templatePaths,
+          additionalThemePaths: resolved.themeEntries,
+        },
+        {
+          cacheHit: 0,
+          extensionEntriesMs: Math.round(extensionEntriesAtMs - startedAtMs),
+          modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
+          cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
+          resourcesMs: Math.round(resourcesAtMs - cacheKeyAtMs),
+          skillDispatchMs: Math.round(skillsDispatchedAtMs - resourcesAtMs),
+          promptTemplateDispatchMs: Math.round(promptTemplatesDispatchedAtMs - skillsDispatchedAtMs),
+          planWaitMs: Math.round(plansAtMs - promptTemplatesDispatchedAtMs),
+          totalMs: Math.round(plansAtMs - startedAtMs),
+        },
+      );
+      liveSessionResourceOptionsCache = { key: cacheKey, value };
+      return value;
+    })();
+
+    liveSessionResourceOptionsPromiseCache = { key: cacheKey, promise };
+    try {
+      return await promise;
+    } finally {
+      if (liveSessionResourceOptionsPromiseCache?.promise === promise) {
+        liveSessionResourceOptionsPromiseCache = null;
+      }
+    }
   }
 
   function withTemporaryRuntimeAgentDir<T>(run: (runtimeAgentDir: string) => Promise<T>): Promise<T> {

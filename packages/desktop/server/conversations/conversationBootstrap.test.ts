@@ -2,22 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   buildAppendOnlySessionDetailResponseMock,
-  listAllLiveSessionsMock,
-  readConversationSessionSignatureMock,
+  readConversationSessionSignatureWithTelemetryMock,
+  readLiveSessionMock,
   readSessionDetailForRouteMock,
   toPublicLiveSessionMetaMock,
 } = vi.hoisted(() => ({
   buildAppendOnlySessionDetailResponseMock: vi.fn(),
-  listAllLiveSessionsMock: vi.fn(),
-  readConversationSessionSignatureMock: vi.fn(),
+  readConversationSessionSignatureWithTelemetryMock: vi.fn(),
+  readLiveSessionMock: vi.fn(),
   readSessionDetailForRouteMock: vi.fn(),
   toPublicLiveSessionMetaMock: vi.fn(),
 }));
 
 vi.mock('./conversationService.js', () => ({
   buildAppendOnlyConversationDetailResponse: buildAppendOnlySessionDetailResponseMock,
-  listAllLiveSessions: listAllLiveSessionsMock,
-  readConversationSessionSignature: readConversationSessionSignatureMock,
+  readConversationSessionSignatureWithTelemetry: readConversationSessionSignatureWithTelemetryMock,
+  readLiveSession: readLiveSessionMock,
   readSessionDetailForRoute: readSessionDetailForRouteMock,
   toPublicLiveSessionMeta: toPublicLiveSessionMetaMock,
 }));
@@ -27,8 +27,21 @@ import { isMissingConversationBootstrapState, readConversationBootstrapState } f
 describe('conversationBootstrap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listAllLiveSessionsMock.mockReturnValue([]);
-    readConversationSessionSignatureMock.mockReturnValue(undefined);
+    readLiveSessionMock.mockReturnValue(null);
+    readConversationSessionSignatureWithTelemetryMock.mockReturnValue({
+      signature: null,
+      telemetry: {
+        liveLookupMs: 0,
+        liveFileExistsMs: 0,
+        ensureMs: 0,
+        ensuredLiveLookupMs: 0,
+        ensuredFileExistsMs: 0,
+        snapshotLookupMs: 0,
+        source: 'missing',
+        signatureFileExistsMs: 0,
+        signatureStatMs: 0,
+      },
+    });
     readSessionDetailForRouteMock.mockResolvedValue({
       sessionRead: {
         detail: null,
@@ -40,9 +53,60 @@ describe('conversationBootstrap', () => {
     buildAppendOnlySessionDetailResponseMock.mockReturnValue(null);
   });
 
+  it('does not stat the session signature before an initial bootstrap detail read', async () => {
+    readSessionDetailForRouteMock.mockResolvedValueOnce({
+      sessionRead: {
+        detail: {
+          signature: 'sig-initial',
+          blocks: [{ id: 'block-1' }],
+        },
+        telemetry: { cache: 'miss', loader: 'fast-tail', durationMs: 4 },
+      },
+      remoteMirror: { status: 'deferred', durationMs: 0 },
+    });
+
+    const result = await readConversationBootstrapState({
+      conversationId: 'conversation-1',
+      profile: 'assistant',
+      tailBlocks: 24,
+    });
+
+    expect(readConversationSessionSignatureWithTelemetryMock).not.toHaveBeenCalled();
+    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({
+      conversationId: 'conversation-1',
+      profile: 'assistant',
+      tailBlocks: 24,
+    });
+    expect(result.state).toMatchObject({
+      conversationId: 'conversation-1',
+      sessionDetailSignature: 'sig-initial',
+      sessionDetail: {
+        signature: 'sig-initial',
+        blocks: [{ id: 'block-1' }],
+      },
+    });
+    expect(result.telemetry).toMatchObject({
+      sessionDetailReused: false,
+      sessionSignature: null,
+    });
+  });
+
   it('reuses the known session signature when the transcript is unchanged', async () => {
-    readConversationSessionSignatureMock.mockReturnValueOnce('sig-1');
-    listAllLiveSessionsMock.mockReturnValueOnce([{ id: 'conversation-1', raw: true }]);
+    readConversationSessionSignatureWithTelemetryMock.mockReturnValueOnce({
+      signature: 'sig-1',
+      telemetry: {
+        liveLookupMs: 1,
+        liveFileExistsMs: 2,
+        ensureMs: 0,
+        ensuredLiveLookupMs: 0,
+        ensuredFileExistsMs: 0,
+        snapshotLookupMs: 0,
+        source: 'live',
+        signatureFileExistsMs: 3,
+        signatureStatMs: 4,
+      },
+    });
+    readLiveSessionMock.mockReturnValueOnce({ id: 'conversation-1', raw: true });
 
     const result = await readConversationBootstrapState({
       conversationId: 'conversation-1',
@@ -68,12 +132,38 @@ describe('conversationBootstrap', () => {
         sessionRead: null,
         sessionDetailReused: true,
         remoteMirror: { status: 'deferred', durationMs: 0 },
+        sessionSignature: {
+          liveLookupMs: 1,
+          liveFileExistsMs: 2,
+          ensureMs: 0,
+          ensuredLiveLookupMs: 0,
+          ensuredFileExistsMs: 0,
+          snapshotLookupMs: 0,
+          source: 'live',
+          signatureFileExistsMs: 3,
+          signatureStatMs: 4,
+        },
+        sessionSignatureMs: expect.any(Number),
+        liveSessionLookupMs: expect.any(Number),
       },
     });
   });
 
   it('returns append-only state when the cached signature is stale', async () => {
-    readConversationSessionSignatureMock.mockReturnValueOnce('sig-new');
+    readConversationSessionSignatureWithTelemetryMock.mockReturnValueOnce({
+      signature: 'sig-new',
+      telemetry: {
+        liveLookupMs: 0,
+        liveFileExistsMs: 0,
+        ensureMs: 0,
+        ensuredLiveLookupMs: 0,
+        ensuredFileExistsMs: 0,
+        snapshotLookupMs: 0,
+        source: 'snapshot',
+        signatureFileExistsMs: 0,
+        signatureStatMs: 0,
+      },
+    });
     readSessionDetailForRouteMock.mockResolvedValueOnce({
       sessionRead: {
         detail: {

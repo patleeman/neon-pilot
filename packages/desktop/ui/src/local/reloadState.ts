@@ -1,5 +1,8 @@
 import { type SetStateAction, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+const useReloadStateLayoutEffect =
+  typeof window === 'undefined' || /\b(jsdom|happy-dom)\b/i.test(window.navigator?.userAgent ?? '') ? useEffect : useLayoutEffect;
+
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -128,7 +131,7 @@ export function useReloadState<T>({
   const shouldPersistRef = useRef(shouldPersist);
   shouldPersistRef.current = shouldPersist;
 
-  useLayoutEffect(() => {
+  useReloadStateLayoutEffect(() => {
     hydratedKeyRef.current = storageKey;
     setStateRecord({
       key: storageKey,

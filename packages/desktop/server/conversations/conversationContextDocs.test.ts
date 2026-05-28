@@ -23,19 +23,19 @@ describe('conversationContextDocs', () => {
       conversationId: 'conversation-1',
       attachedContextDocs: [
         {
-          path: '/vault/work/design.md',
+          path: '/knowledge/work/design.md',
           title: 'Design',
           kind: 'doc',
           mentionId: '@design',
           summary: 'Primary design brief',
         },
         {
-          path: '/vault/work/design.md',
+          path: '/knowledge/work/design.md',
           title: 'Duplicate',
           kind: 'doc',
         },
         {
-          path: '/vault/references/schema.sql',
+          path: '/knowledge/references/schema.sql',
           title: 'schema.sql',
           kind: 'file',
         },
@@ -44,14 +44,14 @@ describe('conversationContextDocs', () => {
 
     expect(saved).toEqual([
       {
-        path: '/vault/work/design.md',
+        path: '/knowledge/work/design.md',
         title: 'Design',
         kind: 'doc',
         mentionId: '@design',
         summary: 'Primary design brief',
       },
       {
-        path: '/vault/references/schema.sql',
+        path: '/knowledge/references/schema.sql',
         title: 'schema.sql',
         kind: 'file',
       },
@@ -63,7 +63,7 @@ describe('conversationContextDocs', () => {
   it('builds a readable prompt context block', () => {
     const context = buildAttachedConversationContextDocsContext([
       {
-        path: '/vault/work/design.md',
+        path: '/knowledge/work/design.md',
         title: 'Design',
         kind: 'doc',
         mentionId: '@design',
@@ -73,7 +73,7 @@ describe('conversationContextDocs', () => {
 
     expect(context).toContain('Attached conversation context docs:');
     expect(context).toContain('Design');
-    expect(context).toContain('/vault/work/design.md');
+    expect(context).toContain('/knowledge/work/design.md');
     expect(context).toContain('Primary design brief');
     expect(context).toContain('@design');
   });

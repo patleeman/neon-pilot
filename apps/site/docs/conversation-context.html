@@ -72,7 +72,7 @@ Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
           <li>Persist across all turns in the conversation</li>
           <li>Appear in the Knowledge rail when workbench mode is active</li>
           <li>Are loaded by the agent on every turn</li>
-          <li>Do not modify the vault — they are scoped to the conversation</li>
+          <li>Do not modify the knowledge base — they are scoped to the conversation</li>
         </ul>
         <p>Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge rail.</p>
         <h2 id="binary-attachments">Binary Attachments</h2>
@@ -109,8 +109,8 @@ Agent sees: contents of auth.ts + auth.test.ts + the prompt</code></pre>
         <h2 id="context-loading-order">Context Loading Order</h2>
         <p>When the agent builds context for a turn, it merges inputs in this order:</p>
         <p>
-          1. <strong>Instruction files</strong> — standing behavior and policy from vault or config 2.
-          <strong>Attached context docs</strong> — durable docs pinned to this conversation 3.
+          1. <strong>Instruction files</strong> — standing behavior and policy from the knowledge base, <code>~/.config/agents</code>,
+          config, or project discovery 2. <strong>Attached context docs</strong> — durable docs pinned to this conversation 3.
           <strong>Inline <code>@</code> file references</strong> — files referenced in the current message 4.
           <strong>Binary attachments</strong> — images and files attached to the current message 5. <strong>Conversation history</strong> —
           previous turns in this thread

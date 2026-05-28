@@ -56,6 +56,7 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
     additionalSkillPaths: options.additionalSkillPaths,
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
+    noThemes: true,
   });
 }
 

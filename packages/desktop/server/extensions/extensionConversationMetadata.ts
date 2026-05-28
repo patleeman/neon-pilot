@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
-import { invalidateAppTopics } from '../shared/appEvents.js';
+import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 
 interface ConversationMetadataFile {
@@ -98,6 +98,13 @@ export function readConversationMetadata(input: {
   return { ...(readFile(input.conversationId, input.profile ?? 'shared', input.stateRoot).namespaces[namespace] ?? {}) };
 }
 
+export function listConversationMetadataNamespaces(input: { conversationId: string; profile?: string; stateRoot?: string }): string[] {
+  return Object.entries(readFile(input.conversationId, input.profile ?? 'shared', input.stateRoot).namespaces)
+    .filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0)
+    .map(([namespace]) => namespace)
+    .sort();
+}
+
 export async function writeConversationMetadata(input: {
   conversationId: string;
   namespace?: string;
@@ -125,6 +132,7 @@ export async function writeConversationMetadata(input: {
   };
   writeFile(updated, profile, input.stateRoot);
   invalidateAppTopics('sessions');
+  publishAppEvent({ type: 'session_meta_changed', sessionId: input.conversationId.trim() });
   await publishExtensionHostEvent('conversationSessions', {
     type: 'session.metadata.updated',
     conversationId: input.conversationId.trim(),

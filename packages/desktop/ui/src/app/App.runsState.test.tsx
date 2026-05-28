@@ -38,6 +38,13 @@ vi.mock('../session/sessionSnapshot', () => ({
 
 vi.mock('../components/Layout', async () => {
   const { useAppData, useAppEvents } = await import('./contexts');
+  const AppDataOnlyProbe = React.memo(function AppDataOnlyProbe() {
+    const { sessions } = useAppData();
+    const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
+    globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__ = (globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__ ?? 0) + 1;
+    return <span>app data sessions {sessions?.length ?? 0}</span>;
+  });
+
   return {
     Layout: () => {
       const { sessions, executions } = useAppData();
@@ -51,6 +58,7 @@ vi.mock('../components/Layout', async () => {
           {(executions?.executions ?? []).map((execution) => (
             <span key={execution.id}>{execution.title}</span>
           ))}
+          <AppDataOnlyProbe />
         </main>
       );
     },
@@ -130,6 +138,7 @@ describe('App execution state integration', () => {
     fetchSessionsSnapshotMock.mockResolvedValue([
       { id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' },
     ]);
+    delete (globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number }).__APP_DATA_ONLY_RENDER_COUNT__;
   });
 
   afterEach(() => {
@@ -231,7 +240,56 @@ describe('App execution state integration', () => {
     });
     await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
 
-    expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
+    expect(apiSessionMetaMock).not.toHaveBeenCalled();
     expect(container.textContent).toContain('conversation running');
+
+    await act(async () => {
+      vi.advanceTimersByTime(750);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
+  });
+
+  it('coalesces repeated session meta change refreshes for the same conversation', async () => {
+    apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
+    ({ root } = await renderApp());
+
+    await emitDesktopEvent({
+      type: 'sessions',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
+    });
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+      await Promise.resolve();
+    });
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    await act(async () => {
+      vi.advanceTimersByTime(749);
+      await Promise.resolve();
+    });
+
+    expect(apiSessionMetaMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiSessionMetaMock).toHaveBeenCalledTimes(1);
+    expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
+  });
+
+  it('does not wake AppData consumers for unrelated app event versions', async () => {
+    ({ root } = await renderApp());
+    const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
+    const renderCount = globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__;
+
+    await emitDesktopEvent({ type: 'invalidate', topics: ['workspace'] });
+
+    expect(globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__).toBe(renderCount);
   });
 });

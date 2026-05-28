@@ -17,9 +17,11 @@ describe('localApiCreateLiveSessionResponse', () => {
         contextReadyAtMs: 4.8,
         createdAtMs: 10.1,
         returnedAtMs: 12.9,
+        contextSetupPerf: { contextRuntimeStateMs: 3 },
         capabilityPerf: { bootstrapMs: 7 },
       }),
     ).toEqual({
+      contextRuntimeStateMs: 3,
       contextMs: 4,
       createCapabilityMs: 5,
       totalBeforeReturnMs: 12,

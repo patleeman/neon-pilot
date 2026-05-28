@@ -2307,6 +2307,53 @@ describe('sessions', () => {
     );
   });
 
+  it('strips generated fork and rewind prefixes from offshoot conversation titles', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const parentSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'title-prefix-parent',
+      title: 'Original thread',
+      assistantTexts: ['Parent reply'],
+    });
+    const forkSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'title-prefix-fork',
+      title: 'Fork source prompt',
+      sessionName: 'fork: Original thread',
+      assistantTexts: ['Fork reply'],
+      parentSession: parentSessionFile,
+    });
+    const rewindSessionFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'title-prefix-rewind',
+      title: 'Rewind source prompt',
+      sessionName: 'rewind: Original thread',
+      assistantTexts: ['Rewind reply'],
+      parentSession: parentSessionFile,
+    });
+
+    appendConversationOffshootMetadata({
+      sessionFile: forkSessionFile,
+      kind: 'fork',
+      parentSessionFile,
+      parentSessionId: 'title-prefix-parent',
+      parentMessageId: 'title-prefix-parent-user-1',
+    });
+    appendConversationOffshootMetadata({
+      sessionFile: rewindSessionFile,
+      kind: 'rewind',
+      parentSessionFile,
+      parentSessionId: 'title-prefix-parent',
+      parentMessageId: 'title-prefix-parent-user-1',
+    });
+
+    expect(readSessionMetaByFile(forkSessionFile)?.title).toBe('Original thread');
+    expect(readSessionMetaByFile(rewindSessionFile)?.title).toBe('Original thread');
+    expect(listSessions().map((session) => session.title)).toEqual(expect.arrayContaining(['Original thread', 'Original thread']));
+  });
+
   it('appends child topology as a chronological parent event', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

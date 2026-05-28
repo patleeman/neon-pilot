@@ -7,6 +7,7 @@ export interface SessionDetailTelemetryInput {
   blockOffset: number;
   contextUsageIncluded: boolean;
   modificationDetected?: boolean;
+  phases?: Record<string, number>;
 }
 
 export interface SessionDetailReadTelemetryLike {
@@ -18,6 +19,7 @@ export interface SessionDetailReadTelemetryLike {
   blockOffset: number;
   contextUsageIncluded: boolean;
   modificationDetected?: boolean;
+  phases?: Record<string, number>;
 }
 
 export function buildSessionDetailTelemetry(input: SessionDetailTelemetryInput): SessionDetailReadTelemetryLike {
@@ -30,6 +32,7 @@ export function buildSessionDetailTelemetry(input: SessionDetailTelemetryInput):
     blockOffset: input.blockOffset,
     contextUsageIncluded: input.contextUsageIncluded,
     ...(input.modificationDetected ? { modificationDetected: true } : {}),
+    ...(input.phases ? { phases: input.phases } : {}),
   };
 }
 

@@ -8,7 +8,6 @@ const WORKER_SAFE_LOCAL_API_ROUTES: Array<{
   methods: ReadonlySet<string>;
   pattern: RegExp;
 }> = [
-  { methods: new Set(['POST']), pattern: /^\/api\/sessions\/search$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/skill-folders$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/instructions$/ },
   { methods: new Set(['GET']), pattern: /^\/api\/settings$/ },

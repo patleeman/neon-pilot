@@ -198,6 +198,7 @@ export interface DesktopLiveSessionCreateRequest {
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
+  reservedSessionFile?: string;
 }
 
 export interface DesktopLiveSessionCreateResult {
@@ -436,8 +437,18 @@ export interface HostController {
   exportLiveSession?(input: DesktopLiveSessionExportRequest): Promise<{ ok: true; path: string }>;
   reloadLiveSession?(conversationId: string): Promise<{ ok: true }>;
   destroyLiveSession?(conversationId: string): Promise<{ ok: true }>;
-  branchLiveSession?(input: DesktopLiveSessionBranchRequest): Promise<{ newSessionId: string; sessionFile: string }>;
-  forkLiveSession?(input: DesktopLiveSessionForkRequest): Promise<{ newSessionId: string; sessionFile: string }>;
+  branchLiveSession?(input: DesktopLiveSessionBranchRequest): Promise<{
+    newSessionId: string;
+    sessionFile: string;
+    bootstrap?: unknown;
+    perf?: Record<string, number>;
+  }>;
+  forkLiveSession?(input: DesktopLiveSessionForkRequest): Promise<{
+    newSessionId: string;
+    sessionFile: string;
+    bootstrap?: unknown;
+    perf?: Record<string, number>;
+  }>;
   submitLiveSessionPrompt?(input: DesktopLiveSessionPromptRequest): Promise<DesktopLiveSessionPromptResult>;
   executeLiveSessionBash?(input: {
     conversationId: string;

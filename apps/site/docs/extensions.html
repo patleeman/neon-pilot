@@ -116,7 +116,40 @@ Implement it with editable source files, build it, reload it, visually test it, 
 └── dist/               # Built output</code></pre>
         <p>
           Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the
-          packaged local-extension-development skill; renderer/extension UI should not call <code>/api/extensions/*</code> directly.
+          packaged local-extension-development skill; renderer/extension UI should use the public extension SDK clients/capabilities instead
+          of reaching into desktop internals.
+        </p>
+        <p>
+          Extension frontend code must not depend on Electron IPC channels. Product data flows through host-provided HTTP
+          clients/capabilities, realtime updates flow through host-provided realtime subscriptions, and native OS/Electron operations remain
+          host-owned capabilities. If an extension needs a missing product API, add a reusable SDK capability rather than adding an
+          extension-specific IPC bridge.
+        </p>
+        <h2 id="packaging-and-distribution">Packaging and distribution</h2>
+        <p>
+          Build before packaging. A packaged extension is a zip file containing one top-level extension directory with
+          <code>extension.json</code>, source/docs/assets, and prebuilt <code>dist/</code> bundles. Do not include
+          <code>node_modules</code>, transient <code>.dist.tmp-*</code> folders, or local build caches.
+        </p>
+        <p>From the repo root:</p>
+        <pre><code>pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out /tmp/agent-board.neon-extension.zip</code></pre>
+        <p>
+          <code>neon-pilot-extension pack</code> is a thin wrapper around <code>scripts/extension-pack.mjs</code>. It zips the package
+          directory itself, excludes <code>node_modules</code>, <code>sidecar/target</code>, and <code>.dist.tmp-*</code>, and writes either
+          <code>&lt;extension-dir&gt;.zip</code> or the path passed with <code>--out</code>.
+        </p>
+        <p>
+          Import/install expects the same shape: one safe top-level directory containing <code>extension.json</code>. The desktop runtime
+          unzips into <code>&lt;state-root&gt;/extensions/{extension-id}</code> and loads the prebuilt <code>dist/</code> files. Packaged
+          desktop releases do <strong>not</strong> compile extensions at install time.
+        </p>
+        <p>For optional first-party installable extensions under <code>installable-extensions/</code>, use the release packer instead:</p>
+        <pre><code>pnpm run extension:pack:installable</code></pre>
+        <p>
+          That writes <code>{extension-id}.neon-extension.zip</code> bundles for release upload. The Settings → Extensions
+          <strong>Available</strong> tab downloads those files from the GitHub release tag matching the installed app version.
         </p>
         <h2 id="manifest-extension-json">Manifest (<code>extension.json</code>)</h2>
         <p>The manifest declares what your extension contributes:</p>
@@ -272,7 +305,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
             </tr>
             <tr>
               <td><code>transcriptRenderers</code></td>
-              <td>Custom tool result rendering</td>
+              <td>Custom tool result rendering; set <code>standalone: true</code> to render outside internal-work clusters</td>
               <td></td>
             </tr>
             <tr>
@@ -1205,11 +1238,13 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
         <p>
           Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as
           <code>@neon-pilot/extensions/backend/artifacts</code>, <code>/automations</code>, <code>/browser</code>, <code>/compaction</code>,
-          <code>/conversations</code>, <code>/images</code>, <code>/knowledge</code>, <code>/knowledgeVault</code>, <code>/mcp</code>,
-          <code>/runs</code>, <code>/runtime</code>, <code>/telemetry</code>, and <code>/webContent</code>. Prefer a focused subpath over
-          the broad backend barrel when bundling a system extension that only needs one backend service. For daemon-backed shell work in a
-          packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the
-          action actually starts or inspects background work.
+          <code>/conversations</code>, <code>/images</code>, <code>/mcp</code>, <code>/runs</code>, <code>/runtime</code>,
+          <code>/telemetry</code>, and <code>/webContent</code>. Prefer a focused subpath over the broad backend barrel when bundling a
+          system extension that only needs one backend service. Feature-specific data planes such as Knowledge should live inside their
+          owning extension and use generic host capabilities (<code>ctx.storage</code>, <code>ctx.filesystem</code>, <code>ctx.shell</code>,
+          <code>ctx.git</code>, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed shell work in a packaged
+          system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action
+          actually starts or inspects background work.
         </p>
         <p>
           The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
@@ -1305,11 +1340,14 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           an action immediately after the user enables the extension.
         </p>
         <p>
-          Desktop extension UI must use the native PA client/action bridge (<code>pa.extension.invoke</code>,
-          <code>pa.extensions.callAction</code>, or another typed <code>pa.*</code> capability) to communicate with backend code. Do not
-          fetch <code>/api/extensions/*</code> or an extension's own <code>backend.routes</code> from extension frontend code. Extension
-          HTTP routes are integration surfaces for external or side-channel consumers only: webhooks, OAuth callbacks, local protocol
-          adapters, browser/webview callbacks, or third-party tools that cannot use the desktop IPC bridge.
+          Desktop extension UI should use the PA client/action bridge (<code>pa.extension.invoke</code>,
+          <code>pa.extensions.callAction</code>, or another typed <code>pa.*</code> capability) to communicate with backend code. The host
+          backs these capabilities with the desktop HTTP data plane and WebSocket realtime plane, not Electron IPC. Extension HTTP routes
+          are primarily integration surfaces for external or side-channel consumers: webhooks, OAuth callbacks, local protocol adapters,
+          browser/webview callbacks, third-party tools that cannot use the typed PA SDK bridge, and long-lived streaming endpoints. If an
+          extension UI needs backend push and no typed PA subscription exists, declare an SSE <code>backend.routes</code> entry with
+          <code>stream: &quot;sse&quot;</code> and consume <code>/api/extensions/&lt;extension-id&gt;/&lt;route-path&gt;</code> with
+          <code>EventSource</code>.
         </p>
         <p>
           Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions,
@@ -1440,6 +1478,14 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
             </tr>
           </tbody>
         </table>
+        <p>
+          Backend extensions that need manifest-declared settings should import the settings backend API instead of reaching into desktop
+          internals:
+        </p>
+        <pre><code>import { readExtensionSettings } from '@neon-pilot/extensions/backend/settings';
+
+const settings = await readExtensionSettings();
+const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
         <p>#### Settings vs Extension Storage</p>
         <p>Extensions have two storage mechanisms for different purposes:</p>
         <table>
@@ -1461,12 +1507,24 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
               <td>SQLite-backed, per-extension</td>
               <td>Internal runtime state (caches, session)</td>
             </tr>
+            <tr>
+              <td><strong>Database</strong></td>
+              <td><code>&lt;stateRoot&gt;/extension-data/{id}/databases/</code></td>
+              <td>Extension-owned relational data and indexes</td>
+            </tr>
+            <tr>
+              <td><strong>Files</strong></td>
+              <td><code>&lt;stateRoot&gt;/extension-data/{id}/files/</code> and <code>/cache/</code></td>
+              <td>Extension-owned blobs, exports, and caches</td>
+            </tr>
           </tbody>
         </table>
         <ul>
           <li>Use <strong>settings</strong> for values the user configures through the Settings UI.</li>
           <li>Use <strong>storage</strong> (<code>ctx.storage</code> / <code>pa.storage</code>) for internal state like</li>
           <p>cached API responses, session tokens, or counter values.</p>
+          <li>Use <strong>database</strong> (<code>ctx.database</code>) for extension-owned SQLite tables,</li>
+          <p>migrations, indexes, queues, and query-heavy state.</p>
           <li>
             Use the <a href="https://github.com/patleeman/neon-pilot/blob/main/filesystem-authority.md">Filesystem Authority</a> for
             extension-owned files/blobs, workspace files, temp workspaces, artifacts, and any path addressed by a user, agent, archive, or
@@ -1488,6 +1546,10 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
             <tr>
               <td><code>ctx.storage</code></td>
               <td>Persistent key-value store per extension (SQLite-backed)</td>
+            </tr>
+            <tr>
+              <td><code>ctx.database</code></td>
+              <td>Extension-owned SQLite databases with optional versioned migrations</td>
             </tr>
             <tr>
               <td><code>ctx.attention</code></td>
@@ -1514,8 +1576,8 @@ export async function ping(_input: unknown, ctx: ExtensionBackendContext) {
               <td>Workspace file operations (read, write, list); convenience wrapper over the filesystem authority</td>
             </tr>
             <tr>
-              <td><code>ctx.vault</code></td>
-              <td>Knowledge vault operations</td>
+              <td><code>ctx.knowledge</code></td>
+              <td>Knowledge base operations</td>
             </tr>
             <tr>
               <td><code>ctx.git</code></td>
@@ -1647,6 +1709,23 @@ const forked = await ctx.conversations.fork({ conversationId, title: 'Bug bash b
         <pre><code>await ctx.conversations.appendTranscriptBlock({ conversationId, blockType: 'approval', data: { status: 'pending' } });
 await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockType: 'approval', data: { status: 'approved' } });</code></pre>
         <p>
+          Frontend extension components can mark and spotlight transcript targets without depending on host DOM internals. Use
+          <code>pa.transcript.targetProps(...)</code> on the element that should receive focus, and
+          <code>pa.transcript.spotlight(...)</code> to scroll it into view and flash a temporary border.
+        </p>
+        <pre><code>function ApprovalBlock({ pa, approvalId }) {
+  const target = { kind: 'extension', extensionId: 'my-extension', targetId: approvalId };
+  return (
+    &lt;button {...pa.transcript.targetProps(target)} onClick={() =&gt; pa.transcript.spotlight(target)}&gt;
+      Review approval
+    &lt;/button&gt;
+  );
+}</code></pre>
+        <p>
+          Supported spotlight targets are <code>block</code>, <code>tool_call</code>, <code>background_run</code>, and
+          <code>extension</code>.
+        </p>
+        <p>
           Long-lived backend services are declared under <code>backend.services</code> so the host can own lifecycle, health, and restart
           policy. Enabled extension services are started during extension startup; a service handler may return a stop function that the
           host calls on shutdown, disable, reload, or restart. Extension Manager shows declared services plus live runtime state
@@ -1662,15 +1741,15 @@ await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockTy
 }</code></pre>
         <p>
           Event subscriptions are declared under <code>contributes.subscriptions</code> for host-owned event sources such as workspace
-          files, vault files, settings, conversations, routes, and selection changes. The host dispatches these through the extension event
-          bus as <code>host:{source}</code> events; <code>pattern</code> narrows the event name. Current built-in producers include
+          files, knowledge files, settings, conversations, routes, and selection changes. The host dispatches these through the extension
+          event bus as <code>host:{source}</code> events; <code>pattern</code> narrows the event name. Current built-in producers include
           <code>host:workspaceFiles</code> for workspace writes/deletes/renames/moves, <code>host:settings</code> for settings updates,
           frontend <code>host:selection</code> notifications when shared selection changes, and <code>host:conversation:*</code> lifecycle
           events for live transcript/stream state.
         </p>
         <pre><code>{
   &quot;contributes&quot;: {
-    &quot;subscriptions&quot;: [{ &quot;id&quot;: &quot;watch-notes&quot;, &quot;source&quot;: &quot;vaultFiles&quot;, &quot;pattern&quot;: &quot;notes/**&quot;, &quot;handler&quot;: &quot;onVaultChange&quot; }]
+    &quot;subscriptions&quot;: [{ &quot;id&quot;: &quot;watch-notes&quot;, &quot;source&quot;: &quot;knowledgeFiles&quot;, &quot;pattern&quot;: &quot;notes/**&quot;, &quot;handler&quot;: &quot;onKnowledgeChange&quot; }]
   }
 }</code></pre>
         <p>Secrets are public manifest API, not an internal convention:</p>
@@ -1758,9 +1837,9 @@ const available = ctx.notify.isSystemAvailable();</code></pre>
     &quot;attention:write&quot;,
     &quot;conversations:read&quot;,
     &quot;conversations:readwrite&quot;,
-    &quot;vault:read&quot;,
-    &quot;vault:write&quot;,
-    &quot;vault:readwrite&quot;,
+    &quot;knowledge:read&quot;,
+    &quot;knowledge:write&quot;,
+    &quot;knowledge:readwrite&quot;,
     &quot;runs:read&quot;,
     &quot;runs:start&quot;,
     &quot;runs:cancel&quot;,
@@ -2055,6 +2134,24 @@ const items = await ctx.storage.list('prefix-');
 // Delete
 await ctx.storage.delete('my-key');</code></pre>
         <p>State is SQLite-backed and survives app restarts.</p>
+        <p>For relational state, use app-owned SQLite databases:</p>
+        <pre><code>const db = await ctx.database.open('main', {
+  migrations: [
+    {
+      version: 1,
+      description: 'create tasks',
+      up: (database) =&gt; database.exec('CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL)'),
+    },
+  ],
+});
+
+db.prepare('INSERT INTO tasks (id, title) VALUES (?, ?)').run('task-1', 'Build the thing');</code></pre>
+        <p>For extension-owned files, use durable app files, disposable cache files, or temp workspaces:</p>
+        <pre><code>const appFiles = await ctx.filesystem.app();
+await appFiles.writeText('exports/report.md', markdown);
+
+const cacheFiles = await ctx.filesystem.cache();
+await cacheFiles.writeJson('remote-index.json', index);</code></pre>
         <h2 id="examples">Examples</h2>
         <p>
           See bundled system extensions in <code>extensions/</code> and optional installable extensions in
@@ -2063,6 +2160,10 @@ await ctx.storage.delete('my-key');</code></pre>
         <ul>
           <li>
             <strong><code>system-artifacts</code></strong> — Tools + views + transcript renderer + skills
+          </li>
+          <li>
+            <strong><code>system-agent-browser</code></strong> — agent-browser CLI tool integration
+            (<code>installable-extensions/system-agent-browser</code>)
           </li>
           <li>
             <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
@@ -2083,10 +2184,6 @@ await ctx.storage.delete('my-key');</code></pre>
           </li>
           <li>
             <strong><code>system-runs</code></strong> — Background runs + composer shelf (ActivityShelf)
-          </li>
-          <li>
-            <strong><code>system-gateways</code></strong> — Experimental Telegram gateway management UI + nav
-            (<code>installable-extensions/system-gateways</code>)
           </li>
           <li>
             <strong><code>system-settings</code></strong> — Settings panels + nav
@@ -2122,6 +2219,7 @@ await ctx.storage.delete('my-key');</code></pre>
         <h2>On this page</h2>
         <a href="#contents">Contents</a><a href="#agent-first-workflow">Agent-first workflow</a
         ><a href="#core-vs-extensions">Core vs extensions</a><a href="#extension-structure">Extension Structure</a
+        ><a href="#packaging-and-distribution">Packaging and distribution</a
         ><a href="#manifest-extension-json">Manifest (`extension.json`)</a><a href="#frontend-ui">Frontend (UI)</a
         ><a href="#main-page-layout">Main page layout</a><a href="#styling-guidance">Styling guidance</a
         ><a href="#backend-server-side">Backend (Server-side)</a><a href="#attention-events">Attention events</a

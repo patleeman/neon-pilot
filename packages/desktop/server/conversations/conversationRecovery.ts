@@ -4,7 +4,9 @@ import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { parsePendingOperation } from '@neon-pilot/daemon';
 
 import { getDurableRun } from '../automation/durableRuns.js';
+import { withExtensionRegistryReadCache } from '../extensions/extensionRegistry.js';
 import { logError } from '../middleware/index.js';
+import { LIVE_SESSION_RESOURCE_OPTIONS_PERF } from '../routes/context.js';
 import {
   createWebLiveConversationRunId,
   syncWebLiveConversationRun,
@@ -30,6 +32,7 @@ interface RecoveryLoaderOptions {
 export interface RecoverConversationCapabilityContext {
   getRuntimeScope: () => string;
   buildLiveSessionResourceOptions: (profile?: string) => Omit<RecoveryLoaderOptions, 'extensionFactories'>;
+  buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<Omit<RecoveryLoaderOptions, 'extensionFactories'>>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
   flushLiveDeferredResumes: () => Promise<void>;
 }
@@ -43,11 +46,43 @@ export interface RecoverConversationResult {
   perf?: Record<string, number>;
 }
 
-function buildRecoveryLoaderOptions(context: RecoverConversationCapabilityContext, profile: string): RecoveryLoaderOptions {
-  return {
-    ...context.buildLiveSessionResourceOptions(profile),
-    extensionFactories: context.buildLiveSessionExtensionFactories(),
-  };
+async function buildRecoveryLoaderOptions(
+  context: RecoverConversationCapabilityContext,
+  profile: string,
+): Promise<{
+  options: RecoveryLoaderOptions;
+  perf: Record<string, number>;
+}> {
+  return withExtensionRegistryReadCache(async () => {
+    const startedAtMs = performance.now();
+    const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
+      ? context.buildLiveSessionResourceOptionsAsync(profile)
+      : Promise.resolve(context.buildLiveSessionResourceOptions(profile));
+    const resourceOptionsDispatchedAtMs = performance.now();
+    const extensionFactories = context.buildLiveSessionExtensionFactories();
+    const extensionFactoriesAtMs = performance.now();
+    const resourceOptions = await resourceOptionsPromise;
+    const resourceOptionsAtMs = performance.now();
+    const resourceOptionsPerf =
+      resourceOptions && typeof resourceOptions === 'object'
+        ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
+        : undefined;
+    return {
+      options: {
+        ...resourceOptions,
+        extensionFactories,
+      },
+      perf: {
+        recoveryResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
+        recoveryResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - startedAtMs),
+        recoveryResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
+        recoveryExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - resourceOptionsDispatchedAtMs),
+        ...(resourceOptionsPerf
+          ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`recoveryResourceOptions.${key}`, value]))
+          : {}),
+      },
+    };
+  });
 }
 
 function readCheckpointString(payload: Record<string, unknown>, key: string): string | undefined {
@@ -68,7 +103,7 @@ async function continueRecoveredConversation(input: {
 
   const sessionFile = input.sessionFile?.trim();
   if (sessionFile) {
-    await syncWebLiveConversationRun({
+    const syncRun = syncWebLiveConversationRun({
       conversationId: input.conversationId,
       sessionFile,
       cwd: input.cwd,
@@ -77,6 +112,17 @@ async function continueRecoveredConversation(input: {
       state: promptOperation ? 'running' : 'waiting',
       pendingOperation: promptOperation,
     });
+    if (promptOperation) {
+      await syncRun;
+    } else {
+      void syncRun.catch((error) => {
+        logError('conversation recovery run sync failed', {
+          sessionId: input.conversationId,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      });
+    }
   }
 
   if (promptOperation) {
@@ -174,7 +220,7 @@ export async function recoverConversationCapability(
   const manifestCwd = typeof manifestSpec?.cwd === 'string' && manifestSpec.cwd.trim().length > 0 ? manifestSpec.cwd.trim() : undefined;
   const requestedCwd = sessionMeta?.cwd ?? readCheckpointString(checkpointPayload, 'cwd') ?? manifestCwd;
   const optionsStartedAtMs = performance.now();
-  const loaderOptions = buildRecoveryLoaderOptions(context, runtimeScope);
+  const { options: loaderOptions, perf: loaderOptionsPerf } = await buildRecoveryLoaderOptions(context, runtimeScope);
   const optionsReadyAtMs = performance.now();
   const resumed = await resumeSession(sessionFile, {
     ...loaderOptions,
@@ -217,7 +263,9 @@ export async function recoverConversationCapability(
       durableRunMs: Math.round(durableRunAtMs - startedAtMs),
       sessionMetaMs: Math.round(sessionMetaAtMs - durableRunAtMs),
       optionBuildMs: Math.round(optionsReadyAtMs - optionsStartedAtMs),
+      ...loaderOptionsPerf,
       resumeMs: Math.round(resumedAtMs - optionsReadyAtMs),
+      ...(resumed.perf ? Object.fromEntries(Object.entries(resumed.perf).map(([key, value]) => [`resume.${key}`, value])) : {}),
       continueMs: Math.round(continuedAtMs - resumedAtMs),
       totalBeforeReturnMs: Math.round(continuedAtMs - startedAtMs),
     },

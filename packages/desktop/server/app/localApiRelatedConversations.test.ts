@@ -55,4 +55,30 @@ describe('buildRelatedConversationResults', () => {
     expect(result.visibleResults[1]?.sameWorkspace).toBe(true);
     expect(result.visibleResults[1]?.reason).toContain('Same workspace');
   });
+
+  it('does not fuzzy-match unrelated tokens across long transcript text', () => {
+    const longTranscriptText = `${'renderer '.repeat(1000)}${'background '.repeat(1000)}performance`;
+
+    const result = buildRelatedConversationResults({
+      sessions: [
+        {
+          id: 'long',
+          title: 'Long transcript',
+          cwd: '/repo',
+          timestamp: '2026-04-10T12:00:00.000Z',
+        },
+      ],
+      searchIndex: {
+        long: longTranscriptText,
+      },
+      summaries: {},
+      query: 'zzzz',
+      workspaceCwd: '/repo',
+      limit: 5,
+      nowMs: Date.parse('2026-04-13T12:00:00.000Z'),
+    });
+
+    expect(result.searchResults).toEqual([]);
+    expect(result.visibleResults).toEqual([]);
+  });
 });

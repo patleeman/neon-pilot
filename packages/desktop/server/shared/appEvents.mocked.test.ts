@@ -297,6 +297,37 @@ describe('appEvents mocked behavior', () => {
     unsubscribe();
   });
 
+  it('starts one low-frequency session file signature poll when recursive watching is available', () => {
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    expect(getLatestWatch('/sessions', (registration) => registration.options.recursive === true)).toBeDefined();
+    expect(getLatestWatch('/sessions', (registration) => registration.options.recursive !== true)).toBeDefined();
+    vi.advanceTimersByTime(0);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it('keeps a session file signature poll when recursive watching is unavailable', () => {
+    unsupportedRecursivePaths.add('/sessions');
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    expect(getLatestWatch('/sessions', (registration) => registration.options.recursive !== true)).toBeDefined();
+    vi.advanceTimersByTime(0);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
   it('derives session file change ids from codex session filenames without reading the file', () => {
     unsupportedRecursivePaths.add('/sessions');
     markDirectory('/sessions/nested');

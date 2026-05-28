@@ -10,7 +10,12 @@ const queue = vi.hoisted(() => ({
   readQueueState: vi.fn(() => ({ steering: [{ id: 'q1', text: 'queued', imageCount: 0 }], followUp: [] })),
 }));
 const stale = vi.hoisted(() => ({ ensureStaleTurnState: vi.fn() }));
-const broadcasts = vi.hoisted(() => ({ readLiveSessionContextUsage: vi.fn(() => ({ tokens: 10 })) }));
+const broadcasts = vi.hoisted(() => ({
+  readCachedLiveSessionContextUsage: vi.fn(() => undefined),
+  readCachedLiveSessionParallelState: vi.fn(() => undefined),
+  readCachedLiveSessionQueueState: vi.fn(() => undefined),
+  readLiveSessionContextUsage: vi.fn(() => ({ tokens: 10 })),
+}));
 const snapshot = vi.hoisted(() => ({ buildLiveSessionSnapshot: vi.fn((_entry, tailBlocks) => ({ id: 's1', tailBlocks })) }));
 const sessionGoalState = vi.hoisted(() => ({ readGoalFromEntries: vi.fn(() => ({ objective: 'goal' })) }));
 
@@ -73,6 +78,44 @@ describe('live session subscription', () => {
 
     unsubscribe();
     expect(e.listeners.size).toBe(0);
+  });
+
+  it('reuses cached context usage during initial replay when available', () => {
+    broadcasts.readCachedLiveSessionContextUsage.mockReturnValueOnce({ tokens: 77 });
+    const e = entry();
+    const send = vi.fn();
+
+    subscribeLiveSession(e as never, send, undefined, { resolveTitle: vi.fn(() => ''), broadcastPresenceState: vi.fn() });
+
+    expect(broadcasts.readCachedLiveSessionContextUsage).toHaveBeenCalledWith(e);
+    expect(broadcasts.readLiveSessionContextUsage).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith({ type: 'context_usage', usage: { tokens: 77 } });
+  });
+
+  it('reuses cached queue and parallel state during initial replay when available', () => {
+    broadcasts.readCachedLiveSessionQueueState.mockReturnValueOnce({
+      steering: [{ id: 'cached-q', text: 'cached queued', imageCount: 0 }],
+      followUp: [],
+    });
+    broadcasts.readCachedLiveSessionParallelState.mockReturnValueOnce([
+      { id: 'cached-job', prompt: 'cached', childConversationId: 'child', status: 'running', imageCount: 0 },
+    ]);
+    const e = entry();
+    const send = vi.fn();
+
+    subscribeLiveSession(e as never, send, undefined, { resolveTitle: vi.fn(() => ''), broadcastPresenceState: vi.fn() });
+
+    expect(queue.readQueueState).not.toHaveBeenCalled();
+    expect(parallel.readParallelState).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith({
+      type: 'queue_state',
+      steering: [{ id: 'cached-q', text: 'cached queued', imageCount: 0 }],
+      followUp: [],
+    });
+    expect(send).toHaveBeenCalledWith({
+      type: 'parallel_state',
+      jobs: [{ id: 'cached-job', prompt: 'cached', childConversationId: 'child', status: 'running', imageCount: 0 }],
+    });
   });
 
   it('registers surfaces, sends presence state, and broadcasts presence changes excluding the new subscriber', () => {

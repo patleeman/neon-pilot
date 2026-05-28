@@ -230,6 +230,36 @@ export async function consumeDraftState(_input: unknown, ctx: ExtensionBackendCo
   return { enabled: state.enabled };
 }
 
+export async function prepareDraftConversation(
+  _input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{
+  enabled: boolean;
+  createOptions?: { allowedToolNames?: string[] };
+  applyAfterCreate?: boolean;
+}> {
+  const state = normalizePersistedState(await ctx.storage.get(DRAFT_STATE_KEY));
+  if (!state.enabled) return { enabled: false };
+  return {
+    enabled: true,
+    createOptions: { allowedToolNames: [CODE_TOOL_NAME] },
+    applyAfterCreate: true,
+  };
+}
+
+export async function applyDraftConversation(input: unknown, ctx: ExtensionBackendContext): Promise<{ enabled: boolean }> {
+  const state = normalizePersistedState(await ctx.storage.get(DRAFT_STATE_KEY));
+  await ctx.storage.delete(DRAFT_STATE_KEY);
+  if (!state.enabled) {
+    ctx.ui.invalidate(['extensions']);
+    return { enabled: false };
+  }
+  const conversationId = conversationIdFrom(input, ctx);
+  await writeState(conversationId, true, ctx);
+  ctx.ui.invalidate(['extensions']);
+  return { enabled: true };
+}
+
 function normalizeTimeout(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_TIMEOUT_MS;
   return Math.max(1000, Math.min(MAX_TIMEOUT_MS, Math.round(value)));

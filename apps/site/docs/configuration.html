@@ -81,6 +81,12 @@
               <td>Machine-local durable config</td>
             </tr>
             <tr>
+              <td>Machine agent dir</td>
+              <td><code>~/.config/agents</code></td>
+              <td>none</td>
+              <td>Canonical secondary location for machine-local agent files</td>
+            </tr>
+            <tr>
               <td>Machine config file</td>
               <td><code>&lt;config-root&gt;/config.json</code></td>
               <td><code>NEON_PILOT_CONFIG_FILE</code></td>
@@ -110,9 +116,9 @@
           </thead>
           <tbody>
             <tr>
-              <td><code>vaultRoot</code></td>
+              <td><code>knowledgeRoot</code></td>
               <td>string</td>
-              <td>Legacy explicit knowledge vault root</td>
+              <td>Explicit knowledge base root</td>
             </tr>
             <tr>
               <td><code>knowledgeBaseRepoUrl</code></td>
@@ -132,7 +138,7 @@
             <tr>
               <td><code>skillDirs</code></td>
               <td>string[]</td>
-              <td>Extra skill directories loaded alongside the vault skills directory</td>
+              <td>Extra skill directories loaded alongside the knowledge base skills directory</td>
             </tr>
             <tr>
               <td><code>daemon</code></td>
@@ -153,6 +159,12 @@
   &quot;instructionFiles&quot;: [&quot;/Users/me/agent/extra-AGENTS.md&quot;],
   &quot;skillDirs&quot;: [&quot;/Users/me/agent/skills&quot;]
 }</code></pre>
+        <p>
+          Machine config augments the built-in machine-local defaults. Neon Pilot always checks <code>~/.config/agents/AGENTS.md</code> as
+          the canonical secondary instruction file and <code>~/.config/agents/skill</code> plus <code>~/.config/agents/skills</code> as
+          canonical secondary skill roots. The knowledge base remains the primary durable source; use the machine agent dir for personal
+          files that should stay local to this machine.
+        </p>
         <h2 id="runtime-agent-settings">Runtime agent settings</h2>
         <p>The active agent/runtime settings file is:</p>
         <pre><code>&lt;state-root&gt;/neon-pilot-runtime/settings.json</code></pre>
@@ -274,16 +286,49 @@
           If no enabled profile extension matches, Neon Pilot uses the normal default runtime behavior. Explicit per-run allowed tool lists
           still take precedence.
         </p>
-        <h2 id="knowledge-vault-resolution">Knowledge vault resolution</h2>
-        <p>The effective knowledge vault root resolves in this order:</p>
+        <h2 id="knowledge-base-resolution">Knowledge base resolution</h2>
+        <p>The effective knowledge base root resolves in this order:</p>
         <p>
-          1. <code>NEON_PILOT_VAULT_ROOT</code> 2. Managed knowledge-base mirror at <code>&lt;state-root&gt;/knowledge-base/repo</code> when
-          <code>knowledgeBaseRepoUrl</code> is configured 3. Legacy <code>vaultRoot</code> from machine config 4.
-          <code>~/Documents/neon-pilot</code>
+          1. <code>NEON_PILOT_KNOWLEDGE_ROOT</code> 2. Managed knowledge-base mirror at
+          <code>&lt;state-root&gt;/knowledge-base/repo</code> when <code>knowledgeBaseRepoUrl</code> is configured 3.
+          <code>knowledgeRoot</code> from machine config 4. <code>~/Documents/neon-pilot</code>
         </p>
         <p>
           Knowledge UI and sync behavior live in the Knowledge system extension. Machine config only stores the machine-level root/sync
           inputs.
+        </p>
+        <h2 id="agent-file-discovery">Agent file discovery</h2>
+        <p>Global agent files use a primary/secondary model:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Kind</th>
+              <th>Primary durable location</th>
+              <th>Secondary machine-local location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Instructions</td>
+              <td><code>&lt;knowledge-root&gt;/AGENTS.md</code></td>
+              <td><code>~/.config/agents/AGENTS.md</code></td>
+            </tr>
+            <tr>
+              <td>Skills</td>
+              <td><code>&lt;knowledge-root&gt;/skills/&lt;skill-name&gt;/SKILL.md</code></td>
+              <td><code>~/.config/agents/skill/&lt;skill-name&gt;/SKILL.md</code></td>
+            </tr>
+            <tr>
+              <td>Skills</td>
+              <td><code>&lt;knowledge-root&gt;/skills/&lt;skill-name&gt;/SKILL.md</code></td>
+              <td><code>~/.config/agents/skills/&lt;skill-name&gt;/SKILL.md</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Runtime discovery also includes explicitly configured instruction files, explicitly configured skill dirs, project instruction
+          files found from the working directory, local overlays, extension-contributed skills, and compatibility skill roots such as
+          <code>~/.claude/skills</code> and <code>~/.codex/skills</code>.
         </p>
         <h2 id="desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</h2>
         <p>Not every Settings-page control writes to the same JSON file:</p>
@@ -356,7 +401,7 @@
         <a href="#path-roots">Path roots</a><a href="#machine-config">Machine config</a
         ><a href="#runtime-agent-settings">Runtime agent settings</a><a href="#extension-settings">Extension settings</a
         ><a href="#models-providers-and-credentials">Models, providers, and credentials</a
-        ><a href="#knowledge-vault-resolution">Knowledge vault resolution</a
+        ><a href="#knowledge-base-resolution">Knowledge base resolution</a><a href="#agent-file-discovery">Agent file discovery</a
         ><a href="#desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</a><a href="#rule-of-thumb">Rule of thumb</a>
       </aside>
     </main>

@@ -18,6 +18,9 @@ import {
   broadcastLiveSessionParallelState,
   broadcastLiveSessionQueueState,
   clearLiveSessionContextUsageTimer,
+  readCachedLiveSessionContextUsage,
+  readCachedLiveSessionParallelState,
+  readCachedLiveSessionQueueState,
   readLiveSessionContextUsage,
   scheduleLiveSessionContextUsage,
 } from './liveSessionStateBroadcasts.js';
@@ -79,8 +82,24 @@ describe('live session state broadcasts', () => {
     broadcastLiveSessionContextUsage(entry as never, send);
     broadcastLiveSessionContextUsage(entry as never, send, true);
 
+    expect(entry).toMatchObject({
+      lastContextUsage: expect.objectContaining({ tokens: 100 }),
+      lastContextUsageJson: expect.any(String),
+      lastContextUsageMessageCount: 1,
+    });
     expect(send).toHaveBeenCalledTimes(2);
     expect(send).toHaveBeenCalledWith({ type: 'context_usage', usage: expect.objectContaining({ tokens: 100 }) });
+  });
+
+  it('reuses cached context usage only while the message count still matches', () => {
+    const entry = { session: session(), lastContextUsageJson: null };
+    const send = vi.fn();
+
+    broadcastLiveSessionContextUsage(entry as never, send);
+    expect(readCachedLiveSessionContextUsage(entry as never)).toMatchObject({ tokens: 100 });
+
+    entry.session.messages.push({ role: 'assistant', content: 'changed' });
+    expect(readCachedLiveSessionContextUsage(entry as never)).toBeUndefined();
   });
 
   it('broadcasts queue and parallel state only when changed unless forced', () => {
@@ -96,8 +115,24 @@ describe('live session state broadcasts', () => {
     broadcastLiveSessionParallelState(parallelEntry as never, send, true);
 
     expect(send).toHaveBeenCalledTimes(4);
+    expect(queueEntry).toMatchObject({ lastQueueState: { steering: [], followUp: [] }, lastQueueStateJson: expect.any(String) });
+    expect(parallelEntry).toMatchObject({ lastParallelState: [{ id: 'job-1' }], lastParallelStateJson: expect.any(String) });
     expect(send).toHaveBeenCalledWith({ type: 'queue_state', steering: [], followUp: [] });
     expect(send).toHaveBeenCalledWith({ type: 'parallel_state', jobs: [{ id: 'job-1' }] });
+  });
+
+  it('reuses cached queue and parallel states once broadcasts have computed them', () => {
+    const queueEntry = { session: session(), lastQueueStateJson: null };
+    const parallelEntry = { parallelJobs: [{ id: 'job-1' }], lastParallelStateJson: null };
+
+    expect(readCachedLiveSessionQueueState(queueEntry as never)).toBeUndefined();
+    expect(readCachedLiveSessionParallelState(parallelEntry as never)).toBeUndefined();
+
+    broadcastLiveSessionQueueState(queueEntry as never, vi.fn());
+    broadcastLiveSessionParallelState(parallelEntry as never, vi.fn());
+
+    expect(readCachedLiveSessionQueueState(queueEntry as never)).toEqual({ steering: [], followUp: [] });
+    expect(readCachedLiveSessionParallelState(parallelEntry as never)).toEqual([{ id: 'job-1' }]);
   });
 
   it('schedules at most one context usage broadcast and can clear it', () => {

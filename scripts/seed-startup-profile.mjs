@@ -46,10 +46,14 @@ for (let i = 0; i < sessions; i += 1) {
     { type: 'session_info', name: `Fixture ${topic} thread ${i}` },
   ];
 
+  let parentId = null;
   for (let j = 0; j < blocks; j += 1) {
     const role = j % 2 === 0 ? 'user' : 'assistant';
+    const entryId = `${id}-message-${String(j).padStart(4, '0')}`;
     lines.push({
       type: 'message',
+      id: entryId,
+      parentId,
       timestamp: iso(day, j * 1000),
       message: {
         role,
@@ -59,6 +63,7 @@ for (let i = 0; i < sessions; i += 1) {
             : `Investigated ${topic} regression ${i}.${j}. Touched src/${topic.replaceAll(' ', '-')}/${i % 20}.ts and validated behavior.`,
       },
     });
+    parentId = entryId;
   }
 
   const slug = workspace;

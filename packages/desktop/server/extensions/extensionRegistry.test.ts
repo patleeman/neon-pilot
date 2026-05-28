@@ -26,6 +26,7 @@ import {
   resolveExtensionModelProfile,
   setExtensionEnabled,
   setExtensionKeybinding,
+  withExtensionRegistryReadCache,
 } from './extensionRegistry.js';
 
 describe('extension registry', () => {
@@ -108,6 +109,29 @@ describe('extension registry', () => {
 
     const commands = listExtensionCommandRegistrations().filter((command) => command.extensionId === 'backend-only');
     expect(commands.map((command) => command.surfaceId)).toEqual(['visible']);
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('invalidates scoped registry config cache after writes', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'opt-in');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'opt-in',
+        name: 'Opt In',
+        defaultEnabled: false,
+      }),
+    );
+
+    await withExtensionRegistryReadCache(async () => {
+      expect(isExtensionEnabled('opt-in', stateRoot)).toBe(false);
+      setExtensionEnabled('opt-in', true, stateRoot);
+      expect(isExtensionEnabled('opt-in', stateRoot)).toBe(true);
+    });
 
     rmSync(stateRoot, { recursive: true, force: true });
   });

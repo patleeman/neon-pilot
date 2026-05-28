@@ -110,6 +110,7 @@ function createBackendMock(): LocalBackendProcesses {
   return {
     ensureStarted: vi.fn(),
     getStatus: vi.fn(),
+    subscribeApiStream: vi.fn().mockResolvedValue(vi.fn()),
     setWorkbenchBrowserToolHost: vi.fn(),
     restart: vi.fn(),
     stop: vi.fn(),
@@ -990,6 +991,21 @@ describe('LocalHostController', () => {
 
     expect(loadLocalApi).toHaveBeenCalledTimes(1);
     expect(subscribeDesktopAppEvents).toHaveBeenCalledWith(onEvent);
+    expect(backend.ensureStarted).not.toHaveBeenCalled();
+  });
+
+  it('does not request the full sessions snapshot for backend app-event bridge subscriptions', async () => {
+    const unsubscribe = vi.fn();
+    const backend = createBackendMock();
+    vi.mocked(backend.subscribeApiStream).mockResolvedValue(unsubscribe);
+    const controller = new LocalHostController({ id: 'local', label: 'Local', kind: 'local' }, backend);
+
+    await expect(controller.subscribeDesktopAppEvents?.(vi.fn())).resolves.toBe(unsubscribe);
+
+    expect(backend.subscribeApiStream).toHaveBeenCalledWith(
+      '/api/app-events/events?initialSnapshotTopics=tasks,runs,daemon',
+      expect.any(Function),
+    );
     expect(backend.ensureStarted).not.toHaveBeenCalled();
   });
 });

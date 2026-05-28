@@ -7,6 +7,7 @@ const {
   existsSyncMock,
   getActivityConversationLinkMock,
   getAvailableModelObjectsMock,
+  getLocalLiveSessionMock,
   getLocalLiveSessionsMock,
   listDeferredResumeRecordsMock,
   listProfileActivityEntriesMock,
@@ -27,6 +28,7 @@ const {
   publishAppEventMock,
   readConversationModelPreferenceSnapshotMock,
   readSavedModelPreferencesMock,
+  readSessionBlocksByFileWithTelemetryMock,
   readSessionBlocksWithTelemetryMock,
   readSessionMetaMock,
   resolveConversationModelPreferenceStateMock,
@@ -41,6 +43,7 @@ const {
   existsSyncMock: vi.fn(),
   getActivityConversationLinkMock: vi.fn(),
   getAvailableModelObjectsMock: vi.fn(),
+  getLocalLiveSessionMock: vi.fn(),
   getLocalLiveSessionsMock: vi.fn(),
   listDeferredResumeRecordsMock: vi.fn(),
   listProfileActivityEntriesMock: vi.fn(),
@@ -61,6 +64,7 @@ const {
   publishAppEventMock: vi.fn(),
   readConversationModelPreferenceSnapshotMock: vi.fn(),
   readSavedModelPreferencesMock: vi.fn(),
+  readSessionBlocksByFileWithTelemetryMock: vi.fn(),
   readSessionBlocksWithTelemetryMock: vi.fn(),
   readSessionMetaMock: vi.fn(),
   resolveConversationModelPreferenceStateMock: vi.fn(),
@@ -109,6 +113,7 @@ vi.mock('@neon-pilot/daemon', () => ({
 vi.mock('./liveSessions.js', () => ({
   ensureSessionFileExists: ensureSessionFileExistsMock,
   getAvailableModelObjects: getAvailableModelObjectsMock,
+  getLiveSession: getLocalLiveSessionMock,
   getLiveSessions: getLocalLiveSessionsMock,
   registry: liveSessionRegistry,
 }));
@@ -120,6 +125,7 @@ vi.mock('../shared/appEvents.js', () => ({
 
 vi.mock('./sessions.js', () => ({
   listSessions: listSessionsMock,
+  readSessionBlocksByFileWithTelemetry: readSessionBlocksByFileWithTelemetryMock,
   readSessionBlocksWithTelemetry: readSessionBlocksWithTelemetryMock,
   readSessionMeta: readSessionMetaMock,
 }));
@@ -179,6 +185,7 @@ describe('conversationService', () => {
     existsSyncMock.mockReset();
     getActivityConversationLinkMock.mockReset();
     getAvailableModelObjectsMock.mockReset();
+    getLocalLiveSessionMock.mockReset();
     getLocalLiveSessionsMock.mockReset();
     listDeferredResumeRecordsMock.mockReset();
     listProfileActivityEntriesMock.mockReset();
@@ -198,6 +205,7 @@ describe('conversationService', () => {
     invalidateAppTopicsMock.mockReset();
     publishAppEventMock.mockReset();
     readConversationModelPreferenceSnapshotMock.mockReset();
+    readSessionBlocksByFileWithTelemetryMock.mockReset();
     readSavedModelPreferencesMock.mockReset();
     readSessionBlocksWithTelemetryMock.mockReset();
     readSessionMetaMock.mockReset();
@@ -212,6 +220,9 @@ describe('conversationService', () => {
     getActivityConversationLinkMock.mockReturnValue(undefined);
     getAvailableModelObjectsMock.mockReturnValue([{ id: 'gpt-5' }]);
     getLocalLiveSessionsMock.mockReturnValue([]);
+    getLocalLiveSessionMock.mockImplementation(
+      (conversationId: string) => getLocalLiveSessionsMock().find((session: { id: string }) => session.id === conversationId) ?? null,
+    );
     listDeferredResumeRecordsMock.mockReturnValue([]);
     listProfileActivityEntriesMock.mockReturnValue([]);
     hasConversationCatalogRowsMock.mockReturnValue(false);
@@ -226,6 +237,10 @@ describe('conversationService', () => {
     loadProfileActivityReadStateMock.mockReturnValue(new Set());
     readSavedModelPreferencesMock.mockReturnValue({ defaultModel: 'gpt-5', currentServiceTier: '' });
     readSessionBlocksWithTelemetryMock.mockReturnValue({
+      detail: null,
+      telemetry: { cache: 'miss', loader: 'disk', durationMs: 4 },
+    });
+    readSessionBlocksByFileWithTelemetryMock.mockReturnValue({
       detail: null,
       telemetry: { cache: 'miss', loader: 'disk', durationMs: 4 },
     });
@@ -340,12 +355,40 @@ describe('conversationService', () => {
       },
     ]);
     expect(resolveConversationSessionFile('conversation-1')).toBe('/sessions/live.jsonl');
+    expect(ensureSessionFileExistsMock).not.toHaveBeenCalled();
+
+    existsSyncMock.mockReturnValueOnce(false).mockReturnValueOnce(true);
+    getLocalLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conversation-1',
+        cwd: '/repo/live',
+        sessionFile: ' /sessions/live.jsonl ',
+        title: 'Live title',
+        isStreaming: true,
+        hasStaleTurnState: true,
+      },
+    ]);
+    expect(resolveConversationSessionFile('conversation-1')).toBe('/sessions/live.jsonl');
     expect(ensureSessionFileExistsMock).toHaveBeenCalledWith('session-manager-1');
 
     getLocalLiveSessionsMock.mockReturnValue([]);
+    readConversationCatalogSessionMock.mockReturnValueOnce({
+      id: 'conversation-2',
+      file: ' /sessions/catalog-stored.jsonl ',
+      timestamp: '2026-04-09T12:00:00.000Z',
+      cwd: '/repo/stored',
+      cwdSlug: '-repo-stored',
+      model: 'gpt-5',
+      title: 'Stored title',
+      messageCount: 4,
+    });
+
+    expect(resolveConversationSessionFile('conversation-2')).toBe('/sessions/catalog-stored.jsonl');
+    expect(listSessionsMock).not.toHaveBeenCalled();
+
     listSessionsMock.mockReturnValue([
       {
-        id: 'conversation-2',
+        id: 'conversation-3',
         file: '/sessions/stored.jsonl',
         timestamp: '2026-04-09T12:00:00.000Z',
         cwd: '/repo/stored',
@@ -356,7 +399,7 @@ describe('conversationService', () => {
       },
     ]);
 
-    expect(resolveConversationSessionFile('conversation-2')).toBe('/sessions/stored.jsonl');
+    expect(resolveConversationSessionFile('conversation-3')).toBe('/sessions/stored.jsonl');
   });
 
   it('reads session signatures and tolerates missing files', () => {
@@ -445,6 +488,27 @@ describe('conversationService', () => {
     expect(listSessionsMock).not.toHaveBeenCalled();
     expect(upsertConversationCatalogSessionsMock).not.toHaveBeenCalled();
     expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
+  });
+
+  it('passes positive snapshot limits into catalog reads', () => {
+    hasConversationCatalogRowsMock.mockReturnValue(true);
+    isConversationCatalogCompleteMock.mockReturnValue(true);
+    listConversationCatalogSessionsMock.mockReturnValue([
+      {
+        id: 'catalog-1',
+        file: '/sessions/catalog-1.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/catalog',
+        cwdSlug: '-repo-catalog',
+        model: 'gpt-5',
+        title: 'Catalog one',
+        messageCount: 1,
+      },
+    ]);
+
+    expect(listConversationSessionsSnapshot({ limit: 1 }).map((session) => session.id)).toEqual(['catalog-1']);
+    expect(listConversationCatalogSessionsMock).toHaveBeenCalledWith({ limit: 1 });
+    expect(listSessionsMock).not.toHaveBeenCalled();
   });
 
   it('builds conversation snapshots from saved workspace state', () => {
@@ -593,6 +657,33 @@ describe('conversationService', () => {
       ]),
     );
 
+    listSessionsMock.mockClear();
+    readSessionMetaMock.mockImplementation((conversationId: string) => {
+      const sessions = [
+        {
+          id: 'workspace-1',
+          file: '/sessions/workspace-1.jsonl',
+          timestamp: '2026-04-09T12:00:00.000Z',
+          cwd: '/repo/workspace',
+          cwdSlug: '-repo-workspace',
+          model: 'gpt-5',
+          title: 'Workspace title',
+          messageCount: 3,
+        },
+        {
+          id: 'review-1',
+          file: '/sessions/review-1.jsonl',
+          timestamp: '2026-04-09T10:00:00.000Z',
+          cwd: '/repo/review',
+          cwdSlug: '-repo-review',
+          model: 'gpt-5',
+          title: 'Needs review',
+          messageCount: 4,
+        },
+      ];
+      return sessions.find((session) => session.id === conversationId) ?? null;
+    });
+
     expect(toggleConversationAttention({ profile: 'assistant', conversationId: 'review-1', read: false })).toBe(true);
     expect(markConversationAttentionUnreadMock).toHaveBeenCalledWith({
       profile: 'assistant',
@@ -606,6 +697,7 @@ describe('conversationService', () => {
       messageCount: 3,
     });
     expect(toggleConversationAttention({ profile: 'assistant', conversationId: 'missing' })).toBe(false);
+    expect(listSessionsMock).not.toHaveBeenCalled();
   });
 
   it('reads isRunning from the live entry running field when present', () => {
@@ -704,6 +796,29 @@ describe('conversationService', () => {
       }),
     ).resolves.toMatchObject({ sessionRead: { detail: { id: 'detail-capped' } } });
     expect(readSessionBlocksWithTelemetryMock).toHaveBeenLastCalledWith('conversation-capped', { tailBlocks: 10000 });
+
+    getLocalLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conversation-live',
+        cwd: '/repo/live',
+        sessionFile: '/sessions/live.jsonl',
+        isStreaming: true,
+      },
+    ]);
+    readSessionBlocksByFileWithTelemetryMock.mockReturnValueOnce({
+      detail: { id: 'detail-live' },
+      telemetry: { cache: 'miss', loader: 'fast-tail', durationMs: 2 },
+    });
+    await expect(
+      readSessionDetailForRoute({
+        conversationId: 'conversation-live',
+        profile: 'assistant',
+        tailBlocks: 12,
+      }),
+    ).resolves.toMatchObject({ sessionRead: { detail: { id: 'detail-live' } } });
+    expect(readSessionBlocksByFileWithTelemetryMock).toHaveBeenCalledWith('/sessions/live.jsonl', { tailBlocks: 12 });
+    expect(readSessionBlocksWithTelemetryMock).not.toHaveBeenLastCalledWith('conversation-live', expect.anything());
+    getLocalLiveSessionsMock.mockReturnValue([]);
 
     readSessionBlocksWithTelemetryMock.mockReturnValueOnce({
       detail: null,

@@ -356,6 +356,54 @@ describe('desktopConversationState reducer', () => {
     ]);
     expect(state.totalBlocks).toBe(1);
   });
+
+  it('preserves transcript block identity for control-only events', async () => {
+    const { applyDesktopConversationStreamEvent, createEmptyDesktopConversationStreamState } =
+      await import('./desktopConversationState.js');
+
+    const blocks = [
+      {
+        type: 'text' as const,
+        id: 'text-1',
+        text: 'already rendered',
+        ts: '2026-05-24T00:00:00.000Z',
+      },
+    ];
+    const state = {
+      ...createEmptyDesktopConversationStreamState(),
+      blocks,
+      totalBlocks: 1,
+      hasSnapshot: true,
+      isStreaming: true,
+    };
+
+    const emptyQueueUpdated = applyDesktopConversationStreamEvent(state, {
+      type: 'queue_state',
+      steering: [],
+      followUp: [],
+    } as never);
+    const queueUpdated = applyDesktopConversationStreamEvent(state, {
+      type: 'queue_state',
+      steering: [{ id: 'steer-1', text: 'Nudge', imageCount: 0 }],
+      followUp: [],
+    } as never);
+    const statsUpdated = applyDesktopConversationStreamEvent(state, { type: 'stats_update', tokens: 10, cost: 0.01 } as never);
+    const repeatedAgentStart = applyDesktopConversationStreamEvent(state, { type: 'agent_start' } as never);
+    const idleToolEnd = applyDesktopConversationStreamEvent(state, {
+      type: 'tool_end',
+      toolName: 'bash',
+      toolCallId: 'missing-tool',
+      output: '',
+      isError: false,
+      durationMs: 0,
+    } as never);
+
+    expect(emptyQueueUpdated).toBe(state);
+    expect(queueUpdated.blocks).toBe(blocks);
+    expect(statsUpdated.blocks).toBe(blocks);
+    expect(repeatedAgentStart).toBe(state);
+    expect(idleToolEnd).toBe(state);
+  });
 });
 
 describe('desktopConversationState reducer — streaming lifecycle', () => {

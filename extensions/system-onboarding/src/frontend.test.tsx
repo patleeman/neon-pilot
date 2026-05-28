@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OnboardingBootstrap } from './frontend';
 
@@ -12,6 +12,14 @@ function LocationProbe() {
 }
 
 describe('OnboardingBootstrap', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('navigates to the onboarding conversation with client-side routing', async () => {
     const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
     const pa = {
@@ -27,9 +35,10 @@ describe('OnboardingBootstrap', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('location').textContent).toBe('/conversations/conv-1');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
+    expect(screen.getByTestId('location').textContent).toBe('/conversations/conv-1');
     expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
   });
 
@@ -48,9 +57,10 @@ describe('OnboardingBootstrap', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
     expect(screen.getByTestId('location').textContent).toBe('/knowledge');
   });
 
@@ -69,9 +79,10 @@ describe('OnboardingBootstrap', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
     expect(screen.getByTestId('location').textContent).toBe('/settings');
   });
 
@@ -95,9 +106,32 @@ describe('OnboardingBootstrap', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
+  });
+
+  it('does not auto-open onboarding over an empty draft composer', async () => {
+    const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
+    const pa = {
+      extension: {
+        invoke,
+      },
+    } as never;
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <OnboardingBootstrap pa={pa} />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
   });
 });

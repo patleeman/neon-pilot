@@ -319,8 +319,12 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
     cwd,
     listeners: new Set(),
     title: resolveStableSessionTitle(session),
+    lastContextUsage: undefined,
     lastContextUsageJson: null,
+    lastContextUsageMessageCount: undefined,
+    lastQueueState: undefined,
     lastQueueStateJson: null,
+    lastParallelState: undefined,
     lastParallelStateJson: null,
     currentTurnError: null,
     tracePersistedTokens: initialPersistedTokens,
@@ -337,10 +341,11 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
   entry.parallelJobs = loadPersistedParallelJobs(entry.session.sessionFile, resolveParallelChildSession);
   registry.set(id, entry);
   publishSessionMetaChanged(id);
-  const durableRunSyncTimer = setTimeout(() => {
-    void syncDurableConversationRun(entry, session.isStreaming ? 'running' : 'waiting', { force: true });
-  }, 5_000);
-  durableRunSyncTimer.unref?.();
+  if (session.isStreaming) {
+    queueMicrotask(() => {
+      void syncDurableConversationRun(entry, 'running', { force: true });
+    });
+  }
   if (entry.parallelJobs.length > 0) {
     queueMicrotask(() => {
       void tryImportReadyParallelJobs(entry);
@@ -417,6 +422,14 @@ export function getLiveSessions() {
   return listLiveSessionEntries(registry.entries(), resolveEntryTitle);
 }
 
+export function getLiveSession(sessionId: string): ReturnType<typeof getLiveSessions>[number] | null {
+  const entry = registry.get(sessionId);
+  if (!entry) {
+    return null;
+  }
+  return listLiveSessionEntries([[sessionId, entry]], resolveEntryTitle)[0] ?? null;
+}
+
 export function getLiveSessionForkEntries(sessionId: string): unknown[] | null {
   return readLiveSessionForkEntries(registry.get(sessionId));
 }
@@ -487,7 +500,7 @@ export async function createSessionFromExisting(
   sessionFile: string,
   cwd: string,
   options: LiveSessionLoaderOptions = {},
-): Promise<{ id: string; sessionFile: string }> {
+): Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }> {
   return createLiveSessionFromExistingWithCallbacks({
     sessionFile,
     cwd,
@@ -559,7 +572,7 @@ async function applyPendingConversationWorkingDirectoryChange(entry: LiveEntry):
 export async function resumeSession(
   sessionFile: string,
   options: LiveSessionLoaderOptions & { cwdOverride?: string } = {},
-): Promise<{ id: string }> {
+): Promise<{ id: string; perf?: Record<string, number> }> {
   return resumeLiveSessionWithCallbacks({
     sessionFile,
     agentDir: AGENT_DIR,
@@ -585,6 +598,7 @@ export function subscribe(
       surfaceId: string;
       surfaceType: LiveSessionSurfaceType;
     };
+    deferInitialReplayMs?: number;
   },
 ): (() => void) | null {
   const entry = registry.get(sessionId);
@@ -1025,7 +1039,7 @@ export async function branchSession(
   entryId: string,
   options: LiveSessionLoaderOptions = {},
   surfaceId?: string,
-): Promise<{ newSessionId: string; sessionFile: string }> {
+): Promise<{ newSessionId: string; sessionFile: string; perf?: Record<string, number> }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
   ensureLiveSessionSurfaceCanControl(entry, surfaceId);
@@ -1040,19 +1054,20 @@ export async function forkSession(
   entryId: string,
   options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: 'fork' | 'rewind' } = {},
   surfaceId?: string,
-): Promise<{ newSessionId: string; sessionFile: string }> {
+): Promise<{ newSessionId: string; sessionFile: string; perf?: Record<string, number> }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
   ensureLiveSessionSurfaceCanControl(entry, surfaceId);
-  const availableModelsForTier = await getAvailableModelObjects();
   const result = await forkLiveSession(entry, entryId, options, {
     createSession,
     resumeSession,
     destroySession,
-    resolveDefaultServiceTier: (candidate) =>
-      buildConversationServiceTierPreferenceInput(
+    resolveDefaultServiceTier: async (candidate) => {
+      const availableModelsForTier = await getAvailableModelObjects();
+      return buildConversationServiceTierPreferenceInput(
         resolveConversationPreferenceStateForSession(candidate.session.sessionManager, availableModelsForTier),
-      ),
+      );
+    },
   });
   // Notify the source conversation so its transcript refreshes and shows the new child tombstone.
   if (options.preserveSource) {

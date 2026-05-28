@@ -19,7 +19,7 @@ vi.mock('../automation/durableRuns.js', () => ({
 import * as daemon from '../automation/daemon.js';
 import * as durableRuns from '../automation/durableRuns.js';
 import * as convoService from '../conversations/conversationService.js';
-import { buildSnapshotEventsForTopic } from './system.js';
+import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from './system.js';
 
 describe('buildSnapshotEventsForTopic', () => {
   it('builds sessions snapshot', async () => {
@@ -61,5 +61,10 @@ describe('buildSnapshotEventsForTopic', () => {
   it('returns empty array for unknown topics', async () => {
     const events = await buildSnapshotEventsForTopic('unknown' as never);
     expect(events).toEqual([]);
+  });
+
+  it('reads requested initial app event snapshot topics', () => {
+    expect(readInitialAppEventTopics(new URLSearchParams())).toEqual(['sessions', 'tasks', 'runs', 'daemon']);
+    expect(readInitialAppEventTopics(new URLSearchParams('initialSnapshotTopics=tasks,runs,invalid'))).toEqual(['tasks', 'runs']);
   });
 });

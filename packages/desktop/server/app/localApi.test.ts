@@ -118,7 +118,16 @@ describe('desktop local API extension routes', () => {
     mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
     writeFileSync(
       join(extensionRoot, 'extension.json'),
-      JSON.stringify({ schemaVersion: 2, id: 'agent-board', name: 'Agent Board', frontend: { entry: 'dist/frontend.js' } }),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        frontend: { entry: 'dist/frontend.js' },
+        contributes: {
+          nav: [{ id: 'agent-board', label: 'Agent Board', route: '/agent-board', icon: 'app' }],
+          tools: [{ id: 'slow-tool', name: 'slow_tool', action: 'tools.slow', description: 'Slow tool', inputSchema: {} }],
+        },
+      }),
     );
     writeFileSync(join(extensionRoot, 'dist', 'frontend.js'), 'export function AgentBoardPage() {}');
 
@@ -130,5 +139,34 @@ describe('desktop local API extension routes', () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toMatch(/javascript|\bjs\b/);
     expect(Buffer.from(response.body).toString('utf-8')).toContain('AgentBoardPage');
+  }, 30000);
+
+  it('serves the critical extension registry from the desktop local API fast path', async () => {
+    process.env.NEON_PILOT_STATE_ROOT = tempStateRoot;
+
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/extensions/registry/critical',
+    });
+    const body = readJsonBody(response);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.settings).toEqual({});
+    expect(body.extensions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'agent-board',
+          manifest: expect.objectContaining({
+            contributes: expect.objectContaining({
+              nav: [expect.objectContaining({ id: 'agent-board' })],
+            }),
+          }),
+        }),
+      ]),
+    );
+    const agentBoard = (body.extensions as Array<{ id: string; manifest: { contributes?: Record<string, unknown> } }>).find(
+      (extension) => extension.id === 'agent-board',
+    );
+    expect(agentBoard?.manifest.contributes).not.toHaveProperty('tools');
   }, 30000);
 });

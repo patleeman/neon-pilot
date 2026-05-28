@@ -6,17 +6,25 @@ const agent = vi.hoisted(() => ({
     open: vi.fn((sessionFile: string) => agent.managers.get(sessionFile)),
   },
 }));
+const core = vi.hoisted(() => ({
+  getPiAgentRuntimeDir: vi.fn(() => '/runtime/neon-pilot'),
+}));
 const sessions = vi.hoisted(() => ({
   appendChildConversationTopologyEntry: vi.fn(),
   appendConversationOffshootMetadata: vi.fn(),
+  appendConversationWorkspaceMetadata: vi.fn(),
   appendParentConversationBacklinkEntry: vi.fn(),
+  readSessionMetaByFile: vi.fn(() => ({ cwd: '/repo', workspaceCwd: '/workspace-repo' })),
 }));
 
 vi.mock('@earendil-works/pi-coding-agent', () => ({ SessionManager: agent.SessionManager }));
+vi.mock('@neon-pilot/core', () => core);
 vi.mock('./conversationTranscriptOps.js', () => ({
   appendChildConversationTopologyEntry: sessions.appendChildConversationTopologyEntry,
   appendConversationOffshootMetadata: sessions.appendConversationOffshootMetadata,
+  appendConversationWorkspaceMetadata: sessions.appendConversationWorkspaceMetadata,
   appendParentConversationBacklinkEntry: sessions.appendParentConversationBacklinkEntry,
+  readConversationSessionMetaByFilePath: sessions.readSessionMetaByFile,
 }));
 
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
@@ -25,6 +33,8 @@ describe('live session branching', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     agent.managers.clear();
+    core.getPiAgentRuntimeDir.mockReturnValue('/runtime/neon-pilot');
+    sessions.readSessionMetaByFile.mockReturnValue({ cwd: '/repo', workspaceCwd: '/workspace-repo' });
   });
 
   function manager(entry: unknown = { id: 'entry-1', parentId: 'parent-1' }, branchFile = '/sessions/branch.jsonl') {
@@ -45,10 +55,12 @@ describe('live session branching', () => {
     agent.managers.set('/sessions/source.jsonl', sourceManager);
     const resumeSession = vi.fn(async () => ({ id: 'branch-id' }));
 
-    await expect(branchLiveSession(entry() as never, 'entry-1', { model: 'm1' } as never, { resumeSession })).resolves.toEqual({
-      newSessionId: 'branch-id',
-      sessionFile: '/sessions/branch.jsonl',
-    });
+    await expect(branchLiveSession(entry() as never, 'entry-1', { model: 'm1' } as never, { resumeSession })).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'branch-id',
+        sessionFile: '/sessions/branch.jsonl',
+      }),
+    );
 
     expect(agent.SessionManager.open).toHaveBeenCalledWith('/sessions/source.jsonl', undefined, '/repo');
     expect(sourceManager.getEntry).toHaveBeenCalledWith('entry-1');
@@ -66,6 +78,11 @@ describe('live session branching', () => {
       parentSessionFile: '/sessions/source.jsonl',
       parentSessionId: 'source-id',
       parentMessageId: 'entry-1',
+    });
+    expect(sessions.appendConversationWorkspaceMetadata).toHaveBeenCalledWith({
+      sessionFile: '/sessions/branch.jsonl',
+      cwd: '/repo',
+      workspaceCwd: '/workspace-repo',
     });
     expect(resumeSession).toHaveBeenCalledWith('/sessions/branch.jsonl', { model: 'm1', cwdOverride: '/repo' });
     expect(sessions.appendChildConversationTopologyEntry).toHaveBeenCalledWith({
@@ -101,10 +118,12 @@ describe('live session branching', () => {
       resolveDefaultServiceTier: vi.fn(() => 'auto'),
     };
 
-    await expect(forkLiveSession(entry() as never, 'root', { beforeEntry: true } as never, callbacks)).resolves.toEqual({
-      newSessionId: 'created-id',
-      sessionFile: '/sessions/created.jsonl',
-    });
+    await expect(forkLiveSession(entry() as never, 'root', { beforeEntry: true } as never, callbacks)).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'created-id',
+        sessionFile: '/sessions/created.jsonl',
+      }),
+    );
 
     expect(callbacks.createSession).toHaveBeenCalledWith('/repo', {
       initialModel: 'model-1',
@@ -118,7 +137,29 @@ describe('live session branching', () => {
     expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith(
       expect.objectContaining({ sessionFile: '/sessions/created.jsonl', kind: 'rewind', parentMessageId: 'root' }),
     );
+    expect(sessions.appendConversationWorkspaceMetadata).toHaveBeenCalledWith({
+      sessionFile: '/sessions/created.jsonl',
+      cwd: '/repo',
+      workspaceCwd: '/workspace-repo',
+    });
     expect(sessions.appendChildConversationTopologyEntry).not.toHaveBeenCalled();
+  });
+
+  it('keeps forked neutral chat conversations in the Chats group when source metadata lacks workspaceCwd', async () => {
+    sessions.readSessionMetaByFile.mockReturnValue({ cwd: '/runtime/neon-pilot/chat-workspaces/chat-123' });
+    const sourceManager = manager();
+    agent.managers.set('/sessions/source.jsonl', sourceManager);
+    const resumeSession = vi.fn(async () => ({ id: 'branch-id' }));
+
+    await branchLiveSession(entry({ cwd: '/runtime/neon-pilot/chat-workspaces/chat-123' }) as never, 'entry-1', { model: 'm1' } as never, {
+      resumeSession,
+    });
+
+    expect(sessions.appendConversationWorkspaceMetadata).toHaveBeenCalledWith({
+      sessionFile: '/sessions/branch.jsonl',
+      cwd: '/runtime/neon-pilot/chat-workspaces/chat-123',
+      workspaceCwd: null,
+    });
   });
 
   it('forks/rewinds via branched session file, optionally preserving source and topology', async () => {
@@ -137,10 +178,12 @@ describe('live session branching', () => {
         { beforeEntry: true, preserveSource: true, initialModel: 'explicit' } as never,
         callbacks,
       ),
-    ).resolves.toEqual({
-      newSessionId: 'forked-id',
-      sessionFile: '/sessions/forked.jsonl',
-    });
+    ).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'forked-id',
+        sessionFile: '/sessions/forked.jsonl',
+      }),
+    );
 
     const sourceManager = agent.managers.get('/sessions/source.jsonl')!;
     expect(sourceManager.createBranchedSession).toHaveBeenCalledWith('parent-1');

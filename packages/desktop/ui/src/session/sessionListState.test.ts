@@ -44,6 +44,37 @@ describe('sessionListState', () => {
     ]);
   });
 
+  it('returns the previous array and item references for an equivalent snapshot', () => {
+    const previousSessions = [createSession({ id: 'alpha', title: 'Alpha' }), createSession({ id: 'beta', title: 'Beta' })];
+    const nextSnapshot = [createSession({ id: 'alpha', title: 'Alpha' }), createSession({ id: 'beta', title: 'Beta' })];
+
+    const merged = mergeSessionSnapshotPreservingOrder(previousSessions, nextSnapshot);
+
+    expect(merged).toBe(previousSessions);
+    expect(merged[0]).toBe(previousSessions[0]);
+    expect(merged[1]).toBe(previousSessions[1]);
+  });
+
+  it('reuses unchanged item references when only one session changes', () => {
+    const previousSessions = [
+      createSession({ id: 'alpha', title: 'Alpha' }),
+      createSession({ id: 'beta', title: 'Beta' }),
+      createSession({ id: 'gamma', title: 'Gamma' }),
+    ];
+    const nextSnapshot = [
+      createSession({ id: 'alpha', title: 'Alpha' }),
+      createSession({ id: 'beta', title: 'Beta refreshed' }),
+      createSession({ id: 'gamma', title: 'Gamma' }),
+    ];
+
+    const merged = mergeSessionSnapshotPreservingOrder(previousSessions, nextSnapshot);
+
+    expect(merged).not.toBe(previousSessions);
+    expect(merged[0]).toBe(previousSessions[0]);
+    expect(merged[1]).not.toBe(previousSessions[1]);
+    expect(merged[2]).toBe(previousSessions[2]);
+  });
+
   it('replaces a session in place without changing surrounding order', () => {
     const sessions = [
       createSession({ id: 'alpha', title: 'Alpha' }),

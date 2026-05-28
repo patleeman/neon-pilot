@@ -6,10 +6,13 @@ import { inlineConversationSessionSnapshotAssetsCapability } from '../conversati
 import type { DisplayBlock } from '../conversations/conversationTypes.js';
 import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
+import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../routes/system.js';
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
 
 const MAX_DESKTOP_LOCAL_API_STREAM_TAIL_BLOCKS = 10000;
+const LIVE_SESSION_INITIAL_REPLAY_DEFER_MS = 150;
+const DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS = 6_000;
 
 export type DesktopLocalApiStreamEvent =
   | { type: 'open' }
@@ -19,6 +22,10 @@ export type DesktopLocalApiStreamEvent =
 
 function emitStreamMessage(onEvent: (event: DesktopLocalApiStreamEvent) => void, payload: unknown): void {
   onEvent({ type: 'message', data: JSON.stringify(payload) });
+}
+
+function initialAppEventSnapshotDelayMs(topics: readonly string[]): number {
+  return topics.includes('sessions') ? DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS : 0;
 }
 
 function parsePositiveInteger(raw: string | null, options?: { minimum?: number; maximum?: number }): number | undefined {
@@ -94,6 +101,7 @@ async function subscribeDesktopLiveSessionStream(url: URL, onEvent: (event: Desk
   const unsubscribe = subscribeLiveSession(sessionId, writeEvent, {
     ...(tailBlocks ? { tailBlocks } : {}),
     ...(surfaceId ? { surface: { surfaceId, surfaceType } } : {}),
+    deferInitialReplayMs: LIVE_SESSION_INITIAL_REPLAY_DEFER_MS,
   });
 
   if (!unsubscribe) {
@@ -389,10 +397,35 @@ async function subscribeDesktopWorkspaceEventsStream(url: URL, onEvent: (event: 
   return close;
 }
 
-async function subscribeDesktopAppEventsStream(_url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+async function subscribeDesktopAppEventsStream(url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
   onEvent({ type: 'open' });
   const unsubscribe = subscribeAppEvents((event) => emitStreamMessage(onEvent, event));
+  const initialSnapshotTopics = readInitialAppEventTopics(url.searchParams);
+  let closed = false;
+
+  const deferredSnapshotTimer = setTimeout(() => {
+    void (async () => {
+      for (const topic of initialSnapshotTopics) {
+        if (closed) {
+          continue;
+        }
+        for (const event of await buildSnapshotEventsForTopic(topic)) {
+          if (closed) {
+            return;
+          }
+          emitStreamMessage(onEvent, event);
+        }
+      }
+    })();
+  }, initialAppEventSnapshotDelayMs(initialSnapshotTopics));
+  deferredSnapshotTimer.unref?.();
+
   return () => {
+    if (closed) {
+      return;
+    }
+    closed = true;
+    clearTimeout(deferredSnapshotTimer);
     unsubscribe();
     onEvent({ type: 'close' });
   };

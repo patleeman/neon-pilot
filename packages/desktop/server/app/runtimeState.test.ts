@@ -12,9 +12,13 @@ const {
   materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResourcesMock,
   createManifestAgentExtensionsMock,
+  listExtensionAgentRegistrationsMock,
+  listExtensionToolRegistrationsMock,
   manifestAgentFactoryMock,
   authStorageMock,
   readSavedModelPreferencesMock,
+  buildSkillInjectionPlanAsyncMock,
+  buildPromptTemplatePlanAsyncMock,
   listExtensionSkillRegistrationsMock,
   listExtensionEntriesMock,
   isExtensionEnabledMock,
@@ -35,9 +39,13 @@ const {
     resolveRuntimeResourcesMock: vi.fn(),
     writeMergedMcpConfigFileMock: vi.fn(() => ({ bundledServerCount: 0 })),
     createManifestAgentExtensionsMock: vi.fn(() => ({ factories: [manifestAgentFactoryMock], errors: [] })),
+    listExtensionAgentRegistrationsMock: vi.fn(() => []),
+    listExtensionToolRegistrationsMock: vi.fn(() => []),
     manifestAgentFactoryMock,
     authStorageMock,
     readSavedModelPreferencesMock: vi.fn(() => ({ currentVisionModel: 'openai/gpt-4o' })),
+    buildSkillInjectionPlanAsyncMock: vi.fn(async () => ({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] })),
+    buildPromptTemplatePlanAsyncMock: vi.fn(async () => ({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] })),
     listExtensionSkillRegistrationsMock: vi.fn(() => []),
     listExtensionEntriesMock: vi.fn(() => []),
     isExtensionEnabledMock: vi.fn(() => true),
@@ -59,7 +67,8 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
   isExtensionEnabled: isExtensionEnabledMock,
   listExtensionEntries: listExtensionEntriesMock,
   listExtensionSkillRegistrations: listExtensionSkillRegistrationsMock,
-  listExtensionToolRegistrations: vi.fn(() => []),
+  listExtensionAgentRegistrations: listExtensionAgentRegistrationsMock,
+  listExtensionToolRegistrations: listExtensionToolRegistrationsMock,
   resolveExtensionModelProfile: vi.fn(() => ({ kind: 'none' })),
 }));
 
@@ -78,6 +87,16 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
   readSavedModelRef: vi.fn(() => 'openai/gpt-4o'),
+}));
+
+vi.mock('../skills/skillInventory.js', () => ({
+  buildSkillInjectionPlan: vi.fn(() => ({ skillPaths: ['/skills/sync'], inlineSkills: [], diagnostics: [] })),
+  buildSkillInjectionPlanAsync: buildSkillInjectionPlanAsyncMock,
+}));
+
+vi.mock('../prompts/promptTemplateInventory.js', () => ({
+  buildPromptTemplatePlan: vi.fn(() => ({ templatePaths: ['/prompts/sync.md'], templates: [], diagnostics: [] })),
+  buildPromptTemplatePlanAsync: buildPromptTemplatePlanAsyncMock,
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
@@ -110,13 +129,21 @@ describe('createRuntimeState', () => {
     createManifestAgentExtensionsMock.mockClear();
     manifestAgentFactoryMock.mockClear();
     listExtensionSkillRegistrationsMock.mockReset();
+    listExtensionAgentRegistrationsMock.mockReset();
+    listExtensionToolRegistrationsMock.mockReset();
     listExtensionEntriesMock.mockReset();
     listExtensionEntriesMock.mockReturnValue([]);
+    listExtensionAgentRegistrationsMock.mockReturnValue([]);
+    listExtensionToolRegistrationsMock.mockReturnValue([]);
     isExtensionEnabledMock.mockReset();
     isExtensionEnabledMock.mockReturnValue(true);
     listExtensionSkillRegistrationsMock.mockReturnValue([]);
     readSavedModelPreferencesMock.mockClear();
     readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: 'openai/gpt-4o' });
+    buildSkillInjectionPlanAsyncMock.mockClear();
+    buildSkillInjectionPlanAsyncMock.mockResolvedValue({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] });
+    buildPromptTemplatePlanAsyncMock.mockClear();
+    buildPromptTemplatePlanAsyncMock.mockResolvedValue({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] });
     authStorageMock.hasAuth.mockReset();
     authStorageMock.hasAuth.mockReturnValue(false);
     authStorageMock.create.mockClear();
@@ -126,7 +153,7 @@ describe('createRuntimeState', () => {
     delete process.env.NEON_PILOT_RESOURCES_ROOT;
   });
 
-  it('materializes the shared runtime and builds live session helpers', async () => {
+  it('builds live session helpers and materializes the shared runtime on demand', async () => {
     process.env.MCP_CONFIG_PATH = '/agent-dir/mcp_servers.json';
     const logger = createLogger();
     const state = createRuntimeState({
@@ -135,6 +162,8 @@ describe('createRuntimeState', () => {
       logger,
     });
 
+    expect(materializeRuntimeResourcesToAgentDirMock).not.toHaveBeenCalledWith(resolvedShared, '/agent-dir');
+    state.materializeRuntimeResources();
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
     expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -257,21 +286,94 @@ describe('createRuntimeState', () => {
     expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(expect.any(Array));
   });
 
-  it('logs initial materialization failures', async () => {
+  it('caches live session extension factories until registrations change', () => {
+    listExtensionAgentRegistrationsMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
+    listExtensionToolRegistrationsMock.mockReturnValue([{ extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' }]);
+    const state = createRuntimeState({
+      repoRoot: '/repo-root',
+      agentDir: '/agent-dir',
+      logger: createLogger(),
+    });
+
+    const first = state.buildLiveSessionExtensionFactories();
+    const second = state.buildLiveSessionExtensionFactories();
+    expect(second).toBe(first);
+    expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(1);
+
+    listExtensionToolRegistrationsMock.mockReturnValue([
+      { extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' },
+      { extensionId: 'tool-ext', id: 'other-tool', name: 'other_tool', action: 'runOther' },
+    ]);
+    const third = state.buildLiveSessionExtensionFactories();
+    expect(third).not.toBe(first);
+    expect(createManifestAgentExtensionsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches async live session resource options for repeated session creation', async () => {
+    const state = createRuntimeState({
+      repoRoot: '/repo-root',
+      agentDir: '/agent-dir',
+      logger: createLogger(),
+    });
+
+    await expect(
+      Promise.all([state.buildLiveSessionResourceOptionsAsync(), state.buildLiveSessionResourceOptionsAsync()]),
+    ).resolves.toEqual([
+      {
+        additionalExtensionPaths: ['/ext/shared'],
+        additionalSkillPaths: ['/skills/async'],
+        additionalPromptTemplatePaths: ['/prompts/async.md'],
+        additionalThemePaths: ['/themes/shared.json'],
+      },
+      {
+        additionalExtensionPaths: ['/ext/shared'],
+        additionalSkillPaths: ['/skills/async'],
+        additionalPromptTemplatePaths: ['/prompts/async.md'],
+        additionalThemePaths: ['/themes/shared.json'],
+      },
+    ]);
+    expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      additionalSkillPaths: ['/skills/async'],
+    });
+    expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('seeds live session resource options while materializing runtime resources', async () => {
+    const state = createRuntimeState({
+      repoRoot: '/repo-root',
+      agentDir: '/agent-dir',
+      logger: createLogger(),
+    });
+
+    state.materializeRuntimeResources();
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toEqual({
+      additionalExtensionPaths: ['/ext/shared'],
+      additionalSkillPaths: ['/skills/sync'],
+      additionalPromptTemplatePaths: ['/prompts/sync.md'],
+      additionalThemePaths: ['/themes/shared.json'],
+    });
+    expect(buildSkillInjectionPlanAsyncMock).not.toHaveBeenCalled();
+    expect(buildPromptTemplatePlanAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces explicit materialization failures', async () => {
     materializeRuntimeResourcesToAgentDirMock.mockImplementationOnce(() => {
       throw new Error('initial materialize failed');
     });
 
     const logger = createLogger();
-    createRuntimeState({
+    const state = createRuntimeState({
       repoRoot: '/repo-root',
       agentDir: '/agent-dir',
       logger,
     });
 
-    expect(logger.warn).toHaveBeenCalledWith('failed to materialize runtime resources', {
-      runtimeScope: 'shared',
-      message: 'initial materialize failed',
-    });
+    expect(() => state.materializeRuntimeResources()).toThrow('initial materialize failed');
+    expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
   });
 });

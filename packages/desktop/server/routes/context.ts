@@ -3,11 +3,14 @@ import type { Express } from 'express';
 
 import type { SavedUiPreferences } from '../ui/uiPreferences.js';
 
+export const LIVE_SESSION_RESOURCE_OPTIONS_PERF = Symbol.for('neon-pilot.liveSessionResourceOptionsPerf');
+
 export interface LiveSessionResourceOptions extends Record<string, unknown> {
   additionalExtensionPaths: string[];
   additionalSkillPaths: string[];
   additionalPromptTemplatePaths: string[];
   additionalThemePaths: string[];
+  [LIVE_SESSION_RESOURCE_OPTIONS_PERF]?: Record<string, number>;
 }
 
 export interface RuntimeScopeTaskSummary {

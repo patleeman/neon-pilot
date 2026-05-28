@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   getDurableRunLogCursorMock,
@@ -8,6 +8,8 @@ const {
   readWorkspaceRootSnapshotMock,
   subscribeLiveSessionMock,
   subscribeProviderOAuthLoginMock,
+  subscribeAppEventsMock,
+  buildSnapshotEventsForTopicMock,
   existsSyncMock,
   watchMock,
 } = vi.hoisted(() => ({
@@ -19,6 +21,8 @@ const {
   existsSyncMock: vi.fn(),
   subscribeLiveSessionMock: vi.fn(),
   subscribeProviderOAuthLoginMock: vi.fn(),
+  subscribeAppEventsMock: vi.fn(),
+  buildSnapshotEventsForTopicMock: vi.fn(),
   watchMock: vi.fn(),
 }));
 
@@ -49,12 +53,84 @@ vi.mock('../workspace/workspaceExplorer.js', () => ({
   readWorkspaceRootSnapshot: readWorkspaceRootSnapshotMock,
 }));
 
+vi.mock('../shared/appEvents.js', () => ({
+  subscribeAppEvents: subscribeAppEventsMock,
+}));
+
+vi.mock('../routes/system.js', () => ({
+  readInitialAppEventTopics: (searchParams: URLSearchParams) =>
+    searchParams.get('initialSnapshotTopics')?.split(',').filter(Boolean) ?? ['sessions', 'tasks'],
+  buildSnapshotEventsForTopic: buildSnapshotEventsForTopicMock,
+}));
+
 import { subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 
 describe('localApiStreams', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     existsSyncMock.mockReturnValue(false);
+    buildSnapshotEventsForTopicMock.mockResolvedValue([]);
+    subscribeAppEventsMock.mockReturnValue(vi.fn());
+  });
+
+  it('emits initial app snapshots on the desktop app-events stream', async () => {
+    vi.useFakeTimers();
+    const unsubscribeFromEvents = vi.fn();
+    buildSnapshotEventsForTopicMock.mockImplementation(async (topic: string) =>
+      topic === 'sessions'
+        ? [{ type: 'sessions_snapshot', sessions: [{ id: 'conv-1' }] }]
+        : [{ type: 'tasks_snapshot', tasks: [{ id: 'task-1' }] }],
+    );
+
+    subscribeAppEventsMock.mockReturnValueOnce(unsubscribeFromEvents);
+    const events: unknown[] = [];
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/app-events/events'), (event) =>
+      events.push(event),
+    );
+
+    expect(buildSnapshotEventsForTopicMock).not.toHaveBeenCalledWith('sessions');
+    expect(buildSnapshotEventsForTopicMock).not.toHaveBeenCalledWith('tasks');
+    expect(events).toEqual([{ type: 'open' }]);
+
+    await vi.advanceTimersByTimeAsync(6_000);
+
+    expect(buildSnapshotEventsForTopicMock).toHaveBeenCalledWith('sessions');
+    expect(buildSnapshotEventsForTopicMock).toHaveBeenCalledWith('tasks');
+    expect(events).toEqual([
+      { type: 'open' },
+      { type: 'message', data: JSON.stringify({ type: 'sessions_snapshot', sessions: [{ id: 'conv-1' }] }) },
+      { type: 'message', data: JSON.stringify({ type: 'tasks_snapshot', tasks: [{ id: 'task-1' }] }) },
+    ]);
+
+    unsubscribe();
+    expect(events.at(-1)).toEqual({ type: 'close' });
+    expect(unsubscribeFromEvents).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it('honors requested initial app snapshot topics on the desktop app-events stream', async () => {
+    vi.useFakeTimers();
+    buildSnapshotEventsForTopicMock.mockImplementation(async (topic: string) => [{ type: `${topic}_snapshot` }]);
+    const events: unknown[] = [];
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(
+      new URL('http://local.test/api/app-events/events?initialSnapshotTopics=tasks'),
+      (event) => events.push(event),
+    );
+
+    await vi.advanceTimersByTimeAsync(6_000);
+
+    expect(buildSnapshotEventsForTopicMock).toHaveBeenCalledTimes(1);
+    expect(buildSnapshotEventsForTopicMock).toHaveBeenCalledWith('tasks');
+    expect(events).toEqual([{ type: 'open' }, { type: 'message', data: JSON.stringify({ type: 'tasks_snapshot' }) }]);
+
+    unsubscribe();
+    vi.useRealTimers();
   });
 
   it('ignores malformed live stream tailBlocks instead of partially parsing them', async () => {
@@ -69,7 +145,7 @@ describe('localApiStreams', () => {
       events.push(event),
     );
 
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), {});
+    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), { deferInitialReplayMs: 150 });
     expect(events).toEqual(
       expect.arrayContaining([
         { type: 'open' },
@@ -90,7 +166,7 @@ describe('localApiStreams', () => {
       vi.fn(),
     );
 
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), {});
+    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), { deferInitialReplayMs: 150 });
   });
 
   it('caps live stream tailBlocks before subscribing', async () => {
@@ -99,7 +175,10 @@ describe('localApiStreams', () => {
 
     await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/live-sessions/session-1/events?tailBlocks=50000'), vi.fn());
 
-    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), { tailBlocks: 10000 });
+    expect(subscribeLiveSessionMock).toHaveBeenCalledWith('session-1', expect.any(Function), {
+      tailBlocks: 10000,
+      deferInitialReplayMs: 150,
+    });
   });
 
   it('streams debounced workspace changes through the desktop local API bridge without recursive repo watches', async () => {

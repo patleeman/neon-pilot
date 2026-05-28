@@ -78,6 +78,7 @@ function createContext(): RecoverConversationCapabilityContext {
   return {
     getRuntimeScope: () => 'assistant',
     buildLiveSessionResourceOptions: () => ({ additionalExtensionPaths: ['extensions'] }),
+    buildLiveSessionResourceOptionsAsync: async () => ({ additionalExtensionPaths: ['async-extensions'] }),
     buildLiveSessionExtensionFactories: () => ['factory'] as never,
     flushLiveDeferredResumes: vi.fn().mockResolvedValue(undefined),
   };
@@ -249,7 +250,7 @@ describe('recoverConversationCapability', () => {
 
     expect(createWebLiveConversationRunIdMock).toHaveBeenCalledWith('conversation-1');
     expect(resumeSessionMock).toHaveBeenCalledWith('/sessions/stored.json', {
-      additionalExtensionPaths: ['extensions'],
+      additionalExtensionPaths: ['async-extensions'],
       extensionFactories: ['factory'],
       cwdOverride: '/repo/stored',
     });

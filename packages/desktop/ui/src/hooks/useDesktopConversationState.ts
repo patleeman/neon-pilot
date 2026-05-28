@@ -116,11 +116,32 @@ function readPartialToolText(partialResult: unknown): string {
   return '';
 }
 
+function queuedPromptPreviewsEqual(
+  left: DesktopConversationState['stream']['pendingQueue']['steering'],
+  right: DesktopConversationState['stream']['pendingQueue']['steering'],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => {
+    const other = right[index];
+    return item.id === other?.id && item.text === other.text && item.imageCount === other.imageCount;
+  });
+}
+
+function tokenCountsEqual(
+  left: DesktopConversationState['stream']['tokens'],
+  right: DesktopConversationState['stream']['tokens'],
+): boolean {
+  return (
+    left === right ||
+    (left !== null && right !== null && left.input === right.input && left.output === right.output && left.total === right.total)
+  );
+}
+
 export function applyDesktopConversationStreamEvent(
   stream: DesktopConversationState['stream'],
   event: SseEvent,
 ): DesktopConversationState['stream'] {
-  const blocks = [...stream.blocks];
   switch (event.type) {
     case 'snapshot':
       return {
@@ -137,39 +158,65 @@ export function applyDesktopConversationStreamEvent(
         toolDefinitions: 'toolDefinitions' in event ? (event.toolDefinitions ?? []) : stream.toolDefinitions,
       };
     case 'agent_start':
+      if (stream.isStreaming && stream.error === null) {
+        return stream;
+      }
       return { ...stream, isStreaming: true, error: null };
     case 'agent_end':
     case 'turn_end':
+      if (!stream.isStreaming) {
+        return stream;
+      }
       return { ...stream, isStreaming: false };
     case 'compaction_start':
+      if (stream.isCompacting) {
+        return stream;
+      }
       return { ...stream, isCompacting: true };
     case 'compaction_end':
       return event.errorMessage
         ? {
             ...stream,
-            blocks: [...blocks, { type: 'error', id: `error-${Date.now()}`, message: event.errorMessage, ts: new Date().toISOString() }],
+            blocks: [
+              ...stream.blocks,
+              { type: 'error', id: `error-${Date.now()}`, message: event.errorMessage, ts: new Date().toISOString() },
+            ],
             isCompacting: false,
             error: event.errorMessage,
           }
-        : { ...stream, isCompacting: false };
+        : stream.isCompacting
+          ? { ...stream, isCompacting: false }
+          : stream;
     case 'cwd_changed':
+      if (
+        stream.cwdChange?.newConversationId === event.newConversationId &&
+        stream.cwdChange.cwd === event.cwd &&
+        stream.cwdChange.autoContinued === event.autoContinued
+      ) {
+        return stream;
+      }
       return { ...stream, cwdChange: { newConversationId: event.newConversationId, cwd: event.cwd, autoContinued: event.autoContinued } };
-    case 'user_message':
+    case 'user_message': {
+      const blocks = [...stream.blocks];
       blocks.push(event.block);
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
+    }
     case 'text_delta': {
+      const blocks = [...stream.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'text') blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
       else blocks.push({ type: 'text', id: `text-${Date.now()}`, text: event.delta, ts: new Date().toISOString() });
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
     case 'thinking_delta': {
+      const blocks = [...stream.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'thinking') blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
       else blocks.push({ type: 'thinking', id: `thinking-${Date.now()}`, text: event.delta, ts: new Date().toISOString() });
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
-    case 'tool_start':
+    case 'tool_start': {
+      const blocks = [...stream.blocks];
       blocks.push({
         type: 'tool_use',
         id: event.toolCallId,
@@ -182,17 +229,22 @@ export function applyDesktopConversationStreamEvent(
         ts: new Date().toISOString(),
       });
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
+    }
     case 'tool_update': {
-      const index = findLastToolUseIndex(blocks, event.toolCallId);
-      if (index >= 0 && blocks[index]?.type === 'tool_use') {
+      const index = findLastToolUseIndex(stream.blocks, event.toolCallId);
+      if (index >= 0 && stream.blocks[index]?.type === 'tool_use') {
+        const blocks = [...stream.blocks];
         const block = blocks[index];
         blocks[index] = { ...block, output: `${block.output ?? ''}${readPartialToolText(event.partialResult)}` };
+        return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
       }
-      return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
+      return stream;
     }
     case 'tool_end': {
-      const index = findLastToolUseIndex(blocks, event.toolCallId);
-      if (index >= 0 && blocks[index]?.type === 'tool_use') {
+      const index = findLastToolUseIndex(stream.blocks, event.toolCallId);
+      let blocks = stream.blocks;
+      if (index >= 0 && stream.blocks[index]?.type === 'tool_use') {
+        blocks = [...stream.blocks];
         const block = blocks[index];
         blocks[index] = {
           ...block,
@@ -204,6 +256,9 @@ export function applyDesktopConversationStreamEvent(
         };
       }
       const goalState = readGoalStateFromToolDetails(event.toolName, event.details);
+      if (blocks === stream.blocks && goalState === undefined) {
+        return stream;
+      }
       return {
         ...stream,
         blocks,
@@ -212,16 +267,35 @@ export function applyDesktopConversationStreamEvent(
       };
     }
     case 'queue_state':
+      if (
+        queuedPromptPreviewsEqual(stream.pendingQueue.steering, event.steering) &&
+        queuedPromptPreviewsEqual(stream.pendingQueue.followUp, event.followUp)
+      ) {
+        return stream;
+      }
       return { ...stream, pendingQueue: { steering: event.steering, followUp: event.followUp } };
     case 'presence_state':
+      if (stream.presence === event.state) {
+        return stream;
+      }
       return { ...stream, presence: event.state };
     case 'title_update':
+      if (stream.title === event.title) {
+        return stream;
+      }
       return { ...stream, title: event.title };
     case 'context_usage':
+      if (stream.contextUsage === event.usage) {
+        return stream;
+      }
       return { ...stream, contextUsage: event.usage };
     case 'stats_update':
+      if (tokenCountsEqual(stream.tokens, event.tokens) && stream.cost === event.cost) {
+        return stream;
+      }
       return { ...stream, tokens: event.tokens, cost: event.cost };
-    case 'error':
+    case 'error': {
+      const blocks = [...stream.blocks];
       blocks.push({ type: 'error', id: `error-${Date.now()}`, message: event.message, ts: new Date().toISOString() });
       return {
         ...stream,
@@ -230,6 +304,7 @@ export function applyDesktopConversationStreamEvent(
         error: event.message,
         totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length),
       };
+    }
     default:
       return stream;
   }
@@ -265,12 +340,8 @@ function mergeDesktopConversationState(
   };
 }
 
-function buildDesktopConversationStateCacheKey(
-  conversationId: string,
-  tailBlocks: number | undefined,
-  includeToolBlocks: boolean | undefined,
-): string {
-  return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}`;
+function buildDesktopConversationStateCacheKey(conversationId: string, tailBlocks: number | undefined): string {
+  return `${conversationId}:${tailBlocks ?? 'default'}`;
 }
 
 function rememberDesktopConversationState(
@@ -292,7 +363,7 @@ function rememberDesktopConversationState(
 export function primeDesktopConversationStateCache(
   conversationId: string,
   bootstrap: ConversationBootstrapState,
-  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
+  options?: { tailBlocks?: number },
 ): void {
   const normalizedConversationId = conversationId.trim();
   if (!normalizedConversationId || bootstrap.conversationId !== normalizedConversationId) {
@@ -300,7 +371,7 @@ export function primeDesktopConversationStateCache(
   }
 
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks);
   const stream = createEmptyDesktopConversationStreamState();
   const sessionDetail = bootstrap.sessionDetail;
   rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
@@ -318,12 +389,35 @@ export function primeDesktopConversationStateCache(
   });
 }
 
-function fetchDesktopConversationStateCached(
-  conversationId: string,
-  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
-): Promise<DesktopConversationState> {
+export function primeReservedDesktopConversationStateCache(
+  input: { conversationId: string; sessionFile: string; cwd: string },
+  options?: { tailBlocks?: number },
+): void {
+  const normalizedConversationId = input.conversationId.trim();
+  const sessionFile = input.sessionFile.trim();
+  if (!normalizedConversationId || !sessionFile) {
+    return;
+  }
+
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks);
+  rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
+    conversationId: normalizedConversationId,
+    sessionDetail: null,
+    liveSession: {
+      live: true,
+      id: normalizedConversationId,
+      cwd: input.cwd,
+      sessionFile,
+      isStreaming: false,
+    },
+    stream: createEmptyDesktopConversationStreamState(),
+  });
+}
+
+function fetchDesktopConversationStateCached(conversationId: string, options?: { tailBlocks?: number }): Promise<DesktopConversationState> {
+  const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
   const inflight = desktopConversationStateInflight.get(cacheKey);
   if (inflight) {
     return inflight;
@@ -332,7 +426,6 @@ function fetchDesktopConversationStateCached(
   const request = api
     .desktopConversationState(conversationId, {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
-      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
     })
     .then((nextState: DesktopConversationState) => {
       const previous = desktopConversationStateCache.get(cacheKey) ?? null;
@@ -350,7 +443,7 @@ function fetchDesktopConversationStateCached(
 
 export function prefetchDesktopConversationState(
   conversationId: string,
-  options?: { tailBlocks?: number; includeToolBlocks?: boolean },
+  options?: { tailBlocks?: number },
 ): Promise<DesktopConversationState> | null {
   const normalizedConversationId = conversationId.trim();
   if (!normalizedConversationId) {
@@ -360,10 +453,7 @@ export function prefetchDesktopConversationState(
   return fetchDesktopConversationStateCached(normalizedConversationId, options);
 }
 
-export function useDesktopConversationState(
-  conversationId: string | null,
-  options?: { tailBlocks?: number; includeToolBlocks?: boolean; enabled?: boolean },
-) {
+export function useDesktopConversationState(conversationId: string | null, options?: { tailBlocks?: number; enabled?: boolean }) {
   const enabled = options?.enabled !== false && Boolean(conversationId);
   const bridge = getDesktopBridge();
   const surfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
@@ -397,12 +487,18 @@ export function useDesktopConversationState(
 
     let closed = false;
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
+    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
     setState((current) => (current?.conversationId === conversationId ? current : cachedState));
     setError(null);
 
-    void fetchDesktopConversationStateCached(conversationId, { tailBlocks, includeToolBlocks: options?.includeToolBlocks })
+    if (cachedState?.conversationId === conversationId && cachedState.liveSession.live) {
+      return () => {
+        closed = true;
+      };
+    }
+
+    void fetchDesktopConversationStateCached(conversationId, { tailBlocks })
       .then((nextState) => {
         if (!closed) {
           setState((previous) => {
@@ -422,7 +518,7 @@ export function useDesktopConversationState(
     return () => {
       closed = true;
     };
-  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [bridge, conversationId, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
     if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession.live) {
@@ -480,6 +576,9 @@ export function useDesktopConversationState(
         nextBlockCount = stream.blocks.length;
         applied = true;
         const latestTitleEvent = events.findLast((streamEvent) => streamEvent.type === 'title_update');
+        if (stream === previous.stream && latestTitleEvent?.type !== 'title_update') {
+          return previous;
+        }
         return {
           ...previous,
           stream,

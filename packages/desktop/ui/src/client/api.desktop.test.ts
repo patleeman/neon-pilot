@@ -468,6 +468,7 @@ describe('api desktop transport', () => {
       if (path === '/api/status') return createJsonResponse(await readAppStatus());
       if (path === '/api/daemon') return createJsonResponse(await readDaemonState());
       if (path === '/api/sessions') return createJsonResponse(await readSessions());
+      if (path === '/api/sessions?limit=100') return createJsonResponse([{ id: 'limited' }]);
       if (path === '/api/sessions/conversation-1/meta') return createJsonResponse(await readSessionMeta('conversation-1'));
       if (path === '/api/sessions/search-index')
         return createJsonResponse(await readSessionSearchIndex(JSON.parse(String(init?.body)).sessionIds));
@@ -569,6 +570,7 @@ describe('api desktop transport', () => {
     const status = await api.status();
     const daemon = await api.daemon();
     const sessions = await api.sessions();
+    const limitedSessions = await api.sessions({ limit: 100 });
     const sessionMeta = await api.sessionMeta('conversation-1');
     const sessionSearchIndex = await api.sessionSearchIndex(['conversation-1']);
     const relatedConversationResults = await api.relatedConversationResults({
@@ -638,6 +640,7 @@ describe('api desktop transport', () => {
     expect(readAppStatus).toHaveBeenCalledTimes(1);
     expect(readDaemonState).toHaveBeenCalledTimes(1);
     expect(readSessions).toHaveBeenCalledTimes(1);
+    expect(limitedSessions).toEqual([{ id: 'limited' }]);
     expect(readSessionMeta).toHaveBeenCalledWith('conversation-1');
     expect(readSessionSearchIndex).toHaveBeenCalledWith(['conversation-1']);
     expect(readModels).toHaveBeenCalledTimes(1);

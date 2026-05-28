@@ -7,9 +7,11 @@ export function buildCreateLiveSessionPerf(input: {
   contextReadyAtMs: number;
   createdAtMs: number;
   returnedAtMs: number;
+  contextSetupPerf?: Record<string, number> | null;
   capabilityPerf?: Record<string, number>;
 }): Record<string, number> {
   return {
+    ...(input.contextSetupPerf ?? {}),
     contextMs: Math.round(input.contextReadyAtMs - input.startedAtMs),
     createCapabilityMs: Math.round(input.createdAtMs - input.contextReadyAtMs),
     totalBeforeReturnMs: Math.round(input.returnedAtMs - input.startedAtMs),

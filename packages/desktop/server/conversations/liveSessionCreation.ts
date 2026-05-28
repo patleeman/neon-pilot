@@ -5,6 +5,8 @@ import { createPreparedLiveAgentSession } from './liveSessionFactory.js';
 import { type LiveSessionLoaderOptions, queuePrewarmLiveSessionLoader } from './liveSessionLoader.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
 
+const CREATED_LIVE_SESSION_LOADER_PREWARM_DELAY_MS = 30_000;
+
 export async function createLiveSession(input: {
   cwd: string;
   agentDir: string;
@@ -31,7 +33,7 @@ export async function createLiveSession(input: {
   const wiredAtMs = performance.now();
   const prewarmTimer = setTimeout(() => {
     queuePrewarmLiveSessionLoader(input.cwd, options);
-  }, 5_000);
+  }, CREATED_LIVE_SESSION_LOADER_PREWARM_DELAY_MS);
   prewarmTimer.unref?.();
   const beforeResolveSessionFileAtMs = performance.now();
   const sessionFile = resolveLiveSessionFile(session) ?? '';
@@ -58,7 +60,7 @@ export async function createLiveSessionFromExisting(input: {
   persistentSessionDir: string;
   options?: LiveSessionLoaderOptions;
   wireSession: (id: string, session: AgentSession, cwd: string) => unknown;
-}): Promise<{ id: string; sessionFile: string }> {
+}): Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }> {
   const options = input.options ?? {};
   const sessionManager = SessionManager.forkFrom(input.sessionFile, input.cwd, input.persistentSessionDir);
   const { session } = await createPreparedLiveAgentSession({
@@ -82,20 +84,32 @@ export async function resumeLiveSession(input: {
   options?: LiveSessionLoaderOptions & { cwdOverride?: string };
   findLiveSessionByFile: (sessionFile: string) => { id: string } | null;
   wireSession: (id: string, session: AgentSession, cwd: string) => unknown;
-}): Promise<{ id: string }> {
+}): Promise<{ id: string; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const live = input.findLiveSessionByFile(input.sessionFile);
+  const liveCheckedAtMs = performance.now();
   if (live) {
-    return live;
+    return {
+      ...live,
+      perf: {
+        liveCheckMs: Math.round(liveCheckedAtMs - startedAtMs),
+        alreadyLive: 1,
+        totalMs: Math.round(liveCheckedAtMs - startedAtMs),
+      },
+    };
   }
 
   const { cwdOverride, ...loaderOptions } = input.options ?? {};
   const normalizedCwdOverride = typeof cwdOverride === 'string' && cwdOverride.trim().length > 0 ? cwdOverride.trim() : undefined;
 
   const metadataCwd = readConversationSessionMetaByFile(input.sessionFile)?.cwd;
+  const metadataAtMs = performance.now();
   const effectiveCwdOverride = normalizedCwdOverride ?? metadataCwd;
   const sessionManager = SessionManager.open(input.sessionFile, undefined, effectiveCwdOverride);
+  const sessionManagerAtMs = performance.now();
   const cwd = effectiveCwdOverride ?? sessionManager.getCwd();
-  const { session } = await createPreparedLiveAgentSession({
+  const cwdAtMs = performance.now();
+  const { session, perf: preparedPerf } = await createPreparedLiveAgentSession({
     cwd,
     agentDir: loaderOptions.agentDir ?? input.agentDir,
     sessionManager,
@@ -103,9 +117,25 @@ export async function resumeLiveSession(input: {
     options: loaderOptions,
     ensureSessionFile: false,
   });
+  const preparedAtMs = performance.now();
 
   const id = session.sessionId;
   input.wireSession(id, session, cwd);
+  const wiredAtMs = performance.now();
   queuePrewarmLiveSessionLoader(cwd, loaderOptions);
-  return { id };
+  const prewarmQueuedAtMs = performance.now();
+  return {
+    id,
+    perf: {
+      liveCheckMs: Math.round(liveCheckedAtMs - startedAtMs),
+      metadataMs: Math.round(metadataAtMs - liveCheckedAtMs),
+      sessionManagerOpenMs: Math.round(sessionManagerAtMs - metadataAtMs),
+      cwdMs: Math.round(cwdAtMs - sessionManagerAtMs),
+      preparedMs: Math.round(preparedAtMs - cwdAtMs),
+      wireMs: Math.round(wiredAtMs - preparedAtMs),
+      queuePrewarmMs: Math.round(prewarmQueuedAtMs - wiredAtMs),
+      totalMs: Math.round(prewarmQueuedAtMs - startedAtMs),
+      ...(preparedPerf ? Object.fromEntries(Object.entries(preparedPerf).map(([key, value]) => [`prepared.${key}`, value])) : {}),
+    },
+  };
 }

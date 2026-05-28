@@ -14,6 +14,7 @@ import {
   applyRemoteConversationLayout,
   closeConversationTab,
   ensureConversationTabOpen,
+  fetchRemoteConversationLayout,
   moveConversationTab,
   pinConversationTab,
   readArchivedSessionIds,
@@ -22,6 +23,7 @@ import {
   readPinnedSessionIds,
   reopenMostRecentlyArchivedConversation,
   replaceConversationLayout,
+  resetRemoteConversationLayoutCache,
   setConversationArchivedState,
   shiftConversationTab,
   unpinConversationTab,
@@ -52,11 +54,13 @@ describe('sessionTabs', () => {
   const dispatchEvent = vi.fn();
 
   beforeEach(() => {
+    vi.useRealTimers();
     vi.stubGlobal('localStorage', createStorage());
     vi.stubGlobal('window', { dispatchEvent });
     apiMocks.openConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
     apiMocks.setOpenConversationTabs.mockResolvedValue({ ok: true });
+    resetRemoteConversationLayoutCache();
 
     if (typeof CustomEvent === 'undefined') {
       vi.stubGlobal(
@@ -80,7 +84,10 @@ describe('sessionTabs', () => {
   });
 
   it('sanitizes stored open, pinned, and archived session ids', () => {
-    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([' session-1 ', '', null, 'session-2', 'session-3']));
+    localStorage.setItem(
+      OPEN_SESSION_IDS_STORAGE_KEY,
+      JSON.stringify([' session-1 ', '', null, 'session-2', 'session-3', 'pending-shell']),
+    );
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['session-2', ' session-4 ', 'session-2']));
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['session-3', 'session-4', ' session-5 ', 'session-5']));
 
@@ -93,6 +100,116 @@ describe('sessionTabs', () => {
     expect(readOpenSessionIds()).toEqual(['session-1', 'session-3']);
     expect(readPinnedSessionIds()).toEqual(['session-2', 'session-4']);
     expect(readArchivedSessionIds()).toEqual(['session-5']);
+  });
+
+  it('coalesces concurrent remote layout reads', async () => {
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['session-1'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/repo'],
+      activeConversationId: 'session-1',
+      remoteControlledConversationIds: ['session-2'],
+    });
+
+    const [left, right] = await Promise.all([fetchRemoteConversationLayout(), fetchRemoteConversationLayout()]);
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(left).toBe(right);
+    expect(left).toEqual({
+      sessionIds: ['session-1'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/repo'],
+      activeSessionId: 'session-1',
+      remoteControlledConversationIds: ['session-2'],
+    });
+  });
+
+  it('coalesces concurrent remote layout refreshes without reusing the cache', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T00:00:00.000Z'));
+    apiMocks.openConversationTabs
+      .mockResolvedValueOnce({
+        sessionIds: ['cached-session'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        workspacePaths: ['/cached'],
+        activeConversationId: 'cached-session',
+        remoteControlledConversationIds: [],
+      })
+      .mockResolvedValueOnce({
+        sessionIds: ['fresh-session'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        workspacePaths: ['/fresh'],
+        activeConversationId: 'fresh-session',
+        remoteControlledConversationIds: [],
+      });
+
+    await fetchRemoteConversationLayout();
+    vi.advanceTimersByTime(5001);
+    const [left, right] = await Promise.all([
+      fetchRemoteConversationLayout({ refresh: true }),
+      fetchRemoteConversationLayout({ refresh: true }),
+    ]);
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(2);
+    expect(left).toBe(right);
+    expect(left.sessionIds).toEqual(['fresh-session']);
+    expect(left.workspacePaths).toEqual(['/fresh']);
+  });
+
+  it('reuses a fresh remote layout cache even when refresh is requested', async () => {
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['cached-session'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/cached'],
+      activeConversationId: 'cached-session',
+      remoteControlledConversationIds: [],
+    });
+
+    await fetchRemoteConversationLayout();
+    const layout = await fetchRemoteConversationLayout({ refresh: true });
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(layout.sessionIds).toEqual(['cached-session']);
+    expect(layout.workspacePaths).toEqual(['/cached']);
+  });
+
+  it('uses the optimistic local layout cache for refreshes during local write grace', async () => {
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['cached-session'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/cached'],
+      activeConversationId: 'cached-session',
+      remoteControlledConversationIds: ['remote-controlled-session'],
+    });
+    apiMocks.setOpenConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['cached-session', 'local-session'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: ['/cached'],
+      activeConversationId: 'local-session',
+      remoteControlledConversationIds: ['remote-controlled-session'],
+    });
+
+    await fetchRemoteConversationLayout();
+    ensureConversationTabOpen('local-session');
+
+    const layout = await fetchRemoteConversationLayout({ refresh: true });
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(layout).toEqual({
+      sessionIds: ['local-session'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeSessionId: 'local-session',
+      workspacePaths: ['/cached'],
+      remoteControlledConversationIds: ['remote-controlled-session'],
+    });
   });
 
   it('applies remote conversation layout exactly without archiving closed tabs', () => {
@@ -112,6 +229,12 @@ describe('sessionTabs', () => {
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     expect([...readOpenSessionIds()]).toEqual(['session-1']);
     expect([...readArchivedSessionIds()]).toEqual([]);
+  });
+
+  it('does not persist pending conversation shell ids', () => {
+    expect(ensureConversationTabOpen('pending-shell')).toEqual([]);
+    expect(readConversationLayout().activeSessionId).toBeNull();
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 
   it('does not reopen a conversation that is already pinned', () => {

@@ -415,6 +415,7 @@ describe('liveSessions bootstrap helpers', () => {
       additionalSkillPaths: undefined,
       additionalPromptTemplatePaths: undefined,
       additionalThemePaths: undefined,
+      noThemes: true,
     });
     expect(defaultResourceLoaderReloadMock).toHaveBeenCalledTimes(1);
     expect(inspectionSession.session.dispose).toHaveBeenCalledTimes(1);
@@ -580,9 +581,11 @@ describe('liveSessions bootstrap helpers', () => {
       id: 'session-forked',
       sessionFile: '/tmp/durable-sessions/--tmp-next-workspace--/session-forked.jsonl',
     });
-    await expect(resumeSession('/tmp/stored-session.jsonl', { cwdOverride: '/tmp/override-workspace' })).resolves.toEqual({
-      id: 'session-resumed',
-    });
+    await expect(resumeSession('/tmp/stored-session.jsonl', { cwdOverride: '/tmp/override-workspace' })).resolves.toEqual(
+      expect.objectContaining({
+        id: 'session-resumed',
+      }),
+    );
 
     expect(sessionManagerForkFromMock).toHaveBeenCalledWith(
       '/tmp/source-session.jsonl',
@@ -730,14 +733,18 @@ describe('liveSessions bootstrap helpers', () => {
         sessionFile: '/tmp/source-session.jsonl',
       },
     });
-    await expect(branchSession('session-branch-source', 'entry-1')).resolves.toEqual({
-      newSessionId: 'session-branch-live',
-      sessionFile: '/tmp/branch-session.jsonl',
-    });
-    await expect(forkSession('session-fork-source', 'entry-2', { beforeEntry: true })).resolves.toEqual({
-      newSessionId: 'session-fork-live',
-      sessionFile: '/tmp/fork-session.jsonl',
-    });
+    await expect(branchSession('session-branch-source', 'entry-1')).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'session-branch-live',
+        sessionFile: '/tmp/branch-session.jsonl',
+      }),
+    );
+    await expect(forkSession('session-fork-source', 'entry-2', { beforeEntry: true })).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'session-fork-live',
+        sessionFile: '/tmp/fork-session.jsonl',
+      }),
+    );
     expect(branchSourceManager.getEntry).toHaveBeenCalledWith('entry-1');
     expect(forkSourceManager.getEntry).toHaveBeenCalledWith('entry-2');
     expect(forkSourceManager.createBranchedSession).toHaveBeenCalledWith('entry-1');
@@ -788,10 +795,12 @@ describe('liveSessions bootstrap helpers', () => {
         beforeEntry: true,
         preserveSource: true,
       }),
-    ).resolves.toEqual({
-      newSessionId: 'session-rewind-live',
-      sessionFile: '/tmp/rewind-root-session.jsonl',
-    });
+    ).resolves.toEqual(
+      expect.objectContaining({
+        newSessionId: 'session-rewind-live',
+        sessionFile: '/tmp/rewind-root-session.jsonl',
+      }),
+    );
 
     expect(sourceManager.createBranchedSession).not.toHaveBeenCalled();
     expect(sessionManagerCreateMock).toHaveBeenCalledWith('/tmp/source-workspace', '/tmp/durable-sessions/--tmp-source-workspace--');

@@ -6,9 +6,10 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invalidateAppTopics = vi.fn();
+const publishAppEvent = vi.fn();
 const publishExtensionHostEvent = vi.fn();
 
-vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics }));
+vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics, publishAppEvent }));
 vi.mock('./extensionSubscriptions.js', () => ({ publishExtensionHostEvent }));
 
 const { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } =
@@ -19,6 +20,7 @@ describe('extensionConversationMetadata', () => {
 
   beforeEach(() => {
     invalidateAppTopics.mockReset();
+    publishAppEvent.mockReset();
     publishExtensionHostEvent.mockReset().mockResolvedValue(undefined);
     rmSync(stateRoot, { recursive: true, force: true });
   });
@@ -47,6 +49,7 @@ describe('extensionConversationMetadata', () => {
       score: 3,
     });
     expect(invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(publishAppEvent).toHaveBeenCalledWith({ type: 'session_meta_changed', sessionId: 'conversation/one' });
     expect(publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
       type: 'session.metadata.updated',
       conversationId: 'conversation/one',

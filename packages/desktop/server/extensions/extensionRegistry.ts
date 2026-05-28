@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -125,6 +126,7 @@ import {
   validateComposerControlContributions,
   validateComposerInputToolContributions,
   validateComposerShelfContributions,
+  validateDraftConversationCreateContributions,
   validateMessageActionContributions,
   validateNewConversationPanelContributions,
   validateToolbarActionContributions,
@@ -524,6 +526,17 @@ export interface ExtensionSettingsComponentRegistration {
 const EXTENSION_FAILURE_WINDOW_MS = 10 * 60 * 1000;
 const EXTENSION_FAILURE_THRESHOLD = 3;
 
+interface ExtensionRegistryReadCache {
+  configs: Map<string, ExtensionRegistryConfig>;
+  entries: Map<string, ExtensionRegistryEntry[]>;
+}
+
+const registryReadCache = new AsyncLocalStorage<ExtensionRegistryReadCache>();
+
+export async function withExtensionRegistryReadCache<T>(fn: () => Promise<T>): Promise<T> {
+  return registryReadCache.run({ configs: new Map(), entries: new Map() }, fn);
+}
+
 export function getRuntimeExtensionsRoot(stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'extensions');
 }
@@ -541,15 +554,25 @@ function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): stri
 }
 
 function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
+  const cache = registryReadCache.getStore();
+  const cached = cache?.configs.get(stateRoot);
+  if (cached) return cached;
+
   const configPath = getExtensionRegistryConfigPath(stateRoot);
   if (!existsSync(configPath)) {
-    return {};
+    const empty = {};
+    cache?.configs.set(stateRoot, empty);
+    return empty;
   }
 
   try {
-    return normalizeExtensionRegistryConfig(JSON.parse(readFileSync(configPath, 'utf-8')) as unknown);
+    const config = normalizeExtensionRegistryConfig(JSON.parse(readFileSync(configPath, 'utf-8')) as unknown);
+    cache?.configs.set(stateRoot, config);
+    return config;
   } catch {
-    return {};
+    const empty = {};
+    cache?.configs.set(stateRoot, empty);
+    return empty;
   }
 }
 
@@ -621,6 +644,7 @@ function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot
   const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
   mkdirSync(extensionsRoot, { recursive: true });
   writeFileSync(getExtensionRegistryConfigPath(stateRoot), serializeExtensionRegistryConfig(config));
+  registryReadCache.getStore()?.configs.delete(stateRoot);
 }
 
 export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot()): boolean {
@@ -835,6 +859,10 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     validateComposerShelfContributions(contributes.composerShelves);
   }
 
+  if (contributes.draftConversationCreate !== undefined) {
+    validateDraftConversationCreateContributions(contributes.draftConversationCreate);
+  }
+
   if (contributes.newConversationPanels !== undefined) {
     validateNewConversationPanelContributions(contributes.newConversationPanels);
   }
@@ -1002,16 +1030,22 @@ export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()):
 }
 
 export function listExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
+  const cache = registryReadCache.getStore();
+  const cached = cache?.entries.get(stateRoot);
+  if (cached) return cached;
+
   const entries = [
     ...SYSTEM_EXTENSION_ENTRIES.map((entry) => ({ manifest: entry.manifest, packageRoot: entry.packageRoot, source: 'system' as const })),
     ...readRuntimeExtensionEntries(stateRoot),
   ];
   const seen = new Set<string>();
-  return entries.filter((entry) => {
+  const filtered = entries.filter((entry) => {
     if (seen.has(entry.manifest.id)) return false;
     seen.add(entry.manifest.id);
     return true;
   });
+  cache?.entries.set(stateRoot, filtered);
+  return filtered;
 }
 
 export function listEnabledExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
@@ -1103,6 +1137,7 @@ export function readExtensionSchema() {
       'topBarElements',
       'messageActions',
       'composerShelves',
+      'draftConversationCreate',
       'newConversationPanels',
       'composerControls',
       'composerButtons',

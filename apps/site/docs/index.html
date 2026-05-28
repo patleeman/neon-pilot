@@ -76,11 +76,11 @@ pnpm run desktop:start</code></pre>
           </li>
           <li><a href="./desktop-app.html">Desktop App</a> — Electron shell, shortcuts, and app chrome</li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/desktop-api-boundary.md">Desktop API Boundary</a> — renderer
-            IPC/local-api contract and HTTP edge policy
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/desktop-api-boundary.md">Desktop API Boundary</a> — HTTP data plane,
+            WebSocket realtime plane, and native-only IPC policy
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-knowledge/README.md">Knowledge</a> — vault,
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-knowledge/README.md">Knowledge</a> — knowledge,
             docs, skills, instruction files, and managed sync
           </li>
           <li><a href="./knowledge-base.html">Knowledge base sync</a> — git-backed knowledge base setup, local paths, and sync behavior</li>
@@ -102,6 +102,10 @@ pnpm run desktop:start</code></pre>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/performance-diagnostics.md">Performance diagnostics</a> — renderer
             timing tripwires for conversation load and API latency
+          </li>
+          <li>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/renderer-isolation.md">Renderer isolation</a> — process ownership,
+            critical lanes, and transcript projection boundaries
           </li>
           <li>
             <a href="./telemetry.html">Telemetry</a> — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime
@@ -151,7 +155,9 @@ pnpm run desktop:start</code></pre>
         <p>Feature-specific documentation lives beside the owning extension package:</p>
         <ul>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-acp/README.md">ACP Protocol</a>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-agent-browser/README.md"
+              >Agent Browser</a
+            >
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-artifacts/README.md">Artifacts</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-auto-mode/README.md">Auto Mode</a></li>
@@ -166,11 +172,6 @@ pnpm run desktop:start</code></pre>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-composer-attachments/README.md"
               >Composer Attachments</a
-            >
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-clean-room-spec/README.md"
-              >Clean-room Spec Generator</a
             >
           </li>
           <li>
@@ -222,8 +223,6 @@ pnpm run desktop:start</code></pre>
               >Local Models</a
             >
           </li>
-          <li>
-          </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-mcp/README.md">MCP</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-model-picker/README.md">Model Picker</a></li>
           <li>
@@ -256,11 +255,6 @@ pnpm run desktop:start</code></pre>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-suggested-context/README.md"
               >Suggested Context</a
-            >
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-gateways/README.md"
-              >Telegram Gateway</a
             >
           </li>
           <li>

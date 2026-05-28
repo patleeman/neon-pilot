@@ -36,11 +36,18 @@ export function broadcastSnapshot(
 ): void {
   callbacks.ensureStaleTurnState(entry);
   const goalState = readGoalFromEntries(entry.session.sessionManager?.getEntries?.() ?? []);
+  const snapshotsByTailBlocks = new Map<string, Record<string, unknown>>();
   for (const listener of entry.listeners) {
+    const snapshotKey = listener.tailBlocks === undefined ? 'default' : String(listener.tailBlocks);
+    let snapshot = snapshotsByTailBlocks.get(snapshotKey);
+    if (!snapshot) {
+      snapshot = callbacks.buildLiveSessionSnapshot(entry, listener.tailBlocks);
+      snapshotsByTailBlocks.set(snapshotKey, snapshot);
+    }
     listener.send({
       type: 'snapshot',
       goalState,
-      ...callbacks.buildLiveSessionSnapshot(entry, listener.tailBlocks),
+      ...snapshot,
     } as SseEvent);
   }
 }

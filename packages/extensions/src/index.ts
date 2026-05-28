@@ -471,6 +471,16 @@ export interface ExtensionComposerShelfContribution {
   placement?: 'top' | 'bottom';
 }
 
+export interface ExtensionDraftConversationCreateContribution {
+  id: string;
+  /** Backend action called before the draft conversation is created. */
+  prepareAction: string;
+  /** Optional backend action called after creation when prepareAction asks for follow-up. */
+  applyAction?: string;
+  /** Sort priority for merge order. Higher runs first. Default 0. */
+  priority?: number;
+}
+
 export interface ExtensionToolbarActionContribution {
   id: string;
   title: string;
@@ -769,6 +779,7 @@ export interface ExtensionContributions {
   topBarElements?: ExtensionTopBarElementContribution[];
   messageActions?: ExtensionMessageActionContribution[];
   composerShelves?: ExtensionComposerShelfContribution[];
+  draftConversationCreate?: ExtensionDraftConversationCreateContribution[];
   composerControls?: ExtensionComposerControlContribution[];
   composerButtons?: ExtensionComposerButtonContribution[];
   composerInputTools?: ExtensionComposerInputToolContribution[];

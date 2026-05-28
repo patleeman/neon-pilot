@@ -198,6 +198,7 @@ export interface LocalApiModule {
     revision?: number;
   }): Promise<unknown>;
   readDesktopLiveSession(conversationId: string): Promise<unknown>;
+  prewarmDesktopLiveSessionOptions(): Promise<{ ok: true }>;
   readDesktopLiveSessionForkEntries(conversationId: string): Promise<Array<{ entryId: string; text: string }>>;
   readDesktopLiveSessionContext(conversationId: string): Promise<unknown>;
   takeOverDesktopLiveSession(input: { conversationId: string; surfaceId: string }): Promise<unknown>;
@@ -220,13 +221,18 @@ export interface LocalApiModule {
   exportDesktopLiveSession(input: { conversationId: string; outputPath?: string }): Promise<{ ok: true; path: string }>;
   reloadDesktopLiveSession(input: { conversationId: string }): Promise<{ ok: true }>;
   destroyDesktopLiveSession(conversationId: string): Promise<{ ok: true }>;
-  branchDesktopLiveSession(input: { conversationId: string; entryId: string }): Promise<{ newSessionId: string; sessionFile: string }>;
-  forkDesktopLiveSession(input: {
-    conversationId: string;
-    entryId: string;
-    beforeEntry?: boolean;
-    preserveSource?: boolean;
-  }): Promise<{ newSessionId: string; sessionFile: string }>;
+  branchDesktopLiveSession(input: { conversationId: string; entryId: string }): Promise<{
+    newSessionId: string;
+    sessionFile: string;
+    bootstrap?: unknown;
+    perf?: Record<string, number>;
+  }>;
+  forkDesktopLiveSession(input: { conversationId: string; entryId: string; beforeEntry?: boolean; preserveSource?: boolean }): Promise<{
+    newSessionId: string;
+    sessionFile: string;
+    bootstrap?: unknown;
+    perf?: Record<string, number>;
+  }>;
   readDesktopSessionDetail(input: {
     sessionId: string;
     tailBlocks?: number;
@@ -242,7 +248,9 @@ export interface LocalApiModule {
     model?: string | null;
     thinkingLevel?: string | null;
     serviceTier?: string | null;
+    reservedSessionFile?: string;
   }): Promise<{ id: string; sessionFile: string; bootstrap?: unknown }>;
+  reserveDesktopConversation?(input: { cwd?: string }): Promise<{ id: string; sessionFile: string; cwd: string }>;
   resumeDesktopLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }>;
   submitDesktopLiveSessionPrompt(input: {
     conversationId: string;

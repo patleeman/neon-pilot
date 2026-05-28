@@ -55,11 +55,13 @@ export const INITIAL_APP_EVENT_VERSIONS: AppEventVersions = {
 interface AppEventsContextValue {
   versions: AppEventVersions;
   conversationVersions: ConversationScopedEventVersions;
+  conversationMetadataVersions?: ConversationScopedEventVersions;
 }
 
 export const AppEventsContext = createContext<AppEventsContextValue>({
   versions: INITIAL_APP_EVENT_VERSIONS,
   conversationVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS,
+  conversationMetadataVersions: INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS,
 });
 
 export function useAppEvents() {

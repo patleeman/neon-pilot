@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { recordClientPerfTiming } from '../client/perfDiagnostics';
 import {
@@ -8,6 +8,9 @@ import {
   isConversationScrollOverflowing,
 } from '../conversation/conversationScroll';
 import type { MessageBlock } from '../shared/types';
+
+const useConversationScrollLayoutEffect =
+  typeof window === 'undefined' || /\b(jsdom|happy-dom)\b/i.test(window.navigator?.userAgent ?? '') ? useEffect : useLayoutEffect;
 
 interface UseConversationScrollOptions {
   conversationId: string | null;
@@ -126,7 +129,7 @@ export function useConversationScroll({
     };
   }, [conversationId, scrollRef]);
 
-  useLayoutEffect(() => {
+  useConversationScrollLayoutEffect(() => {
     cancelScheduledScroll();
     pendingPrependRestoreRef.current = null;
     completedInitialScrollKeyRef.current = null;
@@ -146,14 +149,14 @@ export function useConversationScroll({
     return () => window.cancelAnimationFrame(frame);
   }, [cancelScheduledScroll, conversationId, scrollRef]);
 
-  useLayoutEffect(
+  useConversationScrollLayoutEffect(
     () => () => {
       cancelScheduledScroll();
     },
     [cancelScheduledScroll],
   );
 
-  useLayoutEffect(() => {
+  useConversationScrollLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) {
       return;
@@ -197,7 +200,7 @@ export function useConversationScroll({
     };
   }, [cancelScheduledScroll, scrollRef]);
 
-  useLayoutEffect(() => {
+  useConversationScrollLayoutEffect(() => {
     const startedAtMs = performance.now();
     const pendingRestore = pendingPrependRestoreRef.current;
     if (!pendingRestore || !conversationId || pendingRestore.conversationId !== conversationId) {
@@ -243,7 +246,7 @@ export function useConversationScroll({
     });
   }, [conversationId, messages, prependRestoreKey, scrollRef]);
 
-  useLayoutEffect(() => {
+  useConversationScrollLayoutEffect(() => {
     const messageCount = messages?.length ?? 0;
     const el = scrollRef.current;
     if (!el) {

@@ -91,7 +91,7 @@ describe('live session creation', () => {
       },
     });
 
-    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(loader.queuePrewarmLiveSessionLoader).toHaveBeenCalledWith('/repo', { agentDir: '/override-agent' });
   });
 
@@ -128,7 +128,7 @@ describe('live session creation', () => {
         findLiveSessionByFile: vi.fn(() => ({ id: 'already-live' })),
         wireSession: vi.fn(),
       }),
-    ).resolves.toEqual({ id: 'already-live' });
+    ).resolves.toEqual(expect.objectContaining({ id: 'already-live' }));
     expect(factory.createPreparedLiveAgentSession).not.toHaveBeenCalled();
   });
 

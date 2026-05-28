@@ -28,16 +28,16 @@ describe('createServerRouteContext', () => {
       flushLiveDeferredResumes: async () => undefined,
       getSavedUiPreferences: () => ({ sidebarExpanded: true }),
       listTasksForRuntimeScope: () => [{ id: 'daily', title: 'Daily', prompt: 'Run daily', enabled: true, running: false }],
-      listMemoryDocs: () => [{ id: 'desktop', title: 'Desktop', path: '/vault/notes/Desktop.md' }],
+      listMemoryDocs: () => [{ id: 'desktop', title: 'Desktop', path: '/knowledge/notes/Desktop.md' }],
       listSkillsForRuntimeScope: () => [
         {
           name: 'agent-browser',
           source: 'shared',
           description: 'Browser automation',
-          path: '/vault/_skills/agent-browser/SKILL.md',
+          path: '/knowledge/_skills/agent-browser/SKILL.md',
         },
       ],
-      listProfileAgentItems: () => [{ source: 'shared', path: '/vault/_profiles/assistant/AGENTS.md' }],
+      listProfileAgentItems: () => [{ source: 'shared', path: '/knowledge/_profiles/assistant/AGENTS.md' }],
       withTemporaryRuntimeAgentDir: async <T>(_profile: string, run: (agentDir: string) => Promise<T>) => run('/tmp/agent-dir'),
       getDurableRunSnapshot: async () => ({ runId: 'run-123' }),
     };
@@ -65,7 +65,7 @@ describe('createServerRouteContext', () => {
     expect(context.listTasksForRuntimeScope()).toHaveLength(1);
     expect(context.listMemoryDocs()).toHaveLength(1);
     expect(context.listSkillsForRuntimeScope()).toHaveLength(1);
-    expect(context.listProfileAgentItems()).toEqual([{ source: 'shared', path: '/vault/_profiles/assistant/AGENTS.md' }]);
+    expect(context.listProfileAgentItems()).toEqual([{ source: 'shared', path: '/knowledge/_profiles/assistant/AGENTS.md' }]);
     await expect(context.withTemporaryRuntimeAgentDir('assistant', async (agentDir) => agentDir)).resolves.toBe('/tmp/agent-dir');
     await expect(context.getDurableRunSnapshot('run-123', 50)).resolves.toEqual({ runId: 'run-123' });
   });

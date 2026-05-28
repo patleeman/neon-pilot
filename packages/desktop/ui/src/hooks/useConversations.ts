@@ -108,6 +108,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const { sessions, tasks, setSessions } = useAppData();
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
+  const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
   const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
 
   const automationThreadTitleBySessionId = useMemo(
@@ -219,7 +220,12 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           return;
         }
 
-        const protectedSessionIds = new Set([...liveTitles.keys(), ...automationThreadTitleBySessionId.keys()]);
+        const currentWorkspaceIds = new Set([...currentLayout.sessionIds, ...currentLayout.pinnedSessionIds]);
+        const protectedSessionIds = new Set([
+          ...liveTitles.keys(),
+          ...automationThreadTitleBySessionId.keys(),
+          ...(sessions ?? []).filter((session) => currentWorkspaceIds.has(session.id)).map((session) => session.id),
+        ]);
         const remoteLayout = mergeRemoteConversationLayoutWithProtectedLocalIds(
           { sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId: activeConversationId },
           currentLayout,
@@ -361,6 +367,39 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   );
 
   useEffect(() => {
+    if (sessions && sessions.length > 0) {
+      return;
+    }
+
+    const missingIds = [...pinnedIds, ...openIds].filter(
+      (id) =>
+        !sessionsById.has(id) &&
+        !liveTitles.has(id) &&
+        !automationThreadTitleBySessionId.has(id) &&
+        !missingSessionMetaInflightRef.current.has(id),
+    );
+    if (missingIds.length === 0) {
+      return;
+    }
+
+    for (const id of missingIds) {
+      missingSessionMetaInflightRef.current.add(id);
+      void api
+        .sessionMeta(id)
+        .then((session) => {
+          setSessions([session]);
+        })
+        .catch(() => {
+          // Keep the placeholder until the full sessions snapshot or layout sync
+          // confirms whether the tab is stale.
+        })
+        .finally(() => {
+          missingSessionMetaInflightRef.current.delete(id);
+        });
+    }
+  }, [automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessions, sessionsById, setSessions]);
+
+  useEffect(() => {
     if (sessions === null) {
       return;
     }
@@ -369,7 +408,14 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
       ...sessions.map((session) => session.id),
       ...liveTitles.keys(),
       ...automationThreadTitleBySessionId.keys(),
+      ...missingSessionMetaInflightRef.current,
     ]);
+
+    if (sessions.length === 0) {
+      for (const id of [...openIds, ...pinnedIds, ...(activeId ? [activeId] : [])]) {
+        knownSessionIds.add(id);
+      }
+    }
 
     // During the local-write grace window, protect locally-open conversations from
     // being pruned. Fork/branch/cwd-change flows can add a replacement session id

@@ -45,9 +45,17 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   }, [pa]);
 
   useEffect(() => {
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 10_000);
-    return () => window.clearInterval(id);
+    let cancelled = false;
+    const runRefresh = () => {
+      if (!cancelled) void refresh();
+    };
+    const timeoutId = window.setTimeout(runRefresh, 6_000);
+    const intervalId = window.setInterval(runRefresh, 10_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
   }, [refresh]);
 
   async function toggle() {

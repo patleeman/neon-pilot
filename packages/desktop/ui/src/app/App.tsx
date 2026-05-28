@@ -1,7 +1,8 @@
-import { Component, type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Component, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 import { api } from '../client/api';
+import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
 import { bumpConversationScopedEventVersions, INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
@@ -15,7 +16,7 @@ import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
-import { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
+import { ConversationPage } from '../pages/ConversationPage';
 import {
   mergeSessionSnapshotPreservingOrder,
   removeSessionMetaPreservingOrder,
@@ -34,6 +35,16 @@ import {
   SseConnectionContext,
   SystemStatusContext,
 } from './contexts';
+
+const SESSION_META_REFRESH_DELAY_MS = 750;
+
+function areJsonSnapshotsEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function reuseEqualSnapshot<T>(previous: T | null, next: T): T {
+  return previous !== null && areJsonSnapshotsEqual(previous, next) ? previous : next;
+}
 
 // ── Top-level error boundary ────────────────────────────────────────────────
 // Catches render crashes outside of route content (context providers, hooks, etc.)
@@ -127,9 +138,12 @@ function ConversationsRouteRedirect() {
   return <Navigate to={redirectPath} replace />;
 }
 
-const ConversationPage = lazyRouteWithRecovery('conversation-page', () =>
-  import('../pages/ConversationPage').then((module) => ({ default: module.ConversationPage })),
-);
+function readConversationNavigationStart(conversationId: string): number | null {
+  const candidate = (globalThis as { __NEON_PILOT_LAST_SPA_NAVIGATION__?: { path?: string; startedAtMs?: number } })
+    .__NEON_PILOT_LAST_SPA_NAVIGATION__;
+  return candidate?.path === `/conversations/${conversationId}` && typeof candidate.startedAtMs === 'number' ? candidate.startedAtMs : null;
+}
+
 function suspendRoute(element: React.ReactNode) {
   return (
     <Suspense fallback={<div className="flex h-full items-center justify-center px-6 text-[12px] text-dim">Loading…</div>}>
@@ -145,6 +159,16 @@ function DraftConversationRoute() {
 function SavedConversationRoute() {
   const { id } = useParams<{ id?: string }>();
   const location = useLocation();
+  if (id) {
+    const navigationStartedAtMs = readConversationNavigationStart(id);
+    if (navigationStartedAtMs !== null) {
+      recordClientPerfTimingOnce(`conversation.routeRender:${id}:${navigationStartedAtMs}`, {
+        name: 'conversation.routeRender',
+        startedAtMs: navigationStartedAtMs,
+        meta: { conversationId: id },
+      });
+    }
+  }
   const surfaceKey =
     location.state &&
     typeof location.state === 'object' &&
@@ -155,10 +179,15 @@ function SavedConversationRoute() {
   return suspendRoute(<ConversationPage key={surfaceKey} />);
 }
 
+function isDesktopProtocolShell(): boolean {
+  return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
+}
+
 export function App() {
   const [titleMap, setTitleMap] = useState<Map<string, string>>(new Map());
   const [eventVersions, setEventVersions] = useState(INITIAL_APP_EVENT_VERSIONS);
   const [conversationVersions, setConversationVersions] = useState(INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS);
+  const [conversationMetadataVersions, setConversationMetadataVersions] = useState(INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS);
   const [sseStatus, setSseStatus] = useState<'connecting' | 'open' | 'reconnecting' | 'offline'>('connecting');
 
   const projects = null;
@@ -172,6 +201,7 @@ export function App() {
   // Track the latest request per session so stale HTTP responses cannot undo the
   // authoritative running state already pushed over the desktop event stream.
   const refreshSessionMetaSeqRef = useRef(new Map<string, number>());
+  const refreshSessionMetaTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const setTitle = useCallback((id: string, title: string) => {
     setTitleMap((prev) => {
@@ -206,46 +236,68 @@ export function App() {
     setConversationVersions((previous) => bumpConversationScopedEventVersions(previous, sessionId));
   }, []);
 
+  const bumpConversationMetadataVersion = useCallback((sessionId: string) => {
+    setConversationMetadataVersions((previous) => bumpConversationScopedEventVersions(previous, sessionId));
+  }, []);
+
   const refreshSessionMeta = useCallback(
     (sessionId: string, running?: boolean) => {
       const nextSeq = (refreshSessionMetaSeqRef.current.get(sessionId) ?? 0) + 1;
       refreshSessionMetaSeqRef.current.set(sessionId, nextSeq);
 
-      void api
-        .sessionMeta(sessionId)
-        .then((session) => {
-          if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
-            return;
-          }
-          applySessionMetaUpdate(sessionId, session && running !== undefined ? { ...session, isRunning: running } : session);
-        })
-        .catch((error) => {
-          if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
-            return;
-          }
-          const message = error instanceof Error ? error.message : String(error);
-          if (/not found/i.test(message)) {
-            applySessionMetaUpdate(sessionId, null);
-          }
-        });
+      const existingTimer = refreshSessionMetaTimersRef.current.get(sessionId);
+      if (existingTimer) {
+        window.clearTimeout(existingTimer);
+      }
+
+      const timer = window.setTimeout(() => {
+        refreshSessionMetaTimersRef.current.delete(sessionId);
+        void api
+          .sessionMeta(sessionId)
+          .then((session) => {
+            if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
+              return;
+            }
+            applySessionMetaUpdate(sessionId, session && running !== undefined ? { ...session, isRunning: running } : session);
+          })
+          .catch((error) => {
+            if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
+              return;
+            }
+            const message = error instanceof Error ? error.message : String(error);
+            if (/not found/i.test(message)) {
+              applySessionMetaUpdate(sessionId, null);
+            }
+          });
+      }, SESSION_META_REFRESH_DELAY_MS);
+      refreshSessionMetaTimersRef.current.set(sessionId, timer);
     },
     [applySessionMetaUpdate],
   );
 
+  useEffect(() => {
+    return () => {
+      for (const timer of refreshSessionMetaTimersRef.current.values()) {
+        window.clearTimeout(timer);
+      }
+      refreshSessionMetaTimersRef.current.clear();
+    };
+  }, []);
+
   const setTasks = useCallback((items: ScheduledTaskSummary[]) => {
-    setTasksState(items);
+    setTasksState((previous) => reuseEqualSnapshot(previous, items));
   }, []);
 
   const setRuns = useCallback((result: DurableRunListResult) => {
-    setRunsState(result);
+    setRunsState((previous) => reuseEqualSnapshot(previous, result));
   }, []);
 
   const setExecutions = useCallback((result: import('../shared/types').ExecutionListResult) => {
-    setExecutionsState(result);
+    setExecutionsState((previous) => reuseEqualSnapshot(previous, result));
   }, []);
 
   const setDaemon = useCallback((state: DaemonState) => {
-    setDaemonState(state);
+    setDaemonState((previous) => reuseEqualSnapshot(previous, state));
   }, []);
 
   const refreshInvalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,6 +372,7 @@ export function App() {
               previous ? updateSessionRunningPreservingOrder(previous, payload.sessionId, payload.running) : previous,
             );
           }
+          bumpConversationMetadataVersion(payload.sessionId);
           void refreshSessionMeta(payload.sessionId, payload.running);
           return;
         case 'session_file_changed':
@@ -397,6 +450,7 @@ export function App() {
     },
     [
       bumpConversationVersion,
+      bumpConversationMetadataVersion,
       refreshInvalidatedSnapshots,
       refreshSessionMeta,
       setDaemon,
@@ -541,7 +595,9 @@ export function App() {
   }, [bootstrapSnapshots, handleDesktopAppEvent]);
 
   useEffect(() => {
-    void bootstrapSnapshots();
+    if (!isDesktopProtocolShell()) {
+      void bootstrapSnapshots();
+    }
     const cleanup = subscribe();
 
     return () => {
@@ -549,15 +605,25 @@ export function App() {
     };
   }, [bootstrapSnapshots, subscribe]);
 
+  const appEventsContextValue = useMemo(
+    () => ({ versions: eventVersions, conversationVersions, conversationMetadataVersions }),
+    [conversationMetadataVersions, conversationVersions, eventVersions],
+  );
+  const sseConnectionContextValue = useMemo(() => ({ status: sseStatus }), [sseStatus]);
+  const appDataContextValue = useMemo(
+    () => ({ projects, sessions, tasks, runs, executions, setProjects, setSessions, setTasks, setRuns, setExecutions }),
+    [executions, projects, runs, sessions, setExecutions, setProjects, setRuns, setSessions, setTasks, tasks],
+  );
+  const systemStatusContextValue = useMemo(() => ({ daemon, setDaemon }), [daemon, setDaemon]);
+  const liveTitlesContextValue = useMemo(() => ({ titles: titleMap, setTitle }), [setTitle, titleMap]);
+
   return (
     <AppErrorBoundary>
-      <AppEventsContext.Provider value={{ versions: eventVersions, conversationVersions }}>
-        <SseConnectionContext.Provider value={{ status: sseStatus }}>
-          <AppDataContext.Provider
-            value={{ projects, sessions, tasks, runs, executions, setProjects, setSessions, setTasks, setRuns, setExecutions }}
-          >
-            <SystemStatusContext.Provider value={{ daemon, setDaemon }}>
-              <LiveTitlesContext.Provider value={{ titles: titleMap, setTitle }}>
+      <AppEventsContext.Provider value={appEventsContextValue}>
+        <SseConnectionContext.Provider value={sseConnectionContextValue}>
+          <AppDataContext.Provider value={appDataContextValue}>
+            <SystemStatusContext.Provider value={systemStatusContextValue}>
+              <LiveTitlesContext.Provider value={liveTitlesContextValue}>
                 <ThemeProvider>
                   <ExtensionRegistryProvider>
                     <BrowserRouter future={{ v7_startTransition: true }}>

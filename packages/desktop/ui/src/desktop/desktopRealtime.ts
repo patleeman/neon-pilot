@@ -17,7 +17,7 @@ function shouldUseDesktopEventStream(): boolean {
 
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
   if (shouldUseDesktopEventStream()) {
-    const source = createDesktopAwareEventSource('/api/app-events/events');
+    const source = createDesktopAwareEventSource('/api/app-events/events?initialSnapshotTopics=tasks,runs,daemon');
     source.onopen = () => listener.onopen?.();
     source.onmessage = (event) => {
       try {

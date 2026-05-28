@@ -441,8 +441,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (typeof api.extensions === 'function') {
-      api
+    let timeoutId: number | null = null;
+    const load = () => {
+      if (typeof api.extensions !== 'function') {
+        setExtensionThemes([]);
+        return;
+      }
+      void api
         .extensions()
         .then((extensions) => {
           if (!cancelled) setExtensionThemes(readExtensionThemes(extensions));
@@ -450,11 +455,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         .catch(() => {
           if (!cancelled) setExtensionThemes([]);
         });
+    };
+    if (typeof api.extensions === 'function') {
+      timeoutId = window.setTimeout(() => {
+        timeoutId = null;
+        load();
+      }, 6000);
     } else {
       setExtensionThemes([]);
     }
     return () => {
       cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
   }, []);
 

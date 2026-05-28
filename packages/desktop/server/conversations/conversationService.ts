@@ -31,9 +31,12 @@ import {
 import { readConversationContextDocs } from './conversationContextDocs.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
-import { projectConversationOnlySessionDetail } from './conversationTranscriptProjection.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
-import { getAvailableModelObjects, getLiveSessions as getLocalLiveSessions } from './liveSessions.js';
+import {
+  getAvailableModelObjects,
+  getLiveSession as getLocalLiveSession,
+  getLiveSessions as getLocalLiveSessions,
+} from './liveSessions.js';
 import {
   appendConversationOffshootDetachedMetadata as appendSessionConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
@@ -41,6 +44,7 @@ import {
   buildAppendOnlySessionDetailResponse as buildSessionAppendOnlySessionDetailResponse,
   listSessions,
   readKnownSessionIdByFilePath,
+  readSessionBlocksByFileWithTelemetry,
   readSessionBlocksWithTelemetry,
   readSessionEntryBlocks,
   readSessionImageAsset,
@@ -281,6 +285,18 @@ export function listAllLiveSessions(): LocalLiveSession[] {
     session: localManagersById.get(entry.id) as { sessionManager: unknown } | undefined,
   }));
 }
+
+export function readLiveSession(conversationId: string): LocalLiveSession | null {
+  const local = getLocalLiveSession(conversationId);
+  if (!local) {
+    return null;
+  }
+  const registryEntry = liveSessionRegistry.get(conversationId) as { session?: unknown } | undefined;
+  return {
+    ...local,
+    session: registryEntry?.session as { sessionManager: unknown } | undefined,
+  };
+}
 export function publishConversationSessionMetaChanged(...conversationIds: Array<string | null | undefined>): void {
   const seen = new Set<string>();
 
@@ -382,17 +398,22 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
   );
 }
 
-export function listConversationSessionsSnapshot(options: { includeLive?: boolean } = {}) {
+export function listConversationSessionsSnapshot(options: { includeLive?: boolean; limit?: number } = {}) {
   const profile = getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const catalogComplete = isConversationCatalogComplete();
   const catalogHasRows = hasConversationCatalogRows();
-  const storedSessions = catalogHasRows ? listConversationCatalogSessions() : listSessions();
+  const limit = Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? options.limit : null;
+  const storedSessions = catalogHasRows ? listConversationCatalogSessions({ ...(limit === null ? {} : { limit }) }) : listSessions();
   if (!catalogComplete && !catalogHasRows) {
     upsertConversationCatalogSessions(storedSessions);
     markConversationCatalogComplete();
   }
-  const jsonl = decorateSessionsWithAttention(profile, storedSessions, deferredResumesBySessionFile);
+  const jsonl = decorateSessionsWithAttention(
+    profile,
+    limit === null || catalogHasRows ? storedSessions : storedSessions.slice(0, limit),
+    deferredResumesBySessionFile,
+  );
   const live = options.includeLive === false ? [] : listAllLiveSessions();
   const liveById = new Map(live.map((entry) => [entry.id, entry]));
   const jsonlIds = new Set(jsonl.map((session) => session.id));
@@ -400,7 +421,7 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
     .filter((entry) => !jsonlIds.has(entry.id))
     .map((entry) => buildSyntheticLiveSessionSnapshot(entry, deferredResumesBySessionFile));
 
-  return [
+  const sessions = [
     ...syntheticLive,
     ...jsonl.map((session) => {
       const liveEntry = liveById.get(session.id);
@@ -412,6 +433,7 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
       };
     }),
   ];
+  return limit === null ? sessions : sessions.slice(0, limit);
 }
 
 export function startConversationCatalogBackfillFromSource(): void {
@@ -419,7 +441,7 @@ export function startConversationCatalogBackfillFromSource(): void {
 }
 
 export function toggleConversationAttention(input: { profile: string; conversationId: string; read?: boolean }): boolean {
-  const session = listConversationSessionsSnapshot().find((entry) => entry.id === input.conversationId);
+  const session = readConversationSessionMeta(input.conversationId);
   if (!session) {
     return false;
   }
@@ -442,20 +464,107 @@ export function toggleConversationAttention(input: { profile: string; conversati
 }
 
 export function resolveConversationSessionFile(conversationId: string): string | undefined {
-  const liveEntry = listAllLiveSessions().find((session) => session.id === conversationId);
-  if (liveEntry && 'session' in liveEntry && liveEntry.session?.sessionManager) {
-    ensureSessionFileExists(liveEntry.session.sessionManager as Parameters<typeof ensureSessionFileExists>[0]);
-  }
+  return resolveConversationSessionFileWithTelemetry(conversationId).sessionFile;
+}
 
+export function resolveConversationSessionFileWithTelemetry(conversationId: string): {
+  sessionFile: string | undefined;
+  telemetry: {
+    liveLookupMs: number;
+    liveFileExistsMs: number;
+    ensureMs: number;
+    ensuredLiveLookupMs: number;
+    ensuredFileExistsMs: number;
+    snapshotLookupMs: number;
+    source: 'live' | 'ensured-live' | 'catalog' | 'snapshot' | 'missing';
+  };
+} {
+  const startedAtMs = performance.now();
+  const liveEntry = readLiveSession(conversationId);
+  const liveLookupAtMs = performance.now();
   const liveSessionFile = liveEntry?.sessionFile?.trim();
-  if (liveSessionFile && existsSync(liveSessionFile)) {
-    return liveSessionFile;
+  const liveFileExists = Boolean(liveSessionFile && existsSync(liveSessionFile));
+  const liveFileExistsAtMs = performance.now();
+  if (liveSessionFile && liveFileExists) {
+    return {
+      sessionFile: liveSessionFile,
+      telemetry: {
+        liveLookupMs: liveLookupAtMs - startedAtMs,
+        liveFileExistsMs: liveFileExistsAtMs - liveLookupAtMs,
+        ensureMs: 0,
+        ensuredLiveLookupMs: 0,
+        ensuredFileExistsMs: 0,
+        snapshotLookupMs: 0,
+        source: 'live',
+      },
+    };
   }
 
+  let ensureMs = 0;
+  let ensuredLiveLookupMs = 0;
+  let ensuredFileExistsMs = 0;
+  if (liveEntry && 'session' in liveEntry && liveEntry.session?.sessionManager) {
+    const ensureStartedAtMs = performance.now();
+    ensureSessionFileExists(liveEntry.session.sessionManager as Parameters<typeof ensureSessionFileExists>[0]);
+    const ensureEndedAtMs = performance.now();
+    const ensuredLiveSessionFile = readLiveSession(conversationId)?.sessionFile?.trim();
+    const ensuredLookupAtMs = performance.now();
+    const ensuredFileExists = Boolean(ensuredLiveSessionFile && existsSync(ensuredLiveSessionFile));
+    const ensuredFileExistsAtMs = performance.now();
+    ensureMs = ensureEndedAtMs - ensureStartedAtMs;
+    ensuredLiveLookupMs = ensuredLookupAtMs - ensureEndedAtMs;
+    ensuredFileExistsMs = ensuredFileExistsAtMs - ensuredLookupAtMs;
+    if (ensuredLiveSessionFile && ensuredFileExists) {
+      return {
+        sessionFile: ensuredLiveSessionFile,
+        telemetry: {
+          liveLookupMs: liveLookupAtMs - startedAtMs,
+          liveFileExistsMs: liveFileExistsAtMs - liveLookupAtMs,
+          ensureMs,
+          ensuredLiveLookupMs,
+          ensuredFileExistsMs,
+          snapshotLookupMs: 0,
+          source: 'ensured-live',
+        },
+      };
+    }
+  }
+
+  const catalogStartedAtMs = performance.now();
+  const catalogSessionFile = readConversationCatalogSession(conversationId)?.file?.trim();
+  const catalogEndedAtMs = performance.now();
+  if (catalogSessionFile) {
+    return {
+      sessionFile: catalogSessionFile,
+      telemetry: {
+        liveLookupMs: liveLookupAtMs - startedAtMs,
+        liveFileExistsMs: liveFileExistsAtMs - liveLookupAtMs,
+        ensureMs,
+        ensuredLiveLookupMs,
+        ensuredFileExistsMs,
+        snapshotLookupMs: catalogEndedAtMs - catalogStartedAtMs,
+        source: 'catalog',
+      },
+    };
+  }
+
+  const snapshotStartedAtMs = performance.now();
   const snapshotSessionFile = listConversationSessionsSnapshot()
     .find((session) => session.id === conversationId)
     ?.file?.trim();
-  return snapshotSessionFile || undefined;
+  const snapshotEndedAtMs = performance.now();
+  return {
+    sessionFile: snapshotSessionFile || undefined,
+    telemetry: {
+      liveLookupMs: liveLookupAtMs - startedAtMs,
+      liveFileExistsMs: liveFileExistsAtMs - liveLookupAtMs,
+      ensureMs,
+      ensuredLiveLookupMs,
+      ensuredFileExistsMs,
+      snapshotLookupMs: snapshotEndedAtMs - snapshotStartedAtMs,
+      source: snapshotSessionFile ? 'snapshot' : 'missing',
+    },
+  };
 }
 
 export function readKnownConversationIdByFilePath(filePath: string): string | null {
@@ -495,16 +604,53 @@ export function readConversationSessionImageAsset(sessionId: string, blockId: st
 }
 
 export function readConversationSessionSignature(conversationId: string): string | null {
-  const sessionFile = resolveConversationSessionFile(conversationId);
-  if (!sessionFile || !existsSync(sessionFile)) {
-    return null;
+  return readConversationSessionSignatureWithTelemetry(conversationId).signature;
+}
+
+export function readConversationSessionSignatureWithTelemetry(conversationId: string): {
+  signature: string | null;
+  telemetry: ReturnType<typeof resolveConversationSessionFileWithTelemetry>['telemetry'] & {
+    signatureFileExistsMs: number;
+    signatureStatMs: number;
+  };
+} {
+  const resolved = resolveConversationSessionFileWithTelemetry(conversationId);
+  const sessionFile = resolved.sessionFile;
+  const existsStartedAtMs = performance.now();
+  const fileExists = Boolean(sessionFile && existsSync(sessionFile));
+  const existsEndedAtMs = performance.now();
+  if (!sessionFile || !fileExists) {
+    return {
+      signature: null,
+      telemetry: {
+        ...resolved.telemetry,
+        signatureFileExistsMs: existsEndedAtMs - existsStartedAtMs,
+        signatureStatMs: 0,
+      },
+    };
   }
 
   try {
+    const statStartedAtMs = performance.now();
     const stats = statSync(sessionFile);
-    return `${stats.size}:${stats.mtimeMs}`;
+    const statEndedAtMs = performance.now();
+    return {
+      signature: `${stats.size}:${stats.mtimeMs}`,
+      telemetry: {
+        ...resolved.telemetry,
+        signatureFileExistsMs: existsEndedAtMs - existsStartedAtMs,
+        signatureStatMs: statEndedAtMs - statStartedAtMs,
+      },
+    };
   } catch {
-    return null;
+    return {
+      signature: null,
+      telemetry: {
+        ...resolved.telemetry,
+        signatureFileExistsMs: existsEndedAtMs - existsStartedAtMs,
+        signatureStatMs: 0,
+      },
+    };
   }
 }
 
@@ -515,7 +661,7 @@ export function readConversationSessionMeta(conversationId: string) {
   const decoratedSession = storedSession
     ? (decorateSessionsWithAttention(profile, [storedSession], deferredResumesBySessionFile)[0] ?? null)
     : null;
-  const liveEntry = listAllLiveSessions().find((session) => session.id === conversationId) ?? null;
+  const liveEntry = readLiveSession(conversationId);
 
   if (!decoratedSession) {
     return liveEntry ? buildSyntheticLiveSessionSnapshot(liveEntry, deferredResumesBySessionFile) : null;
@@ -551,28 +697,20 @@ export function parseTailBlocksQuery(rawTailBlocks: unknown): number | undefined
   return Number.isSafeInteger(parsed) && (parsed as number) > 0 ? Math.min(MAX_SESSION_DETAIL_TAIL_BLOCKS, parsed as number) : undefined;
 }
 
-export function readConversationSessionDetail(input: {
-  conversationId: string;
-  tailBlocks?: number;
-  includeToolBlocks?: boolean;
-}): SessionDetailRouteReadResult {
+export function readConversationSessionDetail(input: { conversationId: string; tailBlocks?: number }): SessionDetailRouteReadResult {
   const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
-  const result = readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
-  return input.includeToolBlocks === false && result.detail
-    ? { ...result, detail: projectConversationOnlySessionDetail(result.detail) }
-    : result;
+  const liveSessionFile = readLiveSession(input.conversationId)?.sessionFile?.trim();
+  if (liveSessionFile && existsSync(liveSessionFile)) {
+    return readSessionBlocksByFileWithTelemetry(liveSessionFile, tailBlocks ? { tailBlocks } : undefined);
+  }
+  return readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
 }
 
 export function readConversationSessionEntryBlocks(input: { conversationId: string; entryIds: string[] }) {
   return readSessionEntryBlocks(input.conversationId, input.entryIds);
 }
 
-export async function readSessionDetailForRoute(input: {
-  conversationId: string;
-  profile: string;
-  tailBlocks?: number;
-  includeToolBlocks?: boolean;
-}): Promise<{
+export async function readSessionDetailForRoute(input: { conversationId: string; profile: string; tailBlocks?: number }): Promise<{
   sessionRead: SessionDetailRouteReadResult;
   remoteMirror: SessionDetailRouteRemoteMirrorTelemetry;
 }> {

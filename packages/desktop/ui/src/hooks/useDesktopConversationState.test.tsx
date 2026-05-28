@@ -38,6 +38,7 @@ import {
   normalizeDesktopConversationStateTailBlocks,
   prefetchDesktopConversationState,
   primeDesktopConversationStateCache,
+  primeReservedDesktopConversationStateCache,
   useDesktopConversationState,
 } from './useDesktopConversationState.js';
 
@@ -47,16 +48,8 @@ const mountedRoots: Root[] = [];
 let latestReconnect: (() => void) | null = null;
 let latestState: ReturnType<typeof useDesktopConversationState> | null = null;
 
-function HookProbe({
-  conversationId = 'conv-1',
-  tailBlocks = 20,
-  includeToolBlocks,
-}: {
-  conversationId?: string;
-  tailBlocks?: number;
-  includeToolBlocks?: boolean;
-}) {
-  latestState = useDesktopConversationState(conversationId, { tailBlocks, includeToolBlocks });
+function HookProbe({ conversationId = 'conv-1', tailBlocks = 20 }: { conversationId?: string; tailBlocks?: number }) {
+  latestState = useDesktopConversationState(conversationId, { tailBlocks });
   latestReconnect = latestState.reconnect;
   return null;
 }
@@ -184,6 +177,55 @@ describe('applyDesktopConversationStreamEvent', () => {
 
     expect(next.goalState).toBeNull();
   });
+
+  it('preserves transcript block identity for control-only events', () => {
+    const blocks = [
+      {
+        type: 'text' as const,
+        id: 'text-1',
+        text: 'already rendered',
+        ts: '2026-05-24T00:00:00.000Z',
+      },
+    ];
+    const stream = {
+      blocks,
+      blockOffset: 0,
+      totalBlocks: 1,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const emptyQueueUpdated = applyDesktopConversationStreamEvent(stream, { type: 'queue_state', steering: [], followUp: [] });
+    const queueUpdated = applyDesktopConversationStreamEvent(stream, { type: 'queue_state', steering: ['note'], followUp: [] });
+    const statsUpdated = applyDesktopConversationStreamEvent(stream, { type: 'stats_update', tokens: 10, cost: 0.01 });
+    const repeatedAgentStart = applyDesktopConversationStreamEvent(stream, { type: 'agent_start' });
+    const idleToolEnd = applyDesktopConversationStreamEvent(stream, {
+      type: 'tool_end',
+      toolCallId: 'missing-tool',
+      toolName: 'bash',
+      isError: false,
+      durationMs: 0,
+      output: '',
+    });
+
+    expect(emptyQueueUpdated).toBe(stream);
+    expect(queueUpdated.blocks).toBe(blocks);
+    expect(statsUpdated.blocks).toBe(blocks);
+    expect(repeatedAgentStart).toBe(stream);
+    expect(idleToolEnd).toBe(stream);
+  });
 });
 
 describe('applyDesktopConversationStreamEvents', () => {
@@ -294,12 +336,12 @@ describe('useDesktopConversationState', () => {
       },
     });
 
-    const prefetch = prefetchDesktopConversationState('conv-prefetch', { tailBlocks: 20, includeToolBlocks: false });
+    const prefetch = prefetchDesktopConversationState('conv-prefetch', { tailBlocks: 20 });
     const root = createRoot(document.createElement('div'));
     mountedRoots.push(root);
 
     await act(async () => {
-      root.render(<HookProbe conversationId="conv-prefetch" tailBlocks={20} includeToolBlocks={false} />);
+      root.render(<HookProbe conversationId="conv-prefetch" tailBlocks={20} />);
       await flushPromises();
     });
 
@@ -364,7 +406,7 @@ describe('useDesktopConversationState', () => {
         },
         liveSession: { live: true, id: 'conv-created', cwd: '/repo', sessionFile: '/repo/session.jsonl', isStreaming: false },
       },
-      { tailBlocks: 20, includeToolBlocks: false },
+      { tailBlocks: 20 },
     );
 
     Object.defineProperty(window, 'neonPilotDesktop', {
@@ -378,13 +420,55 @@ describe('useDesktopConversationState', () => {
     mountedRoots.push(root);
 
     await act(async () => {
-      root.render(<HookProbe conversationId="conv-created" tailBlocks={20} includeToolBlocks={false} />);
+      root.render(<HookProbe conversationId="conv-created" tailBlocks={20} />);
       await flushPromises();
     });
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
-    expect(desktopConversationState).toHaveBeenCalledTimes(1);
+    expect(desktopConversationState).not.toHaveBeenCalled();
+  });
+
+  it('uses a primed reserved conversation as live state without fetching before subscription', async () => {
+    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+
+    primeReservedDesktopConversationStateCache(
+      {
+        conversationId: 'conv-reserved',
+        sessionFile: '/repo/reserved.jsonl',
+        cwd: '/repo',
+      },
+      { tailBlocks: 20 },
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-reserved" tailBlocks={20} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.conversationId).toBe('conv-reserved');
+    expect(latestState?.state?.sessionDetail).toBeNull();
+    expect(latestState?.state?.liveSession).toEqual(
+      expect.objectContaining({
+        live: true,
+        id: 'conv-reserved',
+        cwd: '/repo',
+        sessionFile: '/repo/reserved.jsonl',
+      }),
+    );
+    expect(desktopConversationState).not.toHaveBeenCalled();
+    expect(eventSources).toHaveLength(1);
   });
 
   it('flushes text deltas on the next animation frame', async () => {
@@ -452,6 +536,71 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ type: 'text', text: 'Hello' })]);
+  });
+
+  it('preserves state identity when a flushed stream event is a no-op', async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Loaded transcript', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    const previousState = latestState?.state;
+    expect(previousState?.stream.blocks).toHaveLength(1);
+
+    act(() => {
+      eventSources[0]?.send({ type: 'tool_update', toolCallId: 'missing-tool', partialResult: 'ignored' });
+    });
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      frameCallbacks[0]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state).toBe(previousState);
   });
 
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fs = vi.hoisted(() => ({ existsSync: vi.fn(() => true) }));
+const fs = vi.hoisted(() => ({
+  existsSync: vi.fn(() => true),
+  realpathSync: vi.fn((path: string) => path),
+  statSync: vi.fn(() => ({ isDirectory: () => true })),
+}));
 const daemon = vi.hoisted(() => ({ parsePendingOperation: vi.fn((value) => value) }));
 const durableRuns = vi.hoisted(() => ({ getDurableRun: vi.fn() }));
 const middleware = vi.hoisted(() => ({ logError: vi.fn() }));
@@ -42,6 +46,7 @@ describe('conversation recovery', () => {
     return {
       getRuntimeScope: vi.fn(() => 'shared'),
       buildLiveSessionResourceOptions: vi.fn(() => ({ additionalSkillPaths: ['/skills'] })),
+      buildLiveSessionResourceOptionsAsync: vi.fn(async () => ({ additionalSkillPaths: ['/async-skills'] })),
       buildLiveSessionExtensionFactories: vi.fn(() => [function Factory() {}]),
       flushLiveDeferredResumes: vi.fn(async () => undefined),
     };
@@ -98,10 +103,12 @@ describe('conversation recovery', () => {
 
     expect(durableRuns.getDurableRun).toHaveBeenCalledWith('web:conv-1');
     expect(liveSessions.resumeSession).toHaveBeenCalledWith('/session/detail.jsonl', {
-      additionalSkillPaths: ['/skills'],
+      additionalSkillPaths: ['/async-skills'],
       extensionFactories: [expect.any(Function)],
       cwdOverride: '/detail-cwd',
     });
+    expect(ctx.buildLiveSessionResourceOptions).not.toHaveBeenCalled();
+    expect(ctx.buildLiveSessionResourceOptionsAsync).toHaveBeenCalledWith('shared');
     expect(ctx.flushLiveDeferredResumes).toHaveBeenCalledOnce();
     expect(runs.syncWebLiveConversationRun).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -112,6 +119,24 @@ describe('conversation recovery', () => {
         state: 'waiting',
       }),
     );
+  });
+
+  it('does not wait for durable run sync when recovered conversation has no pending operation', async () => {
+    durableRuns.getDurableRun.mockResolvedValueOnce({
+      run: {
+        checkpoint: {
+          payload: { sessionFile: '/checkpoint/session.jsonl', cwd: '/checkpoint-cwd', title: 'Checkpoint Title' },
+        },
+      },
+    });
+    liveSessions.registry.set('resumed-id', { cwd: '/resumed-cwd' });
+    runs.syncWebLiveConversationRun.mockReturnValueOnce(new Promise(() => undefined) as never);
+
+    const recovered = recoverConversationCapability('conv-1', context());
+    await expect(
+      Promise.race([recovered.then((result) => result.conversationId), new Promise((resolve) => setTimeout(() => resolve('timeout'), 20))]),
+    ).resolves.toBe('resumed-id');
+    expect(runs.syncWebLiveConversationRun).toHaveBeenCalledWith(expect.objectContaining({ state: 'waiting', pendingOperation: null }));
   });
 
   it('replays pending operations with context messages and prompt submission', async () => {

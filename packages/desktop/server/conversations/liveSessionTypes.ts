@@ -1,8 +1,10 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import type { WebLiveConversationRunState } from './conversationRuns.js';
-import type { ParallelPromptJob } from './liveSessionParallelJobs.js';
+import type { LiveContextUsage } from './liveSessionEvents.js';
+import type { ParallelPromptJob, ParallelPromptPreview } from './liveSessionParallelJobs.js';
 import type { LiveSessionPresenceHost } from './liveSessionPresence.js';
+import type { QueuedPromptPreview } from './liveSessionQueue.js';
 import type { LiveSessionStaleTurnState } from './liveSessionStaleTurns.js';
 import type { LiveSessionSubscriptionListener } from './liveSessionSubscription.js';
 
@@ -24,8 +26,12 @@ export interface LiveEntry extends LiveSessionPresenceHost, LiveSessionStaleTurn
   cwd: string;
   listeners: Set<LiveListener>;
   title: string;
+  lastContextUsage?: LiveContextUsage | null;
   lastContextUsageJson: string | null;
+  lastContextUsageMessageCount?: number;
+  lastQueueState?: { steering: QueuedPromptPreview[]; followUp: QueuedPromptPreview[] };
   lastQueueStateJson: string | null;
+  lastParallelState?: ParallelPromptPreview[];
   lastParallelStateJson?: string | null;
   currentTurnError?: string | null;
   currentAssistantMessageText?: string;

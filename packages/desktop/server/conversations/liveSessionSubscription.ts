@@ -11,7 +11,15 @@ import {
 } from './liveSessionPresence.js';
 import { readQueueState } from './liveSessionQueue.js';
 import { ensureStaleTurnState, type LiveSessionStaleTurnState } from './liveSessionStaleTurns.js';
-import { readLiveSessionContextUsage } from './liveSessionStateBroadcasts.js';
+import {
+  type LiveSessionContextUsageHost,
+  type LiveSessionParallelStateHost,
+  type LiveSessionQueueStateHost,
+  readCachedLiveSessionContextUsage,
+  readCachedLiveSessionParallelState,
+  readCachedLiveSessionQueueState,
+  readLiveSessionContextUsage,
+} from './liveSessionStateBroadcasts.js';
 import { buildLiveSessionSnapshot } from './liveSessionStateSnapshot.js';
 import { readGoalFromEntries } from './sessionGoalState.js';
 
@@ -20,7 +28,13 @@ export interface LiveSessionSubscriptionListener {
   tailBlocks?: number;
 }
 
-export interface LiveSessionSubscriptionHost extends LiveSessionPresenceHost, LiveSessionStaleTurnState {
+export interface LiveSessionSubscriptionHost
+  extends
+    LiveSessionPresenceHost,
+    LiveSessionStaleTurnState,
+    LiveSessionContextUsageHost,
+    LiveSessionQueueStateHost,
+    LiveSessionParallelStateHost {
   session: AgentSession;
   listeners: Set<LiveSessionSubscriptionListener>;
   title: string;
@@ -37,6 +51,7 @@ export function subscribeLiveSession<TEntry extends LiveSessionSubscriptionHost>
           surfaceId: string;
           surfaceType: LiveSessionSurfaceType;
         };
+        deferInitialReplayMs?: number;
       }
     | undefined,
   callbacks: {
@@ -52,7 +67,20 @@ export function subscribeLiveSession<TEntry extends LiveSessionSubscriptionHost>
 
   const presenceChanged = options?.surface ? registerLiveSessionSurface(entry, options.surface) : false;
 
-  replayLiveSessionState(entry, subscription, options, callbacks.resolveTitle);
+  const deferInitialReplayMs =
+    typeof options?.deferInitialReplayMs === 'number' && Number.isFinite(options.deferInitialReplayMs) && options.deferInitialReplayMs > 0
+      ? Math.round(options.deferInitialReplayMs)
+      : 0;
+  if (deferInitialReplayMs > 0) {
+    const replayTimer = setTimeout(() => {
+      if (entry.listeners.has(subscription)) {
+        replayLiveSessionState(entry, subscription, options, callbacks.resolveTitle);
+      }
+    }, deferInitialReplayMs);
+    replayTimer.unref?.();
+  } else {
+    replayLiveSessionState(entry, subscription, options, callbacks.resolveTitle);
+  }
 
   if (presenceChanged) {
     callbacks.broadcastPresenceState(entry, { exclude: subscription });
@@ -69,7 +97,13 @@ export function subscribeLiveSession<TEntry extends LiveSessionSubscriptionHost>
 function replayLiveSessionState<TEntry extends LiveSessionSubscriptionHost>(
   entry: TEntry,
   subscription: LiveSessionSubscriptionListener,
-  options: { tailBlocks?: number; surface?: { surfaceId: string; surfaceType: LiveSessionSurfaceType } } | undefined,
+  options:
+    | {
+        tailBlocks?: number;
+        surface?: { surfaceId: string; surfaceType: LiveSessionSurfaceType };
+        deferInitialReplayMs?: number;
+      }
+    | undefined,
   resolveTitle: (entry: TEntry) => string,
 ): void {
   ensureStaleTurnState(entry);
@@ -91,9 +125,12 @@ function replayLiveSessionState<TEntry extends LiveSessionSubscriptionHost>(
   if (title) {
     subscription.send({ type: 'title_update', title });
   }
-  subscription.send({ type: 'context_usage', usage: readLiveSessionContextUsage(entry.session) });
-  subscription.send({ type: 'queue_state', ...readQueueState(entry.session) });
-  subscription.send({ type: 'parallel_state', jobs: readParallelState(entry.parallelJobs) });
+  subscription.send({
+    type: 'context_usage',
+    usage: readCachedLiveSessionContextUsage(entry) ?? readLiveSessionContextUsage(entry.session),
+  });
+  subscription.send({ type: 'queue_state', ...(readCachedLiveSessionQueueState(entry) ?? readQueueState(entry.session)) });
+  subscription.send({ type: 'parallel_state', jobs: readCachedLiveSessionParallelState(entry) ?? readParallelState(entry.parallelJobs) });
   if (options?.surface || (entry.presenceBySurfaceId?.size ?? 0) > 0) {
     subscription.send({ type: 'presence_state', state: buildLiveSessionPresenceState(entry) });
   }

@@ -74,7 +74,10 @@ interface AppEventWatchTarget {
 }
 
 const SESSION_FILE_CHANGED_MIN_INTERVAL_MS = 500;
-const DEFAULT_APP_EVENT_POLL_INTERVAL_MS = 1_000;
+const DEFAULT_APP_EVENT_POLL_INTERVAL_MS = 5_000;
+const RECURSIVE_SESSION_FILE_POLL_INTERVAL_MULTIPLIER = 4;
+const SESSION_FILE_SIGNATURE_SCAN_BATCH_SIZE = 8;
+const SESSION_FILE_SIGNATURE_SCAN_YIELD_MS = 8;
 
 const ALL_TOPICS: AppEventTopic[] = [
   'sessions',
@@ -135,31 +138,120 @@ function collectDirectoryTree(root: string): string[] {
   return directories;
 }
 
-function collectSessionFileSignatures(root: string): Map<string, string> {
-  const signatures = new Map<string, string>();
-  for (const directory of collectDirectoryTree(root)) {
-    let entries: Dirent[];
-    try {
-      entries = readdirSync(directory, { withFileTypes: true });
-    } catch {
+function collectSessionFileSignaturesInDirectory(directory: string, signatures: Map<string, string>): void {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (typeof entry.isFile !== 'function' || !entry.isFile() || !entry.name.endsWith('.jsonl')) {
       continue;
     }
 
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.jsonl')) {
-        continue;
-      }
-
-      const filePath = join(directory, entry.name);
-      try {
-        const stat = statSync(filePath);
-        signatures.set(filePath, `${stat.mtimeMs}:${stat.size}`);
-      } catch {
-        // The file may have been moved between readdir and stat; the next pass will resync it.
-      }
+    const filePath = join(directory, entry.name);
+    try {
+      const stat = statSync(filePath);
+      signatures.set(filePath, `${stat.mtimeMs}:${stat.size}`);
+    } catch {
+      // The file may have been moved between readdir and stat; the next pass will resync it.
     }
   }
-  return signatures;
+}
+
+function listChildDirectories(directory: string): string[] {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const directories: string[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      directories.push(join(directory, entry.name));
+    }
+  }
+  directories.sort((left, right) => right.localeCompare(left));
+  return directories;
+}
+
+function startSessionFileSignaturePoll(
+  root: string,
+  intervalMs: number,
+  onEvent: (eventKind: AppEventWatchKind, changedPath: string | null) => void,
+): WatchStop {
+  let signatures = new Map<string, string>();
+  let hasBaseline = false;
+  let scanning = false;
+  let stopped = false;
+  let scanTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const runScan = () => {
+    if (stopped || scanning) {
+      return;
+    }
+    if (!isDirectory(root)) {
+      signatures = new Map();
+      hasBaseline = true;
+      return;
+    }
+
+    scanning = true;
+    const nextSignatures = new Map<string, string>();
+    const directories = [root];
+
+    const scanChunk = () => {
+      if (stopped) {
+        scanning = false;
+        return;
+      }
+
+      for (let index = 0; index < SESSION_FILE_SIGNATURE_SCAN_BATCH_SIZE && directories.length > 0; index += 1) {
+        const directory = directories.pop() as string;
+        collectSessionFileSignaturesInDirectory(directory, nextSignatures);
+        directories.push(...listChildDirectories(directory));
+      }
+
+      if (directories.length > 0) {
+        scanTimer = setTimeout(scanChunk, SESSION_FILE_SIGNATURE_SCAN_YIELD_MS);
+        scanTimer.unref?.();
+        return;
+      }
+
+      if (hasBaseline) {
+        for (const [filePath, signature] of nextSignatures) {
+          if (signatures.get(filePath) !== signature) {
+            onEvent(signatures.has(filePath) ? 'change' : 'rename', filePath);
+          }
+        }
+      }
+
+      signatures = nextSignatures;
+      hasBaseline = true;
+      scanning = false;
+      scanTimer = undefined;
+    };
+
+    scanChunk();
+  };
+
+  const pollTimer = setInterval(runScan, intervalMs);
+  pollTimer.unref?.();
+  scanTimer = setTimeout(runScan, 0);
+  scanTimer.unref?.();
+
+  return () => {
+    stopped = true;
+    clearInterval(pollTimer);
+    if (scanTimer) {
+      clearTimeout(scanTimer);
+      scanTimer = undefined;
+    }
+  };
 }
 
 function normalizeWatchRelativePath(filename: string | Buffer | null | undefined): string | null {
@@ -468,20 +560,31 @@ function startSessionFilesWatch(
   intervalMs: number,
   onEvent: (eventKind: AppEventWatchKind, changedPath: string | null) => void,
 ): WatchStop {
-  const stopWatch = startManualDirectoryTreeWatch(path, onEvent);
-  let signatures = collectSessionFileSignatures(path);
-  const pollTimer = setInterval(() => {
-    const nextSignatures = collectSessionFileSignatures(path);
-    for (const [filePath, signature] of nextSignatures) {
-      if (signatures.get(filePath) !== signature) {
-        onEvent(signatures.has(filePath) ? 'change' : 'rename', filePath);
-      }
+  let stopWatch: WatchStop;
+  let pollIntervalMs = intervalMs;
+  try {
+    const watcher = watch(path, { persistent: false, recursive: true }, (eventType, filename) => {
+      onEvent(eventType === 'rename' ? 'rename' : 'change', resolveWatchPath(path, filename));
+    });
+
+    const stopManualWatch = startManualDirectoryTreeWatch(path, onEvent);
+    stopWatch = () => {
+      watcher.close();
+      stopManualWatch();
+    };
+    pollIntervalMs = intervalMs * RECURSIVE_SESSION_FILE_POLL_INTERVAL_MULTIPLIER;
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code) : '';
+    if (code !== 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM') {
+      throw error;
     }
-    signatures = nextSignatures;
-  }, intervalMs);
+    stopWatch = startManualDirectoryTreeWatch(path, onEvent);
+  }
+
+  const stopSignaturePoll = startSessionFileSignaturePoll(path, pollIntervalMs, onEvent);
 
   return () => {
-    clearInterval(pollTimer);
+    stopSignaturePoll();
     stopWatch();
   };
 }

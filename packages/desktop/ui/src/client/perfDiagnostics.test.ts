@@ -61,6 +61,63 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('records API timing samples in the renderer clock domain', async () => {
+    vi.spyOn(performance, 'now').mockReturnValueOnce(125);
+    const { recordApiTiming } = await import('./perfDiagnostics');
+    const res = new Response('{}', {
+      headers: {
+        'X-PA-Perf': JSON.stringify({ localApi: { totalBeforeReturnMs: 4 } }),
+      },
+    });
+
+    recordApiTiming('/api/conversations/reserve', res, 100);
+
+    const perf = (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { apiSamples?: unknown[] } }).__NEON_PILOT_APP_PERF__;
+    expect(perf?.apiSamples).toEqual([
+      expect.objectContaining({
+        path: '/api/conversations/reserve',
+        startTimeMs: 100,
+        endTimeMs: 125,
+        durationMs: 25,
+        meta: { localApi: { totalBeforeReturnMs: 4 } },
+      }),
+    ]);
+  });
+
+  it('aggregates activity tree row renders per animation frame', async () => {
+    let animationFrame: FrameRequestCallback | null = null;
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      animationFrame = callback;
+      return 1;
+    });
+    const { recordActivityTreeRowRender } = await import('./perfDiagnostics');
+
+    recordActivityTreeRowRender('conversation:one');
+    recordActivityTreeRowRender('conversation:two');
+    recordActivityTreeRowRender('conversation:one');
+
+    expect(
+      (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { activityTreeRenderSamples?: unknown[] } }).__NEON_PILOT_APP_PERF__
+        ?.activityTreeRenderSamples,
+    ).toEqual([]);
+
+    animationFrame?.(performance.now());
+
+    expect(
+      (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { activityTreeRenderSamples?: unknown[] } }).__NEON_PILOT_APP_PERF__
+        ?.activityTreeRenderSamples,
+    ).toEqual([
+      expect.objectContaining({
+        route: '/',
+        totalRenderCount: 3,
+        itemRenderCounts: [
+          { itemId: 'conversation:one', count: 2 },
+          { itemId: 'conversation:two', count: 1 },
+        ],
+      }),
+    ]);
+  });
+
   it('records renderer interactions with useful target attribution', async () => {
     const { recordRendererInteraction } = await import('./perfDiagnostics');
     const button = document.createElement('button');
@@ -147,6 +204,23 @@ describe('perfDiagnostics', () => {
     ]);
   });
 
+  it('starts a fresh conversation-open sample after a previous partial open', async () => {
+    vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(125).mockReturnValueOnce(200).mockReturnValueOnce(212);
+    const { completeConversationOpenPhase, ensureConversationOpenStart } = await import('./perfDiagnostics');
+
+    ensureConversationOpenStart('conv-1', 'route');
+    completeConversationOpenPhase('conv-1', 'content');
+    ensureConversationOpenStart('conv-1', 'route');
+    completeConversationOpenPhase('conv-1', 'content');
+
+    const perf = (globalThis as typeof globalThis & { __NEON_PILOT_APP_PERF__?: { conversationOpenSamples?: unknown[] } })
+      .__NEON_PILOT_APP_PERF__;
+    expect(perf?.conversationOpenSamples).toEqual([
+      expect.objectContaining({ conversationId: 'conv-1', phase: 'content', durationMs: 25 }),
+      expect.objectContaining({ conversationId: 'conv-1', phase: 'content', durationMs: 12 }),
+    ]);
+  });
+
   it('records input-to-frame lag after delayed interaction paint', async () => {
     let nowMs = 100;
     let animationFrame: FrameRequestCallback | null = null;
@@ -155,7 +229,7 @@ describe('perfDiagnostics', () => {
       animationFrame = callback;
       return 1;
     });
-    vi.spyOn(globalThis, 'setInterval').mockImplementation(() => 1 as unknown as NodeJS.Timeout);
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation(() => 1 as unknown as NodeJS.Timeout);
 
     const { startRendererBlockTelemetry } = await import('./perfDiagnostics');
     startRendererBlockTelemetry();
@@ -192,5 +266,17 @@ describe('perfDiagnostics', () => {
         durationMs: 75,
       }),
     );
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+  });
+
+  it('only starts the event-loop lag polling fallback when explicitly enabled', async () => {
+    globalThis.localStorage.setItem('neonPilot.pollEventLoopLag', '1');
+    vi.spyOn(performance, 'now').mockReturnValue(100);
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation(() => 1 as unknown as NodeJS.Timeout);
+
+    const { startRendererBlockTelemetry } = await import('./perfDiagnostics');
+    startRendererBlockTelemetry();
+
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 250);
   });
 });

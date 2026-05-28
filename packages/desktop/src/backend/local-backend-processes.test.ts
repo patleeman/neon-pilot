@@ -1,5 +1,103 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { bootstrapMocks, criticalRegistryMocks, readConversationSessionsCapabilityMock, reserveConversationSessionMock } = vi.hoisted(
+  () => ({
+    bootstrapMocks: {
+      inlineConversationBootstrapAssetsCapability: vi.fn((state: unknown) => state),
+      inlineConversationSessionDetailAppendOnlyAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
+      inlineConversationSessionDetailAssetsCapability: vi.fn((_sessionId: string, detail: unknown) => detail),
+      isMissingConversationBootstrapState: vi.fn(() => false),
+      readConversationBootstrapState: vi.fn(async (input: { conversationId: string }) => ({
+        state: {
+          conversationId: input.conversationId,
+          sessionDetail: { id: input.conversationId, blocks: [] },
+          liveSession: { live: false },
+        },
+        telemetry: {
+          sessionRead: {
+            durationMs: 1,
+            cache: 'miss',
+            loader: 'fast-tail',
+          },
+          sessionDetailReused: false,
+          remoteMirror: { durationMs: 0 },
+          sessionSignatureMs: 0,
+          sessionSignature: {
+            liveLookupMs: 0,
+            liveFileExistsMs: 0,
+            ensureMs: 0,
+            ensuredLiveLookupMs: 0,
+            ensuredFileExistsMs: 0,
+            snapshotLookupMs: 0,
+            source: 'missing',
+            signatureFileExistsMs: 0,
+            signatureStatMs: 0,
+          },
+          liveSessionLookupMs: 0,
+        },
+      })),
+      readConversationSessionSignature: vi.fn(() => 'signature-1'),
+      readSessionDetailForRoute: vi.fn(async (input: { conversationId: string; tailBlocks?: number }) => ({
+        sessionRead: {
+          detail: {
+            id: input.conversationId,
+            blocks: [],
+            blockOffset: 0,
+            totalBlocks: 0,
+            signature: 'signature-1',
+          },
+        },
+        remoteMirror: { status: 'deferred', durationMs: 0 },
+      })),
+      setConversationServiceContext: vi.fn(),
+    },
+    criticalRegistryMocks: {
+      moduleLoaded: vi.fn(),
+      readExtensionRegistrySnapshot: vi.fn(() => ({ extensions: [{ id: 'test-extension' }], routes: [], surfaces: [], views: [] })),
+      buildCriticalExtensionRegistryResponse: vi.fn((snapshot: unknown) => ({
+        extensions: [],
+        routes: [],
+        surfaces: [],
+        settings: {},
+        snapshot,
+      })),
+    },
+    readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
+    reserveConversationSessionMock: vi.fn(() => ({ id: 'reserved-1', sessionFile: '/tmp/reserved-1.jsonl', cwd: '/repo' })),
+  }),
+);
+
+vi.mock('../../server/conversations/conversationSessionCapability.js', () => ({
+  readConversationSessionsCapability: readConversationSessionsCapabilityMock,
+}));
+vi.mock('../../server/conversations/conversationBootstrap.js', () => ({
+  isMissingConversationBootstrapState: bootstrapMocks.isMissingConversationBootstrapState,
+  readConversationBootstrapState: bootstrapMocks.readConversationBootstrapState,
+}));
+vi.mock('../../server/conversations/conversationService.js', () => ({
+  buildAppendOnlyConversationDetailResponse: vi.fn((input: { detail: unknown }) => ({ appendOnly: true, detail: input.detail })),
+  readConversationSessionSignature: bootstrapMocks.readConversationSessionSignature,
+  readSessionDetailForRoute: bootstrapMocks.readSessionDetailForRoute,
+  setConversationServiceContext: bootstrapMocks.setConversationServiceContext,
+}));
+vi.mock('../../server/conversations/conversationSessionAssetCapability.js', () => ({
+  inlineConversationBootstrapAssetsCapability: bootstrapMocks.inlineConversationBootstrapAssetsCapability,
+  inlineConversationSessionDetailAppendOnlyAssetsCapability: bootstrapMocks.inlineConversationSessionDetailAppendOnlyAssetsCapability,
+  inlineConversationSessionDetailAssetsCapability: bootstrapMocks.inlineConversationSessionDetailAssetsCapability,
+}));
+vi.mock('../../server/conversations/conversationReservation.js', () => ({
+  reserveConversationSession: reserveConversationSessionMock,
+}));
+vi.mock('../../server/extensions/extensionRegistry.js', () => {
+  criticalRegistryMocks.moduleLoaded();
+  return {
+    readExtensionRegistrySnapshot: criticalRegistryMocks.readExtensionRegistrySnapshot,
+  };
+});
+vi.mock('../../server/app/localApiExtensionRegistryPresentation.js', () => ({
+  buildCriticalExtensionRegistryResponse: criticalRegistryMocks.buildCriticalExtensionRegistryResponse,
+}));
+
 import { LocalBackendProcesses, type LocalBackendWorkbenchBrowserToolHost } from './local-backend-processes.js';
 
 function createHost(): LocalBackendWorkbenchBrowserToolHost {
@@ -36,11 +134,787 @@ describe('LocalBackendProcesses', () => {
 
   afterEach(() => {
     process.stderr.write = originalStderrWrite;
+    criticalRegistryMocks.moduleLoaded.mockClear();
+    criticalRegistryMocks.readExtensionRegistrySnapshot.mockClear();
+    criticalRegistryMocks.buildCriticalExtensionRegistryResponse.mockClear();
+    vi.unstubAllGlobals();
   });
 
   it('starts', async () => {
     const backend = new LocalBackendProcesses();
     expect(backend).toBeDefined();
+  });
+
+  it('routes hot product API requests through direct backend RPC instead of generic dispatch', async () => {
+    class FastPathBackend extends LocalBackendProcesses {
+      readonly calls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push({ method, args });
+        return { ok: true, method, args };
+      }
+    }
+
+    const backend = new FastPathBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions',
+      body: { cwd: '/repo' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
+      ok: true,
+      method: 'createDesktopLiveSession',
+      args: [{ cwd: '/repo' }],
+    });
+    const sessionsResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions',
+    });
+
+    expect(sessionsResponse.statusCode).toBe(200);
+    expect(JSON.parse(sessionsResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(sessionsResponse.body))).toEqual({
+      ok: true,
+      method: 'readDesktopSessions',
+      args: [{}],
+    });
+    const limitedSessionsResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions?limit=100',
+    });
+
+    expect(JSON.parse(limitedSessionsResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(limitedSessionsResponse.body))).toEqual([{ id: 'limited' }]);
+    const sessionDetailResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions/conversation%201?tailBlocks=40',
+    });
+
+    expect(sessionDetailResponse.statusCode).toBe(200);
+    expect(JSON.parse(sessionDetailResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(sessionDetailResponse.body))).toMatchObject({
+      id: 'conversation 1',
+      signature: 'signature-1',
+    });
+    expect(bootstrapMocks.readSessionDetailForRoute).toHaveBeenCalledWith({
+      conversationId: 'conversation 1',
+      profile: 'shared',
+      tailBlocks: 40,
+    });
+    expect(bootstrapMocks.readConversationSessionSignature).not.toHaveBeenCalled();
+    const resumeResponse = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions/resume',
+      body: { sessionFile: '/sessions/one.jsonl', cwd: '/repo' },
+    });
+
+    expect(resumeResponse.statusCode).toBe(200);
+    expect(JSON.parse(resumeResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(resumeResponse.body))).toEqual({
+      ok: true,
+      method: 'resumeDesktopLiveSession',
+      args: [{ sessionFile: '/sessions/one.jsonl', cwd: '/repo' }],
+    });
+    const liveSessionResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/live-sessions/conversation%201',
+    });
+
+    expect(liveSessionResponse.statusCode).toBe(200);
+    expect(JSON.parse(liveSessionResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(liveSessionResponse.body))).toEqual({
+      ok: true,
+      method: 'readDesktopLiveSession',
+      args: ['conversation 1'],
+    });
+    const forkEntriesResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/live-sessions/conversation%201/fork-entries',
+    });
+
+    expect(forkEntriesResponse.statusCode).toBe(200);
+    expect(JSON.parse(forkEntriesResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(forkEntriesResponse.body))).toEqual({
+      ok: true,
+      method: 'readDesktopLiveSessionForkEntries',
+      args: ['conversation 1'],
+    });
+    const forkResponse = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions/conversation%201/fork',
+      body: { entryId: 'entry-1', beforeEntry: true },
+    });
+
+    expect(forkResponse.statusCode).toBe(200);
+    expect(JSON.parse(forkResponse.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'backend-rpc',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(forkResponse.body))).toEqual({
+      ok: true,
+      method: 'forkDesktopLiveSession',
+      args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true }],
+    });
+    expect(backend.calls).toEqual([
+      { method: 'createDesktopLiveSession', args: [{ cwd: '/repo' }] },
+      { method: 'readDesktopSessions', args: [{}] },
+      { method: 'resumeDesktopLiveSession', args: [{ sessionFile: '/sessions/one.jsonl', cwd: '/repo' }] },
+      { method: 'readDesktopLiveSession', args: ['conversation 1'] },
+      { method: 'readDesktopLiveSessionForkEntries', args: ['conversation 1'] },
+      { method: 'forkDesktopLiveSession', args: [{ conversationId: 'conversation 1', entryId: 'entry-1', beforeEntry: true }] },
+    ]);
+  });
+
+  it('serves conversation content search in the main process', async () => {
+    class MainProcessSearchBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('search should not start the backend child');
+      }
+    }
+
+    const backend = new MainProcessSearchBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/sessions/search',
+      body: { query: 'suggested context release regression', limit: 80 },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      query: 'suggested context release regression',
+      mode: 'allTerms',
+      scope: 'all',
+      matches: expect.any(Array),
+    });
+  });
+
+  it('serves main-process perf diagnostics without starting the backend child', async () => {
+    class DiagnosticsBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('perf diagnostics should not start the backend child');
+      }
+    }
+
+    const backend = new DiagnosticsBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/desktop/perf-diagnostics',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
+      operations: {
+        active: [],
+        recent: [],
+      },
+    });
+  });
+
+  it('serves session search index in the main process', async () => {
+    class MainProcessSearchBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('search index should not start the backend child');
+      }
+    }
+
+    const backend = new MainProcessSearchBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/sessions/search-index',
+      body: { sessionIds: ['conversation-1', 2, 'conversation-2'] },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      index: {
+        'conversation-1': expect.any(String),
+        'conversation-2': expect.any(String),
+      },
+    });
+  });
+
+  it('serves conversation bootstrap in the main process without starting the backend child', async () => {
+    class MainProcessBootstrapBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('conversation bootstrap should not start the backend child');
+      }
+    }
+
+    const backend = new MainProcessBootstrapBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/conversations/perf-long-transcript/bootstrap?tailBlocks=40',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      conversationId: 'perf-long-transcript',
+      perf: {
+        contextMs: 0,
+        sessionReadFastTail: 1,
+      },
+    });
+    expect(bootstrapMocks.setConversationServiceContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getRuntimeScope: expect.any(Function),
+        getRepoRoot: expect.any(Function),
+      }),
+    );
+    expect(bootstrapMocks.readConversationBootstrapState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'perf-long-transcript',
+        profile: 'shared',
+        tailBlocks: 40,
+      }),
+    );
+  });
+
+  it('short-circuits bootstrap for conversations reserved in the main process', async () => {
+    class MainProcessBootstrapBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('reserved conversation bootstrap should not start the backend child');
+      }
+    }
+
+    const backend = new MainProcessBootstrapBackend();
+    const reserved = { id: 'reserved-conversation-1' };
+    (backend as unknown as { reservedConversationIds: Set<string> }).reservedConversationIds.add(reserved.id);
+    bootstrapMocks.readConversationBootstrapState.mockClear();
+
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: `/api/conversations/${encodeURIComponent(reserved.id)}/bootstrap?tailBlocks=40`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      conversationId: reserved.id,
+      sessionDetail: null,
+      perf: {
+        reservedConversationShell: 1,
+      },
+    });
+    expect(bootstrapMocks.readConversationBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it('routes backend-owned live conversation bootstrap through the backend child', async () => {
+    class BackendOwnedBootstrapBackend extends LocalBackendProcesses {
+      readonly calls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push({ method, args });
+        return {
+          conversationId: 'forked-live-1',
+          sessionDetail: { id: 'forked-live-1', blocks: [] },
+          liveSession: { live: true, id: 'forked-live-1' },
+          perf: { childBootstrap: 1 },
+        };
+      }
+    }
+
+    const backend = new BackendOwnedBootstrapBackend();
+    (backend as unknown as { backendLiveConversationIds: Set<string> }).backendLiveConversationIds.add('forked-live-1');
+    bootstrapMocks.readConversationBootstrapState.mockClear();
+
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/conversations/forked-live-1/bootstrap?tailBlocks=40',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      conversationId: 'forked-live-1',
+      perf: { childBootstrap: 1 },
+    });
+    expect(backend.calls).toEqual([
+      {
+        method: 'readDesktopConversationBootstrap',
+        args: [
+          expect.objectContaining({
+            conversationId: 'forked-live-1',
+            tailBlocks: 40,
+          }),
+        ],
+      },
+    ]);
+    expect(bootstrapMocks.readConversationBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it('tracks forked live conversations as backend-owned before the next bootstrap read', async () => {
+    class ForkTrackingBackend extends LocalBackendProcesses {
+      readonly calls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push({ method, args });
+        if (method === 'forkDesktopLiveSession') {
+          return { newSessionId: 'forked-live-2', sessionFile: '/sessions/forked-live-2.jsonl' };
+        }
+        return {
+          conversationId: 'forked-live-2',
+          sessionDetail: { id: 'forked-live-2', blocks: [] },
+          liveSession: { live: true, id: 'forked-live-2' },
+        };
+      }
+    }
+
+    const backend = new ForkTrackingBackend();
+    bootstrapMocks.readConversationBootstrapState.mockClear();
+
+    const forkResponse = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions/source-live/fork',
+      body: { entryId: 'entry-2', beforeEntry: true },
+    });
+    expect(forkResponse.statusCode).toBe(200);
+
+    const bootstrapResponse = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/conversations/forked-live-2/bootstrap?tailBlocks=40',
+    });
+
+    expect(bootstrapResponse.statusCode).toBe(200);
+    expect(backend.calls).toEqual([
+      {
+        method: 'forkDesktopLiveSession',
+        args: [{ conversationId: 'source-live', entryId: 'entry-2', beforeEntry: true }],
+      },
+      {
+        method: 'readDesktopConversationBootstrap',
+        args: [
+          expect.objectContaining({
+            conversationId: 'forked-live-2',
+            tailBlocks: 40,
+          }),
+        ],
+      },
+    ]);
+    expect(bootstrapMocks.readConversationBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it('checks session detail signatures only when the caller provides a known signature', async () => {
+    class MainProcessSessionDetailBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        throw new Error('session detail should not start the backend child');
+      }
+    }
+
+    const backend = new MainProcessSessionDetailBackend();
+    bootstrapMocks.readConversationSessionSignature.mockClear();
+    bootstrapMocks.readSessionDetailForRoute.mockClear();
+
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions/conversation%201?tailBlocks=40&knownSessionSignature=signature-1',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
+      unchanged: true,
+      sessionId: 'conversation 1',
+      signature: 'signature-1',
+    });
+    expect(bootstrapMocks.readConversationSessionSignature).toHaveBeenCalledWith('conversation 1');
+    expect(bootstrapMocks.readSessionDetailForRoute).not.toHaveBeenCalled();
+  });
+
+  it('routes backend-owned live session detail through the backend child', async () => {
+    class BackendOwnedSessionDetailBackend extends LocalBackendProcesses {
+      readonly calls: Array<{ method: string; args: unknown[] }> = [];
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push({ method, args });
+        return {
+          sessionId: 'forked-live-1',
+          detail: { id: 'forked-live-1', blocks: [] },
+          perf: { childSessionDetail: 1 },
+        };
+      }
+    }
+
+    const backend = new BackendOwnedSessionDetailBackend();
+    (backend as unknown as { backendLiveConversationIds: Set<string> }).backendLiveConversationIds.add('forked-live-1');
+
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/sessions/forked-live-1?tailBlocks=40',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      sessionId: 'forked-live-1',
+      perf: { childSessionDetail: 1 },
+    });
+    expect(backend.calls).toEqual([
+      {
+        method: 'readDesktopSessionDetail',
+        args: [
+          expect.objectContaining({
+            sessionId: 'forked-live-1',
+            tailBlocks: 40,
+          }),
+        ],
+      },
+    ]);
+  });
+
+  it('serves open conversation tabs in the main process and warms the backend child', async () => {
+    class MainProcessLayoutBackend extends LocalBackendProcesses {
+      readonly calls: string[] = [];
+
+      override async ensureStarted(): Promise<void> {
+        this.calls.push('ensureStarted');
+      }
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push(`rpc:${method}:${String(args.length)}`);
+        return {};
+      }
+    }
+
+    const backend = new MainProcessLayoutBackend();
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/ui/open-conversations',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      sessionIds: expect.any(Array),
+      pinnedSessionIds: expect.any(Array),
+      archivedSessionIds: expect.any(Array),
+      activeConversationId: null,
+      workspacePaths: expect.any(Array),
+      remoteControlledConversationIds: expect.any(Array),
+    });
+    await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
+    await vi.waitFor(() =>
+      expect(
+        (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
+      ).toBeTruthy(),
+    );
+  });
+
+  it('serves the critical extension registry from warmed main-process modules', async () => {
+    const backend = new LocalBackendProcesses();
+
+    await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/ui/open-conversations',
+    });
+    await vi.waitFor(() =>
+      expect(
+        (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
+      ).toBeTruthy(),
+    );
+    const warmedPromise = (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> })
+      .criticalExtensionRegistryModulePromise;
+
+    const response = await backend.dispatchApiRequest({
+      method: 'GET',
+      path: '/api/extensions/registry/critical',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      routes: expect.any(Array),
+      surfaces: expect.any(Array),
+      settings: {},
+    });
+    expect(
+      (backend as unknown as { criticalExtensionRegistryModulePromise?: Promise<unknown> }).criticalExtensionRegistryModulePromise,
+    ).toBe(warmedPromise);
+  });
+
+  it('reserves conversations in the main process and warms the backend child without prewarming live resources', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    class MainProcessReservationBackend extends LocalBackendProcesses {
+      readonly calls: string[] = [];
+
+      override async ensureStarted(): Promise<void> {
+        this.calls.push('ensureStarted');
+      }
+    }
+
+    reserveConversationSessionMock.mockClear();
+    const backend = new MainProcessReservationBackend() as MainProcessReservationBackend & { baseUrl: string; token: string };
+    backend.baseUrl = 'http://127.0.0.1:1234';
+    backend.token = 'token';
+    const response = await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/conversations/reserve',
+      body: { cwd: '/repo' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.headers['X-PA-Perf'])).toMatchObject({
+      localApi: {
+        fastPath: 'main-process',
+      },
+    });
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toMatchObject({
+      id: 'reserved-1',
+      sessionFile: '/tmp/reserved-1.jsonl',
+      cwd: '/repo',
+    });
+    expect(reserveConversationSessionMock).toHaveBeenCalledWith({ cwd: '/repo', profile: 'shared' });
+    await vi.waitFor(() => expect(backend.calls).toEqual(['ensureStarted']));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('creates a reserved live session without waiting on reservation-time prewarm work', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    class MainProcessReservationBackend extends LocalBackendProcesses {
+      readonly calls: string[] = [];
+
+      override async ensureStarted(): Promise<void> {
+        this.calls.push('ensureStarted');
+      }
+
+      override async callLocalApiMethod(method: string, args: unknown[]): Promise<unknown> {
+        this.calls.push(`rpc:${method}`);
+        return { ok: true, method, args };
+      }
+    }
+
+    const backend = new MainProcessReservationBackend() as MainProcessReservationBackend & { baseUrl: string; token: string };
+    backend.baseUrl = 'http://127.0.0.1:1234';
+    backend.token = 'token';
+
+    await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/conversations/reserve',
+      body: { cwd: '/repo' },
+    });
+    const createPromise = backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/live-sessions',
+      body: { cwd: '/repo', reservedSessionFile: '/tmp/reserved-1.jsonl' },
+    });
+
+    await Promise.resolve();
+
+    const response = await createPromise;
+    expect(response.statusCode).toBe(200);
+    expect(backend.calls).toEqual(['ensureStarted', 'rpc:createDesktopLiveSession']);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(JSON.parse(new TextDecoder().decode(response.body))).toEqual({
+      ok: true,
+      method: 'createDesktopLiveSession',
+      args: [{ cwd: '/repo', reservedSessionFile: '/tmp/reserved-1.jsonl' }],
+    });
+  });
+
+  it('does not send duplicate parent live-session prewarms after the backend is ready', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child: { killed: boolean };
+      baseUrl: string;
+      token: string;
+    };
+    backend.baseUrl = 'http://127.0.0.1:1234';
+    backend.token = 'token';
+    backend.child = { killed: false };
+
+    await backend.ensureStarted();
+    await backend.ensureStarted();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses child-process IPC for local API RPC when the backend child is connected', async () => {
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child: { connected: boolean; killed: boolean; send: ReturnType<typeof vi.fn> };
+      baseUrl: string;
+      token: string;
+      pendingLocalApiRpcResponses: Map<string, (message: unknown) => void>;
+    };
+    backend.baseUrl = 'http://127.0.0.1:1';
+    backend.token = 'token';
+    backend.child = {
+      connected: true,
+      killed: false,
+      send: vi.fn((message: unknown) => {
+        const request = message as { id: string; method: string; args: unknown[] };
+        queueMicrotask(() => {
+          backend.pendingLocalApiRpcResponses.get(request.id)?.({
+            type: 'local-api-rpc-response',
+            id: request.id,
+            ok: true,
+            result: { id: 'conversation-1', perf: { totalBeforeReturnMs: 12 } },
+          });
+        });
+        return true;
+      }),
+    };
+
+    await expect(backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])).resolves.toMatchObject({
+      id: 'conversation-1',
+      perf: {
+        totalBeforeReturnMs: 12,
+        rpcTransport: 'ipc',
+      },
+    });
+    expect(backend.child.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'local-api-rpc-request',
+        method: 'createDesktopLiveSession',
+        args: [{ cwd: '/repo' }],
+      }),
+    );
+  });
+
+  it('does not attach stale backend start timing after the backend is already ready', async () => {
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      child: { connected: boolean; killed: boolean; send: ReturnType<typeof vi.fn> };
+      baseUrl: string;
+      token: string;
+      pendingLocalApiRpcResponses: Map<string, (message: unknown) => void>;
+      lastStartPerf: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
+    };
+    backend.baseUrl = 'http://127.0.0.1:1';
+    backend.token = 'token';
+    backend.lastStartPerf = { totalMs: 42, spawnMs: 2, readyWaitMs: 39, assignMs: 1 };
+    backend.child = {
+      connected: true,
+      killed: false,
+      send: vi.fn((message: unknown) => {
+        const request = message as { id: string };
+        queueMicrotask(() => {
+          backend.pendingLocalApiRpcResponses.get(request.id)?.({
+            type: 'local-api-rpc-response',
+            id: request.id,
+            ok: true,
+            result: { id: 'conversation-1', perf: { totalBeforeReturnMs: 12 } },
+          });
+        });
+        return true;
+      }),
+    };
+
+    await expect(backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])).resolves.toMatchObject({
+      id: 'conversation-1',
+      perf: {
+        rpcEnsureStartedMs: 0,
+        rpcTransport: 'ipc',
+      },
+    });
+    const result = (await backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])) as { perf?: Record<string, unknown> };
+    expect(result.perf).not.toHaveProperty('rpcStartTotalMs');
+  });
+
+  it('attaches backend start timing when an RPC waits for startup', async () => {
+    class WaitingBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {
+        await new Promise((resolve) => setTimeout(resolve, 2));
+      }
+    }
+    const backend = new WaitingBackend() as WaitingBackend & {
+      child: { connected: boolean; killed: boolean; send: ReturnType<typeof vi.fn> };
+      baseUrl: string;
+      token: string;
+      pendingLocalApiRpcResponses: Map<string, (message: unknown) => void>;
+      lastStartPerf: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
+    };
+    backend.baseUrl = 'http://127.0.0.1:1';
+    backend.token = 'token';
+    backend.lastStartPerf = { totalMs: 42, spawnMs: 2, readyWaitMs: 39, assignMs: 1 };
+    backend.child = {
+      connected: true,
+      killed: false,
+      send: vi.fn((message: unknown) => {
+        const request = message as { id: string };
+        queueMicrotask(() => {
+          backend.pendingLocalApiRpcResponses.get(request.id)?.({
+            type: 'local-api-rpc-response',
+            id: request.id,
+            ok: true,
+            result: { id: 'conversation-1', perf: { totalBeforeReturnMs: 12 } },
+          });
+        });
+        return true;
+      }),
+    };
+
+    await expect(backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])).resolves.toMatchObject({
+      id: 'conversation-1',
+      perf: {
+        rpcStartTotalMs: 42,
+        rpcStartSpawnMs: 2,
+        rpcStartReadyWaitMs: 39,
+        rpcStartAssignMs: 1,
+      },
+    });
   });
 
   it('routes native Workbench Browser requests to the registered host', async () => {

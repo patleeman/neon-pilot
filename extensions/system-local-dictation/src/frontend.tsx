@@ -114,21 +114,26 @@ export function DictationButton({
 
   useEffect(() => {
     let cancelled = false;
-    void pa.extension
-      .invoke('readSettings')
-      .then((value) => {
-        if (cancelled) return;
-        const next = value as DictationSettingsState;
-        setEnabled(next.settings.enabled);
-      })
-      .catch(() => {
-        if (!cancelled) setEnabled(false);
-      })
-      .finally(() => {
-        if (!cancelled) setSettingsLoaded(true);
-      });
+    const loadSettings = () => {
+      if (cancelled) return;
+      void pa.extension
+        .invoke('readSettings')
+        .then((value) => {
+          if (cancelled) return;
+          const next = value as DictationSettingsState;
+          setEnabled(next.settings.enabled);
+        })
+        .catch(() => {
+          if (!cancelled) setEnabled(false);
+        })
+        .finally(() => {
+          if (!cancelled) setSettingsLoaded(true);
+        });
+    };
+    const timeoutId = window.setTimeout(loadSettings, 6_000);
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, [pa]);
 

@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
-import type { SessionDetail, SessionDetailAppendOnlyResponse, SessionDetailResult } from '../shared/types';
+import type { SessionDetail, SessionDetailResult } from '../shared/types';
+import { buildSessionDetailKnownParams, mergeAppendOnlySessionDetail, readSessionDetailSignature } from './sessionDetailCacheReuse';
 
 interface CachedSessionDetailEntry {
   detail: SessionDetail;
@@ -11,41 +12,11 @@ interface CachedSessionDetailEntry {
 
 interface SessionDetailOptions {
   tailBlocks?: number;
-  includeToolBlocks?: boolean;
 }
 
 const sessionDetailCache = new Map<string, CachedSessionDetailEntry>();
 const sessionDetailInflight = new Map<string, Promise<SessionDetail>>();
 const MAX_CACHED_SESSION_DETAILS = 24;
-
-function readSessionDetailSignature(detail: SessionDetail | null | undefined): string | undefined {
-  const signature = detail?.signature?.trim();
-  return signature && signature.length > 0 ? signature : undefined;
-}
-
-function readSessionDetailLastBlockId(detail: SessionDetail | null | undefined): string | undefined {
-  const blockId = detail?.blocks.at(-1)?.id?.trim();
-  return blockId && blockId.length > 0 ? blockId : undefined;
-}
-
-function mergeAppendOnlySessionDetail(cached: SessionDetail, result: SessionDetailAppendOnlyResponse): SessionDetail | null {
-  const dropCount = Math.max(0, result.blockOffset - cached.blockOffset);
-  const retainedBlocks = cached.blocks.slice(dropCount);
-  const nextVisibleLength = Math.max(0, result.totalBlocks - result.blockOffset);
-  const retainedCount = Math.max(0, nextVisibleLength - result.blocks.length);
-  if (retainedCount > retainedBlocks.length) {
-    return null;
-  }
-
-  return {
-    meta: result.meta,
-    blocks: [...retainedBlocks.slice(retainedBlocks.length - retainedCount), ...result.blocks],
-    blockOffset: result.blockOffset,
-    totalBlocks: result.totalBlocks,
-    contextUsage: result.contextUsage,
-    signature: result.signature ?? cached.signature,
-  };
-}
 
 function mergeSessionDetailResultWithCachedDetail(cached: SessionDetail | null, result: SessionDetailResult): SessionDetail | null {
   if ('unchanged' in result) {
@@ -73,7 +44,7 @@ function mergeSessionDetailResultWithCachedDetail(cached: SessionDetail | null, 
 }
 
 function buildSessionDetailCacheKey(sessionId: string, options?: SessionDetailOptions): string {
-  return `${sessionId}::${options?.tailBlocks ?? 'all'}::${options?.includeToolBlocks === false ? 'conversation' : 'full'}`;
+  return `${sessionId}::${options?.tailBlocks ?? 'all'}`;
 }
 
 function readCachedSessionDetailEntry(sessionId: string, options?: SessionDetailOptions): CachedSessionDetailEntry | null {
@@ -119,10 +90,7 @@ export function fetchSessionDetailCached(sessionId: string, options?: SessionDet
   const request = api
     .sessionDetail(sessionId, {
       ...options,
-      ...(readSessionDetailSignature(cached?.detail) ? { knownSessionSignature: readSessionDetailSignature(cached?.detail) } : {}),
-      ...(typeof cached?.detail?.blockOffset === 'number' ? { knownBlockOffset: cached.detail.blockOffset } : {}),
-      ...(typeof cached?.detail?.totalBlocks === 'number' ? { knownTotalBlocks: cached.detail.totalBlocks } : {}),
-      ...(readSessionDetailLastBlockId(cached?.detail) ? { knownLastBlockId: readSessionDetailLastBlockId(cached?.detail) } : {}),
+      ...buildSessionDetailKnownParams(cached?.detail),
     })
     .then(async (result) => {
       let detail = mergeSessionDetailResultWithCachedDetail(cached?.detail ?? null, result);
@@ -172,18 +140,27 @@ const useCacheSeedEffect = typeof window === 'undefined' ? useEffect : useLayout
 export function useSessionDetail(sessionId: string | undefined, options?: SessionDetailOptions & { version?: number }) {
   const { versions } = useAppEvents();
   const detailVersion = options?.version ?? versions.sessionFiles;
-  const cacheOptions = options ? { tailBlocks: options.tailBlocks, includeToolBlocks: options.includeToolBlocks } : undefined;
-  const initialSeed = resolveSessionDetailSeed(sessionId, cacheOptions);
-  const [detail, setDetail] = useState<SessionDetail | null>(initialSeed.detail);
-  const [loading, setLoading] = useState(initialSeed.loading);
+  const cacheOptions = options ? { tailBlocks: options.tailBlocks } : undefined;
+  const initialSeedRef = useRef<ReturnType<typeof resolveSessionDetailSeed> | null>(null);
+  if (initialSeedRef.current === null) {
+    initialSeedRef.current = resolveSessionDetailSeed(sessionId, cacheOptions);
+  }
+  const [detail, setDetail] = useState<SessionDetail | null>(initialSeedRef.current.detail);
+  const [loading, setLoading] = useState(initialSeedRef.current.loading);
   const [error, setError] = useState<string | null>(null);
+  const didApplyInitialSeedRef = useRef(false);
 
   useCacheSeedEffect(() => {
+    if (!didApplyInitialSeedRef.current) {
+      didApplyInitialSeedRef.current = true;
+      return;
+    }
+
     const seed = resolveSessionDetailSeed(sessionId, cacheOptions);
     setDetail(seed.detail);
     setLoading(seed.loading);
     setError(null);
-  }, [cacheOptions?.includeToolBlocks, cacheOptions?.tailBlocks, sessionId]);
+  }, [cacheOptions?.tailBlocks, sessionId]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -219,7 +196,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: Sessio
     return () => {
       cancelled = true;
     };
-  }, [cacheOptions?.includeToolBlocks, cacheOptions?.tailBlocks, detailVersion, sessionId]);
+  }, [cacheOptions?.tailBlocks, detailVersion, sessionId]);
 
   return { detail, loading, error };
 }

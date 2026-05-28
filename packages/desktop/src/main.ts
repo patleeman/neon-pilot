@@ -28,9 +28,7 @@ let windowController: DesktopWindowController | undefined;
 let trayController: DesktopTrayController | undefined;
 let updateManager: DesktopUpdateManager | undefined;
 let backendStartupPromise: Promise<boolean> | undefined;
-const DEFERRED_BACKEND_STARTUP_DELAY_MS = 5_000;
 
-let scheduledBackendStartupTimer: ReturnType<typeof setTimeout> | null = null;
 let quitRequestPromise: Promise<void> | null = null;
 let quitting = false;
 
@@ -277,11 +275,6 @@ function configureDesktopRuntimeEnvironment(): void {
 }
 
 async function ensureDesktopBackendAvailable(): Promise<boolean> {
-  if (scheduledBackendStartupTimer) {
-    clearTimeout(scheduledBackendStartupTimer);
-    scheduledBackendStartupTimer = null;
-  }
-
   if (!hostManager) {
     return false;
   }
@@ -292,12 +285,6 @@ async function ensureDesktopBackendAvailable(): Promise<boolean> {
 
   backendStartupPromise = (async () => {
     try {
-      const status = await hostManager.getActiveHostController().getStatus();
-      if (status.reachable) {
-        trayController?.setStartupState({ kind: 'ready' });
-        return true;
-      }
-
       trayController?.setStartupState({ kind: 'starting' });
       await hostManager.ensureActiveHostRunning();
       trayController?.setStartupState({ kind: 'ready' });
@@ -312,19 +299,6 @@ async function ensureDesktopBackendAvailable(): Promise<boolean> {
   })();
 
   return backendStartupPromise;
-}
-
-function scheduleDesktopBackendStartup(onReady?: (ready: boolean) => void): void {
-  if (scheduledBackendStartupTimer || backendStartupPromise) {
-    return;
-  }
-
-  scheduledBackendStartupTimer = setTimeout(() => {
-    scheduledBackendStartupTimer = null;
-    void ensureDesktopBackendAvailable()
-      .then((ready) => onReady?.(ready))
-      .catch((error) => logBootstrapError(error));
-  }, DEFERRED_BACKEND_STARTUP_DELAY_MS);
 }
 
 async function withDesktopBackend(action: () => Promise<void>): Promise<void> {
@@ -406,6 +380,37 @@ async function checkForDesktopUpdates() {
   }
 }
 
+function installWorkbenchBrowserToolHost(): void {
+  if (!hostManager || !windowController) {
+    return;
+  }
+
+  const controller = hostManager.getActiveHostController() as {
+    setWorkbenchBrowserToolHost?(host: {
+      isActive(conversationId: string): Promise<boolean>;
+      listTabs(): Promise<Array<{ sessionKey: string; url: string; title: string }>>;
+      snapshot(conversationId: string, tabId?: string): Promise<unknown>;
+      screenshot(conversationId: string, tabId?: string): Promise<unknown>;
+      cdp(input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }): Promise<unknown>;
+    }): Promise<void>;
+  };
+
+  void controller
+    .setWorkbenchBrowserToolHost?.({
+      isActive: () => Promise.resolve(windowController!.isWorkbenchBrowserActive()),
+      listTabs: () => Promise.resolve(windowController!.listBrowserTabs()),
+      snapshot: (_conversationId, tabId) => windowController!.snapshotWorkbenchBrowser(tabId),
+      screenshot: (_conversationId, tabId) => windowController!.screenshotWorkbenchBrowser(tabId),
+      cdp: (input) =>
+        windowController!.cdpWorkbenchBrowser({
+          command: input.command,
+          continueOnError: input.continueOnError,
+          tabId: input.tabId,
+        }),
+    })
+    .catch((error) => logBootstrapError(error));
+}
+
 async function bootstrapDesktopApp(): Promise<void> {
   const startupStartedAt = process.hrtime.bigint();
   const logStartupMilestone = (label: string) => {
@@ -415,6 +420,14 @@ async function bootstrapDesktopApp(): Promise<void> {
 
   logStartupMilestone('environment-ready');
   hostManager = new HostManager();
+  void ensureDesktopBackendAvailable()
+    .then((ready) => {
+      logStartupMilestone(ready ? 'backend-warmed' : 'backend-warmup-unavailable');
+      if (ready) {
+        installWorkbenchBrowserToolHost();
+      }
+    })
+    .catch((error) => logBootstrapError(error));
   void import('../server/daemon/companion/runtime.js')
     .then((module) => {
       module.setCompanionRuntimeProvider(() => createDesktopCompanionRuntime(hostManager as HostManager));
@@ -559,37 +572,6 @@ async function bootstrapDesktopApp(): Promise<void> {
     await openMainRoute(readInitialDesktopRoute());
     logStartupMilestone('main-window-open-requested');
   }
-
-  scheduleDesktopBackendStartup((ready) => {
-    logStartupMilestone(ready ? 'backend-ready' : 'backend-unavailable');
-    if (ready) {
-      const controller = hostManager?.getActiveHostController() as
-        | {
-            setWorkbenchBrowserToolHost?(host: {
-              isActive(conversationId: string): Promise<boolean>;
-              listTabs(): Promise<Array<{ sessionKey: string; url: string; title: string }>>;
-              snapshot(conversationId: string, tabId?: string): Promise<unknown>;
-              screenshot(conversationId: string, tabId?: string): Promise<unknown>;
-              cdp(input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }): Promise<unknown>;
-            }): Promise<void>;
-          }
-        | undefined;
-      void controller
-        ?.setWorkbenchBrowserToolHost?.({
-          isActive: () => Promise.resolve(windowController!.isWorkbenchBrowserActive()),
-          listTabs: () => Promise.resolve(windowController!.listBrowserTabs()),
-          snapshot: (_conversationId, tabId) => windowController!.snapshotWorkbenchBrowser(tabId),
-          screenshot: (_conversationId, tabId) => windowController!.screenshotWorkbenchBrowser(tabId),
-          cdp: (input) =>
-            windowController!.cdpWorkbenchBrowser({
-              command: input.command,
-              continueOnError: input.continueOnError,
-              tabId: input.tabId,
-            }),
-        })
-        .catch((error) => logBootstrapError(error));
-    }
-  });
 }
 
 async function prepareForQuit(): Promise<void> {
@@ -598,10 +580,6 @@ async function prepareForQuit(): Promise<void> {
   }
 
   quitting = true;
-  if (scheduledBackendStartupTimer) {
-    clearTimeout(scheduledBackendStartupTimer);
-    scheduledBackendStartupTimer = null;
-  }
 
   windowController?.setQuitting(true);
   updateManager?.dispose();

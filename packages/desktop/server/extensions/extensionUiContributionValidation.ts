@@ -30,7 +30,17 @@ export function validateComposerShelfContributions(value: unknown): void {
     requireString(shelf.id, `contributes.composerShelves[${index}].id`);
     requireString(shelf.component, `contributes.composerShelves[${index}].component`);
     validateOptionalString(shelf.title, `contributes.composerShelves[${index}].title`);
+    validateOptionalString(shelf.conversationMetadataNamespace, `contributes.composerShelves[${index}].conversationMetadataNamespace`);
     if (shelf.placement !== undefined) validateEnum(shelf.placement, ['top', 'bottom'], `contributes.composerShelves[${index}].placement`);
+  }
+}
+
+export function validateDraftConversationCreateContributions(value: unknown): void {
+  for (const [index, contribution] of assertRecordArray(value, 'contributes.draftConversationCreate').entries()) {
+    requireString(contribution.id, `contributes.draftConversationCreate[${index}].id`);
+    requireString(contribution.prepareAction, `contributes.draftConversationCreate[${index}].prepareAction`);
+    validateOptionalString(contribution.applyAction, `contributes.draftConversationCreate[${index}].applyAction`);
+    validateOptionalInteger(contribution.priority, `contributes.draftConversationCreate[${index}].priority`);
   }
 }
 

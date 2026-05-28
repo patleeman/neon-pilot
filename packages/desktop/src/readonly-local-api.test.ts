@@ -8,7 +8,7 @@ describe('shouldDispatchReadonlyLocalApiInWorker', () => {
   it('offloads broad readonly desktop api routes on the local host', () => {
     expect(
       shouldDispatchReadonlyLocalApiInWorker({ method: 'POST', path: '/api/sessions/search', hostId: 'local', ...workerAvailable }),
-    ).toBe(true);
+    ).toBe(false);
     expect(shouldDispatchReadonlyLocalApiInWorker({ method: 'GET', path: '/api/settings', hostId: 'local', ...workerAvailable })).toBe(
       true,
     );

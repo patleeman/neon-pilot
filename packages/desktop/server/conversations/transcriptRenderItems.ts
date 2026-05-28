@@ -60,21 +60,12 @@ type TranscriptMessageBlock =
   | { type: 'error'; id?: string; ts: string; tool?: string; message: string };
 
 type ContextTranscriptBlock = Extract<TranscriptMessageBlock, { type: 'context' | 'summary' }>;
+// This builder runs on persisted DisplayBlock data, not live-only MessageBlock
+// stream data. Keep this type aligned with DisplayBlock so route bootstrap
+// precompute cannot silently claim support for blocks it will never receive.
 type TraceTranscriptBlock =
-  | Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'subagent' | 'error' }>
+  | Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'error' }>
   | ContextTranscriptBlock;
-
-type DisplayBlockWithSource = DisplayBlock & { sourceEntryIds?: string[] };
-
-function deriveSourceEntryIdFromDisplayBlockId(blockId: string | undefined): string | null {
-  const normalized = blockId?.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const indexedDisplayBlockMatch = /^(.+)-[mtxcei]\d+$/.exec(normalized);
-  return (indexedDisplayBlockMatch?.[1] ?? normalized).trim() || null;
-}
 
 export type TranscriptRenderItem =
   | { type: 'message'; block: TranscriptMessageBlock; index: number }
@@ -93,6 +84,37 @@ const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_co
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readTrimmedString(value: Record<string, unknown>, key: string): string | undefined {
+  const candidate = value[key];
+  return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : undefined;
+}
+
+function readToolExecutionWrapperLabels(value: Record<string, unknown> | null): string[] {
+  const candidate = value?.executionWrappers;
+  if (!Array.isArray(candidate)) return [];
+
+  return candidate.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const id = readTrimmedString(item, 'id');
+    if (!id) return [];
+    return [readTrimmedString(item, 'label') ?? id];
+  });
+}
+
+function readToolExecutionWrapperChain(block: Extract<TranscriptMessageBlock, { type: 'tool_use' }>): string | null {
+  const details = isRecord(block.details) ? block.details : null;
+  const input = isRecord(block.input) ? block.input : null;
+  const labels = readToolExecutionWrapperLabels(details);
+
+  for (const label of readToolExecutionWrapperLabels(input)) {
+    if (!labels.includes(label)) {
+      labels.push(label);
+    }
+  }
+
+  return labels.length > 0 ? labels.join(' → ') : null;
 }
 
 function displayBlockToTranscriptMessageBlock(block: DisplayBlock): TranscriptMessageBlock {
@@ -213,8 +235,10 @@ function summarizeTraceCluster(blocks: TraceTranscriptBlock[]): TranscriptTraceC
         break;
       case 'tool_use': {
         const backgroundShellStart = isBackgroundShellStart(block);
-        const label = backgroundShellStart ? 'bash · background task' : block.tool;
-        const key = backgroundShellStart ? 'tool:bash:background' : `tool:${block.tool}`;
+        const wrapperChain = readToolExecutionWrapperChain(block);
+        const toolLabel = backgroundShellStart ? 'bash · background task' : block.tool;
+        const label = wrapperChain ? `${wrapperChain} · ${toolLabel}` : toolLabel;
+        const key = `${backgroundShellStart ? 'tool:bash:background' : `tool:${block.tool}`}${wrapperChain ? `:wrappers:${wrapperChain}` : ''}`;
         addSummaryCategory(categories, { key, kind: 'tool', label, tool: backgroundShellStart ? 'bash' : block.tool });
         if (block.status === 'running' || block.running) hasRunning = true;
         if (block.status === 'error' || block.error) hasError = true;
@@ -325,61 +349,5 @@ export function attachTranscriptRenderItems<T extends SessionDetail | null>(deta
   return {
     ...detail,
     renderItems: buildTranscriptRenderItemsFromDisplayBlocks(detail.blocks),
-  } as T;
-}
-
-function displayBlocksFromTranscriptRenderItems(sourceBlocks: DisplayBlock[], renderItems: TranscriptRenderItem[]): DisplayBlock[] {
-  const blocks: DisplayBlock[] = [];
-  for (const item of renderItems) {
-    if (item.type === 'message') {
-      const block = sourceBlocks[item.index];
-      if (block) blocks.push(block);
-      continue;
-    }
-
-    for (let index = item.startIndex; index <= item.endIndex; index += 1) {
-      const block = sourceBlocks[index];
-      if (block && (block.type === 'context' || block.type === 'summary')) {
-        blocks.push(block);
-      }
-    }
-  }
-  return blocks;
-}
-
-export function projectConversationOnlySessionDetail<T extends SessionDetail | null>(detail: T): T {
-  if (!detail) {
-    return detail;
-  }
-
-  const renderItems = buildTranscriptRenderItemsFromDisplayBlocks(detail.blocks).map((item) => {
-    if (item.type !== 'trace_cluster') {
-      return item;
-    }
-
-    const sourceEntryIds = [
-      ...new Set(
-        detail.blocks
-          .slice(item.startIndex, item.endIndex + 1)
-          .flatMap((block) => ((block as DisplayBlockWithSource).sourceEntryIds ?? []).map((entryId) => entryId.trim()).filter(Boolean)),
-      ),
-    ];
-    const fallbackEntryIds = item.blocks.flatMap((block) => {
-      const sourceEntryId = deriveSourceEntryIdFromDisplayBlockId(block.id);
-      return sourceEntryId ? [sourceEntryId] : [];
-    });
-    const deferredEntryIds = [...new Set(sourceEntryIds.length > 0 ? sourceEntryIds : fallbackEntryIds)];
-
-    return {
-      ...item,
-      blocks: [],
-      deferredEntryIds,
-    };
-  });
-
-  return {
-    ...detail,
-    blocks: displayBlocksFromTranscriptRenderItems(detail.blocks, renderItems),
-    renderItems,
   } as T;
 }

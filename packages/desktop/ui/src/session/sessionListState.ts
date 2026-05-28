@@ -1,5 +1,15 @@
 import type { SessionMeta } from '../shared/types';
 
+function areSessionMetaEqual(left: SessionMeta, right: SessionMeta): boolean {
+  const leftKeys = Object.keys(left) as Array<keyof SessionMeta>;
+  const rightKeys = Object.keys(right) as Array<keyof SessionMeta>;
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every((key) => Object.is(left[key], right[key]));
+}
+
 export function mergeSessionSnapshotPreservingOrder(
   previousSessions: readonly SessionMeta[] | null,
   nextSessions: readonly SessionMeta[],
@@ -8,7 +18,13 @@ export function mergeSessionSnapshotPreservingOrder(
     return [...nextSessions];
   }
 
-  const nextSessionById = new Map(nextSessions.map((session) => [session.id, session]));
+  const previousSessionById = new Map(previousSessions.map((session) => [session.id, session]));
+  const nextSessionById = new Map(
+    nextSessions.map((session) => {
+      const previous = previousSessionById.get(session.id);
+      return [session.id, previous && areSessionMetaEqual(previous, session) ? previous : session] as const;
+    }),
+  );
   const orderedSessions = previousSessions
     .map((session) => nextSessionById.get(session.id))
     .filter((session): session is SessionMeta => Boolean(session));
@@ -20,6 +36,13 @@ export function mergeSessionSnapshotPreservingOrder(
     }
 
     orderedSessions.push(session);
+  }
+
+  if (
+    orderedSessions.length === previousSessions.length &&
+    orderedSessions.every((session, index) => Object.is(session, previousSessions[index]))
+  ) {
+    return previousSessions as SessionMeta[];
   }
 
   return orderedSessions;

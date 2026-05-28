@@ -34,6 +34,7 @@ export interface RelatedConversationSearchResult {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RELATED_CONVERSATION_LIMIT = 100;
+const MAX_RELATED_SEARCH_TEXT_LENGTH = 6_000;
 const QUERY_STOPWORDS = new Set([
   'a',
   'about',
@@ -120,6 +121,11 @@ function normalizeField(value: string | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeScoredField(value: string | undefined, maxLength = MAX_RELATED_SEARCH_TEXT_LENGTH): string {
+  const boundedValue = value && value.length > maxLength ? value.slice(0, maxLength) : value;
+  return normalizeField(boundedValue);
+}
+
 function normalizeLimit(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(MAX_RELATED_CONVERSATION_LIMIT, value) : fallback;
 }
@@ -162,12 +168,13 @@ function fuzzyScore(query: string, candidate: string): number | null {
 }
 
 function scoreField(token: string, value: string | undefined, weight: number): number | null {
-  const normalizedValue = normalizeField(value);
+  const normalizedValue = normalizeScoredField(value);
   if (!normalizedValue) return null;
   const lowerValue = normalizedValue.toLowerCase();
   const containsIndex = lowerValue.indexOf(token);
   if (containsIndex !== -1)
     return weight + Math.max(0, 36 - containsIndex) + Math.max(0, 18 - Math.max(0, lowerValue.length - token.length));
+  if (normalizedValue.length > 240) return null;
   const fuzzy = fuzzyScore(token, normalizedValue);
   return fuzzy === null ? null : Math.floor(weight / 3) + fuzzy;
 }
@@ -207,7 +214,7 @@ function buildSummarySearchText(session: SessionMetaLike, searchText: string, su
 }
 
 function scorePhrase(query: string, value: string | undefined, weight: number): number {
-  const normalizedValue = normalizeField(value);
+  const normalizedValue = normalizeScoredField(value);
   const normalizedQuery = normalizeField(query).toLowerCase();
   if (!normalizedValue || !normalizedQuery) return 0;
   const index = normalizedValue.toLowerCase().indexOf(normalizedQuery);

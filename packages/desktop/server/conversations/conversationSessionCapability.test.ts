@@ -32,7 +32,14 @@ describe('conversationSessionCapability', () => {
     listConversationSessionsSnapshotMock.mockReturnValue([{ id: 'conversation-1', title: 'Conversation 1' }]);
 
     expect(readConversationSessionsCapability()).toEqual([{ id: 'conversation-1', title: 'Conversation 1' }]);
-    expect(listConversationSessionsSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(listConversationSessionsSnapshotMock).toHaveBeenCalledWith({});
+  });
+
+  it('passes session snapshot limits through', () => {
+    listConversationSessionsSnapshotMock.mockReturnValue([{ id: 'conversation-1', title: 'Conversation 1' }]);
+
+    expect(readConversationSessionsCapability({ limit: 100 })).toEqual([{ id: 'conversation-1', title: 'Conversation 1' }]);
+    expect(listConversationSessionsSnapshotMock).toHaveBeenCalledWith({ limit: 100 });
   });
 
   it('reads normalized session metadata when present', () => {

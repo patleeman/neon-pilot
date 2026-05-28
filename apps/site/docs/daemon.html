@@ -81,15 +81,21 @@
         </table>
         <h2 id="lifecycle">Lifecycle</h2>
         <p>
-          The desktop app spawns the daemon as a child process on launch and sends SIGTERM on quit. The daemon communicates over a local
-          Unix socket.
+          The desktop app starts a backend child process after the first window has a chance to paint. That backend child owns the daemon
+          runtime in-process and sends SIGTERM-equivalent shutdown through the daemon lifecycle when the app quits. The daemon still
+          communicates over a local Unix socket for daemon-client APIs inside the backend boundary.
         </p>
-        <pre><code>Desktop app ←──→ Daemon (child process)
-                    │
-                    ├── Runtime DB (SQLite)
-                    ├── Automation store
-                    ├── Run logs</code></pre>
-        <p>If the daemon crashes or is killed, the desktop app restarts it automatically.</p>
+        <pre><code>Desktop app/menu shell ←──→ Backend child process
+                              │
+                              └── Daemon runtime
+                                    │
+                                    ├── Runtime DB (SQLite)
+                                    ├── Automation store
+                                    ├── Run logs</code></pre>
+        <p>
+          If the backend child crashes or is killed, the desktop app marks the local runtime unavailable and can restart it automatically
+          through the local host controller.
+        </p>
         <h2 id="durable-agent-runs">Durable Agent Runs</h2>
         <p>
           Subagents and scheduled agent tasks run through the daemon's internal background agent runner. The daemon still spawns a child

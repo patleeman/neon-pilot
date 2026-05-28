@@ -8,8 +8,12 @@ export interface DesktopOpenConversationTabsUpdateInput {
   workspacePaths?: string[];
 }
 
-export function validateDesktopOpenConversationTabsUpdate(input: DesktopOpenConversationTabsUpdateInput): void {
-  const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } = input;
+export function validateDesktopOpenConversationTabsUpdate(input: unknown): asserts input is DesktopOpenConversationTabsUpdateInput {
+  if (!input || typeof input !== 'object') {
+    throw new Error('open conversation tabs update must be an object');
+  }
+  const update = input as DesktopOpenConversationTabsUpdateInput;
+  const { sessionIds, pinnedSessionIds, archivedSessionIds, activeConversationId, workspacePaths } = update;
 
   if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
     throw new Error('sessionIds must be an array when provided');

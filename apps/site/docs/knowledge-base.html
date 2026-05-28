@@ -55,8 +55,9 @@
           of guessing a GitHub URL or credential mode.
         </p>
         <p>
-          Neon Pilot stores the managed mirror under the runtime state directory and syncs it in the background. Git operations are bounded
-          so a stuck credential prompt or unreachable remote records an error instead of leaving the Knowledge page permanently loading.
+          The Knowledge extension stores its managed mirror under the runtime state directory and syncs it through extension backend
+          actions. Git operations run through the extension backend context so process policy stays host-owned while Knowledge-specific
+          state and behavior remain extension-owned.
         </p>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/knowledge-base.md">Edit this page on GitHub →</a>

@@ -109,6 +109,12 @@ pnpm run check    # types, lint, format, full test suite, extension static check
           </tbody>
         </table>
         <p>
+          <code>check:extensions:static</code> enforces the extension/core boundary. Extension runtime source must use
+          <code>@neon-pilot/extensions</code> public APIs instead of importing <code>@neon-pilot/core</code>,
+          <code>@neon-pilot/desktop</code>, or app package internals directly. Host backend API modules must stay narrow and lazy-load host
+          implementations rather than statically re-exporting core/desktop modules.
+        </p>
+        <p>
           Use <code>pnpm test</code> as the default single command for behavior regressions. Keep standalone smoke scripts only for live-app
           or external-environment checks that should not run in every deterministic test pass.
         </p>
@@ -127,14 +133,24 @@ pnpm run check    # types, lint, format, full test suite, extension static check
         <pre><code>pnpm run perf:desktop -- --app=&quot;/Applications/Neon Pilot RC.app&quot; --sessions=2500 --blocks=80 --seconds=30</code></pre>
         <p>
           This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU,
-          draft submit click-to-visible timing, route switches, model fetch, conversation search, long-transcript open, basic interaction
-          timing, and renderer heap delta. <code>appUsableMs</code> is the startup readiness gate: it waits for React hydration, an enabled
-          composer, and the extension registry/critical extension UI to be available. <code>startupReadyMs</code> and
-          <code>appHydratedMs</code> are diagnostic paint/hydration timings, not sufficient readiness on their own.
-          <code>draftSubmitVisibleMs</code> measures from clicking Send on <code>/conversations/new</code> until the submitted prompt is
-          visible on the saved conversation route; setup time to navigate to the draft page is reported separately as
-          <code>draftSubmitSetupMs</code>. Use <code>--draft-submit-wait-ms=&lt;ms&gt;</code> to simulate a user waiting/typing before
-          sending. For release candidates, use:
+          draft submit click-to-visible timing, pending prompt paint, route switches, model fetch, conversation search, long-transcript
+          open, previous-page loading, recovery, fork/rewind creation and open-time checks, basic interaction timing, and renderer heap
+          delta. Pass <code>--skip-fork</code> only for a deliberately narrower local run. <code>appUsableMs</code> is the startup readiness
+          gate: it waits for React hydration, an enabled composer, and the extension registry/critical extension UI to be available.
+          <code>startupReadyMs</code> and <code>appHydratedMs</code> are diagnostic paint/hydration timings, not sufficient readiness on
+          their own. <code>draftSubmitVisibleMs</code> measures from clicking Send on <code>/conversations/new</code> until the submitted
+          prompt is visible on the saved conversation route; setup time to navigate to the draft page is reported separately as
+          <code>draftSubmitSetupMs</code>. <code>draftSubmitPendingPromptBlockVisibleMs</code>, <code>longTranscriptLoadPreviousMs</code>,
+          repeated conversation switch max, recovery/open timings, and fork/rewind open timings are enforced separately so regressions do
+          not hide inside a broad pass. The smoke refuses stale desktop UI/server/main bundles for the source files it covers; rebuild the
+          touched bundle first when it reports a stale output.
+        </p>
+        <p>
+          For local iteration on transcript/new-conversation latency, prefer the Testing app instead of RC so release state stays untouched:
+        </p>
+        <pre><code>pnpm run perf:desktop -- --app=&quot;$PWD/dist/dev-desktop/Neon Pilot Testing.app&quot; --sessions=400 --blocks=5000 --seconds=3 --idle-settle-ms=5000</code></pre>
+        <p>
+          Use <code>--draft-submit-wait-ms=&lt;ms&gt;</code> to simulate a user waiting/typing before sending. For release candidates, use:
         </p>
         <pre><code>pnpm run perf:desktop -- --app=&quot;/Applications/Neon Pilot RC.app&quot; --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120</code></pre>
         <p>

@@ -183,11 +183,16 @@ function createBinaryProtocolResponse(response: {
   statusCode: number;
   headers: Record<string, string> | Headers;
   body: Uint8Array;
+  protocolPerf?: Record<string, number>;
 }): Response {
   const body = response.body.byteLength > 0 ? (response.body as unknown as BodyInit) : null;
+  const headers = new Headers(response.headers);
+  if (response.protocolPerf) {
+    headers.set('X-PA-Protocol-Perf', JSON.stringify(response.protocolPerf));
+  }
   return new Response(body, {
     status: response.statusCode,
-    headers: response.headers,
+    headers,
   });
 }
 
@@ -307,7 +312,9 @@ function createDesktopProtocolHandler(options?: {
         }
 
         const requestPath = `${url.pathname}${url.search}`;
+        const protocolStartedAtMs = performance.now();
         const requestBody = await readDesktopProtocolRequestBody(request);
+        const bodyReadAtMs = performance.now();
         const requestHeaders = Object.fromEntries(request.headers.entries());
 
         if (
@@ -317,16 +324,25 @@ function createDesktopProtocolHandler(options?: {
             hostId: options?.hostId ?? (options?.hostManager ? 'local' : null),
           })
         ) {
+          const dispatchStartedAtMs = performance.now();
           const response = await dispatchReadonlyRequest({
             method: request.method,
             path: requestPath,
             body: requestBody,
             headers: requestHeaders,
           });
-          return createBinaryProtocolResponse(response);
+          return createBinaryProtocolResponse({
+            ...response,
+            protocolPerf: {
+              bodyReadMs: Math.round(bodyReadAtMs - protocolStartedAtMs),
+              dispatchMs: Math.round(performance.now() - dispatchStartedAtMs),
+              totalBeforeResponseMs: Math.round(performance.now() - protocolStartedAtMs),
+            },
+          });
         }
 
         if (options?.hostManager) {
+          const dispatchStartedAtMs = performance.now();
           const response = await options.hostManager.getHostController(options.hostId ?? 'local').dispatchApiRequest({
             method: request.method,
             path: requestPath,
@@ -334,10 +350,20 @@ function createDesktopProtocolHandler(options?: {
             headers: requestHeaders,
           });
 
-          return createBinaryProtocolResponse(response);
+          return createBinaryProtocolResponse({
+            ...response,
+            protocolPerf: {
+              bodyReadMs: Math.round(bodyReadAtMs - protocolStartedAtMs),
+              dispatchMs: Math.round(performance.now() - dispatchStartedAtMs),
+              totalBeforeResponseMs: Math.round(performance.now() - protocolStartedAtMs),
+            },
+          });
         }
 
+        const loadStartedAtMs = performance.now();
         const module = await loadLocalApi();
+        const loadFinishedAtMs = performance.now();
+        const dispatchStartedAtMs = performance.now();
         const response = await module.dispatchDesktopLocalApiRequest({
           method: request.method,
           path: requestPath,
@@ -345,7 +371,15 @@ function createDesktopProtocolHandler(options?: {
           headers: requestHeaders,
         });
 
-        return createBinaryProtocolResponse(response);
+        return createBinaryProtocolResponse({
+          ...response,
+          protocolPerf: {
+            bodyReadMs: Math.round(bodyReadAtMs - protocolStartedAtMs),
+            loadLocalApiMs: Math.round(loadFinishedAtMs - loadStartedAtMs),
+            dispatchMs: Math.round(performance.now() - dispatchStartedAtMs),
+            totalBeforeResponseMs: Math.round(performance.now() - protocolStartedAtMs),
+          },
+        });
       } catch (error) {
         return buildDesktopProtocolErrorResponse(error);
       }

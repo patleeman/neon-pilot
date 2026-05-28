@@ -8,6 +8,7 @@ import { installProcessLogging } from '../middleware/index.js';
 installProcessLogging();
 
 const DESKTOP_SCHEDULED_TASK_PROFILE = 'shared';
+const DESKTOP_FORK_BOOTSTRAP_TAIL_BLOCKS = 24;
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, getStateRoot, saveConversationCommitCheckpoint } from '@neon-pilot/core';
@@ -62,24 +63,20 @@ import {
 } from '../conversations/conversationDeferredResumeCapability.js';
 import { applyConversationModelPreferencesToSessionManager } from '../conversations/conversationModelPreferences.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
+import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import { searchIndexedConversationContent } from '../conversations/conversationSearchIndex.js';
 import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
-  buildAppendOnlyConversationDetailResponse,
   publishConversationSessionMetaChanged,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
-  readConversationSessionSignature,
-  readSessionDetailForRoute,
   renameStoredConversation,
   resolveConversationSessionFile,
   toggleConversationAttention,
 } from '../conversations/conversationService.js';
 import {
   inlineConversationBootstrapAssetsCapability,
-  inlineConversationSessionDetailAppendOnlyAssetsCapability,
-  inlineConversationSessionDetailAssetsCapability,
   readConversationSessionBlockWithInlineAssetsCapability,
   readConversationSessionEntryBlocksWithInlineAssetsCapability,
 } from '../conversations/conversationSessionAssetCapability.js';
@@ -123,8 +120,15 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
-import { beginExtensionStartupGuard, completeExtensionStartupGuard } from '../extensions/extensionRegistry.js';
+import { checkEnabledExtensionBackendHealth, invokeExtensionAction, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import {
+  beginExtensionStartupGuard,
+  completeExtensionStartupGuard,
+  listExtensionInstallSummaries,
+  listExtensionMentionRegistrations,
+  listExtensionSlashCommandRegistrations,
+  readExtensionRegistrySnapshot,
+} from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import { readSavedModelPreferences, writeSavedModelPreferences } from '../models/modelPreferences.js';
@@ -147,6 +151,7 @@ import {
 } from '../models/providerDesktopCapability.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
+import { createSettingsStore } from '../settings/settingsStore.js';
 import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import { logError } from '../shared/logging.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
@@ -157,6 +162,7 @@ import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
 import { startAttentionDispatchLoop } from './bootstrap.js';
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
+import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { desktopOpenConversationTabsInvalidationTopics, validateDesktopOpenConversationTabsUpdate } from './localApiOpenTabs.js';
 import { buildDesktopOpenConversationTabsResponse } from './localApiOpenTabsPresentation.js';
@@ -211,11 +217,7 @@ import { normalizeLocalApiRequestHeaders, readLocalApiRequestHeader } from './lo
 import { buildLocalApiRequestUrl } from './localApiRequestUrl.js';
 import { assertRollbackLiveSessionNotStreaming, buildRollbackConversationResponse } from './localApiRollbackResponse.js';
 import { noopLocalApiUse, shouldRegisterLocalApiRoute } from './localApiRouteCollector.js';
-import {
-  buildUnchangedSessionDetailResponse,
-  shouldBuildAppendOnlySessionDetail,
-  shouldReturnUnchangedSessionDetail,
-} from './localApiSessionDetailResponse.js';
+import { readSessionDetailRouteResponse } from './localApiSessionDetailResponse.js';
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
@@ -358,11 +360,13 @@ class LocalApiResponse {
 }
 
 let localRoutesPromise: Promise<RegisteredRoute[]> | null = null;
+let localContextsPromise: Promise<{ context: ServerRouteContext; perf: Record<string, number> }> | null = null;
 let localServerRouteContext: ServerRouteContext | null = null;
 let localLiveSessionCapabilityContext: LiveSessionCapabilityContext | null = null;
 let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | null = null;
 
 const LOCAL_API_DEFERRED_RESUME_POLL_MS = 3_000;
+const EXTENSION_STARTUP_ACTIONS_DELAY_MS = 10_000;
 function resolveRepoRoot(): string {
   const defaultRepoRoot = fileURLToPath(new URL('../../..', import.meta.url));
   return resolveLocalApiRepoRoot({
@@ -428,11 +432,13 @@ function createRouteCollector(
   };
 }
 
-async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
+async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf: Record<string, number> }> {
+  const startedAtMs = performance.now();
   const repoRoot = resolveRepoRoot();
   const agentDir = getPiAgentRuntimeDir();
   const authFile = join(agentDir, 'auth.json');
   const settingsFile = DEFAULT_RUNTIME_SETTINGS_FILE;
+  const pathsAtMs = performance.now();
 
   const runtimeState = createRuntimeState({
     repoRoot,
@@ -443,6 +449,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
       },
     },
   });
+  const runtimeStateAtMs = performance.now();
 
   const flushAttentionEvents = createAttentionEventFlusher({
     getRuntimeScope: runtimeState.getRuntimeScope,
@@ -458,6 +465,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
       pollMs: LOCAL_API_DEFERRED_RESUME_POLL_MS,
     });
   }
+  const attentionAtMs = performance.now();
 
   const context = createServerRouteContext({
     repoRoot,
@@ -524,6 +532,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     withTemporaryRuntimeAgentDir: (_profile, run) => runtimeState.withTemporaryRuntimeAgentDir(run),
     getDurableRunSnapshot: async (runId: string, tail: number) => (await getDurableRunSnapshot(runId, tail)) ?? null,
   });
+  const routeContextAtMs = performance.now();
 
   localServerRouteContext = context;
 
@@ -532,6 +541,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
+    buildLiveSessionResourceOptionsAsync: context.buildLiveSessionResourceOptionsAsync,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
     listTasksForRuntimeScope: context.listTasksForRuntimeScope,
@@ -543,13 +553,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     materializeWebRuntimeConfig: context.materializeWebRuntimeConfig,
     getAuthFile: context.getAuthFile,
   };
-
-  const routes: RegisteredRoute[] = [];
-  const appRouter = createRouteCollector(routes);
-  registerServerRoutes({
-    app: appRouter as never,
-    context,
-  });
+  const capabilityContextAtMs = performance.now();
 
   if (isMainThread) {
     const startupGuard = beginExtensionStartupGuard();
@@ -565,20 +569,23 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
       });
     }
 
-    // Startup actions/services are first-class startup work. Full backend
-    // health probes are diagnostic and can import heavyweight optional
-    // backends, so run them after the app has had a chance to paint.
-    void startExtensionStartupActions(context)
-      .then(() => completeExtensionStartupGuard())
-      .catch((error) => {
-        logError('extension startup dispatch failed', { message: (error as Error).message });
-        publishAppEvent({
-          type: 'notification',
-          extensionId: 'core',
-          message: `Extension startup failed: ${(error as Error).message}`,
-          severity: 'error',
+    // Runtime extension services are useful, but they are not chat-critical.
+    // Keep their cold imports and service startup out of the initial conversation
+    // creation and transcript navigation window.
+    const startupActionsTimer = setTimeout(() => {
+      void startExtensionStartupActions(context)
+        .then(() => completeExtensionStartupGuard())
+        .catch((error) => {
+          logError('extension startup dispatch failed', { message: (error as Error).message });
+          publishAppEvent({
+            type: 'notification',
+            extensionId: 'core',
+            message: `Extension startup failed: ${(error as Error).message}`,
+            severity: 'error',
+          });
         });
-      });
+    }, EXTENSION_STARTUP_ACTIONS_DELAY_MS);
+    startupActionsTimer.unref?.();
 
     const backendHealthTimer = setTimeout(() => {
       void checkEnabledExtensionBackendHealth().catch((error) => {
@@ -587,6 +594,42 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
     }, 60_000);
     backendHealthTimer.unref?.();
   }
+  const startupSchedulingAtMs = performance.now();
+
+  const perf = {
+    contextPathsMs: Math.round(pathsAtMs - startedAtMs),
+    contextRuntimeStateMs: Math.round(runtimeStateAtMs - pathsAtMs),
+    contextAttentionMs: Math.round(attentionAtMs - runtimeStateAtMs),
+    contextRouteContextMs: Math.round(routeContextAtMs - attentionAtMs),
+    contextCapabilityContextMs: Math.round(capabilityContextAtMs - routeContextAtMs),
+    contextStartupSchedulingMs: Math.round(startupSchedulingAtMs - capabilityContextAtMs),
+    contextTotalMs: Math.round(startupSchedulingAtMs - startedAtMs),
+  };
+  return { context, perf };
+}
+
+async function getLocalContexts(): Promise<{ context: ServerRouteContext; perf: Record<string, number> }> {
+  if (!localContextsPromise) {
+    localContextsPromise = buildLocalContexts().catch((error) => {
+      localContextsPromise = null;
+      localServerRouteContext = null;
+      localLiveSessionCapabilityContext = null;
+      localProviderDesktopCapabilityContext = null;
+      throw error;
+    });
+  }
+
+  return localContextsPromise;
+}
+
+async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
+  const { context } = await getLocalContexts();
+  const routes: RegisteredRoute[] = [];
+  const appRouter = createRouteCollector(routes);
+  registerServerRoutes({
+    app: appRouter as never,
+    context,
+  });
 
   return routes;
 }
@@ -606,18 +649,29 @@ async function getLocalRoutes(): Promise<RegisteredRoute[]> {
 }
 
 async function getLocalServerRouteContext(): Promise<ServerRouteContext> {
-  await getLocalRoutes();
+  await getLocalContexts();
   return assertLocalServerRouteContext(localServerRouteContext);
 }
 
 async function getLocalLiveSessionCapabilityContext(): Promise<LiveSessionCapabilityContext> {
-  await getLocalRoutes();
+  await getLocalContexts();
   return assertLocalLiveSessionCapabilityContext(localLiveSessionCapabilityContext);
 }
 
 async function getLocalProviderDesktopCapabilityContext(): Promise<ProviderDesktopCapabilityContext> {
-  await getLocalRoutes();
+  await getLocalContexts();
   return assertLocalProviderDesktopCapabilityContext(localProviderDesktopCapabilityContext);
+}
+
+async function getLocalLiveSessionCapabilityContextWithPerf(): Promise<{
+  context: LiveSessionCapabilityContext;
+  perf: Record<string, number>;
+}> {
+  const { perf } = await getLocalContexts();
+  return {
+    context: assertLocalLiveSessionCapabilityContext(localLiveSessionCapabilityContext),
+    perf,
+  };
 }
 
 export async function subscribeDesktopAppEvents(onEvent: (event: DesktopAppBridgeEvent) => void): Promise<() => void> {
@@ -653,7 +707,7 @@ export async function subscribeDesktopLocalApiStream(
   path: string,
   onEvent: (event: DesktopLocalApiStreamEvent) => void,
 ): Promise<() => void> {
-  await getLocalRoutes();
+  await getLocalContexts();
   const url = new URL(path, 'http://desktop.local');
   return subscribeDesktopLocalApiStreamByUrl(url, onEvent);
 }
@@ -687,6 +741,19 @@ function createDesktopLocalApiJsonResponse(value: unknown): DesktopLocalApiDispa
   };
 }
 
+async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
+  const summaries = listExtensionInstallSummaries();
+  const { listRunningExtensionServices } = await import('../extensions/extensionServices.js');
+  const running = new Map(listRunningExtensionServices().map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
+  return summaries.map((summary) => ({
+    ...summary,
+    serviceStatuses: (summary.services ?? []).map((service) => {
+      const status = running.get(`${summary.id}:${service.id}`);
+      return { id: service.id, running: Boolean(status), startedAt: status?.startedAt ?? null };
+    }),
+  }));
+}
+
 async function dispatchDesktopLocalProductApiRequest(input: {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: URL;
@@ -697,13 +764,46 @@ async function dispatchDesktopLocalProductApiRequest(input: {
 
   if (method === 'GET' && path === '/api/status') return createDesktopLocalApiJsonResponse(await readDesktopAppStatus());
   if (method === 'GET' && path === '/api/daemon') return createDesktopLocalApiJsonResponse(await readDesktopDaemonState());
-  if (method === 'GET' && path === '/api/sessions') return createDesktopLocalApiJsonResponse(await readDesktopSessions());
+  if (method === 'GET' && path === '/api/sessions') {
+    return createDesktopLocalApiJsonResponse(
+      await readDesktopSessions({
+        limit: input.url.searchParams.has('limit') ? Number(input.url.searchParams.get('limit')) : undefined,
+      }),
+    );
+  }
   if (method === 'POST' && path === '/api/sessions/search-index') {
     const body = input.body as { sessionIds?: string[] } | undefined;
     return createDesktopLocalApiJsonResponse(await readDesktopSessionSearchIndex(body?.sessionIds ?? []));
   }
   if (method === 'POST' && path === '/api/related-conversations/results') {
-    return createDesktopLocalApiJsonResponse(buildRelatedConversationResults(input.body));
+    const body = input.body && typeof input.body === 'object' ? (input.body as Record<string, unknown>) : {};
+    const providedSessions = Array.isArray(body.sessions) ? (body.sessions as Array<{ id?: unknown }>) : [];
+    const requestedSessionIds = Array.isArray(body.sessionIds)
+      ? body.sessionIds.filter((sessionId): sessionId is string => typeof sessionId === 'string')
+      : [];
+    let sessions = providedSessions;
+    if (sessions.length === 0 && requestedSessionIds.length > 0) {
+      const requestedSessionIdSet = new Set(requestedSessionIds);
+      sessions = (await readDesktopSessions({ limit: Math.max(requestedSessionIds.length, 100) })).filter((session) =>
+        requestedSessionIdSet.has(session.id),
+      );
+    }
+    const providedSearchIndex =
+      body.searchIndex && typeof body.searchIndex === 'object' ? (body.searchIndex as Record<string, unknown>) : null;
+    const sessionIds = sessions.map((session) => session.id).filter((id): id is string => typeof id === 'string');
+    const searchIndex =
+      providedSearchIndex !== null
+        ? providedSearchIndex
+        : sessionIds.length === 0
+          ? {}
+          : (await readDesktopSessionSearchIndex(sessionIds)).index;
+    return createDesktopLocalApiJsonResponse(
+      buildRelatedConversationResults({
+        ...body,
+        sessions,
+        searchIndex,
+      }),
+    );
   }
 
   const sessionMetaMatch = /^\/api\/sessions\/([^/]+)\/meta$/.exec(path);
@@ -736,7 +836,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopSessionDetail({
         sessionId: decodeURIComponent(sessionDetailMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
-        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
         knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
         knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
           ? Number(input.url.searchParams.get('knownBlockOffset'))
@@ -750,6 +849,39 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
+  if (method === 'GET' && path === '/api/extensions/slash-commands') {
+    return createDesktopLocalApiJsonResponse(listExtensionSlashCommandRegistrations());
+  }
+  if (method === 'GET' && path === '/api/extensions/mentions') {
+    return createDesktopLocalApiJsonResponse(listExtensionMentionRegistrations());
+  }
+  if (method === 'GET' && path === '/api/extensions/registry/critical') {
+    return createDesktopLocalApiJsonResponse(buildCriticalExtensionRegistryResponse(readExtensionRegistrySnapshot()));
+  }
+  if (method === 'GET' && path === '/api/extensions/registry') {
+    const [extensions, snapshot, settings] = await Promise.all([
+      readExtensionInstallSummariesWithRuntimeStateForLocalApi(),
+      Promise.resolve(readExtensionRegistrySnapshot()),
+      Promise.resolve(createSettingsStore().read()),
+    ]);
+    return createDesktopLocalApiJsonResponse({
+      extensions,
+      routes: snapshot.routes,
+      surfaces: [...snapshot.surfaces, ...snapshot.views],
+      settings,
+    });
+  }
+  const extensionActionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(path);
+  if (method === 'POST' && extensionActionMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await invokeExtensionAction(
+        decodeURIComponent(extensionActionMatch[1] ?? ''),
+        decodeURIComponent(extensionActionMatch[2] ?? ''),
+        input.body,
+        await getLocalServerRouteContext(),
+      ),
+    );
+  }
   if (method === 'PATCH' && path === '/api/model-preferences')
     return createDesktopLocalApiJsonResponse(
       await updateDesktopModelPreferences(input.body as Parameters<typeof updateDesktopModelPreferences>[0]),
@@ -888,6 +1020,19 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       ),
     );
   }
+  if (method === 'POST' && path === '/api/live-sessions/prewarm-options') {
+    return createDesktopLocalApiJsonResponse(await prewarmDesktopLiveSessionOptions());
+  }
+
+  if (method === 'POST' && path === '/api/conversations/reserve') {
+    const body = input.body && typeof input.body === 'object' ? (input.body as { cwd?: unknown }) : {};
+    return createDesktopLocalApiJsonResponse(
+      reserveConversationSession({
+        cwd: typeof body.cwd === 'string' ? body.cwd : undefined,
+        profile: 'shared',
+      }),
+    );
+  }
 
   if (method === 'POST' && path === '/api/live-sessions') {
     return createDesktopLocalApiJsonResponse(
@@ -969,7 +1114,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopConversationBootstrap({
         conversationId: decodeURIComponent(conversationBootstrapMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
-        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
         knownSessionSignature: input.url.searchParams.get('knownSessionSignature') ?? undefined,
         knownBlockOffset: input.url.searchParams.has('knownBlockOffset')
           ? Number(input.url.searchParams.get('knownBlockOffset'))
@@ -989,7 +1133,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         conversationId: decodeURIComponent(conversationStateMatch[1] ?? ''),
         profile: capabilityContext.getRuntimeScope(),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
-        includeToolBlocks: input.url.searchParams.get('includeToolBlocks') !== 'false',
       }),
     );
   }
@@ -1149,16 +1292,46 @@ export async function dispatchDesktopLocalApiRequest(input: {
   body?: unknown;
   headers?: Record<string, string>;
 }): Promise<DesktopLocalApiDispatchResult> {
+  const startedAtMs = performance.now();
   const url = new URL(input.path, 'http://desktop.local');
   const productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body });
-  if (productResponse) return productResponse;
+  if (productResponse) {
+    return {
+      ...productResponse,
+      headers: {
+        ...productResponse.headers,
+        'X-PA-Perf': JSON.stringify({
+          localApi: {
+            totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+            responseBytes: productResponse.body.byteLength,
+            fastPath: 'product',
+          },
+        }),
+      },
+    };
+  }
 
   if (input.method === 'POST' && url.pathname === '/api/sessions/search') {
     const fastResponse = dispatchFastConversationContentSearch({ body: input.body });
-    if (fastResponse) return fastResponse;
+    if (fastResponse) {
+      return {
+        ...fastResponse,
+        headers: {
+          ...fastResponse.headers,
+          'X-PA-Perf': JSON.stringify({
+            localApi: {
+              totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+              responseBytes: fastResponse.body.byteLength,
+              fastPath: 'search',
+            },
+          }),
+        },
+      };
+    }
   }
 
   const routes = await getLocalRoutes();
+  const routesReadyAtMs = performance.now();
   const route = findMatchingLocalApiRoute(routes, input.method, url.pathname);
 
   if (!route) {
@@ -1176,7 +1349,9 @@ export async function dispatchDesktopLocalApiRequest(input: {
   });
   const res = new LocalApiResponse();
 
+  const handlerStartedAtMs = performance.now();
   await route.handler(req, res);
+  const handlerFinishedAtMs = performance.now();
 
   const contentType = res.headers.get('content-type') ?? '';
   if (!res.ended) {
@@ -1187,10 +1362,21 @@ export async function dispatchDesktopLocalApiRequest(input: {
     throw new Error(`Local API route did not complete for ${input.method} ${url.pathname}`);
   }
 
+  const body = res.getBody();
   return {
     statusCode: res.statusCode,
-    headers: Object.fromEntries(res.headers.entries()),
-    body: res.getBody(),
+    headers: {
+      ...Object.fromEntries(res.headers.entries()),
+      'X-PA-Perf': JSON.stringify({
+        localApi: {
+          routeLookupMs: Math.round(routesReadyAtMs - startedAtMs),
+          handlerMs: Math.round(handlerFinishedAtMs - handlerStartedAtMs),
+          totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+          responseBytes: body.byteLength,
+        },
+      }),
+    },
+    body,
   };
 }
 
@@ -1228,14 +1414,11 @@ export async function readDesktopDaemonState() {
   return readDaemonState();
 }
 
-export async function readDesktopSessions() {
-  await getLocalRoutes();
-  return readConversationSessionsCapability();
+export async function readDesktopSessions(input: { limit?: number } = {}) {
+  return readConversationSessionsCapability(input);
 }
 
 export async function readDesktopSessionMeta(sessionId: string) {
-  await getLocalRoutes();
-
   const session = readConversationSessionMetaCapability(sessionId);
   assertSessionFound(Boolean(session));
 
@@ -1243,7 +1426,6 @@ export async function readDesktopSessionMeta(sessionId: string) {
 }
 
 export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
-  await getLocalRoutes();
   return readConversationSessionSearchIndexCapability({ sessionIds });
 }
 
@@ -1568,7 +1750,6 @@ export async function markDesktopDurableRunAttention(input: { runId: string; rea
 export async function readDesktopConversationBootstrap(input: {
   conversationId: string;
   tailBlocks?: number;
-  includeToolBlocks?: boolean;
   knownSessionSignature?: string;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
@@ -1598,10 +1779,28 @@ export async function readDesktopConversationBootstrap(input: {
       ...(bootstrap.telemetry.sessionRead ? { sessionReadMs: Math.round(bootstrap.telemetry.sessionRead.durationMs) } : {}),
       ...(bootstrap.telemetry.sessionRead ? { sessionReadCache: bootstrap.telemetry.sessionRead.cache === 'hit' ? 1 : 0 } : {}),
       ...(bootstrap.telemetry.sessionRead ? { sessionReadFastTail: bootstrap.telemetry.sessionRead.loader === 'fast-tail' ? 1 : 0 } : {}),
+      ...(bootstrap.telemetry.sessionRead?.phases ? { sessionReadPhases: bootstrap.telemetry.sessionRead.phases } : {}),
       remoteMirrorMs: Math.round(bootstrap.telemetry.remoteMirror.durationMs),
+      sessionSignatureMs: Math.round(bootstrap.telemetry.sessionSignatureMs),
+      sessionSignaturePhases: bootstrap.telemetry.sessionSignature,
+      liveSessionLookupMs: Math.round(bootstrap.telemetry.liveSessionLookupMs),
       sessionDetailReused: bootstrap.telemetry.sessionDetailReused ? 1 : 0,
     },
   };
+}
+
+async function readForkedDesktopConversationBootstrap(input: { conversationId: string; profile: string }) {
+  const bootstrap = await readConversationBootstrapState({
+    conversationId: input.conversationId,
+    profile: input.profile,
+    tailBlocks: DESKTOP_FORK_BOOTSTRAP_TAIL_BLOCKS,
+  });
+
+  if (isMissingConversationBootstrapState(bootstrap.state)) {
+    return null;
+  }
+
+  return inlineConversationBootstrapAssetsCapability(bootstrap.state);
 }
 
 export async function renameDesktopConversation(input: {
@@ -1844,6 +2043,7 @@ export async function recoverDesktopConversation(conversationId: string) {
   return recoverConversationCapability(conversationId, {
     getRuntimeScope: context.getRuntimeScope,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
+    buildLiveSessionResourceOptionsAsync: context.buildLiveSessionResourceOptionsAsync,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
   });
@@ -1894,8 +2094,6 @@ export async function updateDesktopConversationModelPreferences(input: {
 }
 
 export async function readDesktopLiveSession(conversationId: string) {
-  await getLocalRoutes();
-
   const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, '404 Not Found');
   assertLiveConversationExists(
     { conversationId: normalizedConversationId, isLive: isLiveSession(normalizedConversationId) },
@@ -1910,8 +2108,12 @@ export async function readDesktopLiveSession(conversationId: string) {
   return buildDesktopLiveSessionResponse(entry);
 }
 
+export async function prewarmDesktopLiveSessionOptions(): Promise<{ ok: true }> {
+  return prewarmLiveSessionCapability({}, await getLocalLiveSessionCapabilityContext());
+}
+
 export async function readDesktopLiveSessionForkEntries(conversationId: string): Promise<Array<{ entryId: string; text: string }>> {
-  await getLocalRoutes();
+  await getLocalContexts();
 
   const normalizedConversationId = normalizeRequiredLiveConversationId(conversationId, 'Session not live');
 
@@ -1942,47 +2144,16 @@ export async function readDesktopLiveSessionContext(conversationId: string) {
 export async function readDesktopSessionDetail(input: {
   sessionId: string;
   tailBlocks?: number;
-  includeToolBlocks?: boolean;
   knownSessionSignature?: string;
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
   knownLastBlockId?: string;
 }) {
   const context = await getLocalLiveSessionCapabilityContext();
-  const sessionId = input.sessionId.trim();
-  const currentSessionSignature = readConversationSessionSignature(sessionId);
-  const unchangedSessionCheck = { knownSessionSignature: input.knownSessionSignature, currentSessionSignature };
-  if (shouldReturnUnchangedSessionDetail(unchangedSessionCheck)) {
-    return buildUnchangedSessionDetailResponse({ sessionId, signature: unchangedSessionCheck.currentSessionSignature });
-  }
-
-  const { sessionRead } = await readSessionDetailForRoute({
-    conversationId: sessionId,
+  return readSessionDetailRouteResponse({
+    ...input,
     profile: context.getRuntimeScope(),
-    tailBlocks: input.tailBlocks,
-    includeToolBlocks: input.includeToolBlocks,
   });
-  if (!sessionRead.detail) {
-    throw new Error('Session not found');
-  }
-
-  const appendOnly = shouldBuildAppendOnlySessionDetail({
-    knownSessionSignature: input.knownSessionSignature,
-    nextSessionSignature: sessionRead.detail.signature,
-  })
-    ? buildAppendOnlyConversationDetailResponse({
-        detail: sessionRead.detail,
-        knownBlockOffset: input.knownBlockOffset,
-        knownTotalBlocks: input.knownTotalBlocks,
-        knownLastBlockId: input.knownLastBlockId,
-      })
-    : null;
-
-  if (appendOnly) {
-    return inlineConversationSessionDetailAppendOnlyAssetsCapability(sessionId, appendOnly);
-  }
-
-  return inlineConversationSessionDetailAssetsCapability(sessionId, sessionRead.detail);
 }
 
 export async function readDesktopSessionBlock(input: { sessionId: string; blockId: string }) {
@@ -2038,9 +2209,10 @@ export async function createDesktopLiveSession(input: {
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
   allowedToolNames?: string[];
+  reservedSessionFile?: string;
 }): Promise<{ id: string; sessionFile: string; bootstrap?: unknown; perf?: Record<string, number> }> {
   const startedAtMs = performance.now();
-  const context = await getLocalLiveSessionCapabilityContext();
+  const { context, perf: contextSetupPerf } = await getLocalLiveSessionCapabilityContextWithPerf();
   const contextReadyAtMs = performance.now();
   const created = await createLiveSessionCapability(input, context);
   const createdAtMs = performance.now();
@@ -2075,13 +2247,30 @@ export async function createDesktopLiveSession(input: {
       contextReadyAtMs,
       createdAtMs,
       returnedAtMs: performance.now(),
+      contextSetupPerf,
       capabilityPerf: created.perf,
     }),
   };
 }
 
-export async function resumeDesktopLiveSession(input: { sessionFile: string; cwd?: string }): Promise<{ id: string }> {
-  return resumeLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
+export async function resumeDesktopLiveSession(input: {
+  sessionFile: string;
+  cwd?: string;
+}): Promise<{ id: string; perf?: Record<string, number> }> {
+  const startedAtMs = performance.now();
+  const { context, perf: contextSetupPerf } = await getLocalLiveSessionCapabilityContextWithPerf();
+  const contextReadyAtMs = performance.now();
+  const resumed = await resumeLiveSessionCapability(input, context);
+  const resumedAtMs = performance.now();
+  return {
+    ...resumed,
+    perf: {
+      ...contextSetupPerf,
+      contextMs: Math.round(contextReadyAtMs - startedAtMs),
+      ...(resumed.perf ?? {}),
+      totalBeforeReturnMs: Math.round(resumedAtMs - startedAtMs),
+    },
+  };
 }
 
 export async function submitDesktopLiveSessionPrompt(input: {
@@ -2189,7 +2378,16 @@ export async function destroyDesktopLiveSession(conversationId: string): Promise
 }
 
 export async function branchDesktopLiveSession(input: { conversationId: string; entryId: string; surfaceId?: string }) {
-  return branchLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
+  const context = await getLocalLiveSessionCapabilityContext();
+  const branched = await branchLiveSessionCapability(input, context);
+  const bootstrap = await readForkedDesktopConversationBootstrap({
+    conversationId: branched.newSessionId,
+    profile: context.getRuntimeScope(),
+  });
+  return {
+    ...branched,
+    ...(bootstrap ? { bootstrap } : {}),
+  };
 }
 
 export async function forkDesktopLiveSession(input: {
@@ -2200,7 +2398,28 @@ export async function forkDesktopLiveSession(input: {
   branchKind?: 'fork' | 'rewind';
   surfaceId?: string;
 }) {
-  return forkLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());
+  const startedAtMs = performance.now();
+  const { context, perf: contextSetupPerf } = await getLocalLiveSessionCapabilityContextWithPerf();
+  const contextReadyAtMs = performance.now();
+  const forked = await forkLiveSessionCapability(input, context);
+  const forkedAtMs = performance.now();
+  const bootstrap = await readForkedDesktopConversationBootstrap({
+    conversationId: forked.newSessionId,
+    profile: context.getRuntimeScope(),
+  });
+  const bootstrapAtMs = performance.now();
+  return {
+    ...forked,
+    ...(bootstrap ? { bootstrap } : {}),
+    perf: {
+      ...contextSetupPerf,
+      contextMs: Math.round(contextReadyAtMs - startedAtMs),
+      ...(forked.perf ?? {}),
+      totalBeforeReturnMs: Math.round(forkedAtMs - startedAtMs),
+      bootstrapMs: Math.round(bootstrapAtMs - forkedAtMs),
+      totalWithBootstrapMs: Math.round(bootstrapAtMs - startedAtMs),
+    },
+  };
 }
 
 export async function forkDesktopConversation(input: {

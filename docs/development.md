@@ -62,7 +62,15 @@ Desktop performance smoke:
 pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30
 ```
 
-This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, draft submit click-to-visible timing, route switches, model fetch, conversation search, long-transcript open, basic interaction timing, and renderer heap delta. `appUsableMs` is the startup readiness gate: it waits for React hydration, an enabled composer, and the extension registry/critical extension UI to be available. `startupReadyMs` and `appHydratedMs` are diagnostic paint/hydration timings, not sufficient readiness on their own. `draftSubmitVisibleMs` measures from clicking Send on `/conversations/new` until the submitted prompt is visible on the saved conversation route; setup time to navigate to the draft page is reported separately as `draftSubmitSetupMs`. Use `--draft-submit-wait-ms=<ms>` to simulate a user waiting/typing before sending. For release candidates, use:
+This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, draft submit click-to-visible timing, pending prompt paint, route switches, model fetch, conversation search, long-transcript open, previous-page loading, recovery, fork/rewind creation and open-time checks, basic interaction timing, and renderer heap delta. Pass `--skip-fork` only for a deliberately narrower local run. `appUsableMs` is the startup readiness gate: it waits for React hydration, an enabled composer, and the extension registry/critical extension UI to be available. `startupReadyMs` and `appHydratedMs` are diagnostic paint/hydration timings, not sufficient readiness on their own. `draftSubmitVisibleMs` measures from clicking Send on `/conversations/new` until the submitted prompt is visible on the saved conversation route; setup time to navigate to the draft page is reported separately as `draftSubmitSetupMs`. `draftSubmitPendingPromptBlockVisibleMs`, `longTranscriptLoadPreviousMs`, repeated conversation switch max, recovery/open timings, and fork/rewind open timings are enforced separately so regressions do not hide inside a broad pass. The smoke refuses stale desktop UI/server/main bundles for the source files it covers; rebuild the touched bundle first when it reports a stale output.
+
+For local iteration on transcript/new-conversation latency, prefer the Testing app instead of RC so release state stays untouched:
+
+```bash
+pnpm run perf:desktop -- --app="$PWD/dist/dev-desktop/Neon Pilot Testing.app" --sessions=400 --blocks=5000 --seconds=3 --idle-settle-ms=5000
+```
+
+Use `--draft-submit-wait-ms=<ms>` to simulate a user waiting/typing before sending. For release candidates, use:
 
 ```bash
 pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120

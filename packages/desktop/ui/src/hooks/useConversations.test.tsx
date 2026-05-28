@@ -18,6 +18,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMocks = vi.hoisted(() => ({
   openConversationTabs: vi.fn(),
+  sessionMeta: vi.fn(),
   setOpenConversationTabs: vi.fn(),
 }));
 
@@ -76,6 +77,21 @@ function HookProbe() {
   return null;
 }
 
+function mergeSessions(previous: SessionMeta[] | null, items: SessionMeta[]): SessionMeta[] {
+  const next = [...(previous ?? [])];
+  const indexes = new Map(next.map((session, index) => [session.id, index]));
+  for (const item of items) {
+    const index = indexes.get(item.id);
+    if (index === undefined) {
+      indexes.set(item.id, next.length);
+      next.push(item);
+    } else {
+      next[index] = item;
+    }
+  }
+  return next;
+}
+
 function renderProbe(input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -114,6 +130,54 @@ function renderProbeIntoRoot(
   });
 }
 
+function StatefulHookProbeProviders({
+  input,
+}: {
+  input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> };
+}) {
+  const [sessions, setSessionsState] = React.useState<SessionMeta[] | null>(input.sessions);
+  const setSessions = React.useCallback((items: SessionMeta[]) => {
+    setSessionsState((previous) => mergeSessions(previous, items));
+  }, []);
+
+  return (
+    <SseConnectionContext.Provider value={{ status: 'offline' }}>
+      <AppDataContext.Provider
+        value={{
+          projects: null,
+          sessions,
+          tasks: input.tasks,
+          runs: null,
+          setProjects: () => {},
+          setSessions,
+          setTasks: () => {},
+          setRuns: () => {},
+        }}
+      >
+        <LiveTitlesContext.Provider value={{ titles: input.liveTitles ?? new Map(), setTitle: () => {} }}>
+          <HookProbe />
+        </LiveTitlesContext.Provider>
+      </AppDataContext.Provider>
+    </SseConnectionContext.Provider>
+  );
+}
+
+function renderStatefulProbe(input: {
+  sessions: SessionMeta[] | null;
+  tasks: ScheduledTaskSummary[] | null;
+  liveTitles?: Map<string, string>;
+}) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(<StatefulHookProbeProviders input={input} />);
+  });
+
+  mountedRoots.push(root);
+}
+
 async function flushAsyncWork() {
   await act(async () => {
     await Promise.resolve();
@@ -126,6 +190,7 @@ describe('useConversations', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createStorage());
     apiMocks.openConversationTabs.mockReset();
+    apiMocks.sessionMeta.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: [],
@@ -142,6 +207,7 @@ describe('useConversations', () => {
       activeConversationId: null,
       workspacePaths: [],
     });
+    apiMocks.sessionMeta.mockImplementation(async (id: string) => createSession({ id, title: `Loaded ${id}` }));
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
@@ -210,6 +276,44 @@ describe('useConversations', () => {
     expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+  });
+
+  it('hydrates remote layout when local layout is empty', async () => {
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['remote-conv'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: 'remote-conv',
+      workspacePaths: [],
+    });
+
+    renderProbe({
+      sessions: [createSession({ id: 'remote-conv', title: 'Remote conversation' })],
+      tasks: null,
+    });
+
+    expect(latestHookResult?.layoutHydrating).toBe(true);
+    await flushAsyncWork();
+
+    expect(apiMocks.openConversationTabs).toHaveBeenCalledTimes(1);
+    expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['remote-conv']);
+    expect(latestHookResult?.activeId).toBe('remote-conv');
+    expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('remote-conv');
+  });
+
+  it('loads row metadata for locally open ids before the full sessions snapshot arrives', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-one']));
+
+    renderStatefulProbe({
+      sessions: null,
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    expect(apiMocks.sessionMeta).toHaveBeenCalledWith('open-one');
+    expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Loaded open-one']);
+    expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-one']);
   });
 
   it('does not let stale remote layout sync close locally visible live conversation tabs', async () => {

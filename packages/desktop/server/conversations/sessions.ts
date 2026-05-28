@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync } from 'node:fs';
+import { appendFileSync, closeSync, type Dirent, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -27,11 +27,6 @@ import {
   writeConversationAssetCache,
   writeConversationDetailCache,
 } from './conversationCatalog.js';
-import {
-  attachTranscriptRenderItems,
-  buildTranscriptRenderItemsFromDisplayBlocks,
-  type TranscriptRenderItem,
-} from './conversationTranscriptProjection.js';
 import { buildAppendOnlySessionDetailResponse as buildAppendOnlySessionDetailResponseValue } from './sessionAppendOnly.js';
 import { decorateSessionAssetUrls as decorateSessionAssetUrlsForBlocks } from './sessionAssetUrls.js';
 import { getAssistantErrorDisplayMessage as getAssistantErrorDisplayMessageValue } from './sessionAssistantErrors.js';
@@ -74,6 +69,11 @@ import {
 } from './sessionHeavyContent.js';
 import { readCurrentSessionLeafIdFromFile, readSessionIdFromSessionRecordFile } from './sessionIdentity.js';
 import { buildSessionImageAssets, imageMimeType, imageSrc } from './sessionImages.js';
+import {
+  attachTranscriptRenderItems,
+  buildTranscriptRenderItemsFromDisplayBlocks,
+  type TranscriptRenderItem,
+} from './transcriptRenderItems.js';
 export type { SessionImageAsset } from './sessionImages.js';
 import { buildSessionIndexKey, shouldReloadPersistentSessionIndex } from './sessionIndexKey.js';
 import {
@@ -334,6 +334,7 @@ export interface SessionDetailReadTelemetry {
   totalBlocks: number;
   blockOffset: number;
   contextUsageIncluded: boolean;
+  phases?: Record<string, number>;
   /** True when a cache miss was caused by file modification (not just append). */
   modificationDetected?: boolean;
 }
@@ -461,6 +462,16 @@ const sessionSearchTextCache = new LRUMap<string, CachedSessionSearchText>(MAX_S
 let sessionFileById = new Map<string, string>();
 let loadedPersistentIndexKey: string | null = null;
 let persistedIndexJson: string | null = null;
+let lastFastTailScanStats: {
+  linesVisited: number;
+  displayLinesRetained: number;
+  scanMs: number;
+  entryBuildMs: number;
+  blockBuildMs: number;
+  assetDecorateMs: number;
+  topologyMs: number;
+  deferMs: number;
+} | null = null;
 // Set to true whenever the session cache is mutated so persistSessionIndex() can
 // skip the expensive JSON build-and-compare on unchanged scans.
 let sessionCacheDirty = false;
@@ -472,7 +483,10 @@ export async function flushSessionIndexWrite(): Promise<void> {
 }
 
 const MAX_SESSION_DETAIL_CACHE_ENTRIES = 24;
-const FAST_TAIL_EXACT_COUNT_MAX_BYTES = 2 * 1024 * 1024;
+
+function elapsedMsSince(startedAt: bigint): number {
+  return Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+}
 
 // ── Parsing ────────────────────────────────────────────────────────────────────
 
@@ -590,6 +604,10 @@ function tryReadSessionTailBlocksByFile(
   tailBlocks: number,
   options: { exactCounts?: boolean } = {},
 ): SessionDetail | null {
+  if (!options.exactCounts) {
+    return tryReadApproximateSessionTailBlocksByFile(filePath, meta, tailBlocks);
+  }
+
   const branchDisplayEntries: TailScanDisplayEntrySummary[] = [];
   let pendingEntryId: string | null | undefined;
   let scannedVisibleBlockCount = 0;
@@ -688,13 +706,117 @@ function tryReadSessionTailBlocksByFile(
 
   const rebasedBlocks = rebaseDisplayBlockIds(buildDisplayBlocksFromEntries(detailEntries), droppedVisibleBlockCount);
   const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
+  const allMetas = scanSessionMetas();
   const blocksWithTopology = addParentConversationBacklink(
-    mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithAssets, meta), meta),
+    mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithAssets, meta, allMetas), meta, allMetas),
     meta,
+    allMetas,
   );
   const topologyBlockCount = Math.max(0, blocksWithTopology.length - blocksWithAssets.length);
   const totalBlocksWithTopology = totalBlocks + topologyBlockCount;
   const blocks = deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology);
+
+  return {
+    meta,
+    blocks,
+    blockOffset: droppedVisibleBlockCount,
+    totalBlocks: totalBlocksWithTopology,
+    contextUsage: null,
+  };
+}
+
+function tryReadApproximateSessionTailBlocksByFile(filePath: string, meta: SessionMeta, tailBlocks: number): SessionDetail | null {
+  const retainedRawLines: string[] = [];
+  let pendingEntryId: string | null | undefined;
+  let linesVisited = 0;
+
+  const scanStartedAt = process.hrtime.bigint();
+  try {
+    readFileLinesReverse(filePath, (rawLine) => {
+      const trimmedLine = rawLine.trim();
+      if (!trimmedLine) {
+        return;
+      }
+
+      linesVisited += 1;
+      const sanitizedLine = sanitizeSessionLineForSummary(trimmedLine);
+      const parsed = parseJsonLine(sanitizedLine) as unknown;
+      if (!parsed || typeof parsed !== 'object') {
+        return;
+      }
+
+      const id = 'id' in parsed && typeof parsed.id === 'string' ? parsed.id : null;
+      const parentId =
+        'parentId' in parsed && (typeof parsed.parentId === 'string' || parsed.parentId === null) ? parsed.parentId : undefined;
+      if (!id || parentId === undefined) {
+        return;
+      }
+
+      if (pendingEntryId === undefined) {
+        pendingEntryId = id;
+      }
+
+      if (id !== pendingEntryId) {
+        return;
+      }
+
+      pendingEntryId = parentId;
+      if (isRawDisplayLine(parsed as RawLine)) {
+        retainedRawLines.push(rawLine);
+      }
+
+      return pendingEntryId !== null && retainedRawLines.length < tailBlocks;
+    });
+  } catch {
+    return null;
+  }
+  const scanMs = elapsedMsSince(scanStartedAt);
+
+  const entryBuildStartedAt = process.hrtime.bigint();
+  const chronologicalEntries = retainedRawLines
+    .slice()
+    .reverse()
+    .map((line) => parseJsonLine(line))
+    .filter((entry): entry is RawDisplayLine => entry !== null && isRawDisplayLine(entry))
+    .map((entry) => buildDisplayMessageEntryFromRawLine(entry));
+  const suppressedEntryIds = collectSuppressedTranscriptEntryIds(chronologicalEntries);
+  const visibleEntries = chronologicalEntries.filter((entry) => !suppressedEntryIds.has(entry.id));
+  const entryBuildMs = elapsedMsSince(entryBuildStartedAt);
+
+  const blockBuildStartedAt = process.hrtime.bigint();
+  const allTailBlocks = buildDisplayBlocksFromEntries(visibleEntries);
+  const totalBlocks = Math.max(meta.messageCount, allTailBlocks.length);
+  const tailBlockLimit = Math.min(tailBlocks, totalBlocks);
+  const retainedBlocks = allTailBlocks.length > tailBlockLimit ? allTailBlocks.slice(allTailBlocks.length - tailBlockLimit) : allTailBlocks;
+  const droppedVisibleBlockCount = Math.max(0, totalBlocks - retainedBlocks.length);
+  const rebasedBlocks = rebaseDisplayBlockIds(retainedBlocks, droppedVisibleBlockCount);
+  const blockBuildMs = elapsedMsSince(blockBuildStartedAt);
+
+  const assetDecorateStartedAt = process.hrtime.bigint();
+  const blocksWithAssets = decorateSessionAssetUrls(rebasedBlocks, meta.id);
+  const assetDecorateMs = elapsedMsSince(assetDecorateStartedAt);
+
+  // Fast-tail reads are the route-critical path for opening a conversation.
+  // Topology/backlink enrichment requires scanning every session meta, which is
+  // unrelated to showing the latest transcript page and can dominate large
+  // workspaces. Full reads still enrich topology when older context is loaded.
+  const blocksWithTopology = blocksWithAssets;
+  const totalBlocksWithTopology = totalBlocks;
+  const topologyMs = 0;
+
+  const deferStartedAt = process.hrtime.bigint();
+  const blocks = deferHeavyBlockContent(blocksWithTopology, droppedVisibleBlockCount, totalBlocksWithTopology);
+  const deferMs = elapsedMsSince(deferStartedAt);
+  lastFastTailScanStats = {
+    linesVisited,
+    displayLinesRetained: retainedRawLines.length,
+    scanMs,
+    entryBuildMs,
+    blockBuildMs,
+    assetDecorateMs,
+    topologyMs,
+    deferMs,
+  };
 
   return {
     meta,
@@ -1104,7 +1226,11 @@ function decorateSessionAssetUrls(blocks: DisplayBlock[], sessionId: string): Di
   return decorateSessionAssetUrlsForBlocks(blocks, sessionId) as DisplayBlock[];
 }
 
-function buildChildConversationTopologyBlocks(meta: SessionMeta, existingBlocks: DisplayBlock[] = []): DisplayBlock[] {
+function buildChildConversationTopologyBlocks(
+  meta: SessionMeta,
+  existingBlocks: DisplayBlock[] = [],
+  allMetas: SessionMeta[] = scanSessionMetas(),
+): DisplayBlock[] {
   const existingChildIds = new Set(
     existingBlocks
       .map((block) =>
@@ -1114,7 +1240,7 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta, existingBlocks:
       )
       .filter((id): id is string => Boolean(id)),
   );
-  const children = scanSessionMetas()
+  const children = allMetas
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
     .filter((child) => !existingChildIds.has(child.id))
     .filter((child) => {
@@ -1139,8 +1265,8 @@ function buildChildConversationTopologyBlocks(meta: SessionMeta, existingBlocks:
   });
 }
 
-function enrichSubagentToolBlocks(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
-  const subagentChildren = scanSessionMetas().filter(
+function enrichSubagentToolBlocks(blocks: DisplayBlock[], meta: SessionMeta, allMetas: SessionMeta[] = scanSessionMetas()): DisplayBlock[] {
+  const subagentChildren = allMetas.filter(
     (child) =>
       child.id !== meta.id &&
       (child.parentSessionId === meta.id || child.parentSessionFile === meta.file) &&
@@ -1165,12 +1291,12 @@ function enrichSubagentToolBlocks(blocks: DisplayBlock[], meta: SessionMeta): Di
   });
 }
 
-function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
-  const children = scanSessionMetas()
+function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta, allMetas: SessionMeta[] = scanSessionMetas()): DisplayBlock[] {
+  const children = allMetas
     .filter((child) => child.id !== meta.id && (child.parentSessionId === meta.id || child.parentSessionFile === meta.file))
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
   const childById = new Map(children.map((child) => [child.id, child] as const));
-  const topologyBlocks = buildChildConversationTopologyBlocks(meta, blocks);
+  const topologyBlocks = buildChildConversationTopologyBlocks(meta, blocks, allMetas);
   if (topologyBlocks.length === 0) {
     return blocks;
   }
@@ -1194,7 +1320,11 @@ function mergeTopologyBlocks(blocks: DisplayBlock[], meta: SessionMeta): Display
   return [...merged, ...remainingTopologyBlocks];
 }
 
-function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta): DisplayBlock[] {
+function addParentConversationBacklink(
+  blocks: DisplayBlock[],
+  meta: SessionMeta,
+  allMetas: SessionMeta[] = scanSessionMetas(),
+): DisplayBlock[] {
   const existingBacklink = blocks.find(
     (block) => block.type === 'context' && block.customType === PARENT_CONVERSATION_BACKLINK_CUSTOM_TYPE,
   );
@@ -1206,7 +1336,7 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
   const parentId = meta.parentSessionId?.trim() || (meta.parentSessionFile ? resolveSessionIdByFile(meta.parentSessionFile) : undefined);
   if (!parentId) return blocks;
   const label = kind === 'subagent' ? 'Subagent' : kind.charAt(0).toUpperCase() + kind.slice(1);
-  const parentMeta = scanSessionMetas().find((m) => m.id === parentId);
+  const parentMeta = allMetas.find((m) => m.id === parentId);
   const parentTitle = parentMeta?.title?.trim() || parentId;
   const backlink: DisplayBlock =
     existingBacklink ??
@@ -1249,30 +1379,6 @@ function addParentConversationBacklink(blocks: DisplayBlock[], meta: SessionMeta
 
 function findLastBlockIndex(blocks: DisplayBlock[], predicate: (block: DisplayBlock) => boolean): number {
   return findLastBlockIndexValue(blocks, predicate);
-}
-
-function refreshSessionDetailTopology(detail: SessionDetail): SessionDetail {
-  const blocksWithoutTopology = detail.blocks.filter(
-    (block) =>
-      !(block.type === 'context' && block.customType === CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE && block.id.startsWith('topology-child-')),
-  );
-  const previousTopologyBlockCount = detail.blocks.length - blocksWithoutTopology.length;
-  const blocks = addParentConversationBacklink(
-    mergeTopologyBlocks(enrichSubagentToolBlocks(blocksWithoutTopology, detail.meta), detail.meta),
-    detail.meta,
-  );
-  const topologyBlockCount = blocks.length - blocksWithoutTopology.length;
-
-  if (previousTopologyBlockCount === topologyBlockCount && blocks === detail.blocks) {
-    return detail;
-  }
-
-  return {
-    ...detail,
-    blocks,
-    totalBlocks: Math.max(0, detail.totalBlocks - previousTopologyBlockCount + topologyBlockCount),
-    renderItems: buildTranscriptRenderItemsFromDisplayBlocks(blocks),
-  };
 }
 
 const RECENT_HEAVY_CONTENT_BLOCK_COUNT = 80;
@@ -1340,6 +1446,16 @@ function deferSessionDetailBlocksToPayloadBudget(blocks: DisplayBlock[], maxBloc
 
 function extractTitleFromMessage(message: RawMessage['message']): string | null {
   return extractTitleFromMessageValue(message);
+}
+
+function stripOffshootTitlePrefix(title: string, kind?: ConversationOffshootKind): string {
+  const normalizedKind = kind?.trim().toLowerCase();
+  if (normalizedKind !== 'fork' && normalizedKind !== 'rewind' && normalizedKind !== 'duplicate') {
+    return title;
+  }
+
+  const withoutPrefix = title.replace(/^(?:fork|rewind|duplicate)\s*:\s*/i, '').trim();
+  return withoutPrefix || title;
 }
 
 function isNeutralChatWorkspaceCwd(cwd: string): boolean {
@@ -1496,8 +1612,8 @@ export function appendChildConversationTopologyEntry(input: {
   kind: ConversationOffshootKind;
   parentMessageId?: string;
 }): void {
-  const childMeta = readSessionMeta(input.childSessionId);
   const label = input.kind === 'subagent' ? 'Subagent' : input.kind.charAt(0).toUpperCase() + input.kind.slice(1);
+  const childLabel = input.childTitle?.trim() || input.childSessionId;
   const sourcePreview = input.parentMessageId ? readSessionEntryPreview(input.parentSessionFile, input.parentMessageId) : null;
   const leafId = readCurrentSessionLeafId(input.parentSessionFile);
   appendFileSync(
@@ -1508,7 +1624,7 @@ export function appendChildConversationTopologyEntry(input: {
         parentId: leafId,
         timestamp: new Date().toISOString(),
         customType: CHILD_CONVERSATION_TOPOLOGY_CUSTOM_TYPE,
-        content: `${label} conversation created: ${input.childTitle?.trim() || childMeta?.title?.trim() || input.childSessionId}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}${sourcePreview ? `\nSource preview: ${sourcePreview}` : ''}`,
+        content: `${label} conversation created: ${childLabel}\nOpen: /conversations/${input.childSessionId}\nConversation: ${input.childSessionId}${input.parentMessageId ? `\nSource message: ${input.parentMessageId}` : ''}${sourcePreview ? `\nSource preview: ${sourcePreview}` : ''}`,
       }),
     ),
     'utf-8',
@@ -1658,6 +1774,11 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
       return;
     }
 
+    if (line.type === 'compaction' || line.type === 'branch_summary') {
+      messageCount += 1;
+      return;
+    }
+
     if (line.type === 'custom') {
       workspaceMetadata = readConversationWorkspaceMetadata(line as RawCustomEntry) ?? workspaceMetadata;
       offshootMetadata = readConversationOffshootMetadata(line as RawCustomEntry) ?? offshootMetadata;
@@ -1702,6 +1823,9 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
         ? null
         : undefined);
 
+  const offshootKind = resolvedOffshootMetadata?.kind ?? (sourceRunId ? ('subagent' as const) : undefined);
+  const rawTitle = (sawSessionInfo ? namedTitle : null) ?? fallbackTitle ?? 'New Conversation';
+
   return {
     id: resolvedSessionRecord.id,
     file: filePath,
@@ -1710,16 +1834,12 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
     cwdSlug,
     model,
-    title: (sawSessionInfo ? namedTitle : null) ?? fallbackTitle ?? 'New Conversation',
+    title: stripOffshootTitlePrefix(rawTitle, offshootKind),
     messageCount,
     ...(parentSessionFile ? { parentSessionFile } : {}),
     ...(resolvedOffshootMetadata?.parentSessionId ? { parentSessionId: resolvedOffshootMetadata.parentSessionId } : {}),
     ...(resolvedOffshootMetadata?.parentMessageId ? { parentMessageId: resolvedOffshootMetadata.parentMessageId } : {}),
-    ...(resolvedOffshootMetadata?.kind
-      ? { offshootKind: resolvedOffshootMetadata.kind }
-      : sourceRunId
-        ? { offshootKind: 'subagent' as const }
-        : {}),
+    ...(offshootKind ? { offshootKind } : {}),
     ...(resolvedOffshootMetadata?.timestamp ? { offshootTimestamp: resolvedOffshootMetadata.timestamp } : {}),
     ...(sourceRunId ? { sourceRunId } : {}),
   };
@@ -1882,6 +2002,43 @@ function scanSessionMetas(): SessionMeta[] {
   return decoratedMetas;
 }
 
+function resolveSessionMetaByConventionalFileName(sessionId: string): SessionMeta | null {
+  if (!sessionId || sessionId.includes('/') || sessionId.includes('\\')) {
+    return null;
+  }
+
+  const sessionsDir = resolveSessionsDir();
+  if (!existsSync(sessionsDir)) {
+    return null;
+  }
+
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(sessionsDir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const filePath = join(sessionsDir, entry.name, `${sessionId}.jsonl`);
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const meta = readCachedSessionMeta(filePath, resolveSessionFileCwdSlug(filePath));
+    if (meta?.id === sessionId) {
+      sessionFileById.set(sessionId, filePath);
+      return meta;
+    }
+  }
+
+  return null;
+}
+
 function resolveSessionMeta(sessionId: string): SessionMeta | null {
   ensurePersistentIndexLoaded();
 
@@ -1891,6 +2048,11 @@ function resolveSessionMeta(sessionId: string): SessionMeta | null {
     if (cachedMeta?.id === sessionId) {
       return cachedMeta;
     }
+  }
+
+  const conventionalMeta = resolveSessionMetaByConventionalFileName(sessionId);
+  if (conventionalMeta) {
+    return conventionalMeta;
   }
 
   const metas = scanSessionMetas();
@@ -2127,33 +2289,20 @@ export function readSessionBlocksByFileWithTelemetry(
   }
 
   const requestedTailBlocks = normalizeTailBlockRequest(options?.tailBlocks);
-  const cachedDbDetail = readConversationDetailCache(readKnownSessionIdByFilePath(filePath) ?? filePath, signature, {
-    tailBlocks: requestedTailBlocks,
-  });
-  if (cachedDbDetail) {
-    const detail = attachTranscriptRenderItems(cachedDbDetail);
-    return {
-      detail,
-      telemetry: buildSessionDetailTelemetry({
-        cache: 'hit',
-        loader: detail.contextUsage === null && typeof requestedTailBlocks === 'number' ? 'fast-tail' : 'full',
-        startedAt,
-        requestedTailBlocks,
-        totalBlocks: detail.totalBlocks,
-        blockOffset: detail.blockOffset,
-        contextUsageIncluded: detail.contextUsage !== null,
-      }),
-    };
-  }
   const cacheKey = buildSessionDetailCacheKey(filePath, requestedTailBlocks);
   const cachedDetail = sessionDetailCache.get(cacheKey);
+  const cacheLookupAt = process.hrtime.bigint();
 
   // ── Cache hit ────────────────────────────────────────────────────────────────
   if (cachedDetail?.signature === signature) {
+    const cacheHitStartedAt = process.hrtime.bigint();
     sessionDetailCache.delete(cacheKey);
-    const detailWithFreshTopology = attachTranscriptRenderItems(refreshSessionDetailTopology(cachedDetail.detail));
-    const detail = detailWithFreshTopology.signature === signature ? detailWithFreshTopology : { ...detailWithFreshTopology, signature };
+    const cacheDeleteAt = process.hrtime.bigint();
+    const detailWithRenderItems = attachTranscriptRenderItems(cachedDetail.detail);
+    const renderItemsAttachedAt = process.hrtime.bigint();
+    const detail = detailWithRenderItems.signature === signature ? detailWithRenderItems : { ...detailWithRenderItems, signature };
     sessionDetailCache.set(cacheKey, { ...cachedDetail, detail });
+    const cacheSetAt = process.hrtime.bigint();
     return {
       detail,
       telemetry: {
@@ -2165,12 +2314,38 @@ export function readSessionBlocksByFileWithTelemetry(
           totalBlocks: detail.totalBlocks,
           blockOffset: detail.blockOffset,
           contextUsageIncluded: detail.contextUsage !== null,
+          phases: {
+            signatureAndCacheLookupMs: Number(cacheLookupAt - startedAt) / 1_000_000,
+            cacheDeleteMs: Number(cacheDeleteAt - cacheHitStartedAt) / 1_000_000,
+            attachRenderItemsMs: Number(renderItemsAttachedAt - cacheDeleteAt) / 1_000_000,
+            cacheSetMs: Number(cacheSetAt - renderItemsAttachedAt) / 1_000_000,
+          },
         }),
       },
     };
   }
 
+  const cachedDbDetail =
+    typeof requestedTailBlocks === 'number'
+      ? null
+      : readConversationDetailCache(readKnownSessionIdByFilePath(filePath) ?? filePath, signature);
+  if (cachedDbDetail) {
+    const detail = attachTranscriptRenderItems(cachedDbDetail);
+    return {
+      detail,
+      telemetry: buildSessionDetailTelemetry({
+        cache: 'hit',
+        loader: 'full',
+        startedAt,
+        totalBlocks: detail.totalBlocks,
+        blockOffset: detail.blockOffset,
+        contextUsageIncluded: detail.contextUsage !== null,
+      }),
+    };
+  }
+
   // ── Cache miss — detect modification ─────────────────────────────────────────
+  const modificationCheckStartedAt = process.hrtime.bigint();
   let telemetryModificationDetected = false;
   if (cachedDetail?.contentHash) {
     const oldSize = parseSignatureSize(cachedDetail.signature);
@@ -2196,30 +2371,35 @@ export function readSessionBlocksByFileWithTelemetry(
       }
     }
   }
+  const modificationCheckMs = elapsedMsSince(modificationCheckStartedAt);
 
+  const metaReadStartedAt = process.hrtime.bigint();
   const meta = readCachedSessionMeta(filePath, resolveSessionFileCwdSlug(filePath));
   if (!meta) return { detail: null, telemetry: null };
+  const metaReadMs = elapsedMsSince(metaReadStartedAt);
 
-  const shouldReadExactTailCounts =
-    (parseSignatureSize(signature) ?? Number.POSITIVE_INFINITY) <= FAST_TAIL_EXACT_COUNT_MAX_BYTES ||
-    (typeof requestedTailBlocks === 'number' && requestedTailBlocks > meta.messageCount);
+  const fastTailStartedAt = process.hrtime.bigint();
   const fastTailDetail =
     typeof requestedTailBlocks === 'number' && requestedTailBlocks > 0
       ? tryReadSessionTailBlocksByFile(meta.file, meta, requestedTailBlocks, {
-          exactCounts: shouldReadExactTailCounts,
+          exactCounts: false,
         })
       : null;
+  const fastTailMs = elapsedMsSince(fastTailStartedAt);
   if (fastTailDetail) {
+    const fastTailFinalizeStartedAt = process.hrtime.bigint();
     const detail = {
       ...fastTailDetail,
       signature,
       renderItems: buildTranscriptRenderItemsFromDisplayBlocks(fastTailDetail.blocks),
     } satisfies SessionDetail;
     // Fast-tail reads serve the initial route paint; avoid a full-file hash on
-    // this path and rely on the file signature for exact cache reuse.
+    // this path and rely on the file signature for exact cache reuse. Keep this
+    // cache in memory only; opening and writing the persistent detail DB adds
+    // blocking work to the route that is supposed to be the cheap transcript path.
     sessionDetailCache.set(cacheKey, { signature, contentHash: '', detail });
-    writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
     trimSessionDetailCache();
+    const fastTailFinalizeMs = elapsedMsSince(fastTailFinalizeStartedAt);
     return {
       detail,
       telemetry: {
@@ -2232,19 +2412,41 @@ export function readSessionBlocksByFileWithTelemetry(
           blockOffset: detail.blockOffset,
           contextUsageIncluded: false,
           modificationDetected: telemetryModificationDetected,
+          phases: {
+            modificationCheckMs,
+            metaReadMs,
+            fastTailMs,
+            fastTailFinalizeMs,
+            ...(lastFastTailScanStats
+              ? {
+                  fastTailLinesVisited: lastFastTailScanStats.linesVisited,
+                  fastTailDisplayLinesRetained: lastFastTailScanStats.displayLinesRetained,
+                  fastTailScanMs: lastFastTailScanStats.scanMs,
+                  fastTailEntryBuildMs: lastFastTailScanStats.entryBuildMs,
+                  fastTailBlockBuildMs: lastFastTailScanStats.blockBuildMs,
+                  fastTailAssetDecorateMs: lastFastTailScanStats.assetDecorateMs,
+                  fastTailTopologyMs: lastFastTailScanStats.topologyMs,
+                  fastTailDeferMs: lastFastTailScanStats.deferMs,
+                }
+              : {}),
+          },
         }),
       },
     };
   }
 
+  const fullReadStartedAt = process.hrtime.bigint();
   const manager = SessionManager.open(meta.file);
   const branchEntries = buildDisplayMessageEntriesFromSessionEntries(manager.getBranch());
+  const allMetas = scanSessionMetas();
   const allBlocks = addParentConversationBacklink(
     mergeTopologyBlocks(
-      enrichSubagentToolBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta),
+      enrichSubagentToolBlocks(decorateSessionAssetUrls(buildDisplayBlocksFromEntries(branchEntries), meta.id), meta, allMetas),
       meta,
+      allMetas,
     ),
     meta,
+    allMetas,
   );
   const totalBlocks = allBlocks.length;
   const tailBlockLimit = resolveTailBlockLimit(requestedTailBlocks, totalBlocks);
@@ -2262,10 +2464,13 @@ export function readSessionBlocksByFileWithTelemetry(
     signature,
     renderItems: buildTranscriptRenderItemsFromDisplayBlocks(blocks),
   } satisfies SessionDetail;
+  const fullReadMs = elapsedMsSince(fullReadStartedAt);
 
+  const fullCacheWriteStartedAt = process.hrtime.bigint();
   sessionDetailCache.set(cacheKey, { signature, contentHash, detail });
   writeConversationDetailCache(meta.id, detail, { tailBlocks: requestedTailBlocks });
   trimSessionDetailCache();
+  const fullCacheWriteMs = elapsedMsSince(fullCacheWriteStartedAt);
   return {
     detail,
     telemetry: {
@@ -2278,6 +2483,12 @@ export function readSessionBlocksByFileWithTelemetry(
         blockOffset: detail.blockOffset,
         contextUsageIncluded: true,
         modificationDetected: telemetryModificationDetected,
+        phases: {
+          modificationCheckMs,
+          metaReadMs,
+          fullReadMs,
+          fullCacheWriteMs,
+        },
       }),
     },
   };

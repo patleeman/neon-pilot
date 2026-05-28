@@ -171,7 +171,8 @@ export function upsertConversationCatalogSessions(metas: SessionMeta[]): void {
   write(metas);
 }
 
-export function listConversationCatalogSessions(): SessionMeta[] {
+export function listConversationCatalogSessions(options: { limit?: number } = {}): SessionMeta[] {
+  const limit = Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? options.limit : null;
   const rows = getDb()
     .prepare(
       `
@@ -179,9 +180,10 @@ export function listConversationCatalogSessions(): SessionMeta[] {
         parent_session_file, parent_session_id, parent_message_id, offshoot_kind, offshoot_timestamp, source_run_id
       FROM conversations
       ORDER BY last_activity_at DESC, id DESC
+      ${limit === null ? '' : 'LIMIT ?'}
     `,
     )
-    .all() as ConversationCatalogRow[];
+    .all(...(limit === null ? [] : [limit])) as ConversationCatalogRow[];
   return rows.map(rowToSessionMeta);
 }
 

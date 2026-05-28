@@ -812,6 +812,7 @@ export interface ConversationBootstrapState {
   sessionDetailUnchanged?: boolean;
   sessionDetailAppendOnly?: SessionDetailAppendOnlyResponse | null;
   liveSession: ConversationBootstrapLiveState;
+  extensionMetadataNamespaces?: string[];
   /** True when the session file was modified (not just appended to) since last read. */
   integrityWarning?: boolean;
   perf?: Record<string, number>;
@@ -895,6 +896,13 @@ export interface LiveSessionMeta {
 
 export interface LiveSessionCreateResult {
   id: string;
+  sessionFile: string;
+  bootstrap?: ConversationBootstrapState;
+  perf?: Record<string, number>;
+}
+
+export interface LiveSessionForkResult {
+  newSessionId: string;
   sessionFile: string;
   bootstrap?: ConversationBootstrapState;
   perf?: Record<string, number>;
@@ -1000,6 +1008,7 @@ export interface DesktopConversationState {
   conversationId: string;
   sessionDetail: SessionDetail | null;
   liveSession: ConversationBootstrapLiveState;
+  extensionMetadataNamespaces?: string[];
   stream: DesktopConversationStreamState;
   perf?: Record<string, number>;
 }
