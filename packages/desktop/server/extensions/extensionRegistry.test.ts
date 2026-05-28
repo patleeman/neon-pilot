@@ -136,9 +136,9 @@ describe('extension registry', () => {
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
-  it('does not expose the extension manager as a standalone /extensions route', () => {
+  it('exposes the extension manager as the standalone /extensions route', () => {
     const routes = readExtensionRegistrySnapshot().routes;
-    expect(routes).not.toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/extensions' }));
+    expect(routes).toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/extensions' }));
   });
 
   it('resolves enabled model profiles by provider/model glob and priority', () => {

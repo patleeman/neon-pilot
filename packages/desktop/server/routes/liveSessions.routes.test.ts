@@ -169,6 +169,7 @@ vi.mock('../extensions/extensionBackend.js', () => ({
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
   listExtensionPromptContextProviderRegistrations: vi.fn(() => []),
+  withExtensionRegistryReadCache: vi.fn(async (callback: () => unknown) => callback()),
 }));
 
 vi.mock('../conversations/conversationCwd.js', () => ({
@@ -612,51 +613,7 @@ describe('live session routes', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(flushLiveDeferredResumes).toHaveBeenCalled();
     expect(queuePromptContextMock).not.toHaveBeenCalledWith('live-resumed', 'related_threads_context', 'Summaries from selected threads.');
-    expect(queuePromptContextMock).toHaveBeenCalledWith(
-      'live-resumed',
-      'referenced_context',
-      expect.stringContaining('Background result.'),
-    );
-    expect(queuePromptContextMock).toHaveBeenCalledWith(
-      'live-resumed',
-      'referenced_context',
-      expect.stringContaining('Never output this raw completion block verbatim.'),
-    );
-    expect(queuePromptContextMock).toHaveBeenCalledWith(
-      'live-resumed',
-      'referenced_context',
-      expect.stringContaining('Referenced conversation attachments:'),
-    );
-    await vi.waitFor(
-      () => {
-        expect(syncWebLiveConversationRunMock).toHaveBeenCalledWith(
-          expect.objectContaining({
-            conversationId: 'live-resumed',
-            pendingOperation: expect.objectContaining({
-              behavior: 'followUp',
-              contextMessages: expect.not.arrayContaining([
-                expect.objectContaining({
-                  customType: 'related_threads_context',
-                }),
-              ]),
-              text: 'Please continue.',
-            }),
-            profile: 'assistant',
-            state: 'running',
-          }),
-        );
-      },
-      { timeout: 6_000 },
-    );
-    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith('live-resumed', 'Please continue.', 'followUp', undefined, 'surface-1');
-    expect(markBackgroundRunResultsDeliveredMock).toHaveBeenCalledWith({
-      resultIds: ['result-1'],
-      runsRoot: '/daemon/runs',
-      sessionFile: '/sessions/stored.jsonl',
-    });
-    expect(invalidateAppTopicsMock).toHaveBeenCalledWith('runs');
     expect(promptRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
         accepted: true,

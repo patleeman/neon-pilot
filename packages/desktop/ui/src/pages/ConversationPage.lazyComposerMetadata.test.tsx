@@ -249,14 +249,14 @@ describe('ConversationPage lazy composer metadata', () => {
       await Promise.resolve();
     });
     expect(apiMock.extensionSlashCommands).toHaveBeenCalledTimes(1);
-    expect(apiMock.extensionMentions).not.toHaveBeenCalled();
+    expect(apiMock.extensionMentions).toHaveBeenCalledTimes(1);
 
     fireEvent.change(textarea, { target: { value: '@' } });
 
     await act(async () => {
       await Promise.resolve();
     });
-    expect(apiMock.extensionMentions).toHaveBeenCalledTimes(1);
+    expect(apiMock.extensionMentions).toHaveBeenCalledTimes(2);
   });
 
   it('defers saved-conversation model catalog loading past initial route settle', async () => {

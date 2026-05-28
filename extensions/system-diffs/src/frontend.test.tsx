@@ -31,7 +31,7 @@ vi.mock('react-router-dom', () => ({
   useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
-import { CheckpointTranscriptRenderer } from './frontend.js';
+import { CheckpointTranscriptRenderer } from './panels.js';
 
 describe('CheckpointTranscriptRenderer', () => {
   it('renders an unsupported checkpoint tool block instead of disappearing', () => {

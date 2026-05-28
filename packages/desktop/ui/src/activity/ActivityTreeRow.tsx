@@ -42,7 +42,7 @@ export type ActivityTreeRowProps = {
   rowDropPosition: ActivityTreeDropPosition | null;
 };
 
-export const ActivityTreeRow = memo(function ActivityTreeRow({
+function ActivityTreeRowComponent({
   active,
   canArchive,
   canCreateChild,
@@ -112,7 +112,7 @@ export const ActivityTreeRow = memo(function ActivityTreeRow({
       style={rowStyle}
       data-sidebar-session-id={rowModel.dataSidebarSessionId}
       data-sidebar-group-key={rowModel.dataSidebarGroupKey}
-      title={canDrag ? 'Drag to move conversation' : rowModel.title}
+      title={canDrag ? 'Drag to reorder conversations' : rowModel.title}
       aria-expanded={item.kind === 'group' ? expanded : undefined}
       onClick={() => {
         if (item.kind === 'group') {
@@ -151,5 +151,23 @@ export const ActivityTreeRow = memo(function ActivityTreeRow({
         onOpenContextMenu={onOpenContextMenu}
       />
     </button>
+  );
+}
+
+export const ActivityTreeRow = memo(ActivityTreeRowComponent, (prev, next) => {
+  return (
+    prev.active === next.active &&
+    prev.canArchive === next.canArchive &&
+    prev.canCreateChild === next.canCreateChild &&
+    prev.canDrag === next.canDrag &&
+    prev.childCount === next.childCount &&
+    prev.conversationChildCount === next.conversationChildCount &&
+    prev.depth === next.depth &&
+    prev.dragged === next.dragged &&
+    prev.expanded === next.expanded &&
+    prev.item === next.item &&
+    prev.renderContextMenu === next.renderContextMenu &&
+    prev.rowDropPosition === next.rowDropPosition &&
+    prev.inlineActions === next.inlineActions
   );
 });

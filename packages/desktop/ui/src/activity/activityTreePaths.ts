@@ -8,7 +8,9 @@ interface ActivityTreePathEntry {
 export interface ActivityTreePathModel {
   entries: ActivityTreePathEntry[];
   pathById: Map<string, string>;
+  itemById: Map<string, ActivityTreeItem>;
   itemByPath: Map<string, ActivityTreeItem>;
+  ancestorIdsById: Map<string, string[]>;
   paths: string[];
 }
 
@@ -91,10 +93,27 @@ export function buildActivityTreePathModel(items: readonly ActivityTreeItem[]): 
     visit(item);
   }
 
+  const ancestorIdsById = new Map<string, string[]>();
+  for (const item of items) {
+    const ancestorIds: string[] = [];
+    const seen = new Set<string>();
+    let parentId = item.parentId;
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      const parent = itemById.get(parentId);
+      if (!parent) break;
+      ancestorIds.unshift(parent.id);
+      parentId = parent.parentId;
+    }
+    ancestorIdsById.set(item.id, ancestorIds);
+  }
+
   return {
     entries,
     pathById,
+    itemById,
     itemByPath: new Map(entries.map((entry) => [entry.path, entry.item])),
+    ancestorIdsById,
     paths: entries.map((entry) => entry.path),
   };
 }

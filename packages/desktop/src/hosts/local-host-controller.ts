@@ -127,7 +127,7 @@ function createBackendLocalApiModule(backend: LocalBackendController): LocalApiM
 
         if (property === 'subscribeDesktopAppEvents') {
           return async (onEvent: (event: DesktopAppBridgeEvent) => void) =>
-            backend.subscribeApiStream('/api/app-events/events', (event) => {
+            backend.subscribeApiStream('/api/app-events/events?initialSnapshotTopics=tasks,runs,daemon', (event) => {
               if (event.type === 'open') {
                 onEvent({ type: 'open' });
               } else if (event.type === 'close') {

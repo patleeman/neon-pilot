@@ -3,6 +3,9 @@ import { recordRendererTelemetry } from '../telemetry/appTelemetry';
 interface PerfApiSample {
   path: string;
   recordedAt: string;
+  startTimeMs?: number;
+  endTimeMs?: number;
+  durationMs?: number;
   serverTiming: string | null;
   meta: Record<string, unknown> | null;
 }
@@ -70,10 +73,18 @@ interface PerfStore {
   clientSamples: ClientPerfSample[];
   longTaskSamples: RendererLongTaskSample[];
   interactionSamples: RendererInteractionSample[];
+  activityTreeRenderSamples: ActivityTreeRenderSample[];
   extensionRegistryLoading?: boolean;
   extensionRegistryLoadedAt?: string;
   extensionRegistryLoadedAtMs?: number;
   extensionRegistryCounts?: Record<string, number>;
+}
+
+interface ActivityTreeRenderSample {
+  route: string | null;
+  recordedAt: string;
+  totalRenderCount: number;
+  itemRenderCounts: Array<{ itemId: string; count: number }>;
 }
 
 const MAX_PERF_SAMPLES = 120;
@@ -87,11 +98,14 @@ const perfStore: PerfStore = {
   clientSamples: [],
   longTaskSamples: [],
   interactionSamples: [],
+  activityTreeRenderSamples: [],
 };
 const conversationOpenTrackers = new Map<string, ConversationOpenTracker>();
 const recordedClientPerfTimingOnceNames = new Set<string>();
 let rendererBlockTelemetryStarted = false;
 let pendingInputFrameLagCheck = false;
+let activityTreeRenderFrameScheduled = false;
+const pendingActivityTreeRenderCounts = new Map<string, number>();
 publishPerfStore();
 
 function appendSample<T>(samples: T[], sample: T): void {
@@ -457,19 +471,21 @@ export function startRendererBlockTelemetry(): void {
     // Long Task API is best-effort; keep the fallback lag sampler active.
   }
 
-  let expectedAtMs = performance.now() + 250;
-  globalThis.setInterval(() => {
-    const now = performance.now();
-    const lagMs = now - expectedAtMs;
-    expectedAtMs = now + 250;
-    if (lagMs >= 75) {
-      recordRendererLongTask({
-        source: 'event-loop-lag',
-        startTimeMs: now - lagMs,
-        durationMs: lagMs,
-      });
-    }
-  }, 250);
+  if (globalThis.localStorage?.getItem('neonPilot.pollEventLoopLag') === '1') {
+    let expectedAtMs = performance.now() + 250;
+    globalThis.setInterval(() => {
+      const now = performance.now();
+      const lagMs = now - expectedAtMs;
+      expectedAtMs = now + 250;
+      if (lagMs >= 75) {
+        recordRendererLongTask({
+          source: 'event-loop-lag',
+          startTimeMs: now - lagMs,
+          durationMs: lagMs,
+        });
+      }
+    }, 250);
+  }
 }
 
 export function recordExtensionRegistryUsability(input: { loading: boolean; counts?: Record<string, number> }): void {
@@ -482,7 +498,7 @@ export function recordExtensionRegistryUsability(input: { loading: boolean; coun
   publishPerfStore();
 }
 
-export function recordApiTiming(path: string, res: Response): void {
+export function recordApiTiming(path: string, res: Response, startedAtMs?: number): void {
   if (!res) return;
   const serverTiming = res.headers.get('Server-Timing');
   const meta = safeParsePerfMeta(res.headers.get('X-PA-Perf'));
@@ -490,9 +506,13 @@ export function recordApiTiming(path: string, res: Response): void {
     return;
   }
 
+  const endTimeMs = typeof startedAtMs === 'number' ? performance.now() : undefined;
   const sample: PerfApiSample = {
     path,
     recordedAt: new Date().toISOString(),
+    ...(typeof startedAtMs === 'number' && typeof endTimeMs === 'number'
+      ? { startTimeMs: startedAtMs, endTimeMs, durationMs: Math.max(0, endTimeMs - startedAtMs) }
+      : {}),
     serverTiming,
     meta,
   };
@@ -519,11 +539,36 @@ function markConversationOpenStart(conversationId: string, source = 'route'): vo
 
 export function ensureConversationOpenStart(conversationId: string, source = 'route'): void {
   const normalizedConversationId = conversationId.trim();
-  if (!normalizedConversationId || conversationOpenTrackers.has(normalizedConversationId)) {
+  if (!normalizedConversationId) {
     return;
   }
 
   markConversationOpenStart(normalizedConversationId, source);
+}
+
+export function recordActivityTreeRowRender(itemId: string): void {
+  pendingActivityTreeRenderCounts.set(itemId, (pendingActivityTreeRenderCounts.get(itemId) ?? 0) + 1);
+  if (activityTreeRenderFrameScheduled || typeof globalThis.requestAnimationFrame !== 'function') {
+    return;
+  }
+
+  activityTreeRenderFrameScheduled = true;
+  globalThis.requestAnimationFrame(() => {
+    activityTreeRenderFrameScheduled = false;
+    const itemRenderCounts = [...pendingActivityTreeRenderCounts.entries()].map(([renderedItemId, count]) => ({
+      itemId: renderedItemId,
+      count,
+    }));
+    pendingActivityTreeRenderCounts.clear();
+    const sample: ActivityTreeRenderSample = {
+      route: `${globalThis.location?.pathname ?? ''}${globalThis.location?.search ?? ''}`,
+      recordedAt: new Date().toISOString(),
+      totalRenderCount: itemRenderCounts.reduce((total, item) => total + item.count, 0),
+      itemRenderCounts,
+    };
+    appendSample(perfStore.activityTreeRenderSamples, sample);
+    publishPerfStore();
+  });
 }
 
 export function completeConversationOpenPhase(conversationId: string, phase: ConversationOpenPhase, meta?: Record<string, unknown>): void {

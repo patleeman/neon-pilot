@@ -1979,6 +1979,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
     return modelState.models.find((model) => model.id === modelState.currentModel) ?? null;
   }, [modelState]);
+  const imageCapableModels = useMemo(
+    () => (modelState?.models ?? []).filter((model) => model.input?.includes('image')),
+    [modelState?.models],
+  );
 
   const availableModelProviderIds = useMemo(
     () => listKnownModelProviderIds(modelProviderState, providerAuthState, modelState?.models),
@@ -2930,6 +2934,33 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         {savingPreference === 'thinking'
                           ? 'Saving thinking level…'
                           : `Current thinking level: ${formatThinkingLevelLabel(modelState.currentThinkingLevel)}`}
+                      </p>
+
+                      <label className="ui-card-meta pt-1" htmlFor="settings-vision-model">
+                        Vision model
+                      </label>
+                      <select
+                        id="settings-vision-model"
+                        value={modelState.currentVisionModel ?? ''}
+                        onChange={(event) => {
+                          void handleModelPreferenceChange({ visionModel: event.target.value }, 'visionModel');
+                        }}
+                        disabled={savingPreference !== null || imageCapableModels.length === 0}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="">Not configured</option>
+                        {imageCapableModels.map((model) => (
+                          <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
+                            {model.name} · {model.provider}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="ui-card-meta">
+                        {savingPreference === 'visionModel'
+                          ? 'Saving vision model…'
+                          : modelState.currentVisionModel
+                            ? `Image probing uses ${modelState.currentVisionModel}.`
+                            : 'Required before inspecting uploaded images with the current model.'}
                       </p>
                     </>
                   ) : null}

@@ -790,9 +790,14 @@ describe('live session registry helpers', () => {
       },
     });
 
-    await expect(resumeSession('/tmp/already-live.jsonl')).resolves.toEqual({
-      id: 'session-resume-short-circuit',
-    });
+    await expect(resumeSession('/tmp/already-live.jsonl')).resolves.toEqual(
+      expect.objectContaining({
+        id: 'session-resume-short-circuit',
+        perf: expect.objectContaining({
+          alreadyLive: 1,
+        }),
+      }),
+    );
   });
 });
 

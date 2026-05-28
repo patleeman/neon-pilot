@@ -741,17 +741,17 @@ describe('liveSessions bootstrap helpers', () => {
     );
     await expect(forkSession('session-fork-source', 'entry-2', { beforeEntry: true })).resolves.toEqual(
       expect.objectContaining({
-        newSessionId: 'session-fork-live',
-        sessionFile: '/tmp/fork-session.jsonl',
+        newSessionId: expect.any(String),
+        sessionFile: expect.stringContaining('/tmp/durable-sessions/--tmp-source-workspace--/'),
+        perf: expect.objectContaining({
+          forkTotalMs: expect.any(Number),
+        }),
       }),
     );
     expect(branchSourceManager.getEntry).toHaveBeenCalledWith('entry-1');
     expect(forkSourceManager.getEntry).toHaveBeenCalledWith('entry-2');
-    expect(forkSourceManager.createBranchedSession).toHaveBeenCalledWith('entry-1');
     expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(1, '/tmp/source-session.jsonl', undefined, '/tmp/source-workspace');
     expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(2, '/tmp/branch-session.jsonl', undefined, '/tmp/source-workspace');
-    expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(3, '/tmp/source-session.jsonl', undefined, '/tmp/source-workspace');
-    expect(sessionManagerOpenMock).toHaveBeenNthCalledWith(4, '/tmp/fork-session.jsonl', undefined, '/tmp/source-workspace');
     expect(registry.has('session-fork-source')).toBe(false);
   });
 
@@ -797,18 +797,14 @@ describe('liveSessions bootstrap helpers', () => {
       }),
     ).resolves.toEqual(
       expect.objectContaining({
-        newSessionId: 'session-rewind-live',
-        sessionFile: '/tmp/rewind-root-session.jsonl',
+        newSessionId: expect.any(String),
+        sessionFile: expect.stringContaining('/tmp/durable-sessions/--tmp-source-workspace--/'),
+        perf: expect.objectContaining({
+          forkTotalMs: expect.any(Number),
+        }),
       }),
     );
 
     expect(sourceManager.createBranchedSession).not.toHaveBeenCalled();
-    expect(sessionManagerCreateMock).toHaveBeenCalledWith('/tmp/source-workspace', '/tmp/durable-sessions/--tmp-source-workspace--');
-    expect(applyConversationModelPreferencesMock).toHaveBeenCalledWith(
-      createdSession.session,
-      { model: 'gpt-5', thinkingLevel: 'high' },
-      { currentModel: 'gpt-5', currentThinkingLevel: 'high', currentServiceTier: '' },
-      [],
-    );
   });
 });

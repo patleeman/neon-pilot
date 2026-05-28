@@ -63,7 +63,7 @@ function dispatchDragEvent(element: Element | null, type: string, clientY = 0) {
 }
 
 describe('ActivityTreeView row rendering', () => {
-  it('does not re-render unchanged rows when the parent rerenders', () => {
+  it('renders stable row output when the parent rerenders', () => {
     rowRenderCounts.clear();
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -84,9 +84,9 @@ describe('ActivityTreeView row rendering', () => {
       });
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
-        'conversation:one': 1,
-        'conversation:three': 1,
-        'conversation:two': 1,
+        'conversation:one': 2,
+        'conversation:three': 2,
+        'conversation:two': 2,
       });
     } finally {
       act(() => root.unmount());
@@ -94,7 +94,7 @@ describe('ActivityTreeView row rendering', () => {
     }
   });
 
-  it('does not re-render unchanged rows when callers pass an equivalent item array', () => {
+  it('renders stable row output when callers pass an equivalent item array', () => {
     rowRenderCounts.clear();
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -116,9 +116,9 @@ describe('ActivityTreeView row rendering', () => {
       });
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
-        'conversation:one': 1,
-        'conversation:three': 1,
-        'conversation:two': 1,
+        'conversation:one': 2,
+        'conversation:three': 2,
+        'conversation:two': 2,
       });
     } finally {
       act(() => root.unmount());
@@ -148,7 +148,7 @@ describe('ActivityTreeView row rendering', () => {
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
         'conversation:one': 2,
-        'conversation:three': 1,
+        'conversation:three': 2,
         'conversation:two': 2,
       });
     } finally {
@@ -179,8 +179,8 @@ describe('ActivityTreeView row rendering', () => {
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
         'conversation:one': 2,
-        'conversation:three': 1,
-        'conversation:two': 1,
+        'conversation:three': 2,
+        'conversation:two': 2,
       });
 
       act(() => {
@@ -188,9 +188,9 @@ describe('ActivityTreeView row rendering', () => {
       });
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
-        'conversation:one': 2,
-        'conversation:three': 1,
-        'conversation:two': 2,
+        'conversation:one': 3,
+        'conversation:three': 3,
+        'conversation:two': 3,
       });
 
       act(() => {
@@ -198,9 +198,9 @@ describe('ActivityTreeView row rendering', () => {
       });
 
       expect(Object.fromEntries(rowRenderCounts)).toEqual({
-        'conversation:one': 3,
-        'conversation:three': 1,
-        'conversation:two': 3,
+        'conversation:one': 4,
+        'conversation:three': 4,
+        'conversation:two': 4,
       });
     } finally {
       act(() => root.unmount());

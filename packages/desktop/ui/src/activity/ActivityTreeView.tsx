@@ -2,12 +2,9 @@ import type { FileTreeContextMenuOpenContext } from '@pierre/trees';
 import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ConversationStatusText } from '../components/ConversationStatusText';
-import type { ConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
-import { timeAgoCompact } from '../shared/utils';
 import type { ActivityTreeItem } from './activityTree';
 import { buildActivityTreePathModel } from './activityTreePaths';
-import { sanitizeCssColor } from './cssColors';
+import { ActivityTreeRow } from './ActivityTreeRow';
 
 export type ActivityTreeDropPosition = 'before' | 'after';
 
@@ -55,24 +52,6 @@ export function getActivityTreeRowPaddingLeftRem(item: ActivityTreeItem, depth: 
     return ACTIVITY_TREE_ROOT_INDENT_REM;
   }
   return ACTIVITY_TREE_ROOT_INDENT_REM + Math.max(0, depth) * ACTIVITY_TREE_CHILD_INDENT_REM;
-}
-
-function PinIcon() {
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m15.75 3.75 4.5 4.5-3 3v3l-2.25 2.25-7.5-7.5L9.75 6.75h3l3-3ZM9.75 14.25 4.5 19.5" />
-    </svg>
-  );
 }
 
 export function ActivityTreeView({
@@ -277,8 +256,6 @@ export function ActivityTreeView({
         {visibleEntries.map(({ item, path }) => {
           const depth = Math.max(0, path.split('/').filter(Boolean).length - 1);
           const active = path === selectedPath;
-          const accentColor = sanitizeCssColor(item.accentColor);
-          const backgroundColor = sanitizeCssColor(item.backgroundColor);
           const childCount = childCountByParentId.get(item.id) ?? 0;
           const conversationChildCount = conversationChildCountByParentId.get(item.id) ?? 0;
           const expanded =
@@ -289,54 +266,50 @@ export function ActivityTreeView({
           const rowDropPosition = dropTarget?.itemId === item.id ? dropTarget.position : null;
           const canArchive = item.kind === 'conversation' && onArchiveItem && item.metadata?.canArchive !== false;
           const canCreateChild = item.kind === 'group' && onCreateChildItem;
-          const conversationIsRunning = item.kind === 'conversation' && item.metadata?.isRunning === true;
-          const conversationNeedsAttention = item.kind === 'conversation' && item.metadata?.needsAttention === true;
-          const conversationHasPendingRuns = item.kind === 'conversation' && item.metadata?.hasPendingRuns === true;
-          const conversationBackgroundWorkKind =
-            item.kind === 'conversation' && typeof item.metadata?.backgroundWorkKind === 'string'
-              ? (item.metadata.backgroundWorkKind as ConversationBackgroundWorkKind)
-              : null;
-          const conversationIsPinned = item.kind === 'conversation' && item.metadata?.isPinned === true;
-          const showConversationStatus = conversationIsRunning || conversationHasPendingRuns || conversationNeedsAttention;
-          const showExpander = childCount > 0 && item.kind !== 'group';
-          const rowPaddingLeft = getActivityTreeRowPaddingLeftRem(item, depth);
           return (
-            <button
+            <ActivityTreeRow
               key={item.id}
-              type="button"
-              role="treeitem"
-              aria-selected={active ? 'true' : 'false'}
-              draggable={canDrag}
-              onDragStart={
-                canDrag
-                  ? (event) => {
-                      draggedItemIdRef.current = item.id;
-                      setDraggedItemId(item.id);
-                      onDragStartItem?.(item, event);
-                    }
-                  : undefined
-              }
-              onDragOver={(event) => {
+              active={active}
+              canArchive={Boolean(canArchive)}
+              canCreateChild={Boolean(canCreateChild)}
+              canDrag={canDrag}
+              childCount={childCount}
+              conversationChildCount={conversationChildCount}
+              depth={depth}
+              dragged={draggedItemId === item.id}
+              expanded={expanded}
+              inlineActions={inlineActions}
+              item={item}
+              renderContextMenu={Boolean(renderContextMenu)}
+              rowDropPosition={rowDropPosition}
+              onArchiveItem={onArchiveItem}
+              onCreateChildItem={onCreateChildItem}
+              onDragStart={(draggedItem, event) => {
+                draggedItemIdRef.current = draggedItem.id;
+                setDraggedItemId(draggedItem.id);
+                onDragStartItem?.(draggedItem, event);
+              }}
+              onDragOver={(targetItem, event) => {
                 const currentDraggedItemId = draggedItemIdRef.current ?? draggedItemId;
                 const draggedItem = currentDraggedItemId ? itemById.get(currentDraggedItemId) : null;
-                if (!draggedItem || draggedItem.id === item.id) {
+                if (!draggedItem || draggedItem.id === targetItem.id) {
                   setDropTarget(null);
                   return;
                 }
 
                 const position = getDropPosition(event);
-                if (!canDropItem?.(draggedItem, item, position, event)) {
-                  if (dropTarget?.itemId === item.id) setDropTarget(null);
+                if (!canDropItem?.(draggedItem, targetItem, position, event)) {
+                  if (dropTarget?.itemId === targetItem.id) setDropTarget(null);
                   return;
                 }
 
                 event.preventDefault();
                 event.dataTransfer.dropEffect = 'move';
                 setDropTarget((current) =>
-                  current?.itemId === item.id && current.position === position ? current : { itemId: item.id, position },
+                  current?.itemId === targetItem.id && current.position === position ? current : { itemId: targetItem.id, position },
                 );
               }}
-              onDrop={(event) => {
+              onDrop={(targetItem, event) => {
                 const currentDraggedItemId = draggedItemIdRef.current ?? draggedItemId;
                 const draggedItem = currentDraggedItemId ? itemById.get(currentDraggedItemId) : null;
                 if (!draggedItem) {
@@ -345,9 +318,9 @@ export function ActivityTreeView({
                 }
 
                 const position = getDropPosition(event);
-                if (canDropItem?.(draggedItem, item, position, event)) {
+                if (canDropItem?.(draggedItem, targetItem, position, event)) {
                   event.preventDefault();
-                  onDropItem?.(draggedItem, item, position, event);
+                  onDropItem?.(draggedItem, targetItem, position, event);
                 }
                 clearDragState();
               }}
@@ -355,207 +328,12 @@ export function ActivityTreeView({
                 clearDragState();
                 onDragEndItem?.();
               }}
-              className={[
-                'ui-sidebar-session-row group relative flex w-full items-center gap-1 select-none text-left',
-                item.kind === 'group' && 'font-semibold',
-                active && 'ui-sidebar-session-row-active',
-                canDrag && (draggedItemId === item.id ? 'cursor-grabbing opacity-60' : 'cursor-grab'),
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              style={{
-                paddingLeft: `${rowPaddingLeft}rem`,
-                ...(backgroundColor ? { backgroundColor } : {}),
-                ...(accentColor ? { boxShadow: `inset 2px 0 0 ${accentColor}` } : {}),
-              }}
-              data-sidebar-session-id={typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : undefined}
-              data-sidebar-group-key={typeof item.metadata?.groupKey === 'string' ? item.metadata.groupKey : undefined}
-              title={
-                canDrag
-                  ? 'Drag to reorder conversations'
-                  : typeof item.metadata?.tooltip === 'string'
-                    ? item.metadata.tooltip
-                    : item.subtitle
-              }
-              aria-expanded={item.kind === 'group' ? expanded : undefined}
-              onClick={() => {
-                if (item.kind === 'group') {
-                  toggleGroupCollapsed(item);
-                  return;
-                }
-                onOpenItem?.(item);
-              }}
-              onContextMenu={(event) => {
-                if (!renderContextMenu) return;
-                event.preventDefault();
-                event.stopPropagation();
-                setContextMenu({ item, x: event.clientX, y: event.clientY });
-              }}
-            >
-              {rowDropPosition ? (
-                <span
-                  aria-hidden="true"
-                  className={[
-                    'pointer-events-none absolute left-2 right-2 z-10 h-0.5 rounded-full bg-accent/80',
-                    rowDropPosition === 'before' ? 'top-0' : 'bottom-0',
-                  ].join(' ')}
-                />
-              ) : null}
-              {item.kind === 'group' ? (
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
-                  aria-label={`${expanded ? 'Collapse' : 'Expand'} ${item.title}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleGroupCollapsed(item);
-                  }}
-                >
-                  {expanded ? '▾' : '▸'}
-                </span>
-              ) : showExpander ? (
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  className="-ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-dim hover:text-primary"
-                  aria-label={expanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
-                  title={
-                    conversationChildCount > 0
-                      ? expanded
-                        ? 'Collapse branches'
-                        : 'Expand branches'
-                      : expanded
-                        ? 'Collapse children'
-                        : 'Expand children'
-                  }
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleExpanded(item.id);
-                  }}
-                >
-                  {expanded ? '▾' : '▸'}
-                </span>
-              ) : showConversationStatus ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
-                  <ConversationStatusText
-                    isRunning={conversationIsRunning}
-                    hasPendingRuns={conversationHasPendingRuns}
-                    backgroundWorkKind={conversationBackgroundWorkKind}
-                    needsAttention={conversationNeedsAttention}
-                  />
-                </span>
-              ) : (
-                <span className="h-4 w-4 shrink-0" aria-hidden="true" />
-              )}
-              {showConversationStatus && showExpander ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
-                  <ConversationStatusText
-                    isRunning={conversationIsRunning}
-                    hasPendingRuns={conversationHasPendingRuns}
-                    backgroundWorkKind={conversationBackgroundWorkKind}
-                    needsAttention={conversationNeedsAttention}
-                  />
-                </span>
-              ) : null}
-              {conversationIsPinned ? (
-                <span className="ui-sidebar-pinned-icon shrink-0" title="Pinned chat" aria-label="Pinned chat">
-                  <PinIcon />
-                </span>
-              ) : null}
-              <span className="min-w-0 flex-1 truncate text-[12px] leading-[1.15] text-primary">{item.title}</span>
-              {item.status !== 'idle' && item.kind !== 'conversation' ? (
-                <span className="shrink-0 text-[10px] text-dim">{formatActivityTreeStatus(item.status)}</span>
-              ) : null}
-              {item.kind === 'group' && renderContextMenu ? (
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  className="shrink-0 rounded px-1 text-[16px] leading-none text-dim hover:bg-surface-hover hover:text-primary"
-                  aria-label={`Workspace actions for ${item.title}`}
-                  title={
-                    typeof item.metadata?.cwd === 'string'
-                      ? `Workspace actions for ${item.metadata.cwd}`
-                      : `Workspace actions for ${item.title}`
-                  }
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    setContextMenu({ item, x: rect.left, y: rect.bottom + 4 });
-                  }}
-                >
-                  …
-                </span>
-              ) : null}
-              {canCreateChild ? (
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  className="shrink-0 rounded px-1 text-[14px] leading-none text-dim hover:bg-surface-hover hover:text-primary"
-                  aria-label={`New conversation in ${item.title}`}
-                  title={
-                    typeof item.metadata?.cwd === 'string'
-                      ? `New conversation in ${item.metadata.cwd}`
-                      : `New conversation in ${item.title}`
-                  }
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onCreateChildItem(item);
-                  }}
-                >
-                  +
-                </span>
-              ) : null}
-              {item.kind === 'conversation' && !expanded && conversationChildCount > 0 ? (
-                <span
-                  className="ui-sidebar-session-meta shrink-0 whitespace-nowrap"
-                  title={`${conversationChildCount} child branch${conversationChildCount === 1 ? '' : 'es'}`}
-                >
-                  {conversationChildCount}
-                </span>
-              ) : item.kind === 'conversation' && item.updatedAt ? (
-                <span className="ui-sidebar-session-meta ui-sidebar-session-time shrink-0 whitespace-nowrap">
-                  {timeAgoCompact(item.updatedAt)}
-                </span>
-              ) : null}
-              {inlineActions.map((action) => (
-                <span
-                  key={action.id}
-                  role="button"
-                  tabIndex={-1}
-                  className="shrink-0 rounded px-1 text-[12px] leading-none text-dim opacity-0 hover:bg-surface-hover hover:text-primary group-hover:opacity-100 group-focus-within:opacity-100"
-                  aria-label={action.title}
-                  title={action.title}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onInlineAction?.(action.id, item);
-                  }}
-                >
-                  {action.icon ?? '•'}
-                </span>
-              ))}
-              {canArchive ? (
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  className="shrink-0 rounded px-1 text-[14px] leading-none text-dim opacity-0 hover:bg-surface-hover hover:text-primary group-hover:opacity-100 group-focus-within:opacity-100"
-                  aria-label="Archive thread"
-                  title="Archive thread"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onArchiveItem(item);
-                  }}
-                >
-                  ×
-                </span>
-              ) : null}
-            </button>
+              onInlineAction={onInlineAction}
+              onOpenContextMenu={(contextItem, x, y) => setContextMenu({ item: contextItem, x, y })}
+              onOpenItem={onOpenItem}
+              onToggleBranch={toggleExpanded}
+              onToggleGroup={toggleGroupCollapsed}
+            />
           );
         })}
       </div>
@@ -577,20 +355,4 @@ export function ActivityTreeView({
       ) : null}
     </div>
   );
-}
-
-function formatActivityTreeStatus(status: ActivityTreeItem['status']): string {
-  switch (status) {
-    case 'running':
-      return 'run';
-    case 'queued':
-      return 'wait';
-    case 'failed':
-      return 'fail';
-    case 'done':
-      return 'done';
-    case 'idle':
-    default:
-      return 'idle';
-  }
 }

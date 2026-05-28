@@ -32,6 +32,11 @@ export interface ConversationLayout {
   activeSessionId: string | null;
 }
 
+export interface RemoteConversationLayout extends ConversationLayout {
+  workspacePaths: string[];
+  remoteControlledConversationIds: string[];
+}
+
 interface ConversationLayoutInput {
   sessionIds?: Iterable<unknown>;
   pinnedSessionIds?: Iterable<unknown>;
@@ -40,7 +45,8 @@ interface ConversationLayoutInput {
 }
 
 function normalizeSessionId(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized.startsWith('pending-') ? '' : normalized;
 }
 
 function normalizeSessionIds(values: Iterable<unknown>): string[] {
@@ -127,6 +133,77 @@ function sameConversationLayout(left: ConversationLayout, right: ConversationLay
     sameSessionIds(left.archivedSessionIds, right.archivedSessionIds) &&
     left.activeSessionId === right.activeSessionId
   );
+}
+
+let remoteLayoutPromise: Promise<RemoteConversationLayout> | null = null;
+let remoteLayoutCache: RemoteConversationLayout | null = null;
+let remoteLayoutCacheAt = 0;
+
+function normalizeRemoteConversationLayout(input: {
+  sessionIds?: Iterable<unknown>;
+  pinnedSessionIds?: Iterable<unknown>;
+  archivedSessionIds?: Iterable<unknown>;
+  activeConversationId?: unknown;
+  activeSessionId?: unknown;
+  workspacePaths?: Iterable<unknown>;
+  remoteControlledConversationIds?: Iterable<unknown>;
+}): RemoteConversationLayout {
+  const layout = normalizeConversationLayout({
+    sessionIds: input.sessionIds,
+    pinnedSessionIds: input.pinnedSessionIds,
+    archivedSessionIds: input.archivedSessionIds,
+    activeSessionId: input.activeSessionId ?? input.activeConversationId,
+  });
+  return {
+    ...layout,
+    workspacePaths: normalizeSessionIds(input.workspacePaths ?? []),
+    remoteControlledConversationIds: normalizeSessionIds(input.remoteControlledConversationIds ?? []),
+  };
+}
+
+export function resetRemoteConversationLayoutCache(): void {
+  remoteLayoutPromise = null;
+  remoteLayoutCache = null;
+  remoteLayoutCacheAt = 0;
+}
+
+export async function fetchRemoteConversationLayout(
+  options: { refresh?: boolean; reason?: string } = {},
+): Promise<RemoteConversationLayout> {
+  if (!options.refresh && remoteLayoutCache) {
+    return remoteLayoutCache;
+  }
+  if (!options.refresh && remoteLayoutPromise) {
+    return remoteLayoutPromise;
+  }
+  if (options.refresh && isWithinLocalWriteGrace() && remoteLayoutCache) {
+    return {
+      ...readConversationLayout(),
+      workspacePaths: remoteLayoutCache.workspacePaths,
+      remoteControlledConversationIds: remoteLayoutCache.remoteControlledConversationIds,
+    };
+  }
+  if (options.refresh && remoteLayoutCache && Date.now() - remoteLayoutCacheAt < LOCAL_WRITE_GRACE_MS) {
+    return remoteLayoutCache;
+  }
+  if (options.refresh && remoteLayoutPromise) {
+    return remoteLayoutPromise;
+  }
+
+  const promise = api.openConversationTabs().then((layout) => {
+    const normalized = normalizeRemoteConversationLayout(layout);
+    remoteLayoutCache = normalized;
+    remoteLayoutCacheAt = Date.now();
+    return normalized;
+  });
+  remoteLayoutPromise = promise;
+  try {
+    return await promise;
+  } finally {
+    if (remoteLayoutPromise === promise) {
+      remoteLayoutPromise = null;
+    }
+  }
 }
 
 function persistConversationLayoutToServer(layout: ConversationLayout): void {

@@ -10,7 +10,7 @@ import {
   measureClientPerfTiming,
   recordClientPerfTiming,
 } from '../client/perfDiagnostics';
-import { buildSlashMenuItems } from '../commands/slashMenu';
+import { buildSlashMenuItems, parseSlashInput } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
 import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
@@ -295,7 +295,12 @@ import {
   buildConversationPendingQueueItems,
   resolveRestoredQueuedPromptComposerUpdate,
 } from '../pending/pendingQueueMessages';
-import { closeConversationTab, ensureConversationTabOpen, setActiveConversationTab } from '../session/sessionTabs';
+import {
+  closeConversationTab,
+  ensureConversationTabOpen,
+  fetchRemoteConversationLayout,
+  setActiveConversationTab,
+} from '../session/sessionTabs';
 import type {
   ConversationAttachmentSummary,
   ConversationContextDocRef,
@@ -395,7 +400,7 @@ interface ExcalidrawEditorSavePayload {
   previewUrl: string;
 }
 
-const INITIAL_HISTORICAL_TAIL_BLOCKS = 40;
+const INITIAL_HISTORICAL_TAIL_BLOCKS = 24;
 const HISTORICAL_TAIL_BLOCKS_STEP = 40;
 const HISTORICAL_TAIL_BLOCKS_STEP_PERCENT = 10;
 const MAX_RELATED_THREAD_SELECTIONS = 5;
@@ -447,16 +452,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, []);
   useEffect(() => {
     let cancelled = false;
-    void api
-      .openConversationTabs()
-      .then((layout) => {
-        if (!cancelled) setRemoteControlledConversationIds(layout.remoteControlledConversationIds ?? []);
+    const timeoutId = window.setTimeout(() => {
+      void fetchRemoteConversationLayout({
+        refresh: false,
+        reason: 'ConversationPage.remoteControlledIds',
       })
-      .catch(() => {
-        if (!cancelled) setRemoteControlledConversationIds([]);
-      });
+        .then((layout) => {
+          if (!cancelled) setRemoteControlledConversationIds(layout.remoteControlledConversationIds ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteControlledConversationIds([]);
+        });
+    }, 500);
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, [versions.sessions]);
 
@@ -1544,7 +1554,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [extensionMentionItems, setExtensionMentionItems] = useState<MentionItem[]>([]);
 
   useEffect(() => {
-    if (!nonCriticalComposerMetadataReady) {
+    const hasAutocompleteDemand = Boolean(parseSlashInput(input)) || /(^|.*\s)(@[\w./-]*)$/.test(input);
+    if (!nonCriticalComposerMetadataReady && !hasAutocompleteDemand) {
       return;
     }
 
@@ -1566,7 +1577,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [nonCriticalComposerMetadataReady]);
+  }, [input, nonCriticalComposerMetadataReady]);
 
   // Current context usage (compaction-aware)
   const sessionTokens = useMemo(

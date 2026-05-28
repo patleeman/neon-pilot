@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding, upsertAlert } from '@neon-pilot/core';
 import {
   type AutomationActivityEntry,
-  type AutomationPolicy,
   createStoredAutomation,
   deleteStoredAutomation,
   ensureAutomationThread,
@@ -25,6 +24,7 @@ import {
   resolveScheduledTaskThreadBinding,
   type ScheduledTaskThreadInput,
 } from './scheduledTaskThreads.js';
+import type { AutomationPolicy } from './store.js';
 import { findTaskForProfile, readRequiredTaskId } from './taskService.js';
 
 const SCHEDULER_STALE_AFTER_SECONDS = 15 * 60;

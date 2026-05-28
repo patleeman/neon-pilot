@@ -31,6 +31,35 @@ function loadShelfModule(registration: ExtensionComposerShelfRegistration, revis
   return import(/* @vite-ignore */ source) as Promise<Record<string, unknown>>;
 }
 
+const shelfComponentCache = new Map<string, Promise<ComposerShelfComponent | null>>();
+
+function getComposerShelfCacheKey(registration: ExtensionComposerShelfRegistration, revision: number): string {
+  return `${registration.extensionId}:${registration.frontendEntry ?? ''}:${registration.component}:${revision}`;
+}
+
+function loadComposerShelfComponent(
+  registration: ExtensionComposerShelfRegistration,
+  revision: number,
+): Promise<ComposerShelfComponent | null> {
+  const cacheKey = getComposerShelfCacheKey(registration, revision);
+  const cached = shelfComponentCache.get(cacheKey);
+  if (cached) return cached;
+
+  const promise = loadShelfModule(registration, revision).then(
+    (module) => (module[registration.component] as ComposerShelfComponent) ?? null,
+  );
+  shelfComponentCache.set(cacheKey, promise);
+  return promise;
+}
+
+export function clearComposerShelfComponentCacheForTests(): void {
+  shelfComponentCache.clear();
+}
+
+export async function preloadComposerShelfComponent(registration: ExtensionComposerShelfRegistration, revision: number): Promise<void> {
+  await loadComposerShelfComponent(registration, revision);
+}
+
 export function ComposerShelfHost({
   registration,
   shelfContext,
@@ -43,9 +72,8 @@ export function ComposerShelfHost({
   const Component = useMemo(
     () =>
       lazy(async () => {
-        const module = await loadShelfModule(registration, getExtensionRegistryRevision());
-        const component = module[registration.component] as ComposerShelfComponent | undefined;
-        if (typeof component !== 'function') {
+        const component = await loadComposerShelfComponent(registration, getExtensionRegistryRevision());
+        if (!component) {
           return { default: () => null as unknown as React.ReactElement };
         }
         return {
