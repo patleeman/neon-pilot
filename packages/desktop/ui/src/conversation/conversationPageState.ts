@@ -382,8 +382,9 @@ export function resolveConversationInitialHistoricalWarmupTarget(input: {
   }
 
   // Keep the first paint small when switching threads. Older history can load
-  // lazily in the background or on demand instead of blocking open.
-  return null;
+  // lazily in the background for small transcripts or on demand for larger ones.
+  const smallTranscriptWarmupLimit = 120;
+  return input.historicalTotalBlocks <= smallTranscriptWarmupLimit ? input.historicalTotalBlocks : null;
 }
 
 export function hasConversationLoadedHistoricalTailBlocks(

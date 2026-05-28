@@ -9,6 +9,7 @@ import {
   mergeConversationSessionMeta,
   replaceConversationMetaInSessionList,
   resolveConversationBackgroundRunState,
+  resolveConversationInitialHistoricalWarmupTarget,
   resolveConversationLiveSession,
   resolveConversationPerformanceMode,
   resolveConversationStreamTitleSync,
@@ -254,6 +255,24 @@ describe('conversation page state helpers', () => {
 
     expect(hasConversationLoadedHistoricalTailBlocks({ blocks: [{ id: 'a' }], totalBlocks: 1 }, 10)).toBe(true);
     expect(hasConversationLoadedHistoricalTailBlocks({ blocks: [{ id: 'a' }], totalBlocks: 1 }, Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+    expect(
+      resolveConversationInitialHistoricalWarmupTarget({
+        draft: false,
+        conversationId: 'conv-1',
+        liveDecision: false,
+        historicalTotalBlocks: 96,
+        historicalHasOlderBlocks: true,
+      }),
+    ).toBe(96);
+    expect(
+      resolveConversationInitialHistoricalWarmupTarget({
+        draft: false,
+        conversationId: 'conv-1',
+        liveDecision: false,
+        historicalTotalBlocks: 500,
+        historicalHasOlderBlocks: true,
+      }),
+    ).toBeNull();
     expect(
       shouldShowConversationInitialHistoricalWarmupLoader({
         warmupActive: true,
