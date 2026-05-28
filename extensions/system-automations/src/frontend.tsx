@@ -31,6 +31,7 @@ interface AutomationFormState {
   prompt: string;
   scheduleType: 'cron' | 'at';
   cron: string;
+  scheduleBuilder: EasySchedule;
   at: string;
   cwd: string;
   targetType: 'background-agent' | 'conversation';
@@ -41,6 +42,17 @@ interface AutomationFormState {
   timeoutSeconds: string;
   catchUpWindowSeconds: string;
   enabled: boolean;
+}
+
+type EasyCadence = 'hourly' | 'interval' | 'daily' | 'weekdays' | 'weekly' | 'monthly';
+
+interface EasySchedule {
+  cadence: EasyCadence;
+  minute: number;
+  hour: number;
+  intervalHours: number;
+  weekdays: number[];
+  dayOfMonth: number;
 }
 
 type AutomationTaskForEditor = ScheduledTaskSummary & {
@@ -69,6 +81,16 @@ const THINKING_LEVEL_OPTIONS = [
 
 const DEFAULT_TIMEOUT_SECONDS = '1800';
 const DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS = '900';
+
+const WEEKDAY_OPTIONS = [
+  { value: 0, label: 'Sun' },
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+];
 
 const CRON_PRESETS = [
   { label: 'Every 15 minutes', summary: 'Good for short polling', cron: '*/15 * * * *', preview: 'Runs every 15 minutes.' },
@@ -112,6 +134,14 @@ const emptyForm: AutomationFormState = {
   prompt: '',
   scheduleType: 'cron',
   cron: '0 9 * * 1-5',
+  scheduleBuilder: {
+    cadence: 'weekdays',
+    minute: 0,
+    hour: 9,
+    intervalHours: 4,
+    weekdays: [1, 2, 3, 4, 5],
+    dayOfMonth: 1,
+  },
   at: '',
   cwd: '',
   targetType: 'background-agent',
@@ -123,6 +153,138 @@ const emptyForm: AutomationFormState = {
   catchUpWindowSeconds: DEFAULT_CRON_CATCH_UP_WINDOW_SECONDS,
   enabled: true,
 };
+
+function clampInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.floor(value)));
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+function normalizeWeekdays(values: number[]): number[] {
+  const normalized = values.map((value) => (value === 7 ? 0 : value)).filter((value) => value >= 0 && value <= 6);
+  return [...new Set(normalized)].sort((left, right) => left - right);
+}
+
+function serializeWeekdays(values: number[]): string {
+  const weekdays = normalizeWeekdays(values);
+  if (weekdays.length === 5 && weekdays.every((value, index) => value === index + 1)) return '1-5';
+  return weekdays.length > 0 ? weekdays.join(',') : '1';
+}
+
+function parseWeekdayField(value: string): number[] | null {
+  const weekdays: number[] = [];
+  for (const segment of value.split(',')) {
+    const trimmed = segment.trim();
+    const range = trimmed.match(/^(\d)-(\d)$/);
+    if (range) {
+      const start = Number(range[1]);
+      const end = Number(range[2]);
+      if (end < start) return null;
+      for (let day = start; day <= end; day += 1) weekdays.push(day);
+      continue;
+    }
+    if (!/^\d$/.test(trimmed)) return null;
+    weekdays.push(Number(trimmed));
+  }
+  return normalizeWeekdays(weekdays);
+}
+
+function buildCronFromEasySchedule(schedule: EasySchedule): string {
+  const minute = clampInteger(schedule.minute, 0, 59);
+  const hour = clampInteger(schedule.hour, 0, 23);
+  const intervalHours = clampInteger(schedule.intervalHours, 1, 23);
+  const dayOfMonth = clampInteger(schedule.dayOfMonth, 1, 31);
+  switch (schedule.cadence) {
+    case 'hourly':
+      return `${minute} * * * *`;
+    case 'interval':
+      return `${minute} */${intervalHours} * * *`;
+    case 'daily':
+      return `${minute} ${hour} * * *`;
+    case 'weekdays':
+      return `${minute} ${hour} * * 1-5`;
+    case 'weekly':
+      return `${minute} ${hour} * * ${serializeWeekdays(schedule.weekdays)}`;
+    case 'monthly':
+      return `${minute} ${hour} ${dayOfMonth} * *`;
+  }
+}
+
+function easyScheduleFromCron(cron: string): EasySchedule | null {
+  const [minuteField, hourField, dayOfMonthField, monthField, dayOfWeekField] = cron.trim().split(/\s+/);
+  if (!minuteField || !hourField || !dayOfMonthField || !monthField || !dayOfWeekField) return null;
+  const minute = Number(minuteField);
+  if (!Number.isSafeInteger(minute) || minute < 0 || minute > 59 || monthField !== '*') return null;
+
+  if (dayOfMonthField === '*' && dayOfWeekField === '*') {
+    if (hourField === '*') return { ...emptyForm.scheduleBuilder, cadence: 'hourly', minute };
+    const interval = hourField.match(/^\*\/(\d+)$/);
+    if (interval)
+      return { ...emptyForm.scheduleBuilder, cadence: 'interval', minute, intervalHours: clampInteger(Number(interval[1]), 1, 23) };
+    const hour = Number(hourField);
+    return Number.isSafeInteger(hour) && hour >= 0 && hour <= 23 ? { ...emptyForm.scheduleBuilder, cadence: 'daily', minute, hour } : null;
+  }
+
+  const hour = Number(hourField);
+  if (!Number.isSafeInteger(hour) || hour < 0 || hour > 23) return null;
+  if (dayOfMonthField === '*') {
+    if (dayOfWeekField === '1-5') return { ...emptyForm.scheduleBuilder, cadence: 'weekdays', minute, hour, weekdays: [1, 2, 3, 4, 5] };
+    const weekdays = parseWeekdayField(dayOfWeekField);
+    return weekdays ? { ...emptyForm.scheduleBuilder, cadence: 'weekly', minute, hour, weekdays } : null;
+  }
+
+  if (dayOfWeekField === '*') {
+    const dayOfMonth = Number(dayOfMonthField);
+    return Number.isSafeInteger(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31
+      ? { ...emptyForm.scheduleBuilder, cadence: 'monthly', minute, hour, dayOfMonth }
+      : null;
+  }
+
+  return null;
+}
+
+function formatTimeValue(schedule: EasySchedule): string {
+  return `${pad2(clampInteger(schedule.hour, 0, 23))}:${pad2(clampInteger(schedule.minute, 0, 59))}`;
+}
+
+function parseTimeValue(value: string): Pick<EasySchedule, 'hour' | 'minute'> | null {
+  const match = value.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return { hour: clampInteger(Number(match[1]), 0, 23), minute: clampInteger(Number(match[2]), 0, 59) };
+}
+
+function formatClock(schedule: Pick<EasySchedule, 'hour' | 'minute'>): string {
+  const hour = clampInteger(schedule.hour, 0, 23);
+  const minute = clampInteger(schedule.minute, 0, 59);
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${pad2(minute)} ${suffix}`;
+}
+
+function scheduleBuilderPreview(schedule: EasySchedule): string {
+  switch (schedule.cadence) {
+    case 'hourly':
+      return schedule.minute === 0 ? 'Runs every hour on the hour.' : `Runs every hour at :${pad2(clampInteger(schedule.minute, 0, 59))}.`;
+    case 'interval':
+      return `Runs every ${clampInteger(schedule.intervalHours, 1, 23)} hours.`;
+    case 'daily':
+      return `Runs every day at ${formatClock(schedule)}.`;
+    case 'weekdays':
+      return `Runs every weekday at ${formatClock(schedule)}.`;
+    case 'weekly': {
+      const days = normalizeWeekdays(schedule.weekdays)
+        .map((day) => WEEKDAY_OPTIONS.find((option) => option.value === day)?.label)
+        .filter(Boolean)
+        .join(', ');
+      return `Runs every ${days || 'Mon'} at ${formatClock(schedule)}.`;
+    }
+    case 'monthly':
+      return `Runs monthly on day ${clampInteger(schedule.dayOfMonth, 1, 31)} at ${formatClock(schedule)}.`;
+  }
+}
 
 function taskName(task: Pick<ScheduledTaskSummary, 'id' | 'title'>) {
   return (task.title || '').trim() || task.id;
@@ -315,11 +477,13 @@ function normalizeThreadModeForTarget(targetType: 'background-agent' | 'conversa
 function formFromTask(task: AutomationTaskForEditor): AutomationFormState {
   const targetType = task.targetType === 'conversation' ? 'conversation' : 'background-agent';
   const threadMode = normalizeThreadModeForTarget(targetType, task.threadMode ?? 'dedicated');
+  const cron = task.cron || (task.at ? '' : '0 9 * * 1-5');
   return {
     title: task.title || '',
     prompt: task.prompt || '',
     scheduleType: task.at ? 'at' : 'cron',
-    cron: task.cron || (task.at ? '' : '0 9 * * 1-5'),
+    cron,
+    scheduleBuilder: easyScheduleFromCron(cron) ?? emptyForm.scheduleBuilder,
     at: task.at || '',
     cwd: task.cwd || '',
     targetType,
@@ -335,11 +499,12 @@ function formFromTask(task: AutomationTaskForEditor): AutomationFormState {
 
 function readFormInput(form: AutomationFormState) {
   const threadMode = normalizeThreadModeForTarget(form.targetType, form.threadMode);
+  const cron = form.scheduleType === 'cron' ? form.cron.trim() || buildCronFromEasySchedule(form.scheduleBuilder) : null;
   return {
     title: form.title.trim(),
     enabled: form.enabled,
     prompt: form.prompt.trim(),
-    cron: form.scheduleType === 'cron' ? form.cron.trim() : null,
+    cron,
     at: form.scheduleType === 'at' ? form.at.trim() : null,
     cwd: form.cwd.trim() || null,
     targetType: form.targetType,
@@ -419,6 +584,8 @@ function schedulePreview(form: AutomationFormState) {
   const cron = form.cron.trim();
   const preset = CRON_PRESETS.find((candidate) => candidate.cron === cron);
   if (preset) return preset.preview;
+  const builder = easyScheduleFromCron(cron);
+  if (builder) return scheduleBuilderPreview(builder);
   return cron ? 'Uses a custom saved schedule.' : 'Choose a recurring schedule.';
 }
 
@@ -870,6 +1037,33 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
     }
   }, [form.cwd, pa]);
 
+  const updateScheduleBuilder = useCallback((patch: Partial<EasySchedule>) => {
+    setForm((current) => {
+      const scheduleBuilder = { ...current.scheduleBuilder, ...patch };
+      return {
+        ...current,
+        scheduleBuilder,
+        cron: buildCronFromEasySchedule(scheduleBuilder),
+      };
+    });
+  }, []);
+
+  const toggleScheduleWeekday = useCallback((day: number) => {
+    setForm((current) => {
+      const weekdays = current.scheduleBuilder.weekdays.includes(day)
+        ? current.scheduleBuilder.weekdays.length > 1
+          ? current.scheduleBuilder.weekdays.filter((entry) => entry !== day)
+          : current.scheduleBuilder.weekdays
+        : [...current.scheduleBuilder.weekdays, day].sort((left, right) => left - right);
+      const scheduleBuilder = { ...current.scheduleBuilder, weekdays };
+      return {
+        ...current,
+        scheduleBuilder,
+        cron: buildCronFromEasySchedule(scheduleBuilder),
+      };
+    });
+  }, []);
+
   const deleteTask = useCallback(
     async (task: Pick<ScheduledTaskSummary, 'id' | 'title'>) => {
       const confirmed = await pa.ui.confirm({
@@ -1096,7 +1290,17 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           ? 'bg-accent/10 text-accent ring-1 ring-accent/25'
                           : 'text-secondary hover:text-primary',
                       )}
-                      onClick={() => setForm({ ...form, scheduleType: 'cron', cron: form.cron || '0 9 * * 1-5' })}
+                      onClick={() => {
+                        const scheduleBuilder = form.cron
+                          ? (easyScheduleFromCron(form.cron) ?? form.scheduleBuilder)
+                          : form.scheduleBuilder;
+                        setForm({
+                          ...form,
+                          scheduleType: 'cron',
+                          scheduleBuilder,
+                          cron: form.cron || buildCronFromEasySchedule(scheduleBuilder),
+                        });
+                      }}
                     >
                       Recurring
                     </button>
@@ -1113,33 +1317,143 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                   </div>
 
                   {form.scheduleType === 'cron' ? (
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {form.cron && !CRON_PRESETS.some((preset) => preset.cron === form.cron) ? (
-                        <button
-                          type="button"
-                          className="rounded-md border border-accent/60 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
-                          onClick={() => setForm({ ...form, cron: form.cron })}
-                        >
-                          <span className="block text-[13px] font-semibold">Custom saved schedule</span>
-                          <span className="mt-0.5 block text-[11px] text-dim">Keep this existing schedule</span>
-                        </button>
-                      ) : null}
-                      {CRON_PRESETS.map((preset) => (
-                        <button
-                          key={preset.cron}
-                          type="button"
-                          className={cx(
-                            'rounded-md border px-3 py-3 text-left transition-colors',
-                            form.cron === preset.cron
-                              ? 'border-accent/45 bg-accent/10 text-primary shadow-[0_0_0_1px_rgb(var(--color-accent)/0.18)]'
-                              : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:text-primary',
-                          )}
-                          onClick={() => setForm({ ...form, cron: preset.cron })}
-                        >
-                          <span className="block text-[13px] font-semibold">{preset.label}</span>
-                          <span className="mt-0.5 block text-[11px] text-dim">{preset.summary}</span>
-                        </button>
-                      ))}
+                    <div className="grid gap-4">
+                      <div className="grid gap-3 rounded-md border border-border-subtle bg-surface/25 p-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                        <Field label="Schedule">
+                          <select
+                            className={fieldClass()}
+                            name="automation-recurring-cadence"
+                            value={form.scheduleBuilder.cadence}
+                            onChange={(event) => updateScheduleBuilder({ cadence: event.target.value as EasyCadence })}
+                          >
+                            <option value="hourly">Hourly</option>
+                            <option value="interval">Every few hours</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekdays">Weekdays</option>
+                            <option value="weekly">Specific weekdays</option>
+                            <option value="monthly">Monthly</option>
+                          </select>
+                        </Field>
+
+                        {form.scheduleBuilder.cadence === 'hourly' || form.scheduleBuilder.cadence === 'interval' ? (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {form.scheduleBuilder.cadence === 'interval' ? (
+                              <Field label="Every">
+                                <input
+                                  className={fieldClass()}
+                                  type="number"
+                                  min="1"
+                                  max="23"
+                                  inputMode="numeric"
+                                  name="automation-recurring-interval"
+                                  value={form.scheduleBuilder.intervalHours}
+                                  onChange={(event) =>
+                                    updateScheduleBuilder({ intervalHours: Number.parseInt(event.target.value || '1', 10) || 1 })
+                                  }
+                                />
+                              </Field>
+                            ) : null}
+                            <Field label="Minute">
+                              <input
+                                className={fieldClass()}
+                                type="number"
+                                min="0"
+                                max="59"
+                                inputMode="numeric"
+                                name="automation-recurring-minute"
+                                value={form.scheduleBuilder.minute}
+                                onChange={(event) => updateScheduleBuilder({ minute: Number.parseInt(event.target.value || '0', 10) || 0 })}
+                              />
+                            </Field>
+                          </div>
+                        ) : (
+                          <Field label="Time">
+                            <input
+                              className={fieldClass()}
+                              type="time"
+                              name="automation-recurring-time"
+                              value={formatTimeValue(form.scheduleBuilder)}
+                              onChange={(event) => {
+                                const parsed = parseTimeValue(event.target.value);
+                                if (parsed) updateScheduleBuilder(parsed);
+                              }}
+                            />
+                          </Field>
+                        )}
+
+                        {form.scheduleBuilder.cadence === 'weekly' ? (
+                          <div className="flex flex-wrap gap-2 md:col-span-2">
+                            {WEEKDAY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={cx(
+                                  'rounded-md border px-2.5 py-1.5 text-[12px] transition-colors',
+                                  form.scheduleBuilder.weekdays.includes(option.value)
+                                    ? 'border-accent/45 bg-accent/10 text-primary'
+                                    : 'border-border-subtle bg-elevated text-secondary hover:text-primary',
+                                )}
+                                aria-pressed={form.scheduleBuilder.weekdays.includes(option.value)}
+                                onClick={() => toggleScheduleWeekday(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {form.scheduleBuilder.cadence === 'monthly' ? (
+                          <Field label="Day of month">
+                            <input
+                              className={fieldClass()}
+                              type="number"
+                              min="1"
+                              max="31"
+                              inputMode="numeric"
+                              name="automation-recurring-day-of-month"
+                              value={form.scheduleBuilder.dayOfMonth}
+                              onChange={(event) =>
+                                updateScheduleBuilder({ dayOfMonth: Number.parseInt(event.target.value || '1', 10) || 1 })
+                              }
+                            />
+                          </Field>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {form.cron && !CRON_PRESETS.some((preset) => preset.cron === form.cron) && !easyScheduleFromCron(form.cron) ? (
+                          <button
+                            type="button"
+                            className="rounded-md border border-accent/60 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
+                            onClick={() => setForm({ ...form, cron: form.cron })}
+                          >
+                            <span className="block text-[13px] font-semibold">Custom saved schedule</span>
+                            <span className="mt-0.5 block text-[11px] text-dim">Keep this existing schedule</span>
+                          </button>
+                        ) : null}
+                        {CRON_PRESETS.map((preset) => (
+                          <button
+                            key={preset.cron}
+                            type="button"
+                            className={cx(
+                              'rounded-md border px-3 py-3 text-left transition-colors',
+                              form.cron === preset.cron
+                                ? 'border-accent/45 bg-accent/10 text-primary shadow-[0_0_0_1px_rgb(var(--color-accent)/0.18)]'
+                                : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:text-primary',
+                            )}
+                            onClick={() =>
+                              setForm({
+                                ...form,
+                                cron: preset.cron,
+                                scheduleBuilder: easyScheduleFromCron(preset.cron) ?? form.scheduleBuilder,
+                              })
+                            }
+                          >
+                            <span className="block text-[13px] font-semibold">{preset.label}</span>
+                            <span className="mt-0.5 block text-[11px] text-dim">{preset.summary}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <Field label="Run at" hint="ISO timestamp or natural phrase, depending on backend support.">

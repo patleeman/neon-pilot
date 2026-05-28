@@ -213,4 +213,37 @@ describe('AutomationsPage', () => {
       'Catch-up window seconds: 900',
     );
   });
+
+  it('lets recurring schedules be composed from controls', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
+    if (!newButton) throw new Error('New automation button not found');
+
+    await act(async () => {
+      newButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const cadence = container.querySelector<HTMLSelectElement>('select[name="automation-recurring-cadence"]');
+    const time = container.querySelector<HTMLInputElement>('input[name="automation-recurring-time"]');
+    const chatButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Create with chat');
+    if (!cadence || !time || !chatButton) throw new Error('Schedule builder controls not found');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(cadence, 'daily');
+      cadence.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(time, '14:30');
+      time.dispatchEvent(new Event('input', { bubbles: true }));
+      time.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+      'Schedule: recurring cron 30 14 * * *',
+    );
+  });
 });
