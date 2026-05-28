@@ -469,6 +469,13 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - views: page (/telemetry)
 - nav: telemetry-nav (/telemetry)
 
+### system-todo — Todos (default disabled)
+
+- tools: todo
+- composerShelves: todos
+- turnContextProviders: todos
+- backend actions: getState, addItem, updateItem, deleteItem, clearItems, todoTool, provideTurnContext
+
 ### system-web-tools — Web fetch
 
 - tools: web-fetch/web_fetch

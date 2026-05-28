@@ -1618,7 +1618,7 @@ The integration suite covers these categories:
 | Settings/Secrets          | Setting type/default consistency, select enum values, dot-separated key format, secret env var format                                                     |
 | Frontend components       | Every component field in views/buttons/shelves/panels exists in the frontend bundle                                                                       |
 | Cross-extension conflicts | Duplicate IDs, routes, tool names, commands, keybindings, settings, secrets, env variables, mention ids, prompt reference/context provider/quick open ids |
-| Registry sanity           | All 25 system extensions registered, routes point to real extensions                                                                                      |
+| Registry sanity           | All bundled system extensions registered, routes point to real extensions                                                                                 |
 | Backend files             | `dist/backend.mjs` exists, source files present, handler names match                                                                                      |
 | Frontend files            | `dist/frontend.js` exists, style files present                                                                                                            |
 | Agent extensions          | Registration listing, export names, backend entry references                                                                                              |

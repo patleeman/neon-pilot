@@ -86,10 +86,6 @@
         "../../extensions/**/*.test.ts"
       ],
       "project": ["src/**/*.{ts,cts}", "ui/src/**/*.{ts,tsx}", "server/**/*.ts", "../../extensions/**/*.ts", "../../extensions/**/*.tsx"]
-    },
-    "installable-extensions/system-todo": {
-      "entry": ["src/**/*.test.ts", "src/**/*.test.tsx"],
-      "project": ["src/**/*.{ts,tsx}"]
     }
   },
   "ignore": ["packages/desktop/server/**/*.ts", "extensions/**/*.ts", "extensions/**/*.tsx"]
