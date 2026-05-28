@@ -137,6 +137,7 @@ export function NativeExtensionSurfaceHost({
   hash,
   conversationId,
   cwd,
+  instanceId,
 }: {
   surface: NativeExtensionViewSummary;
   pathname: string;
@@ -144,6 +145,7 @@ export function NativeExtensionSurfaceHost({
   hash: string;
   conversationId?: string | null;
   cwd?: string | null;
+  instanceId?: string | null;
 }) {
   useExtensionStyles(surface.extensionId, surface.frontend?.styles);
 
@@ -154,8 +156,18 @@ export function NativeExtensionSurfaceHost({
     return lazyExtensionComponent(surface, getExtensionRegistryRevision());
   }, [surface, moduleKey]);
   const context = useMemo(
-    () => ({ extensionId: surface.extensionId, surfaceId: surface.id, route: surface.route, pathname, search, hash, conversationId, cwd }),
-    [conversationId, cwd, hash, pathname, search, surface.extensionId, surface.id, surface.route],
+    () => ({
+      extensionId: surface.extensionId,
+      surfaceId: surface.id,
+      route: surface.route,
+      pathname,
+      search,
+      hash,
+      conversationId,
+      cwd,
+      instanceId,
+    }),
+    [conversationId, cwd, hash, instanceId, pathname, search, surface.extensionId, surface.id, surface.route],
   );
 
   return (

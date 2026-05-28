@@ -307,9 +307,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
         <div className="max-w-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
           <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open an artifact</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">
-            Pick an artifact from the right rail to inspect it beside the transcript.
-          </p>
+          <p className="mt-2 text-[13px] leading-6 text-secondary">Open an artifact from the transcript to inspect it in a tab.</p>
         </div>
       </div>
     );

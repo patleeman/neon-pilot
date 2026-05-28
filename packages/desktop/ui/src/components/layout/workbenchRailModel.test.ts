@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { isArtifactsRailMode, resolveActiveExtensionWorkbenchSurface, resolveWorkbenchRailMode } from './workbenchRailModel';
+import {
+  isArtifactsRailMode,
+  isNewWorkbenchTabMode,
+  resolveActiveExtensionWorkbenchSurface,
+  resolveWorkbenchRailMode,
+} from './workbenchRailModel';
 
 function surface(overrides: Record<string, unknown>) {
   return {
@@ -69,5 +74,10 @@ describe('workbench rail model', () => {
     expect(isArtifactsRailMode('artifacts')).toBe(true);
     expect(isArtifactsRailMode('extension:system-artifacts:panel')).toBe(false);
     expect(isArtifactsRailMode('files')).toBe(false);
+  });
+
+  it('detects the workbench new-tab mode', () => {
+    expect(isNewWorkbenchTabMode('new')).toBe(true);
+    expect(isNewWorkbenchTabMode('files')).toBe(false);
   });
 });

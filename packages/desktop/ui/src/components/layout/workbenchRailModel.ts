@@ -1,6 +1,6 @@
 import type { ExtensionRightToolPanelSurface, ExtensionSurfaceSummary, NativeExtensionViewSummary } from '../../extensions/types';
 
-export type BuiltInWorkbenchRailMode = 'files' | 'artifacts' | 'browser';
+export type BuiltInWorkbenchRailMode = 'new' | 'files' | 'artifacts' | 'browser';
 type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
 export type WorkbenchRailMode = BuiltInWorkbenchRailMode | ExtensionWorkbenchRailMode;
 
@@ -61,4 +61,8 @@ export function resolveActiveExtensionWorkbenchSurface({
 
 export function isArtifactsRailMode(mode: WorkbenchRailMode): boolean {
   return mode === 'artifacts';
+}
+
+export function isNewWorkbenchTabMode(mode: WorkbenchRailMode): boolean {
+  return mode === 'new';
 }

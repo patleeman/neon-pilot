@@ -58,6 +58,7 @@ export function WorkbenchBrowserTab({
   }, [tabsState]);
 
   const browserSessionKey = getTabSessionKey(activeTab.id);
+  const previousBrowserSessionKeyRef = useRef(browserSessionKey);
   const [urlDraft, setUrlDraft] = useState(() => activeTab.urlDraft || activeTab.url);
   const urlDraftRef = useRef(urlDraft);
 
@@ -173,6 +174,15 @@ export function WorkbenchBrowserTab({
       })
       .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
   }, [bridge, browserSessionKey, syncUrlDraftFromBrowserState]);
+
+  useEffect(() => {
+    const previousSessionKey = previousBrowserSessionKeyRef.current;
+    previousBrowserSessionKeyRef.current = browserSessionKey;
+    if (!bridge || previousSessionKey === browserSessionKey) {
+      return;
+    }
+    void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: previousSessionKey, deactivate: true }).catch(() => undefined);
+  }, [bridge, browserSessionKey]);
 
   useLayoutEffect(() => {
     closedRef.current = false;

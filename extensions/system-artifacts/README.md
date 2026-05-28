@@ -8,7 +8,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Artifacts
 
-Artifacts are rendered outputs visible inside a conversation. They support HTML, Mermaid diagrams, and copyable LaTeX source. Saving one inserts a transcript card you can open, and artifacts also appear in the workbench rail beside the conversation.
+Artifacts are rendered outputs visible inside a conversation. They support HTML, Mermaid diagrams, and copyable LaTeX source. Saving one inserts a transcript card you can open as its own workbench tab beside the conversation.
 
 ## Supported Types
 
@@ -44,13 +44,13 @@ Parameters:
 
 ## Viewing Artifacts
 
-Artifacts appear in the Artifacts tab of the workbench rail. The right sidebar entry for that tab is provided by this extension. Each artifact is rendered inline:
+Artifacts open as individual workbench tabs from the transcript. Each artifact is rendered inline:
 
 - **HTML** — rendered as a web page in a sandboxed iframe
 - **Mermaid** — rendered as an SVG diagram
 - **LaTeX** — shown as raw source for copying
 
-Multiple artifacts in a conversation are listed and selectable. Click an artifact to view it.
+Multiple artifacts in a conversation can be opened side by side as separate tabs.
 
 ## Updating Artifacts
 

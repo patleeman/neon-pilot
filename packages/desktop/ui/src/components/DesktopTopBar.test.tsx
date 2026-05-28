@@ -217,6 +217,26 @@ describe('DesktopTopBar', () => {
     expect(html).toContain('aria-checked="true"');
   });
 
+  it('can relabel the primary collapse control for workbench mode', () => {
+    const html = renderTopBar(
+      {
+        isElectron: true,
+        activeHostId: 'local',
+        activeHostLabel: 'Local',
+        activeHostKind: 'local',
+        activeHostSummary: 'Local runtime is healthy.',
+      },
+      {
+        layoutMode: 'workbench',
+        sidebarOpen: true,
+        sidebarToggleLabel: { open: 'Hide workbench', closed: 'Show workbench' },
+      },
+    );
+
+    expect(html).toContain('aria-label="Hide workbench"');
+    expect(html).not.toContain('aria-label="Hide sidebar"');
+  });
+
   it('does not render desktop chrome outside the desktop shell', () => {
     vi.stubGlobal('navigator', {
       userAgent: 'Mozilla/5.0 Safari/605.1.15',

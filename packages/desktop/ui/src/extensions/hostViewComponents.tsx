@@ -20,6 +20,7 @@ export interface ExtensionHostViewComponentProps {
     hash: string;
     conversationId?: string | null;
     cwd?: string | null;
+    instanceId?: string | null;
   };
   surface: NativeExtensionViewSummary;
   params: Record<string, string>;

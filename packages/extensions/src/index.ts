@@ -901,6 +901,7 @@ export interface ExtensionRenderContext {
   hash: string;
   conversationId?: string | null;
   cwd?: string | null;
+  instanceId?: string | null;
 }
 
 export interface ExtensionSurfaceProps<Params = Record<string, string>> {

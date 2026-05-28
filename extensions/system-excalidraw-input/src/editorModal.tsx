@@ -736,31 +736,51 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
   );
 }
 
-export function ExcalidrawWorkbenchDetail({ pa, context }: { pa: NativeExtensionClient; context: { conversationId?: string | null } }) {
-  const [state, setState] = useState(() => pa.workbench.getDetailState<DrawingDetailState>('drawing-detail'));
+export function ExcalidrawWorkbenchDetail({
+  pa,
+  context,
+}: {
+  pa: NativeExtensionClient;
+  context: { conversationId?: string | null; instanceId?: string | null };
+}) {
+  const detailStateKey = context.instanceId ? `drawing-detail:${context.instanceId}` : 'drawing-detail';
+  const [state, setState] = useState(
+    () =>
+      pa.workbench.getDetailState<DrawingDetailState>(detailStateKey) ?? pa.workbench.getDetailState<DrawingDetailState>('drawing-detail'),
+  );
   const [editorRevision, setEditorRevision] = useState(0);
 
   useEffect(() => {
     function handleStateChange(event: CustomEvent) {
       const detail = event.detail as { extensionId?: string; surfaceId?: string; state?: unknown };
-      if (detail.extensionId !== 'system-excalidraw-input' || detail.surfaceId !== 'drawing-detail') return;
+      if (detail.extensionId !== 'system-excalidraw-input' || detail.surfaceId !== detailStateKey) return;
       setState((detail.state as DrawingDetailState | null) ?? null);
       setEditorRevision((current) => current + 1);
     }
 
     window.addEventListener('neon-pilot-extension-workbench-detail-state', handleStateChange as EventListener);
     return () => window.removeEventListener('neon-pilot-extension-workbench-detail-state', handleStateChange as EventListener);
-  }, []);
+  }, [detailStateKey]);
+
+  useEffect(() => {
+    if (state) return;
+    const draft = publishDraftDrawing(pa, createDraftDrawing());
+    const nextState = {
+      localDraftId: draft.id,
+      initialTitle: draft.title,
+      initialScene: draft.scene,
+      saveLabel: 'Attach drawing',
+    } satisfies DrawingDetailState;
+    setState(nextState);
+    pa.workbench.setDetailState(detailStateKey, nextState);
+  }, [detailStateKey, pa, state]);
 
   if (!state) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center select-text">
         <div className="max-w-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a drawing</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">
-            Pick a saved drawing from the right rail, or start a new drawing there.
-          </p>
+          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Opening drawing</h2>
         </div>
       </div>
     );
@@ -780,7 +800,7 @@ export function ExcalidrawWorkbenchDetail({ pa, context }: { pa: NativeExtension
           ? async (payload) => {
               const savedPayload = await persistDrawingToConversation(pa, context.conversationId as string, payload);
               removeDraftDrawing(pa, state?.localDraftId);
-              pa.workbench.setDetailState('drawing-detail', {
+              pa.workbench.setDetailState(detailStateKey, {
                 ...state,
                 localDraftId: undefined,
                 initialTitle: savedPayload.title,

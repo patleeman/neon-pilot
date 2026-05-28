@@ -128,6 +128,7 @@ export function DesktopTopBar({
   environment,
   sidebarOpen,
   onToggleSidebar,
+  sidebarToggleLabel,
   showRailToggle,
   railOpen,
   onToggleRail,
@@ -138,6 +139,7 @@ export function DesktopTopBar({
   environment: DesktopEnvironmentState | null;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  sidebarToggleLabel?: { open: string; closed: string };
   showRailToggle: boolean;
   railOpen: boolean;
   onToggleRail: () => void;
@@ -146,6 +148,7 @@ export function DesktopTopBar({
   trailingExtra?: React.ReactNode;
 }) {
   const location = useLocation();
+  const effectiveSidebarToggleLabel = sidebarToggleLabel ?? { open: 'Hide sidebar', closed: 'Show sidebar' };
   const { topBarElements } = useExtensionRegistry();
   const searchShellRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -308,8 +311,8 @@ export function DesktopTopBar({
           <ToolbarButton
             className="ui-desktop-top-bar__icon-button"
             onClick={onToggleSidebar}
-            aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            aria-label={sidebarOpen ? effectiveSidebarToggleLabel.open : effectiveSidebarToggleLabel.closed}
+            title={sidebarOpen ? effectiveSidebarToggleLabel.open : effectiveSidebarToggleLabel.closed}
           >
             <LeftSidebarToggleIcon open={sidebarOpen} />
           </ToolbarButton>

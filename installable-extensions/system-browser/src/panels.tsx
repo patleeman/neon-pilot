@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserToolBlock } from './BrowserToolBlock.js';
 
 const BROWSER_TABS_CHANGED_EVENT = 'pa:system-browser-tabs-changed';
+const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 
 export function BrowserTranscriptRenderer({ block, context }: { block: never; context: { onOpenBrowser?: () => void } }) {
   return <BrowserToolBlock block={block} onOpenBrowser={context.onOpenBrowser} />;
@@ -153,9 +154,39 @@ export function BrowserTabsPanel() {
   );
 }
 
-export function BrowserWorkbenchPanel() {
+export function BrowserWorkbenchPanel({ context }: { context?: { instanceId?: string | null } }) {
   const { tabsState, setTabsState, addTab, closeTab, reopenTab } = useBrowserTabActions();
-  const activeTab = tabsState.tabs.find((tab) => tab.id === tabsState.activeTabId) ?? tabsState.tabs[0] ?? createNewTab();
+  const workbenchTabId = context?.instanceId ?? null;
+  const activeTab = workbenchTabId
+    ? (tabsState.tabs.find((tab) => tab.id === workbenchTabId) ?? {
+        id: workbenchTabId,
+        title: 'New Tab',
+        url: 'https://www.google.com/',
+        urlDraft: '',
+      })
+    : (tabsState.tabs.find((tab) => tab.id === tabsState.activeTabId) ?? tabsState.tabs[0] ?? createNewTab());
+
+  useEffect(() => {
+    if (!workbenchTabId) return;
+    setTabsState((prev) => {
+      if (prev.tabs.some((tab) => tab.id === workbenchTabId)) {
+        return prev.activeTabId === workbenchTabId ? prev : { ...prev, activeTabId: workbenchTabId };
+      }
+      return {
+        ...prev,
+        tabs: [...prev.tabs, { id: workbenchTabId, title: 'New Tab', url: 'https://www.google.com/', urlDraft: '' }],
+        activeTabId: workbenchTabId,
+      };
+    });
+  }, [setTabsState, workbenchTabId]);
+
+  const openWorkbenchBrowserTab = useCallback(() => {
+    if (!workbenchTabId) {
+      addTab();
+      return;
+    }
+    window.dispatchEvent(new CustomEvent(WORKBENCH_OPEN_TOOL_TAB_EVENT, { detail: { tool: 'browser' } }));
+  }, [addTab, workbenchTabId]);
 
   return (
     <WorkbenchBrowserTab
@@ -163,7 +194,7 @@ export function BrowserWorkbenchPanel() {
       activeTab={activeTab}
       onSetTabsState={setTabsState}
       onClose={() => undefined}
-      onNewTab={addTab}
+      onNewTab={openWorkbenchBrowserTab}
       onReopenTab={reopenTab}
       onCloseCurrentTab={() => closeTab(activeTab.id)}
     />

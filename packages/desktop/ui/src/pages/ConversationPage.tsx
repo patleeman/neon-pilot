@@ -478,6 +478,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       const nextSearch = buildOpenArtifactSearch(location.search, artifactId);
+      window.dispatchEvent(new CustomEvent('pa:workbench-open-artifact-tab', { detail: { artifactId } }));
 
       navigate({
         pathname: location.pathname,
