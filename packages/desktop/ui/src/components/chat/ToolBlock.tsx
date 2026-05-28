@@ -211,7 +211,7 @@ export function ToolBlock({
   const subagentTitle = block.tool === 'subagent' ? (readToolDetailString(block.details, 'branchTitle') ?? subagentTask) : undefined;
   const artifactId = block.tool === 'artifact' ? readArtifactId(block) : undefined;
   const artifactTitle = block.tool === 'artifact' ? readArtifactTitle(block) : undefined;
-  const pinnedSubagent = block.tool === 'subagent' && (Boolean(subagentConversationRoute) || linkedRuns.runs.length > 0);
+  const pinnedSubagent = block.tool === 'subagent' && Boolean(subagentConversationRoute);
   const checkpointAction =
     block.tool === 'checkpoint' ? (readToolInputString(block.input, 'action') ?? readToolDetailString(block.details, 'action')) : undefined;
   const useExtensionRenderer = extensionRenderer && !(block.tool === 'checkpoint' && checkpointAction === 'list');
@@ -293,8 +293,9 @@ export function ToolBlock({
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
   const backgroundRun = backgroundRunId ? runs?.runs.find((candidate) => candidate.runId === backgroundRunId) : null;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
-  const headerDisclosureLabel =
-    fileChangingTool && fileChanges.length > 0 && !isRunning && !isError
+  const headerDisclosureLabel = subagentConversationRoute
+    ? 'open'
+    : fileChangingTool && fileChanges.length > 0 && !isRunning && !isError
       ? pinnedDiffOpen
         ? 'Hide diff'
         : 'View diff'
@@ -310,6 +311,55 @@ export function ToolBlock({
     setPreference((current) => toggleDisclosurePreference(autoOpen, current));
   };
 
+  const headerClassName = cx(
+    'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
+    (subagentConversationRoute || (fileChangingTool && fileChanges.length > 0 && !isRunning && !isError)) && 'cursor-pointer',
+  );
+  const headerContent = (
+    <>
+      <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
+        {meta.label}
+      </Pill>
+      {backgroundShellStart && (
+        <Pill tone="accent" mono className="shrink-0">
+          background task
+        </Pill>
+      )}
+      {executionWrappers.map((wrapper) => (
+        <Pill key={wrapper.id} tone="accent" mono className="shrink-0">
+          {wrapper.label ?? wrapper.id}
+        </Pill>
+      ))}
+      <span className={cx('flex-1 opacity-70 font-normal', agentBashTool ? 'whitespace-normal break-words' : 'truncate')}>
+        {displayPreview}
+      </span>
+      {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
+      {pinnedArtifact && artifactId && onOpenArtifact ? (
+        <button
+          type="button"
+          className="ui-action-button shrink-0 text-[10px] font-sans"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenArtifact(artifactId);
+          }}
+        >
+          View
+        </button>
+      ) : null}
+      {block.durationMs && !isRunning && !pinnedTool && (
+        <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
+      )}
+      {isRunning ? (
+        <>
+          <span className="shrink-0 text-[10px] opacity-60 ml-2">running…</span>
+          <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
+        </>
+      ) : (
+        <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
+      )}
+    </>
+  );
+
   return (
     <div
       className={cx(
@@ -318,75 +368,37 @@ export function ToolBlock({
         isError && 'border border-danger/40 bg-danger/5 text-danger',
       )}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        data-background-run-id={backgroundRunId}
-        {...(backgroundRunId ? transcriptTargetAttributes({ kind: 'background_run', runId: backgroundRunId }) : {})}
-        onMouseEnter={prefetchDeferredOutput}
-        onFocus={prefetchDeferredOutput}
-        onClick={toggleHeaderDisclosure}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            toggleHeaderDisclosure();
-          }
-        }}
-        className={cx(
-          'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
-          fileChangingTool && fileChanges.length > 0 && !isRunning && !isError && 'cursor-pointer',
-        )}
-      >
-        <Pill tone={isError ? 'danger' : meta.tone} mono className="shrink-0">
-          {meta.label}
-        </Pill>
-        {backgroundShellStart && (
-          <Pill tone="accent" mono className="shrink-0">
-            background task
-          </Pill>
-        )}
-        {executionWrappers.map((wrapper) => (
-          <Pill key={wrapper.id} tone="accent" mono className="shrink-0">
-            {wrapper.label ?? wrapper.id}
-          </Pill>
-        ))}
-        <span className={cx('flex-1 opacity-70 font-normal', agentBashTool ? 'whitespace-normal break-words' : 'truncate')}>
-          {displayPreview}
-        </span>
-        {subagentConversationRoute ? (
-          <Link
-            to={subagentConversationRoute}
-            className="ui-action-button shrink-0 text-[10px] font-sans"
-            onClick={(event) => event.stopPropagation()}
-          >
-            Open conversation
-          </Link>
-        ) : null}
-        {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
-        {pinnedArtifact && artifactId && onOpenArtifact ? (
-          <button
-            type="button"
-            className="ui-action-button shrink-0 text-[10px] font-sans"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenArtifact(artifactId);
-            }}
-          >
-            View
-          </button>
-        ) : null}
-        {block.durationMs && !isRunning && !pinnedTool && (
-          <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
-        )}
-        {isRunning ? (
-          <>
-            <span className="shrink-0 text-[10px] opacity-60 ml-2">running…</span>
-            <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
-          </>
-        ) : (
-          <span className="shrink-0 opacity-50 text-[10px]">{headerDisclosureLabel}</span>
-        )}
-      </div>
+      {subagentConversationRoute ? (
+        <Link
+          to={subagentConversationRoute}
+          data-background-run-id={backgroundRunId}
+          {...(backgroundRunId ? transcriptTargetAttributes({ kind: 'background_run', runId: backgroundRunId }) : {})}
+          onMouseEnter={prefetchDeferredOutput}
+          onFocus={prefetchDeferredOutput}
+          className={headerClassName}
+        >
+          {headerContent}
+        </Link>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          data-background-run-id={backgroundRunId}
+          {...(backgroundRunId ? transcriptTargetAttributes({ kind: 'background_run', runId: backgroundRunId }) : {})}
+          onMouseEnter={prefetchDeferredOutput}
+          onFocus={prefetchDeferredOutput}
+          onClick={toggleHeaderDisclosure}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleHeaderDisclosure();
+            }
+          }}
+          className={headerClassName}
+        >
+          {headerContent}
+        </div>
+      )}
 
       {linkedRuns.runs.length > 0 && !pinnedTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">

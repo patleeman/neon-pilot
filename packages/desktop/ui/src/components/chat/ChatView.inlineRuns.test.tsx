@@ -470,6 +470,40 @@ describe('ChatView inline run cards', () => {
     expect(container.textContent).toContain('(no output)');
   });
 
+  it('expands subagent tool output when linked work has no viewable conversation', async () => {
+    const { container } = renderChatView(
+      [
+        {
+          type: 'tool_use',
+          ts: '2026-03-11T18:00:00.000Z',
+          tool: 'subagent',
+          input: {
+            action: 'status',
+            taskSlug: 'scout-ui-surface',
+          },
+          output: `Detailed status for ${RUN_ID}: still running.`,
+          status: 'ok',
+          details: { action: 'status', runId: RUN_ID },
+        },
+      ],
+      { listedRuns: [] },
+    );
+
+    expect(container.textContent).toContain('Internal work');
+    expect(container.textContent).toContain('scout-ui-surface');
+    expect(container.textContent).not.toContain('Detailed status');
+
+    const toolHeader = Array.from(container.querySelectorAll('[role="button"]')).find((element) =>
+      element.textContent?.includes('scout-ui-surface'),
+    ) as HTMLElement | undefined;
+    await act(async () => {
+      toolHeader?.click();
+      await flushAsyncWork();
+    });
+
+    expect(container.textContent).toContain('Detailed status');
+  });
+
   it('focuses a background bash run event by expanding the trace cluster without opening tool output', async () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;

@@ -483,6 +483,38 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('show details');
   });
 
+  it('links the whole pinned subagent tool row to a viewable child conversation', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        {},
+        createElement(ChatView, {
+          messages: [
+            {
+              type: 'tool_use',
+              ts: '2026-03-11T18:00:00.000Z',
+              tool: 'subagent',
+              input: { prompt: 'Review the UI surface', taskSlug: 'scout-ui-surface' },
+              output: 'Started subagent run-child for subagent-child-session.',
+              status: 'ok',
+              details: {
+                childConversationId: 'subagent-child-session',
+                branchKind: 'subagent',
+                branchTitle: 'Scout UI Surface',
+              },
+            },
+          ],
+          isStreaming: false,
+        }),
+      ),
+    );
+
+    expect(html).toContain('href="/conversations/subagent-child-session"');
+    expect(html).toContain('Scout UI Surface');
+    expect(html).toContain('>open</span>');
+    expect(html).not.toContain('Open conversation');
+  });
+
   it('resolves legacy linked run ids to current durable run records using task slug', () => {
     const html = renderToStaticMarkup(
       createElement(
