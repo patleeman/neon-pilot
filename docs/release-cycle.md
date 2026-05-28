@@ -4,17 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.2** — patch release being prepared.
+**v0.9.3-rc.0** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.0
 
 Highlights in this train:
 
-- Improves startup readiness for large local profiles by trimming critical extension registry loading, delaying non-critical cache work, and adding an immediate startup shell while the app hydrates.
-- Restores smoother live conversation behavior with frame-synced stream flushing, live tool streaming fixes, and more reliable transcript fork resolution.
-- Keeps draft prompts intact when rewinding or forking messages, including the user-message fork path and assistant rewind flow.
-- Makes provider sign-in smoother by exposing OAuth login URLs and reopening provider authorization automatically when needed.
-- Moves the system prompt editor into the agent runtime so prompt assembly settings stay extension-owned while preserving the app shell boundary.
+- Hardens the core chat path with safer conversation recovery, malformed-session tolerance, stale attachment handling, and validation around catch-up policies.
+- Improves fork and rewind behavior so restored drafts, branch markers, setup-entry branching, and related conversation topology stay consistent.
+- Makes the Extensions surface clearer and more complete with a redesigned manager, canonical extension settings, searchable marketplace installs, scoped tab counts, and modal-based details.
+- Adds extension-backed plugins, todos, and first-party automation policies while keeping host access behind the extension boundary.
+- Speeds up and stabilizes everyday desktop use with cleaner new-conversation routing, faster fresh conversation lists, reduced markdown flicker, and backend child-process isolation.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.0` candidate.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

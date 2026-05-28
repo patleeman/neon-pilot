@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.3-rc.0 — 2026-05-28
+
+### Highlights
+
+- Hardens the core chat path with safer conversation recovery, malformed-session tolerance, stale attachment handling, and validation around catch-up policies.
+- Improves fork and rewind behavior so restored drafts, branch markers, setup-entry branching, and related conversation topology stay consistent.
+- Makes the Extensions surface clearer and more complete with a redesigned manager, canonical extension settings, searchable marketplace installs, scoped tab counts, and modal-based details.
+- Adds extension-backed plugins, todos, and first-party automation policies while keeping host access behind the extension boundary.
+- Speeds up and stabilizes everyday desktop use with cleaner new-conversation routing, faster fresh conversation lists, reduced markdown flicker, and backend child-process isolation.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.0` candidate.
+
+### Notes
+
+- 65 commits since the previous release.
+
 ## 0.9.2 — 2026-05-26
 
 ### Highlights
