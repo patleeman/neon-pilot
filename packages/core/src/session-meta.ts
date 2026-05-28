@@ -172,6 +172,20 @@ function isRawMessage(line: RawLine): line is RawMessage {
   return typeof candidate.timestamp === 'string' && typeof (message as Partial<RawMessage['message']>).role === 'string';
 }
 
+function isRawSessionRecord(line: RawLine): line is RawSessionRecord {
+  if (line.type !== 'session') {
+    return false;
+  }
+
+  const candidate = line as Partial<RawSessionRecord>;
+  return (
+    typeof candidate.id === 'string' &&
+    candidate.id.trim().length > 0 &&
+    typeof candidate.timestamp === 'string' &&
+    (candidate.cwd === undefined || typeof candidate.cwd === 'string')
+  );
+}
+
 function slugToCwd(slug: string): string {
   return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
 }
@@ -244,8 +258,8 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): StoredSessi
         continue;
       }
 
-      if (line.type === 'session') {
-        sessionRecord = line as RawSessionRecord;
+      if (isRawSessionRecord(line)) {
+        sessionRecord = line;
         continue;
       }
 

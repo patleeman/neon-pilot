@@ -285,4 +285,34 @@ describe('listStoredSessions', () => {
       }),
     );
   });
+
+  it('skips sessions with malformed ids without breaking valid sessions', () => {
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
+
+    writeFile(
+      join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-17-00-000Z_bad-id.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 123, timestamp: '2026-03-12T12:17:00.000Z', cwd: '/Users/patrick/project' }),
+        JSON.stringify({
+          type: 'message',
+          timestamp: '2026-03-12T12:17:01.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Broken header' }] },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    writeFile(
+      join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-18-00-000Z_good.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 'conv-good', timestamp: '2026-03-12T12:18:00.000Z', cwd: '/Users/patrick/project' }),
+        JSON.stringify({
+          type: 'message',
+          timestamp: '2026-03-12T12:18:01.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Valid conversation' }] },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    expect(listStoredSessions({ sessionsDir }).map((session) => session.id)).toEqual(['conv-good']);
+  });
 });
