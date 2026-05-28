@@ -958,20 +958,27 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
   })();
 
   return (
-    <div className="flex items-center gap-1.5 py-0.5 text-[11px] text-dim/70" data-topology-kind={block.customType}>
-      <span className="shrink-0">{label}</span>
-      {conversationId ? (
-        <button
-          type="button"
-          onClick={handleClick}
-          className="truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
-          title={sourceMessageId ? `Source: ${sourcePreview ?? sourceMessageId}` : undefined}
-        >
-          {title}
-        </button>
-      ) : (
-        <span className="truncate">{title}</span>
-      )}
+    <div
+      className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] text-dim/70"
+      data-topology-kind={block.customType}
+    >
+      <span className="h-px bg-border-subtle" aria-hidden="true" />
+      <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+        <span className="shrink-0">{label}</span>
+        {conversationId ? (
+          <button
+            type="button"
+            onClick={handleClick}
+            className="min-w-0 truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
+            title={sourceMessageId ? `Source: ${sourcePreview ?? sourceMessageId}` : undefined}
+          >
+            {title}
+          </button>
+        ) : (
+          <span className="min-w-0 truncate">{title}</span>
+        )}
+      </span>
+      <span className="h-px bg-border-subtle" aria-hidden="true" />
     </div>
   );
 });
