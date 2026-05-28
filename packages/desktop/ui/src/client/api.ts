@@ -1094,11 +1094,17 @@ export const api = {
       ...(surfaceId ? { surfaceId } : {}),
     });
   },
-  forkSession: async (id: string, entryId: string, options?: { preserveSource?: boolean; beforeEntry?: boolean }, surfaceId?: string) => {
+  forkSession: async (
+    id: string,
+    entryId: string,
+    options?: { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: 'fork' | 'rewind' },
+    surfaceId?: string,
+  ) => {
     return post<{ newSessionId: string; sessionFile: string }>(`/live-sessions/${encodeURIComponent(id)}/fork`, {
       entryId,
       preserveSource: options?.preserveSource,
       beforeEntry: options?.beforeEntry,
+      branchKind: options?.branchKind,
       ...(surfaceId ? { surfaceId } : {}),
     });
   },

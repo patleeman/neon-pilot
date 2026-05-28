@@ -23,15 +23,16 @@ export function resolveRewindTargetFromResolvedEntry(messages: MessageBlock[], m
   }
 
   if (block?.type === 'text') {
-    const promptDraft =
+    const promptBlock =
       messages
         .slice(0, messageIndex)
         .reverse()
-        .find((message) => message.type === 'user')?.text ?? null;
+        .find((message) => message.type === 'user') ?? null;
+    const promptEntryId = promptBlock ? resolveSessionEntryIdFromBlockId(promptBlock.id) : null;
     return {
-      entryId,
+      entryId: promptEntryId ?? entryId,
       beforeEntry: true,
-      promptDraft,
+      promptDraft: promptBlock?.text ?? null,
     };
   }
 
@@ -159,8 +160,7 @@ export function resolveRewindTargetForMessage(
 
   const block = messages[messageIndex];
   if (block?.type === 'text') {
-    const assistantEntryId = resolveSessionEntryIdFromBlockId(block.id);
-    return resolveRewindTargetFromResolvedEntry(messages, messageIndex, assistantEntryId ?? entry.entryId);
+    return resolveRewindTargetFromResolvedEntry(messages, messageIndex, entry.entryId);
   }
 
   return resolveRewindTargetFromResolvedEntry(messages, messageIndex, entry.entryId);

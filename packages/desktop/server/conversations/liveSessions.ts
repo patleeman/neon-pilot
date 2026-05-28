@@ -1038,7 +1038,7 @@ export async function branchSession(
 export async function forkSession(
   sessionId: string,
   entryId: string,
-  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean } = {},
+  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: 'fork' | 'rewind' } = {},
   surfaceId?: string,
 ): Promise<{ newSessionId: string; sessionFile: string }> {
   const entry = registry.get(sessionId);

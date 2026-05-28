@@ -13,7 +13,11 @@ const sessions = vi.hoisted(() => ({
 }));
 
 vi.mock('@earendil-works/pi-coding-agent', () => ({ SessionManager: agent.SessionManager }));
-vi.mock('./sessions.js', () => sessions);
+vi.mock('./conversationTranscriptOps.js', () => ({
+  appendChildConversationTopologyEntry: sessions.appendChildConversationTopologyEntry,
+  appendConversationOffshootMetadata: sessions.appendConversationOffshootMetadata,
+  appendParentConversationBacklinkEntry: sessions.appendParentConversationBacklinkEntry,
+}));
 
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
 
@@ -154,6 +158,31 @@ describe('live session branching', () => {
       parentMessageId: 'entry-1',
     });
     expect(callbacks.destroySession).not.toHaveBeenCalled();
+  });
+
+  it('uses explicit branch kind for user-message forks before an entry', async () => {
+    agent.managers.set('/sessions/source.jsonl', manager({ id: 'entry-2', parentId: 'entry-1' }, '/sessions/forked.jsonl'));
+    const callbacks = {
+      createSession: vi.fn(),
+      resumeSession: vi.fn(async () => ({ id: 'forked-id' })),
+      destroySession: vi.fn(),
+      resolveDefaultServiceTier: vi.fn(),
+    };
+
+    await forkLiveSession(entry() as never, 'entry-2', { beforeEntry: true, preserveSource: true, branchKind: 'fork' } as never, callbacks);
+
+    expect(sessions.appendConversationOffshootMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionFile: '/sessions/forked.jsonl', kind: 'fork', parentMessageId: 'entry-2' }),
+    );
+    expect(sessions.appendParentConversationBacklinkEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionFile: '/sessions/forked.jsonl', kind: 'fork', parentMessageId: 'entry-2' }),
+    );
+    expect(sessions.appendChildConversationTopologyEntry).toHaveBeenCalledWith({
+      parentSessionFile: '/sessions/source.jsonl',
+      childSessionId: 'forked-id',
+      kind: 'fork',
+      parentMessageId: 'entry-2',
+    });
   });
 
   it('prevents replacing streaming sources and validates fork source state', async () => {

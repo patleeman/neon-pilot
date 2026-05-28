@@ -3641,6 +3641,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           {
             preserveSource: true,
             beforeEntry: target.beforeEntry,
+            branchKind: 'rewind',
           },
           currentSurfaceId,
         );
@@ -3714,6 +3715,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           {
             preserveSource: false,
             beforeEntry: true,
+            branchKind: 'rewind',
           },
           currentSurfaceId,
         );
@@ -3777,6 +3779,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 {
                   preserveSource: true,
                   beforeEntry: true,
+                  branchKind: 'fork',
                 },
                 currentSurfaceId,
               )

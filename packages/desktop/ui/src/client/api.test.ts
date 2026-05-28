@@ -165,7 +165,7 @@ describe('api live session surface forwarding', () => {
 
     const { api } = await import('./api.js');
     await api.branchSession('thread-1', 'entry-1', 'surface-1');
-    await api.forkSession('thread-1', 'entry-2', { preserveSource: false, beforeEntry: true }, 'surface-1');
+    await api.forkSession('thread-1', 'entry-2', { preserveSource: false, beforeEntry: true, branchKind: 'rewind' }, 'surface-1');
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -176,7 +176,13 @@ describe('api live session surface forwarding', () => {
       2,
       '/api/live-sessions/thread-1/fork',
       expect.objectContaining({
-        body: JSON.stringify({ entryId: 'entry-2', preserveSource: false, beforeEntry: true, surfaceId: 'surface-1' }),
+        body: JSON.stringify({
+          entryId: 'entry-2',
+          preserveSource: false,
+          beforeEntry: true,
+          branchKind: 'rewind',
+          surfaceId: 'surface-1',
+        }),
       }),
     );
   });

@@ -2197,6 +2197,7 @@ export async function forkDesktopLiveSession(input: {
   entryId: string;
   preserveSource?: boolean;
   beforeEntry?: boolean;
+  branchKind?: 'fork' | 'rewind';
   surfaceId?: string;
 }) {
   return forkLiveSessionCapability(input, await getLocalLiveSessionCapabilityContext());

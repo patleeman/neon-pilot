@@ -173,7 +173,7 @@ describe('resolveBranchEntryIdForMessage', () => {
 });
 
 describe('resolveRewindTargetForMessage', () => {
-  it('builds the same rewind target for directly resolved user and assistant entries', () => {
+  it('rewinds assistant replies before the preceding user entry when it is directly available', () => {
     const messages: MessageBlock[] = [
       { type: 'user', id: 'user-entry', ts: '2026-03-11T18:00:00.000Z', text: 'Prompt' },
       { type: 'text', id: 'assistant-entry-x4', ts: '2026-03-11T18:00:01.000Z', text: 'Reply' },
@@ -185,13 +185,13 @@ describe('resolveRewindTargetForMessage', () => {
       promptDraft: 'Prompt',
     });
     expect(resolveRewindTargetFromResolvedEntry(messages, 1, 'assistant-entry')).toEqual({
-      entryId: 'assistant-entry',
+      entryId: 'user-entry',
       beforeEntry: true,
       promptDraft: 'Prompt',
     });
   });
 
-  it('keeps the selected prompt in history when rewinding from an assistant reply', () => {
+  it('restores the selected prompt without keeping it in history when rewinding from an assistant reply', () => {
     const messages: MessageBlock[] = [
       { type: 'user', ts: '2026-03-11T18:00:00.000Z', text: 'First prompt' },
       { type: 'text', ts: '2026-03-11T18:00:01.000Z', text: 'First reply' },
@@ -205,7 +205,7 @@ describe('resolveRewindTargetForMessage', () => {
         { entryId: 'entry-2', text: 'Second prompt' },
       ]),
     ).toEqual({
-      entryId: 'assistant-entry',
+      entryId: 'entry-2',
       beforeEntry: true,
       promptDraft: 'Second prompt',
     });

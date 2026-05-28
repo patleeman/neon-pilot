@@ -201,6 +201,7 @@ export interface ForkLiveSessionCapabilityInput {
   entryId: string;
   preserveSource?: boolean;
   beforeEntry?: boolean;
+  branchKind?: 'fork' | 'rewind';
   surfaceId?: string;
 }
 
@@ -1089,6 +1090,7 @@ export async function forkLiveSessionCapability(
     {
       preserveSource: input.preserveSource,
       beforeEntry: input.beforeEntry,
+      branchKind: input.branchKind,
       ...(await buildLiveSessionOptionsAsync(context)),
     },
     input.surfaceId,

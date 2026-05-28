@@ -20,6 +20,8 @@ export interface LiveSessionBranchCallbacks {
   resolveDefaultServiceTier: (entry: LiveSessionBranchHost) => LiveSessionLoaderOptions['initialServiceTier'];
 }
 
+type LiveSessionForkKind = 'fork' | 'rewind';
+
 export async function branchLiveSession(
   entry: LiveSessionBranchHost,
   entryId: string,
@@ -81,10 +83,11 @@ export async function branchLiveSession(
 export async function forkLiveSession(
   entry: LiveSessionBranchHost,
   entryId: string,
-  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean },
+  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: LiveSessionForkKind },
   callbacks: LiveSessionBranchCallbacks,
 ): Promise<{ newSessionId: string; sessionFile: string }> {
-  const { preserveSource, beforeEntry, ...loaderOptions } = options;
+  const { preserveSource, beforeEntry, branchKind, ...loaderOptions } = options;
+  const topologyKind: LiveSessionForkKind = branchKind ?? (beforeEntry ? 'rewind' : 'fork');
 
   if (entry.session.isStreaming && !preserveSource) {
     throw new Error('Cannot replace a running conversation while forking. Keep the source conversation open instead.');
@@ -119,14 +122,14 @@ export async function forkLiveSession(
 
     appendConversationOffshootMetadata({
       sessionFile: created.sessionFile,
-      kind: 'rewind',
+      kind: topologyKind,
       parentSessionFile: sourceSessionFile,
       parentSessionId: entry.sessionId,
       parentMessageId: entryId,
     });
     appendParentConversationBacklinkEntry({
       sessionFile: created.sessionFile,
-      kind: 'rewind',
+      kind: topologyKind,
       parentSessionFile: sourceSessionFile,
       parentSessionId: entry.sessionId,
       parentMessageId: entryId,
@@ -137,7 +140,7 @@ export async function forkLiveSession(
       appendChildConversationTopologyEntry({
         parentSessionFile: sourceSessionFile,
         childSessionId: created.id,
-        kind: 'rewind',
+        kind: topologyKind,
         parentMessageId: entryId,
       });
     }
@@ -160,14 +163,14 @@ export async function forkLiveSession(
   // metadata entry and new messages bypass it — orphaning the metadata on reload.
   appendConversationOffshootMetadata({
     sessionFile: forkedSessionFile,
-    kind: beforeEntry ? 'rewind' : 'fork',
+    kind: topologyKind,
     parentSessionFile: sourceSessionFile,
     parentSessionId: entry.sessionId,
     parentMessageId: entryId,
   });
   appendParentConversationBacklinkEntry({
     sessionFile: forkedSessionFile,
-    kind: beforeEntry ? 'rewind' : 'fork',
+    kind: topologyKind,
     parentSessionFile: sourceSessionFile,
     parentSessionId: entry.sessionId,
     parentMessageId: entryId,
@@ -183,7 +186,7 @@ export async function forkLiveSession(
     appendChildConversationTopologyEntry({
       parentSessionFile: sourceSessionFile,
       childSessionId: resumed.id,
-      kind: beforeEntry ? 'rewind' : 'fork',
+      kind: topologyKind,
       parentMessageId: entryId,
     });
   }
