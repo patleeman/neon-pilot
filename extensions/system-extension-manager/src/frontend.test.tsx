@@ -120,13 +120,13 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('shows all installed extensions without category filters or commands', async () => {
+  it('shows installed add-ons with source labels and no command category buttons', async () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('link', { name: /Available/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Built-in' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'All installed' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add-ons' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Available' })).toBeTruthy();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getByText('Installed')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
@@ -156,7 +156,7 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(screen.queryByText('Available Only')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Install Extension' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
@@ -189,13 +189,13 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Install Extension' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
     fireEvent.change(screen.getByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path'), {
       target: { value: 'https://example.com/claude-instructions.git' },
     });
     const selectors = screen.getAllByRole('combobox');
     fireEvent.change(selectors[0] as HTMLSelectElement, { target: { value: 'instruction-pack' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
 
     await screen.findByText('Installed agent plugin package as a Neon Pilot extension.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', {
