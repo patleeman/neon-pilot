@@ -40,6 +40,7 @@ describe('SuggestedContextPanel', () => {
 
     expect(html).toContain('Suggested context');
     expect(html).toContain('Auto-ranked from past conversations.');
+    expect(html.replace(/<[^>]+>/g, '')).toContain('Suggested context Auto-ranked from past conversations.');
     expect(html).toContain('Architecture pass');
     expect(html).toContain('Split the page');
     expect(html).toContain('1/3 selected');

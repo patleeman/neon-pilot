@@ -69,7 +69,7 @@ export function SuggestedContextPanel({ panelContext }: { panelContext: Suggeste
       <div className="w-full">
         <div className="flex items-center justify-between gap-3 text-[11px] text-dim/85">
           <p className="min-w-0 truncate">
-            <span className="font-semibold uppercase tracking-[0.14em] text-dim/80">Suggested context</span>
+            <span className="font-semibold uppercase tracking-[0.14em] text-dim/80">Suggested context</span>{' '}
             <span className="ml-2 text-secondary">Auto-ranked from past conversations.</span>
           </p>
           <p className="shrink-0" aria-live="polite">
