@@ -18,6 +18,13 @@ const emojiListEntry: UnifiedSettingsEntry = {
 };
 
 describe('SettingsField', () => {
+  it('separates setting labels from inline descriptions in text content', () => {
+    const onChange = vi.fn();
+    const { getByText } = render(<SettingsField entry={emojiListEntry} value={undefined} onChange={onChange} />);
+
+    expect(getByText('Emoji Picker Items').closest('label')?.textContent).toBe('Emoji Picker Items Emoji reply starters.');
+  });
+
   it('renders emoji label lists as separate emoji and label controls', () => {
     const onChange = vi.fn();
     const { getByLabelText } = render(<SettingsField entry={emojiListEntry} value={undefined} onChange={onChange} />);

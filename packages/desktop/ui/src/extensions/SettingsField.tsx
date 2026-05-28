@@ -28,7 +28,7 @@ export function SettingsField({ entry, value, onChange }: SettingsFieldProps) {
     <div className="space-y-2 py-3 first:pt-0">
       <label className="block text-[13px] font-medium text-primary">
         {label}
-        {entry.description ? <span className="ml-2 font-normal text-[12px] text-secondary">{entry.description}</span> : null}
+        {entry.description ? <span className="ml-2 font-normal text-[12px] text-secondary"> {entry.description}</span> : null}
       </label>
 
       {renderControl(entry, currentValue, handleChange)}
