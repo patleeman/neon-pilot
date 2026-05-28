@@ -259,4 +259,30 @@ describe('listStoredSessions', () => {
 
     expect(listStoredSessions({ sessionsDir }).map((session) => session.id)).toEqual(['conv-b', 'conv-a']);
   });
+
+  it('skips malformed message rows without dropping the whole session', () => {
+    const sessionsDir = createTempDir('neon-pilot-session-meta-');
+
+    writeFile(
+      join(sessionsDir, '--Users-patrick-project', '2026-03-12T12-16-00-000Z_partial.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 'conv-partial', timestamp: '2026-03-12T12:16:00.000Z', cwd: '/Users/patrick/project' }),
+        JSON.stringify({ type: 'message', timestamp: '2026-03-12T12:16:01.000Z' }),
+        JSON.stringify({
+          type: 'message',
+          timestamp: '2026-03-12T12:16:02.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Keep visible' }] },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    expect(listStoredSessions({ sessionsDir })[0]).toEqual(
+      expect.objectContaining({
+        id: 'conv-partial',
+        title: 'Keep visible',
+        messageCount: 1,
+        lastActivityAt: '2026-03-12T12:16:02.000Z',
+      }),
+    );
+  });
 });

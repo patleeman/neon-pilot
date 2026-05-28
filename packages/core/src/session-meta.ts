@@ -158,6 +158,20 @@ function readConversationWorkspaceMetadata(line: RawCustomEntry): ConversationWo
   };
 }
 
+function isRawMessage(line: RawLine): line is RawMessage {
+  if (line.type !== 'message') {
+    return false;
+  }
+
+  const candidate = line as Partial<RawMessage>;
+  const message = candidate.message;
+  if (!message || typeof message !== 'object') {
+    return false;
+  }
+
+  return typeof candidate.timestamp === 'string' && typeof (message as Partial<RawMessage['message']>).role === 'string';
+}
+
 function slugToCwd(slug: string): string {
   return slug.replace(/^--/, '').replace(/--$/, '').replace(/-/g, '/');
 }
@@ -251,16 +265,15 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): StoredSessi
         continue;
       }
 
-      if (line.type !== 'message') {
+      if (!isRawMessage(line)) {
         continue;
       }
 
-      const message = line as RawMessage;
       messageCount += 1;
-      lastMessageTimestamp = message.timestamp;
+      lastMessageTimestamp = line.timestamp;
 
-      if (fallbackTitle === null && message.message.role === 'user') {
-        fallbackTitle = extractUserTitle(message.message.content);
+      if (fallbackTitle === null && line.message.role === 'user') {
+        fallbackTitle = extractUserTitle(line.message.content);
       }
     }
 
