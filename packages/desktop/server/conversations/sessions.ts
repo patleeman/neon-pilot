@@ -24,6 +24,7 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import {
   readConversationAssetCache,
   readConversationDetailCache,
+  upsertConversationCatalogSession,
   writeConversationAssetCache,
   writeConversationDetailCache,
 } from './conversationCatalog.js';
@@ -1659,6 +1660,7 @@ export function appendConversationWorkspaceMetadata(input: {
 
   if (!input.visibleMessage) {
     clearSessionCaches();
+    refreshCatalogEntryFromSessionFile(input.sessionFile);
     return;
   }
 
@@ -1689,6 +1691,18 @@ export function appendConversationWorkspaceMetadata(input: {
     'utf-8',
   );
   clearSessionCaches();
+  refreshCatalogEntryFromSessionFile(input.sessionFile);
+}
+
+function refreshCatalogEntryFromSessionFile(sessionFile: string): void {
+  try {
+    const meta = readSessionMetaByFile(sessionFile);
+    if (meta) {
+      upsertConversationCatalogSession(meta);
+    }
+  } catch {
+    // Best-effort catalog refresh; the in-memory caches are already cleared.
+  }
 }
 
 function readSourceRunIdFromSessionFilePath(filePath: string): string | undefined {

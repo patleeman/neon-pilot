@@ -907,7 +907,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             {!embedded ? (
               <AppPageIntro
                 title="Extensions"
-                summary="Manage add-ons and built-in capabilities."
+                summary="Manage installed extensions and built-in capabilities."
                 actions={
                   <div className="flex min-w-[26rem] items-center gap-2">
                     <input
@@ -944,7 +944,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <div className="flex flex-wrap items-center gap-5 border-b border-border-subtle/70 text-[12px]">
               {(
                 [
-                  ['add-ons', 'Add-ons'],
+                  ['add-ons', 'Installed'],
                   ['built-in', 'Built-in'],
                   ['available', 'Available'],
                   ['attention', 'Attention'],
@@ -1010,19 +1010,19 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 <div>
                   <h2 className="text-[24px] font-semibold leading-tight text-primary">
                     {activeFilter === 'available'
-                      ? 'Available Add-ons'
+                      ? 'Available'
                       : activeFilter === 'built-in'
                         ? 'Built-in Extensions'
                         : activeFilter === 'attention'
                           ? 'Needs Attention'
-                          : 'Installed Add-ons'}
+                          : 'Installed Extensions'}
                   </h2>
                   <p className="mt-1 text-[12px] text-secondary">{sectionSummary}</p>
                 </div>
               </div>
               {activeFilter === 'available' ? (
                 visibleCatalogExtensions.length === 0 ? (
-                  <EmptyState title="No available add-ons" body="Installed add-ons and marketplace packages are hidden from this list." />
+                  <EmptyState title="No available extensions" body="Installed extensions and marketplace packages are hidden from this list." />
                 ) : (
                   renderCatalogList(visibleCatalogExtensions)
                 )

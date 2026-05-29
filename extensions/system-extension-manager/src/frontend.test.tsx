@@ -133,7 +133,7 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Add-ons' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Installed' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Available' })).toBeTruthy();
     expect(screen.queryByText('USER')).toBeNull();

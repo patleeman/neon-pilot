@@ -32,7 +32,7 @@ export interface MarketplaceSource {
 const MARKETPLACE_SOURCES: MarketplaceSource[] = [
   {
     id: 'neon-pilot-release',
-    name: 'Neon Pilot Add-ons',
+    name: 'Neon Pilot Extensions',
     ecosystem: 'neon-pilot',
     description: 'First-party Neon Pilot extension bundles published with the current app release.',
     supportedPackageTypes: ['extension'],
