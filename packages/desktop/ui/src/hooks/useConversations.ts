@@ -227,6 +227,16 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           ...automationThreadTitleBySessionId.keys(),
           ...(sessions ?? []).filter((session) => currentWorkspaceIds.has(session.id)).map((session) => session.id),
         ]);
+
+        // During bootstrap (individual session meta fetches in progress), protect
+        // all locally-open conversations from being overwritten by the remote layout.
+        // Individual metas arrive one-at-a-time and would not cover the full set of
+        // open IDs, so only the inflight guard keeps them from being pruned.
+        if (missingSessionMetaInflightRef.current.size > 0) {
+          for (const id of currentWorkspaceIds) {
+            protectedSessionIds.add(id);
+          }
+        }
         const remoteLayout = mergeRemoteConversationLayoutWithProtectedLocalIds(
           { sessionIds, pinnedSessionIds, archivedSessionIds, activeSessionId: activeConversationId },
           currentLayout,

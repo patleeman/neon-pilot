@@ -10,6 +10,7 @@ import {
   OPEN_SESSION_IDS_STORAGE_KEY,
   PINNED_SESSION_IDS_STORAGE_KEY,
 } from '../local/localSettings.js';
+import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
 import { resetLocalWriteGrace } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
 import { useConversations } from './useConversations.js';
@@ -28,6 +29,12 @@ vi.mock('../client/api', () => ({
 
 const mountedRoots: Root[] = [];
 let latestHookResult: ReturnType<typeof useConversations> | null = null;
+
+/**
+ * Exposed by ControllableStatefulProbe so the test can inject a full session
+ * snapshot mid-test, simulating an SSE sessions_snapshot arrival.
+ */
+const snapshotControlRef: { current: ((sessions: SessionMeta[]) => void) | null } = { current: null };
 
 function createStorage() {
   const map = new Map<string, string>();
@@ -173,6 +180,71 @@ function renderStatefulProbe(input: {
 
   act(() => {
     root.render(<StatefulHookProbeProviders input={input} />);
+  });
+
+  mountedRoots.push(root);
+}
+
+/**
+ * Probe that uses the real mergeSessionSnapshotPreservingOrder, matching what
+ * App.tsx does. This allows reproducing the race where individual sessionMeta
+ * fetches replace the sessions array (snapshot semantics) instead of merging.
+ */
+function SnapshotStatefulHookProbeProviders({
+  input,
+}: {
+  input: { sessions: SessionMeta[] | null; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> };
+}) {
+  const [sessions, setSessionsState] = React.useState<SessionMeta[] | null>(input.sessions);
+  const setSessions = React.useCallback((items: SessionMeta[]) => {
+    setSessionsState((previous) => mergeSessionSnapshotPreservingOrder(previous, items));
+  }, []);
+
+  // Expose a setter so the test can simulate an SSE sessions_snapshot arriving.
+  const applySnapshot = React.useCallback((snapshot: SessionMeta[]) => {
+    setSessionsState(snapshot);
+  }, []);
+
+  React.useEffect(() => {
+    snapshotControlRef.current = applySnapshot;
+    return () => {
+      snapshotControlRef.current = null;
+    };
+  }, [applySnapshot]);
+
+  return (
+    <SseConnectionContext.Provider value={{ status: 'offline' }}>
+      <AppDataContext.Provider
+        value={{
+          projects: null,
+          sessions,
+          tasks: input.tasks,
+          runs: null,
+          setProjects: () => {},
+          setSessions,
+          setTasks: () => {},
+          setRuns: () => {},
+        }}
+      >
+        <LiveTitlesContext.Provider value={{ titles: input.liveTitles ?? new Map(), setTitle: () => {} }}>
+          <HookProbe />
+        </LiveTitlesContext.Provider>
+      </AppDataContext.Provider>
+    </SseConnectionContext.Provider>
+  );
+}
+
+function renderSnapshotProbe(input: {
+  sessions: SessionMeta[] | null;
+  tasks: ScheduledTaskSummary[] | null;
+  liveTitles?: Map<string, string>;
+}) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(<SnapshotStatefulHookProbeProviders input={input} />);
   });
 
   mountedRoots.push(root);
@@ -348,6 +420,126 @@ describe('useConversations', () => {
 
     expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['conv-live']);
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-live']);
+  });
+
+  describe('bootstrap / individual sessionMeta fetch race', () => {
+    it('preserves all open IDs when individual sessionMeta fetches resolve out of order', async () => {
+      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b', 'open-c']));
+
+      // Deferred promises let us control resolution order.
+      let resolveA!: (session: SessionMeta) => void;
+      let resolveB!: (session: SessionMeta) => void;
+      let resolveC!: (session: SessionMeta) => void;
+      const promiseA = new Promise<SessionMeta>((r) => {
+        resolveA = r;
+      });
+      const promiseB = new Promise<SessionMeta>((r) => {
+        resolveB = r;
+      });
+      const promiseC = new Promise<SessionMeta>((r) => {
+        resolveC = r;
+      });
+
+      apiMocks.sessionMeta.mockImplementation(async (id: string) => {
+        if (id === 'open-a') return promiseA;
+        if (id === 'open-b') return promiseB;
+        if (id === 'open-c') return promiseC;
+        return createSession({ id });
+      });
+
+      renderSnapshotProbe({ sessions: null, tasks: null });
+      await flushAsyncWork();
+
+      // All three fetches started.
+      expect(apiMocks.sessionMeta).toHaveBeenCalledTimes(3);
+
+      // Resolve 'open-b' first — without the fix this would replace the
+      // sessions array with just [B], then the pruning effect would run with
+      // knownSessionIds = {B, C} (A is no longer in inflight after .finally)
+      // and prune A from openIds.
+      resolveB(createSession({ id: 'open-b', title: 'Session B' }));
+      await flushAsyncWork();
+
+      expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b', 'open-c']);
+      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b', 'open-c']);
+
+      // Resolve remaining.
+      resolveA(createSession({ id: 'open-a', title: 'Session A' }));
+      resolveC(createSession({ id: 'open-c', title: 'Session C' }));
+      await flushAsyncWork();
+
+      expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b', 'open-c']);
+      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b', 'open-c']);
+    });
+
+    it('does not let individual sessionMeta fetches overwrite a later-arriving full snapshot', async () => {
+      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b']));
+
+      let resolveA!: (session: SessionMeta) => void;
+      let resolveB!: (session: SessionMeta) => void;
+      const promiseA = new Promise<SessionMeta>((r) => {
+        resolveA = r;
+      });
+      const promiseB = new Promise<SessionMeta>((r) => {
+        resolveB = r;
+      });
+
+      apiMocks.sessionMeta.mockImplementation(async (id: string) => {
+        if (id === 'open-a') return promiseA;
+        if (id === 'open-b') return promiseB;
+        return createSession({ id });
+      });
+
+      renderSnapshotProbe({ sessions: null, tasks: null });
+      await flushAsyncWork();
+      expect(apiMocks.sessionMeta).toHaveBeenCalledTimes(2);
+
+      // Simulate SSE sessions_snapshot arriving with both sessions before
+      // the individual fetches resolve.
+      act(() => {
+        snapshotControlRef.current?.([
+          createSession({ id: 'open-a', title: 'Snapshot A' }),
+          createSession({ id: 'open-b', title: 'Snapshot B' }),
+        ]);
+      });
+      await flushAsyncWork();
+
+      expect(latestHookResult?.tabs.map((s) => s.title)).toEqual(['Snapshot A', 'Snapshot B']);
+
+      // Individual meta fetches finally resolve — they must NOT overwrite
+      // the full snapshot that arrived first.
+      resolveA(createSession({ id: 'open-a', title: 'Individual A' }));
+      resolveB(createSession({ id: 'open-b', title: 'Individual B' }));
+      await flushAsyncWork();
+
+      expect(latestHookResult?.tabs.map((s) => s.title)).toEqual(['Snapshot A', 'Snapshot B']);
+      expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b']);
+      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b']);
+    });
+
+    it('still prunes stale layout IDs when no individual meta fetches are in flight', async () => {
+      localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['real-open', 'stale-open']));
+      localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-pinned']));
+      localStorage.setItem(ARCHIVED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['stale-archived']));
+      localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, 'stale-open');
+
+      // Use the snapshot-style probe to match app behavior.
+      renderSnapshotProbe({
+        sessions: [createSession({ id: 'real-open', title: 'Real conversation' })],
+        tasks: null,
+      });
+
+      await flushAsyncWork();
+
+      expect(latestHookResult?.tabs.map((session) => session.id)).toEqual(['real-open']);
+      expect(latestHookResult?.pinnedSessions).toEqual([]);
+      expect(latestHookResult?.archivedConversationIds).toEqual([]);
+      expect(latestHookResult?.activeId).toBeNull();
+      expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['real-open']);
+      expect(localStorage.getItem(PINNED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBeNull();
+    });
   });
 
   it('uses the latest session snapshot as the source of truth for running state', () => {
