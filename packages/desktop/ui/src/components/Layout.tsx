@@ -626,7 +626,6 @@ function WorkbenchNewTabPage({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
-
           <button
             type="button"
             className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"

@@ -463,9 +463,10 @@ export interface KnowledgeEditorProps {
   fileName?: string;
   onFileNavigate: (id: string) => void;
   onFileRenamed: (oldId: string, newId: string) => void;
+  onClose?: () => void;
 }
 
-export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRenamed }: KnowledgeEditorProps) {
+export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRenamed, onClose }: KnowledgeEditorProps) {
   const [frontmatter, setFrontmatter] = useState<Frontmatter>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -827,6 +828,28 @@ export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRename
               >
                 {saveStatus}
               </span>
+            ) : null}
+            {onClose ? (
+              <button
+                type="button"
+                className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-dim hover:bg-surface-2 hover:text-primary transition-colors"
+                title="Close file"
+                aria-label="Close file"
+                onClick={onClose}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
             ) : null}
           </div>
 

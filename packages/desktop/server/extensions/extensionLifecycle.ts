@@ -429,6 +429,10 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
   uninstallExtensionSubscriptions(id);
 
+  const { removeExtensionFromRegistry, clearExtensionFailureRecords } = await import('./extensionRegistry.js');
+  removeExtensionFromRegistry(id, stateRoot);
+  clearExtensionFailureRecords(id, stateRoot);
+
   rmSync(entry.packageRoot, { recursive: true, force: true });
   return { ok: true as const, extensionId: id, deleted: true };
 }

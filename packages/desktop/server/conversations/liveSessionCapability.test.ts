@@ -108,12 +108,12 @@ vi.mock('./liveSessions.js', () => ({
 }));
 
 import { appendConversationWorkspaceMetadata } from './conversationService.js';
-import { createSession, resumeSession } from './liveSessions.js';
 import {
   createLiveSessionCapability,
   restoreQueuedLiveSessionMessageCapability,
   submitLiveSessionPromptCapability,
 } from './liveSessionCapability.js';
+import { createSession, resumeSession } from './liveSessions.js';
 
 function createContext() {
   return {

@@ -63,9 +63,7 @@ type ContextTranscriptBlock = Extract<TranscriptMessageBlock, { type: 'context' 
 // This builder runs on persisted DisplayBlock data, not live-only MessageBlock
 // stream data. Keep this type aligned with DisplayBlock so route bootstrap
 // precompute cannot silently claim support for blocks it will never receive.
-type TraceTranscriptBlock =
-  | Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'error' }>
-  | ContextTranscriptBlock;
+type TraceTranscriptBlock = Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'error' }> | ContextTranscriptBlock;
 
 export type TranscriptRenderItem =
   | { type: 'message'; block: TranscriptMessageBlock; index: number }

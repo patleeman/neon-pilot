@@ -668,6 +668,15 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
   writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot);
 }
 
+export function removeExtensionFromRegistry(extensionId: string, stateRoot: string = getStateRoot()): void {
+  const config = readExtensionRegistryConfig(stateRoot);
+  const disabledIds = (config.disabledIds ?? []).filter((id) => id !== extensionId);
+  const enabledIds = (config.enabledIds ?? []).filter((id) => id !== extensionId);
+  const quarantined = { ...(config.quarantined ?? {}) };
+  delete quarantined[extensionId];
+  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, quarantined }, stateRoot);
+}
+
 export function recordExtensionFailure(input: { extensionId: string; operation: string; error: string; stateRoot?: string }): {
   quarantined: boolean;
   failures: number;

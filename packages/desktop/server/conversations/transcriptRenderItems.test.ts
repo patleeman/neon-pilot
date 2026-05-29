@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildTranscriptRenderItemsFromDisplayBlocks } from './transcriptRenderItems';
 import type { DisplayBlock } from './sessions';
+import { buildTranscriptRenderItemsFromDisplayBlocks } from './transcriptRenderItems';
 
 const ts = '2026-05-24T12:00:00.000Z';
 

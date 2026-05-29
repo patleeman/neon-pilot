@@ -1274,8 +1274,39 @@ export function WorkspaceFileDocument({
     return <EmptyState className="flex h-full flex-col justify-center px-5" title="File unavailable" body="No file is selected." />;
   }
 
+  const handleFileClose = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('pa:workbench-close-active-file'));
+  }, []);
+
   return (
     <div className="flex h-full min-w-0 flex-col bg-base select-text">
+      <div className="flex items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-mono text-[12px] text-secondary" title={path}>
+            {path}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ui-icon-button ui-icon-button-compact shrink-0"
+          title="Close file"
+          aria-label="Close file"
+          onClick={handleFileClose}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
       {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
         <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
           <button
