@@ -205,12 +205,15 @@ describe('AutomationsPage', () => {
     expect(pa.commands.execute).toHaveBeenCalledWith(
       'conversation.newAndFocus',
       expect.objectContaining({
-        initialComposerText: expect.stringContaining('Use the scheduled-tasks skill'),
+        initialComposerText: expect.stringContaining('Read the built-in scheduled-tasks skill'),
       }),
     );
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain('Timeout seconds: 1800');
     expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
-      'Catch-up window seconds: 900',
+      'Do not create the automation until I confirm',
+    );
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain('- Timeout seconds: 1800');
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+      '- Catch-up policy window seconds: 900',
     );
   });
 

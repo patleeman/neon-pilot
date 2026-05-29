@@ -648,21 +648,22 @@ function schedulePreview(form: AutomationFormState) {
 function buildCreateWithChatPrompt(form: AutomationFormState) {
   const input = readFormInput(form);
   const lines = [
-    'Use the scheduled-tasks skill to create this automation with the scheduled_task tool. Validate the schedule and ask me only if required information is missing.',
+    "Read the built-in scheduled-tasks skill, then let's chat about the automation I want to create. Help me shape the schedule, policies, delivery, and runtime defaults. Do not create the automation until I confirm the final version.",
     '',
-    `Title: ${input.title || '<fill in a concise title>'}`,
-    `Prompt: ${input.prompt || '<describe what should run>'}`,
-    input.cron ? `Schedule: recurring cron ${input.cron}` : `Schedule: once at ${input.at || '<choose a time>'}`,
-    `Target: ${input.targetType}`,
-    `Thread mode: ${input.threadMode}`,
-    input.threadConversationId ? `Existing thread id: ${input.threadConversationId}` : null,
-    input.cwd ? `Working directory: ${input.cwd}` : null,
-    input.model ? `Model: ${input.model}` : null,
-    input.thinkingLevel ? `Thinking level: ${input.thinkingLevel}` : null,
-    input.timeoutSeconds ? `Timeout seconds: ${input.timeoutSeconds}` : null,
-    input.catchUpWindowSeconds && input.cron ? `Catch-up window seconds: ${input.catchUpWindowSeconds}` : null,
-    input.policies.length > 0 ? `Policies: ${JSON.stringify(input.policies)}` : null,
-    `Enabled: ${input.enabled ? 'true' : 'false'}`,
+    'Starter draft from the automation form:',
+    `- Title: ${input.title || '<help me choose a concise title>'}`,
+    `- Prompt: ${input.prompt || '<help me write what should run>'}`,
+    input.cron ? `- Schedule: recurring cron ${input.cron}` : `- Schedule: once at ${input.at || '<help me choose a time>'}`,
+    `- Target: ${input.targetType}`,
+    `- Thread mode: ${input.threadMode}`,
+    input.threadConversationId ? `- Existing thread id: ${input.threadConversationId}` : null,
+    input.cwd ? `- Working directory: ${input.cwd}` : null,
+    input.model ? `- Model: ${input.model}` : null,
+    input.thinkingLevel ? `- Thinking level: ${input.thinkingLevel}` : null,
+    input.timeoutSeconds ? `- Timeout seconds: ${input.timeoutSeconds}` : null,
+    input.catchUpWindowSeconds && input.cron ? `- Catch-up policy window seconds: ${input.catchUpWindowSeconds}` : null,
+    input.policies.length > 0 ? `- Policies: ${JSON.stringify(input.policies)}` : null,
+    `- Enabled: ${input.enabled ? 'true' : 'false'}`,
   ].filter(Boolean);
   return lines.join('\n');
 }
