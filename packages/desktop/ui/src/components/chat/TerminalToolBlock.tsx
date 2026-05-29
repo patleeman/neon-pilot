@@ -78,7 +78,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
         </div>
 
         {hasBody && (
-          <div className="px-3 py-2.5">
+          <div className="px-3 py-2.5 max-h-96 overflow-y-auto">
             {block.output ? (
               <pre
                 className={cx('whitespace-pre-wrap break-all text-[11px] leading-relaxed', isError ? 'text-danger/85' : 'text-secondary')}

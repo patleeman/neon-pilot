@@ -58,7 +58,7 @@ function BackgroundBashInlineOutput({
 
   return (
     <div
-      className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2"
+      className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2 max-h-96 overflow-y-auto"
       tabIndex={-1}
       {...transcriptTargetAttributes({ kind: 'background_run', runId })}
     >
@@ -454,7 +454,7 @@ export function ToolBlock({
       ) : null}
 
       {open && !pinnedTool && agentBashTool && (
-        <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2">
+        <div className="border-t border-border-subtle/70 bg-black/10 px-2.5 py-2 max-h-96 overflow-y-auto">
           <span className="sr-only">input</span>
           <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
             <span className="opacity-60">$ </span>
@@ -489,7 +489,7 @@ export function ToolBlock({
       {open && !pinnedTool && !agentBashTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70">
           {(isRunning || output || outputDeferred) && (
-            <div className={cx('px-2.5 py-2', isRunning && output && 'max-h-40 overflow-y-auto')}>
+            <div className="px-2.5 py-2 max-h-96 overflow-y-auto">
               {output ? (
                 <pre className="whitespace-pre-wrap break-all text-[11px] leading-relaxed opacity-75">{output}</pre>
               ) : isRunning ? (
