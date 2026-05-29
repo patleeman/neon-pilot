@@ -1,6 +1,5 @@
 import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
 import {
-  addOpenFileId,
   canDropAllPaths,
   collapseExpandedFolderIds,
   ContextMenuWrapper,
@@ -36,8 +35,8 @@ import { Link } from 'react-router-dom';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
 import { getKnowledgeBaseSyncPresentation } from '../lib/knowledgeBaseSyncStatus';
-import { emitKBEvent, onKBEvent, useKnowledgeWatcher } from './knowledgeEvents';
 import { canDropKnowledgeEntry, normalizeKnowledgeDir } from './knowledgeDragAndDrop';
+import { emitKBEvent, onKBEvent, useKnowledgeWatcher } from './knowledgeEvents';
 
 function Ico({ d, size = 14 }: { d: string; size?: number }) {
   return (
@@ -71,7 +70,6 @@ const ICON = {
   import: 'M12 3v12m0 0 4-4m-4 4-4-4m-5 8.25h18',
   refresh:
     'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99',
-  x: 'M6 18 18 6M6 6l12 12',
   file: 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z',
   folderOpen:
     'M3.75 6.75h5.379a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H20.25m-16.5-3A2.25 2.25 0 0 0 1.5 9v8.25A2.25 2.25 0 0 0 3.75 19.5h16.5a2.25 2.25 0 0 0 2.25-2.25v-5.25a2.25 2.25 0 0 0-2.25-2.25H3.75',
@@ -132,10 +130,6 @@ function idToDir(id: string): string {
   const parts = id.split('/');
   parts.pop();
   return parts.length > 0 ? `${parts.join('/')}/` : '';
-}
-
-function formatOpenFileName(fileId: string): string {
-  return fileId.split('/').filter(Boolean).pop() ?? fileId;
 }
 
 function resolveRenamedFileId(fileId: string | null, oldId: string, newId: string): string | null {
@@ -602,90 +596,6 @@ function CreateEntryModal({
   );
 }
 
-function OpenFilesSection({
-  openFileIds,
-  activeFileId,
-  onSelect,
-  onClose,
-  onCloseAll,
-  bordered = true,
-  className = '',
-}: {
-  openFileIds: readonly string[];
-  activeFileId: string | null;
-  onSelect: (id: string) => void;
-  onClose: (id: string) => void;
-  onCloseAll: () => void;
-  bordered?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={['flex flex-col px-2 pb-2 pt-1.5', bordered ? 'border-t border-border-subtle' : '', className].filter(Boolean).join(' ')}
-    >
-      <div className="flex shrink-0 items-center justify-between gap-2 px-1 pb-1">
-        <p className="ui-section-label">Open Files</p>
-        {openFileIds.length > 0 ? (
-          <button
-            type="button"
-            aria-label="Close all open files"
-            title="Close all open files"
-            className="ui-icon-button ui-icon-button-compact text-dim hover:text-primary"
-            onClick={onCloseAll}
-          >
-            <Ico d={ICON.x} size={11} />
-          </button>
-        ) : null}
-      </div>
-      {openFileIds.length === 0 ? (
-        <p className="px-2 py-2 text-[12px] text-dim">No open files.</p>
-      ) : (
-        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-          {openFileIds.map((fileId) => {
-            const isActive = activeFileId === fileId;
-            const fileName = formatOpenFileName(fileId);
-
-            return (
-              <div key={fileId} className="group relative">
-                <button
-                  type="button"
-                  aria-label={`Open file ${fileId}`}
-                  title={fileId}
-                  className={[
-                    'flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 pr-9 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/35 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
-                    isActive ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-accent/8 hover:text-primary',
-                  ].join(' ')}
-                  aria-current={isActive ? 'true' : undefined}
-                  onClick={() => onSelect(fileId)}
-                >
-                  <span className="shrink-0 text-dim">
-                    <Ico d={ICON.file} size={12} />
-                  </span>
-                  <span className="block min-w-0 flex-1 truncate text-[12px] font-medium">{fileName.replace(/\.md$/, '')}</span>
-                </button>
-                <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
-                  <button
-                    type="button"
-                    aria-label={`Close file ${fileId}`}
-                    className="pointer-events-auto ui-icon-button ui-icon-button-compact shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onClose(fileId);
-                    }}
-                  >
-                    <Ico d={ICON.x} size={10} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase }: FileTreeProps) {
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -693,8 +603,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
   const [importDirectoryId, setImportDirectoryId] = useState<string | null>(null);
   const [createEntryState, setCreateEntryState] = useState<CreateEntryState | null>(null);
   const [syncingKnowledgeBase, setSyncingKnowledgeBase] = useState(false);
-  const initialOpenFileIds = useRef(activeFileId ? addOpenFileId(readStoredOpenFileIds(), activeFileId) : readStoredOpenFileIds());
-  const [openFileIds, setOpenFileIds] = useState<string[]>(initialOpenFileIds.current);
+  const initialOpenFileIds = useRef(activeFileId ? [activeFileId] : readStoredOpenFileIds().slice(0, 1));
   const openFileIdsRef = useRef<string[]>(initialOpenFileIds.current);
   const recentlyClosedFileIdsRef = useRef<string[]>(readStoredRecentlyClosedFileIds());
   const expandedFolderIdsRef = useRef<Set<string>>(readStoredExpandedFolderIds());
@@ -748,9 +657,8 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
   }, [knowledgeBaseError, knowledgeBaseLoading, knowledgeBaseState]);
 
   const persistOpenFileIds = useCallback((nextOpenFileIds: readonly string[]) => {
-    const normalized = [...nextOpenFileIds];
+    const normalized = normalizeOpenFileIds(nextOpenFileIds).slice(0, 1);
     openFileIdsRef.current = normalized;
-    setOpenFileIds(normalized);
     writeStoredOpenFileIds(normalized);
   }, []);
 
@@ -1147,21 +1055,6 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
     [onFileSelect, persistOpenFileIds, persistRecentlyClosedFileIds],
   );
 
-  const handleOpenFilesCloseAll = useCallback(() => {
-    const currentOpenFileIds = openFileIdsRef.current;
-    if (currentOpenFileIds.length === 0) {
-      return;
-    }
-
-    const nextRecentlyClosedFileIds = currentOpenFileIds.reduceRight(
-      (recentlyClosedFileIds, fileId) => recordRecentlyClosedFileId(recentlyClosedFileIds, fileId),
-      recentlyClosedFileIdsRef.current,
-    );
-    persistRecentlyClosedFileIds(nextRecentlyClosedFileIds);
-    persistOpenFileIds([]);
-    onFileSelect('');
-  }, [onFileSelect, persistOpenFileIds, persistRecentlyClosedFileIds]);
-
   const handleReopenLastClosedFile = useCallback(() => {
     const remaining = [...recentlyClosedFileIdsRef.current];
     while (remaining.length > 0) {
@@ -1180,7 +1073,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
       }
 
       persistRecentlyClosedFileIds(remaining);
-      persistOpenFileIds(addOpenFileId(openFileIdsRef.current, candidate));
+      persistOpenFileIds([candidate]);
       onFileSelect(candidate);
       return;
     }
@@ -1220,7 +1113,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
       return;
     }
 
-    persistOpenFileIds(addOpenFileId(openFileIdsRef.current, activeFileId));
+    persistOpenFileIds([activeFileId]);
   }, [activeFileId, persistOpenFileIds]);
 
   // selectionChangeRef and renameRef are wired through useFileTreeModel
@@ -1578,27 +1471,6 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
         </>
       ) : (
         <>
-          {openFileIds.length > 0 ? (
-            <OpenFilesSection
-              openFileIds={openFileIds}
-              activeFileId={activeFileId}
-              onSelect={onFileSelect}
-              onClose={handleOpenFileClose}
-              onCloseAll={handleOpenFilesCloseAll}
-              bordered={false}
-              className="max-h-[45%] shrink-0"
-            />
-          ) : (
-            <OpenFilesSection
-              openFileIds={openFileIds}
-              activeFileId={activeFileId}
-              onSelect={onFileSelect}
-              onClose={handleOpenFileClose}
-              onCloseAll={handleOpenFilesCloseAll}
-              bordered={false}
-            />
-          )}
-
           <div ref={headerRef} className="px-3 pt-1 pb-1 shrink-0 rounded-md">
             <div className="flex items-center gap-1">
               <p className="ui-section-label flex-1">Knowledge</p>

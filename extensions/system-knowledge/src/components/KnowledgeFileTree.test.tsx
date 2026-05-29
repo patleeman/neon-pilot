@@ -368,7 +368,7 @@ describe('KnowledgeFileTree', () => {
     expect(queryInShadowRoots(container, 'button[aria-label="todo.md"]')).toBeNull();
   });
 
-  it('tracks open files, restores them after remount, and lets the active file close back to the previous one', async () => {
+  it('tracks only the active file and does not render an open files section', async () => {
     const { container } = renderManagedTree();
     await flushAsyncWork();
 
@@ -379,18 +379,17 @@ describe('KnowledgeFileTree', () => {
     click(getButton(container, 'today.md'));
     await flushAsyncWork();
 
-    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['notes/today.md', 'README.md']);
-    const openTodayButton = getButton(container, 'Open file notes/today.md');
-    expect(openTodayButton).toBeTruthy();
-    expect(openTodayButton.textContent).toBe('today');
-    expect(openTodayButton.getAttribute('title')).toBe('notes/today.md');
-    expect(getButton(container, 'Open file README.md')).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['notes/today.md']);
+    expect(container.textContent).not.toContain('Open Files');
+    expect(queryInShadowRoots(container, 'button[aria-label="Open file notes/today.md"]')).toBeNull();
+    expect(queryInShadowRoots(container, 'button[aria-label="Open file README.md"]')).toBeNull();
 
-    click(getButton(container, 'Close file notes/today.md'));
+    act(() => {
+      emitKBEvent('kb:close-active-file');
+    });
     await flushAsyncWork();
 
-    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['README.md']);
-    expect(getButton(container, 'Open file README.md')).toBeTruthy();
+    expect(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY)).toBeNull();
 
     for (const root of mountedRoots.splice(0)) {
       act(() => {
@@ -402,7 +401,7 @@ describe('KnowledgeFileTree', () => {
     const remounted = renderManagedTree();
     await flushAsyncWork();
 
-    expect(getButton(remounted.container, 'Open file README.md')).toBeTruthy();
+    expect(remounted.container.textContent).not.toContain('Open Files');
   });
 
   it('reopens the most recently closed file when asked', async () => {
@@ -421,43 +420,15 @@ describe('KnowledgeFileTree', () => {
     });
     await flushAsyncWork();
 
-    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['README.md']);
-    expect(getButton(container, 'Open file README.md').getAttribute('aria-current')).toBe('true');
-
-    act(() => {
-      emitKBEvent('kb:reopen-closed-file');
-    });
-    await flushAsyncWork();
-
-    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['notes/today.md', 'README.md']);
-    expect(getButton(container, 'Open file notes/today.md').getAttribute('aria-current')).toBe('true');
-  });
-
-  it('closes all open files from the open files section', async () => {
-    const { container } = renderManagedTree();
-    await flushAsyncWork();
-
-    click(getButton(container, 'README.md'));
-    await flushAsyncWork();
-    click(getButton(container, 'notes'));
-    await flushAsyncWork();
-    click(getButton(container, 'today.md'));
-    await flushAsyncWork();
-
-    click(getButton(container, 'Close all open files'));
-    await flushAsyncWork();
-
     expect(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY)).toBeNull();
-    expect(queryInShadowRoots(container, 'button[aria-label="Open file notes/today.md"]')).toBeNull();
-    expect(queryInShadowRoots(container, 'button[aria-label="Open file README.md"]')).toBeNull();
-    expect(container.textContent).toContain('No open files.');
 
     act(() => {
       emitKBEvent('kb:reopen-closed-file');
     });
     await flushAsyncWork();
 
-    expect(getButton(container, 'Open file notes/today.md').getAttribute('aria-current')).toBe('true');
+    expect(JSON.parse(localStorage.getItem(KNOWLEDGE_OPEN_FILE_IDS_STORAGE_KEY) ?? '[]')).toEqual(['notes/today.md']);
+    expect(container.textContent).not.toContain('Open Files');
   });
 
   it('creates a new file inside the right-clicked folder', async () => {
