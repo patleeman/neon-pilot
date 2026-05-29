@@ -987,6 +987,7 @@ export function Layout() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { versions } = useAppEvents();
+  const activeConversationId = getActiveConversationId(location.pathname);
   const activeSessionCwd = useSession(activeConversationId)?.cwd ?? null;
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
@@ -1102,7 +1103,6 @@ export function Layout() {
   const showContextRail = canShowContextRail && railOpen;
   const showWorkbench = appLayoutMode === 'workbench' && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
-  const activeConversationId = getActiveConversationId(location.pathname);
   const activeWorkbenchKnowledgeFileId = showWorkbench
     ? (searchParams.get('file') ?? (activeConversationId ? selectedFileByConversation[activeConversationId] : null) ?? null)
     : null;
