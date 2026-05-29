@@ -307,7 +307,9 @@ export function publishConversationSessionMetaChanged(...conversationIds: Array<
     }
 
     seen.add(conversationId);
-    publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId });
+    const liveEntry = readLiveSession(conversationId);
+    const running = liveEntry ? isLiveEntryRunning(liveEntry) : undefined;
+    publishAppEvent({ type: 'session_meta_changed', sessionId: conversationId, ...(running !== undefined ? { running } : {}) });
   }
 }
 
