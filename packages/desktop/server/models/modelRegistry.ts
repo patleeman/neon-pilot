@@ -10,6 +10,18 @@ type RegistryModel = ReturnType<ModelRegistry['getAvailable']>[number];
 
 function applyNeonPilotModelMetadataOverrides(model: RegistryModel): RegistryModel {
   const contextWindow = normalizeModelContextWindow(model.id, model.contextWindow, 128_000);
+
+  // Fix: kimi-k2.6 under opencode-go uses "string-thinking" format which sends
+  // `thinking: "high"` (a string), but the API expects `thinking` as an object
+  // (e.g., `{ type: "enabled" }`). Switch to "deepseek" format which sends the
+  // correct object shape. Also map "high" in thinkingLevelMap so selected levels
+  // don't fall through to raw strings.
+  if (model.provider === 'opencode-go' && model.id === 'kimi-k2.6' && model.compat) {
+    const compat = { ...model.compat, thinkingFormat: 'deepseek' as const };
+    const thinkingLevelMap = model.thinkingLevelMap ? { ...model.thinkingLevelMap, high: 'high' } : { off: 'none', high: 'high' };
+    return { ...model, compat, thinkingLevelMap, contextWindow };
+  }
+
   if (contextWindow !== model.contextWindow) {
     return { ...model, contextWindow };
   }
