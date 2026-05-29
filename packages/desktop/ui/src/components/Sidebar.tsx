@@ -149,6 +149,12 @@ const PATH = {
     'M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v6.75a2.25 2.25 0 0 1-2.25 2.25H12l-4.5 3v-3H6.75A2.25 2.25 0 0 1 4.5 13.5V6.75Z',
   check: 'm5 12.75 4.5 4.5L19 7.75',
   pin: 'm15.75 3.75 4.5 4.5-3 3v3l-2.25 2.25-7.5-7.5L9.75 6.75h3l3-3ZM9.75 14.25 4.5 19.5',
+  home: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z M9 22V12h6v10',
+  book: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z M4 19.5A2.5 2.5 0 0 1 6.5 17H20',
+  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+  code: 'M16 18l6-6-6-6 M8 6l-6 6 6 6',
+  tag: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01',
 };
 
 const THREADS_COLLAPSED_CWD_GROUPS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-collapsed-cwd-groups');
@@ -186,6 +192,26 @@ function getExtensionNavIcon(icon: string | undefined): string {
       return PATH.sparkles;
     case 'terminal':
       return PATH.workspace;
+    case 'search':
+      return PATH.search;
+    case 'chat':
+      return PATH.chatBubble;
+    case 'add':
+      return PATH.plus;
+    case 'clock':
+      return PATH.clock;
+    case 'home':
+      return PATH.home;
+    case 'book':
+      return PATH.book;
+    case 'star':
+      return PATH.star;
+    case 'link':
+      return PATH.link;
+    case 'code':
+      return PATH.code;
+    case 'tag':
+      return PATH.tag;
     case 'app':
     case 'database':
     default:
@@ -3123,12 +3149,17 @@ export function Sidebar() {
       return;
     }
 
-    const activeSession = sessions?.find((session) => session.id === activeConversationId);
-    if (!activeSession || !sessionNeedsAttention(activeSession)) {
+    // Only skip marking read if the session is in the sessions list AND
+    // definitely does not need attention (no unread messages/activities
+    // and not forced-unread).  If the session is a placeholder (not yet
+    // in the sessions list — e.g., opened via open_session or pending
+    // refreshSessionMeta) we always optimistically mark it as read.
+    const sessionInSessions = (sessions ?? []).find((s) => s.id === activeConversationId);
+    if (sessionInSessions && !sessionNeedsAttention(sessionInSessions)) {
       return;
     }
 
-    void api.markConversationAttentionRead(activeSession.id).catch(() => {
+    void api.markConversationAttentionRead(activeConversationId).catch(() => {
       // Ignore optimistic attention-clear failures.
     });
   }, [activeConversationId, sessions]);
