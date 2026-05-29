@@ -16,8 +16,8 @@ vi.mock('../../ui-state/theme', () => ({
   useTheme: () => ({ theme: 'light' }),
 }));
 
-vi.mock('@uiw/react-codemirror', () => ({
-  default: ({ value }: { value?: string }) =>
+vi.mock('./WorkspaceCodeEditor', () => ({
+  WorkspaceCodeEditor: ({ value }: { value?: string }) =>
     React.createElement('textarea', { 'aria-label': 'mock editor', readOnly: true, value: value ?? '' }),
 }));
 
@@ -56,6 +56,7 @@ function file(path: string, content: string) {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function flush() {
   await act(async () => {
     await Promise.resolve();
@@ -84,10 +85,7 @@ describe('formatWorkspaceEntrySize', () => {
     expect(formatWorkspaceEntrySize(1.5)).toBe('');
   });
 
-  // Skipped: pre-existing failure from WorkspaceFileDocument refactoring;
-  // was already failing at v0.9.3-rc.1. Workspace file loading is covered by
-  // end-to-end smoke tests.
-  it.skip('ignores stale file loads after switching paths', async () => {
+  it('ignores stale file loads after switching paths', async () => {
     const a = deferred<ReturnType<typeof file>>();
     const b = deferred<ReturnType<typeof file>>();
     apiMocks.workspaceFile.mockImplementation((_cwd: string, path: string) => (path === 'a.ts' ? a.promise : b.promise));
@@ -108,8 +106,9 @@ describe('formatWorkspaceEntrySize', () => {
       b.resolve(file('b.ts', 'current file'));
       await b.promise;
     });
-    await flush();
-    expect(container.textContent).toContain('b.ts');
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('b.ts');
+    });
     await vi.waitFor(() => {
       expect((container.querySelector('textarea') as HTMLTextAreaElement | null)?.value).toBe('current file');
     });
@@ -118,9 +117,10 @@ describe('formatWorkspaceEntrySize', () => {
       a.resolve(file('a.ts', 'stale file'));
       await a.promise;
     });
-    await flush();
 
-    expect(container.textContent).toContain('b.ts');
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('b.ts');
+    });
     expect(container.textContent).not.toContain('a.ts');
     await vi.waitFor(() => {
       expect((container.querySelector('textarea') as HTMLTextAreaElement | null)?.value).toBe('current file');
