@@ -711,12 +711,13 @@ function resolveSidebarConversationHotkeyOrder<T>(input: {
 }
 
 function getSessionWorkspaceCwd(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string | null {
-  if (Object.prototype.hasOwnProperty.call(session, 'workspaceCwd')) {
-    const workspaceCwd = session.workspaceCwd ?? null;
-    return isNeutralChatCwdPath(workspaceCwd) ? null : workspaceCwd;
+  const workspaceCwd = session.workspaceCwd?.trim();
+  if (workspaceCwd && !isNeutralChatCwdPath(workspaceCwd)) {
+    return workspaceCwd;
   }
 
-  return isNeutralChatCwdPath(session.cwd) ? null : (session.cwd ?? null);
+  const cwd = session.cwd?.trim();
+  return cwd && !isNeutralChatCwdPath(cwd) ? cwd : null;
 }
 
 function getLocalSessionWorkspacePath(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string {
