@@ -109,6 +109,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
+  const sessionsPopulatedRef = useRef(false);
   const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
 
   const automationThreadTitleBySessionId = useMemo(
@@ -368,8 +369,11 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
   useEffect(() => {
     if (sessions && sessions.length > 0) {
+      sessionsPopulatedRef.current = true;
       return;
     }
+
+    sessionsPopulatedRef.current = false;
 
     const missingIds = [...pinnedIds, ...openIds].filter(
       (id) =>
@@ -387,7 +391,12 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
       void api
         .sessionMeta(id)
         .then((session) => {
-          setSessions([session]);
+          // Only apply individual session metas if the full sessions list hasn't
+          // been populated yet (via SSE snapshot or bootstrap). Otherwise, the
+          // merged snapshot would be overwritten by this single-session update.
+          if (!sessionsPopulatedRef.current) {
+            setSessions([session]);
+          }
         })
         .catch(() => {
           // Keep the placeholder until the full sessions snapshot or layout sync
@@ -411,7 +420,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
       ...missingSessionMetaInflightRef.current,
     ]);
 
-    if (sessions.length === 0) {
+    if (sessions.length === 0 || (missingSessionMetaInflightRef.current.size > 0 && sessions.length < openIds.length)) {
       for (const id of [...openIds, ...pinnedIds, ...(activeId ? [activeId] : [])]) {
         knownSessionIds.add(id);
       }
