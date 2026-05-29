@@ -20,7 +20,7 @@ function listSystemExtensionDirs() {
   }
 
   return readdirSync(extensionsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('system-'))
+    .filter((entry) => entry.isDirectory())
     .map((entry) => join(extensionsRoot, entry.name))
     .filter((extensionDir) => existsSync(join(extensionDir, 'extension.json')))
     .sort((left, right) => left.localeCompare(right));
@@ -57,5 +57,5 @@ for (const extensionDir of extensionDirs) {
   assertBuiltEntriesExist(extensionDir);
 }
 
-const systemCount = listSystemExtensionDirs().length;
-console.log(`Built and verified ${extensionDirs.length} system extensions (${systemCount} system).`);
+const systemCount = extensionDirs.length;
+console.log(`Built and verified ${extensionDirs.length} extensions.`);

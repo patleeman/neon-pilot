@@ -3,7 +3,7 @@ import { cx } from '../ui';
 
 export interface GoalPanelProps {
   goal: ThreadGoal | null;
-  workingLabel?: string | null;
+  onCancel?: () => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -12,7 +12,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   complete: { label: 'Complete', className: 'text-dim' },
 };
 
-export function ConversationGoalPanel({ goal, workingLabel }: GoalPanelProps) {
+export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
   if (!goal || !goal.objective || goal.status === 'complete') {
     return null;
   }
@@ -22,16 +22,26 @@ export function ConversationGoalPanel({ goal, workingLabel }: GoalPanelProps) {
   return (
     <div className="border-b border-border-subtle/60 bg-surface/20 px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+        {goal.status === 'active' ? (
+          <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-accent" aria-hidden="true">
+            <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+          </span>
+        ) : null}
         <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-accent">Goal</span>
         <span className="min-w-0 flex-1 truncate text-primary">{goal.objective}</span>
         <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>{statusConfig.label}</span>
-        {workingLabel ? (
-          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-secondary">
-            <span className="inline-flex h-3 w-3 items-center justify-center text-accent" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
-            </span>
-            {workingLabel}
-          </span>
+        {goal.status === 'active' ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-danger/70 transition-colors hover:bg-danger/10 hover:text-danger"
+            aria-label="Cancel goal"
+          >
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
+            </svg>
+            Cancel
+          </button>
         ) : null}
       </div>
     </div>

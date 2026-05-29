@@ -1542,7 +1542,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     shouldPersist: (value) => value.length > 0,
   });
 
-  const goalEnabled = stream.goalState?.status === 'active';
   const [extensionSlashCommands, setExtensionSlashCommands] = useState<ExtensionSlashCommandRegistration[]>([]);
   const [extensionMentionRegistrations, setExtensionMentionRegistrations] = useState<ExtensionMentionRegistration[]>([]);
   const [extensionMentionItems, setExtensionMentionItems] = useState<MentionItem[]>([]);
@@ -6388,10 +6387,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               )}
 
               {composerChromeReady ? (
-                <ConversationGoalPanel
-                  goal={stream.goalState}
-                  workingLabel={goalEnabled && conversationRunningForPage ? 'Working…' : null}
-                />
+                <ConversationGoalPanel goal={stream.goalState} onCancel={() => void streamSend('/goal clear')} />
               ) : null}
 
               {hasComposerShelfContent && (
