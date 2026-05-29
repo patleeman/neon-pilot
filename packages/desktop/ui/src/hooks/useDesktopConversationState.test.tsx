@@ -659,6 +659,99 @@ describe('useDesktopConversationState', () => {
     expect(desktopConversationState).toHaveBeenCalledTimes(initialFetchCount + 1);
   });
 
+  it('preserves stream events and schedules reconnection when the SSE connection errors during active streaming', async () => {
+    vi.useFakeTimers();
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Initial', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(eventSources).toHaveLength(1);
+    expect(latestState?.state?.stream.blocks).toHaveLength(1);
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    // Simulate streaming events arriving just before an SSE error
+    act(() => {
+      eventSources[0]?.send({ type: 'tool_start', toolCallId: 'tool-1', toolName: 'bash', args: { command: 'pnpm test' } });
+      eventSources[0]?.send({ type: 'text_delta', delta: 'Building...' });
+    });
+
+    // Flush the frame-scheduled events
+    await act(async () => {
+      frameCallbacks[0]?.(performance.now());
+      await flushPromises();
+    });
+
+    expect(latestState?.state?.stream.blocks).toHaveLength(3);
+
+    // Simulate the SSE error — flushPendingStreamEvents + setState
+    const blockIdsBeforeError = latestState?.state?.stream.blocks.map((b: { id: string }) => b.id);
+    const previousEventSourceCount = eventSources.length;
+    act(() => {
+      eventSources[0]?.onerror?.(new Event('error'));
+    });
+
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    // The blocks from the last flush should still be in the state
+    expect(latestState?.state?.stream.blocks.map((b: { id: string }) => b.id)).toEqual(blockIdsBeforeError);
+    expect(latestState?.state?.stream.blocks).toHaveLength(3);
+
+    // After the reconnection delay, the SSE effect should re-establish the subscription
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await flushPromises();
+    });
+
+    // A new EventSource was created
+    expect(eventSources.length).toBeGreaterThan(previousEventSourceCount);
+    expect(latestState?.error).toBeNull();
+
+    vi.useRealTimers();
+  });
+
   it('keeps same-conversation state visible while refetching', async () => {
     let resolveSecondFetch: ((value: Awaited<ReturnType<typeof api.desktopConversationState>>) => void) | null = null;
     const initialState = {

@@ -467,6 +467,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const pendingStreamFrameRef = useRef<number | null>(null);
   const pendingStreamFlushTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const pendingStreamFlushDelayRef = useRef<number | null>(null);
+  const reconnectRetryRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
 
   useEffect(() => {
@@ -652,6 +653,16 @@ export function useDesktopConversationState(conversationId: string | null, optio
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
     };
+    const scheduleReconnectRetry = () => {
+      if (reconnectRetryRef.current !== null) {
+        return;
+      }
+      reconnectRetryRef.current = window.setTimeout(() => {
+        reconnectRetryRef.current = null;
+        setSubscriptionVersion((current) => current + 1);
+      }, 2000);
+    };
+
     source.onerror = () => {
       flushPendingStreamEvents();
       setError('Conversation realtime stream failed.');
@@ -666,14 +677,19 @@ export function useDesktopConversationState(conversationId: string | null, optio
           liveSession: previous.liveSession.live ? { ...previous.liveSession, isStreaming: false } : previous.liveSession,
         };
       });
+      scheduleReconnectRetry();
     };
 
     return () => {
+      if (reconnectRetryRef.current !== null) {
+        window.clearTimeout(reconnectRetryRef.current);
+        reconnectRetryRef.current = null;
+      }
       source.close();
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
-  }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, surfaceId, surfaceType]);
+  }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {

@@ -3710,7 +3710,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         if (target.promptDraft) {
           persistForkPromptDraft(newSessionId, target.promptDraft);
         }
-        ensureConversationTabOpen(newSessionId);
         window.dispatchEvent(
           new CustomEvent('pa:companion-chat-open', {
             detail: { conversationId: newSessionId },
@@ -3789,7 +3788,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         );
         const { newSessionId } = forked;
         primeForkedConversationOpenCaches(forked);
-        ensureConversationTabOpen(newSessionId);
         window.dispatchEvent(
           new CustomEvent('pa:companion-chat-open', {
             detail: { conversationId: newSessionId },
@@ -3876,7 +3874,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         if (clickedBlock.type === 'user') {
           persistForkPromptDraft(newSessionId, clickedBlock.text);
         }
-        ensureConversationTabOpen(newSessionId);
         window.dispatchEvent(
           new CustomEvent('pa:companion-chat-open', {
             detail: {

@@ -54,6 +54,27 @@ describe('desktop local API conversation actions', () => {
   });
 });
 
+describe('desktop local API conversation rename route', () => {
+  it('rejects rename with missing name instead of throwing No local API route', async () => {
+    await expect(
+      dispatchDesktopLocalApiRequest({
+        method: 'PATCH',
+        path: '/api/conversations/test-id/title',
+      }),
+    ).rejects.not.toThrow('No local API route');
+  });
+
+  it('rejects rename with empty name instead of throwing No local API route', async () => {
+    await expect(
+      dispatchDesktopLocalApiRequest({
+        method: 'PATCH',
+        path: '/api/conversations/test-id/title',
+        body: { name: '' },
+      }),
+    ).rejects.not.toThrow('No local API route');
+  });
+});
+
 describe('desktop local API conversation asset routes', () => {
   const tempStateRoot = mkdtempSync(join(tmpdir(), 'pa-local-api-assets-'));
   const previousStateRoot = process.env.NEON_PILOT_STATE_ROOT;

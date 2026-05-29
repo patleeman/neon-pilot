@@ -31,16 +31,16 @@ export async function syncLiveSessionDurableRun(
   state: WebLiveConversationRunState,
   input: { force?: boolean; lastError?: string } = {},
 ): Promise<void> {
-  const sessionFile = entry.session.sessionFile?.trim();
-  if (!sessionFile) {
-    return;
-  }
-
   if (!input.force && entry.lastDurableRunState === state && !input.lastError) {
     return;
   }
 
   entry.lastDurableRunState = state;
+
+  const sessionFile = entry.session.sessionFile?.trim();
+  if (!sessionFile) {
+    return;
+  }
 
   try {
     await syncWebLiveConversationRun({

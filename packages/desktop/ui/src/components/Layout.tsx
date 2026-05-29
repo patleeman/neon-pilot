@@ -523,24 +523,6 @@ function WorkbenchDocumentPane({
         extensionToolPanels={extensionToolPanels}
         onActiveToolChange={onActiveToolChange}
         onWorkspaceFileClear={onWorkspaceFileClear}
-        onNewChat={
-          conversationId && workspaceCwd
-            ? () => {
-                api
-                  .createLiveSession(workspaceCwd, undefined, {
-                    workspaceCwd: workspaceCwd,
-                  })
-                  .then((result) => {
-                    window.dispatchEvent(
-                      new CustomEvent('pa:companion-chat-open', {
-                        detail: { conversationId: result.id },
-                      }),
-                    );
-                  })
-                  .catch(() => undefined);
-              }
-            : undefined
-        }
       />
     );
   } else if (extensionWorkbenchSurface) {
@@ -623,12 +605,10 @@ function WorkbenchNewTabPage({
   extensionToolPanels,
   onActiveToolChange,
   onWorkspaceFileClear,
-  onNewChat,
 }: {
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onWorkspaceFileClear: () => void;
-  onNewChat?: () => void;
 }) {
   const availableTools = extensionToolPanels.filter(
     (surface) => shouldRenderWorkbenchToolInNav(surface) && inferSurfaceToolSlot(surface) !== 'artifacts',
@@ -646,21 +626,7 @@ function WorkbenchNewTabPage({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          {onNewChat ? (
-            <button
-              type="button"
-              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
-              onClick={onNewChat}
-            >
-              <span className="w-[18px] shrink-0 text-center text-[15px] opacity-70" aria-hidden="true">
-                💬
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-medium text-primary">Side Chat</span>
-                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a companion chat in the right panel.</span>
-              </span>
-            </button>
-          ) : null}
+
           <button
             type="button"
             className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"

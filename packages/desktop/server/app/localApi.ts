@@ -1177,6 +1177,15 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       );
     }
   }
+  const conversationTitleMatch = /^\/api\/conversations\/([^/]+)\/title$/.exec(path);
+  if (method === 'PATCH' && conversationTitleMatch) {
+    return createDesktopLocalApiJsonResponse(
+      await renameDesktopConversation({
+        conversationId: decodeURIComponent(conversationTitleMatch[1] ?? ''),
+        ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+      }),
+    );
+  }
   const conversationDeferredResumeActionMatch = /^\/api\/conversations\/([^/]+)\/deferred-resumes\/([^/]+)\/(fire)$/.exec(path);
   if (method === 'POST' && conversationDeferredResumeActionMatch) {
     return createDesktopLocalApiJsonResponse(

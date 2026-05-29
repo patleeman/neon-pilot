@@ -109,7 +109,11 @@ vi.mock('./liveSessions.js', () => ({
 
 import { appendConversationWorkspaceMetadata } from './conversationService.js';
 import { createSession, resumeSession } from './liveSessions.js';
-import { createLiveSessionCapability, restoreQueuedLiveSessionMessageCapability, submitLiveSessionPromptCapability } from './liveSessionCapability.js';
+import {
+  createLiveSessionCapability,
+  restoreQueuedLiveSessionMessageCapability,
+  submitLiveSessionPromptCapability,
+} from './liveSessionCapability.js';
 
 function createContext() {
   return {
@@ -181,10 +185,7 @@ describe('createLiveSessionCapability', () => {
   });
 
   it('appends workspace metadata with explicit cwd when creating from a workspace', async () => {
-    const result = await createLiveSessionCapability(
-      { cwd: '/my-workspace' },
-      createContext(),
-    );
+    const result = await createLiveSessionCapability({ cwd: '/my-workspace' }, createContext());
 
     expect(appendConversationWorkspaceMetadata).toHaveBeenCalledTimes(1);
     expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
@@ -210,10 +211,7 @@ describe('createLiveSessionCapability', () => {
   });
 
   it('passes through explicit workspaceCwd when provided', async () => {
-    await createLiveSessionCapability(
-      { cwd: '/my-workspace', workspaceCwd: '/other-workspace' },
-      createContext(),
-    );
+    await createLiveSessionCapability({ cwd: '/my-workspace', workspaceCwd: '/other-workspace' }, createContext());
 
     expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -224,10 +222,7 @@ describe('createLiveSessionCapability', () => {
   });
 
   it('includes workspaceCwd in the bootstrap sessionDetail.meta', async () => {
-    const result = await createLiveSessionCapability(
-      { cwd: '/my-workspace' },
-      createContext(),
-    );
+    const result = await createLiveSessionCapability({ cwd: '/my-workspace' }, createContext());
 
     expect(result.bootstrap).toBeDefined();
     expect(result.bootstrap?.sessionDetail?.meta).toBeDefined();
@@ -241,10 +236,7 @@ describe('createLiveSessionCapability', () => {
   });
 
   it('calls appendConversationWorkspaceMetadata in the reserved flow', async () => {
-    await createLiveSessionCapability(
-      { cwd: '/my-workspace', reservedSessionFile: '/sessions/reserved.jsonl' },
-      createContext(),
-    );
+    await createLiveSessionCapability({ cwd: '/my-workspace', reservedSessionFile: '/sessions/reserved.jsonl' }, createContext());
 
     expect(appendConversationWorkspaceMetadata).toHaveBeenCalledTimes(1);
     expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
