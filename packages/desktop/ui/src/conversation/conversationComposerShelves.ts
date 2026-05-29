@@ -16,7 +16,6 @@ export function hasConversationComposerShelfContent(input: {
   attachedContextDocsCount: number;
   draftMentionItemsCount: number;
   pendingQueueCount: number;
-  visibleBackgroundExecutionsCount: number;
   draft: boolean;
   orderedDeferredResumesCount: number;
   pendingBrowserCommentsCount: number;
@@ -28,7 +27,6 @@ export function hasConversationComposerShelfContent(input: {
     input.attachedContextDocsCount > 0 ||
     input.draftMentionItemsCount > 0 ||
     input.pendingQueueCount > 0 ||
-    input.visibleBackgroundExecutionsCount > 0 ||
     (!input.draft && input.orderedDeferredResumesCount > 0) ||
     input.pendingBrowserCommentsCount > 0 ||
     input.hasActiveQuestion

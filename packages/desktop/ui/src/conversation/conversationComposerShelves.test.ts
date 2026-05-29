@@ -8,7 +8,6 @@ const emptyInput = {
   attachedContextDocsCount: 0,
   draftMentionItemsCount: 0,
   pendingQueueCount: 0,
-  visibleBackgroundExecutionsCount: 0,
   draft: false,
   orderedDeferredResumesCount: 0,
   pendingBrowserCommentsCount: 0,
@@ -27,7 +26,7 @@ describe('conversationComposerShelves', () => {
     expect(hasConversationComposerShelfContent({ ...emptyInput, attachedContextDocsCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, draftMentionItemsCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, pendingQueueCount: 1 })).toBe(true);
-    expect(hasConversationComposerShelfContent({ ...emptyInput, visibleBackgroundExecutionsCount: 1 })).toBe(true);
+
     expect(hasConversationComposerShelfContent({ ...emptyInput, orderedDeferredResumesCount: 1 })).toBe(true);
     expect(hasConversationComposerShelfContent({ ...emptyInput, draft: true, orderedDeferredResumesCount: 1 })).toBe(false);
     expect(hasConversationComposerShelfContent({ ...emptyInput, pendingBrowserCommentsCount: 1 })).toBe(true);

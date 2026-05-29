@@ -5700,7 +5700,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       attachedContextDocsCount: attachedContextDocs.length,
       draftMentionItemsCount: draftMentionItems.length,
       pendingQueueCount: pendingQueue.length,
-      visibleBackgroundExecutionsCount: visibleActiveConversationBackgroundExecutions.length,
       draft,
       orderedDeferredResumesCount: orderedDeferredResumes.length,
       pendingBrowserCommentsCount: pendingBrowserComments.length,
@@ -6454,72 +6453,72 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                       }}
                     />
                   </Suspense>
-
-                  {!draft && (
-                    <Suspense fallback={null}>
-                      <ConversationActivityShelf
-                        backgroundExecutions={visibleActiveConversationBackgroundExecutions}
-                        backgroundExecutionIndicatorText={backgroundExecutionIndicatorText}
-                        showBackgroundRunDetails={showActiveBackgroundRunDetails}
-                        cancellingBackgroundRunIds={cancellingBackgroundRunIds}
-                        onToggleBackgroundRunDetails={() => {
-                          setShowBackgroundRunDetails((open) => !open);
-                        }}
-                        onCancelBackgroundRun={cancelBackgroundRunFromShelf}
-                        onOpenBackgroundRun={openRun}
-                        scheduledTasks={conversationScheduledTasks}
-                        scheduledTaskIndicatorText={scheduledTaskIndicatorText}
-                        showScheduledTaskDetails={showScheduledTaskDetails}
-                        onToggleScheduledTaskDetails={() => {
-                          setShowScheduledTaskDetails((open) => !open);
-                        }}
-                        onRunScheduledTaskNow={(taskId) => {
-                          void runScheduledTaskFromShelf(taskId);
-                        }}
-                        onOpenScheduledTask={openScheduledTask}
-                        deferredResumes={orderedDeferredResumes}
-                        deferredResumeIndicatorText={deferredResumeIndicatorText}
-                        deferredResumeNowMs={deferredResumeNowMs}
-                        hasReadyDeferredResumes={hasReadyDeferredResumes}
-                        isLiveSession={isLiveSession}
-                        deferredResumesBusy={deferredResumesBusy}
-                        showDeferredResumeDetails={showDeferredResumeDetails}
-                        onContinueDeferredResumesNow={() => {
-                          void continueDeferredResumesNow();
-                        }}
-                        onToggleDeferredResumeDetails={() => {
-                          setShowDeferredResumeDetails((open) => !open);
-                        }}
-                        onFireDeferredResumeNow={(resumeId) => {
-                          void fireDeferredResumeNow(resumeId);
-                        }}
-                        onCancelDeferredResume={(resumeId) => {
-                          void cancelDeferredResume(resumeId);
-                        }}
-                      />
-                    </Suspense>
-                  )}
-
-                  {pendingAskUserQuestion && composerActiveQuestion && (
-                    <Suspense fallback={null}>
-                      <ConversationQuestionShelf
-                        presentation={pendingAskUserQuestion.presentation}
-                        activeQuestion={composerActiveQuestion}
-                        activeQuestionIndex={composerQuestionIndex}
-                        activeOptionIndex={composerQuestionOptionIndex}
-                        answers={composerQuestionAnswers}
-                        submitting={composerQuestionSubmitting}
-                        answeredCount={composerQuestionAnsweredCount}
-                        onActivateQuestion={activateComposerQuestion}
-                        onSelectOption={handleComposerQuestionOptionSelect}
-                      />
-                    </Suspense>
-                  )}
-                  {composerShelvesBottom.map((shelf) => (
-                    <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
-                  ))}
                 </div>
               )}
+
+              {!draft && (
+                <Suspense fallback={null}>
+                  <ConversationActivityShelf
+                    backgroundExecutions={visibleActiveConversationBackgroundExecutions}
+                    backgroundExecutionIndicatorText={backgroundExecutionIndicatorText}
+                    showBackgroundRunDetails={showActiveBackgroundRunDetails}
+                    cancellingBackgroundRunIds={cancellingBackgroundRunIds}
+                    onToggleBackgroundRunDetails={() => {
+                      setShowBackgroundRunDetails((open) => !open);
+                    }}
+                    onCancelBackgroundRun={cancelBackgroundRunFromShelf}
+                    onOpenBackgroundRun={openRun}
+                    scheduledTasks={conversationScheduledTasks}
+                    scheduledTaskIndicatorText={scheduledTaskIndicatorText}
+                    showScheduledTaskDetails={showScheduledTaskDetails}
+                    onToggleScheduledTaskDetails={() => {
+                      setShowScheduledTaskDetails((open) => !open);
+                    }}
+                    onRunScheduledTaskNow={(taskId) => {
+                      void runScheduledTaskFromShelf(taskId);
+                    }}
+                    onOpenScheduledTask={openScheduledTask}
+                    deferredResumes={orderedDeferredResumes}
+                    deferredResumeIndicatorText={deferredResumeIndicatorText}
+                    deferredResumeNowMs={deferredResumeNowMs}
+                    hasReadyDeferredResumes={hasReadyDeferredResumes}
+                    isLiveSession={isLiveSession}
+                    deferredResumesBusy={deferredResumesBusy}
+                    showDeferredResumeDetails={showDeferredResumeDetails}
+                    onContinueDeferredResumesNow={() => {
+                      void continueDeferredResumesNow();
+                    }}
+                    onToggleDeferredResumeDetails={() => {
+                      setShowDeferredResumeDetails((open) => !open);
+                    }}
+                    onFireDeferredResumeNow={(resumeId) => {
+                      void fireDeferredResumeNow(resumeId);
+                    }}
+                    onCancelDeferredResume={(resumeId) => {
+                      void cancelDeferredResume(resumeId);
+                    }}
+                  />
+                </Suspense>
+              )}
+
+              {pendingAskUserQuestion && composerActiveQuestion && (
+                <Suspense fallback={null}>
+                  <ConversationQuestionShelf
+                    presentation={pendingAskUserQuestion.presentation}
+                    activeQuestion={composerActiveQuestion}
+                    activeQuestionIndex={composerQuestionIndex}
+                    activeOptionIndex={composerQuestionOptionIndex}
+                    answers={composerQuestionAnswers}
+                    submitting={composerQuestionSubmitting}
+                    answeredCount={composerQuestionAnsweredCount}
+                    onActivateQuestion={activateComposerQuestion}
+                    onSelectOption={handleComposerQuestionOptionSelect}
+                  />
+                </Suspense>
+              )}
+              {composerShelvesBottom.map((shelf) => (
+                <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
+              ))}
 
               <ConversationComposerInputControls
                 conversationId={id}
