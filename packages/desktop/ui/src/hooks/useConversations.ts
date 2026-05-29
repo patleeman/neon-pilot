@@ -11,7 +11,7 @@
  */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { LiveTitlesContext, useAppData, useSseConnection } from '../app/contexts';
+import { LiveTitlesContext, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
 import { NEW_CONVERSATION_TITLE, normalizeConversationTitle } from '../conversation/conversationTitle';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
@@ -36,6 +36,7 @@ import {
   unpinConversationTab,
 } from '../session/sessionTabs';
 import type { SessionMeta } from '../shared/types';
+import { sessionStore, useAllSessions, useAllTasks, useSessionsReady } from '../store';
 
 function compareSessionsByRecentActivity(left: SessionMeta, right: SessionMeta): number {
   return (right.lastActivityAt ?? right.timestamp).localeCompare(left.lastActivityAt ?? left.timestamp);
@@ -105,7 +106,9 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
       initialLayout.sessionIds.length === 0 && initialLayout.pinnedSessionIds.length === 0 && initialLayout.archivedSessionIds.length === 0,
   );
   const { titles: liveTitles } = useContext(LiveTitlesContext);
-  const { sessions, tasks, setSessions } = useAppData();
+  const sessions = useAllSessions();
+  const sessionsReady = useSessionsReady();
+  const tasks = useAllTasks();
   const { status: sseStatus } = useSseConnection();
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
@@ -188,9 +191,10 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
   const refetch = useCallback(async () => {
     const next = await fetchSessionsSnapshot();
-    setSessions(next);
+    sessionStore.replaceAll(next);
+    sessionStore.markReady?.();
     return next;
-  }, [setSessions]);
+  }, []);
 
   const remoteLayoutLastSyncedAt = useRef(0);
   const REMOTE_LAYOUT_SYNC_COOLDOWN_MS = 3_000;
@@ -414,7 +418,8 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           // been populated yet (via SSE snapshot or bootstrap). Otherwise, the
           // merged snapshot would be overwritten by this single-session update.
           if (!sessionsPopulatedRef.current) {
-            setSessions([session]);
+            sessionStore.replaceAll([session]);
+            sessionStore.markReady?.();
           }
         })
         .catch(() => {
@@ -425,10 +430,10 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           missingSessionMetaInflightRef.current.delete(id);
         });
     }
-  }, [automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessions, sessionsById, setSessions]);
+  }, [automationThreadTitleBySessionId, liveTitles, openIds, pinnedIds, sessionsById, sessionsReady]);
 
   useEffect(() => {
-    if (sessions === null) {
+    if (!sessionsReady) {
       return;
     }
 
@@ -511,7 +516,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
         : withTitles.filter((session) => !openIdSet.has(session.id) && !pinnedIdSet.has(session.id)).sort(compareSessionsByRecentActivity),
     [openIdSet, options.includeArchivedSessions, pinnedIdSet, withTitles],
   );
-  const loading = sessions === null && (sseStatus === 'connecting' || sseStatus === 'reconnecting');
+  const loading = !sessionsReady && (sseStatus === 'connecting' || sseStatus === 'reconnecting');
 
   return {
     pinnedIds,

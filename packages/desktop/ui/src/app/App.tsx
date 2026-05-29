@@ -17,16 +17,10 @@ import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
-import {
-  mergeSessionSnapshotPreservingOrder,
-  removeSessionMetaPreservingOrder,
-  replaceSessionMetaPreservingOrder,
-  updateSessionRunningPreservingOrder,
-} from '../session/sessionListState';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
-import { runStore, sessionStore, taskStore, titleStore } from '../store';
+import { executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { ThemeProvider } from '../ui-state/theme';
 import {
   AppDataContext,
@@ -188,10 +182,6 @@ export function App() {
   const [sseStatus, setSseStatus] = useState<'connecting' | 'open' | 'reconnecting' | 'offline'>('connecting');
 
   const projects = null;
-  const [sessions, setSessionsState] = useState<SessionMeta[] | null>(null);
-  const [tasks, setTasksState] = useState<ScheduledTaskSummary[] | null>(null);
-  const [runs, setRunsState] = useState<DurableRunListResult | null>(null);
-  const [executions, setExecutionsState] = useState<import('../shared/types').ExecutionListResult | null>(null);
   const [daemon, setDaemonState] = useState<DaemonState | null>(null);
   const openedOnceRef = useRef(false);
   // Session meta requests can resolve out of order during fast run transitions.
@@ -212,23 +202,16 @@ export function App() {
   const setProjects = useCallback(() => {}, []);
 
   const setSessions = useCallback((items: SessionMeta[]) => {
-    setSessionsState((previous) => mergeSessionSnapshotPreservingOrder(previous, items));
+    sessionStore.replaceAll(items);
+    sessionStore.markReady?.();
   }, []);
 
   const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
-    setSessionsState((previous) => {
-      if (!previous) {
-        return previous;
-      }
-
-      if (!nextSession) {
-        sessionStore.remove(sessionId);
-        return removeSessionMetaPreservingOrder(previous, sessionId);
-      }
-
-      sessionStore.upsert(nextSession);
-      return replaceSessionMetaPreservingOrder(previous, nextSession);
-    });
+    if (!nextSession) {
+      sessionStore.remove(sessionId);
+      return;
+    }
+    sessionStore.upsert(nextSession);
   }, []);
 
   const bumpConversationVersion = useCallback((sessionId: string) => {
@@ -284,15 +267,15 @@ export function App() {
   }, []);
 
   const setTasks = useCallback((items: ScheduledTaskSummary[]) => {
-    setTasksState((previous) => reuseEqualSnapshot(previous, items));
+    taskStore.replaceAll(items);
   }, []);
 
   const setRuns = useCallback((result: DurableRunListResult) => {
-    setRunsState((previous) => reuseEqualSnapshot(previous, result));
+    runStore.replaceAll(result.runs ?? []);
   }, []);
 
   const setExecutions = useCallback((result: import('../shared/types').ExecutionListResult) => {
-    setExecutionsState((previous) => reuseEqualSnapshot(previous, result));
+    executionStore.replaceAll(result.executions ?? []);
   }, []);
 
   const setDaemon = useCallback((state: DaemonState) => {
@@ -368,9 +351,6 @@ export function App() {
           return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
-            setSessionsState((previous) =>
-              previous ? updateSessionRunningPreservingOrder(previous, payload.sessionId, payload.running) : previous,
-            );
             sessionStore.patch(payload.sessionId, { isRunning: payload.running } as Partial<SessionMeta>);
           }
           bumpConversationMetadataVersion(payload.sessionId);
@@ -387,6 +367,7 @@ export function App() {
         case 'sessions':
           setSessions(payload.sessions);
           sessionStore.replaceAll(payload.sessions);
+          sessionStore.markReady?.();
           return;
         case 'tasks_snapshot':
         case 'tasks':
@@ -475,6 +456,7 @@ export function App() {
       .then((items) => {
         setSessions(items);
         sessionStore.replaceAll(items);
+        sessionStore.markReady?.();
       })
       .catch(() => {
         // Keep waiting for SSE or a later retry.
@@ -613,10 +595,7 @@ export function App() {
     [conversationMetadataVersions, conversationVersions, eventVersions],
   );
   const sseConnectionContextValue = useMemo(() => ({ status: sseStatus }), [sseStatus]);
-  const appDataContextValue = useMemo(
-    () => ({ projects, sessions, tasks, runs, executions, setProjects, setSessions, setTasks, setRuns, setExecutions }),
-    [executions, projects, runs, sessions, setExecutions, setProjects, setRuns, setSessions, setTasks, tasks],
-  );
+  const appDataContextValue = useMemo(() => ({ projects, setProjects }), [projects, setProjects]);
   const systemStatusContextValue = useMemo(() => ({ daemon, setDaemon }), [daemon, setDaemon]);
   const liveTitlesContextValue = useMemo(() => ({ titles: titleMap, setTitle }), [setTitle, titleMap]);
 

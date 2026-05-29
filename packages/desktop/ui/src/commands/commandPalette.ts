@@ -44,16 +44,21 @@ export function shouldBootstrapCommandPaletteThreads(options: {
   scope: CommandPaletteScope;
   sessions: unknown[] | null;
   alreadyRequested: boolean;
+  sessionsReady?: boolean;
 }): boolean {
-  if (!options.open || options.sessions !== null || options.alreadyRequested) {
+  if (!options.open || options.sessions !== null || options.sessionsReady || options.alreadyRequested) {
     return false;
   }
 
   return options.scope === THREADS_COMMAND_PALETTE_SCOPE;
 }
 
-export function isCommandPaletteThreadDataLoading(options: { sessions: unknown[] | null; sessionsLoading: boolean }): boolean {
-  return options.sessions === null || options.sessionsLoading;
+export function isCommandPaletteThreadDataLoading(options: {
+  sessions: unknown[] | null;
+  sessionsLoading: boolean;
+  sessionsReady?: boolean;
+}): boolean {
+  return (options.sessionsReady === undefined ? options.sessions === null : !options.sessionsReady) || options.sessionsLoading;
 }
 
 function dedupeCommandPaletteItems<TAction>(items: CommandPaletteItem<TAction>[]): CommandPaletteItem<TAction>[] {

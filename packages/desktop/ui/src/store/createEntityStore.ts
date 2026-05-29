@@ -14,6 +14,9 @@ export interface EntityStore<T> {
   /** Subscribe to any entity being added/removed/changed. Returns unsubscribe. */
   subscribeAll(callback: () => void): () => void;
 
+  /** Subscribe to ready state changes (first snapshot loaded). Returns unsubscribe. */
+  subscribeReady?(callback: (ready: boolean) => void): () => void;
+
   /** Stable snapshot for useSyncExternalStore — same ref until ID is mutated. */
   get(id: string): T | undefined;
 
@@ -22,6 +25,9 @@ export interface EntityStore<T> {
 
   /** Number of tracked entities. */
   get size(): number;
+
+  /** Whether the store has received its initial snapshot. */
+  get ready(): boolean;
 
   // ── Mutations ──────────────────────────────────────────────
 
@@ -34,15 +40,23 @@ export interface EntityStore<T> {
   /** Replace the entire store contents (e.g. on initial snapshot from SSE). */
   replaceAll(entities: T[]): void;
 
+  /** Mark the store as having received its initial snapshot. */
+  markReady?(): void;
+
   /** Remove a single entity. */
   remove(id: string): void;
+
+  /** Clear all entities and reset ready state (for test isolation). */
+  reset?(): void;
 }
 
 export function createEntityStore<T>(initial?: T[], idAccessor?: (entity: T) => string): EntityStore<T> {
   const getId = idAccessor ?? ((entity: unknown) => (entity as { id: string }).id);
-  const entities = new Map<string, T>();
+  let entities = new Map<string, T>();
   let snapshots = new Map<string, T>();
   let allSnapshot: readonly T[] = [];
+  let _ready = false;
+  const readyListeners = new Set<(ready: boolean) => void>();
   const listeners = new Map<string, Set<() => void>>();
   const allListeners = new Set<() => void>();
 
@@ -56,6 +70,13 @@ export function createEntityStore<T>(initial?: T[], idAccessor?: (entity: T) => 
 
   const notifyAll = () => {
     allListeners.forEach((cb) => cb());
+  };
+
+  const setReady = () => {
+    if (!_ready) {
+      _ready = true;
+      readyListeners.forEach((cb) => cb(true));
+    }
   };
 
   // Hydrate from initial data
@@ -84,6 +105,14 @@ export function createEntityStore<T>(initial?: T[], idAccessor?: (entity: T) => 
       };
     },
 
+    subscribeReady(callback: (ready: boolean) => void): () => void {
+      readyListeners.add(callback);
+      if (_ready) callback(true);
+      return () => {
+        readyListeners.delete(callback);
+      };
+    },
+
     get(id: string): T | undefined {
       return snapshots.get(id);
     },
@@ -96,7 +125,15 @@ export function createEntityStore<T>(initial?: T[], idAccessor?: (entity: T) => 
       return entities.size;
     },
 
+    get ready(): boolean {
+      return _ready;
+    },
+
     // ── Mutations ──
+
+    markReady(): void {
+      setReady();
+    },
 
     upsert(entity: T): void {
       const key = getId(entity);
@@ -176,6 +213,19 @@ export function createEntityStore<T>(initial?: T[], idAccessor?: (entity: T) => 
         notifyId(id);
         notifyAll();
       }
+    },
+
+    reset(): void {
+      const oldIds = new Set(entities.keys());
+      entities = new Map();
+      snapshots = new Map();
+      allSnapshot = [];
+      _ready = false;
+      for (const id of oldIds) {
+        notifyId(id);
+      }
+      notifyAll();
+      readyListeners.forEach((cb) => cb(false));
     },
   };
 }

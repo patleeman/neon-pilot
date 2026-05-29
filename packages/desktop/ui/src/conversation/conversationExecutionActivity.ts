@@ -1,4 +1,4 @@
-import type { ExecutionListResult, ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
+import type { ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
 
 export type ConversationBackgroundWorkKind = 'command' | 'subagent' | 'mixed' | 'other';
 
@@ -93,7 +93,7 @@ function isStaleScheduledTaskExecution(
 
 export function selectConversationActiveExecutions(input: {
   conversationId: string | null | undefined;
-  executions?: ExecutionListResult | null;
+  executions?: readonly ExecutionRecord[] | null;
   tasks?: ScheduledTaskSummary[] | null;
   excludeExecutionId?: string | null;
   visibility?: 'primary' | 'visible' | 'all';
@@ -103,7 +103,7 @@ export function selectConversationActiveExecutions(input: {
 
   const visibility = input.visibility ?? 'visible';
   const lookups = buildAutomationRunningLookups(input.tasks);
-  return [...(input.executions?.executions ?? [])]
+  return (input.executions ?? [])
     .filter((execution) => execution.conversationId === conversationId)
     .filter((execution) => execution.id !== input.excludeExecutionId)
     .filter((execution) => {

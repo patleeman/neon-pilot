@@ -1,7 +1,6 @@
 import { type SelectHTMLAttributes, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAppData } from '../app/contexts';
 import { isScheduledTaskDetail } from '../automation/scheduledTaskDetail';
 import {
   type CronEditorState,
@@ -17,8 +16,9 @@ import { normalizeConversationGroupCwd } from '../conversation/conversationCwdGr
 import { useApi } from '../hooks/useApi';
 import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
 import { THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
-import type { ScheduledTaskDetail, ScheduledTaskSummary } from '../shared/types';
+import type { ScheduledTaskDetail } from '../shared/types';
 import { timeAgo } from '../shared/utils';
+import { taskStore, useAllSessions, useSessionsReady } from '../store';
 import { MentionTextarea } from './MentionTextarea';
 import { addNotification } from './notifications/notificationStore';
 import { ScheduledTaskLogSection } from './ScheduledTaskLogSection';
@@ -103,9 +103,9 @@ function InlineSelect({ className, children, ...props }: SelectHTMLAttributes<HT
   );
 }
 
-async function refreshTaskSnapshot(setTasks: (tasks: ScheduledTaskSummary[]) => void) {
+async function refreshTaskSnapshot() {
   const tasks = await api.tasks();
-  setTasks(tasks);
+  taskStore.replaceAll(tasks);
   return tasks;
 }
 
@@ -491,8 +491,9 @@ function TaskEditorForm({
   onCancel: () => void;
   onSubmit: () => void;
 }) {
-  const { projects, sessions } = useAppData();
-  const validationError = useMemo(() => validateTaskForm(value, mode), [mode, value]);
+  const { projects } = useAppData();
+  const sessions = useAllSessions();
+  const sessionsReady = useSessionsReady();
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
@@ -587,7 +588,7 @@ function TaskEditorForm({
         threadMode: value.threadMode,
         threadConversationId: value.threadConversationId,
         existingThreadOptions,
-        sessionsLoaded: sessions !== null,
+        sessionsLoaded: sessionsReady,
       })
     ) {
       onChange({ threadConversationId: '' });
@@ -735,7 +736,6 @@ function TaskEditorForm({
 
 export function ScheduledTaskCreatePanel({ onCancel }: { onCancel?: () => void } = {}) {
   const navigate = useNavigate();
-  const { setTasks } = useAppData();
   const [draft, setDraft] = useState<TaskFormState>(() => createDefaultTaskFormState());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -750,7 +750,7 @@ export function ScheduledTaskCreatePanel({ onCancel }: { onCancel?: () => void }
     setSaveError(null);
     try {
       const response = await api.createTask(createTaskMutationPayload(draft));
-      await refreshTaskSnapshot(setTasks);
+      await refreshTaskSnapshot();
       navigate(`/automations/${encodeURIComponent(response.task.id)}`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -786,7 +786,6 @@ export function ScheduledTaskPanel({
   onClose?: () => void;
 }) {
   const navigate = useNavigate();
-  const { setTasks } = useAppData();
   const {
     data: task,
     loading,
@@ -841,7 +840,7 @@ export function ScheduledTaskPanel({
     setSaveError(null);
     try {
       await api.saveTask(id, createTaskMutationPayload(draft));
-      await Promise.all([refetch({ resetLoading: false }), refreshTaskSnapshot(setTasks)]);
+      await Promise.all([refetch({ resetLoading: false }), refreshTaskSnapshot()]);
       setEditing(false);
       setDraft(null);
       onClose?.();

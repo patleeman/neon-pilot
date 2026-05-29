@@ -6,9 +6,9 @@
  */
 import { useCallback, useSyncExternalStore } from 'react';
 
-import type { SessionMeta } from '../shared/types';
+import type { DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import type { EntityStore } from './createEntityStore';
-import { presenceStore, type RunningState, sessionStore, titleStore } from './stores';
+import { executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore, titleStore } from './stores';
 
 // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -26,11 +26,11 @@ function useEntityValue<T>(store: EntityStore<T>, id: string | null | undefined)
     return store.get(id);
   }, [id, store]);
 
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 function useDerivedValue<T>(subscribe: (onStoreChange: () => void) => () => void, getSnapshot: () => T): T {
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 // ── Entity hooks ─────────────────────────────────────────────────────────────
@@ -88,5 +88,35 @@ export function useCanSend(id: string | null | undefined): boolean {
 export function useAllSessions(): readonly SessionMeta[] {
   const subscribe = useCallback((onStoreChange: () => void) => sessionStore.subscribeAll(onStoreChange), []);
   const getSnapshot = useCallback(() => sessionStore.getAll(), []);
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/** Whether the session store has received its initial snapshot. */
+export function useSessionsReady(): boolean {
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    if (sessionStore.subscribeReady) {
+      return sessionStore.subscribeReady(onStoreChange);
+    }
+    return () => {};
+  }, []);
+  const getSnapshot = useCallback(() => sessionStore.ready, []);
+  return useDerivedValue(subscribe, getSnapshot);
+}
+
+export function useAllTasks(): readonly ScheduledTaskSummary[] {
+  const subscribe = useCallback((onStoreChange: () => void) => taskStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => taskStore.getAll(), []);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function useAllRuns(): readonly DurableRunRecord[] {
+  const subscribe = useCallback((onStoreChange: () => void) => runStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => runStore.getAll(), []);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function useAllExecutions(): readonly ExecutionRecord[] {
+  const subscribe = useCallback((onStoreChange: () => void) => executionStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => executionStore.getAll(), []);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

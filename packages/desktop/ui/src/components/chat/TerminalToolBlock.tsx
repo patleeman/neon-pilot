@@ -1,8 +1,8 @@
 import { memo, useState } from 'react';
 
-import { useAppData } from '../../app/contexts';
 import type { MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
+import { useAllRuns } from '../../store';
 import { readTerminalBashToolPresentation } from '../../transcript/terminalBashBlock';
 import { cx, Pill } from '../ui';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -39,7 +39,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
   const hasBody = isRunning || block.output || outputDeferred;
   const copyText = block.output ? `$ ${presentation.command}\n${block.output}` : `$ ${presentation.command}`;
   const footerBits: string[] = [];
-  const { runs } = useAppData();
+  const runs = useAllRuns();
   const knownRunIds = new Set((runs?.runs ?? []).map((run) => run.runId));
   const linkedRuns = block.output ? readMentionedLinkedRunsFromText(block.output).filter((run) => knownRunIds.has(run.runId)) : [];
   const [expandedRunKeys, setExpandedRunKeys] = useState<Set<string>>(() => new Set());

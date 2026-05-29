@@ -9,6 +9,16 @@
  */
 export type { EntityStore } from './createEntityStore';
 export { createEntityStore } from './createEntityStore';
-export { useAllSessions, useCanSend, useSession, useSessionPresence, useSessionTitle } from './hooks';
+export {
+  useAllExecutions,
+  useAllRuns,
+  useAllSessions,
+  useAllTasks,
+  useCanSend,
+  useSession,
+  useSessionPresence,
+  useSessionsReady,
+  useSessionTitle,
+} from './hooks';
 export type { RunningState } from './stores';
-export { executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from './stores';
+export { executionStore, presenceStore, resetAllStores, runStore, sessionStore, taskStore, titleStore } from './stores';

@@ -2,10 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 
 import { closeActivityDbs } from './packages/core/src/activity.js';
 import { closeAutomationDbs } from './packages/desktop/server/automation/store.js';
+import { resetAllStores } from './packages/desktop/ui/src/store/stores';
 
 // JSDOM doesn't provide EventSource; provide a minimal mock for components
 // that create EventSource instances during render (e.g. VaultFileTree).
@@ -64,6 +65,10 @@ if (!globalForTestStateRoot[GLOBAL_KEY]) {
 if (!process.env.NEON_PILOT_STATE_ROOT) {
   process.env.NEON_PILOT_STATE_ROOT = globalForTestStateRoot[GLOBAL_KEY]!;
 }
+
+beforeEach(() => {
+  resetAllStores();
+});
 
 afterEach(() => {
   closeActivityDbs();

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
+import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import {
   completeConversationOpenPhase,
@@ -120,8 +120,6 @@ import { buildLiveSessionPreferenceInput, selectComposerModel } from '../convers
 import {
   hasConversationLoadedHistoricalTailBlocks,
   mergeConversationSessionMeta,
-  replaceConversationMetaInSessionList,
-  replaceConversationTitleInSessionList,
   resolveConversationComposerRunState,
   resolveConversationCwdChangeAction,
   resolveConversationInitialHistoricalWarmupTarget,
@@ -171,7 +169,6 @@ import {
   shouldShowScrollToBottomControl,
 } from '../conversation/conversationScroll';
 import { isConversationSessionNotLiveError, primeCreatedConversationOpenCaches } from '../conversation/conversationSessionLifecycle';
-import { findConversationSessionById } from '../conversation/conversationSessionSelection';
 import { type ConversationSlashCommand, parseConversationSlashCommand } from '../conversation/conversationSlashCommand';
 import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
@@ -318,7 +315,7 @@ import type {
   SessionMeta,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
-import { sessionStore, useSession } from '../store';
+import { runStore, sessionStore, taskStore, useAllRuns, useAllSessions, useAllTasks, useSession, useSessionsReady } from '../store';
 import {
   type AskUserQuestionAnswers,
   type AskUserQuestionPresentation,
@@ -447,7 +444,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const artifactOpensInWorkbenchPane = appLayoutMode === 'workbench';
   const { versions } = useAppEvents();
-  const { tasks, sessions, runs, setRuns, setSessions, setTasks } = useAppData();
+  const sessions = useAllSessions();
+  const tasks = useAllTasks();
+  const runRecords = useAllRuns();
+  const sessionsReady = useSessionsReady();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
   useEffect(() => {
@@ -567,13 +567,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, id]);
 
   // ── Live session detection ─────────────────────────────────────────────────
-  const storeSession = useSession(id);
-  const rawSessionSnapshot = useMemo(() => findConversationSessionById(sessions, id), [id, sessions]);
-  // Use the store as primary source for session data; fall back to AppDataContext
-  // for compatibility during the migration.
-  const sessionSnapshot = storeSession ?? rawSessionSnapshot;
-
-  const sessionsLoaded = sessions !== null;
+  const sessionSnapshot = useSession(id);
+  const sessionsLoaded = sessionsReady;
   // We use a confirmed-live flag only for lightweight session-state labeling.
   const [confirmedLive, setConfirmedLive] = useState<boolean | null>(null);
   const [liveSessionHasStaleTurnState, setLiveSessionHasStaleTurnState] = useState(false);
@@ -670,8 +665,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         },
       );
       const seedForkedSessionMeta = (sessionMeta: SessionMeta) => {
-        const existingSessions = sessions ?? [];
-        setSessions([...existingSessions.filter((session) => session.id !== sessionMeta.id), sessionMeta]);
         sessionStore.upsert(sessionMeta);
       };
       const forkedSessionMeta = forked.bootstrap.sessionDetail?.meta;
@@ -695,7 +688,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         seedForkedSessionMeta(optimisticMeta);
       }
     },
-    [conversationEventVersion, conversationVersionKey, historicalTailBlocks, sessions, setSessions],
+    [conversationEventVersion, conversationVersionKey, historicalTailBlocks],
   );
   const confirmedLiveValue = useDesktopConversation ? (visibleConversationBootstrap?.liveSession.live ?? null) : null;
 
@@ -1282,7 +1275,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     streamTitle: stream.title,
     liveTitle: id ? titles.get(id) : undefined,
     detailTitle: visibleSessionDetail?.meta.title,
-    sessionTitle: id ? sessions?.find((session) => session.id === id)?.title : undefined,
+    sessionTitle: sessionSnapshot?.title,
   });
   const model = visibleSessionDetail?.meta.model;
 
@@ -1313,7 +1306,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, isEditingTitle, title, titleSaving]);
 
   useEffect(() => {
-    const { normalizedTitle, shouldPushLiveTitle, nextSessions } = resolveConversationStreamTitleSync({
+    const { normalizedTitle, shouldPushLiveTitle } = resolveConversationStreamTitleSync({
       draft,
       conversationId: id,
       streamTitle: stream.title,
@@ -1325,14 +1318,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    if (shouldPushLiveTitle && id) {
+    if (shouldPushLiveTitle && id && normalizedTitle) {
       pushTitle(id, normalizedTitle);
+      sessionStore.patch(id, { title: normalizedTitle });
     }
-
-    if (nextSessions && nextSessions !== sessions) {
-      setSessions(nextSessions);
-    }
-  }, [draft, id, pushTitle, sessions, setSessions, stream.title, titles]);
+  }, [draft, id, pushTitle, stream.title, titles]);
 
   const [nonCriticalComposerMetadataReady, setNonCriticalComposerMetadataReady] = useState(false);
   useEffect(() => {
@@ -1958,7 +1948,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       .runs()
       .then((result) => {
         if (!cancelled) {
-          setRuns(result);
+          runStore.replaceAll(result.runs ?? []);
         }
       })
       .catch(() => {});
@@ -1966,7 +1956,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [draft, runs, setRuns]);
+  }, [draft, runRecords]);
 
   const cancelBackgroundRunFromShelf = useCallback(
     (runId: string) => {
@@ -2557,11 +2547,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   });
 
   useEffect(() => {
-    const nextSessions = replaceConversationMetaInSessionList(sessions, id, currentSessionMeta);
-    if (nextSessions && nextSessions !== sessions) {
-      setSessions(nextSessions);
+    if (currentSessionMeta && currentSessionMeta.id === id) {
+      sessionStore.upsert(currentSessionMeta);
     }
-  }, [currentSessionMeta, id, sessions, setSessions]);
+  }, [currentSessionMeta, id]);
 
   useEffect(() => {
     if (!id) {
@@ -2594,14 +2583,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
   const conversationScheduledTasks = useMemo(() => selectConversationScheduledTasks({ conversationId: id, tasks }), [id, tasks]);
   const scheduledTaskIndicatorText = buildScheduledTaskIndicatorText(conversationScheduledTasks);
-  const runScheduledTaskFromShelf = useCallback(
-    async (taskId: string) => {
-      await api.runTaskNow(taskId);
-      const nextTasks = await api.tasks();
-      setTasks(nextTasks);
-    },
-    [setTasks],
-  );
+  const runScheduledTaskFromShelf = useCallback(async (taskId: string) => {
+    await api.runTaskNow(taskId);
+    const nextTasks = await api.tasks();
+    taskStore.replaceAll(nextTasks);
+  }, []);
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -2621,7 +2607,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     () => selectUnattachedMentionItems(draftMentionItems, attachedContextDocs),
     [attachedContextDocs, draftMentionItems],
   );
-  const knownRunIds = useMemo(() => (runs ? new Set(runs.runs.map((run) => run.runId)) : null), [runs]);
+  const knownRunIds = useMemo(() => (runRecords.length > 0 ? new Set(runRecords.map((run) => run.runId)) : null), [runRecords]);
   const shouldLoadConversationRun = resolveShouldLoadConversationRun({
     conversationRunId,
     knownRunIds,
@@ -4358,10 +4344,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       if (isLiveSession) {
         pushTitle(id, result.title);
       }
-      const nextSessions = replaceConversationTitleInSessionList(sessions, id, result.title);
-      if (nextSessions && nextSessions !== sessions) {
-        setSessions(nextSessions);
-      }
+      sessionStore.patch(id, { title: result.title });
       setIsEditingTitle(false);
       showNotice('accent', 'Conversation renamed.');
     } catch (error) {

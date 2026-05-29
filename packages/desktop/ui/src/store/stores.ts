@@ -81,6 +81,12 @@ export const presenceStore = {
     }
     return presenceStates.get(sessionId) ?? 'idle';
   },
+
+  /** Reset all cached presence (for test isolation). */
+  reset(): void {
+    presenceStates = new Map();
+    presenceListeners.clear();
+  },
 };
 
 // ── Title store (derived from live_title SSE events) ─────────────────────────
@@ -107,4 +113,20 @@ export const titleStore = {
     titleEntities.set(sessionId, title);
     titleListeners.get(sessionId)?.forEach((cb) => cb());
   },
+
+  /** Clear all titles (for test isolation). */
+  reset(): void {
+    titleEntities.clear();
+    titleListeners.clear();
+  },
 };
+
+/** Reset all stores to initial empty state (for test isolation). */
+export function resetAllStores(): void {
+  sessionStore.reset?.();
+  taskStore.reset?.();
+  runStore.reset?.();
+  executionStore.reset?.();
+  presenceStore.reset();
+  titleStore.reset();
+}

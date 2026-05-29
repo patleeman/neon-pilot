@@ -7,15 +7,7 @@ import {
   type ConversationScopedEventVersions,
   INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS,
 } from '../conversation/conversationEventVersions';
-import type {
-  AppEventTopic,
-  DaemonState,
-  DurableRunListResult,
-  ExecutionListResult,
-  ProjectRecord,
-  ScheduledTaskSummary,
-  SessionMeta,
-} from '../shared/types';
+import type { AppEventTopic, DaemonState, ProjectRecord } from '../shared/types';
 
 // ── Live title overrides ──────────────────────────────────────────────────────
 // ConversationPage pushes stream.title here; Sidebar reads it to update tabs/archive.
@@ -84,28 +76,12 @@ export function useSseConnection() {
 
 interface AppDataContextValue {
   projects: ProjectRecord[] | null;
-  sessions: SessionMeta[] | null;
-  tasks: ScheduledTaskSummary[] | null;
-  runs: DurableRunListResult | null;
-  executions: ExecutionListResult | null;
   setProjects: (projects: ProjectRecord[]) => void;
-  setSessions: (sessions: SessionMeta[]) => void;
-  setTasks: (tasks: ScheduledTaskSummary[]) => void;
-  setRuns: (runs: DurableRunListResult) => void;
-  setExecutions: (executions: ExecutionListResult) => void;
 }
 
 export const AppDataContext = createContext<AppDataContextValue>({
   projects: null,
-  sessions: null,
-  tasks: null,
-  runs: null,
-  executions: null,
   setProjects: () => {},
-  setSessions: () => {},
-  setTasks: () => {},
-  setRuns: () => {},
-  setExecutions: () => {},
 });
 
 export function useAppData() {

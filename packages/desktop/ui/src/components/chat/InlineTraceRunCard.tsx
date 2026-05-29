@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useAppData } from '../../app/contexts';
 import {
   getRunConnections,
   getRunHeadline,
@@ -16,6 +15,7 @@ import {
   type RunPresentationLookups,
 } from '../../automation/runPresentation';
 import { timeAgo } from '../../shared/utils';
+import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { cx, Pill } from '../ui';
 import {
@@ -38,9 +38,11 @@ function InlineRunMetadataRow({ label, value }: { label: string; value: ReactNod
 }
 
 export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRunPresentation; expanded: boolean; onToggle: () => void }) {
-  const { tasks, sessions, runs } = useAppData();
+  const tasks = useAllTasks();
+  const sessions = useAllSessions();
+  const runRecords = useAllRuns();
   const runLookups = useMemo<RunPresentationLookups>(() => ({ tasks, sessions }), [tasks, sessions]);
-  const resolvedRunRecord = useMemo(() => resolveLinkedRunRecord(run, runs?.runs, runLookups), [run, runLookups, runs?.runs]);
+  const resolvedRunRecord = useMemo(() => resolveLinkedRunRecord(run, runRecords, runLookups), [run, runLookups, runRecords]);
   const resolvedRunId = resolvedRunRecord?.runId ?? run.runId;
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);

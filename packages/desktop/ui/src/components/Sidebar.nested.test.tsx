@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import { ARCHIVED_SESSION_IDS_STORAGE_KEY, OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings.js';
 import type { SessionMeta } from '../shared/types.js';
+import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -45,6 +46,10 @@ function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'tit
 }
 
 function renderSidebar(pathname: string, sessions: SessionMeta[]) {
+  // Seed the store so useConversations finds the sessions it needs
+  sessionStore.replaceAll(sessions);
+  sessionStore.markReady?.();
+
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);

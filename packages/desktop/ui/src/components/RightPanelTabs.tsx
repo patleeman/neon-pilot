@@ -49,6 +49,21 @@ export function RightPanelTabs({
     const restoredTabs = stored.map((c) => ({ id: c.id, kind: 'chat', conversationId: c.conversationId, title: c.title }));
     setTabs(restoredTabs);
 
+    // Check for a preferred companion from sessionStorage (set when starting
+    // a side chat from the workbench new tab page).
+    const preferredCompanionId = sessionStorage.getItem('np:preferred-companion');
+    if (preferredCompanionId) {
+      sessionStorage.removeItem('np:preferred-companion');
+      if (restoredTabs.some((t) => t.id === preferredCompanionId)) {
+        setActiveTabId(preferredCompanionId);
+        activeTabByConversationRef.current = {
+          ...activeTabByConversationRef.current,
+          [conversationId]: preferredCompanionId,
+        };
+        return;
+      }
+    }
+
     // Restore the last active tab for this conversation, if it still exists.
     const lastActive = activeTabByConversationRef.current[conversationId];
     if (lastActive && (lastActive === 'context' || restoredTabs.some((t) => t.id === lastActive))) {

@@ -14,7 +14,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { type ActivityTreeItem, buildActivityTreeItems, buildConversationActivityId } from '../activity/activityTree';
 import { applyActivityTreeItemStyleProviders } from '../activity/activityTreeExtensionStyles';
 import { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/ActivityTreeView';
-import { useAppData, useAppEvents, useLiveTitles } from '../app/contexts';
+import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import {
@@ -71,7 +71,7 @@ import {
 } from '../session/sessionTabs';
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
-import { useSession, useSessionPresence } from '../store';
+import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
@@ -2097,7 +2097,10 @@ export function Sidebar() {
   const location = useLocation();
   const { versions } = useAppEvents();
   const { titles: liveTitles } = useLiveTitles();
-  const { sessions, tasks, executions } = useAppData();
+  const sessions = useAllSessions();
+  const sessionsReady = useSessionsReady();
+  const tasks = useAllTasks();
+  const executionRecords = useAllExecutions();
   const extensionRegistry = useExtensionRegistry();
   const {
     pinnedIds,
@@ -2299,7 +2302,7 @@ export function Sidebar() {
   }, [loadSavedWorkspacePaths, workspaceQuickSelectOpen]);
 
   useEffect(() => {
-    if (workspaceSyncReady || !savedWorkspacePathsLoaded || sessions === null) {
+    if (workspaceSyncReady || !savedWorkspacePathsLoaded || !sessionsReady) {
       return;
     }
 
@@ -2312,13 +2315,13 @@ export function Sidebar() {
     openIds.length,
     pinnedIds.length,
     savedWorkspacePathsLoaded,
-    sessions,
+    sessionsReady,
     workspaceBootstrapHasOpenConversations,
     workspaceSyncReady,
   ]);
 
   useEffect(() => {
-    if (!workspaceSyncReady || sessions === null) {
+    if (!workspaceSyncReady || !sessionsReady) {
       return;
     }
 
@@ -2331,7 +2334,7 @@ export function Sidebar() {
     void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
       // Ignore best-effort sync failures.
     });
-  }, [openWorkspacePaths, persistSavedWorkspacePathsState, savedWorkspacePaths, sessions, workspaceSyncReady]);
+  }, [openWorkspacePaths, persistSavedWorkspacePathsState, savedWorkspacePaths, sessionsReady, workspaceSyncReady]);
 
   const orderedConversationItems = useMemo(() => {
     const pinnedItems: SidebarConversationItem[] = pinnedSessions.map((session, originalIndex) => ({
@@ -2355,9 +2358,7 @@ export function Sidebar() {
   }, [pinnedSessions, threadsSortMode, visibleConversationTabs]);
   const automationThreadTitleByConversationId = useMemo(
     () =>
-      new Map(
-        (tasks ?? []).flatMap((task) => (task.threadConversationId ? [[task.threadConversationId, task.title ?? task.id] as const] : [])),
-      ),
+      new Map(tasks.flatMap((task) => (task.threadConversationId ? [[task.threadConversationId, task.title ?? task.id] as const] : []))),
     [tasks],
   );
   const automationConversationIdSet = useMemo(
@@ -2370,18 +2371,23 @@ export function Sidebar() {
   );
   const backgroundWorkKindByConversationId = useMemo(() => {
     const conversationIds = new Set(
-      (executions?.executions ?? [])
+      (executionRecords ?? [])
         .map((execution) => execution.conversationId?.trim())
         .filter((conversationId): conversationId is string => Boolean(conversationId)),
     );
     return new Map(
       [...conversationIds].flatMap((conversationId) => {
-        const activeExecutions = selectConversationActiveExecutions({ conversationId, executions, tasks, visibility: 'visible' });
+        const activeExecutions = selectConversationActiveExecutions({
+          conversationId,
+          executions: executionRecords,
+          tasks,
+          visibility: 'visible',
+        });
         const kind = summarizeConversationBackgroundWorkKind(activeExecutions);
         return kind ? [[conversationId, kind] as const] : [];
       }),
     );
-  }, [executions, tasks]);
+  }, [executionRecords, tasks]);
   const pendingExecutionConversationIdSet = useMemo(
     () => new Set(backgroundWorkKindByConversationId.keys()),
     [backgroundWorkKindByConversationId],

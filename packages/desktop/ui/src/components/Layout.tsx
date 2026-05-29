@@ -1,7 +1,7 @@
 import { Component, type ReactNode, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { useAppData, useAppEvents } from '../app/contexts';
+import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
@@ -32,6 +32,7 @@ import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRec
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsContextRail, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
+import { useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
@@ -484,6 +485,7 @@ function WorkbenchDocumentPane({
   onActiveToolChange,
   onCheckpointSelect,
   onWorkspaceFileClear,
+  onStartSideChat,
 }: {
   conversationId: string | null;
   artifactId: string | null;
@@ -502,6 +504,7 @@ function WorkbenchDocumentPane({
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
+  onStartSideChat?: () => void;
 }) {
   const location = useLocation();
   const activeExtensionToolPanel = useMemo(() => {
@@ -521,8 +524,10 @@ function WorkbenchDocumentPane({
     mainContent = (
       <WorkbenchNewTabPage
         extensionToolPanels={extensionToolPanels}
+        conversationId={conversationId}
         onActiveToolChange={onActiveToolChange}
         onWorkspaceFileClear={onWorkspaceFileClear}
+        onStartSideChat={onStartSideChat}
       />
     );
   } else if (extensionWorkbenchSurface) {
@@ -603,22 +608,37 @@ function WorkbenchDocumentPane({
 
 function WorkbenchNewTabPage({
   extensionToolPanels,
+  conversationId,
   onActiveToolChange,
   onWorkspaceFileClear,
+  onStartSideChat,
 }: {
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
+  conversationId: string | null;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onWorkspaceFileClear: () => void;
+  onStartSideChat?: () => void;
 }) {
   const availableTools = extensionToolPanels.filter(
     (surface) => shouldRenderWorkbenchToolInNav(surface) && inferSurfaceToolSlot(surface) !== 'artifacts',
   );
   const systemFilesExtensionSurface = findExtensionToolPanelBySlot(extensionToolPanels, 'files');
+  const [sideChatStarting, setSideChatStarting] = useState(false);
 
   function openTool(surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) {
     onActiveToolChange(extensionToolPanelMode(surface));
     onWorkspaceFileClear();
   }
+
+  const handleStartSideChat = useCallback(async () => {
+    if (!onStartSideChat || !conversationId) return;
+    setSideChatStarting(true);
+    try {
+      await onStartSideChat();
+    } finally {
+      setSideChatStarting(false);
+    }
+  }, [onStartSideChat, conversationId]);
 
   return (
     <div className="flex h-full items-center justify-center px-8 text-center select-text">
@@ -658,6 +678,24 @@ function WorkbenchNewTabPage({
               </span>
             </button>
           ))}
+          {onStartSideChat && conversationId ? (
+            <button
+              type="button"
+              disabled={sideChatStarting}
+              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-dashed border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2 disabled:opacity-40"
+              onClick={handleStartSideChat}
+            >
+              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
+                💬
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-primary">{sideChatStarting ? 'Opening…' : '+ Side Chat'}</span>
+                <span className="mt-1 block text-[12px] leading-5 text-secondary">
+                  Open a companion chat alongside the current conversation.
+                </span>
+              </span>
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -948,8 +986,8 @@ export function Layout() {
   useRouteTelemetry();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { sessions } = useAppData();
   const { versions } = useAppEvents();
+  const activeSessionCwd = useSession(activeConversationId)?.cwd ?? null;
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const [activeWorkbenchTabId, setActiveWorkbenchTabId] = useState<string | null>(null);
@@ -1081,8 +1119,9 @@ export function Layout() {
         null)
       : null;
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
-  const activeWorkspaceCwd = resolveActiveWorkspaceCwd(sessions, activeConversationId);
+  const activeWorkspaceCwd = activeSessionCwd;
   const clearActiveWorkspaceFile = useCallback(() => undefined, []);
+
   const extensionRightToolPanels = useMemo(
     () =>
       extensionRegistry.surfaces.filter(
@@ -1361,7 +1400,6 @@ export function Layout() {
       location.pathname,
       navigate,
       openWorkbenchToolTab,
-      sessions,
       setActiveConversationTool,
       startNewConversationFromLayout,
     ],
@@ -1690,6 +1728,32 @@ export function Layout() {
     handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
   }, [handleAppLayoutModeChange, showWorkbench]);
 
+  const handleStartSideChat = useCallback(async () => {
+    if (!activeConversationId) return;
+    try {
+      const result = await api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
+        workspaceCwd: activeWorkspaceCwd ?? undefined,
+      });
+
+      // Save companion association to localStorage so RightPanelTabs picks it up.
+      const STORAGE_PREFIX = 'np:companions:';
+      const storageKey = `${STORAGE_PREFIX}${activeConversationId}`;
+      const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (!existing.includes(result.id)) {
+        existing.push(result.id);
+        localStorage.setItem(storageKey, JSON.stringify(existing));
+      }
+
+      // Signal RightPanelTabs to auto-select this companion on mount.
+      sessionStorage.setItem('np:preferred-companion', result.id);
+
+      // Switch to compact mode — RightPanelTabs mounts and loads companions.
+      handleAppLayoutModeChange('compact');
+    } catch {
+      // Side chat creation failed silently.
+    }
+  }, [activeConversationId, activeWorkspaceCwd, handleAppLayoutModeChange]);
+
   useEffect(() => {
     function handleDesktopShortcut(event: Event) {
       if (hasBlockingOverlayOpen()) {
@@ -1889,6 +1953,7 @@ export function Layout() {
                           onActiveToolChange={openWorkbenchToolTab}
                           onCheckpointSelect={() => undefined}
                           onWorkspaceFileClear={clearActiveWorkspaceFile}
+                          onStartSideChat={handleStartSideChat}
                         />
                       </div>
                     </section>

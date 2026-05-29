@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useAppData } from '../../app/contexts';
 import { getRunConnections, isRunActive, type RunPresentationLookups } from '../../automation/runPresentation';
 import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionToolBlockHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import type { DurableRunListResult, MessageBlock } from '../../shared/types';
+import type { DurableRunRecord, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
+import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
@@ -40,7 +40,7 @@ function BackgroundBashInlineOutput({
 }: {
   runId: string;
   command: string;
-  run: DurableRunListResult['runs'][number] | null | undefined;
+  run: DurableRunRecord | null | undefined;
   streaming: boolean;
 }) {
   const pollEnabled = shouldPollInlineRunSnapshot({
@@ -74,10 +74,10 @@ function BackgroundBashInlineOutput({
 
 function getLinkedRunConversationRoute(
   runId: string,
-  runs: DurableRunListResult | null | undefined,
+  runRecords: readonly DurableRunRecord[],
   runLookups: RunPresentationLookups | undefined,
 ): string | undefined {
-  const run = runs?.runs.find((candidate) => candidate.runId === runId);
+  const run = runRecords.find((candidate) => candidate.runId === runId);
   if (!run) {
     return undefined;
   }
@@ -171,7 +171,9 @@ export function ToolBlock({
   const open = resolveDisclosureOpen(autoOpen, preference);
   const terminalBashBlock = isTerminalBashToolBlock(block);
   const extensionRegistry = useExtensionRegistry();
-  const { tasks, sessions, runs } = useAppData();
+  const tasks = useAllTasks();
+  const sessions = useAllSessions();
+  const runRecords = useAllRuns();
   const runLookups = useMemo<RunPresentationLookups>(() => ({ tasks, sessions }), [tasks, sessions]);
   const extensionRenderer = useMemo(() => {
     if (block.tool === 'bash') {
@@ -202,7 +204,7 @@ export function ToolBlock({
   const subagentLinkedConversationRoute =
     block.tool === 'subagent'
       ? linkedRuns.runs
-          .map((linkedRun) => getLinkedRunConversationRoute(linkedRun.runId, runs, runLookups))
+          .map((linkedRun) => getLinkedRunConversationRoute(linkedRun.runId, runRecords, runLookups))
           .find((route): route is string => Boolean(route))
       : undefined;
   const subagentConversationRoute = subagentConversationId
@@ -292,7 +294,7 @@ export function ToolBlock({
   const hiddenRunCount = Math.max(0, displayedLinkedRuns.length - MAX_VISIBLE_LINKED_RUNS);
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
-  const backgroundRun = backgroundRunId ? runs?.runs.find((candidate) => candidate.runId === backgroundRunId) : null;
+  const backgroundRun = backgroundRunId ? runRecords.find((candidate) => candidate.runId === backgroundRunId) : null;
   const bashCommand = readToolInputString(block.input, 'command') ?? preview;
   const headerDisclosureLabel = subagentConversationRoute
     ? 'open'
@@ -421,7 +423,7 @@ export function ToolBlock({
           )}
           <div className="space-y-1.5">
             {visibleRuns.map((linkedRun) => {
-              const conversationRoute = getLinkedRunConversationRoute(linkedRun.runId, runs, runLookups);
+              const conversationRoute = getLinkedRunConversationRoute(linkedRun.runId, runRecords, runLookups);
 
               return (
                 <div key={linkedRun.runId} className="w-full rounded-md px-2 py-1.5 text-left text-dim">

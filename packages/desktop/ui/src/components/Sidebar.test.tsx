@@ -12,6 +12,7 @@ import {
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
 import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import { executionStore, runStore, sessionStore, taskStore } from '../store';
 import { Sidebar } from './Sidebar.js';
 
 const OPEN_NOTE_IDS_STORAGE_KEY = 'pa:open-note-ids';
@@ -95,6 +96,17 @@ describe('Sidebar', () => {
       executions?: ExecutionListResult;
     },
   ) {
+    // Seed the reactive entity store so the Sidebar reads the same data
+    // that the test passes through AppDataContext.
+    const testSessions = options?.sessions ?? [createSession()];
+    if (testSessions.length > 0) {
+      sessionStore.replaceAll(testSessions);
+      sessionStore.markReady?.();
+    }
+    if (options?.tasks) taskStore.replaceAll(options.tasks);
+    if (options?.runs?.runs) runStore.replaceAll(options.runs.runs);
+    if (options?.executions?.executions) executionStore.replaceAll(options.executions.executions);
+
     return renderToString(
       <MemoryRouter initialEntries={[pathname]}>
         <SseConnectionContext.Provider value={{ status: 'offline' }}>

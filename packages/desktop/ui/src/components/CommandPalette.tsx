@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { useAppData } from '../app/contexts';
 import { api } from '../client/api';
 import {
   COMMAND_PALETTE_SCOPE_OPTIONS,
@@ -35,6 +34,7 @@ import type {
 } from '../extensions/types';
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
+import { useAllSessions, useSessionsReady } from '../store';
 import { cx } from './ui';
 
 type ExtensionQuickOpenProvider = {
@@ -72,7 +72,8 @@ export function CommandPalette() {
   const shellRef = useRef<HTMLDivElement>(null);
   const requestedThreadBootstrapRef = useRef(false);
   const macPlatform = useMemo(() => isMacPlatform(), []);
-  const { sessions } = useAppData();
+  const sessions = useAllSessions();
+  const sessionsReady = useSessionsReady();
   const { pinnedSessions, tabs, archivedSessions, openSession, loading: sessionsLoading, refetch } = useConversations();
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<CommandPaletteScope>(THREADS_COMMAND_PALETTE_SCOPE);
@@ -304,7 +305,7 @@ export function CommandPalette() {
   }, [openPalette]);
 
   useEffect(() => {
-    if (sessions !== null || !open) {
+    if (sessionsReady || !open) {
       requestedThreadBootstrapRef.current = false;
     }
 
@@ -312,8 +313,9 @@ export function CommandPalette() {
       !shouldBootstrapCommandPaletteThreads({
         open,
         scope,
-        sessions,
+        sessions: sessions as unknown as unknown[] | null,
         alreadyRequested: requestedThreadBootstrapRef.current,
+        sessionsReady,
       })
     ) {
       return;
@@ -323,7 +325,7 @@ export function CommandPalette() {
     void refetch().catch(() => {
       // Keep the palette usable even if the eager thread bootstrap fails.
     });
-  }, [open, refetch, scope, sessions]);
+  }, [open, refetch, scope, sessions, sessionsReady]);
 
   useEffect(() => {
     if (!open) {
@@ -668,7 +670,11 @@ export function CommandPalette() {
   const visibleCount = visibleItems.length;
   const loadingSections = useMemo(() => {
     const sections = new Set<CommandPaletteSection>();
-    const threadSessionsLoading = isCommandPaletteThreadDataLoading({ sessions, sessionsLoading });
+    const threadSessionsLoading = isCommandPaletteThreadDataLoading({
+      sessions: sessions as unknown as unknown[] | null,
+      sessionsLoading,
+      sessionsReady,
+    });
 
     if (threadSessionsLoading) {
       if (scope === THREADS_COMMAND_PALETTE_SCOPE) {
@@ -701,7 +707,7 @@ export function CommandPalette() {
     extensionSearchLoading,
     fileItems.length,
     scope,
-    sessions,
+    sessionsReady,
     sessionsLoading,
     quickOpenLoading,
     quickOpenSearchLoading,

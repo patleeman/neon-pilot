@@ -23,6 +23,7 @@ const apiMocks = vi.hoisted(() => ({
   changeConversationCwd: vi.fn(),
   gateways: vi.fn(),
   sessions: vi.fn(),
+  sessionMeta: vi.fn(),
 }));
 
 vi.mock('../client/api', () => ({

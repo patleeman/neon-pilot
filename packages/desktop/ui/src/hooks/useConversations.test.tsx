@@ -13,6 +13,7 @@ import {
 import { mergeSessionSnapshotPreservingOrder } from '../session/sessionListState.js';
 import { resetLocalWriteGrace } from '../session/sessionTabs.js';
 import type { ScheduledTaskSummary, SessionMeta } from '../shared/types.js';
+import { sessionStore, taskStore } from '../store';
 import { useConversations } from './useConversations.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -113,6 +114,14 @@ function renderProbeIntoRoot(
   root: Root,
   input: { sessions: SessionMeta[]; tasks: ScheduledTaskSummary[] | null; liveTitles?: Map<string, string> },
 ) {
+  // Seed the reactive entity store so hooks read the same data the test expects
+  // via AppDataContext (backward compat during migration).
+  if (input.sessions) {
+    sessionStore.replaceAll(input.sessions);
+    sessionStore.markReady?.();
+  }
+  if (input.tasks) taskStore.replaceAll(input.tasks);
+
   act(() => {
     root.render(
       <SseConnectionContext.Provider value={{ status: 'offline' }}>
@@ -144,7 +153,23 @@ function StatefulHookProbeProviders({
 }) {
   const [sessions, setSessionsState] = React.useState<SessionMeta[] | null>(input.sessions);
   const setSessions = React.useCallback((items: SessionMeta[]) => {
-    setSessionsState((previous) => mergeSessions(previous, items));
+    setSessionsState((previous) => {
+      const merged = mergeSessions(previous, items);
+      sessionStore.replaceAll(merged);
+      sessionStore.markReady?.();
+      return merged;
+    });
+  }, []);
+
+  // Seed the store with initial data
+  React.useEffect(() => {
+    if (input.sessions) {
+      sessionStore.replaceAll(input.sessions);
+      sessionStore.markReady?.();
+    }
+    if (input.tasks) {
+      taskStore.replaceAll(input.tasks);
+    }
   }, []);
 
   return (
@@ -174,6 +199,13 @@ function renderStatefulProbe(input: {
   tasks: ScheduledTaskSummary[] | null;
   liveTitles?: Map<string, string>;
 }) {
+  // Seed the store synchronously before rendering
+  if (input.sessions) {
+    sessionStore.replaceAll(input.sessions);
+    sessionStore.markReady?.();
+  }
+  if (input.tasks) taskStore.replaceAll(input.tasks);
+
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -197,12 +229,19 @@ function SnapshotStatefulHookProbeProviders({
 }) {
   const [sessions, setSessionsState] = React.useState<SessionMeta[] | null>(input.sessions);
   const setSessions = React.useCallback((items: SessionMeta[]) => {
-    setSessionsState((previous) => mergeSessionSnapshotPreservingOrder(previous, items));
+    setSessionsState((previous) => {
+      const merged = mergeSessionSnapshotPreservingOrder(previous, items);
+      sessionStore.replaceAll(merged);
+      sessionStore.markReady?.();
+      return merged;
+    });
   }, []);
 
   // Expose a setter so the test can simulate an SSE sessions_snapshot arriving.
   const applySnapshot = React.useCallback((snapshot: SessionMeta[]) => {
     setSessionsState(snapshot);
+    sessionStore.replaceAll(snapshot);
+    sessionStore.markReady?.();
   }, []);
 
   React.useEffect(() => {
@@ -239,6 +278,14 @@ function renderSnapshotProbe(input: {
   tasks: ScheduledTaskSummary[] | null;
   liveTitles?: Map<string, string>;
 }) {
+  // Seed the store synchronously before rendering so the hook sees the data
+  // on the first render instead of waiting for a useEffect.
+  if (input.sessions) {
+    sessionStore.replaceAll(input.sessions);
+    sessionStore.markReady?.();
+  }
+  if (input.tasks) taskStore.replaceAll(input.tasks);
+
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
