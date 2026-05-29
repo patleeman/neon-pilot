@@ -31,14 +31,19 @@ describe('live session durable run sync', () => {
     expect(resolveDurableRunTitle(entry() as never)).toBe('Entry Title');
   });
 
-  it('skips sync without a session file or unchanged state unless forced or carrying an error', async () => {
-    await syncLiveSessionDurableRun(entry({ session: { sessionFile: '   ' } }) as never, 'running');
+  it('skips disk sync without a session file but still updates lastDurableRunState', async () => {
+    const e = entry({ session: { sessionFile: '   ' } });
+    await syncLiveSessionDurableRun(e as never, 'waiting');
+    expect(e.lastDurableRunState).toBe('waiting');
+    expect(runs.syncWebLiveConversationRun).not.toHaveBeenCalled();
+  });
+
+  it('skips disk sync when lastDurableRunState is unchanged unless forced or carrying an error', async () => {
+    const e = entry({ lastDurableRunState: 'running' });
+    await syncLiveSessionDurableRun(e as never, 'running');
     expect(runs.syncWebLiveConversationRun).not.toHaveBeenCalled();
 
-    await syncLiveSessionDurableRun(entry({ lastDurableRunState: 'running' }) as never, 'running');
-    expect(runs.syncWebLiveConversationRun).not.toHaveBeenCalled();
-
-    await syncLiveSessionDurableRun(entry({ lastDurableRunState: 'running' }) as never, 'running', { lastError: 'boom' });
+    await syncLiveSessionDurableRun(e as never, 'running', { lastError: 'boom' });
     expect(runs.syncWebLiveConversationRun).toHaveBeenCalledOnce();
   });
 
