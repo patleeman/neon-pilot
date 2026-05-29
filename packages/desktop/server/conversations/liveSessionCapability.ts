@@ -444,6 +444,7 @@ function buildConversationAttachmentsContext(attachments: ReturnType<typeof reso
 function buildCreatedLiveSessionBootstrap(
   conversationId: string,
   sessionFile: string,
+  workspaceCwd?: string | null,
 ): CreateLiveSessionCapabilityResult['bootstrap'] | undefined {
   const liveEntry = liveRegistry.get(conversationId);
   if (!liveEntry) {
@@ -464,6 +465,7 @@ function buildCreatedLiveSessionBootstrap(
         file: sessionFile,
         timestamp: now,
         cwd: liveEntry.cwd,
+        ...(workspaceCwd !== undefined ? { workspaceCwd } : {}),
         cwdSlug: liveEntry.cwd.replace(/\//g, '-'),
         model,
         title,
@@ -554,6 +556,8 @@ export async function createLiveSessionCapability(
   const optionsAtMs = performance.now();
 
   const reservedSessionFile = typeof input.reservedSessionFile === 'string' ? input.reservedSessionFile.trim() : '';
+  const resolvedWorkspaceCwd = input.workspaceCwd !== undefined ? input.workspaceCwd : hasExplicitCwd ? cwd : null;
+
   if (reservedSessionFile) {
     const resumeStartedAtMs = performance.now();
     const resumed = await resumeLocalSession(reservedSessionFile, {
@@ -561,6 +565,12 @@ export async function createLiveSessionCapability(
       cwdOverride: cwd,
     });
     const resumedAtMs = performance.now();
+    appendConversationWorkspaceMetadata({
+      sessionFile: reservedSessionFile,
+      cwd,
+      workspaceCwd: resolvedWorkspaceCwd,
+    });
+    const workspaceMetadataAtMs = performance.now();
     if (input.model !== undefined || input.thinkingLevel !== undefined || input.serviceTier !== undefined) {
       await updateLiveSessionModelPreferences(resumed.id, {
         ...(input.model !== undefined ? { model: input.model } : {}),
@@ -572,13 +582,14 @@ export async function createLiveSessionCapability(
     return {
       id: resumed.id,
       sessionFile: reservedSessionFile,
-      bootstrap: buildCreatedLiveSessionBootstrap(resumed.id, reservedSessionFile),
+      bootstrap: buildCreatedLiveSessionBootstrap(resumed.id, reservedSessionFile, resolvedWorkspaceCwd),
       perf: {
         ...(resumed.perf ?? {}),
         capabilityBuildOptionsMs: Math.round(optionsAtMs - optionsStartedAtMs),
         ...optionsPerf,
         capabilityResumeReservedSessionMs: Math.round(resumedAtMs - resumeStartedAtMs),
-        capabilityReservedPreferencesMs: Math.round(preferencesAtMs - resumedAtMs),
+        capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - resumedAtMs),
+        capabilityReservedPreferencesMs: Math.round(preferencesAtMs - workspaceMetadataAtMs),
         capabilityTotalMs: Math.round(preferencesAtMs - optionsStartedAtMs),
       },
     };
@@ -590,10 +601,10 @@ export async function createLiveSessionCapability(
   appendConversationWorkspaceMetadata({
     sessionFile: created.sessionFile,
     cwd,
-    workspaceCwd: input.workspaceCwd !== undefined ? input.workspaceCwd : hasExplicitCwd ? cwd : null,
+    workspaceCwd: resolvedWorkspaceCwd,
   });
   const workspaceMetadataAtMs = performance.now();
-  const bootstrap = buildCreatedLiveSessionBootstrap(created.id, created.sessionFile);
+  const bootstrap = buildCreatedLiveSessionBootstrap(created.id, created.sessionFile, resolvedWorkspaceCwd);
   const bootstrapAtMs = performance.now();
 
   return {

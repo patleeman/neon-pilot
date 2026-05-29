@@ -382,12 +382,15 @@ export function App() {
           openConversationTab(payload.sessionId);
           return;
 
+        case 'sessions_snapshot':
         case 'sessions':
           setSessions(payload.sessions);
           return;
+        case 'tasks_snapshot':
         case 'tasks':
           setTasks(payload.tasks);
           return;
+        case 'runs_snapshot':
         case 'runs':
           setRuns(payload.result);
           void api
@@ -404,6 +407,7 @@ export function App() {
             executions: prev.executions + 1,
           }));
           return;
+        case 'daemon_snapshot':
         case 'daemon':
           setDaemon(payload.state);
           return;

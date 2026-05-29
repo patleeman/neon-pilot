@@ -107,7 +107,9 @@ vi.mock('./liveSessions.js', () => ({
   updateLiveSessionModelPreferences: vi.fn(),
 }));
 
-import { restoreQueuedLiveSessionMessageCapability, submitLiveSessionPromptCapability } from './liveSessionCapability.js';
+import { appendConversationWorkspaceMetadata } from './conversationService.js';
+import { createSession, resumeSession } from './liveSessions.js';
+import { createLiveSessionCapability, restoreQueuedLiveSessionMessageCapability, submitLiveSessionPromptCapability } from './liveSessionCapability.js';
 
 function createContext() {
   return {
@@ -136,6 +138,123 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   liveRegistry.clear();
+});
+
+describe('createLiveSessionCapability', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(createSession).mockResolvedValue({
+      id: 'test-session',
+      sessionFile: '/sessions/test-session.jsonl',
+      perf: {},
+    });
+    vi.mocked(resumeSession).mockResolvedValue({
+      id: 'test-session',
+      perf: {},
+    });
+    liveRegistry.set('test-session', {
+      sessionId: 'test-session',
+      cwd: '/repo',
+      title: '',
+      session: { isStreaming: false },
+      listeners: new Set(),
+      lastContextUsage: undefined,
+      lastContextUsageJson: null,
+      lastContextUsageMessageCount: undefined,
+      lastQueueState: undefined,
+      lastQueueStateJson: null,
+      lastParallelState: undefined,
+      lastParallelStateJson: null,
+      currentTurnError: null,
+      tracePersistedTokens: undefined,
+      queuedStaleTurnCustomTypes: [],
+      activeStaleTurnCustomType: null,
+      pendingAutoCompactionReason: null,
+      lastCompactionSummaryTitle: null,
+      isCompacting: false,
+      running: false,
+      parallelJobs: [],
+      importingParallelJobs: false,
+      lifecycleHandlers: [],
+      presence: {},
+    } as never);
+  });
+
+  it('appends workspace metadata with explicit cwd when creating from a workspace', async () => {
+    const result = await createLiveSessionCapability(
+      { cwd: '/my-workspace' },
+      createContext(),
+    );
+
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledTimes(1);
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/repo',
+        workspaceCwd: '/repo',
+      }),
+    );
+    expect(result.id).toBe('test-session');
+    expect(result.sessionFile).toBe('/sessions/test-session.jsonl');
+    expect(result.bootstrap).toBeDefined();
+  });
+
+  it('appends workspace metadata with null when no explicit cwd (neutral chat)', async () => {
+    await createLiveSessionCapability({}, createContext());
+
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledTimes(1);
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceCwd: null,
+      }),
+    );
+  });
+
+  it('passes through explicit workspaceCwd when provided', async () => {
+    await createLiveSessionCapability(
+      { cwd: '/my-workspace', workspaceCwd: '/other-workspace' },
+      createContext(),
+    );
+
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/repo',
+        workspaceCwd: '/other-workspace',
+      }),
+    );
+  });
+
+  it('includes workspaceCwd in the bootstrap sessionDetail.meta', async () => {
+    const result = await createLiveSessionCapability(
+      { cwd: '/my-workspace' },
+      createContext(),
+    );
+
+    expect(result.bootstrap).toBeDefined();
+    expect(result.bootstrap?.sessionDetail?.meta).toBeDefined();
+    expect(result.bootstrap?.sessionDetail?.meta?.workspaceCwd).toBe('/repo');
+  });
+
+  it('includes workspaceCwd as null in the bootstrap for neutral chat', async () => {
+    const result = await createLiveSessionCapability({}, createContext());
+
+    expect(result.bootstrap?.sessionDetail?.meta?.workspaceCwd).toBeNull();
+  });
+
+  it('calls appendConversationWorkspaceMetadata in the reserved flow', async () => {
+    await createLiveSessionCapability(
+      { cwd: '/my-workspace', reservedSessionFile: '/sessions/reserved.jsonl' },
+      createContext(),
+    );
+
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledTimes(1);
+    expect(appendConversationWorkspaceMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionFile: '/sessions/reserved.jsonl',
+        cwd: '/repo',
+        workspaceCwd: '/repo',
+      }),
+    );
+  });
 });
 
 describe('liveSessionCapability input validation', () => {
