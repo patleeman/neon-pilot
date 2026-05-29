@@ -4,18 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.3-rc.0** — release candidate being prepared.
+**v0.9.3-rc.1** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.1
 
 Highlights in this train:
 
-- Hardens the core chat path with safer conversation recovery, malformed-session tolerance, stale attachment handling, and validation around catch-up policies.
-- Improves fork and rewind behavior so restored drafts, branch markers, setup-entry branching, and related conversation topology stay consistent.
-- Makes the Extensions surface clearer and more complete with a redesigned manager, canonical extension settings, searchable marketplace installs, scoped tab counts, and modal-based details.
-- Adds extension-backed plugins, todos, and first-party automation policies while keeping host access behind the extension boundary.
-- Speeds up and stabilizes everyday desktop use with cleaner new-conversation routing, faster fresh conversation lists, reduced markdown flicker, and backend child-process isolation.
-- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.0` candidate.
+- Moves provider API keys into the secure secrets store and migrates existing credentials when model backends change.
+- Makes Suggested Context an installable extension while keeping extension catalog metadata and docs aligned.
+- Refines the workbench with tabbed tools, right-sidebar toggle wiring, actionable subagent rows, and less noisy execution shelves.
+- Speeds up small conversation opens by warming and loading compact transcripts on first paint.
+- Polishes extension-facing UX with simpler knowledge file selection, clearer Excalidraw save actions, automation draft copy, and updated Video Probe settings.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.1` candidate.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -11,6 +11,7 @@ const {
   getAvailableModelObjectsMock,
   getConversationArtifactMock,
   getConversationAttachmentMock,
+  getStateRootMock,
   invalidateAppTopicsMock,
   isLocalLiveMock,
   listConversationArtifactsMock,
@@ -57,6 +58,7 @@ const {
   getAvailableModelObjectsMock: vi.fn(),
   getConversationArtifactMock: vi.fn(),
   getConversationAttachmentMock: vi.fn(),
+  getStateRootMock: vi.fn(() => '/state'),
   invalidateAppTopicsMock: vi.fn(),
   isLocalLiveMock: vi.fn(),
   listConversationArtifactsMock: vi.fn(),
@@ -103,6 +105,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 vi.mock('@neon-pilot/core', () => ({
   getConversationArtifact: getConversationArtifactMock,
   getConversationAttachment: getConversationAttachmentMock,
+  getStateRoot: getStateRootMock,
   listConversationArtifacts: listConversationArtifactsMock,
   listConversationAttachments: listConversationAttachmentsMock,
   readConversationAttachmentDownload: readConversationAttachmentDownloadMock,
