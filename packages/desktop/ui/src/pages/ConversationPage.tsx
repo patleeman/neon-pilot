@@ -113,6 +113,7 @@ import {
   pruneComputedMessages,
   resolveComputedMessagesRaw,
   resolveTranscriptWindowPercent,
+  shouldShowEarlierTranscriptBoundary,
 } from '../conversation/conversationMessageWindow';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
 import { buildLiveSessionPreferenceInput, selectComposerModel } from '../conversation/conversationModelSelection';
@@ -5782,8 +5783,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     ],
   );
   const visibleTranscriptCount = visibleTranscriptMessages?.length ?? 0;
-  const visibleTranscriptHasOlderBlocks =
-    !showConversationLoadingState && !draft && Boolean(id) && visibleTranscriptState?.conversationId === id && showHistoricalLoadMore;
+  const visibleTranscriptHasOlderBlocks = shouldShowEarlierTranscriptBoundary({
+    hasOlderBlocks:
+      !showConversationLoadingState && !draft && Boolean(id) && visibleTranscriptState?.conversationId === id && showHistoricalLoadMore,
+    visibleMessages: visibleTranscriptMessages,
+  });
   const visibleTranscriptAnchoredToTail =
     !showConversationLoadingState &&
     !draft &&

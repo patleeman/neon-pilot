@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
-import { pruneComputedMessages, resolveComputedMessagesRaw, resolveTranscriptWindowPercent } from './conversationMessageWindow';
+import {
+  countVisibleAgentTurns,
+  pruneComputedMessages,
+  resolveComputedMessagesRaw,
+  resolveTranscriptWindowPercent,
+  shouldShowEarlierTranscriptBoundary,
+} from './conversationMessageWindow';
 
 const block = (id: string) => ({ id, type: 'text', text: id }) as never;
 const prompt = (text: string): PendingConversationPrompt => ({ text, images: [], attachmentRefs: [] });
@@ -83,6 +89,49 @@ describe('conversationMessageWindow', () => {
         maxRenderedBlocks: 3,
       }),
     ).toEqual({ computedMessages: messages.slice(1), computedHistoricalBlockOffset: 11, computedHistoricalTotalBlocks: 4 });
+  });
+
+  it('counts visible agent turns from assistant text and summary blocks', () => {
+    expect(
+      countVisibleAgentTurns([
+        { type: 'user', ts: '2026-05-29T00:00:00.000Z', text: 'Request' },
+        { type: 'thinking', ts: '2026-05-29T00:00:01.000Z', text: 'Working' },
+        { type: 'tool_use', ts: '2026-05-29T00:00:02.000Z', tool: 'bash', input: {}, output: 'ok' },
+        { type: 'text', ts: '2026-05-29T00:00:03.000Z', text: 'Reply' },
+        {
+          type: 'summary',
+          ts: '2026-05-29T00:00:04.000Z',
+          kind: 'compaction',
+          title: 'Summary',
+          text: 'Older reply summary',
+        },
+      ]),
+    ).toBe(2);
+  });
+
+  it('gates the earlier transcript boundary by visible agent turns', () => {
+    expect(
+      shouldShowEarlierTranscriptBoundary({
+        hasOlderBlocks: true,
+        visibleMessages: [
+          { type: 'user', ts: '2026-05-29T00:00:00.000Z', text: 'Small conversation' },
+          { type: 'thinking', ts: '2026-05-29T00:00:01.000Z', text: 'Lots of internal work' },
+          { type: 'tool_use', ts: '2026-05-29T00:00:02.000Z', tool: 'bash', input: {}, output: 'ok' },
+          { type: 'text', ts: '2026-05-29T00:00:03.000Z', text: 'Only one agent reply' },
+        ],
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowEarlierTranscriptBoundary({
+        hasOlderBlocks: true,
+        visibleMessages: [
+          { type: 'text', ts: '2026-05-29T00:00:00.000Z', text: 'Reply 1' },
+          { type: 'text', ts: '2026-05-29T00:00:01.000Z', text: 'Reply 2' },
+          { type: 'text', ts: '2026-05-29T00:00:02.000Z', text: 'Reply 3' },
+        ],
+      }),
+    ).toBe(true);
   });
 
   it('reports tail-anchored transcript windows as ending at the latest content', () => {

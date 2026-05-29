@@ -1,6 +1,8 @@
 import type { PendingConversationPrompt } from '../pending/pendingConversationPrompt';
 import type { MessageBlock } from '../shared/types';
 
+const MIN_VISIBLE_AGENT_TURNS_FOR_EARLIER_TRANSCRIPT_BOUNDARY = 3;
+
 export function resolveComputedMessagesRaw(input: {
   draft: boolean;
   draftPendingPrompt: PendingConversationPrompt | null;
@@ -37,6 +39,35 @@ export function resolveComputedMessagesRaw(input: {
   }
 
   return input.visibleSessionDetailAvailable ? input.baseMessages : undefined;
+}
+
+export function countVisibleAgentTurns(messages: MessageBlock[] | undefined): number {
+  return (
+    messages?.reduce((count, message) => {
+      if (message.type !== 'text' && message.type !== 'summary') {
+        return count;
+      }
+
+      return message.text.trim().length > 0 ? count + 1 : count;
+    }, 0) ?? 0
+  );
+}
+
+export function shouldShowEarlierTranscriptBoundary(input: {
+  hasOlderBlocks: boolean;
+  visibleMessages: MessageBlock[] | undefined;
+  minVisibleAgentTurns?: number;
+}): boolean {
+  if (!input.hasOlderBlocks) {
+    return false;
+  }
+
+  const minVisibleAgentTurns =
+    typeof input.minVisibleAgentTurns === 'number' && Number.isSafeInteger(input.minVisibleAgentTurns) && input.minVisibleAgentTurns > 0
+      ? input.minVisibleAgentTurns
+      : MIN_VISIBLE_AGENT_TURNS_FOR_EARLIER_TRANSCRIPT_BOUNDARY;
+
+  return countVisibleAgentTurns(input.visibleMessages) >= minVisibleAgentTurns;
 }
 
 export function pruneComputedMessages(input: {
