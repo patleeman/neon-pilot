@@ -1,5 +1,6 @@
 {
   "schemaVersion": 2,
+  "packageType": "user",
   "id": "lm-studio",
   "name": "LM Studio",
   "description": "Connect to a local LM Studio instance and use its models in Neon Pilot.",
@@ -49,7 +50,7 @@
         "id": "lm-studio-nav",
         "label": "LM Studio",
         "route": "/ext/lm-studio",
-        "icon": "box"
+        "icon": "gear"
       }
     ],
     "settings": {

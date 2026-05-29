@@ -137,7 +137,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Available' })).toBeTruthy();
     expect(screen.queryByText('USER')).toBeNull();
-    expect(screen.getByText('Installed')).toBeTruthy();
+    expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 

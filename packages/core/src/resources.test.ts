@@ -248,6 +248,8 @@ metadata:
     const runtime = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-'));
     tempDirs.push(runtime);
     process.env.NEON_PILOT_KNOWLEDGE_ROOT = syncRoot;
+    process.env.NEON_PILOT_LOCAL_PROFILE_DIR = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));
+    tempDirs.push(process.env.NEON_PILOT_LOCAL_PROFILE_DIR);
 
     writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
     writeFile(join(repo, 'defaults/agent/APPEND_SYSTEM.md'), 'shared append\n');
@@ -272,7 +274,11 @@ description: Commit and push the agent's current work.
 `,
     );
 
-    const resolved = resolveRuntimeResources('datadog', { repoRoot: repo, runtimeConfigRoot });
+    const resolved = resolveRuntimeResources('datadog', {
+      repoRoot: repo,
+      runtimeConfigRoot,
+      localProfileDir: process.env.NEON_PILOT_LOCAL_PROFILE_DIR,
+    });
     const result = materializeRuntimeResourcesToAgentDir(resolved, runtime);
     const runtimeSettings = JSON.parse(readFileSync(join(runtime, 'settings.json'), 'utf-8')) as Record<string, unknown>;
     const runtimePrompt = readFileSync(join(runtime, 'APPEND_SYSTEM.md'), 'utf-8');

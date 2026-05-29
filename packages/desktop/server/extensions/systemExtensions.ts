@@ -18,7 +18,8 @@ function readExtensionEntries(source: 'bundled'): SystemExtensionEntry[] {
       try {
         const manifest = JSON.parse(readFileSync(join(entry.packageRoot, 'extension.json'), 'utf-8')) as ExtensionManifest;
         if (!manifest.id || !manifest.name) return [];
-        return [{ manifest: { ...manifest, packageType: 'system' }, packageRoot: entry.packageRoot }];
+        const packageType = manifest.packageType ?? 'system';
+        return [{ manifest: { ...manifest, packageType }, packageRoot: entry.packageRoot }];
       } catch {
         return [];
       }
