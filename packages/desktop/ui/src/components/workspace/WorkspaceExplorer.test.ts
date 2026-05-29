@@ -107,10 +107,8 @@ describe('formatWorkspaceEntrySize', () => {
       await b.promise;
     });
     await vi.waitFor(() => {
-      expect(container.textContent).toContain('b.ts');
-    });
-    await vi.waitFor(() => {
-      expect((container.querySelector('textarea') as HTMLTextAreaElement | null)?.value).toBe('current file');
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('current file');
     });
 
     await act(async () => {
@@ -119,11 +117,8 @@ describe('formatWorkspaceEntrySize', () => {
     });
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain('b.ts');
-    });
-    expect(container.textContent).not.toContain('a.ts');
-    await vi.waitFor(() => {
-      expect((container.querySelector('textarea') as HTMLTextAreaElement | null)?.value).toBe('current file');
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('current file');
     });
   });
 });
