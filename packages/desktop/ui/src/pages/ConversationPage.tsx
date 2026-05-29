@@ -2546,9 +2546,18 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     hasGitSummary,
   });
 
+  const lastUpsertedSessionRef = useRef<string>('');
+
   useEffect(() => {
     if (currentSessionMeta && currentSessionMeta.id === id) {
-      sessionStore.upsert(currentSessionMeta);
+      // Avoid write-back loop: mergeConversationSessionMeta always creates a
+      // new object, so comparing by reference won't work. Compare a stable
+      // serialization of relevant fields instead.
+      const key = `${currentSessionMeta.id}:${JSON.stringify(currentSessionMeta.deferredResumes ?? [])}:${JSON.stringify(currentSessionMeta.attachedContextDocs ?? [])}:${currentSessionMeta.isRunning ?? ''}:${currentSessionMeta.isLive ?? ''}:${currentSessionMeta.lastActivityAt ?? ''}:${currentSessionMeta.needsAttention ?? ''}`;
+      if (lastUpsertedSessionRef.current !== key) {
+        lastUpsertedSessionRef.current = key;
+        sessionStore.upsert(currentSessionMeta);
+      }
     }
   }, [currentSessionMeta, id]);
 

@@ -1262,6 +1262,10 @@ export function WorkspaceFileDocument({
     [closeSelectionContextMenu, copySelectedText, onReplyWithSelection, replyWithSelectedText],
   );
 
+  const handleFileClose = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('pa:workbench-close-active-file'));
+  }, []);
+
   if (fileState.status === 'loading' && !selectedFile) {
     return <LoadingState label="Opening file…" className="h-full justify-center" />;
   }
@@ -1273,10 +1277,6 @@ export function WorkspaceFileDocument({
   if (!selectedFile) {
     return <EmptyState className="flex h-full flex-col justify-center px-5" title="File unavailable" body="No file is selected." />;
   }
-
-  const handleFileClose = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('pa:workbench-close-active-file'));
-  }, []);
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-base select-text">
