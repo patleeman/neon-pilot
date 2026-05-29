@@ -12,6 +12,7 @@ import {
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
 } from '../local/localSettings.js';
 import type { SessionMeta } from '../shared/types.js';
+import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -64,6 +65,10 @@ function createSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
 }
 
 function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new') {
+  // Seed the store so hooks find the sessions
+  sessionStore.replaceAll(sessions);
+  sessionStore.markReady?.();
+
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);

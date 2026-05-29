@@ -37,25 +37,27 @@ vi.mock('../session/sessionSnapshot', () => ({
 }));
 
 vi.mock('../components/Layout', async () => {
-  const { useAppData, useAppEvents } = await import('./contexts');
+  const { useAppEvents } = await import('./contexts');
+  const { useAllSessions, useAllExecutions } = await import('../store');
   const AppDataOnlyProbe = React.memo(function AppDataOnlyProbe() {
-    const { sessions } = useAppData();
+    const sessions = useAllSessions();
     const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
     globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__ = (globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__ ?? 0) + 1;
-    return <span>app data sessions {sessions?.length ?? 0}</span>;
+    return <span>app data sessions {sessions.length}</span>;
   });
 
   return {
     Layout: () => {
-      const { sessions, executions } = useAppData();
+      const sessions = useAllSessions();
+      const executions = useAllExecutions();
       const { versions } = useAppEvents();
-      const session = sessions?.find((candidate) => candidate.id === 'conv-1');
+      const session = sessions.find((candidate) => candidate.id === 'conv-1');
       return (
         <main>
           <span>{session?.isRunning ? 'conversation running' : 'conversation idle'}</span>
           <span>executions version {versions.executions}</span>
           <span>runs version {versions.runs}</span>
-          {(executions?.executions ?? []).map((execution) => (
+          {(executions ?? []).map((execution) => (
             <span key={execution.id}>{execution.title}</span>
           ))}
           <AppDataOnlyProbe />

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import { OPEN_SESSION_IDS_STORAGE_KEY, PINNED_SESSION_IDS_STORAGE_KEY } from '../local/localSettings.js';
 import type { SessionMeta } from '../shared/types';
+import { sessionStore } from '../store';
 import { Sidebar } from './Sidebar.js';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -73,6 +74,8 @@ describe('Sidebar draft route listing', () => {
   });
 
   it('does not show a Draft thread for a fresh new-conversation route', () => {
+    sessionStore.replaceAll([createSession()]);
+    sessionStore.markReady?.();
     const html = renderToString(
       <MemoryRouter initialEntries={['/conversations/new']}>
         <SseConnectionContext.Provider value={{ status: 'offline' }}>

@@ -1939,7 +1939,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const [deferredResumeNowMs, setDeferredResumeNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    if (draft || runs !== null) {
+    if (draft || runRecords.length > 0) {
       return;
     }
 

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../../app/contexts';
 import type { DurableRunRecord, MessageBlock } from '../../shared/types';
+import { runStore } from '../../store';
 import { ChatView } from './ChatView';
 
 const apiMocks = vi.hoisted(() => ({
@@ -149,6 +150,9 @@ function renderChatView(messages: MessageBlock[], options?: { listedRuns?: Durab
   document.body.appendChild(container);
   const root = createRoot(container);
   const listedRuns = options?.listedRuns ?? [createRunRecord()];
+
+  // Seed the reactive entity store so ToolBlock's useAllRuns() finds the runs
+  runStore.replaceAll(listedRuns);
 
   act(() => {
     root.render(

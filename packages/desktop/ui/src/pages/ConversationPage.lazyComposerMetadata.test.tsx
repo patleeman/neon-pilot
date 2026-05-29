@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../app/contexts';
+import { sessionStore } from '../store';
 import { ConversationPage } from './ConversationPage';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -15,6 +16,7 @@ const apiMock = vi.hoisted(() => ({
   memory: vi.fn(),
   models: vi.fn(),
   runs: vi.fn(),
+  liveSession: vi.fn(),
   conversationModelPreferences: vi.fn(),
 }));
 
@@ -132,12 +134,14 @@ vi.mock('../hooks/useDesktopConversationState', () => ({
   useDesktopConversationState: () => desktopConversationState,
 }));
 
+const regressionBootstrap = {
+  loading: false,
+  error: null,
+  data: regressionBootstrapData,
+};
+
 vi.mock('../hooks/useConversationBootstrap', () => ({
-  useConversationBootstrap: (conversationId?: string) => ({
-    loading: false,
-    error: null,
-    data: conversationId === 'conv-regression' ? regressionBootstrapData : null,
-  }),
+  useConversationBootstrap: () => regressionBootstrap,
 }));
 
 vi.mock('../session/sessionTabs', () => ({
@@ -149,6 +153,22 @@ vi.mock('../session/sessionTabs', () => ({
 }));
 
 function renderConversationPage() {
+  // Seed the store so ConversationPage hooks find the session data
+  sessionStore.replaceAll([
+    {
+      id: 'conv-regression',
+      file: '/tmp/conv-regression.jsonl',
+      timestamp: '2026-05-27T12:00:00.000Z',
+      cwd: '/tmp/project',
+      cwdSlug: 'project',
+      model: 'openai/gpt-5.4',
+      title: 'Regression conversation',
+      messageCount: 2,
+      isLive: false,
+    },
+  ]);
+  sessionStore.markReady?.();
+
   return render(
     <AppDataContext.Provider
       value={{
@@ -219,6 +239,7 @@ beforeEach(() => {
   });
   apiMock.memory.mockResolvedValue({ memoryDocs: [], skills: [] });
   apiMock.runs.mockResolvedValue({ runs: [] });
+  apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   sessionTabsMock.fetchRemoteConversationLayout.mockResolvedValue({
     localConversationIds: [],
     remoteControlledConversationIds: [],
