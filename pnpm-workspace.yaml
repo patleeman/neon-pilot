@@ -9,3 +9,4 @@ allowBuilds:
   '@google/genai': false
   electron-winstaller: false
   protobufjs: false
+  node-pty: true

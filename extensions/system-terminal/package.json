@@ -1,0 +1,13 @@
+{
+  "name": "@neon-pilot/extension-system-terminal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neon-pilot/extensions": "workspace:0.9.3-rc.2",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

@@ -21,4 +21,4 @@ export {
   useSessionTitle,
 } from './hooks';
 export type { RunningState } from './stores';
-export { executionStore, presenceStore, resetAllStores, runStore, sessionStore, taskStore, titleStore } from './stores';
+export { executionStore, presenceStore, runStore, sessionStore, taskStore, titleStore } from './stores';

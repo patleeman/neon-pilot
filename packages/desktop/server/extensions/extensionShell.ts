@@ -1,6 +1,7 @@
 import { type ChildProcess } from 'node:child_process';
 
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
+import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
 
 const spawnedExtensionProcesses = new Set<ChildProcess>();
 let shutdownHooksInstalled = false;
@@ -60,17 +61,56 @@ export function createExtensionShellCapability() {
       args?: string[];
       cwd?: string;
       env?: Record<string, string>;
+      pty?: boolean | { cols?: number; rows?: number };
       onStdout?: (chunk: string) => void;
       onStderr?: (chunk: string) => void;
       onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
-    }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => void }> {
+    }): Promise<{
+      pid: number | null;
+      executionWrappers: Array<{ id: string; label?: string }>;
+      kill: () => void;
+      write: (data: string) => void;
+      resize: (cols: number, rows: number) => void;
+    }> {
       installShutdownHooks();
+      const resolvedEnv = input.env ? { ...process.env, ...input.env } : process.env;
+
+      if (input.pty) {
+        // PTY-backed spawn: use node-pty
+        const ptyOptions: PtySpawnOptions = {
+          command: input.command,
+          args: input.args ?? [],
+          cwd: input.cwd,
+          env: resolvedEnv,
+          cols: typeof input.pty === 'object' ? input.pty.cols : 80,
+          rows: typeof input.pty === 'object' ? input.pty.rows : 24,
+        };
+        const { pty, launch } = createPtyProcess(ptyOptions);
+        spawnedExtensionProcesses.add(pty as unknown as ChildProcess);
+        pty.onData((chunk: string) => input.onStdout?.(chunk));
+        pty.onExit((event: { exitCode: number; signal?: number }) => {
+          spawnedExtensionProcesses.delete(pty as unknown as ChildProcess);
+          input.onExit?.({ code: event.exitCode, signal: null });
+        });
+        return {
+          pid: pty.pid,
+          executionWrappers: launch.wrappers,
+          kill: () => {
+            spawnedExtensionProcesses.delete(pty as unknown as ChildProcess);
+            pty.kill();
+          },
+          write: (data: string) => pty.write(data),
+          resize: (cols: number, rows: number) => pty.resize(cols, rows),
+        };
+      }
+
+      // Non-PTY spawn with stdin pipe for write support
       const { child, launch } = spawnProcess({
         command: input.command,
         args: input.args ?? [],
         cwd: input.cwd,
-        env: input.env ? { ...process.env, ...input.env } : process.env,
-        options: { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
+        env: resolvedEnv,
+        options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] },
       });
       spawnedExtensionProcesses.add(child);
       child.stdout?.on('data', (chunk: Buffer) => input.onStdout?.(chunk.toString('utf8')));
@@ -85,6 +125,14 @@ export function createExtensionShellCapability() {
         kill: () => {
           spawnedExtensionProcesses.delete(child);
           terminateProcessGroup(child);
+        },
+        write: (data: string) => {
+          if (child.stdin?.writable) {
+            child.stdin.write(data);
+          }
+        },
+        resize: (_cols: number, _rows: number) => {
+          // No-op for non-PTY processes; resize is only meaningful with PTY.
         },
       };
     },

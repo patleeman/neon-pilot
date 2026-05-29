@@ -8,6 +8,37 @@ const terminateProcessGroup = vi.fn();
 
 vi.mock('../shared/processLauncher.js', () => ({ execFileProcess, spawnProcess, terminateProcessGroup }));
 
+// Factory for a mock PTY that looks like node-pty's IPty
+function createMockPty(
+  overrides: Partial<{
+    pid: number;
+    onData: (cb: (chunk: string) => void) => void;
+    onExit: (cb: (event: { exitCode: number; signal?: number }) => void) => void;
+    write: (data: string) => void;
+    resize: (cols: number, rows: number) => void;
+    kill: () => void;
+  }> = {},
+) {
+  const callbacks: { data?: (chunk: string) => void; exit?: (event: { exitCode: number; signal?: number }) => void } = {};
+  return {
+    pid: overrides.pid ?? 456,
+    onData: vi.fn((cb: (chunk: string) => void) => {
+      callbacks.data = cb;
+    }),
+    onExit: vi.fn((cb: (event: { exitCode: number; signal?: number }) => void) => {
+      callbacks.exit = cb;
+    }),
+    write: vi.fn(),
+    resize: vi.fn(),
+    kill: vi.fn(),
+    _callbacks: callbacks,
+    ...overrides,
+  };
+}
+
+const createPtyProcess = vi.fn();
+vi.mock('../shared/ptyLauncher.js', () => ({ createPtyProcess }));
+
 const { createExtensionGitCapability, createExtensionShellCapability } = await import('./extensionShell.js');
 
 function createChild() {
@@ -27,6 +58,7 @@ describe('extensionShell', () => {
     execFileProcess.mockReset().mockResolvedValue({ stdout: 'out', stderr: 'err', launch: { wrappers: [{ id: 'sandbox' }] } });
     spawnProcess.mockReset();
     terminateProcessGroup.mockReset();
+    createPtyProcess.mockReset();
   });
 
   it('executes commands through the process launcher with defaults and merged env', async () => {
@@ -74,12 +106,78 @@ describe('extensionShell', () => {
     child.emit('exit', 0, null);
     handle.kill();
 
-    expect(spawnProcess).toHaveBeenCalledWith(expect.objectContaining({ options: { detached: true, stdio: ['ignore', 'pipe', 'pipe'] } }));
+    expect(spawnProcess).toHaveBeenCalledWith(expect.objectContaining({ options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] } }));
     expect(handle).toMatchObject({ pid: 123, executionWrappers: [{ id: 'wrap' }] });
+    expect(typeof handle.write).toBe('function');
+    expect(typeof handle.resize).toBe('function');
     expect(onStdout).toHaveBeenCalledWith('hello');
     expect(onStderr).toHaveBeenCalledWith('oops');
     expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });
     expect(terminateProcessGroup).toHaveBeenCalledWith(child);
+
+    // write() should write to child.stdin
+    Object.assign(child, { stdin: { writable: true, write: vi.fn() } });
+    handle.write('test input');
+    expect(child.stdin.write).toHaveBeenCalledWith('test input');
+  });
+
+  it('spawns with PTY: delegates to node-pty and wires callbacks', async () => {
+    const mockPty = createMockPty({ pid: 456 });
+    createPtyProcess.mockReturnValue({ pty: mockPty, launch: { wrappers: [{ id: 'wrap-pty' }] } });
+
+    const onStdout = vi.fn();
+    const onExit = vi.fn();
+
+    const handle = await createExtensionShellCapability().spawn({
+      command: '/bin/bash',
+      pty: { cols: 120, rows: 30 },
+      cwd: '/workspace',
+      onStdout,
+      onExit,
+    });
+
+    // Should delegate to createPtyProcess with correct options
+    expect(createPtyProcess).toHaveBeenCalledWith({
+      command: '/bin/bash',
+      args: [],
+      cwd: '/workspace',
+      env: expect.any(Object),
+      cols: 120,
+      rows: 30,
+    });
+
+    // Should wire pty.onData → onStdout
+    mockPty._callbacks.data?.('terminal output\r\n');
+    expect(onStdout).toHaveBeenCalledWith('terminal output\r\n');
+
+    // Should wire pty.onExit → onExit
+    mockPty._callbacks.exit?.({ exitCode: 0 });
+    expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });
+
+    // Returned handle should have write/resize that delegate to the pty
+    handle.write('echo hi\n');
+    expect(mockPty.write).toHaveBeenCalledWith('echo hi\n');
+
+    handle.resize(100, 40);
+    expect(mockPty.resize).toHaveBeenCalledWith(100, 40);
+
+    // kill should delegate
+    handle.kill();
+    expect(mockPty.kill).toHaveBeenCalled();
+
+    expect(handle).toMatchObject({ pid: 456, executionWrappers: [{ id: 'wrap-pty' }] });
+  });
+
+  it('spawns with pty:true uses default 80x24 dimensions', async () => {
+    const mockPty = createMockPty({ pid: 789 });
+    createPtyProcess.mockReturnValue({ pty: mockPty, launch: { wrappers: [] } });
+
+    await createExtensionShellCapability().spawn({
+      command: 'zsh',
+      pty: true,
+    });
+
+    expect(createPtyProcess).toHaveBeenCalledWith(expect.objectContaining({ cols: 80, rows: 24 }));
   });
 
   it('implements git helpers with focused git commands', async () => {

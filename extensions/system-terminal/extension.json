@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "system-terminal",
+  "name": "Terminal",
+  "packageType": "system",
+  "description": "Built-in terminal panel with PTY-backed shell integration.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "terminalCreate", "handler": "createTerminal", "title": "Create terminal" },
+      { "id": "terminalWrite", "handler": "writeTerminal", "title": "Write to terminal" },
+      { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal" },
+      { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal" }
+    ],
+    "routes": [{ "method": "GET", "path": "/stream", "handler": "streamTerminal", "title": "Terminal output stream", "stream": "sse" }]
+  },
+  "contributes": {
+    "surfaces": [
+      {
+        "placement": "right",
+        "kind": "toolPanel",
+        "id": "terminal-panel",
+        "label": "Terminal",
+        "entry": "TerminalPanel",
+        "scope": "workspace",
+        "icon": "terminal",
+        "defaultOpen": false,
+        "toolSlot": "terminal"
+      }
+    ]
+  },
+  "permissions": []
+}

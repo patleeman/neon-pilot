@@ -1310,10 +1310,27 @@ export interface ExtensionBackendContext {
       args?: string[];
       cwd?: string;
       env?: Record<string, string>;
+      /**
+       * When true, allocates a pseudo-terminal (PTY) via node-pty.
+       * Accepts `{ cols, rows }` to set initial terminal dimensions.
+       * PTY mode merges stdout/stderr into the `onStdout` callback.
+       */
+      pty?: boolean | { cols?: number; rows?: number };
       onStdout?: (chunk: string) => void;
       onStderr?: (chunk: string) => void;
       onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
-    }): Promise<{ pid: number | null; executionWrappers: Array<{ id: string; label?: string }>; kill: () => void }>;
+    }): Promise<{
+      pid: number | null;
+      executionWrappers: Array<{ id: string; label?: string }>;
+      kill: () => void;
+      /** Write data to the process stdin. */
+      write: (data: string) => void;
+      /**
+       * Resize the terminal (cols, rows).
+       * Only meaningful for PTY-backed processes; no-op for non-PTY spawns.
+       */
+      resize: (cols: number, rows: number) => void;
+    }>;
   };
   commands: {
     execute(command: string, args?: unknown): Promise<boolean>;
