@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.3-rc.2 — 2026-05-29
+
+### Highlights
+
+- Adds a dedicated Extensions use-cases page with 8 categories and richer nav link infrastructure, including new sidebar icon options (home, book, star, link, code, tag, pin) for extensions.
+- Improves Extension Manager label clarity by renaming "Add-ons" to "Installed" / "Installed Extensions" throughout.
+- Fixes several conversation reliability issues: SQL catalog sync when workspace metadata changes, transcript boundary gating by agent turns, and correct running-field emission on session meta events.
+- Polishes chat UX with capped tool output height (384px scrollable), independently mounted ConversationActivityShelf, and a fix for the stuck "Working…" indicator on SSE disconnect.
+- Hardens sidebar navigation with unread indicator cleanup when clicking threads, session cwd inclusion in draft workspace paths, and null workspaceCwd grouping fallback.
+- Adds IPC bridge for clipboard copy in NotificationCenter, always stores probe images, and switches kimi-k2.6 to deepseek format.
+
+### Notes
+
+- 18 commits since the previous release.
+
 ## 0.9.3-rc.1 — 2026-05-29
 
 ### Highlights
