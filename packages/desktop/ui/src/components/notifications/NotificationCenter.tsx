@@ -6,6 +6,7 @@
  */
 import { useMemo, useState } from 'react';
 
+import { writeClipboardText } from '../../desktop/clipboard';
 import { cx } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
@@ -63,9 +64,13 @@ function NotificationRow({
   const [copied, setCopied] = useState(false);
 
   const copyNotification = async () => {
-    await navigator.clipboard.writeText(formatNotificationForCopy(item));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    try {
+      await writeClipboardText(formatNotificationForCopy(item));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // Silently fail — clipboard access denied.
+    }
   };
 
   return (

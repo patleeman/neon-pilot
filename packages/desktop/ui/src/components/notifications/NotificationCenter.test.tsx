@@ -6,10 +6,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   useNotificationStore: vi.fn(),
+  writeClipboardText: vi.fn(),
 }));
 
 vi.mock('./notificationStore', () => ({
   useNotificationStore: () => mocks.useNotificationStore(),
+}));
+
+vi.mock('../../desktop/clipboard', () => ({
+  writeClipboardText: mocks.writeClipboardText,
 }));
 
 import { NotificationCenter } from './NotificationCenter';
@@ -48,17 +53,16 @@ describe('NotificationCenter', () => {
   });
 
   it('copies the notification summary, message, details, source, and repeat count', () => {
-    const writeText = vi.fn(() => new Promise<void>(() => {}));
-    Object.assign(navigator, { clipboard: { writeText } });
+    mocks.writeClipboardText.mockResolvedValue(undefined);
     mocks.useNotificationStore.mockReturnValue(storeValue);
 
     render(<NotificationCenter onClose={() => undefined} />);
     fireEvent.click(screen.getByLabelText('Copy notification'));
 
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Type: Error'));
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Source: system'));
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Repeated: 2x'));
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Build failed'));
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Details:\nReferenceError: boom'));
+    expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Type: Error'));
+    expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Source: system'));
+    expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Repeated: 2x'));
+    expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Build failed'));
+    expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Details:\nReferenceError: boom'));
   });
 });
