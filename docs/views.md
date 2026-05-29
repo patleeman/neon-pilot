@@ -1,33 +1,33 @@
 # Views
 
-Neon Pilot has two view modes. Switch between them with `F1`/`F2` or the dropdown in the top bar.
+Neon Pilot has a conversation layout with an optional workbench panel. Toggle the workbench with the right-side top-bar button or `Cmd+\` (or `Ctrl+\`).
 
-## Conversation View (F1)
+## Conversation View
 
-The default layout. A single conversation pane with the left sidebar for conversation navigation.
+The default layout when the workbench is hidden. A single conversation pane with the left sidebar for conversation navigation.
 
 - **Left sidebar** — conversation list, toggle with `Cmd+/` (or `Ctrl+/`)
 - **Center** — transcript and composer
 - Use this for focused single-thread work
 
-## Workbench View (F2)
+## Workbench
 
-A multi-pane layout for working alongside knowledge and tools. Available on conversation routes.
+A tabbed panel for working alongside knowledge and tools. Available on conversation routes.
 
-The right rail nav tabs include:
+The new tab page includes:
 
 | Tab           | Shows when                           |
 | ------------- | ------------------------------------ |
 | File Explorer | Always — working directory file tree |
 | Artifacts     | Conversation has rendered artifacts  |
 | Browser       | Opened by user                       |
-| Knowledge     | Primary page with right rail         |
+| Knowledge     | Opened by user                       |
 
-Knowledge appears as a left-sidebar route (not a workbench tab). Extension-contributed tool panels also appear in the nav. Toggle the right rail (in compact mode) with `Cmd+\` or toggle the workbench explorer (in workbench mode) with `Cmd+\`.
+Knowledge also appears as a left-sidebar route. Extension-contributed workbench tools can appear on the new tab page.
 
-For extension authors, the right rail is for compact contextual tools. If a feature needs the rail to select something and the center pane to render the large detail view, pair the rail view with a `location: "workbench"` detail view. See [Extensions](../extensions/system-extension-manager/README.md#surface-selection) for the surface decision guide.
+For extension authors, an extension rail is for compact contextual tools inside a workbench tab. If a feature needs the rail to select something and the main area to render the large detail view, pair the rail view with a `location: "workbench"` detail view. See [Extensions](../extensions/system-extension-manager/README.md#surface-selection) for the surface decision guide.
 
-### Rail pane behavior
+### Workbench Behavior
 
 - Panes are resizable by dragging the divider
 - The File Explorer shows the workspace file tree
@@ -38,11 +38,11 @@ For extension authors, the right rail is for compact contextual tools. If a feat
 
 ## Layout Shortcuts
 
-| Action                      | Shortcut              |
-| --------------------------- | --------------------- |
-| Conversation mode (compact) | `F1`                  |
-| Workbench mode              | `F2`                  |
-| Toggle left sidebar         | `Cmd+/` (or `Ctrl+/`) |
-| Toggle right rail           | `Cmd+\` (or `Ctrl+\`) |
+| Action              | Shortcut              |
+| ------------------- | --------------------- |
+| Hide workbench      | `F1`                  |
+| Show workbench      | `F2`                  |
+| Toggle left sidebar | `Cmd+/` (or `Ctrl+/`) |
+| Toggle workbench    | `Cmd+\` (or `Ctrl+\`) |
 
 Default shortcuts are configurable in Settings → Keyboard.

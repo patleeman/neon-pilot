@@ -69,7 +69,7 @@ function formatSurfaceKind(location: string): string {
     case 'main':
       return 'Main page';
     case 'rightRail':
-      return 'Right rail';
+      return 'Tab rail';
     case 'workbench':
       return 'Workbench detail';
     default:
@@ -102,7 +102,7 @@ function getLogicalSurfaces(extension: ExtensionInstallSummary): LogicalSurfaceS
         {
           id: view.id,
           title: view.title,
-          kind: detail && !wrongLocation ? 'Right rail + workbench detail' : 'Right rail',
+          kind: detail && !wrongLocation ? 'Tab rail + workbench detail' : 'Tab rail',
           ...(detail && !wrongLocation ? { detail } : {}),
           ...(detail
             ? wrongLocation
@@ -118,7 +118,7 @@ function getLogicalSurfaces(extension: ExtensionInstallSummary): LogicalSurfaceS
         id: view.id,
         title: view.title,
         kind: formatSurfaceKind(view.location),
-        ...(view.location === 'workbench' ? { warning: 'Orphan workbench detail view; no right rail view points at it' } : {}),
+        ...(view.location === 'workbench' ? { warning: 'Orphan workbench detail view; no tab rail view points at it' } : {}),
       },
     ];
   });
@@ -394,7 +394,7 @@ function formatAppearsInSummary(extension: ExtensionInstallSummary): string {
   const surfaces = getLogicalSurfaces(extension);
   const labels = [
     surfaces.some((surface) => surface.kind.includes('Main page')) ? 'Page' : null,
-    surfaces.some((surface) => surface.kind.includes('Right rail')) ? 'Right rail' : null,
+    surfaces.some((surface) => surface.kind.includes('Tab rail')) ? 'Tab rail' : null,
     surfaces.some((surface) => surface.kind.includes('Workbench')) ? 'Workbench' : null,
     extension.tools?.length ? 'Chat tool' : null,
     extension.skills?.length ? 'Skill' : null,

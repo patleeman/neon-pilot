@@ -104,7 +104,7 @@ export interface NativeExtensionClient {
     diff(cwd: string, path: string): Promise<unknown>;
     uncommittedDiff(cwd: string): Promise<unknown>;
   };
-  /** Workbench split-pane state sharing between a right-rail view and its paired detail view. */
+  /** Workbench split-pane state sharing between a tab-local rail view and its paired detail view. */
   workbench: {
     getDetailState<T = unknown>(surfaceId: string): T | null;
     setDetailState(surfaceId: string, state: unknown): void;
@@ -265,7 +265,7 @@ export interface ExtensionViewContribution {
   activation?: ExtensionViewActivation;
   defaultOpen?: boolean;
   persistOpen?: boolean;
-  /** For rightRail views, optional paired workbench view id rendered in the center pane while this rail tool is active. */
+  /** For rightRail views, optional paired workbench view id rendered in the tab's detail pane while this rail tool is active. */
   detailView?: string;
   /** Optional host layout behaviors enabled when this main view's route is active. */
   routeCapabilities?: Array<'contextRail' | 'workbench' | 'workbenchFilePane' | 'knowledgeFiles' | 'settingsSection'>;

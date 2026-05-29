@@ -36,7 +36,7 @@ Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for conversation-specific side panel
+- tab-local right rail for a conversation-specific side panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
@@ -82,8 +82,8 @@ Treat `ok: false` as actionable, not fatal. Fix every `error`, usually fix every
 Templates:
 
 - `main-page` — global app page with `/ext/{id}` route and sidebar nav.
-- `right-rail` — conversation-scoped right rail panel.
-- `workbench-detail` — right rail selector paired with a workbench detail view.
+- `right-rail` — conversation-scoped tab-local rail panel.
+- `workbench-detail` — tab-local rail selector paired with a workbench detail view.
 
 ## Package layout
 
@@ -152,7 +152,7 @@ Rules:
 }
 ```
 
-### Right rail
+### Tab-local right rail
 
 ```json
 {
@@ -160,7 +160,7 @@ Rules:
 }
 ```
 
-### Workbench detail paired with right rail
+### Workbench detail paired with a tab-local right rail
 
 ```json
 {

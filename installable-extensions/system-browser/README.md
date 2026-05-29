@@ -8,11 +8,11 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Browser
 
-The built-in Browser is an Electron-owned webview embedded in the desktop app's Workbench rail. It provides a shared visual context for the user and agent — both see the same page.
+The built-in Browser is an Electron-owned webview embedded in a desktop workbench tab. It provides a shared visual context for the user and agent — both see the same page.
 
 ## Opening the Browser
 
-In Workbench mode, open the Browser tab in the right rail. The browser loads and displays web pages alongside the conversation transcript. Close it with the X button, which hides the browser pane.
+Open a Browser workbench tab from the new tab page or an inline browser widget. The browser loads and displays web pages alongside the conversation transcript. Close the tab with its close button.
 
 ```
 ┌─────────────────────────────────────────────────┐

@@ -22,11 +22,11 @@ Drag a markdown file into the composer or use the attach button to pin it as con
 Attached docs:
 
 - Persist across all turns in the conversation
-- Appear in the Knowledge rail when workbench mode is active
+- Appear in the Knowledge tree when the workbench is open
 - Are loaded by the agent on every turn
 - Do not modify the knowledge base — they are scoped to the conversation
 
-Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge rail.
+Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge tree.
 
 ## Binary Attachments
 

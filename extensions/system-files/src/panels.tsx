@@ -68,7 +68,7 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
         <div className="max-w-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
           <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the right rail to keep it beside the transcript.</p>
+          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the file tree to keep it beside the transcript.</p>
         </div>
       </div>
     );

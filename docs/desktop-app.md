@@ -52,18 +52,18 @@ Electron main process
 - The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
 - The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions, automations, and daemon status after startup settles
 
-## Layout Modes
+## Layout
 
-| Mode         | Shortcut | Description                          |
-| ------------ | -------- | ------------------------------------ |
-| Conversation | `F1`     | Single-pane layout with left sidebar |
-| Workbench    | `F2`     | Multi-pane layout with side rails    |
+| State          | Shortcut | Description                          |
+| -------------- | -------- | ------------------------------------ |
+| Workbench off  | `F1`     | Single-pane layout with left sidebar |
+| Workbench open | `F2`     | Conversation plus tabbed workbench   |
 
-Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the right rail with `Cmd+\` (or `Ctrl+\`).
+Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the workbench with `Cmd+\` (or `Ctrl+\`).
 
-## Workbench Rails
+## Workbench Tabs
 
-In Workbench mode, the right rail nav tabs include:
+The workbench new tab page includes:
 
 | Tab           | Description                   |
 | ------------- | ----------------------------- |
@@ -71,20 +71,20 @@ In Workbench mode, the right rail nav tabs include:
 | Artifacts     | Rendered HTML, Mermaid, LaTeX |
 | Browser       | Embedded webview              |
 
-Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are context-sensitive — Artifacts appear when the conversation has rendered artifacts. Checkpoint diffs and background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+Knowledge is also a primary left-sidebar page. Extension-contributed workbench tools can appear on the new tab page. Tabs are context-sensitive; artifacts open from transcript cards and do not appear as a generic new-tab option. Checkpoint diffs and background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
 
 ## Keyboard Shortcuts
 
 All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
 
-| Action            | Default               |
-| ----------------- | --------------------- |
-| New conversation  | `Cmd+N`               |
-| Conversation mode | `F1`                  |
-| Workbench mode    | `F2`                  |
-| Toggle sidebar    | `Cmd+/` (or `Ctrl+/`) |
-| Toggle right rail | `Cmd+\` (or `Ctrl+\`) |
-| Settings          | `Cmd+,`               |
+| Action           | Default               |
+| ---------------- | --------------------- |
+| New conversation | `Cmd+N`               |
+| Hide workbench   | `F1`                  |
+| Show workbench   | `F2`                  |
+| Toggle sidebar   | `Cmd+/` (or `Ctrl+/`) |
+| Toggle workbench | `Cmd+\` (or `Ctrl+\`) |
+| Settings         | `Cmd+,`               |
 
 ## Routes
 

@@ -12,7 +12,7 @@ Highlights in this train:
 
 - Moves provider API keys into the secure secrets store and migrates existing credentials when model backends change.
 - Makes Suggested Context an installable extension while keeping extension catalog metadata and docs aligned.
-- Refines the workbench with tabbed tools, right-sidebar toggle wiring, actionable subagent rows, and less noisy execution shelves.
+- Refines the workbench with tabbed tools, workbench toggle wiring, actionable subagent rows, and less noisy execution shelves.
 - Speeds up small conversation opens by warming and loading compact transcripts on first paint.
 - Polishes extension-facing UX with simpler knowledge file selection, clearer Excalidraw save actions, automation draft copy, and updated Video Probe settings.
 - Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.1` candidate.

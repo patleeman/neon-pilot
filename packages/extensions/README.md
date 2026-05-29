@@ -77,7 +77,7 @@ The builder compiles frontend React to `dist/frontend.js`, backend Node code to 
 
 Packaged desktop releases only load prebuilt `dist/` files. They do not run esbuild for extensions at runtime, so imported/user extensions must already include their built frontend/backend bundles.
 
-After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route or right-rail surface and visually inspect it.
+After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route, workbench tab, or tab-local rail surface and visually inspect it.
 
 ## Packaging extensions
 
@@ -633,15 +633,15 @@ Prompt assembly providers are isolated: failures, timeouts, and malformed items 
 
 ## Surfaces and contribution choices
 
-Pick the smallest surface that matches the product shape. Do not use the right rail as a junk drawer.
+Pick the smallest surface that matches the product shape. Do not use a tab-local rail as a junk drawer.
 
 | Surface                | Use for                                                                | Avoid using for                  |
 | ---------------------- | ---------------------------------------------------------------------- | -------------------------------- |
 | Main page view         | Durable app-level workflows with their own route                       | Tiny contextual helpers          |
 | Left nav item          | Primary destinations users should see every day (`section: 'primary'`) | Settings subpanels               |
 | Nav item (settings)    | Settings/configuration destinations (`section: 'settings'`)            | Product workflows                |
-| Right-rail panel       | Compact contextual companions for a conversation/workspace/selection   | Wide editors or log/diff viewers |
-| Workbench detail view  | Large detail rendering paired to a right-rail selector                 | Standalone app-level workflows   |
+| Right-rail panel       | Compact contextual companions inside a workbench tab                   | Wide editors or log/diff viewers |
+| Workbench detail view  | Large detail rendering paired to a tab-local rail selector             | Standalone app-level workflows   |
 | Settings contribution  | Configuration and preferences                                          | Product workflows                |
 | Command                | Fast one-shot actions or opening a surface                             | Persistent UI                    |
 | Slash command          | Conversation-authored actions that affect prompt context               | Global app navigation            |
@@ -666,7 +666,7 @@ Rules:
 - Imperative DOM is acceptable only for browser-owned UI state: focus, caret/selection, scroll, measurement, and the hidden file input reset that lets users pick the same file twice.
 - If a new composer action needs state changes, add a host-owned intent method instead of passing refs or DOM handles across the extension boundary.
 
-Right-rail views may point at a paired workbench detail view with `detailView`:
+Right-rail views are tab-local extension rails. They may point at a paired workbench detail view with `detailView`:
 
 ```json
 {
@@ -725,7 +725,7 @@ Built-in host commands include:
 - `app.navigate` with `{ "to": "/path" }`
 - `palette.open` with `{ "scope": "threads" }`
 - `rail.open` with `{ "extensionId": "...", "surfaceId": "..." }`
-- `layout.set` with `{ "mode": "compact" | "workbench" }`
+- `layout.set` with `{ "mode": "compact" | "workbench" }` for hiding/showing the workbench panel
 - `conversation.new`
 - `conversation.open` with `{ "conversationId": "..." }`
 - `conversation.next` / `conversation.previous`

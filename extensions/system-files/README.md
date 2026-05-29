@@ -8,11 +8,11 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # File Explorer
 
-The File Explorer is a file tree browser in the workbench rail. It provides quick access to workspace and knowledge files without leaving the conversation.
+The File Explorer is a file tree browser in a workbench tab-local rail. It provides quick access to workspace and knowledge files without leaving the conversation.
 
 ## Opening the Explorer
 
-In Workbench mode, the File Explorer tab is available in the right rail. Click the Files icon to open it. The tree shows the project directory structure.
+Open a File Explorer workbench tab to browse the project directory tree. The file tree lives in that tab's rail, and selected files open in the same tab's detail area.
 
 ## Navigation
 

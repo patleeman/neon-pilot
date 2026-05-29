@@ -371,8 +371,8 @@ export function DesktopTopBar({
           className="ui-desktop-top-bar__icon-button"
           onClick={onToggleRail}
           disabled={!showRailToggle}
-          aria-label={showRailToggle ? (railOpen ? 'Collapse right sidebar' : 'Expand right sidebar') : 'Right sidebar unavailable'}
-          title={showRailToggle ? (railOpen ? 'Collapse right sidebar' : 'Expand right sidebar') : 'Right sidebar unavailable'}
+          aria-label={showRailToggle ? (railOpen ? 'Hide workbench' : 'Show workbench') : 'Workbench unavailable'}
+          title={showRailToggle ? (railOpen ? 'Hide workbench' : 'Show workbench') : 'Workbench unavailable'}
         >
           <RightRailToggleIcon open={showRailToggle ? railOpen : false} />
         </ToolbarButton>

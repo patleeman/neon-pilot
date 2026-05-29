@@ -31,7 +31,7 @@ Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for a compact conversation-specific tool panel
+- tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
@@ -287,8 +287,8 @@ ctx.setActiveTools(toolNames: string[]): void;
 Views are the primary way to add UI. Three locations:
 
 - **`main`**: Full-page view at a custom route (`/ext/your-id`).
-- **`rightRail`**: Collapsible panel beside the conversation.
-- **`workbench`**: Center detail pane, paired with a right rail view.
+- **`rightRail`**: Tab-local rail inside the workbench, usually used as a compact selector/context panel.
+- **`workbench`**: Detail pane, optionally paired with a tab-local rail view.
 
 ```json
 {

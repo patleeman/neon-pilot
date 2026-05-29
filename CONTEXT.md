@@ -269,11 +269,11 @@ The primary navigation sidebar on the left side of the desktop app. It contains 
 
 Use **left sidebar** for the app-level navigation area. Do not call it the right rail or a pane.
 
-### Right rail
+### Extension rail
 
-The contextual navigation/tool rail on the right side of the desktop app, especially in Workbench mode. It hosts compact context surfaces such as file explorer, diffs, artifacts, runs, browser, knowledge tree, or extension-contributed tool panels.
+A tab-local contextual tool rail owned by a workbench tab. It hosts compact selector/context surfaces such as file explorer, knowledge tree, or extension-contributed tool panels.
 
-Use **right rail** for contextual side tools. If a surface needs substantial reading or editing space, it should open a workbench pane/detail view rather than live entirely in the rail.
+Use **extension rail** or **tab rail** when distinguishing it from the global app shell. Do not imply there is a persistent global right sidebar. If a surface needs substantial reading or editing space, it should open a workbench tab/detail view rather than live entirely in the rail.
 
 ### Pane
 
@@ -291,7 +291,7 @@ In Conversation View this is the only content pane. In Workbench View it sits be
 
 The secondary content pane shown beside the conversation pane in Workbench View. It renders larger conversation-adjacent detail surfaces such as files, diffs, artifacts, browser pages, or knowledge files.
 
-Use **workbench pane** for the large right-hand detail area, not **right rail**.
+Use **workbench pane** for the large right-hand detail area, not **extension rail**.
 
 ### Detail view
 
@@ -305,7 +305,7 @@ A split-pane workspace for conversation-adjacent surfaces such as file detail vi
 
 ### View
 
-An extension-contributed UI surface, such as a main page, right rail panel, or workbench detail.
+An extension-contributed UI surface, such as a main page, tab-local rail panel, or workbench detail.
 
 ### Activity tree
 

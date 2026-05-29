@@ -95,10 +95,10 @@ const DESKTOP_KEYBOARD_SHORTCUT_LABELS: Record<DesktopKeyboardShortcutId, { labe
   findOnPage: { label: 'Find on page', description: 'Search text in the current page.' },
   settings: { label: 'Settings', description: 'Open this settings page.' },
   quit: { label: 'Quit', description: 'Quit the desktop app.' },
-  conversationMode: { label: 'Conversation mode', description: 'Show the normal chat layout.' },
-  workbenchMode: { label: 'Workbench mode', description: 'Show the chat and workbench layout.' },
+  conversationMode: { label: 'Hide workbench', description: 'Show the normal chat layout.' },
+  workbenchMode: { label: 'Show workbench', description: 'Show the chat and workbench layout.' },
   toggleSidebar: { label: 'Toggle left sidebar', description: 'Collapse or restore the conversation sidebar.' },
-  toggleRightRail: { label: 'Toggle right rail', description: 'Collapse or restore the active workbench rail.' },
+  toggleRightRail: { label: 'Toggle workbench', description: 'Collapse or restore the workbench panel.' },
 };
 
 const DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS: DesktopAppPreferencesState['keyboardShortcuts'] = {

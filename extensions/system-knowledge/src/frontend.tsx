@@ -164,7 +164,7 @@ export function KnowledgePageSurface() {
         <AppPageEmptyState
           align="start"
           title="Select a file to start editing"
-          body="Pick a note from the right sidebar, or import a URL into the knowledge base."
+          body="Pick a note from the Knowledge tree, or import a URL into the knowledge base."
         />
       </AppPageLayout>
     </div>
@@ -196,7 +196,7 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
         <div className="max-w-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
           <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a knowledge file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the right rail to keep it beside the transcript.</p>
+          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the Knowledge tree to keep it beside the transcript.</p>
         </div>
       </div>
     );

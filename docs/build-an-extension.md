@@ -11,7 +11,7 @@ Build a Neon Pilot extension that [does what].
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for a compact conversation-specific tool panel
+- tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
@@ -39,7 +39,7 @@ Use this as agent guidance, not homework for the user:
 | If you want...                                       | Ask for...                                 |
 | ---------------------------------------------------- | ------------------------------------------ |
 | A full app, dashboard, or workflow                   | `main-page` extension                      |
-| Context beside the current conversation              | `right-rail` extension                     |
+| Context inside a workbench tab-local rail            | `right-rail` extension                     |
 | A compact rail panel plus workbench pane detail view | `workbench-detail` extension               |
 | Something the agent can call                         | backend tool or action                     |
 | A command palette, slash command, or composer button | command/composer contribution              |
@@ -97,7 +97,7 @@ my-extension/
 ## Good extension requests
 
 ```text
-Build a right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.
+Build a tab-local right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.
 ```
 
 ```text

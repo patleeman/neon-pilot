@@ -34,7 +34,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Conversation header actions contributed by extensions, including Import Session when enabled.
 - Working directory group context menu: copy working directory and grouped conversation behavior.
 - Selection context menu: copy/selection actions.
-- Right rail/workbench tool slots: open, close, switch tabs, detail panes, preserved sizing.
+- Workbench tool tabs and tab-local rails: open, close, switch tabs, detail panes, preserved sizing.
 - Conversation resume after app restart: pending tool calls, background work, bash output, agent state.
 
 ### Agent tool execution baseline
@@ -75,7 +75,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### `/knowledge` and knowledge rail/detail (`system-knowledge`)
 
 - Nav item: Knowledge.
-- Views: Knowledge page, Knowledge tree right rail, Knowledge file workbench detail.
+- Views: Knowledge page, Knowledge tree tab-local rail, Knowledge file workbench detail.
 - Actions: `readState`, `updateState`, `sync`, `knowledgeListFiles`, `knowledgeTree`, `knowledgeReadFile`, `knowledgeWriteFile`, `knowledgeCreateFolder`, `knowledgeDeleteFile`, `knowledgeRename`, `knowledgeMove`, `knowledgeBacklinks`, `knowledgeSearch`, `knowledgeUploadImage`, `knowledgeImportUrl`, `resolvePromptReferences`.
 - Prompt reference provider: `knowledge-files`.
 - Quick open provider: `knowledge-files` in the command palette files section.
@@ -112,11 +112,11 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `localModelsStatus`, `localModelsMlxSetModel`, `localModelsMlxSetup`, `localModelsMlxUpdateRuntime`, `localModelsMlxStart`, `localModelsMlxStop`, `localModelsMlxSearch`, `localModelsSearch`, `localModelsModelDetails`, `localModelsGgufDownload`, `localModelsGgufCancelDownload`, `localModelsGgufSaveSettings`, `localModelsGgufSetModel`, `localModelsGgufReveal`, `localModelsMlxDelete`, `localModelsGgufDelete`, `localModelsGgufInstallRuntime`, `localModelsGgufStart`, `localModelsGgufStop`, `localModelsGgufRunPrompt`, `localModelsDiscover`.
 - Test MLX setup/start/stop/update/delete, GGUF download/cancel/settings/reveal/delete/runtime install/start/stop/run prompt, Hugging Face search/details, model selection propagation.
 
-## Conversation right rails, workbench details, and transcript renderers
+## Workbench rails, workbench details, and transcript renderers
 
 ### Artifacts (`system-artifacts`)
 
-- Views: Artifacts right rail, Artifact workbench detail.
+- Views: Artifact workbench detail.
 - Agent tool/action: `artifact` with `save`, `get`, `list`, `delete`; kinds `html`, `mermaid`, `latex`; `open` behavior.
 - Transcript renderer: artifact tool block.
 - Test create/update/open/delete, list ordering, malformed artifact content, sandboxing, render errors.
@@ -139,12 +139,12 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### File Explorer (`system-files`)
 
-- Views: Workspace files right rail, workspace file detail.
+- Views: Workspace files tab-local rail, workspace file detail.
 - Test tree load, cwd switching, file open, large file, binary/image file, diff view, readonly mode, missing file, permission errors.
 
 ### Browser (`system-browser`, default disabled)
 
-- Views: Browser tabs right rail, Browser workbench.
+- Views: Browser workbench tabs.
 - Commands/buttons/keybindings: open browser (`mod+shift+b`), new tab (`mod+t`), reopen closed tab (`mod+shift+t`), close tab (`mod+w`), focus location bar (`mod+l`).
 - Agent tools/actions: `browser_snapshot`, `browser_cdp`, `browser_screenshot`.
 - Transcript renderers: snapshot, CDP, screenshot tool blocks.

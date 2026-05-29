@@ -207,10 +207,10 @@ The agent can read other conversation transcripts using the `conversation` actio
 | Action                   | Shortcut              |
 | ------------------------ | --------------------- |
 | New conversation         | `Cmd+N`               |
-| Conversation mode        | `F1`                  |
-| Workbench mode           | `F2`                  |
+| Hide workbench           | `F1`                  |
+| Show workbench           | `F2`                  |
 | Toggle sidebar           | `Cmd+/` (or `Ctrl+/`) |
-| Toggle right rail        | `Cmd+\` (or `Ctrl+\`) |
+| Toggle workbench         | `Cmd+\` (or `Ctrl+\`) |
 | Submit message           | Enter                 |
 | New line in composer     | Shift+Enter           |
 | Cancel agent response    | Escape                |

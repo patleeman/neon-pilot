@@ -212,7 +212,7 @@ When any built-in browser tool runs from a desktop conversation:
 1. ensure the hidden browser session exists for the conversation
 2. return the tool result to the transcript
 3. render an inline Browser widget in chat with an **Open browser** action
-4. only switch to Workbench mode and select the Browser tab after the user clicks the widget
+4. only open the workbench and select the Browser tab after the user clicks the widget
 
 Do not show raw script/debug panels in the user Browser tab. The transcript is where tool details belong.
 

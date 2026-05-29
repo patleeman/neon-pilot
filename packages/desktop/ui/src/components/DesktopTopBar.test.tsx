@@ -178,7 +178,7 @@ describe('DesktopTopBar', () => {
 
     expect(html.indexOf('Hide sidebar')).toBeLessThan(html.indexOf('Go back'));
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
-    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Collapse right sidebar'));
+    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Hide workbench'));
   });
 
   it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
@@ -190,7 +190,7 @@ describe('DesktopTopBar', () => {
       activeHostSummary: 'Local runtime is healthy.',
     });
 
-    expect(html).toContain('Right sidebar unavailable');
+    expect(html).toContain('Workbench unavailable');
     expect(html).toContain('disabled=""');
   });
 
