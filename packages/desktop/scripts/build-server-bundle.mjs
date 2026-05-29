@@ -33,7 +33,7 @@ const sharedEsbuildOptions = {
   minify: true,
   legalComments: 'none',
   logLevel: 'info',
-  external: ['@xenova/transformers', 'better-sqlite3', 'electron', 'esbuild', 'fsevents'],
+  external: ['@xenova/transformers', 'better-sqlite3', 'electron', 'esbuild', 'fsevents', 'node-pty'],
   plugins: [extensionApiAliasPlugin],
 };
 

@@ -23,7 +23,7 @@ await build({
   banner: {
     js: `import { createRequire as __paCreateRequire } from 'node:module';var require=__paCreateRequire(import.meta.url);`,
   },
-  external: ['electron', 'fsevents'],
+  external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
 });
@@ -77,7 +77,7 @@ await build({
   banner: {
     js: `import { createRequire as __paBackendCreateRequire } from 'node:module';var require=__paBackendCreateRequire(import.meta.url);`,
   },
-  external: ['electron', 'fsevents'],
+  external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
 });
