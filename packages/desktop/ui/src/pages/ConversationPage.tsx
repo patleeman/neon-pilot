@@ -2249,8 +2249,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
   const setupWorkspaceCwd = draft ? draftCwdValue || null : currentCwdLabel === 'Chat' ? null : currentCwd;
   const availableDraftWorkspacePaths = useMemo(
-    () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupWorkspaceCwd ?? '', savedWorkspacePaths }),
-    [savedWorkspacePaths, setupWorkspaceCwd],
+    () => buildAvailableDraftWorkspacePaths({ draftCwdValue: setupWorkspaceCwd ?? '', savedWorkspacePaths, sessions }),
+    [savedWorkspacePaths, sessions, setupWorkspaceCwd],
   );
   const relatedThreadCandidates = useMemo(
     () =>
