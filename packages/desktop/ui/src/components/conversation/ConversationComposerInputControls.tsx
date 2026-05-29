@@ -1,4 +1,12 @@
-import { type ClipboardEventHandler, type KeyboardEventHandler, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * ConversationComposerInputControls — textarea + action bar for conversation input.
+ *
+ * Wrapped in React.memo so the textarea only re-renders when its own props change,
+ * not when the parent ConversationPage re-renders for unrelated reasons.
+ * The component manages a localInput copy so keystroke-sensitive state (menus)
+ * stays inside this subtree without propagating every change to the parent.
+ */
+import { type ClipboardEventHandler, type KeyboardEventHandler, memo, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
@@ -18,44 +26,47 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
   return 0;
 }
 
-export function ConversationComposerInputControls({
-  fileInputRef,
-  textareaRef,
-  input,
-  pendingAskUserQuestion,
-  composerDisabled,
-  composerShellWidth,
+function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps, next: ConversationComposerInputControlsProps): boolean {
+  // The component manages its own localInput copy. Skip re-render when only
+  // the `input` prop changes (the parent re-syncs every keystroke).
+  // Compare all other display-affecting props by reference.
+  return (
+    prev.input === next.input &&
+    prev.pendingAskUserQuestion === next.pendingAskUserQuestion &&
+    prev.composerDisabled === next.composerDisabled &&
+    prev.composerShellWidth === next.composerShellWidth &&
+    prev.streamIsStreaming === next.streamIsStreaming &&
+    prev.models === next.models &&
+    prev.currentModel === next.currentModel &&
+    prev.currentThinkingLevel === next.currentThinkingLevel &&
+    prev.savingPreference === next.savingPreference &&
+    prev.conversationNeedsTakeover === next.conversationNeedsTakeover &&
+    prev.composerHasContent === next.composerHasContent &&
+    prev.composerShowsQuestionSubmit === next.composerShowsQuestionSubmit &&
+    prev.composerQuestionCanSubmit === next.composerQuestionCanSubmit &&
+    prev.composerQuestionRemainingCount === next.composerQuestionRemainingCount &&
+    prev.composerQuestionSubmitting === next.composerQuestionSubmitting &&
+    prev.composerSubmitLabel === next.composerSubmitLabel &&
+    prev.composerAltHeld === next.composerAltHeld &&
+    prev.onFilesSelected === next.onFilesSelected &&
+    prev.onInputChange === next.onInputChange &&
+    prev.onRememberComposerSelection === next.onRememberComposerSelection &&
+    prev.onKeyDown === next.onKeyDown &&
+    prev.onPaste === next.onPaste &&
+    prev.onOpenFilePicker === next.onOpenFilePicker &&
+    prev.onUpsertDrawingAttachment === next.onUpsertDrawingAttachment &&
+    prev.onSelectModel === next.onSelectModel &&
+    prev.onSelectThinkingLevel === next.onSelectThinkingLevel &&
+    prev.onInsertComposerText === next.onInsertComposerText &&
+    prev.onAppendComposerText === next.onAppendComposerText &&
+    prev.onSubmitComposerQuestion === next.onSubmitComposerQuestion &&
+    prev.onSubmitComposerActionForModifiers === next.onSubmitComposerActionForModifiers &&
+    prev.onAbortStream === next.onAbortStream &&
+    prev.conversationId === next.conversationId
+  );
+}
 
-  streamIsStreaming,
-  models,
-  currentModel,
-  currentThinkingLevel,
-  savingPreference,
-  conversationNeedsTakeover,
-  composerHasContent,
-  composerShowsQuestionSubmit,
-  composerQuestionCanSubmit,
-  composerQuestionRemainingCount,
-  composerQuestionSubmitting,
-  composerSubmitLabel,
-  composerAltHeld,
-  onFilesSelected,
-  onInputChange,
-  onRememberComposerSelection,
-  onKeyDown,
-  onPaste,
-  onOpenFilePicker,
-  onUpsertDrawingAttachment,
-
-  onSelectModel,
-  onSelectThinkingLevel,
-  onInsertComposerText,
-  onAppendComposerText,
-  onSubmitComposerQuestion,
-  onSubmitComposerActionForModifiers,
-  onAbortStream,
-  conversationId,
-}: {
+interface ConversationComposerInputControlsProps {
   conversationId?: string | null;
   fileInputRef: RefObject<HTMLInputElement>;
   textareaRef: RefObject<HTMLTextAreaElement>;
@@ -63,7 +74,6 @@ export function ConversationComposerInputControls({
   pendingAskUserQuestion: boolean;
   composerDisabled: boolean;
   composerShellWidth: number | null;
-
   streamIsStreaming: boolean;
   models: ModelInfo[];
   currentModel: string;
@@ -84,7 +94,6 @@ export function ConversationComposerInputControls({
   onPaste: ClipboardEventHandler<HTMLTextAreaElement>;
   onOpenFilePicker: () => void;
   onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
-
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   onInsertComposerText: (text: string) => void;
@@ -92,7 +101,44 @@ export function ConversationComposerInputControls({
   onSubmitComposerQuestion: () => void;
   onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
-}) {
+}
+
+export const ConversationComposerInputControls = memo(function ConversationComposerInputControls({
+  fileInputRef,
+  textareaRef,
+  input,
+  pendingAskUserQuestion,
+  composerDisabled,
+  composerShellWidth,
+  streamIsStreaming,
+  models,
+  currentModel,
+  currentThinkingLevel,
+  savingPreference,
+  conversationNeedsTakeover,
+  composerHasContent,
+  composerShowsQuestionSubmit,
+  composerQuestionCanSubmit,
+  composerQuestionRemainingCount,
+  composerQuestionSubmitting,
+  composerSubmitLabel,
+  composerAltHeld,
+  onFilesSelected,
+  onInputChange,
+  onRememberComposerSelection,
+  onKeyDown,
+  onPaste,
+  onOpenFilePicker,
+  onUpsertDrawingAttachment,
+  onSelectModel,
+  onSelectThinkingLevel,
+  onInsertComposerText,
+  onAppendComposerText,
+  onSubmitComposerQuestion,
+  onSubmitComposerActionForModifiers,
+  onAbortStream,
+  conversationId,
+}: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools } = useExtensionRegistry();
   const [localInput, setLocalInputState] = useState(input);
   const previousInputPropRef = useRef(input);
@@ -102,6 +148,8 @@ export function ConversationComposerInputControls({
     setLocalInputState(nextInput);
   };
 
+  // Sync from parent input prop — the parent can push external updates
+  // (e.g., pasting text from a command) when the textarea is not focused.
   useEffect(() => {
     if (previousInputPropRef.current === input) {
       return;
@@ -114,6 +162,7 @@ export function ConversationComposerInputControls({
     }
     setLocalInput(input);
   }, [input, textareaRef]);
+
   const visibleComposerInputTools = useMemo(
     () =>
       composerInputTools.filter((tool) => {
@@ -147,6 +196,7 @@ export function ConversationComposerInputControls({
       }),
     [composerControls, composerHasContent, streamIsStreaming],
   );
+
   const composerControlContext = {
     composerDisabled,
     streamIsStreaming,
@@ -162,6 +212,7 @@ export function ConversationComposerInputControls({
     selectModel: onSelectModel,
     selectThinkingLevel: onSelectThinkingLevel,
   };
+
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
   const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');
 
@@ -273,4 +324,4 @@ export function ConversationComposerInputControls({
       </div>
     </div>
   );
-}
+}, inputControlsPropsAreEqual);

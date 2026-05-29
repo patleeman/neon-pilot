@@ -1,5 +1,6 @@
 import {
   type DragEvent,
+  memo,
   type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
@@ -70,6 +71,7 @@ import {
 } from '../session/sessionTabs';
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
+import { useSession, useSessionPresence } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
@@ -1404,7 +1406,7 @@ type ConversationCopyMenuState = {
   status: 'copied' | 'failed';
 };
 
-function OpenConversationRow({
+const OpenConversationRow = memo(function OpenConversationRow({
   session,
   active,
   pinned = false,
@@ -1988,7 +1990,102 @@ function OpenConversationRow({
       ) : null}
     </div>
   );
-}
+});
+
+/**
+ * SessionRow — subscribes to the normalized session store for a single ID
+ * and renders the memo'd OpenConversationRow. Each row re-renders only when
+ * its own session or presence changes, not when other sessions update.
+ */
+const SessionRow = memo(function SessionRow({
+  sessionId,
+  active,
+  pinned,
+  canDrag,
+  isDragging,
+  dropPosition,
+  automationTitle,
+  hasPendingRuns,
+  backgroundWorkKind,
+  gatewayProviders,
+  onPin,
+  onUnpin,
+  onClose,
+  onArchive,
+  onOpenInNewWindow,
+  onDuplicate,
+  onCopyWorkingDirectory,
+  onCopyId,
+  onCopyDeeplink,
+  onPrefetch,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+}: {
+  sessionId: string;
+  active: boolean;
+  pinned?: boolean;
+  canDrag?: boolean;
+  isDragging?: boolean;
+  dropPosition?: OpenConversationDropPosition | null;
+  automationTitle?: string;
+  hasPendingRuns?: boolean;
+  backgroundWorkKind?: ConversationBackgroundWorkKind | null;
+  gatewayProviders?: Array<'telegram' | 'slack_mcp'>;
+  onPin?: () => void;
+  onUnpin?: () => void;
+  onClose?: () => void;
+  onArchive?: () => boolean | Promise<boolean>;
+  onOpenInNewWindow?: () => boolean | Promise<boolean>;
+  onDuplicate?: () => boolean | Promise<boolean>;
+  onCopyWorkingDirectory?: () => boolean | Promise<boolean>;
+  onCopyId?: () => boolean | Promise<boolean>;
+  onCopyDeeplink?: () => boolean | Promise<boolean>;
+  onPrefetch?: () => void;
+  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: (event: DragEvent<HTMLDivElement>) => void;
+}) {
+  const session = useSession(sessionId);
+  const presence = useSessionPresence(sessionId);
+
+  if (!session) return null;
+
+  const isRunning = presence === 'streaming' || presence === 'automation';
+  const pending = (hasPendingRuns ?? false) || presence === 'hasRuns';
+
+  return (
+    <OpenConversationRow
+      session={isRunning ? { ...session, isRunning: true } : session}
+      active={active}
+      pinned={pinned}
+      canDrag={canDrag}
+      isDragging={isDragging}
+      dropPosition={dropPosition}
+      isAutomation={presence === 'automation'}
+      automationTitle={automationTitle}
+      hasPendingRuns={pending}
+      backgroundWorkKind={backgroundWorkKind}
+      gatewayProviders={gatewayProviders}
+      onPin={onPin}
+      onUnpin={onUnpin}
+      onClose={onClose}
+      onArchive={onArchive}
+      onOpenInNewWindow={onOpenInNewWindow}
+      onDuplicate={onDuplicate}
+      onCopyWorkingDirectory={onCopyWorkingDirectory}
+      onCopyId={onCopyId}
+      onCopyDeeplink={onCopyDeeplink}
+      onPrefetch={onPrefetch}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+    />
+  );
+});
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -3819,9 +3916,6 @@ export function Sidebar() {
         ? dropTarget.position
         : null;
 
-    const isAutomationRunning = runningAutomationConversationIdSet.has(session.id);
-    const hasPendingExecutions = pendingExecutionConversationIdSet.has(session.id);
-    const backgroundWorkKind = backgroundWorkKindByConversationId.get(session.id) ?? null;
     const gatewayProviders =
       gatewayState?.bindings
         .filter((binding) => binding.conversationId === session.id)
@@ -3829,16 +3923,15 @@ export function Sidebar() {
         .filter((provider, index, providers) => providers.indexOf(provider) === index) ?? [];
 
     return (
-      <OpenConversationRow
+      <SessionRow
         key={session.id}
-        session={isAutomationRunning && !session.isRunning ? { ...session, isRunning: true } : session}
+        sessionId={session.id}
         active={isDraftTab ? location.pathname === DRAFT_CONVERSATION_ROUTE : location.pathname === `/conversations/${session.id}`}
         pinned={pinned}
         canDrag={canDrag}
-        isAutomation={isAutomationRunning}
         automationTitle={automationThreadTitleByConversationId.get(session.id)}
-        hasPendingRuns={hasPendingExecutions && !session.isRunning && !isAutomationRunning}
-        backgroundWorkKind={backgroundWorkKind}
+        backgroundWorkKind={backgroundWorkKindByConversationId.get(session.id) ?? null}
+        gatewayProviders={gatewayProviders}
         isDragging={canDrag && draggingSessionId === session.id}
         dropPosition={dropPosition}
         onPin={!pinned && !isDraftTab ? () => handlePinConversation(session.id) : undefined}
@@ -3858,7 +3951,6 @@ export function Sidebar() {
         onCopyId={!isDraftTab ? () => handleCopyConversationId(session.id) : undefined}
         onCopyDeeplink={!isDraftTab ? () => handleCopyConversationDeeplink(session.id) : undefined}
         onPrefetch={!isDraftTab ? () => prefetchConversation(session.id) : undefined}
-        gatewayProviders={gatewayProviders}
         onDragStart={canDrag ? (event) => handleTabDragStart(section, session.id, event) : undefined}
         onDragOver={canDrag ? (event) => handleTabDragOver(section, session.id, event) : undefined}
         onDrop={canDrag ? (event) => handleTabDrop(section, session.id, event) : undefined}

@@ -318,6 +318,7 @@ import type {
   SessionMeta,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
+import { useSession } from '../store';
 import {
   type AskUserQuestionAnswers,
   type AskUserQuestionPresentation,
@@ -565,8 +566,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   }, [draft, id]);
 
   // ── Live session detection ─────────────────────────────────────────────────
+  const storeSession = useSession(id);
   const rawSessionSnapshot = useMemo(() => findConversationSessionById(sessions, id), [id, sessions]);
-  const sessionSnapshot = rawSessionSnapshot;
+  // Use the store as primary source for session data; fall back to AppDataContext
+  // for compatibility during the migration.
+  const sessionSnapshot = storeSession ?? rawSessionSnapshot;
 
   const sessionsLoaded = sessions !== null;
   // We use a confirmed-live flag only for lightweight session-state labeling.

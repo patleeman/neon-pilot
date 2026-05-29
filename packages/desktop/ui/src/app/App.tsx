@@ -26,6 +26,7 @@ import {
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { openConversationTab } from '../session/sessionTabs';
 import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import { runStore, sessionStore, taskStore, titleStore } from '../store';
 import { ThemeProvider } from '../ui-state/theme';
 import {
   AppDataContext,
@@ -179,10 +180,6 @@ function SavedConversationRoute() {
   return suspendRoute(<ConversationPage key={surfaceKey} />);
 }
 
-function isDesktopProtocolShell(): boolean {
-  return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
-}
-
 export function App() {
   const [titleMap, setTitleMap] = useState<Map<string, string>>(new Map());
   const [eventVersions, setEventVersions] = useState(INITIAL_APP_EVENT_VERSIONS);
@@ -225,9 +222,11 @@ export function App() {
       }
 
       if (!nextSession) {
+        sessionStore.remove(sessionId);
         return removeSessionMetaPreservingOrder(previous, sessionId);
       }
 
+      sessionStore.upsert(nextSession);
       return replaceSessionMetaPreservingOrder(previous, nextSession);
     });
   }, []);
@@ -365,12 +364,14 @@ export function App() {
       switch (payload.type) {
         case 'live_title':
           setTitle(payload.sessionId, payload.title);
+          titleStore.set(payload.sessionId, payload.title);
           return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
             setSessionsState((previous) =>
               previous ? updateSessionRunningPreservingOrder(previous, payload.sessionId, payload.running) : previous,
             );
+            sessionStore.patch(payload.sessionId, { isRunning: payload.running } as Partial<SessionMeta>);
           }
           bumpConversationMetadataVersion(payload.sessionId);
           void refreshSessionMeta(payload.sessionId, payload.running);
@@ -385,14 +386,17 @@ export function App() {
         case 'sessions_snapshot':
         case 'sessions':
           setSessions(payload.sessions);
+          sessionStore.replaceAll(payload.sessions);
           return;
         case 'tasks_snapshot':
         case 'tasks':
           setTasks(payload.tasks);
+          taskStore.replaceAll(payload.tasks);
           return;
         case 'runs_snapshot':
         case 'runs':
           setRuns(payload.result);
+          runStore.replaceAll(payload.result.runs ?? []);
           void api
             .executions()
             .then((result) => {
@@ -470,6 +474,7 @@ export function App() {
     void fetchSessionsSnapshot()
       .then((items) => {
         setSessions(items);
+        sessionStore.replaceAll(items);
       })
       .catch(() => {
         // Keep waiting for SSE or a later retry.
@@ -479,6 +484,7 @@ export function App() {
       .tasks()
       .then((items) => {
         setTasks(items);
+        taskStore.replaceAll(items);
       })
       .catch(() => {
         // Keep waiting for SSE or a later retry.
@@ -488,6 +494,7 @@ export function App() {
       .runs()
       .then((result) => {
         setRuns(result);
+        runStore.replaceAll(result.runs ?? []);
       })
       .catch(() => {
         // Keep waiting for SSE or a later retry.
@@ -551,17 +558,13 @@ export function App() {
       }, delayMs);
     };
 
-    const bootstrapTimer = window.setTimeout(() => {
-      if (!openedOnceRef.current) {
-        setSseStatus('offline');
-        void bootstrapSnapshots();
-      }
-    }, 1500);
+    // Start HTTP bootstrap in parallel with SSE connect, not after a timeout.
+    // The SSE will deliver incremental updates on top of the HTTP snapshot.
+    bootstrapSnapshots();
 
     const localCleanup = subscribeDesktopRealtimeAppEvents({
       onopen: () => {
         openedOnceRef.current = true;
-        window.clearTimeout(bootstrapTimer);
         setSseStatus('open');
       },
       onevent: handleDesktopAppEvent,
@@ -584,7 +587,6 @@ export function App() {
 
     return () => {
       cancelled = true;
-      window.clearTimeout(bootstrapTimer);
       if (reconnectTimer !== null) {
         window.clearTimeout(reconnectTimer);
       }
@@ -599,15 +601,12 @@ export function App() {
   }, [bootstrapSnapshots, handleDesktopAppEvent]);
 
   useEffect(() => {
-    if (!isDesktopProtocolShell()) {
-      void bootstrapSnapshots();
-    }
     const cleanup = subscribe();
 
     return () => {
       cleanup();
     };
-  }, [bootstrapSnapshots, subscribe]);
+  }, [subscribe]);
 
   const appEventsContextValue = useMemo(
     () => ({ versions: eventVersions, conversationVersions, conversationMetadataVersions }),
