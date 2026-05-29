@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <meta
+      name="description"
+      content="Reshape Neon Pilot with extensions — custom tools, surfaces, automations, hardware integration, and everything in between."
+    />
+    <title>Extensions · Neon Pilot</title>
+    <link rel="icon" href="./mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header>
+      <a class="brand" href="./" aria-label="Neon Pilot home">
+        <span class="brand-mark"><img src="./mark.svg" alt="" /></span>
+        <span>Neon Pilot</span>
+      </a>
+      <nav aria-label="Primary">
+        <a href="./">Overview</a>
+        <a href="./docs/">Docs</a>
+        <a class="active" href="./extensions.html">Extensions</a>
+        <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="ext-hero-title">
+        <div class="hero-copy">
+          <h1 id="ext-hero-title">Make Neon Pilot<br />your own.</h1>
+          <p class="section-copy">
+            Extensions are self-contained packages that add tools, surfaces, automations, hardware support, or integrations to Neon Pilot.
+            The app already ships with 45+ of them. You can build your own in minutes — just ask your agent.
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="./docs/build-an-extension.html">Build an extension</a>
+            <a class="btn" href="./docs/extensions.html">Reference <span>→</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="ext-grid" aria-label="Extension use-case categories">
+        <article class="ext-card wide">
+          <div class="ext-card-header">
+            <span class="ext-icon">⊞</span>
+            <h2>Add agent tools</h2>
+          </div>
+          <p>
+            Teach the agent new capabilities by registering executable tools. Tools appear in the agent's toolbelt alongside built-in
+            commands like <code>bash</code> and <code>read</code> — no special prompting needed.
+          </p>
+          <ul class="ext-ideas">
+            <li>Query your database schema or run read-only queries</li>
+            <li>Create Jira / Linear / Asana tickets from conversation</li>
+            <li>Trigger CI pipelines and fetch build results</li>
+            <li>Search internal wikis, runbooks, or incident databases</li>
+            <li>Post Slack messages or page on-call engineers</li>
+            <li>Override built-in tools with safer or domain-specific replacements</li>
+          </ul>
+        </article>
+
+        <article class="ext-card wide">
+          <div class="ext-card-header">
+            <span class="ext-icon">☰</span>
+            <h2>Build custom surfaces</h2>
+          </div>
+          <p>
+            Extensions own full pages, side panels, and workbench detail views — anything beyond the conversation. Render custom React
+            components that feel native to the app.
+          </p>
+          <ul class="ext-ideas">
+            <li>A kanban board for agent-managed tasks and workflows</li>
+            <li>A build-dashboard page showing test results and deploy status</li>
+            <li>A right-rail file browser or database schema explorer</li>
+            <li>A diff inspector that pairs with git branch context</li>
+            <li>Custom settings panels with their own controls</li>
+            <li>A workbench detail pane paired with a compact rail selector</li>
+          </ul>
+        </article>
+
+        <article class="ext-card wide">
+          <div class="ext-card-header">
+            <span class="ext-icon">⌘</span>
+            <h2>Create composer workflows</h2>
+          </div>
+          <p>
+            Add slash commands, composer buttons, shelves above the input, attachment providers, and hover-reveal message actions. Change
+            how the user interacts with the agent.
+          </p>
+          <ul class="ext-ideas">
+            <li><code>/triage</code> — paste a CI failure, get root-cause analysis</li>
+            <li>One-click "Summarize this thread" on any message</li>
+            <li>A context shelf showing the active PR or ticket above the composer</li>
+            <li>"Add screenshot" that captures a browser window as context</li>
+            <li>Drawing input tool for sketching architecture diagrams inline</li>
+            <li>Attachment providers that import from Notion, Google Docs, or clipboard</li>
+          </ul>
+        </article>
+
+        <article class="ext-card wide">
+          <div class="ext-card-header">
+            <span class="ext-icon">◉</span>
+            <h2>Integrate hardware &amp; input</h2>
+          </div>
+          <p>
+            Physical input devices can drive composer controls, toolbar actions, and commands — the same extension surfaces software actions
+            use.
+          </p>
+          <ul class="ext-ideas">
+            <li>Push-to-talk dictation via a USB foot pedal or Stream Deck</li>
+            <li>Direct Philips SpeechMike integration (already shipped)</li>
+            <li>Elgato Stream Deck profiles for agent commands</li>
+            <li>MIDI controllers mapped to composer actions</li>
+            <li>Bluetooth button remotes for "new chat" or "summarize"</li>
+            <li>Eye-tracker or head-triggered actions for accessibility</li>
+          </ul>
+        </article>
+
+        <article class="ext-card">
+          <div class="ext-card-header">
+            <span class="ext-icon">◷</span>
+            <h2>Automate &amp; schedule</h2>
+          </div>
+          <p>
+            Backend services, scheduled tasks, lifecycle hooks, and turn-context providers let extensions run code on their own schedule or
+            in response to events.
+          </p>
+          <ul class="ext-ideas">
+            <li>Daily summary digests emailed or posted to Slack</li>
+            <li>Auto-compact long conversations after a threshold</li>
+            <li>Background service that indexes your codebase</li>
+            <li>Health check monitors that page you when something breaks</li>
+            <li>Inject scoped context before every turn</li>
+            <li>Filter or rewrite prompts before they reach the model</li>
+          </ul>
+        </article>
+
+        <article class="ext-card">
+          <div class="ext-card-header">
+            <span class="ext-icon">⇌</span>
+            <h2>Connect your stack</h2>
+          </div>
+          <p>MCP servers, custom protocol handlers, and inter-extension calls let extensions bridge into your existing toolchain.</p>
+          <ul class="ext-ideas">
+            <li>Wire in Jira, Confluence, PagerDuty, or Datadog</li>
+            <li>Run an ACP server for custom agent protocols</li>
+            <li>Export/import conversations between instances</li>
+            <li>Orchestrate multiple extensions together</li>
+            <li>Add quick-open scopes for your domain objects</li>
+            <li>Global search across tickets, docs, and code</li>
+          </ul>
+        </article>
+
+        <article class="ext-card">
+          <div class="ext-card-header">
+            <span class="ext-icon">✦</span>
+            <h2>Adapt the agent per model</h2>
+          </div>
+          <p>
+            Model profiles let extensions switch tool surfaces, instructions, and hooks based on which model is running — without global
+            config changes.
+          </p>
+          <ul class="ext-ideas">
+            <li>Expose Codex-style patch tools for OpenAI coding models</li>
+            <li>Replace <code>edit</code> with a safer diff tool for cheap models</li>
+            <li>Add vision-only tools when a vision model is active</li>
+            <li>Disable network tools for local-only model profiles</li>
+            <li>Apply domain-specific instructions per model tier</li>
+          </ul>
+        </article>
+
+        <article class="ext-card">
+          <div class="ext-card-header">
+            <span class="ext-icon">◇</span>
+            <h2>Go deeper with agent workers</h2>
+          </div>
+          <p>
+            Extensions can spawn hidden or visible agent conversations — parallel research, background code review, or multi-turn automation
+            tasks.
+          </p>
+          <ul class="ext-ideas">
+            <li>Spawn a research agent that explores a topic while you work</li>
+            <li>Run background code review on a PR diff</li>
+            <li>Batch-generate documentation, tests, or release notes</li>
+            <li>Orchestrate a multi-agent workflow: plan → implement → review</li>
+            <li>Monitor a long-running task and report results to the active conversation</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="ext-cta" aria-label="Get started building extensions">
+        <div class="ext-cta-card">
+          <p class="eyebrow">How it works</p>
+          <h2>Ask your agent to build it</h2>
+          <p>
+            You don't need to learn a new framework. Just describe the feature you want, and Neon Pilot generates the extension — manifest,
+            frontend, backend, and all — then builds and reloads it.
+          </p>
+          <div class="ext-quote">
+            <span
+              >Build a Neon Pilot extension that lets me browse Docker containers, view logs, and restart services from a right-rail
+              panel.</span
+            >
+          </div>
+          <p>
+            That's the whole prompt. The agent creates the extension, registers the manifest, adds the nav item, wires the backend actions,
+            builds, reloads, and visually verifies the result.
+          </p>
+          <a class="btn primary" href="./docs/build-an-extension.html">Learn how to build one</a>
+        </div>
+      </section>
+
+      <section class="ext-faq" aria-label="Frequently asked questions about extensions">
+        <h2>Common questions</h2>
+        <div class="ext-faq-grid">
+          <details>
+            <summary>Do I need to know React or TypeScript?</summary>
+            <p>
+              No. Describe the feature in plain language and the agent writes the code. You can edit the source later if you want, but it's
+              not required. The agent handles the full loop: scaffold → implement → build → reload → verify.
+            </p>
+          </details>
+          <details>
+            <summary>How are extensions different from Pi skills or tools?</summary>
+            <p>
+              Skills are markdown instructions the agent reads. Tools are callable backend actions. Extensions are the full package — they
+              can include skills, tools, UI surfaces, backend services, storage, permissions, and lifecycle hooks all in one self-contained
+              bundle.
+            </p>
+          </details>
+          <details>
+            <summary>Can I share an extension with my team?</summary>
+            <p>
+              Yes. Extensions package into a single <code>.neon-extension.zip</code> file with everything needed. Import it through Settings
+              → Extensions → Import. The built-in Extension Manager handles packaging, importing, and exporting.
+            </p>
+          </details>
+          <details>
+            <summary>Are extensions safe?</summary>
+            <p>
+              Extensions are local code with declared permissions shown in the Extension Manager. The runtime blocks process-terminating
+              calls from extension backend code and disables extensions that repeatedly fail infrastructure checks. Review what an extension
+              declares before enabling it.
+            </p>
+          </details>
+          <details>
+            <summary>What if the extension I want already exists?</summary>
+            <p>
+              Check the Available tab in Settings → Extensions. Neon Pilot ships with 45+ built-in extensions covering tools, surfaces,
+              integrations, and more. You can also browse installable extensions from the GitHub repo.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="closing">
+        <div>
+          <h2>Ready to build something?</h2>
+          <p>Describe a feature and let your agent handle the rest.</p>
+        </div>
+        <a class="btn primary" href="./docs/build-an-extension.html">Build an extension</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>Open source · MIT · macOS today</span>
+      <div>
+        <a href="https://github.com/patleeman/neon-pilot">GitHub</a><a href="https://github.com/patleeman/neon-pilot/releases">Releases</a
+        ><a href="./docs/">Docs</a>
+      </div>
+    </footer>
+  </body>
+</html>
