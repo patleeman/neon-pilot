@@ -1182,7 +1182,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
     return createDesktopLocalApiJsonResponse(
       await renameDesktopConversation({
         conversationId: decodeURIComponent(conversationTitleMatch[1] ?? ''),
-        ...((input.body && typeof input.body === 'object' ? input.body : {}) as object),
+        name: String((input.body && typeof input.body === 'object' ? (input.body as Record<string, unknown>).name : '') ?? ''),
       }),
     );
   }

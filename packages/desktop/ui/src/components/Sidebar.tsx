@@ -46,7 +46,7 @@ import {
   readDraftConversationCwd,
 } from '../conversation/draftConversation';
 import { persistForkPromptDraft } from '../conversation/forking';
-import { startDraftConversation } from '../conversation/newConversationNavigation';
+import { startNewConversation } from '../conversation/newConversationNavigation';
 import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
@@ -2022,6 +2022,7 @@ const SessionRow = memo(function SessionRow({
   onDragOver,
   onDrop,
   onDragEnd,
+  initialSession,
 }: {
   sessionId: string;
   active: boolean;
@@ -2047,9 +2048,13 @@ const SessionRow = memo(function SessionRow({
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
   onDrop?: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd?: (event: DragEvent<HTMLDivElement>) => void;
+  initialSession?: SessionMeta;
 }) {
-  const session = useSession(sessionId);
+  // Use store as primary source; fall back to initialSession from parent (AppDataContext)
+  // during initial render before SSE has seeded the store.
+  const storeSession = useSession(sessionId);
   const presence = useSessionPresence(sessionId);
+  const session = storeSession ?? initialSession;
 
   if (!session) return null;
 
@@ -3264,20 +3269,13 @@ export function Sidebar() {
   const handleNewConversation = useCallback(
     (cwd?: string | null) => {
       const explicitCwd = normalizeConversationGroupCwd(cwd);
-      try {
-        startDraftConversation({
-          navigate,
-          cwd: explicitCwd,
-          replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
-          focusComposer: true,
-        });
-        setDraftCwd(explicitCwd);
-      } catch (error) {
-        setSidebarNotice({
-          tone: 'danger',
-          text: error instanceof Error ? error.message : String(error),
-        });
-      }
+      void startNewConversation({
+        navigate,
+        cwd: explicitCwd,
+        replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
+        focusComposer: true,
+      });
+      setDraftCwd(explicitCwd);
     },
     [location.pathname, navigate],
   );
@@ -3922,6 +3920,9 @@ export function Sidebar() {
         .map((binding) => binding.provider)
         .filter((provider, index, providers) => providers.indexOf(provider) === index) ?? [];
 
+    const isAutomationRunning = runningAutomationConversationIdSet.has(session.id);
+    const hasPendingExecutions = pendingExecutionConversationIdSet.has(session.id);
+
     return (
       <SessionRow
         key={session.id}
@@ -3929,7 +3930,9 @@ export function Sidebar() {
         active={isDraftTab ? location.pathname === DRAFT_CONVERSATION_ROUTE : location.pathname === `/conversations/${session.id}`}
         pinned={pinned}
         canDrag={canDrag}
+        initialSession={session}
         automationTitle={automationThreadTitleByConversationId.get(session.id)}
+        hasPendingRuns={hasPendingExecutions && !session.isRunning && !isAutomationRunning}
         backgroundWorkKind={backgroundWorkKindByConversationId.get(session.id) ?? null}
         gatewayProviders={gatewayProviders}
         isDragging={canDrag && draggingSessionId === session.id}

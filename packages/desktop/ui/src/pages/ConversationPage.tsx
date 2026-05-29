@@ -318,7 +318,7 @@ import type {
   SessionMeta,
 } from '../shared/types';
 import type { ConversationSummaryRecord } from '../shared/types';
-import { useSession } from '../store';
+import { sessionStore, useSession } from '../store';
 import {
   type AskUserQuestionAnswers,
   type AskUserQuestionPresentation,
@@ -370,6 +370,7 @@ export { constrainPromptImageDimensions } from '../conversation/promptAttachment
 const ConversationArtifactModal = lazy(() =>
   import('../components/ConversationArtifactModal').then((module) => ({ default: module.ConversationArtifactModal })),
 );
+
 const ConversationDrawingsPickerModal = lazy(() =>
   import('../components/ConversationDrawingsPickerModal').then((module) => ({ default: module.ConversationDrawingsPickerModal })),
 );
@@ -671,6 +672,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const seedForkedSessionMeta = (sessionMeta: SessionMeta) => {
         const existingSessions = sessions ?? [];
         setSessions([...existingSessions.filter((session) => session.id !== sessionMeta.id), sessionMeta]);
+        sessionStore.upsert(sessionMeta);
       };
       const forkedSessionMeta = forked.bootstrap.sessionDetail?.meta;
       if (forkedSessionMeta) {

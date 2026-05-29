@@ -9,13 +9,7 @@ import {
   clearDraftConversationContextDocs,
   clearDraftConversationCwd,
   clearDraftConversationModelPreferences,
-  DRAFT_CONVERSATION_ROUTE,
-  hasDraftConversationAttachments,
-  hasDraftConversationContextDocs,
-  persistDraftConversationComposer,
   persistDraftConversationCwd,
-  readDraftConversationComposer,
-  readDraftConversationCwd,
   readDraftConversationModel,
   readDraftConversationThinkingLevel,
 } from './draftConversation';
@@ -47,51 +41,72 @@ function focusComposerAfterNavigation(): void {
   });
 }
 
-function hasDraftConversationState(): boolean {
-  return (
-    readDraftConversationComposer().trim().length > 0 ||
-    readDraftConversationCwd().trim().length > 0 ||
-    readDraftConversationModel().trim().length > 0 ||
-    readDraftConversationThinkingLevel().trim().length > 0 ||
-    hasDraftConversationAttachments() ||
-    hasDraftConversationContextDocs()
-  );
-}
-
-export function startDraftConversation(input: StartDraftConversationInput): void {
+/**
+ * Start a new conversation by creating a live session first, then navigating.
+ * Eliminates the draft sentinel pattern and its associated race conditions.
+ */
+export async function startNewConversation(input: StartDraftConversationInput): Promise<string> {
   const cwd = input.cwd?.trim() ?? '';
-  const alreadyOnEmptyDraft =
-    !cwd && typeof window !== 'undefined' && window.location?.pathname === DRAFT_CONVERSATION_ROUTE && !hasDraftConversationState();
+  const model = readDraftConversationModel();
+  const thinkingLevel = readDraftConversationThinkingLevel();
+  const initialComposerText = input.initialComposerText?.trim() ?? '';
 
-  if (alreadyOnEmptyDraft) {
+  try {
+    const created = await api.createLiveSession(cwd || undefined, initialComposerText || undefined, {
+      ...(model ? { model } : {}),
+      ...(thinkingLevel ? { thinkingLevel } : {}),
+    });
+
+    primeCreatedConversationOpenCaches(created, {
+      tailBlocks: NEW_CONVERSATION_INITIAL_TAIL_BLOCKS,
+      bootstrapVersionKey: '',
+      sessionDetailVersion: 0,
+    });
+
+    clearDraftConversationAttachments();
+    clearDraftConversationComposer();
+    clearDraftConversationContextDocs();
+    clearDraftConversationCwd();
+    clearDraftConversationModelPreferences();
+    ensureConversationTabOpen(created.id);
+
+    input.navigate(`/conversations/${encodeURIComponent(created.id)}`, {
+      replace: input.replace,
+      state: {
+        focusComposer: input.focusComposer === true,
+      },
+    });
+
     if (input.focusComposer === true) {
       focusComposerAfterNavigation();
     }
-    return;
-  }
 
+    return created.id;
+  } catch (error) {
+    console.error('Failed to create conversation:', error);
+    // Fall back to draft navigation on failure
+    navigateDraft(input);
+    return '';
+  }
+}
+
+// Fallback draft navigation for error cases
+function navigateDraft(input: StartDraftConversationInput): void {
+  const cwd = input.cwd?.trim() ?? '';
   clearDraftConversationAttachments();
   clearDraftConversationComposer();
   clearDraftConversationContextDocs();
   clearDraftConversationCwd();
   clearDraftConversationModelPreferences();
   if (cwd) {
-    // Preserve an explicit workspace choice while still resetting the rest of
-    // the draft so opening Chat is instant and deterministic.
     persistDraftConversationCwd(cwd);
   }
-  const initialComposerText = input.initialComposerText?.trim() ?? '';
-  if (initialComposerText) {
-    persistDraftConversationComposer(initialComposerText);
-  }
-
   input.navigate('/conversations/new', {
     replace: input.replace,
     state: {
       focusComposer: input.focusComposer === true,
     },
   });
-
   if (input.focusComposer === true) {
     focusComposerAfterNavigation();
   }

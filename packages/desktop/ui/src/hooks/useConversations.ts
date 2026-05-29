@@ -192,11 +192,20 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
     return next;
   }, [setSessions]);
 
+  const remoteLayoutLastSyncedAt = useRef(0);
+  const REMOTE_LAYOUT_SYNC_COOLDOWN_MS = 3_000;
+
   useEffect(() => {
     if (!hasSyncedRemoteLayoutAfterSessionChangeRef.current) {
       hasSyncedRemoteLayoutAfterSessionChangeRef.current = true;
       return;
     }
+
+    const now = Date.now();
+    if (now - remoteLayoutLastSyncedAt.current < REMOTE_LAYOUT_SYNC_COOLDOWN_MS) {
+      return;
+    }
+    remoteLayoutLastSyncedAt.current = now;
 
     let cancelled = false;
 

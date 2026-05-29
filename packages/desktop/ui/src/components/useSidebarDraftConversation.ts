@@ -3,7 +3,7 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import { normalizeConversationGroupCwd } from '../conversation/conversationCwdGroups';
 import { DRAFT_CONVERSATION_ROUTE, readDraftConversationCwd } from '../conversation/draftConversation';
-import { startDraftConversation } from '../conversation/newConversationNavigation';
+import { startNewConversation } from '../conversation/newConversationNavigation';
 
 type UseSidebarDraftConversationInput = {
   locationPathname: string;
@@ -24,7 +24,7 @@ export function useSidebarDraftConversation({ locationPathname, navigate, showNo
     (cwd?: string | null) => {
       const explicitCwd = normalizeConversationGroupCwd(cwd);
       try {
-        startDraftConversation({
+        void startNewConversation({
           navigate,
           cwd: explicitCwd,
           replace: locationPathname === DRAFT_CONVERSATION_ROUTE,
