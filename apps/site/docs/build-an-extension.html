@@ -14,7 +14,7 @@
         ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
       >
       <nav aria-label="Primary">
-        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
         ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
       </nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
@@ -60,7 +60,7 @@
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for a compact conversation-specific tool panel
+- tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.</code></pre>
@@ -126,7 +126,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
               <td><code>main-page</code> extension</td>
             </tr>
             <tr>
-              <td>Context beside the current conversation</td>
+              <td>Context inside a workbench tab-local rail</td>
               <td><code>right-rail</code> extension</td>
             </tr>
             <tr>
@@ -190,7 +190,7 @@ Implement it with editable source files, build it, reload it, visually test it, 
     backend.mjs</code></pre>
         <p><code>src/</code> is the source of truth. <code>dist/</code> is generated output that every desktop runtime loads.</p>
         <h2 id="good-extension-requests">Good extension requests</h2>
-        <pre><code>Build a right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.</code></pre>
+        <pre><code>Build a tab-local right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.</code></pre>
         <pre><code>Build a main-page extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a detail pane.</code></pre>
         <pre><code>Build an extension that adds an agent-callable tool for looking up snippets from my local workspace glossary. Include a small settings panel for the glossary path.</code></pre>
         <pre><code>Build a theme-only extension with a calm dark palette. Install it, reload extensions, and tell me how to enable it.</code></pre>

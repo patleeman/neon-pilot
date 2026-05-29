@@ -14,7 +14,7 @@
         ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
       >
       <nav aria-label="Primary">
-        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
         ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
       </nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
@@ -82,7 +82,7 @@
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- right rail for a compact conversation-specific tool panel
+- tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.</code></pre>
@@ -564,11 +564,11 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           </li>
           <li>
             <strong><code>rightRail</code></strong
-            >: Collapsible panel beside the conversation.
+            >: Tab-local rail inside the workbench, usually used as a compact selector/context panel.
           </li>
           <li>
             <strong><code>workbench</code></strong
-            >: Center detail pane, paired with a right rail view.
+            >: Detail pane, optionally paired with a tab-local rail view.
           </li>
         </ul>
         <pre><code>{
@@ -1500,7 +1500,7 @@ const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
             <tr>
               <td><strong>Settings</strong></td>
               <td><code>&lt;stateRoot&gt;/settings.json</code> (shared)</td>
-              <td>User-facing config declared in manifest</td>
+              <td>User-facing non-secret config declared in manifest</td>
             </tr>
             <tr>
               <td><strong>Storage</strong></td>
@@ -1520,7 +1520,7 @@ const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
           </tbody>
         </table>
         <ul>
-          <li>Use <strong>settings</strong> for values the user configures through the Settings UI.</li>
+          <li>Use <strong>settings</strong> for non-secret values the user configures through the Settings UI.</li>
           <li>Use <strong>storage</strong> (<code>ctx.storage</code> / <code>pa.storage</code>) for internal state like</li>
           <p>cached API responses, session tokens, or counter values.</p>
           <li>Use <strong>database</strong> (<code>ctx.database</code>) for extension-owned SQLite tables,</li>
@@ -1763,7 +1763,9 @@ await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockTy
 }</code></pre>
         <p>
           Resolve them in backend code with <code>ctx.secrets.get('apiKey')</code>. Stored values take precedence; environment variables
-          declared by the extension are used as a fallback when no stored value exists.
+          declared by the extension are used as a fallback when no stored value exists. Do not store API keys, bearer tokens, refresh
+          tokens, bot tokens, or other reusable credentials in extension settings, <code>ctx.storage</code>, cache JSON, or extension-owned
+          config files; keep those stores for non-secret preferences and state.
         </p>
         <p>Extensions can declare dependencies on other extensions:</p>
         <pre><code>{
@@ -2089,7 +2091,7 @@ pnpm test</code></pre>
             </tr>
             <tr>
               <td>Registry sanity</td>
-              <td>All 25 system extensions registered, routes point to real extensions</td>
+              <td>All bundled system extensions registered, routes point to real extensions</td>
             </tr>
             <tr>
               <td>Backend files</td>

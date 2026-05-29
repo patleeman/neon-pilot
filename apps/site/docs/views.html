@@ -14,7 +14,7 @@
         ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
       >
       <nav aria-label="Primary">
-        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
         ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
       </nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
@@ -48,17 +48,22 @@
       </aside>
       <article class="docs-content">
         <h1 id="views">Views</h1>
-        <p>Neon Pilot has two view modes. Switch between them with <code>F1</code>/<code>F2</code> or the dropdown in the top bar.</p>
-        <h2 id="conversation-view-f1">Conversation View (F1)</h2>
-        <p>The default layout. A single conversation pane with the left sidebar for conversation navigation.</p>
+        <p>
+          Neon Pilot has a conversation layout with an optional workbench panel. Toggle the workbench with the right-side top-bar button or
+          <code>Cmd+\</code> (or <code>Ctrl+\</code>).
+        </p>
+        <h2 id="conversation-view">Conversation View</h2>
+        <p>
+          The default layout when the workbench is hidden. A single conversation pane with the left sidebar for conversation navigation.
+        </p>
         <ul>
           <li><strong>Left sidebar</strong> — conversation list, toggle with <code>Cmd+/</code> (or <code>Ctrl+/</code>)</li>
           <li><strong>Center</strong> — transcript and composer</li>
           <li>Use this for focused single-thread work</li>
         </ul>
-        <h2 id="workbench-view-f2">Workbench View (F2)</h2>
-        <p>A multi-pane layout for working alongside knowledge and tools. Available on conversation routes.</p>
-        <p>The right rail nav tabs include:</p>
+        <h2 id="workbench">Workbench</h2>
+        <p>A tabbed panel for working alongside knowledge and tools. Available on conversation routes.</p>
+        <p>The new tab page includes:</p>
         <table>
           <thead>
             <tr>
@@ -81,25 +86,21 @@
             </tr>
             <tr>
               <td>Knowledge</td>
-              <td>Primary page with right rail</td>
+              <td>Opened by user</td>
             </tr>
           </tbody>
         </table>
+        <p>Knowledge also appears as a left-sidebar route. Extension-contributed workbench tools can appear on the new tab page.</p>
         <p>
-          Knowledge appears as a left-sidebar route (not a workbench tab). Extension-contributed tool panels also appear in the nav. Toggle
-          the right rail (in compact mode) with <code>Cmd+\</code> or toggle the workbench explorer (in workbench mode) with
-          <code>Cmd+\</code>.
-        </p>
-        <p>
-          For extension authors, the right rail is for compact contextual tools. If a feature needs the rail to select something and the
-          center pane to render the large detail view, pair the rail view with a <code>location: &quot;workbench&quot;</code> detail view.
-          See
+          For extension authors, an extension rail is for compact contextual tools inside a workbench tab. If a feature needs the rail to
+          select something and the main area to render the large detail view, pair the rail view with a
+          <code>location: &quot;workbench&quot;</code> detail view. See
           <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-extension-manager/README.md#surface-selection"
             >Extensions</a
           >
           for the surface decision guide.
         </p>
-        <h3 id="rail-pane-behavior">Rail pane behavior</h3>
+        <h3 id="workbench-behavior">Workbench Behavior</h3>
         <ul>
           <li>Panes are resizable by dragging the divider</li>
           <li>The File Explorer shows the workspace file tree</li>
@@ -118,11 +119,11 @@
           </thead>
           <tbody>
             <tr>
-              <td>Conversation mode (compact)</td>
+              <td>Hide workbench</td>
               <td><code>F1</code></td>
             </tr>
             <tr>
-              <td>Workbench mode</td>
+              <td>Show workbench</td>
               <td><code>F2</code></td>
             </tr>
             <tr>
@@ -130,7 +131,7 @@
               <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
             </tr>
             <tr>
-              <td>Toggle right rail</td>
+              <td>Toggle workbench</td>
               <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
             </tr>
           </tbody>
@@ -140,8 +141,7 @@
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#conversation-view-f1">Conversation View (F1)</a><a href="#workbench-view-f2">Workbench View (F2)</a
-        ><a href="#layout-shortcuts">Layout Shortcuts</a>
+        <a href="#conversation-view">Conversation View</a><a href="#workbench">Workbench</a><a href="#layout-shortcuts">Layout Shortcuts</a>
       </aside>
     </main>
   </body>

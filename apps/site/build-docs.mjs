@@ -190,7 +190,7 @@ function shell(page, body, toc) {
   <body class="docs-body">
     <header>
       <a class="brand" href="../"><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a>
-      <nav aria-label="Primary"><a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a></nav>
+      <nav aria-label="Primary"><a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a></nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
     </header>
     <main class="docs-layout">

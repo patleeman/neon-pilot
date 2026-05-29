@@ -14,7 +14,7 @@
         ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
       >
       <nav aria-label="Primary">
-        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
         ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
       </nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
@@ -254,9 +254,14 @@
               <td>Materialized model definitions read by the runtime</td>
             </tr>
             <tr>
+              <td>Provider API keys</td>
+              <td>macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, or env-only</td>
+              <td>API keys managed through Settings → Providers</td>
+            </tr>
+            <tr>
               <td>Legacy provider credentials</td>
               <td><code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code></td>
-              <td>Existing API keys and OAuth tokens managed through Settings</td>
+              <td>OAuth tokens and old API keys kept as compatibility fallback</td>
             </tr>
             <tr>
               <td>Extension secrets</td>
@@ -271,10 +276,17 @@
           </tbody>
         </table>
         <p>
-          Provider credentials should be managed through Settings. Manual edits to <code>auth.json</code> are possible but discouraged. New
-          extension secrets should use <code>contributes.secrets</code>; the active backend is configured by
-          <code>secrets.provider</code> (<code>keychain</code>, <code>file</code>, or <code>env-only</code>). Stored extension secrets take
-          precedence over declared environment variables; the environment variable is a fallback when no stored secret exists.
+          Provider credentials should be managed through Settings. New provider API-key saves use the shared secrets backend and remove the
+          legacy plaintext <code>auth.json</code> API-key entry. Manual edits to <code>auth.json</code> are possible but discouraged; the
+          runtime still reads legacy API keys and OAuth tokens as compatibility fallbacks. New extension secrets should use
+          <code>contributes.secrets</code>; the active backend is configured by <code>secrets.provider</code> (<code>keychain</code>,
+          <code>file</code>, or <code>env-only</code>). Stored secrets take precedence over declared environment variables; the environment
+          variable is a fallback when no stored secret exists.
+        </p>
+        <p>
+          Changing <code>secrets.provider</code> migrates indexed persisted secrets between durable backends (<code>keychain</code> and
+          <code>file</code>) before the setting is saved. <code>env-only</code> has no persistence target, so switching to it leaves
+          existing stored secrets in place but inactive until the provider is switched back.
         </p>
         <p>
           Enabled extensions may contribute <code>modelProfiles</code> that match provider/model refs with simple globs over
@@ -362,7 +374,9 @@
             </tr>
             <tr>
               <td>Provider credentials</td>
-              <td><code>&lt;state-root&gt;/neon-pilot-runtime/auth.json</code> and environment variables</td>
+              <td>
+                macOS Keychain, <code>&lt;state-root&gt;/secrets.json</code>, legacy <code>auth.json</code>, and environment variables
+              </td>
             </tr>
             <tr>
               <td>Extension secrets</td>

@@ -14,7 +14,7 @@
         ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
       >
       <nav aria-label="Primary">
-        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../#extensions">Extensions</a
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
         ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
       </nav>
       <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
@@ -111,34 +111,34 @@ pnpm run desktop:demo</code></pre>
             automations, and daemon status after startup settles
           </li>
         </ul>
-        <h2 id="layout-modes">Layout Modes</h2>
+        <h2 id="layout">Layout</h2>
         <table>
           <thead>
             <tr>
-              <th>Mode</th>
+              <th>State</th>
               <th>Shortcut</th>
               <th>Description</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Conversation</td>
+              <td>Workbench off</td>
               <td><code>F1</code></td>
               <td>Single-pane layout with left sidebar</td>
             </tr>
             <tr>
-              <td>Workbench</td>
+              <td>Workbench open</td>
               <td><code>F2</code></td>
-              <td>Multi-pane layout with side rails</td>
+              <td>Conversation plus tabbed workbench</td>
             </tr>
           </tbody>
         </table>
         <p>
-          Toggle the left sidebar with <code>Cmd+/</code> (or <code>Ctrl+/</code>). Toggle the right rail with <code>Cmd+\</code> (or
+          Toggle the left sidebar with <code>Cmd+/</code> (or <code>Ctrl+/</code>). Toggle the workbench with <code>Cmd+\</code> (or
           <code>Ctrl+\</code>).
         </p>
-        <h2 id="workbench-rails">Workbench Rails</h2>
-        <p>In Workbench mode, the right rail nav tabs include:</p>
+        <h2 id="workbench-tabs">Workbench Tabs</h2>
+        <p>The workbench new tab page includes:</p>
         <table>
           <thead>
             <tr>
@@ -162,9 +162,10 @@ pnpm run desktop:demo</code></pre>
           </tbody>
         </table>
         <p>
-          Knowledge is a primary left-sidebar page (not a workbench tab). Extension-contributed tool panels also appear in the nav. Tabs are
-          context-sensitive — Artifacts appear when the conversation has rendered artifacts. Checkpoint diffs and background work render
-          inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+          Knowledge is also a primary left-sidebar page. Extension-contributed workbench tools can appear on the new tab page. Tabs are
+          context-sensitive; artifacts open from transcript cards and do not appear as a generic new-tab option. Checkpoint diffs and
+          background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial
+          renderer bundle.
         </p>
         <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
         <p>All desktop shortcuts are configurable in Settings → Keyboard. Defaults:</p>
@@ -181,11 +182,11 @@ pnpm run desktop:demo</code></pre>
               <td><code>Cmd+N</code></td>
             </tr>
             <tr>
-              <td>Conversation mode</td>
+              <td>Hide workbench</td>
               <td><code>F1</code></td>
             </tr>
             <tr>
-              <td>Workbench mode</td>
+              <td>Show workbench</td>
               <td><code>F2</code></td>
             </tr>
             <tr>
@@ -193,7 +194,7 @@ pnpm run desktop:demo</code></pre>
               <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
             </tr>
             <tr>
-              <td>Toggle right rail</td>
+              <td>Toggle workbench</td>
               <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
             </tr>
             <tr>
@@ -261,8 +262,8 @@ pnpm run desktop:demo</code></pre>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#starting">Starting</a><a href="#runtime-model">Runtime Model</a><a href="#layout-modes">Layout Modes</a
-        ><a href="#workbench-rails">Workbench Rails</a><a href="#keyboard-shortcuts">Keyboard Shortcuts</a><a href="#routes">Routes</a
+        <a href="#starting">Starting</a><a href="#runtime-model">Runtime Model</a><a href="#layout">Layout</a
+        ><a href="#workbench-tabs">Workbench Tabs</a><a href="#keyboard-shortcuts">Keyboard Shortcuts</a><a href="#routes">Routes</a
         ><a href="#demo-mode">Demo Mode</a>
       </aside>
     </main>
