@@ -4,18 +4,19 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.3-rc.1** — release candidate being prepared.
+**v0.9.3-rc.2** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.1
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.2
 
 Highlights in this train:
 
-- Moves provider API keys into the secure secrets store and migrates existing credentials when model backends change.
-- Makes Suggested Context an installable extension while keeping extension catalog metadata and docs aligned.
-- Refines the workbench with tabbed tools, workbench toggle wiring, actionable subagent rows, and less noisy execution shelves.
-- Speeds up small conversation opens by warming and loading compact transcripts on first paint.
-- Polishes extension-facing UX with simpler knowledge file selection, clearer Excalidraw save actions, automation draft copy, and updated Video Probe settings.
-- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.1` candidate.
+- Adds a dedicated Extensions use-cases page with 8 categories and richer nav link infrastructure.
+- Improves Extension Manager label clarity: "Add-ons" renamed to "Installed" / "Installed Extensions".
+- Fixes conversation reliability: SQL catalog sync on workspace changes, transcript boundary gating, and session meta event correctness.
+- Polishes chat UX with capped tool output height, independent activity shelf mounting, and stuck-indicator fix on SSE disconnect.
+- Hardens sidebar navigation with unread indicator cleanup, session cwd inclusion, and null workspaceCwd fallback.
+- Includes the LM Studio extension as a first-party installable extension.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.2` candidate.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
