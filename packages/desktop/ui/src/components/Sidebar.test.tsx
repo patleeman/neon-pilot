@@ -878,4 +878,208 @@ describe('Sidebar', () => {
     expect(html).toContain('Threads');
     expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
+
+  describe('visual state indicators', () => {
+    it('renders no status indicator for an idle conversation', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-idle']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-idle', title: 'Idle conversation', isRunning: false })],
+      });
+
+      expect(html).toContain('Idle conversation');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('aria-label="Background work running"');
+      expect(html).not.toContain('aria-label="Conversation needs review"');
+      expect(html).not.toContain('animate-spin');
+    });
+
+    it('shows a spinning indicator for a running live conversation', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-running']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-running', title: 'Active task', isRunning: true })],
+      });
+
+      expect(html).toContain('aria-label="Running conversation"');
+      expect(html).toContain('animate-spin');
+      expect(html).toContain('title="Agent is still running"');
+      expect(html).not.toContain('aria-label="Background work running"');
+      expect(html).not.toContain('aria-label="Conversation needs review"');
+    });
+
+    it('shows a subagent glyph for subagent background work when the session is not running', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-subagent']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-subagent', title: 'Review thread', isRunning: false })],
+        executions: {
+          executions: [
+            {
+              id: 'run-sub-1',
+              kind: 'subagent',
+              visibility: 'primary',
+              conversationId: 'conv-subagent',
+              title: 'code-review',
+              status: 'running',
+              capabilities: { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+            },
+          ],
+        },
+      });
+
+      expect(html).toContain('aria-label="Background work running"');
+      expect(html).toContain('✦');
+      expect(html).toContain('title="Background work is running"');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('animate-spin');
+      expect(html).not.toContain('aria-label="Conversation needs review"');
+    });
+
+    it('shows a command glyph for command background work when the session is not running', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-cmd']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-cmd', title: 'Bash script', isRunning: false })],
+        executions: {
+          executions: [
+            {
+              id: 'run-cmd-1',
+              kind: 'background-command',
+              visibility: 'primary',
+              conversationId: 'conv-cmd',
+              title: 'npm run build',
+              status: 'running',
+              capabilities: { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+            },
+          ],
+        },
+      });
+
+      expect(html).toContain('aria-label="Background work running"');
+      expect(html).toContain('›_');
+      expect(html).toContain('title="Background work is running"');
+      expect(html).not.toContain('✦');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('animate-spin');
+    });
+
+    it('shows a needs-review dot when the conversation needs attention with no pending work', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-needs-attention']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-needs-attention', title: 'Unread reply', isRunning: false, needsAttention: true })],
+      });
+
+      expect(html).toContain('aria-label="Conversation needs review"');
+      expect(html).toContain('title="Stopped with new output or linked updates you have not viewed yet"');
+      expect(html).not.toContain('aria-label="Running conversation"');
+      expect(html).not.toContain('aria-label="Background work running"');
+      expect(html).not.toContain('animate-spin');
+    });
+
+    it('prefers the running indicator over needs-review when both are true', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-both']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-both', title: 'Busy thread', isRunning: true, needsAttention: true })],
+      });
+
+      // Running takes priority — the needs-review indicator should not render.
+      expect(html).toContain('aria-label="Running conversation"');
+      expect(html).toContain('animate-spin');
+      expect(html).not.toContain('aria-label="Conversation needs review"');
+      expect(html).not.toContain('bg-warning');
+    });
+
+    it('shows the pinned icon for pinned conversations alongside the running indicator', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+      storage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-pinned-running']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-pinned-running', title: 'Pinned active task', isRunning: true })],
+      });
+
+      expect(html).toContain('aria-label="Pinned chat"');
+      expect(html).toContain('aria-label="Running conversation"');
+      expect(html).toContain('animate-spin');
+      expect(html).toContain('Pinned active task');
+    });
+
+    it('applies the active row class to the currently selected conversation', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-active']));
+
+      const html = renderSidebar('/conversations/conv-active', {
+        sessions: [createSession({ id: 'conv-active', title: 'Selected conversation' })],
+      });
+
+      expect(html).toContain('ui-sidebar-session-row-active');
+      expect(html).toContain('Selected conversation');
+    });
+
+    it('does not apply the active row class to unselected conversations', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-a', 'conv-b']));
+
+      const html = renderSidebar('/conversations/conv-a', {
+        sessions: [createSession({ id: 'conv-a', title: 'Selected' }), createSession({ id: 'conv-b', title: 'Not selected' })],
+      });
+
+      const activeIndex = html.indexOf('ui-sidebar-session-row-active');
+      expect(activeIndex).toBeGreaterThanOrEqual(0);
+      // The non-selected conversation row comes after the selected one.
+      const notSelectedIndex = html.indexOf('Not selected');
+      expect(notSelectedIndex).toBeGreaterThan(activeIndex);
+      expect(html.match(/ui-sidebar-session-row-active/g)).toHaveLength(1);
+    });
+
+    it('forces the running indicator for automation-owned threads even with session.isRunning=false', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-auto-force']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-auto-force', title: 'Automation thread', isRunning: false })],
+        tasks: [
+          {
+            id: 'auto-task',
+            title: 'Auto task',
+            scheduleType: 'cron',
+            running: true,
+            enabled: true,
+            prompt: 'Do the thing.',
+            threadConversationId: 'conv-auto-force',
+          },
+        ],
+      });
+
+      expect(html).toContain('aria-label="Running conversation"');
+      expect(html).toContain('animate-spin');
+      expect(html).toContain('Automation thread');
+    });
+
+    it('only renders one status indicator even when both running and pending runs are true', () => {
+      storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-busy']));
+
+      const html = renderSidebar('/conversations/new', {
+        sessions: [createSession({ id: 'conv-busy', title: 'Busy thread', isRunning: true })],
+        executions: {
+          executions: [
+            {
+              id: 'run-busy-1',
+              kind: 'background-command',
+              visibility: 'primary',
+              conversationId: 'conv-busy',
+              title: 'npm test',
+              status: 'running',
+              capabilities: { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+            },
+          ],
+        },
+      });
+
+      // Running takes priority over pending runs — only one spinner.
+      const runningLabels = (html.match(/aria-label="Running conversation"/g) ?? []).length;
+      const backgroundLabels = (html.match(/aria-label="Background work running"/g) ?? []).length;
+      expect(runningLabels).toBe(1);
+      expect(backgroundLabels).toBe(0);
+    });
+  });
 });
