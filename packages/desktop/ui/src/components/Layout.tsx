@@ -58,9 +58,7 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
   import('./CommandPalette').then((module) => ({ default: module.CommandPalette })),
 );
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
-const ContextRail = lazyRouteWithRecovery('layout-context-rail', () =>
-  import('./ContextRail').then((module) => ({ default: module.ContextRail })),
-);
+
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
 );
@@ -71,6 +69,9 @@ const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact
   import('./ConversationArtifactWorkbench').then((module) => ({ default: module.ConversationArtifactWorkbenchPane })),
 );
 const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
+const RightPanelTabs = lazyRouteWithRecovery('layout-right-panel-tabs', () =>
+  import('./RightPanelTabs.js').then((module) => ({ default: module.RightPanelTabs })),
+);
 const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
   import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
 );
@@ -522,6 +523,24 @@ function WorkbenchDocumentPane({
         extensionToolPanels={extensionToolPanels}
         onActiveToolChange={onActiveToolChange}
         onWorkspaceFileClear={onWorkspaceFileClear}
+        onNewChat={
+          conversationId && workspaceCwd
+            ? () => {
+                api
+                  .createLiveSession(workspaceCwd, undefined, {
+                    workspaceCwd: workspaceCwd,
+                  })
+                  .then((result) => {
+                    window.dispatchEvent(
+                      new CustomEvent('pa:companion-chat-open', {
+                        detail: { conversationId: result.id },
+                      }),
+                    );
+                  })
+                  .catch(() => undefined);
+              }
+            : undefined
+        }
       />
     );
   } else if (extensionWorkbenchSurface) {
@@ -604,10 +623,12 @@ function WorkbenchNewTabPage({
   extensionToolPanels,
   onActiveToolChange,
   onWorkspaceFileClear,
+  onNewChat,
 }: {
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onWorkspaceFileClear: () => void;
+  onNewChat?: () => void;
 }) {
   const availableTools = extensionToolPanels.filter(
     (surface) => shouldRenderWorkbenchToolInNav(surface) && inferSurfaceToolSlot(surface) !== 'artifacts',
@@ -625,6 +646,21 @@ function WorkbenchNewTabPage({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          {onNewChat ? (
+            <button
+              type="button"
+              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
+              onClick={onNewChat}
+            >
+              <span className="w-[18px] shrink-0 text-center text-[15px] opacity-70" aria-hidden="true">
+                💬
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-medium text-primary">Side Chat</span>
+                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a companion chat in the right panel.</span>
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
             className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
@@ -1915,13 +1951,22 @@ export function Layout() {
                 ) : !showWorkbench && showContextRail ? (
                   <>
                     <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
-                    <div style={{ width: railWidth }} className="relative z-10 flex-shrink-0 overflow-hidden bg-panel select-text">
-                      <Suspense
-                        fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}
-                      >
-                        <ContextRail />
-                      </Suspense>
-                    </div>
+                    <Suspense
+                      fallback={
+                        <div
+                          style={{ width: railWidth }}
+                          className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel"
+                        />
+                      }
+                    >
+                      <RightPanelTabs
+                        width={railWidth}
+                        conversationId={activeConversationId}
+                        workspaceCwd={activeWorkspaceCwd}
+                        onMouseDown={rail.onMouseDown}
+                        onDoubleClick={rail.reset}
+                      />
+                    </Suspense>
                   </>
                 ) : null}
               </RouteContentBoundary>

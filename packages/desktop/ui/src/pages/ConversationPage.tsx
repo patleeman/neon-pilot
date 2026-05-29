@@ -3711,14 +3711,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           persistForkPromptDraft(newSessionId, target.promptDraft);
         }
         ensureConversationTabOpen(newSessionId);
-        navigate(`/conversations/${newSessionId}`, {
-          state: target.promptDraft
-            ? {
-                initialComposerDraftState: { conversationId: newSessionId, text: target.promptDraft },
-                focusComposer: true,
-              }
-            : undefined,
-        });
+        window.dispatchEvent(
+          new CustomEvent('pa:companion-chat-open', {
+            detail: { conversationId: newSessionId },
+          }),
+        );
       } catch (error) {
         showNotice('danger', `Rewind failed: ${(error as Error).message}`);
       }
@@ -3729,7 +3726,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       ensureConversationIsLive,
       id,
       messageIndexOffset,
-      navigate,
       primeForkedConversationOpenCaches,
       realMessages,
       showNotice,
@@ -3794,7 +3790,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         const { newSessionId } = forked;
         primeForkedConversationOpenCaches(forked);
         ensureConversationTabOpen(newSessionId);
-        navigate(`/conversations/${newSessionId}`, { replace: true });
+        window.dispatchEvent(
+          new CustomEvent('pa:companion-chat-open', {
+            detail: { conversationId: newSessionId },
+          }),
+        );
         await api.promptSession(newSessionId, editedText, undefined, undefined, undefined, currentSurfaceId);
         showNotice('accent', 'Conversation rerunning from edited prompt.');
       } catch (error) {
@@ -3809,7 +3809,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       ensureConversationIsLive,
       id,
       messageIndexOffset,
-      navigate,
       primeForkedConversationOpenCaches,
       realMessages,
       showNotice,
@@ -3878,15 +3877,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           persistForkPromptDraft(newSessionId, clickedBlock.text);
         }
         ensureConversationTabOpen(newSessionId);
-        navigate(`/conversations/${newSessionId}`, {
-          state:
-            clickedBlock.type === 'user'
-              ? {
-                  initialComposerDraftState: { conversationId: newSessionId, text: clickedBlock.text },
-                  focusComposer: true,
-                }
-              : undefined,
-        });
+        window.dispatchEvent(
+          new CustomEvent('pa:companion-chat-open', {
+            detail: {
+              conversationId: newSessionId,
+              title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
+            },
+          }),
+        );
       } catch (error) {
         showNotice('danger', `Fork failed: ${(error as Error).message}`);
       }
@@ -3897,7 +3895,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       ensureConversationIsLive,
       id,
       messageIndexOffset,
-      navigate,
       primeForkedConversationOpenCaches,
       realMessages,
       rewindConversationFromMessage,

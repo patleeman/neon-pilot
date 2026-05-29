@@ -253,15 +253,6 @@ function collectExpandedWorkspaceFolderPaths(model: TreesModel, entries: Iterabl
   return expanded;
 }
 
-function buildWorkspaceBreadcrumbs(path: string): string[] {
-  const parts = path.split('/').filter(Boolean);
-  if (parts.length <= 4) {
-    return parts;
-  }
-
-  return ['…', ...parts.slice(-3)];
-}
-
 function parentDirectory(path: string): string {
   const parts = path.split('/').filter(Boolean);
   parts.pop();
@@ -813,8 +804,7 @@ export function WorkspaceExplorer({
     return (
       <div className="flex h-full flex-col bg-panel text-sm">
         <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
-          <div className="flex items-center gap-1">
-            <p className="ui-section-label flex-1">File explorer</p>
+          <div className="flex items-center justify-end">
             <button
               type="button"
               className="ui-icon-button ui-icon-button-compact"
@@ -825,9 +815,6 @@ export function WorkspaceExplorer({
             >
               ↻
             </button>
-          </div>
-          <div className="mt-1 truncate font-mono text-[10px] text-dim" title={rootListing.data?.root ?? cwd}>
-            {rootListing.data?.rootName ?? 'Workspace'} · {rootListing.data?.branch ?? 'no branch'}
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
@@ -1089,7 +1076,8 @@ export function WorkspaceFileDocument({
   const [fileState, setFileState] = useState<LoadState<WorkspaceFileContent>>({ status: 'loading', data: null, error: null });
   const [diffState, setDiffState] = useState<LoadState<WorkspaceDiffOverlay>>({ status: 'idle', data: null, error: null });
   const [draftContent, setDraftContent] = useState('');
-  const [saveState, setSaveState] = useState<{ status: 'idle' | 'saving'; error: string | null }>({ status: 'idle', error: null });
+  const [saveState, setSaveState] = useState<{ error: string | null }>({ error: null });
+
   const [selectionContextMenu, setSelectionContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const selectionContextMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1138,37 +1126,49 @@ export function WorkspaceFileDocument({
   );
 
   const selectedFile = fileState.data;
-  const dirty = Boolean(
-    selectedFile &&
-    !selectedFile.binary &&
-    !(selectedFile.tooLarge && !selectedFile.content) &&
-    draftContent !== (selectedFile.content ?? ''),
-  );
-
-  const saveFile = useCallback(async () => {
-    if (!selectedFile || selectedFile.binary || (selectedFile.tooLarge && !selectedFile.content) || saveState.status === 'saving') return;
-    setSaveState({ status: 'saving', error: null });
-    try {
-      const saved = await api.writeWorkspaceFile(cwd, selectedFile.path, draftContent);
-      setFileState({ status: 'idle', data: saved, error: null });
-      setDraftContent(saved.content ?? draftContent);
-      setSaveState({ status: 'idle', error: null });
-      if (saved.gitStatus && !saved.binary && !saved.tooLarge) {
-        try {
-          const diff = await api.workspaceDiff(cwd, saved.path);
-          setDiffState({ status: 'idle', data: diff, error: null });
-        } catch {
-          setDiffState({ status: 'idle', data: null, error: null });
-        }
-      }
-    } catch (error) {
-      setSaveState({ status: 'idle', error: error instanceof Error ? error.message : String(error) });
-    }
-  }, [cwd, draftContent, saveState.status, selectedFile]);
 
   useEffect(() => {
     void loadFile();
   }, [loadFile]);
+
+  // Debounced auto-save
+  useEffect(() => {
+    if (!selectedFile || selectedFile.binary || (selectedFile.tooLarge && !selectedFile.content)) {
+      return;
+    }
+
+    const isDirty = draftContent !== (selectedFile.content ?? '');
+    if (!isDirty) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void api
+        .writeWorkspaceFile(cwd, selectedFile.path, draftContent)
+        .then((saved) => {
+          setFileState({ status: 'idle', data: saved, error: null });
+          setDraftContent(saved.content ?? draftContent);
+          setSaveState({ error: null });
+          if (saved.gitStatus && !saved.binary && !saved.tooLarge) {
+            void api
+              .workspaceDiff(cwd, saved.path)
+              .then((diff) => {
+                setDiffState({ status: 'idle', data: diff, error: null });
+              })
+              .catch(() => {
+                setDiffState({ status: 'idle', data: null, error: null });
+              });
+          }
+        })
+        .catch((error) => {
+          setSaveState({ error: error instanceof Error ? error.message : String(error) });
+        });
+    }, 800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [draftContent, selectedFile, cwd]);
 
   useEffect(() => {
     writeStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, showDiff);
@@ -1274,28 +1274,10 @@ export function WorkspaceFileDocument({
     return <EmptyState className="flex h-full flex-col justify-center px-5" title="File unavailable" body="No file is selected." />;
   }
 
-  const breadcrumbs = buildWorkspaceBreadcrumbs(selectedFile.path);
-
   return (
     <div className="flex h-full min-w-0 flex-col bg-base select-text">
-      <div className="flex h-[35px] shrink-0 items-center gap-2 border-b border-border-subtle bg-surface text-secondary">
-        <div className="min-w-0 flex flex-1 items-center gap-1 overflow-hidden font-mono text-[11px] leading-5 text-secondary">
-          <div className="flex h-[34px] min-w-0 max-w-[320px] items-center border-r border-border-subtle bg-panel px-3 shadow-[inset_0_-2px_0_rgb(var(--color-accent))]">
-            <span className="truncate text-primary" title={selectedFile.path}>
-              {breadcrumbs[breadcrumbs.length - 1] ?? selectedFile.path}
-            </span>
-            {dirty ? <span className="ml-2 h-1.5 w-1.5 rounded-full bg-accent" aria-label="Unsaved changes" /> : null}
-          </div>
-          <div className="hidden min-w-0 items-center gap-1 px-3 text-dim lg:flex">
-            {breadcrumbs.slice(0, -1).map((segment, index) => (
-              <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-1">
-                {index > 0 ? <span className="shrink-0 text-dim/80">›</span> : null}
-                <span className="truncate">{segment}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
+      {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
+        <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
           <button
             type="button"
             className={cx('ui-toolbar-button px-2 text-[10px]', showDiff && 'text-accent')}
@@ -1303,38 +1285,8 @@ export function WorkspaceFileDocument({
           >
             {showDiff ? 'Diff on' : 'Diff off'}
           </button>
-        )}
-        {!selectedFile.binary && !(selectedFile.tooLarge && !selectedFile.content) ? (
-          <button
-            type="button"
-            className={cx(
-              'ui-icon-button ui-icon-button-compact',
-              dirty && saveState.status !== 'saving' && 'text-accent hover:bg-accent/10',
-              saveState.status === 'saving' && 'text-warning animate-pulse',
-              !dirty && saveState.status !== 'saving' && 'text-dim opacity-60',
-            )}
-            title={saveState.status === 'saving' ? 'Saving…' : dirty ? 'Save file' : 'Saved'}
-            aria-label={saveState.status === 'saving' ? 'Saving file' : dirty ? 'Save file' : 'File saved'}
-            onClick={() => {
-              void saveFile();
-            }}
-            disabled={!dirty || saveState.status === 'saving'}
-          >
-            <Ico d={dirty ? ICON.save : ICON.check} size={12} />
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="ui-icon-button ui-icon-button-compact"
-          title="Refresh file"
-          onClick={() => {
-            void loadFile();
-          }}
-        >
-          ↻
-        </button>
-      </div>
-      {saveState.error ? <div className="bg-danger/5 px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
+        </div>
+      )}
       <div
         ref={editorContainerRef}
         className="min-h-0 flex-1 overflow-hidden border-r border-border-subtle"
@@ -1372,6 +1324,7 @@ export function WorkspaceFileDocument({
           </Suspense>
         )}
       </div>
+      {saveState.error ? <div className="bg-danger/5 px-3 py-1 text-[11px] text-danger">{saveState.error}</div> : null}
       {selectionContextMenu ? (
         <div
           ref={selectionContextMenuRef}

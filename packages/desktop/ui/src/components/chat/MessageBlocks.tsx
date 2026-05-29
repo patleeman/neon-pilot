@@ -1,5 +1,4 @@
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
@@ -953,15 +952,20 @@ function parseTopologyBlockText(text: string): {
 }
 
 export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
-  const navigate = useNavigate();
   const isChildTopology = block.customType === 'child_conversation_topology';
   const { title, conversationId, kind, sourceMessageId, sourcePreview } = useMemo(() => parseTopologyBlockText(block.text), [block.text]);
 
   const handleClick = useCallback(() => {
     if (conversationId) {
-      navigate(`/conversations/${encodeURIComponent(conversationId)}`);
+      // Dispatch an event so the Layout can open this conversation in a right-panel
+      // companion tab.  If the companion system isn't active, fall back to navigation.
+      window.dispatchEvent(
+        new CustomEvent('pa:companion-chat-open', {
+          detail: { conversationId, title: title ?? undefined },
+        }),
+      );
     }
-  }, [conversationId, navigate]);
+  }, [conversationId, title]);
 
   const label = (() => {
     if (kind === 'rewind') return isChildTopology ? 'Rewound to' : '← Rewound from';
