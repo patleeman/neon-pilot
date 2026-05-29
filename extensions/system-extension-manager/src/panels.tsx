@@ -1022,7 +1022,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               </div>
               {activeFilter === 'available' ? (
                 visibleCatalogExtensions.length === 0 ? (
-                  <EmptyState title="No available extensions" body="Installed extensions and marketplace packages are hidden from this list." />
+                  <EmptyState
+                    title="No available extensions"
+                    body="Installed extensions and marketplace packages are hidden from this list."
+                  />
                 ) : (
                   renderCatalogList(visibleCatalogExtensions)
                 )
