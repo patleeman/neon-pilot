@@ -81,7 +81,7 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
   const hasImages = Boolean(images && images.length > 0);
   const shouldUseTextOnlyImageHandling = hasImages && !liveSessionModelAcceptsImages(session.model);
   const preferredVisionModel = shouldUseTextOnlyImageHandling ? getPreferredVisionModel() : '';
-  const storedImages = shouldUseTextOnlyImageHandling && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
+  const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
   const promptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
 
   if (behavior === undefined) {

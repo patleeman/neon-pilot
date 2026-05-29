@@ -76,13 +76,13 @@ describe('runPromptOnLiveEntry image probing', () => {
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('No preferred vision model is configured'));
   });
 
-  it('passes images directly to image-capable models', async () => {
+  it('passes images directly to image-capable models while also storing them for probing', async () => {
     const entry = createEntry({ id: 'vision-model', input: ['text', 'image'] });
     const images = [{ type: 'image' as const, data: 'aGVsbG8=', mimeType: 'image/png', name: 'screen.png' }];
 
     await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, callbacks);
 
-    expect(rememberImageProbeAttachmentsMock).not.toHaveBeenCalled();
+    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledWith('What is wrong here?', { images });
   });
 });

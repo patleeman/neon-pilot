@@ -1,6 +1,5 @@
 import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-import { listModelDefinitions } from '../models/modelState.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { buildToolInjectionPlan } from '../tools/toolInventory.js';
 import { invokeExtensionAction } from './extensionBackend.js';
@@ -24,25 +23,6 @@ export interface ManifestToolFactoryOptions {
  */
 const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web_fetch', 'web_search']);
 
-type ModelDefinition = Awaited<ReturnType<typeof listModelDefinitions>>[number];
-
-let modelDefinitionsCache: ModelDefinition[] | null = null;
-let modelDefinitionsLoad: Promise<void> | null = null;
-
-function refreshModelDefinitionsCache(): void {
-  if (modelDefinitionsLoad) return;
-  modelDefinitionsLoad = listModelDefinitions()
-    .then((models) => {
-      modelDefinitionsCache = models;
-    })
-    .catch(() => {
-      modelDefinitionsCache = null;
-    })
-    .finally(() => {
-      modelDefinitionsLoad = null;
-    });
-}
-
 function isOverridableTool(toolName: string): boolean {
   return OVERRIDABLE_TOOLS.has(toolName);
 }
@@ -54,20 +34,6 @@ function parseModelRef(modelRef: string): { provider: string; model: string; ful
     return { provider: full.slice(0, slashIndex), model: full.slice(slashIndex + 1), full };
   }
   return { provider: '', model: full, full };
-}
-
-function modelSupportsImages(modelRef: string): boolean {
-  const current = parseModelRef(modelRef);
-  refreshModelDefinitionsCache();
-  return (modelDefinitionsCache ?? []).some(
-    (model) =>
-      model.provider === current.provider && model.id === current.model && Array.isArray(model.input) && model.input.includes('image'),
-  );
-}
-
-function shouldExposeManifestTool(tool: { name: string }, modelRef: string): boolean {
-  if (tool.name !== 'probe_image') return true;
-  return !modelSupportsImages(modelRef);
 }
 
 function modelConditionMatches(tool: { when?: { providers?: string[]; models?: string[] } }, modelRef: string): boolean {
@@ -100,7 +66,7 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
   return listExtensionToolRegistrations()
     .filter((tool) => activeToolIds.has(`${tool.extensionId}/${tool.id}`))
     .filter((tool) => !tool.nativeRegistration)
-    .filter((tool) => modelConditionMatches(tool, currentModelRef) && shouldExposeManifestTool(tool, currentModelRef))
+    .filter((tool) => modelConditionMatches(tool, currentModelRef))
     .map((tool) => {
       // When `replaces` is set and the target tool is overridable, use that name
       // so pi.registerTool() replaces the built-in tool.

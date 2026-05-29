@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const listModelDefinitions = vi.fn();
 const buildToolInjectionPlan = vi.fn();
 const invokeExtensionAction = vi.fn();
 const listExtensionToolRegistrations = vi.fn();
-
-vi.mock('../models/modelState.js', () => ({ listModelDefinitions }));
 vi.mock('../tools/toolInventory.js', () => ({ buildToolInjectionPlan }));
 vi.mock('./extensionBackend.js', () => ({ invokeExtensionAction }));
 vi.mock('./extensionRegistry.js', () => ({ listExtensionToolRegistrations }));
@@ -49,7 +46,6 @@ function registerTools() {
 
 describe('manifestToolAgentExtension', () => {
   beforeEach(() => {
-    listModelDefinitions.mockReset().mockResolvedValue([]);
     buildToolInjectionPlan.mockReset().mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
     invokeExtensionAction.mockReset().mockResolvedValue({ ok: true, result: { text: 'done', details: { ok: true } } });
     listExtensionToolRegistrations.mockReset().mockReturnValue([tool()]);
@@ -176,12 +172,9 @@ describe('manifestToolAgentExtension', () => {
     });
   });
 
-  it('hides probe_image after the model definition cache learns the active model supports images', async () => {
+  it('always exposes probe_image regardless of model image support', () => {
     listExtensionToolRegistrations.mockReturnValue([tool({ id: 'tool', name: 'probe_image' })]);
-    listModelDefinitions.mockResolvedValue([{ provider: 'openai', id: 'gpt-text', input: ['text', 'image'] }]);
 
     expect(registerTools()).toHaveLength(1);
-    await vi.waitFor(() => expect(listModelDefinitions).toHaveBeenCalled());
-    expect(registerTools()).toHaveLength(0);
   });
 });
