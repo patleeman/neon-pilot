@@ -16,9 +16,10 @@ function readExtensionEntries(source: 'bundled'): SystemExtensionEntry[] {
     .filter((entry) => entry.source === source)
     .flatMap((entry): SystemExtensionEntry[] => {
       try {
-        const manifest = JSON.parse(readFileSync(join(entry.packageRoot, 'extension.json'), 'utf-8')) as ExtensionManifest;
-        if (!manifest.id || !manifest.name) return [];
-        const packageType = manifest.packageType ?? 'system';
+        const raw = JSON.parse(readFileSync(join(entry.packageRoot, 'extension.json'), 'utf-8')) as Record<string, unknown>;
+        if (typeof raw.id !== 'string' || typeof raw.name !== 'string') return [];
+        const packageType: ExtensionPackageType = raw.packageType === 'user' ? 'user' : 'system';
+        const manifest = raw as unknown as ExtensionManifest;
         return [{ manifest: { ...manifest, packageType }, packageRoot: entry.packageRoot }];
       } catch {
         return [];
