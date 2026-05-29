@@ -20,16 +20,16 @@
     "routes": [{ "method": "GET", "path": "/stream", "handler": "streamTerminal", "title": "Terminal output stream", "stream": "sse" }]
   },
   "contributes": {
-    "surfaces": [
+    "views": [
       {
-        "placement": "right",
-        "kind": "toolPanel",
         "id": "terminal-panel",
-        "label": "Terminal",
-        "entry": "TerminalPanel",
+        "title": "Terminal",
+        "location": "rightRail",
         "scope": "workspace",
+        "component": "TerminalPanel",
         "icon": "terminal",
-        "defaultOpen": false,
+        "placement": "workbench-tool",
+        "activation": "on-demand",
         "toolSlot": "terminal"
       }
     ]
