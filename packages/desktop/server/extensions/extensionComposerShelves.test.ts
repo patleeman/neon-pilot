@@ -3,16 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { listExtensionComposerShelfRegistrations, listExtensionNewConversationPanelRegistrations } from './extensionRegistry.js';
 
 describe('extension composer shelves', () => {
-  it('surfaces suggested context as a new conversation panel, not a composer shelf', () => {
+  it('does not surface installable suggested context until it is installed', () => {
     expect(listExtensionNewConversationPanelRegistrations()).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          extensionId: 'system-suggested-context',
-          id: 'suggested-context',
-          component: 'SuggestedContextPanel',
-          priority: 100,
-        }),
-      ]),
+      expect.not.arrayContaining([expect.objectContaining({ extensionId: 'system-suggested-context' })]),
     );
     expect(listExtensionComposerShelfRegistrations()).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ extensionId: 'system-suggested-context' })]),

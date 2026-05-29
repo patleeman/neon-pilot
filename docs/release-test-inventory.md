@@ -173,11 +173,11 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Composer git status indicator.
 - Test clean/dirty repo, branch display, untracked files, non-git cwd, permission errors.
 
-### Suggested Context (`system-suggested-context`)
+### Suggested Context (`system-suggested-context`, default disabled)
 
-- Composer suggested context UI and prompt context provider.
+- Installable new-conversation suggested context UI and prompt context provider.
 - Action: `warmPointers`.
-- Test pointer warming, suggestions list, accept/remove suggestion, stale/missing files, prompt injection.
+- Test install from Available add-ons, enable/disable, pointer warming, suggestions list, accept/remove suggestion, stale/missing files, prompt injection.
 
 ### Reply Actions (`system-reply-actions`)
 
@@ -458,7 +458,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 - backend actions: listSkills, updateSkillEnabled
 
-### system-suggested-context — Suggested Context
+### system-suggested-context — Suggested Context (installable, default disabled)
 
 - newConversationPanels: suggested-context
 - promptContextProviders: provide-prompt-context

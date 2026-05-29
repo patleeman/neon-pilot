@@ -4,7 +4,7 @@
   "name": "Suggested Context",
   "description": "Suggests related conversations as pointer context for new prompts.",
   "version": "0.1.0",
-  "packageType": "system",
+  "defaultEnabled": false,
   "frontend": {
     "entry": "dist/frontend.js"
   },

@@ -103,6 +103,11 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'SpeechMike hardware integration.',
   },
   {
+    id: 'system-suggested-context',
+    name: 'Suggested Context',
+    description: 'Suggests related conversations as pointer context for new prompts.',
+  },
+  {
     id: 'system-video-probe',
     name: 'Video Probe',
     description: 'Analyze UI recordings and videos with a video-capable model.',
