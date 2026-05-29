@@ -1682,12 +1682,12 @@ export function Layout() {
   );
 
   const handlePrimarySidebarToggle = useCallback(() => {
-    if (canToggleWorkbench) {
-      handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
-      return;
-    }
     setSidebarOpen((current) => !current);
-  }, [canToggleWorkbench, handleAppLayoutModeChange, showWorkbench]);
+  }, []);
+
+  const handleWorkbenchToggle = useCallback(() => {
+    handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
+  }, [handleAppLayoutModeChange, showWorkbench]);
 
   useEffect(() => {
     function handleDesktopShortcut(event: Event) {
@@ -1797,12 +1797,11 @@ export function Layout() {
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar
             environment={desktopEnvironment}
-            sidebarOpen={canToggleWorkbench ? showWorkbench : effectiveSidebarOpen}
+            sidebarOpen={effectiveSidebarOpen}
             onToggleSidebar={handlePrimarySidebarToggle}
-            sidebarToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
-            showRailToggle={activeRightRailControl !== null}
-            railOpen={activeRightRailControl?.railOpen ?? false}
-            onToggleRail={activeRightRailControl?.toggleRail ?? (() => {})}
+            showRailToggle={canToggleWorkbench || activeRightRailControl !== null}
+            railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
+            onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
             trailingExtra={
               <NotificationBell
                 onClick={() => {
