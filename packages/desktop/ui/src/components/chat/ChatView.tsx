@@ -326,8 +326,13 @@ export const ChatView = memo(function ChatView({
     : (pendingStatusLabel ?? getStreamingStatusLabel(messages, isStreaming));
   const renderingProfile = CHAT_VIEW_RENDERING_PROFILE[performanceMode];
   const lastBlock = messages[messages.length - 1];
+  // Don't show the streaming indicator when the last message is an error block
+  // — this handles edge cases where isStreaming gets stuck (e.g., SSE disconnect)
+  // while there's already an error in the transcript.
   const showStreamingIndicator =
-    !!streamingStatusLabel && (isCompacting || Boolean(pendingStatusLabel) || !lastBlock || lastBlock.type === 'user');
+    !!streamingStatusLabel &&
+    lastBlock?.type !== 'error' &&
+    (isCompacting || Boolean(pendingStatusLabel) || !lastBlock || lastBlock.type === 'user');
   const shouldUseContentVisibility = renderItems.length >= renderingProfile.contentVisibilityThreshold;
   const [contentVisibilityReady, setContentVisibilityReady] = useState(false);
 

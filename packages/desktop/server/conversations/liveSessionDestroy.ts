@@ -1,10 +1,13 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import type { WebLiveConversationRunState } from './conversationRuns.js';
+import type { SseEvent } from './liveSessionEvents.js';
+import type { LiveSessionSubscriptionListener } from './liveSessionSubscription.js';
 
 export interface LiveSessionDestroyHost {
   sessionId: string;
   session: AgentSession;
+  listeners: Set<LiveSessionSubscriptionListener>;
 }
 
 export function destroyLiveSession<TEntry extends LiveSessionDestroyHost>(
@@ -25,6 +28,16 @@ export function destroyLiveSession<TEntry extends LiveSessionDestroyHost>(
   const entry = input.registry.get(sessionId);
   if (!entry) return;
   input.clearContextUsageTimer(entry);
+
+  if (entry.session.isStreaming) {
+    // Broadcast a terminal agent_end event so connected SSE listeners
+    // don't get stuck with isStreaming = true on the client.
+    const terminalEvent: SseEvent = { type: 'agent_end' };
+    for (const listener of entry.listeners) {
+      listener.send(terminalEvent);
+    }
+  }
+
   input
     .syncDurableConversationRun(entry, entry.session.isStreaming ? 'interrupted' : 'waiting', {
       force: true,

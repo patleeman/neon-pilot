@@ -652,7 +652,21 @@ export function useDesktopConversationState(conversationId: string | null, optio
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       }
     };
-    source.onerror = () => setError('Conversation realtime stream failed.');
+    source.onerror = () => {
+      flushPendingStreamEvents();
+      setError('Conversation realtime stream failed.');
+      setState((previous) => {
+        if (previous?.conversationId !== conversationId || !previous.stream.isStreaming) {
+          return previous;
+        }
+        const stream = { ...previous.stream, isStreaming: false };
+        return {
+          ...previous,
+          stream,
+          liveSession: previous.liveSession.live ? { ...previous.liveSession, isStreaming: false } : previous.liveSession,
+        };
+      });
+    };
 
     return () => {
       source.close();

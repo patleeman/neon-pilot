@@ -7,6 +7,7 @@ describe('destroyLiveSession', () => {
     return {
       sessionId: 's1',
       session: { isStreaming, dispose: vi.fn() },
+      listeners: new Set(),
     };
   }
 
@@ -61,6 +62,9 @@ describe('destroyLiveSession', () => {
       publishSessionMetaChanged: vi.fn(),
     };
 
+    const sendListener = vi.fn();
+    live.listeners.add({ send: sendListener });
+
     destroyLiveSession('s1', input as never);
     await Promise.resolve();
 
@@ -68,6 +72,8 @@ describe('destroyLiveSession', () => {
       force: true,
       lastError: 'Live session disposed while a response was active.',
     });
+    // Streaming sessions broadcast agent_end to prevent stuck isStreaming on clients
+    expect(sendListener).toHaveBeenCalledWith({ type: 'agent_end' });
     expect(live.session.dispose).toHaveBeenCalledOnce();
     expect(input.registry.has('s1')).toBe(false);
     expect(errorSpy).toHaveBeenCalledWith('[liveSessionDestroy] sync failed', error);
