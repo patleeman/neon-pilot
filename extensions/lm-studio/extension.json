@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "id": "lm-studio",
+  "name": "LM Studio",
+  "description": "Connect to a local LM Studio instance and use its models in Neon Pilot.",
+  "version": "0.1.0",
+  "permissions": ["storage:readwrite", "ui:notify"],
+  "frontend": {
+    "entry": "dist/frontend.js"
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "lmStudioDiscover",
+        "handler": "discoverModels",
+        "title": "Discover LM Studio models"
+      },
+      {
+        "id": "lmStudioStatus",
+        "handler": "getStatus",
+        "title": "Get LM Studio connection status"
+      },
+      {
+        "id": "lmStudioRefresh",
+        "handler": "refreshModels",
+        "title": "Force-refresh LM Studio model list"
+      }
+    ]
+  },
+  "contributes": {
+    "modelDiscovery": {
+      "action": "lmStudioDiscover"
+    },
+    "views": [
+      {
+        "id": "lm-studio-status",
+        "title": "LM Studio",
+        "location": "main",
+        "route": "/ext/lm-studio",
+        "component": "LmStudioStatusPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "lm-studio-nav",
+        "label": "LM Studio",
+        "route": "/ext/lm-studio",
+        "icon": "box"
+      }
+    ],
+    "settings": {
+      "lmStudio.baseUrl": {
+        "type": "string",
+        "default": "http://localhost:1234",
+        "description": "LM Studio API server URL (e.g. http://localhost:1234)",
+        "group": "LM Studio",
+        "order": 1
+      },
+      "lmStudio.contextWindow": {
+        "type": "number",
+        "default": 32768,
+        "description": "Default context window for discovered models (tokens)",
+        "group": "LM Studio",
+        "order": 2
+      },
+      "lmStudio.maxTokens": {
+        "type": "number",
+        "default": 4096,
+        "description": "Default max output tokens for discovered models",
+        "group": "LM Studio",
+        "order": 3
+      }
+    }
+  }
+}
