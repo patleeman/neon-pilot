@@ -93,43 +93,32 @@ function sleep(ms: number): Promise<void> {
 
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   let lastError: unknown;
+  let attempt = 0;
 
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+  for (;;) {
     const delayMs = attempt < RETRY_DELAYS_MS.length ? RETRY_DELAYS_MS[attempt] : null;
+    attempt++;
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      // 503 = backend still warming up — keep retrying indefinitely.
-      // Exponential backoff runs first (1s, 2s, 4s, 8s), then plateaus at 8s.
+      // 503 = backend still warming up — retry indefinitely. Uses exponential
+      // backoff (1s, 2s, 4s, 8s), then plateaus at 8s polling.
       if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status)) {
         lastError = new Error(`Server error ${res.status} for ${input}`);
-        if (delayMs !== null) {
-          await sleep(delayMs);
-        } else {
-          // Past the exponential backoff window — poll at the slowest rate.
-          await sleep(RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
-        }
+        await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
       }
       return res;
     } catch (error) {
       lastError = error;
-      // Transient network errors (ECONNREFUSED while backend starts up) —
-      // retry as long as we have delays left.
-      if (isTransientNetworkError(error) && delayMs !== null) {
-        await sleep(delayMs);
-        continue;
-      }
+      // Transient network errors (ECONNREFUSED while backend starts up).
       if (isTransientNetworkError(error)) {
-        // Past the exponential backoff — poll at the slowest rate.
-        await sleep(RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
+        await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
       }
       throw error;
     }
   }
-
-  throw lastError;
 }
 
 // ── API helpers ──────────────────────────────────────────────────────────────
