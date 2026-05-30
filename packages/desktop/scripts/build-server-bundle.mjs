@@ -33,7 +33,25 @@ const sharedEsbuildOptions = {
   minify: true,
   legalComments: 'none',
   logLevel: 'info',
-  external: ['@xenova/transformers', 'better-sqlite3', 'electron', 'esbuild', 'fsevents', 'node-pty'],
+  external: [
+    '@xenova/transformers',
+    'better-sqlite3',
+    'electron',
+    'esbuild',
+    'fsevents',
+    'node-pty',
+    // AI provider SDKs — only needed when the user configures that provider.
+    // Externalizing them keeps the cold-start bundle small and lets Node.js
+    // load them lazily from node_modules on first use.
+    'openai',
+    '@anthropic-ai/sdk',
+    '@google/generative-ai',
+    '@aws-sdk/client-bedrock-runtime',
+    '@aws-sdk/client-sagemaker-runtime',
+    '@cohere-ai/cohere-ai',
+    'cohere-ai',
+    '@mistralai/mistralai',
+  ],
   plugins: [extensionApiAliasPlugin],
 };
 
