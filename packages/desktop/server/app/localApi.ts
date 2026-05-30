@@ -138,18 +138,22 @@ import type { ProviderDesktopCapabilityContext } from '../models/providerDesktop
 // AI SDKs (openai, anthropic, etc.) are loaded via Promise.all() so they
 // are fetched/parsed concurrently rather than depth-first sequentially.
 let _modelsMod: Record<string, unknown> | null = null;
-const _modelsPromise = Promise.all([
+let _modelsPromise = Promise.all([
   import('../models/modelPreferences.js'),
   import('../models/modelState.js'),
   import('../models/providerAuth.js'),
   import('../models/providerDesktopCapability.js'),
 ]).then(([prefs, state, auth, caps]) => {
   _modelsMod = { ...prefs, ...state, ...auth, ...caps };
+}).catch((err) => {
+  console.error('[local-api] failed to load model modules:', err.message);
 });
 
+// Block module execution until model chunks are loaded so the first
+// API call that touches models doesn't pay the cold parse penalty.
+await _modelsPromise;
+
 async function models(): Promise<any> {
-  if (_modelsMod) return _modelsMod;
-  await _modelsPromise;
   return _modelsMod!;
 }
 import type { ServerRouteContext } from '../routes/context.js';
