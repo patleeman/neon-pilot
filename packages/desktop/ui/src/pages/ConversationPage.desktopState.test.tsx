@@ -222,7 +222,7 @@ describe('ConversationPage desktop local state', () => {
 
     expect(desktopConversationState).toHaveBeenCalledWith(
       'local-conv',
-      expect.objectContaining({ tailBlocks: INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS }),
+      expect.objectContaining({ tailBlocks: INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS, includeToolBlocks: false }),
     );
     expect(html).toContain('Loading messages…');
   }, 15000);

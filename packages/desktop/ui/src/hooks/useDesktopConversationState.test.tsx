@@ -31,6 +31,7 @@ vi.mock('../desktop/desktopEventSource', () => ({
 }));
 
 import { api } from '../client/api.js';
+import { primeConversationBootstrapCache } from './useConversationBootstrap.js';
 import {
   applyDesktopConversationStreamEvent,
   applyDesktopConversationStreamEvents,
@@ -48,8 +49,16 @@ const mountedRoots: Root[] = [];
 let latestReconnect: (() => void) | null = null;
 let latestState: ReturnType<typeof useDesktopConversationState> | null = null;
 
-function HookProbe({ conversationId = 'conv-1', tailBlocks = 20 }: { conversationId?: string; tailBlocks?: number }) {
-  latestState = useDesktopConversationState(conversationId, { tailBlocks });
+function HookProbe({
+  conversationId = 'conv-1',
+  tailBlocks = 20,
+  includeToolBlocks,
+}: {
+  conversationId?: string;
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}) {
+  latestState = useDesktopConversationState(conversationId, { tailBlocks, includeToolBlocks });
   latestReconnect = latestState.reconnect;
   return null;
 }
@@ -469,6 +478,55 @@ describe('useDesktopConversationState', () => {
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
     expect(desktopConversationState).not.toHaveBeenCalled();
+  });
+
+  it('seeds saved desktop conversations from the bootstrap cache while refreshing desktop state', async () => {
+    const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
+
+    primeConversationBootstrapCache(
+      'conv-cached',
+      {
+        conversationId: 'conv-cached',
+        sessionDetail: {
+          meta: {
+            id: 'conv-cached',
+            file: '/repo/cached.jsonl',
+            timestamp: '2026-05-30T00:00:00.000Z',
+            cwd: '/repo',
+            cwdSlug: 'repo',
+            model: 'gpt',
+            title: 'Cached Conversation',
+            messageCount: 2,
+          },
+          blocks: [{ type: 'text', id: 'text-1', text: 'Cached reply', ts: '2026-05-30T00:00:00.000Z' }],
+          blockOffset: 0,
+          totalBlocks: 1,
+          contextUsage: null,
+        },
+        liveSession: { live: false },
+      },
+      { tailBlocks: 20, includeToolBlocks: false },
+      '1',
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-cached" tailBlocks={20} includeToolBlocks={false} />);
+      await flushPromises();
+    });
+
+    expect(latestState?.loading).toBe(false);
+    expect(latestState?.state?.sessionDetail?.blocks).toEqual([expect.objectContaining({ text: 'Cached reply' })]);
+    expect(desktopConversationState).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
   });
 
   it('uses a primed reserved conversation as live state without fetching before subscription', async () => {

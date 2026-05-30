@@ -13,6 +13,7 @@ import type {
   ThreadGoal,
 } from '../shared/types';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
+import { readCachedConversationBootstrap, readCachedOrPersistedConversationBootstrap } from './useConversationBootstrap';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
@@ -20,6 +21,15 @@ const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
 const STREAM_CONTROL_FLUSH_INTERVAL_MS = 16;
 const desktopConversationStateCache = new Map<string, DesktopConversationState>();
 const desktopConversationStateInflight = new Map<string, Promise<DesktopConversationState>>();
+
+interface DesktopConversationStateOptions {
+  tailBlocks?: number;
+  includeToolBlocks?: boolean;
+}
+
+interface UseDesktopConversationStateOptions extends DesktopConversationStateOptions {
+  enabled?: boolean;
+}
 
 export function clearDesktopConversationStateCacheForTests(): void {
   desktopConversationStateCache.clear();
@@ -340,8 +350,12 @@ function mergeDesktopConversationState(
   };
 }
 
-function buildDesktopConversationStateCacheKey(conversationId: string, tailBlocks: number | undefined): string {
-  return `${conversationId}:${tailBlocks ?? 'default'}`;
+function buildDesktopConversationStateCacheKey(
+  conversationId: string,
+  tailBlocks: number | undefined,
+  includeToolBlocks: boolean | undefined,
+): string {
+  return `${conversationId}:${tailBlocks ?? 'default'}:${includeToolBlocks === false ? 'conversation' : 'full'}`;
 }
 
 function rememberDesktopConversationState(
@@ -363,7 +377,7 @@ function rememberDesktopConversationState(
 export function primeDesktopConversationStateCache(
   conversationId: string,
   bootstrap: ConversationBootstrapState,
-  options?: { tailBlocks?: number },
+  options?: DesktopConversationStateOptions,
 ): void {
   const normalizedConversationId = conversationId.trim();
   if (!normalizedConversationId || bootstrap.conversationId !== normalizedConversationId) {
@@ -371,27 +385,17 @@ export function primeDesktopConversationStateCache(
   }
 
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks);
-  const stream = createEmptyDesktopConversationStreamState();
-  const sessionDetail = bootstrap.sessionDetail;
-  rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
-    conversationId: normalizedConversationId,
-    sessionDetail,
-    liveSession: bootstrap.liveSession,
-    stream: sessionDetail
-      ? {
-          ...stream,
-          blockOffset: sessionDetail.blockOffset,
-          totalBlocks: sessionDetail.totalBlocks,
-          contextUsage: sessionDetail.contextUsage,
-        }
-      : stream,
-  });
+  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
+  rememberDesktopConversationState(
+    desktopConversationStateCache,
+    cacheKey,
+    createDesktopConversationStateFromBootstrap(normalizedConversationId, bootstrap),
+  );
 }
 
 export function primeReservedDesktopConversationStateCache(
   input: { conversationId: string; sessionFile: string; cwd: string },
-  options?: { tailBlocks?: number },
+  options?: DesktopConversationStateOptions,
 ): void {
   const normalizedConversationId = input.conversationId.trim();
   const sessionFile = input.sessionFile.trim();
@@ -400,7 +404,7 @@ export function primeReservedDesktopConversationStateCache(
   }
 
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(normalizedConversationId, tailBlocks, options?.includeToolBlocks);
   rememberDesktopConversationState(desktopConversationStateCache, cacheKey, {
     conversationId: normalizedConversationId,
     sessionDetail: null,
@@ -415,9 +419,33 @@ export function primeReservedDesktopConversationStateCache(
   });
 }
 
-function fetchDesktopConversationStateCached(conversationId: string, options?: { tailBlocks?: number }): Promise<DesktopConversationState> {
+function createDesktopConversationStateFromBootstrap(
+  conversationId: string,
+  bootstrap: ConversationBootstrapState,
+): DesktopConversationState {
+  const stream = createEmptyDesktopConversationStreamState();
+  const sessionDetail = bootstrap.sessionDetail;
+  return {
+    conversationId,
+    sessionDetail,
+    liveSession: bootstrap.liveSession,
+    stream: sessionDetail
+      ? {
+          ...stream,
+          blockOffset: sessionDetail.blockOffset,
+          totalBlocks: sessionDetail.totalBlocks,
+          contextUsage: sessionDetail.contextUsage,
+        }
+      : stream,
+  };
+}
+
+function fetchDesktopConversationStateCached(
+  conversationId: string,
+  options?: DesktopConversationStateOptions,
+): Promise<DesktopConversationState> {
   const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
+  const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, options?.includeToolBlocks);
   const inflight = desktopConversationStateInflight.get(cacheKey);
   if (inflight) {
     return inflight;
@@ -426,6 +454,7 @@ function fetchDesktopConversationStateCached(conversationId: string, options?: {
   const request = api
     .desktopConversationState(conversationId, {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
     })
     .then((nextState: DesktopConversationState) => {
       const previous = desktopConversationStateCache.get(cacheKey) ?? null;
@@ -443,7 +472,7 @@ function fetchDesktopConversationStateCached(conversationId: string, options?: {
 
 export function prefetchDesktopConversationState(
   conversationId: string,
-  options?: { tailBlocks?: number },
+  options?: DesktopConversationStateOptions,
 ): Promise<DesktopConversationState> | null {
   const normalizedConversationId = conversationId.trim();
   if (!normalizedConversationId) {
@@ -453,7 +482,7 @@ export function prefetchDesktopConversationState(
   return fetchDesktopConversationStateCached(normalizedConversationId, options);
 }
 
-export function useDesktopConversationState(conversationId: string | null, options?: { tailBlocks?: number; enabled?: boolean }) {
+export function useDesktopConversationState(conversationId: string | null, options?: UseDesktopConversationStateOptions) {
   const enabled = options?.enabled !== false && Boolean(conversationId);
   const bridge = getDesktopBridge();
   const surfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
@@ -488,9 +517,20 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     let closed = false;
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
-    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks);
+    const requestOptions = {
+      ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+    } satisfies DesktopConversationStateOptions;
+    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
-    setState((current) => (current?.conversationId === conversationId ? current : cachedState));
+    const cachedBootstrap = cachedState ? null : readCachedConversationBootstrap(conversationId, requestOptions);
+    const bootstrapState = cachedBootstrap
+      ? createDesktopConversationStateFromBootstrap(conversationId, cachedBootstrap)
+      : null;
+    if (bootstrapState) {
+      rememberDesktopConversationState(desktopConversationStateCache, cacheKey, bootstrapState);
+    }
+    setState((current) => (current?.conversationId === conversationId ? current : (cachedState ?? bootstrapState)));
     setError(null);
 
     if (cachedState?.conversationId === conversationId && cachedState.liveSession.live) {
@@ -499,7 +539,23 @@ export function useDesktopConversationState(conversationId: string | null, optio
       };
     }
 
-    void fetchDesktopConversationStateCached(conversationId, { tailBlocks })
+    if (!cachedState && !bootstrapState) {
+      void readCachedOrPersistedConversationBootstrap(conversationId, requestOptions)
+        .then((persistedBootstrap) => {
+          if (closed || !persistedBootstrap) {
+            return;
+          }
+
+          const persistedState = createDesktopConversationStateFromBootstrap(conversationId, persistedBootstrap);
+          rememberDesktopConversationState(desktopConversationStateCache, cacheKey, persistedState);
+          setState((current) => (current?.conversationId === conversationId ? current : persistedState));
+        })
+        .catch(() => {
+          // Ignore persisted bootstrap misses; the authoritative desktop state request owns freshness.
+        });
+    }
+
+    void fetchDesktopConversationStateCached(conversationId, requestOptions)
       .then((nextState) => {
         if (!closed) {
           setState((previous) => {
@@ -519,7 +575,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     return () => {
       closed = true;
     };
-  }, [bridge, conversationId, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
     if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession.live) {

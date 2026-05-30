@@ -4939,7 +4939,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               sessionFile: reserved.sessionFile,
               cwd: reserved.cwd,
             },
-            { tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS },
+            { tailBlocks: INITIAL_HISTORICAL_TAIL_BLOCKS, includeToolBlocks: false },
           );
           recordSubmitPhase('primeReservedConversationCaches', primeCachesStartedAtMs, { conversationId: reserved.id });
           const createStartedAtMs = performance.now();

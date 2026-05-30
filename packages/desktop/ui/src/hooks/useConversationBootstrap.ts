@@ -164,6 +164,13 @@ function readCachedConversationBootstrapEntry(
   return normalizedEntry;
 }
 
+export function readCachedConversationBootstrap(
+  conversationId: string,
+  options?: ConversationBootstrapOptions,
+): ConversationBootstrapState | null {
+  return readCachedConversationBootstrapEntry(conversationId, options)?.data ?? null;
+}
+
 function trimConversationBootstrapCache(): void {
   while (conversationBootstrapCache.size > MAX_CACHED_CONVERSATION_BOOTSTRAPS) {
     const oldestKey = conversationBootstrapCache.keys().next().value;
@@ -207,6 +214,13 @@ async function readConversationBootstrapEntry(
   }
 
   return writeConversationBootstrapCacheEntry(conversationId, persisted.data, options, persisted.versionKey);
+}
+
+export async function readCachedOrPersistedConversationBootstrap(
+  conversationId: string,
+  options?: ConversationBootstrapOptions,
+): Promise<ConversationBootstrapState | null> {
+  return (await readConversationBootstrapEntry(conversationId, options))?.data ?? null;
 }
 
 export function primeConversationBootstrapCache(
