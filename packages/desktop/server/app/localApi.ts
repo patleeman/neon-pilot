@@ -627,6 +627,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
 async function getLocalContexts(): Promise<{ context: ServerRouteContext; perf: Record<string, number> }> {
   if (!localContextsPromise) {
     localContextsPromise = buildLocalContexts().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[desktop-backend] buildLocalContexts failed: ${message}\n`);
       // Keep the rejected promise cached so subsequent callers fail fast
       // instead of each triggering a fresh rebuild that times out.
       localServerRouteContext = null;
@@ -654,6 +656,8 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
 async function getLocalRoutes(): Promise<RegisteredRoute[]> {
   if (!localRoutesPromise) {
     localRoutesPromise = buildLocalRoutes().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[desktop-backend] buildLocalRoutes failed: ${message}\n`);
       // Keep the rejected promise cached so subsequent callers fail fast
       // instead of each triggering a fresh rebuild that times out.
       localServerRouteContext = null;
