@@ -1,4 +1,5 @@
-import { appendFileSync, existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import { type AgentSession, type SessionManager } from '@earendil-works/pi-coding-agent';
 
@@ -29,6 +30,10 @@ function updateConversationCatalogForSessionFile(sessionFile: string): void {
   }
 }
 
+function ensureSessionFileDirectory(sessionFile: string): void {
+  mkdirSync(dirname(sessionFile), { recursive: true });
+}
+
 export function patchSessionManagerPersistence(sessionManager: SessionManager): void {
   const manager = sessionManager as unknown as PersistableSessionManager & {
     [SESSION_MANAGER_PERSISTENCE_PATCH]?: boolean;
@@ -49,12 +54,14 @@ export function patchSessionManagerPersistence(sessionManager: SessionManager): 
     }
 
     if (!manager.flushed || !existsSync(manager.sessionFile)) {
+      ensureSessionFileDirectory(manager.sessionFile);
       rewriteFile();
       manager.flushed = true;
       updateConversationCatalogForSessionFile(manager.sessionFile);
       return;
     }
 
+    ensureSessionFileDirectory(manager.sessionFile);
     appendFileSync(manager.sessionFile, `${JSON.stringify(entry)}\n`);
     updateConversationCatalogForSessionFile(manager.sessionFile);
   };
@@ -72,6 +79,7 @@ export function ensureSessionFileExists(sessionManager: SessionManager): void {
     return;
   }
 
+  ensureSessionFileDirectory(manager.sessionFile);
   manager._rewriteFile();
   manager.flushed = true;
   updateConversationCatalogForSessionFile(manager.sessionFile);

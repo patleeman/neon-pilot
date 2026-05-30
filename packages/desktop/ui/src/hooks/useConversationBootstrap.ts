@@ -59,11 +59,14 @@ function mergeAppendOnlyConversationSessionDetail(cached: SessionDetail, nextDat
 
 function normalizeConversationBootstrapState(data: ConversationBootstrapState): ConversationBootstrapState {
   const sessionDetailSignature = readConversationBootstrapSessionSignature(data) ?? null;
+  const liveSession = data.liveSession ?? { live: false as const };
+  const liveSessionChanged = liveSession !== data.liveSession;
   if (!data.sessionDetail) {
-    return data.sessionDetailSignature === sessionDetailSignature
+    return data.sessionDetailSignature === sessionDetailSignature && !liveSessionChanged
       ? data
       : {
           ...data,
+          liveSession,
           sessionDetailSignature,
         };
   }
@@ -76,12 +79,13 @@ function normalizeConversationBootstrapState(data: ConversationBootstrapState): 
         }
       : data.sessionDetail;
 
-  if (normalizedSessionDetail === data.sessionDetail && data.sessionDetailSignature === sessionDetailSignature) {
+  if (normalizedSessionDetail === data.sessionDetail && data.sessionDetailSignature === sessionDetailSignature && !liveSessionChanged) {
     return data;
   }
 
   return {
     ...data,
+    liveSession,
     sessionDetail: normalizedSessionDetail,
     sessionDetailSignature,
   };
@@ -262,7 +266,7 @@ export function fetchConversationBootstrapCached(
         : {}),
     });
     let nextData = mergeConversationBootstrapWithCachedSessionDetail(cached?.data ?? null, data);
-    if ((nextData.sessionDetailUnchanged || nextData.sessionDetailAppendOnly) && !nextData.sessionDetail && !nextData.liveSession.live) {
+    if ((nextData.sessionDetailUnchanged || nextData.sessionDetailAppendOnly) && !nextData.sessionDetail && !nextData.liveSession?.live) {
       const fallback = await api.conversationBootstrap(conversationId, options);
       nextData = mergeConversationBootstrapWithCachedSessionDetail(cached?.data ?? null, fallback);
     }

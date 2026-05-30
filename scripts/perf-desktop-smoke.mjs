@@ -427,7 +427,20 @@ async function waitForExpression(cdp, child, expression, timeoutMs = 30_000, pol
     if (await evalJs(cdp, expression)) return;
     await sleep(pollMs);
   }
-  throw new Error(`timed out waiting for expression: ${expression}`);
+  const diagnostics = await evalJs(
+    cdp,
+    `(() => ({
+      location: location.href,
+      pathname: location.pathname,
+      loader: Boolean(document.querySelector('#app-loader')),
+      textareaCount: document.querySelectorAll('textarea').length,
+      enabledTextareaCount: document.querySelectorAll('textarea:not([disabled])').length,
+      buttonCount: document.querySelectorAll('button').length,
+      bodyText: (document.body?.innerText || '').slice(0, 1200),
+      bodyTextTail: (document.body?.innerText || '').slice(-1200)
+    }))()`,
+  ).catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
+  throw new Error(`timed out waiting for expression: ${expression}; diagnostics=${JSON.stringify(diagnostics)}`);
 }
 async function navigateSpa(cdp, path) {
   return evalJs(

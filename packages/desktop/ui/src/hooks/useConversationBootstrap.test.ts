@@ -112,6 +112,22 @@ describe('useConversationBootstrap cache helpers', () => {
     expect(apiMocks.conversationBootstrap).toHaveBeenCalledWith(conversationId, { tailBlocks: 120 });
   });
 
+  it('normalizes legacy bootstrap records that are missing live session state', async () => {
+    const conversationId = 'conv-legacy-bootstrap';
+    const bootstrap = createBootstrapState(conversationId, {
+      sessionDetail: createSessionDetail('sig-legacy', 'Legacy reply', conversationId),
+    });
+    const legacyBootstrap = { ...bootstrap } as Partial<ConversationBootstrapState>;
+    delete legacyBootstrap.liveSession;
+    apiMocks.conversationBootstrap.mockResolvedValueOnce(legacyBootstrap);
+
+    await expect(fetchConversationBootstrapCached(conversationId, { tailBlocks: 120 }, '1:0')).resolves.toEqual({
+      ...bootstrap,
+      liveSession: { live: false },
+      sessionDetailSignature: 'sig-legacy',
+    });
+  });
+
   it('reuses the cached transcript window when the server says the session detail is unchanged', async () => {
     const conversationId = 'conv-unchanged';
     const cached = createBootstrapState(conversationId);

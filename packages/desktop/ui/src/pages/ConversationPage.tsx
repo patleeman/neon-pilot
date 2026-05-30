@@ -595,6 +595,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const [historicalTailBlocks, setHistoricalTailBlocks] = useState(INITIAL_HISTORICAL_TAIL_BLOCKS);
   const [initialHistoricalWarmupConversationId, setInitialHistoricalWarmupConversationId] = useState<string | null>(null);
+  const [autoAnchorTranscriptTail, setAutoAnchorTranscriptTail] = useState(true);
   const desktopConversation = useDesktopConversationState(id ?? null, {
     tailBlocks: historicalTailBlocks,
     includeToolBlocks: false,
@@ -609,33 +610,47 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   });
   const visibleDesktopConversationState =
     useDesktopConversation && id && desktopConversation.state?.conversationId === id ? desktopConversation.state : null;
+  const visibleDesktopSessionDetail = visibleDesktopConversationState?.sessionDetail ?? null;
+  const desktopSessionDetailNeedsRequestedTail =
+    visibleDesktopSessionDetail !== null && !hasConversationLoadedHistoricalTailBlocks(visibleDesktopSessionDetail, historicalTailBlocks);
   const conversationVersionKey = `${effectiveConversationEventVersion}`;
+  const shouldFetchConversationBootstrap =
+    !draft &&
+    !desktopConversationChecking &&
+    (!useDesktopConversation || !visibleDesktopConversationState || desktopSessionDetailNeedsRequestedTail);
   const { data: webConversationBootstrap, loading: webConversationBootstrapLoading } = useConversationBootstrap(
-    draft || useDesktopConversation || desktopConversationChecking ? undefined : id,
+    shouldFetchConversationBootstrap ? id : undefined,
     {
       tailBlocks: historicalTailBlocks,
       includeToolBlocks: false,
       versionKey: conversationVersionKey,
     },
   );
-  const visibleConversationBootstrap = useDesktopConversation
-    ? id && visibleDesktopConversationState
+  const desktopConversationBootstrap =
+    id && visibleDesktopConversationState
       ? {
           conversationId: id,
-          sessionDetail: visibleDesktopConversationState.sessionDetail,
-          liveSession: visibleDesktopConversationState.liveSession,
+          sessionDetail: visibleDesktopSessionDetail,
+          liveSession: visibleDesktopConversationState.liveSession ?? { live: false as const },
         }
-      : null
-    : id && webConversationBootstrap?.conversationId === id
-      ? webConversationBootstrap
       : null;
-  const bootstrapSessionDetail = useDesktopConversation
-    ? (visibleDesktopConversationState?.sessionDetail ?? null)
-    : id && visibleConversationBootstrap?.sessionDetail?.meta.id === id
-      ? visibleConversationBootstrap.sessionDetail
-      : null;
+  const webVisibleConversationBootstrap = id && webConversationBootstrap?.conversationId === id ? webConversationBootstrap : null;
+  const webBootstrapSatisfiesRequestedTail = hasConversationLoadedHistoricalTailBlocks(
+    webVisibleConversationBootstrap?.sessionDetail,
+    historicalTailBlocks,
+  );
+  const shouldUseWebBootstrapForDesktopTail = desktopSessionDetailNeedsRequestedTail && webBootstrapSatisfiesRequestedTail;
+  const visibleConversationBootstrap = useDesktopConversation
+    ? shouldUseWebBootstrapForDesktopTail
+      ? (webVisibleConversationBootstrap ?? desktopConversationBootstrap)
+      : (desktopConversationBootstrap ?? webVisibleConversationBootstrap)
+    : webVisibleConversationBootstrap;
+  const bootstrapSessionDetail =
+    id && visibleConversationBootstrap?.sessionDetail?.meta.id === id ? visibleConversationBootstrap.sessionDetail : null;
   const conversationBootstrapLoading = useDesktopConversation
-    ? desktopConversation.loading
+    ? desktopConversation.loading && !visibleConversationBootstrap
+      ? webConversationBootstrapLoading
+      : false
     : desktopConversationChecking
       ? true
       : webConversationBootstrapLoading;
@@ -663,7 +678,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       const forkedSessionMeta = forked.bootstrap.sessionDetail?.meta;
       if (forkedSessionMeta) {
         seedForkedSessionMeta(forkedSessionMeta);
-      } else if (forked.bootstrap.liveSession.live) {
+      } else if (forked.bootstrap.liveSession?.live) {
         const liveSession = forked.bootstrap.liveSession;
         const now = new Date().toISOString();
         const optimisticMeta: SessionMeta = {
@@ -683,7 +698,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     },
     [conversationEventVersion, conversationVersionKey, historicalTailBlocks],
   );
-  const confirmedLiveValue = useDesktopConversation ? (visibleConversationBootstrap?.liveSession.live ?? null) : null;
+  const confirmedLiveValue = useDesktopConversation ? (visibleConversationBootstrap?.liveSession?.live ?? null) : null;
 
   useEffect(() => {
     if (draft || !id || deferConversationFileRefresh) {
@@ -761,9 +776,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
 
     if (useDesktopConversation) {
-      setConfirmedLive(visibleConversationBootstrap?.liveSession.live ?? false);
+      setConfirmedLive(visibleConversationBootstrap?.liveSession?.live ?? false);
       setLiveSessionHasStaleTurnState(
-        visibleConversationBootstrap?.liveSession.live === true && visibleConversationBootstrap.liveSession.hasStaleTurnState === true,
+        visibleConversationBootstrap?.liveSession?.live === true && visibleConversationBootstrap.liveSession.hasStaleTurnState === true,
       );
       return;
     }
@@ -774,13 +789,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    if (visibleConversationBootstrap?.liveSession.live) {
+    if (visibleConversationBootstrap?.liveSession?.live) {
       setConfirmedLive(true);
       setLiveSessionHasStaleTurnState(visibleConversationBootstrap.liveSession.hasStaleTurnState === true);
       return;
     }
 
-    if (visibleConversationBootstrap?.liveSession.live === false || sessionSnapshot?.isLive === false) {
+    if (visibleConversationBootstrap?.liveSession?.live === false || sessionSnapshot?.isLive === false) {
       setConfirmedLive(false);
       setLiveSessionHasStaleTurnState(false);
       return;
@@ -822,7 +837,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     confirmedLive: useDesktopConversation ? confirmedLiveValue : confirmedLive,
   });
   const conversationLiveDecision =
-    visibleConversationBootstrap?.liveSession.live ??
+    visibleConversationBootstrap?.liveSession?.live ??
     sessionSnapshot?.isLive ??
     (useDesktopConversation ? confirmedLiveValue : confirmedLive);
   const conversationNeedsTakeover = false;
@@ -830,9 +845,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     streamIsStreaming: stream.isStreaming,
     sessionIsRunning: sessionSnapshot?.isRunning,
     bootstrapLiveSessionIsStreaming:
-      visibleConversationBootstrap?.liveSession.live === true ? visibleConversationBootstrap.liveSession.isStreaming : false,
+      visibleConversationBootstrap?.liveSession?.live === true ? visibleConversationBootstrap.liveSession.isStreaming : false,
     desktopLiveSessionIsStreaming:
-      visibleDesktopConversationState?.liveSession.live === true ? visibleDesktopConversationState.liveSession.isStreaming : false,
+      visibleDesktopConversationState?.liveSession?.live === true ? visibleDesktopConversationState.liveSession.isStreaming : false,
     hasStaleTurnState: liveSessionHasStaleTurnState,
   });
   const [latchedStreamControlsActive, setLatchedStreamControlsActive] = useState(rawComposerRunState.streamControlsActive);
@@ -867,6 +882,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   useEffect(() => {
     setHistoricalTailBlocks(INITIAL_HISTORICAL_TAIL_BLOCKS);
     setInitialHistoricalWarmupConversationId(draft || !id ? null : id);
+    setAutoAnchorTranscriptTail(true);
   }, [draft, id]);
 
   // ── Existing session data (read-only JSONL) ───────────────────────────────
@@ -878,18 +894,32 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     primeSessionDetailCache(id, bootstrapSessionDetail, { tailBlocks: historicalTailBlocks }, effectiveConversationEventVersion);
   }, [bootstrapSessionDetail, effectiveConversationEventVersion, historicalTailBlocks, id, useDesktopConversation]);
 
-  const bootstrapPendingInitialSessionDetail =
-    !useDesktopConversation && Boolean(id) && conversationBootstrapLoading && !bootstrapSessionDetail;
+  const bootstrapPendingInitialSessionDetail = Boolean(id) && conversationBootstrapLoading && !bootstrapSessionDetail;
   const {
     detail: webSessionDetail,
     loading: webSessionLoading,
     error: webSessionError,
-  } = useSessionDetail(bootstrapPendingInitialSessionDetail || useDesktopConversation || desktopConversationChecking ? undefined : id, {
-    tailBlocks: historicalTailBlocks,
-    version: effectiveConversationEventVersion,
-  });
-  const sessionDetail = useDesktopConversation ? (visibleDesktopConversationState?.sessionDetail ?? null) : webSessionDetail;
-  const sessionLoading = useDesktopConversation ? desktopConversation.loading : desktopConversationChecking ? true : webSessionLoading;
+  } = useSessionDetail(
+    bootstrapPendingInitialSessionDetail ||
+      (useDesktopConversation && Boolean(visibleDesktopConversationState?.sessionDetail || bootstrapSessionDetail)) ||
+      desktopConversationChecking
+      ? undefined
+      : id,
+    {
+      tailBlocks: historicalTailBlocks,
+      version: effectiveConversationEventVersion,
+    },
+  );
+  const sessionDetail = useDesktopConversation
+    ? shouldUseWebBootstrapForDesktopTail
+      ? (bootstrapSessionDetail ?? visibleDesktopSessionDetail ?? webSessionDetail)
+      : (visibleDesktopSessionDetail ?? bootstrapSessionDetail ?? webSessionDetail)
+    : webSessionDetail;
+  const sessionLoading = useDesktopConversation
+    ? desktopConversation.loading && !sessionDetail
+    : desktopConversationChecking
+      ? true
+      : webSessionLoading;
   const sessionError = useDesktopConversation ? desktopConversation.error : desktopConversationChecking ? null : webSessionError;
   const visibleSessionDetail = useDesktopConversation
     ? sessionDetail
@@ -2146,6 +2176,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }
 
       if (targetMessageIndex === undefined) {
+        setAutoAnchorTranscriptTail(false);
         scrollPrefetchUserIntentRef.current = false;
         lastHistoricalPrefetchRequestedAtRef.current = performance.now();
         capturePrependRestore();
@@ -3221,6 +3252,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const el = scrollRef.current;
     if (!el) return;
     const markUserScrollIntent = () => {
+      setAutoAnchorTranscriptTail(false);
       scrollPrefetchUserIntentRef.current = true;
     };
     el.addEventListener('wheel', markUserScrollIntent, { passive: true });
@@ -6064,7 +6096,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     </div>
                   ) : undefined
                 }
-                anchorWindowingToTail={atBottom}
+                anchorWindowingToTail={atBottom || autoAnchorTranscriptTail}
               />
             </Suspense>
           ) : (

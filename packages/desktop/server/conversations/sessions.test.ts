@@ -381,6 +381,51 @@ describe('sessions', () => {
     });
   });
 
+  it('reads the latest blocks from a long transcript tail', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const sessionId = 'perf-long-transcript';
+    const dir = join(sessionsDir, 'perf-long');
+    mkdirSync(dir, { recursive: true });
+    const lines: unknown[] = [
+      { type: 'session', id: sessionId, timestamp: '2026-03-11T12:00:00.000Z', cwd: '/tmp/perf-long' },
+      { type: 'session_info', name: 'Perf long transcript' },
+    ];
+    let parentId: string | null = null;
+    for (let index = 0; index < 5000; index += 1) {
+      const entryId = `${sessionId}-message-${String(index).padStart(5, '0')}`;
+      lines.push({
+        type: 'message',
+        id: entryId,
+        parentId,
+        timestamp: `2026-03-11T12:${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`,
+        message: {
+          role: index % 2 === 0 ? 'user' : 'assistant',
+          content: `Long transcript message ${index} ${'x'.repeat(120)}`,
+        },
+      });
+      parentId = entryId;
+    }
+    writeFileSync(join(dir, `${sessionId}.jsonl`), `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`);
+
+    const read = readSessionBlocksWithTelemetry(sessionId, { tailBlocks: 120 });
+
+    expect(read.detail?.blocks).toHaveLength(120);
+    expect(read.detail?.blockOffset).toBe(4880);
+    expect(read.detail?.totalBlocks).toBe(5000);
+    expect(read.detail?.blocks.at(-1)).toMatchObject({
+      type: 'text',
+      text: expect.stringContaining('Long transcript message 4999'),
+    });
+    expect(read.telemetry).toMatchObject({
+      loader: 'fast-tail',
+      requestedTailBlocks: 120,
+      totalBlocks: 5000,
+      blockOffset: 4880,
+    });
+  });
+
   it('keeps older transcript blocks loadable when rendered blocks outnumber message metadata', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { fs, readConversationSessionMetaByFileMock, upsertConversationCatalogSessionMock } = vi.hoisted(() => ({
-  fs: { appendFileSync: vi.fn(), existsSync: vi.fn(() => true) },
+  fs: { appendFileSync: vi.fn(), existsSync: vi.fn(() => true), mkdirSync: vi.fn() },
   readConversationSessionMetaByFileMock: vi.fn(),
   upsertConversationCatalogSessionMock: vi.fn(),
 }));
@@ -32,6 +32,7 @@ describe('live session persistence', () => {
     manager._persist({ type: 'second' });
 
     expect(manager._rewriteFile).toHaveBeenCalledOnce();
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/sessions', { recursive: true });
     expect(fs.appendFileSync).toHaveBeenCalledWith('/sessions/s1.jsonl', '{"type":"second"}\n');
     expect(upsertConversationCatalogSessionMock).toHaveBeenCalledTimes(2);
   });
@@ -68,9 +69,20 @@ describe('live session persistence', () => {
     manager._persist({ type: 'rewrite' });
 
     expect(manager._rewriteFile).toHaveBeenCalledOnce();
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/sessions', { recursive: true });
     expect(manager.flushed).toBe(true);
     expect(fs.appendFileSync).not.toHaveBeenCalled();
     expect(upsertConversationCatalogSessionMock).toHaveBeenCalledOnce();
+  });
+
+  it('creates the session directory before ensuring a missing session file', () => {
+    fs.existsSync.mockReturnValue(false);
+    const manager = { persist: true, sessionFile: '/sessions/workspace/s1.jsonl', flushed: false, _rewriteFile: vi.fn() };
+
+    ensureSessionFileExists(manager as never);
+
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/sessions/workspace', { recursive: true });
+    expect(manager._rewriteFile).toHaveBeenCalledOnce();
   });
 
   it('ensures persisted session files only when needed', () => {

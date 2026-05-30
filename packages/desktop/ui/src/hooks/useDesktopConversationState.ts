@@ -425,10 +425,11 @@ function createDesktopConversationStateFromBootstrap(
 ): DesktopConversationState {
   const stream = createEmptyDesktopConversationStreamState();
   const sessionDetail = bootstrap.sessionDetail;
+  const liveSession = bootstrap.liveSession ?? { live: false as const };
   return {
     conversationId,
     sessionDetail,
-    liveSession: bootstrap.liveSession,
+    liveSession,
     stream: sessionDetail
       ? {
           ...stream,
@@ -533,7 +534,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     setState((current) => (current?.conversationId === conversationId ? current : (cachedState ?? bootstrapState)));
     setError(null);
 
-    if (cachedState?.conversationId === conversationId && cachedState.liveSession.live) {
+    if (cachedState?.conversationId === conversationId && cachedState.liveSession?.live) {
       return () => {
         closed = true;
       };
@@ -578,7 +579,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
-    if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession.live) {
+    if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession?.live) {
       return;
     }
 
@@ -639,7 +640,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return {
           ...previous,
           stream,
-          liveSession: previous.liveSession.live
+          liveSession: previous.liveSession?.live
             ? {
                 ...previous.liveSession,
                 ...(latestTitleEvent?.type === 'title_update' ? { title: latestTitleEvent.title } : {}),
@@ -730,7 +731,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return {
           ...previous,
           stream,
-          liveSession: previous.liveSession.live ? { ...previous.liveSession, isStreaming: false } : previous.liveSession,
+          liveSession: previous.liveSession?.live ? { ...previous.liveSession, isStreaming: false } : (previous.liveSession ?? { live: false }),
         };
       });
       scheduleReconnectRetry();
@@ -745,7 +746,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
-  }, [bridge, conversationId, matchedState?.liveSession.live, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [bridge, conversationId, matchedState?.liveSession?.live, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {
