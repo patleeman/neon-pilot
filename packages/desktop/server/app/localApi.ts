@@ -448,6 +448,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const authFile = join(agentDir, 'auth.json');
   const settingsFile = DEFAULT_RUNTIME_SETTINGS_FILE;
   const pathsAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);
 
   const runtimeState = createRuntimeState({
     repoRoot,
@@ -459,6 +460,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     },
   });
   const runtimeStateAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: runtimeState ${Math.round(runtimeStateAtMs - pathsAtMs)}ms\n`);
 
   const flushAttentionEvents = createAttentionEventFlusher({
     getRuntimeScope: runtimeState.getRuntimeScope,
@@ -479,6 +481,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     });
   }
   const attentionAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: attention ${Math.round(attentionAtMs - runtimeStateAtMs)}ms\n`);
 
   const context = createServerRouteContext({
     repoRoot,
@@ -546,6 +549,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getDurableRunSnapshot: async (runId: string, tail: number) => (await getDurableRunSnapshot(runId, tail)) ?? null,
   });
   const routeContextAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: routeContext ${Math.round(routeContextAtMs - attentionAtMs)}ms\n`);
 
   localServerRouteContext = context;
 
@@ -561,6 +565,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     listMemoryDocs: context.listMemoryDocs,
   };
   localLiveSessionCapabilityContext = liveSessionCapabilityContext;
+  const prewarmStartedAtMs = performance.now();
   try {
     await prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext);
   } catch (error) {
@@ -569,6 +574,9 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
       stack: error instanceof Error ? error.stack : undefined,
     });
   }
+  const prewarmAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: prewarm ${Math.round(prewarmAtMs - prewarmStartedAtMs)}ms\n`);
+  process.stderr.write(`[perf] buildLocalContexts: TOTAL ${Math.round(prewarmAtMs - startedAtMs)}ms\n`);
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,
@@ -667,6 +675,7 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
 
 async function getLocalRoutes(): Promise<RegisteredRoute[]> {
   if (!localRoutesPromise) {
+    const start = performance.now();
     localRoutesPromise = buildLocalRoutes().catch((error) => {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`[desktop-backend] buildLocalRoutes failed: ${message}\n`);
@@ -676,6 +685,9 @@ async function getLocalRoutes(): Promise<RegisteredRoute[]> {
       localLiveSessionCapabilityContext = null;
       localProviderDesktopCapabilityContext = null;
       throw error;
+    });
+    localRoutesPromise.then(() => {
+      process.stderr.write(`[perf] buildLocalRoutes: ${Math.round(performance.now() - start)}ms\n`);
     });
   }
 
@@ -1362,6 +1374,7 @@ export async function dispatchDesktopLocalApiRequest(input: {
   headers?: Record<string, string>;
 }): Promise<DesktopLocalApiDispatchResult> {
   const startedAtMs = performance.now();
+  process.stderr.write(`[perf] dispatch ${input.method} ${input.path}\n`);
   const url = new URL(input.path, 'http://desktop.local');
   const productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body });
   if (productResponse) {
@@ -1451,6 +1464,10 @@ export async function dispatchDesktopLocalApiRequest(input: {
     throw new Error(`Local API route did not complete for ${input.method} ${url.pathname}`);
   }
 
+  const totalMs = Math.round(performance.now() - startedAtMs);
+  if (totalMs > 100) {
+    process.stderr.write(`[perf] dispatch ${input.method} ${url.pathname} → ${res.statusCode} in ${totalMs}ms\n`);
+  }
   const body = res.getBody();
   return {
     statusCode: res.statusCode,
