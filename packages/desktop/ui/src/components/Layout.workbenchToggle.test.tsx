@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { act } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,6 +27,12 @@ function installLocalStorageShim() {
   });
 }
 
+class ResizeObserverShim {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 function renderLayout(pathname = '/conversations/new') {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
@@ -45,17 +51,28 @@ describe('Layout workbench toggle', () => {
     installLocalStorageShim();
     window.localStorage.clear();
     document.documentElement.dataset.neonPilotDesktop = '1';
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: ResizeObserverShim,
+    });
+    Object.defineProperty(globalThis, 'ResizeObserver', {
+      configurable: true,
+      value: ResizeObserverShim,
+    });
     vi.spyOn(api, 'extensionKeybindings').mockImplementation(
       () => new Promise<Awaited<ReturnType<typeof api.extensionKeybindings>>>(() => {}),
     );
     vi.spyOn(api, 'extensionCommands').mockImplementation(
       () => new Promise<Awaited<ReturnType<typeof api.extensionCommands>>>(() => {}),
     );
+    vi.spyOn(api, 'models').mockResolvedValue({ models: [], perf: {} });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     delete document.documentElement.dataset.neonPilotDesktop;
+    delete (window as { ResizeObserver?: unknown }).ResizeObserver;
+    delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
     window.localStorage.clear();
   });
 
@@ -88,5 +105,34 @@ describe('Layout workbench toggle', () => {
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('opens a side chat after reservation without waiting for live-session creation', async () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    const reserveConversation = vi.spyOn(api, 'reserveConversation').mockResolvedValue({
+      id: 'side-chat-1',
+      sessionFile: '/tmp/side-chat-1.jsonl',
+      cwd: '/repo',
+      perf: {},
+    });
+    const createLiveSession = vi.spyOn(api, 'createLiveSession').mockImplementation(
+      () => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}),
+    );
+
+    renderLayout('/conversations/conv-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chat Open a new chat tab.' }));
+
+    await waitFor(() => {
+      expect(reserveConversation).toHaveBeenCalledWith(undefined);
+    });
+    await waitFor(() => {
+      expect(document.querySelector('[data-chat-rail="1"]')).not.toBeNull();
+    });
+
+    expect(createLiveSession).toHaveBeenCalledWith(undefined, undefined, {
+      workspaceCwd: undefined,
+      reservedSessionFile: '/tmp/side-chat-1.jsonl',
+    });
   });
 });

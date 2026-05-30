@@ -32,7 +32,7 @@ import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchB
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { readConversationLayout } from '../session/sessionTabs';
-import { primeDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
+import { primeDesktopConversationStateCache, primeReservedDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
@@ -1962,18 +1962,35 @@ export function Layout() {
   const handleStartSideChat = useCallback(async () => {
     if (!activeConversationId) return;
     try {
-      const result = await api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
+      const reserved = await api.reserveConversation(activeWorkspaceCwd ?? undefined);
+      primeReservedDesktopConversationStateCache(
+        {
+          conversationId: reserved.id,
+          sessionFile: reserved.sessionFile,
+          cwd: reserved.cwd,
+        },
+        { tailBlocks: 400 },
+      );
+      openWorkbenchToolTab('chat', { conversationId: reserved.id, forceNewTab: true });
+
+      const createdPromise = api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
         workspaceCwd: activeWorkspaceCwd ?? undefined,
+        reservedSessionFile: reserved.sessionFile,
       });
-      // Prime the desktop conversation state cache so ChatRail loads instantly
-      // instead of waiting for a REST round-trip.
-      if (result.bootstrap) {
-        primeDesktopConversationStateCache(result.id, result.bootstrap, { tailBlocks: 400 });
-      }
-      openWorkbenchToolTab('chat', { conversationId: result.id, forceNewTab: true });
-      return result.id;
+      void createdPromise
+        .then((result) => {
+          // Prime the desktop conversation state cache so ChatRail loads instantly
+          // instead of waiting for a REST round-trip.
+          if (result.bootstrap) {
+            primeDesktopConversationStateCache(result.id, result.bootstrap, { tailBlocks: 400 });
+          }
+        })
+        .catch(() => {
+          // Chat tab creation failed silently.
+        });
+      return reserved.id;
     } catch {
-      // Chat tab creation failed silently.
+      // Chat tab reservation failed silently.
     }
   }, [activeConversationId, activeWorkspaceCwd, openWorkbenchToolTab]);
 
