@@ -56,22 +56,24 @@ describe('desktop local API conversation actions', () => {
 
 describe('desktop local API conversation rename route', () => {
   it('rejects rename with missing name instead of throwing No local API route', async () => {
-    await expect(
-      dispatchDesktopLocalApiRequest({
-        method: 'PATCH',
-        path: '/api/conversations/test-id/title',
-      }),
-    ).rejects.not.toThrow('No local API route');
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
   });
 
   it('rejects rename with empty name instead of throwing No local API route', async () => {
-    await expect(
-      dispatchDesktopLocalApiRequest({
-        method: 'PATCH',
-        path: '/api/conversations/test-id/title',
-        body: { name: '' },
-      }),
-    ).rejects.not.toThrow('No local API route');
+    const response = await dispatchDesktopLocalApiRequest({
+      method: 'PATCH',
+      path: '/api/conversations/test-id/title',
+      body: { name: '' },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(Buffer.from(response.body).toString('utf-8')).toBe('name required');
   });
 });
 
@@ -117,6 +119,24 @@ describe('desktop local API conversation asset routes', () => {
       conversationId: 'conversation-1',
       artifact: expect.objectContaining({ id: 'artifact-1', content: '<h1>Hello</h1>' }),
     });
+  });
+});
+
+describe('desktop local API product fast-path errors', () => {
+  it('returns mapped error responses instead of throwing through the backend child', async () => {
+    const runResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/runs/missing-local-api-product-run',
+    });
+    expect(runResponse.statusCode).toBe(404);
+    expect(Buffer.from(runResponse.body).toString('utf-8')).toBe('Run not found');
+
+    const preferencesResponse = await dispatchDesktopLocalApiRequest({
+      method: 'GET',
+      path: '/api/conversations/missing-local-api-product-conversation/model-preferences',
+    });
+    expect(preferencesResponse.statusCode).toBe(404);
+    expect(Buffer.from(preferencesResponse.body).toString('utf-8')).toBe('Conversation not found');
   });
 });
 
