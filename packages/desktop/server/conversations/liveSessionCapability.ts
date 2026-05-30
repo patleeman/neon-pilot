@@ -523,6 +523,11 @@ export async function prewarmLiveSessionCapability(
     : resolveNeutralChatCwd(profile);
 
   await prewarmLiveSessionLoader(cwd, await buildLiveSessionOptionsAsync(context));
+
+  // Warm the extension factories cache so the first createLiveSession call
+  // doesn't pay the cold-build penalty.
+  context.buildLiveSessionExtensionFactories();
+
   return { ok: true };
 }
 
