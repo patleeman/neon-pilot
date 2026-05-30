@@ -186,8 +186,14 @@ function handleGatewayError(res: Response, err: unknown): void {
 
 export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>, context: ServerRouteContext): void {
   initializeGatewayRoutesContext(context);
-
-  startTelegramGatewayRuntime();
+  try {
+    startTelegramGatewayRuntime();
+  } catch (err) {
+    logError('gateway runtime startup failed', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+  }
   router.get('/api/gateways', (_req, res) => {
     try {
       res.json(readGatewayState(currentGatewayContext()));

@@ -1,6 +1,7 @@
 import type { SessionDetail, SessionMeta } from './conversationTypes.js';
 import {
   appendChildConversationTopologyEntry as appendSessionChildConversationTopologyEntry,
+  appendConversationCompactionSummary as appendSessionConversationCompactionSummary,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
   appendConversationWorkspaceMetadata as appendSessionConversationWorkspaceMetadata,
   appendParentConversationBacklinkEntry as appendSessionParentConversationBacklinkEntry,
@@ -33,6 +34,12 @@ export function clearTranscriptBackedConversationCaches(): void {
 
 export function appendConversationWorkspaceMetadata(input: Parameters<typeof appendSessionConversationWorkspaceMetadata>[0]): void {
   appendSessionConversationWorkspaceMetadata(input);
+}
+
+export function appendConversationCompactionSummary(
+  input: Parameters<typeof appendSessionConversationCompactionSummary>[0],
+): void {
+  appendSessionConversationCompactionSummary(input);
 }
 
 export function appendConversationOffshootMetadata(input: Parameters<typeof appendSessionConversationOffshootMetadata>[0]): void {

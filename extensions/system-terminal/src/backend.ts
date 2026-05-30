@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { accessSync, constants } from 'node:fs';
+import { basename } from 'node:path';
 
 import type {
   ExtensionBackendContext,
@@ -10,6 +11,7 @@ import type {
 
 interface TerminalSession {
   id: string;
+  usingPty: boolean;
   process: {
     pid: number | null;
     kill: () => void;
@@ -38,6 +40,19 @@ function resolveLoginShell(): string {
     }
   }
   return '/bin/sh';
+}
+
+function resolveShellArgs(shell: string, options: { interactive?: boolean } = {}): string[] | undefined {
+  // Launch interactive shells so they provide a normal prompt and interactive UX.
+  // Most common shells support `-i` (interactive mode).
+  if (options.interactive === false) {
+    return undefined;
+  }
+  const binary = basename(shell).toLowerCase();
+  if (binary === 'sh' || binary === 'bash' || binary === 'zsh' || binary === 'fish') {
+    return ['-i'];
+  }
+  return undefined;
 }
 
 function broadcastOutput(session: TerminalSession, data: string): void {
@@ -97,33 +112,56 @@ function removeSession(id: string): void {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
-export async function createTerminal(input: { cwd?: string }, ctx: ExtensionBackendContext): Promise<{ id: string; pid: number | null }> {
+export async function createTerminal(
+  input: { cwd?: string },
+  ctx: ExtensionBackendContext,
+): Promise<{ id: string; pid: number | null; usingPty: boolean }> {
   const shell = resolveLoginShell();
   const id = generateId();
 
-  const child = await ctx.shell.spawn({
-    command: shell,
-    pty: { cols: 80, rows: 24 },
-    cwd: input.cwd,
+  const makeSpawnHandlers = (sessionId: string) => ({
     onStdout: (chunk: string) => {
-      const session = sessions.get(id);
+      const session = sessions.get(sessionId);
       if (session) broadcastOutput(session, chunk);
     },
     onStderr: (chunk: string) => {
-      const session = sessions.get(id);
+      const session = sessions.get(sessionId);
       if (session) broadcastOutput(session, chunk);
     },
-    onExit: (event) => {
-      const session = sessions.get(id);
+    onExit: (event: { code: number | null; signal?: NodeJS.Signals | null }) => {
+      const session = sessions.get(sessionId);
       if (session) {
         broadcastExit(session, event.code);
-        sessions.delete(id);
+        sessions.delete(sessionId);
       }
     },
   });
 
+  let usingPty = true;
+  let child: TerminalSession['process'];
+  try {
+    child = await ctx.shell.spawn({
+      command: shell,
+      pty: { cols: 80, rows: 24 },
+      args: resolveShellArgs(shell, { interactive: true }),
+      cwd: input.cwd,
+      ...makeSpawnHandlers(id),
+    });
+  } catch {
+    // PTY allocation can fail in some environments (or on first launch in sandboxed
+    // contexts). Fall back to a pipe-backed shell so we still provide a usable panel.
+    usingPty = false;
+    child = await ctx.shell.spawn({
+      command: shell,
+      args: resolveShellArgs(shell, { interactive: false }),
+      cwd: input.cwd,
+      ...makeSpawnHandlers(id),
+    });
+  }
+
   const session: TerminalSession = {
     id,
+    usingPty,
     process: child,
     listeners: new Set(),
     startedAt: Date.now(),
@@ -132,7 +170,7 @@ export async function createTerminal(input: { cwd?: string }, ctx: ExtensionBack
   sessions.set(id, session);
 
   ctx.log.info('Terminal created', { id, pid: child.pid, cwd: input.cwd });
-  return { id, pid: child.pid };
+  return { id, pid: child.pid, usingPty };
 }
 
 export async function writeTerminal(input: { id: string; data: string }, _ctx: ExtensionBackendContext): Promise<{ ok: boolean }> {

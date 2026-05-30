@@ -25,18 +25,24 @@ export function buildExtensionMentionRegistrations(input: {
   packageType?: ExtensionPackageType;
   mentions?: ExtensionMentionContribution[];
 }): ExtensionMentionRegistration[] {
-  return (input.mentions ?? []).flatMap((mention): ExtensionMentionRegistration[] => {
-    const id = mention.id.trim();
-    const provider = mention.provider.trim();
-    if (!id || !mention.title.trim() || !provider) return [];
+  const mentions = Array.isArray(input.mentions) ? input.mentions : [];
+  return mentions.flatMap((mention): ExtensionMentionRegistration[] => {
+    if (!mention || typeof mention !== 'object') return [];
+    const id = typeof mention.id === 'string' ? mention.id.trim() : '';
+    const title = typeof mention.title === 'string' ? mention.title.trim() : '';
+    const description = typeof mention.description === 'string' ? mention.description : undefined;
+    const provider = typeof mention.provider === 'string' ? mention.provider.trim() : '';
+    const kinds = Array.isArray(mention.kinds) ? mention.kinds.filter((kind): kind is string => typeof kind === 'string') : [];
+    if (!id || !title || !provider || kinds.length === 0) return [];
+
     return [
       {
         extensionId: input.extensionId,
         packageType: input.packageType ?? 'user',
         id,
-        title: mention.title,
-        ...(mention.description ? { description: mention.description } : {}),
-        kinds: mention.kinds,
+        title,
+        ...(description ? { description } : {}),
+        kinds,
         provider,
       },
     ];

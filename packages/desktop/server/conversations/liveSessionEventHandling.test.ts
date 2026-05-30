@@ -236,6 +236,7 @@ describe('trace persistence hooks', () => {
     broadcastSnapshot: vi.fn(),
     broadcast: vi.fn(),
     tryImportReadyParallelJobs: vi.fn(),
+    appendCompactionSummary: vi.fn(),
   };
 
   beforeEach(() => {
@@ -382,6 +383,76 @@ describe('trace persistence hooks', () => {
     expect(call.sessionId).toBe('test-session');
     expect(call.reason).toBe('overflow');
     expect(call.tokensBefore).toBe(120000);
+  });
+
+  it('writes overflow compaction summary with callback details', () => {
+    const entry = {
+      sessionId: 'test-session',
+      session: {
+        ...mockSession,
+        state: { messages: [] },
+      },
+      title: 'Test conversation',
+      isCompacting: true,
+    } as unknown;
+
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'compaction_end',
+        reason: 'overflow',
+        aborted: false,
+        willRetry: false,
+        result: {
+          tokensBefore: 120000,
+          firstKeptEntryId: 'entry-1',
+          summary: 'overflow summary',
+          details: { nativeCompaction: true },
+        },
+      } as unknown,
+      mockCallbacks,
+    );
+
+    expect(mockCallbacks.appendCompactionSummary).toHaveBeenCalledTimes(1);
+    expect(mockCallbacks.appendCompactionSummary).toHaveBeenCalledWith({
+      entry,
+      summary: 'overflow summary',
+      tokensBefore: 120000,
+      firstKeptEntryId: 'entry-1',
+      details: { nativeCompaction: true },
+    });
+  });
+
+  it('does not write a duplicate overflow compaction summary when one already exists in state', () => {
+    const entry = {
+      sessionId: 'test-session',
+      session: {
+        ...mockSession,
+        state: {
+          messages: [{ role: 'compactionSummary', summary: 'existing summary' }],
+        },
+      },
+      title: 'Test conversation',
+      isCompacting: true,
+    } as unknown;
+
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'compaction_end',
+        reason: 'overflow',
+        aborted: false,
+        willRetry: false,
+        result: {
+          tokensBefore: 120000,
+          firstKeptEntryId: 'entry-1',
+          summary: 'existing summary',
+        },
+      } as unknown,
+      mockCallbacks,
+    );
+
+    expect(mockCallbacks.appendCompactionSummary).not.toHaveBeenCalled();
   });
 
   it('does not persist aborted compactions', () => {

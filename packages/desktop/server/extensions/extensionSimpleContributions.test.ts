@@ -13,6 +13,9 @@ describe('extensionSimpleContributions', () => {
           { id: '', title: 'No id', kinds: ['file'], provider: 'provider' },
           { id: 'no-title', title: ' ', kinds: ['file'], provider: 'provider' },
           { id: 'no-provider', title: 'No provider', kinds: ['file'], provider: ' ' },
+          null as unknown as { id: string; title: string; kinds: string[]; provider: string },
+          { id: 'kind-non-string', title: 'Kinds invalid', kinds: [1, 'valid', null] as unknown as string[], provider: 'provider' },
+          { id: 'valid-2', title: 'Second valid', kinds: ['message', 'file'], provider: 'provider2' },
         ],
       }),
     ).toEqual([
@@ -24,6 +27,22 @@ describe('extensionSimpleContributions', () => {
         description: 'Search docs',
         kinds: ['file'],
         provider: 'docs.search',
+      },
+      {
+        extensionId: 'mention-board',
+        packageType: 'system',
+        id: 'kind-non-string',
+        title: 'Kinds invalid',
+        kinds: ['valid'],
+        provider: 'provider',
+      },
+      {
+        extensionId: 'mention-board',
+        packageType: 'system',
+        id: 'valid-2',
+        title: 'Second valid',
+        kinds: ['message', 'file'],
+        provider: 'provider2',
       },
     ]);
   });

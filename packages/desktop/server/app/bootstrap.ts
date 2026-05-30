@@ -14,6 +14,7 @@ import {
   webRequestLoggingMiddleware,
 } from '../middleware/index.js';
 import { subscribeProviderOAuthLogins } from '../models/providerAuth.js';
+import { prewarmModelDefinitions } from '../models/modelState.js';
 import { startAppEventMonitor } from '../shared/appEvents.js';
 import { createServiceAttentionMonitor, type ServiceAttentionMonitorOptions } from '../shared/internalAttention.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
@@ -66,6 +67,7 @@ export function startBootstrapMonitors(options: {
       reloadAllLiveSessionAuth();
     }
   });
+  prewarmModelDefinitions();
 
   createServiceAttentionMonitor({
     repoRoot: options.repoRoot,

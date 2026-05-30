@@ -173,6 +173,7 @@ const MODEL_PROVIDER_API_OPTIONS: Array<{ value: ModelProviderApi; label: string
   { value: 'anthropic-messages', label: 'Anthropic Messages' },
   { value: 'google-generative-ai', label: 'Google Generative AI' },
 ];
+const COMMON_PROVIDER_IDS = ['anthropic', 'openai', 'opencode-go', 'google'];
 
 const NEW_MODEL_PROVIDER_ID = '__new-model-provider__';
 const NEW_MODEL_ID = '__new-model__';
@@ -1813,6 +1814,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [selectedModelProviderId, setSelectedModelProviderId] = useState('');
   const [providerEditorMode, setProviderEditorMode] = useState<'provider' | 'custom'>('custom');
   const [modelProviderPickerId, setModelProviderPickerId] = useState('');
+  const [showAdvancedProviderFields, setShowAdvancedProviderFields] = useState(false);
+  const [showProviderModelManagement, setShowProviderModelManagement] = useState(false);
   const [modelProviderDraft, setModelProviderDraft] = useState<ProviderEditorDraft>(() => createProviderEditorDraft(null));
   const [modelProviderAction, setModelProviderAction] = useState<'save' | 'delete' | null>(null);
   const [modelProviderMessage, setModelProviderMessage] = useState<string | null>(null);
@@ -2060,6 +2063,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       builtInProviderModels.some((model) => model.id === editingModelId),
     [editingModelId, editingProviderModel, builtInProviderModels],
   );
+  const providerModelCount = selectedModelProvider?.models.length ?? 0;
 
   const selectedProvider = useMemo(() => {
     if (!providerAuthState || !selectedProviderId) {
@@ -2115,6 +2119,36 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setSelectedProviderId(providerAuthState.providers[0]?.id ?? '');
     }
   }, [providerAuthState, selectedProviderId]);
+
+  useEffect(() => {
+    if (
+      !modelProviderState ||
+      selectedModelProviderId !== NEW_MODEL_PROVIDER_ID ||
+      !selectedProviderId
+    ) {
+      return;
+    }
+
+    const configuredProvider = modelProviderState.providers.find((provider) => provider.id === selectedProviderId) ?? null;
+    if (!configuredProvider) {
+      return;
+    }
+
+    setSelectedModelProviderId(configuredProvider.id);
+    setSelectedProviderId(configuredProvider.id);
+    setModelProviderDraft(createProviderEditorDraft(configuredProvider));
+    setShowAdvancedProviderFields(false);
+    setShowProviderModelManagement(false);
+    setEditingModelId(null);
+    setModelDraft(createModelEditorDraft(null));
+    setModelProviderEditorError(null);
+    setModelProviderMessage(null);
+    setModelDraftError(null);
+    setModelDraftMessage(null);
+    setProviderCredentialError(null);
+    setProviderCredentialNotice(null);
+    setProviderEditorMode('custom');
+  }, [modelProviderState, selectedModelProviderId, selectedProviderId]);
 
   useEffect(() => {
     setProviderApiKey('');
@@ -2347,6 +2381,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       ...createProviderEditorDraft(null),
       id: mode === 'provider' ? initialId : '',
     });
+    setShowAdvancedProviderFields(false);
+    setShowProviderModelManagement(false);
     setEditingModelId(null);
     setModelDraft(createModelEditorDraft(null));
     setModelProviderEditorError(null);
@@ -2368,6 +2404,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setSelectedModelProviderId(providerId);
     setSelectedProviderId(providerId);
     setModelProviderDraft(createProviderEditorDraft(provider));
+    setShowAdvancedProviderFields(false);
+    setShowProviderModelManagement(false);
     setEditingModelId(null);
     setModelDraft(createModelEditorDraft(null));
     setModelProviderEditorError(null);
@@ -2386,6 +2424,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
     setSelectedModelProviderId('');
     setSelectedProviderId('');
+    setShowAdvancedProviderFields(false);
+    setShowProviderModelManagement(false);
     setEditingModelId(null);
     setModelDraft(createModelEditorDraft(null));
     setModelProviderEditorError(null);
@@ -2405,6 +2445,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       setEditingModelId(modelId);
       setModelDraft(createModelEditorDraft(model));
     }
+
+    setShowProviderModelManagement(true);
 
     setModelDraftError(null);
     setModelDraftMessage(null);
@@ -2434,6 +2476,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     });
     setModelDraftError(null);
     setModelDraftMessage(null);
+    setShowProviderModelManagement(true);
   }
 
   function syncModelProviderSelection(nextState: ModelProviderState, providerId: string, nextModelId: string | null = null) {
@@ -2443,15 +2486,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     if (!provider) {
       setSelectedModelProviderId(NEW_MODEL_PROVIDER_ID);
       setModelProviderDraft(createProviderEditorDraft(null));
+      setShowAdvancedProviderFields(false);
+      setShowProviderModelManagement(false);
       setEditingModelId(null);
       setModelDraft(createModelEditorDraft(null));
       return;
     }
 
     setSelectedModelProviderId(provider.id);
+    setShowAdvancedProviderFields(false);
+    setShowProviderModelManagement(Boolean(nextModelId));
     setModelProviderDraft(createProviderEditorDraft(provider));
 
     if (!nextModelId) {
+      setShowProviderModelManagement(false);
       setEditingModelId(null);
       setModelDraft(createModelEditorDraft(null));
       return;
@@ -3205,12 +3253,28 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     : (selectedModelProvider?.id ?? 'Provider')}
                                 </h3>
                                 <p className="ui-card-meta max-w-3xl">
-                                  Use built-in ids like <span className="font-mono text-[11px]">anthropic</span>,{' '}
-                                  <span className="font-mono text-[11px]">openai</span>,{' '}
-                                  <span className="font-mono text-[11px]">openai-codex</span>, or{' '}
-                                  <span className="font-mono text-[11px]">google</span> to override a built-in provider. Use any new id for
-                                  a custom provider.
+                                  Start with a known provider ID to auto-load defaults. Save a key here or in Credentials to enable secure auth.
                                 </p>
+                                {selectedModelProviderId === NEW_MODEL_PROVIDER_ID ? (
+                                  <div className="flex flex-wrap gap-2 text-[12px]">
+                                    {COMMON_PROVIDER_IDS.map((providerId) => (
+                                      <button
+                                        key={providerId}
+                                        type="button"
+                                        onClick={() => {
+                                          if (modelProviderAction !== null) {
+                                            return;
+                                          }
+                                          setModelProviderDraft((current) => ({ ...current, id: providerId }));
+                                        }}
+                                        disabled={modelProviderAction !== null}
+                                        className="text-accent underline decoration-dotted underline-offset-4 transition-colors hover:text-accent/80 disabled:opacity-50"
+                                      >
+                                        {providerId}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
 
                               <form
@@ -3240,46 +3304,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   </div>
 
                                   <div className="space-y-2 min-w-0">
-                                    <label className="ui-card-meta" htmlFor="settings-model-provider-base-url">
-                                      Base URL
-                                    </label>
-                                    <input
-                                      id="settings-model-provider-base-url"
-                                      value={modelProviderDraft.baseUrl}
-                                      onChange={(event) => {
-                                        setModelProviderDraft((current) => ({ ...current, baseUrl: event.target.value }));
-                                      }}
-                                      className={`${INPUT_CLASS} font-mono text-[13px]`}
-                                      placeholder="http://localhost:11434/v1"
-                                      autoComplete="off"
-                                      spellCheck={false}
-                                      disabled={modelProviderAction !== null}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2 min-w-0">
-                                    <label className="ui-card-meta" htmlFor="settings-model-provider-api">
-                                      API
-                                    </label>
-                                    <select
-                                      id="settings-model-provider-api"
-                                      value={modelProviderDraft.api}
-                                      onChange={(event) => {
-                                        setModelProviderDraft((current) => ({ ...current, api: event.target.value }));
-                                      }}
-                                      className={INPUT_CLASS}
-                                      disabled={modelProviderAction !== null}
-                                    >
-                                      <option value="">Use built-in or inherit</option>
-                                      {MODEL_PROVIDER_API_OPTIONS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  <div className="space-y-2 min-w-0">
                                     <label className="ui-card-meta" htmlFor="settings-model-provider-api-key">
                                       Provider API key
                                     </label>
@@ -3298,77 +3322,130 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   </div>
                                 </div>
 
-                                <label
-                                  className="inline-flex items-center gap-3 text-[14px] text-primary"
-                                  htmlFor="settings-model-provider-auth-header"
+                                <details
+                                  open={showAdvancedProviderFields}
+                                  onToggle={(event) => {
+                                    setShowAdvancedProviderFields((event.currentTarget as HTMLDetailsElement).open);
+                                  }}
+                                  className="space-y-1"
                                 >
-                                  <input
-                                    id="settings-model-provider-auth-header"
-                                    type="checkbox"
-                                    checked={modelProviderDraft.authHeader}
-                                    onChange={(event) => {
-                                      setModelProviderDraft((current) => ({ ...current, authHeader: event.target.checked }));
-                                    }}
-                                    disabled={modelProviderAction !== null}
-                                    className={CHECKBOX_CLASS}
-                                  />
-                                  <span>
-                                    Add <span className="font-mono text-[11px]">Authorization: Bearer</span> from the provider API key
-                                  </span>
-                                </label>
+                                  <summary className="ui-card-meta cursor-pointer text-primary">Advanced provider options</summary>
+                                  <div className="space-y-4 pt-2">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                      <div className="space-y-2 min-w-0">
+                                        <label className="ui-card-meta" htmlFor="settings-model-provider-base-url">
+                                          Base URL
+                                        </label>
+                                        <input
+                                          id="settings-model-provider-base-url"
+                                          value={modelProviderDraft.baseUrl}
+                                          onChange={(event) => {
+                                            setModelProviderDraft((current) => ({ ...current, baseUrl: event.target.value }));
+                                          }}
+                                          className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                          placeholder="http://localhost:11434/v1"
+                                          autoComplete="off"
+                                          spellCheck={false}
+                                          disabled={modelProviderAction !== null}
+                                        />
+                                      </div>
 
-                                <div className="grid gap-4 xl:grid-cols-2">
-                                  <div className="space-y-2 min-w-0">
-                                    <label className="ui-card-meta" htmlFor="settings-model-provider-headers">
-                                      Headers (JSON)
-                                    </label>
-                                    <textarea
-                                      id="settings-model-provider-headers"
-                                      value={modelProviderDraft.headersText}
-                                      onChange={(event) => {
-                                        setModelProviderDraft((current) => ({ ...current, headersText: event.target.value }));
-                                      }}
-                                      className={JSON_TEXTAREA_CLASS}
-                                      placeholder={'{\n  "x-app": "neon-pilot"\n}'}
-                                      spellCheck={false}
-                                      disabled={modelProviderAction !== null}
-                                    />
-                                  </div>
+                                      <div className="space-y-2 min-w-0">
+                                        <label className="ui-card-meta" htmlFor="settings-model-provider-api">
+                                          API
+                                        </label>
+                                        <select
+                                          id="settings-model-provider-api"
+                                          value={modelProviderDraft.api}
+                                          onChange={(event) => {
+                                            setModelProviderDraft((current) => ({ ...current, api: event.target.value }));
+                                          }}
+                                          className={INPUT_CLASS}
+                                          disabled={modelProviderAction !== null}
+                                        >
+                                          <option value="">Use built-in or inherit</option>
+                                          {MODEL_PROVIDER_API_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </div>
 
-                                  <div className="space-y-2 min-w-0">
-                                    <label className="ui-card-meta" htmlFor="settings-model-provider-compat">
-                                      Compat (JSON)
+                                    <label
+                                      className="inline-flex items-center gap-3 text-[14px] text-primary"
+                                      htmlFor="settings-model-provider-auth-header"
+                                    >
+                                      <input
+                                        id="settings-model-provider-auth-header"
+                                        type="checkbox"
+                                        checked={modelProviderDraft.authHeader}
+                                        onChange={(event) => {
+                                          setModelProviderDraft((current) => ({ ...current, authHeader: event.target.checked }));
+                                        }}
+                                        disabled={modelProviderAction !== null}
+                                        className={CHECKBOX_CLASS}
+                                      />
+                                      <span>
+                                        Add <span className="font-mono text-[11px]">Authorization: Bearer</span> from the provider API key
+                                      </span>
                                     </label>
-                                    <textarea
-                                      id="settings-model-provider-compat"
-                                      value={modelProviderDraft.compatText}
-                                      onChange={(event) => {
-                                        setModelProviderDraft((current) => ({ ...current, compatText: event.target.value }));
-                                      }}
-                                      className={JSON_TEXTAREA_CLASS}
-                                      placeholder={'{\n  "supportsDeveloperRole": false\n}'}
-                                      spellCheck={false}
-                                      disabled={modelProviderAction !== null}
-                                    />
-                                  </div>
 
-                                  <div className="space-y-2 min-w-0 xl:col-span-2">
-                                    <label className="ui-card-meta" htmlFor="settings-model-provider-overrides">
-                                      Model overrides (JSON)
-                                    </label>
-                                    <textarea
-                                      id="settings-model-provider-overrides"
-                                      value={modelProviderDraft.modelOverridesText}
-                                      onChange={(event) => {
-                                        setModelProviderDraft((current) => ({ ...current, modelOverridesText: event.target.value }));
-                                      }}
-                                      className={JSON_TEXTAREA_CLASS}
-                                      placeholder={'{\n  "claude-sonnet-4-6": {\n    "name": "Claude Sonnet 4.6 (Proxy)"\n  }\n}'}
-                                      spellCheck={false}
-                                      disabled={modelProviderAction !== null}
-                                    />
+                                    <div className="grid gap-4 xl:grid-cols-2">
+                                      <div className="space-y-2 min-w-0">
+                                        <label className="ui-card-meta" htmlFor="settings-model-provider-headers">
+                                          Headers (JSON)
+                                        </label>
+                                        <textarea
+                                          id="settings-model-provider-headers"
+                                          value={modelProviderDraft.headersText}
+                                          onChange={(event) => {
+                                            setModelProviderDraft((current) => ({ ...current, headersText: event.target.value }));
+                                          }}
+                                          className={JSON_TEXTAREA_CLASS}
+                                          placeholder={'{\n  "x-app": "neon-pilot"\n}'}
+                                          spellCheck={false}
+                                          disabled={modelProviderAction !== null}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2 min-w-0">
+                                        <label className="ui-card-meta" htmlFor="settings-model-provider-compat">
+                                          Compat (JSON)
+                                        </label>
+                                        <textarea
+                                          id="settings-model-provider-compat"
+                                          value={modelProviderDraft.compatText}
+                                          onChange={(event) => {
+                                            setModelProviderDraft((current) => ({ ...current, compatText: event.target.value }));
+                                          }}
+                                          className={JSON_TEXTAREA_CLASS}
+                                          placeholder={'{\n  "supportsDeveloperRole": false\n}'}
+                                          spellCheck={false}
+                                          disabled={modelProviderAction !== null}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2 min-w-0 xl:col-span-2">
+                                        <label className="ui-card-meta" htmlFor="settings-model-provider-overrides">
+                                          Model overrides (JSON)
+                                        </label>
+                                        <textarea
+                                          id="settings-model-provider-overrides"
+                                          value={modelProviderDraft.modelOverridesText}
+                                          onChange={(event) => {
+                                            setModelProviderDraft((current) => ({ ...current, modelOverridesText: event.target.value }));
+                                          }}
+                                          className={JSON_TEXTAREA_CLASS}
+                                          placeholder={'{\n  "claude-sonnet-4-6": {\n    "name": "Claude Sonnet 4.6 (Proxy)"\n  }\n}'}
+                                          spellCheck={false}
+                                          disabled={modelProviderAction !== null}
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
+                                </details>
 
                                 <p className="ui-card-meta max-w-3xl">
                                   Provider API keys here use <span className="font-mono text-[11px]">models.json</span> value resolution.
@@ -3410,22 +3487,35 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             </div>
                           )}
 
-                          <div className="space-y-2 border-t border-border-subtle pt-3 min-w-0">
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <h3 className="text-[14px] font-medium text-primary">Models</h3>
+                          <details
+                            open={showProviderModelManagement}
+                            onToggle={(event) => {
+                              setShowProviderModelManagement((event.currentTarget as HTMLDetailsElement).open);
+                            }}
+                            className="space-y-1 border-t border-border-subtle pt-3 min-w-0"
+                          >
+                            <summary className="cursor-pointer text-[14px] font-medium text-primary">Models</summary>
+
+                            <div className="space-y-2 pt-3">
+                              <p className="ui-card-meta">
+                                {providerModelCount > 0
+                                  ? `${providerModelCount} model ${providerModelCount === 1 ? 'row' : 'rows'} loaded from defaults.`
+                                  : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
+                                    ? 'Save this provider to auto-load model defaults for this provider ID, when available.'
+                                    : 'No model rows yet for this provider.'}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    startEditingProviderModel(NEW_MODEL_ID);
+                                  }}
+                                  disabled={!editableModelProviderId || modelDraftAction !== null}
+                                  className={ACTION_BUTTON_CLASS}
+                                >
+                                  Add model
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  startEditingProviderModel(NEW_MODEL_ID);
-                                }}
-                                disabled={!editableModelProviderId || modelDraftAction !== null}
-                                className={ACTION_BUTTON_CLASS}
-                              >
-                                Add model
-                              </button>
-                            </div>
 
                             {editableModelProviderId ? (
                               <>
@@ -3867,6 +3957,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               <p className="ui-card-meta">Select a provider, or type a provider id above, to edit its models.</p>
                             )}
                           </div>
+                          </details>
 
                           <div className="space-y-3 border-t border-border-subtle pt-4 min-w-0">
                             <div>

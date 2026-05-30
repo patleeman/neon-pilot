@@ -56,18 +56,31 @@ export function ExcalidrawInputTool({
     return () => subscription.unsubscribe();
   }, [pa, toolContext]);
 
+  const openDrawingModal = async () => {
+    const result = await pa.ui.openModal({
+      component: 'ExcalidrawEditorModal',
+      props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
+      size: 'fullscreen',
+    });
+    if (result && typeof result === 'object') {
+      toolContext.upsertDrawingAttachment(result as ExcalidrawEditorSavePayload);
+      pa.ui.toast('Drawing attached to composer.');
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={async () => {
-        const result = await pa.ui.openModal({
-          component: 'ExcalidrawEditorModal',
-          props: { conversationId: toolContext.conversationId, saveLabel: 'Attach to chat' },
-          size: 'fullscreen',
-        });
-        if (result && typeof result === 'object') {
-          toolContext.upsertDrawingAttachment(result as ExcalidrawEditorSavePayload);
-          pa.ui.toast('Drawing attached to composer.');
+      onPointerDown={(event) => {
+        event.preventDefault();
+        if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) {
+          void openDrawingModal();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          void openDrawingModal();
         }
       }}
       disabled={toolContext.composerDisabled}

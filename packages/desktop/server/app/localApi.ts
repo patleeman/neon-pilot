@@ -757,6 +757,32 @@ function createDesktopLocalApiJsonResponse(value: unknown): DesktopLocalApiDispa
   };
 }
 
+function createDesktopLocalApiErrorResponse(
+  statusCode: number,
+  message: string,
+): DesktopLocalApiDispatchResult {
+  return {
+    statusCode,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+    body: new TextEncoder().encode(message),
+  };
+}
+
+function getDesktopLocalApiErrorStatus(error: unknown): number {
+  if (!(error instanceof Error)) {
+    return 500;
+  }
+
+  if (
+    error.name === 'ConversationAssetCapabilityNotFoundError' ||
+    error.name === 'ConversationDeferredResumeCapabilityNotFoundError'
+  ) {
+    return 404;
+  }
+
+  return /\bnot found\b/i.test(error.message) || error.message === '404 Not Found' ? 404 : 500;
+}
+
 async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
   const summaries = listExtensionInstallSummaries();
   const { listRunningExtensionServices } = await import('../extensions/extensionServices.js');
@@ -1360,7 +1386,7 @@ export async function dispatchDesktopLocalApiRequest(input: {
   const route = findMatchingLocalApiRoute(routes, input.method, url.pathname);
 
   if (!route) {
-    throw new Error(`No local API route for ${input.method} ${url.pathname}`);
+    return createDesktopLocalApiErrorResponse(404, `No local API route for ${input.method} ${url.pathname}`);
   }
 
   const match = route.pattern.exec(url.pathname);
@@ -1375,7 +1401,27 @@ export async function dispatchDesktopLocalApiRequest(input: {
   const res = new LocalApiResponse();
 
   const handlerStartedAtMs = performance.now();
-  await route.handler(req, res);
+  try {
+    await route.handler(req, res);
+  } catch (error) {
+    const statusCode = getDesktopLocalApiErrorStatus(error);
+    const message = error instanceof Error ? error.message : String(error);
+    const errorResponse = createDesktopLocalApiErrorResponse(statusCode, message);
+    return {
+      ...errorResponse,
+      headers: {
+        ...errorResponse.headers,
+        'X-PA-Perf': JSON.stringify({
+          localApi: {
+            routeLookupMs: Math.round(routesReadyAtMs - startedAtMs),
+            handlerMs: Math.round(performance.now() - handlerStartedAtMs),
+            totalBeforeReturnMs: Math.round(performance.now() - startedAtMs),
+            responseBytes: errorResponse.body.byteLength,
+          },
+        }),
+      },
+    };
+  }
   const handlerFinishedAtMs = performance.now();
 
   const contentType = res.headers.get('content-type') ?? '';

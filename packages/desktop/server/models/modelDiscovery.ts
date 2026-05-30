@@ -2,7 +2,8 @@
  * Model discovery — extension contribution point for dynamic model providers.
  *
  * Extensions declare `contributes.modelDiscovery.action` in their manifest.
- * At model-list query time the registered action is invoked with no input.
+ * The registered action is invoked during model-list refreshes unless a
+ * short-lived model cache is still valid.
  * It returns either null (runtime not available) or a live provider descriptor.
  *
  * This replaces the UI-side sync loop that was the only way to inject local

@@ -8,10 +8,25 @@ export function AttachFilesComposerControl({
   buttonContext: ComposerControlContext;
 }) {
   const context = controlContext ?? buttonContext;
+  const handleOpenFilePicker = () => {
+    context.openFilePicker();
+  };
+
   return (
     <button
       type="button"
-      onClick={context.openFilePicker}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) {
+          handleOpenFilePicker();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleOpenFilePicker();
+        }
+      }}
       disabled={context.composerDisabled}
       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-elevated/60 hover:text-primary disabled:opacity-40"
       title="Attach image or file"

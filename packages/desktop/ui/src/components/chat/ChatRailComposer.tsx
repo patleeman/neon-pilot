@@ -1,6 +1,7 @@
-import { type ClipboardEventHandler, type KeyboardEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ClipboardEventHandler, type KeyboardEventHandler, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildSlashMenuItems, type SlashMenuItem } from '../../commands/slashMenu';
+import { formatConversationCwdLabel } from '../../conversation/conversationCwdPresentation.js';
 import { type MentionItem } from '../../conversation/conversationMentions';
 import { parseConversationSlashCommand } from '../../conversation/conversationSlashCommand';
 import {
@@ -19,6 +20,7 @@ import { useConversationComposerMenus, type UseConversationComposerMenusState } 
 import { useComposerModifierKeys } from '../../conversation/useConversationKeyboardState';
 import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types';
 import { ConversationComposer } from '../conversation/ConversationComposer';
+import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../conversation/ConversationComposerMenus';
 import { addNotification } from '../notifications/notificationStore';
@@ -45,14 +47,17 @@ function clearForkPromptDraft(conversationId: string): void {
 
 export function ChatRailComposer({
   conversationId,
+  workspaceCwd,
   isStreaming,
   models,
   currentModel,
   onSubmit,
   onAbortStream,
   onSelectModel,
+  composerMeta,
 }: {
   conversationId: string | null;
+  workspaceCwd: string | null;
   isStreaming: boolean;
   models: ModelInfo[];
   currentModel: string;
@@ -64,6 +69,7 @@ export function ChatRailComposer({
   ) => void;
   onAbortStream: () => void;
   onSelectModel: (modelId: string) => void;
+  composerMeta?: ReactNode;
 }) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
@@ -185,7 +191,7 @@ export function ChatRailComposer({
   composerMenuStateRef.current = composerMenus;
 
   const hasContent = input.trim().length > 0 || attachments.length > 0 || drawingAttachments.length > 0;
-  const composerDisabled = !hasContent;
+  const composerDisabled = false;
 
   const buildSubmitPayload = useCallback(() => {
     const promptImages = [...buildPromptImages(attachments), ...drawingAttachments.map(drawingAttachmentToPromptImage)];
@@ -270,6 +276,16 @@ export function ChatRailComposer({
     [buildSubmitPayload, clearComposerAfterSubmit, hasContent, input, isStreaming, onSubmit],
   );
 
+  const composerCwdLabel = useMemo(() => formatConversationCwdLabel(workspaceCwd), [workspaceCwd]);
+  const composerMetaFallback = (
+    <div className="conversation-composer-meta mt-1.5 px-3">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        {composerCwdLabel ? <FolderIcon className="shrink-0 text-dim/70" /> : <ChatBubbleIcon className="shrink-0 text-dim/70" />}
+        <span className="ui-truncate-start min-w-0">{composerCwdLabel || 'Chat'}</span>
+      </div>
+    </div>
+  );
+
   const shelves =
     attachments.length > 0 || drawingAttachments.length > 0 ? (
       <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain border-b border-border-subtle/60">
@@ -287,7 +303,8 @@ export function ChatRailComposer({
 
   return (
     <ConversationComposer
-      layoutMode="rail"
+      layoutMode="main"
+      className={`bg-gradient-to-t from-base via-base to-transparent px-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
       dragOver={dragOver}
       streamIsStreaming={isStreaming}
       onDragOver={(event) => {
@@ -352,6 +369,7 @@ export function ChatRailComposer({
           ) : null}
         </>
       }
+      composerMeta={composerMeta ?? composerMetaFallback}
       shelves={shelves}
       inputControls={
         <ConversationComposerInputControls

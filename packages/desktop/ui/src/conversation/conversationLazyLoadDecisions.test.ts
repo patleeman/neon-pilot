@@ -7,7 +7,7 @@ import {
 } from './conversationLazyLoadDecisions';
 
 describe('conversationLazyLoadDecisions', () => {
-  it('gates model loading on metadata readiness', () => {
+  it('loads models for draft mode', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         metadataReady: false,
@@ -15,11 +15,22 @@ describe('conversationLazyLoadDecisions', () => {
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         metadataReady: true,
         draft: true,
+        hasPendingInitialPrompt: false,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('loads models for existing conversations even before metadata is ready', () => {
+    expect(
+      shouldLoadConversationModelsAfterMetadataReady({
+        metadataReady: false,
+        draft: false,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
       }),

@@ -34,14 +34,25 @@ export function buildNativeExtensionSlashCommandRegistrations(
     contributes?: { slashCommands?: Array<{ name: string; description: string; action: string }> };
   }>,
 ) {
-  return extensions.flatMap((extension) =>
-    (extension.contributes?.slashCommands ?? []).map((command) => ({
-      extensionId: extension.id,
-      surfaceId: command.name,
-      packageType: extension.packageType ?? 'user',
-      name: command.name,
-      description: command.description,
-      action: command.action,
-    })),
-  );
+  return extensions.flatMap((extension) => {
+    const slashCommands = Array.isArray(extension.contributes?.slashCommands) ? extension.contributes?.slashCommands : [];
+    return slashCommands.flatMap((command) => {
+      if (!command || typeof command !== 'object') return [];
+      const name = typeof command.name === 'string' ? command.name.trim() : '';
+      const description = typeof command.description === 'string' ? command.description : '';
+      const action = typeof command.action === 'string' ? command.action.trim() : '';
+      if (!name || !action) return [];
+
+      return [
+        {
+          extensionId: extension.id,
+          surfaceId: name,
+          packageType: extension.packageType ?? 'user',
+          name,
+          description,
+          action,
+        },
+      ];
+    });
+  });
 }

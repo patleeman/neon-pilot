@@ -3,6 +3,8 @@ import { runModelDiscovery } from './modelDiscovery.js';
 import { normalizeSavedModelPreferences } from './modelPreferences.js';
 import { getSupportedServiceTiersForModel, modelSupportsServiceTier } from './modelServiceTiers.js';
 
+const MODEL_DEFINITIONS_CACHE_TTL_MS = 60_000;
+
 const BUILT_IN_MODELS = [
   { id: 'claude-opus-4-6', provider: 'anthropic', name: 'Claude Opus 4.6', context: 200_000, input: ['text', 'image'] },
   { id: 'claude-sonnet-4-6', provider: 'anthropic', name: 'Claude Sonnet 4.6', context: 200_000, input: ['text', 'image'] },
@@ -17,6 +19,29 @@ const BUILT_IN_MODELS = [
   { id: 'gemini-3.1-pro-high', provider: 'google', name: 'Gemini 3.1 Pro High', context: 1_000_000, input: ['text', 'image'] },
 ] as const;
 
+export interface ModelDefinition {
+  id: string;
+  provider: string;
+  name: string;
+  context: number;
+  input: readonly ('text' | 'image')[];
+  reasoning?: boolean;
+  supportedServiceTiers: string[];
+}
+
+type ModelDefinitionsCacheEntry = {
+  expiresAt: number;
+  models: readonly ModelDefinition[];
+};
+
+let modelDefinitionsCache: ModelDefinitionsCacheEntry | null = null;
+let modelDefinitionsInFlight: Promise<readonly ModelDefinition[]> | null = null;
+
+export function invalidateModelDefinitionsCache() {
+  modelDefinitionsCache = null;
+  modelDefinitionsInFlight = null;
+}
+
 function readModelInput(model: unknown): Array<'text' | 'image'> {
   const input = (model as { input?: unknown } | undefined)?.input;
   if (!Array.isArray(input)) {
@@ -30,7 +55,31 @@ function readModelReasoning(model: unknown): boolean | undefined {
   return typeof reasoning === 'boolean' ? reasoning : undefined;
 }
 
-export async function listModelDefinitions() {
+function refreshModelDefinitionsInBackground() {
+  if (modelDefinitionsInFlight) {
+    return modelDefinitionsInFlight;
+  }
+
+  if (!modelDefinitionsCache) {
+    const builtinModels = BUILT_IN_MODELS.map((model) => ({
+      ...model,
+      supportedServiceTiers: getSupportedServiceTiersForModel(model),
+    }));
+    modelDefinitionsCache = { models: builtinModels, expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
+  }
+
+  const request = loadModelDefinitions().then((models) => {
+    modelDefinitionsCache = { models, expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
+    return models;
+  });
+
+  modelDefinitionsInFlight = request.finally(() => {
+    modelDefinitionsInFlight = null;
+  });
+  return modelDefinitionsInFlight;
+}
+
+async function loadModelDefinitions(): Promise<readonly ModelDefinition[]> {
   let registryModels: Awaited<ReturnType<typeof getAvailableModels>>;
   try {
     registryModels = await getAvailableModels();
@@ -76,12 +125,41 @@ export async function listModelDefinitions() {
 
   // Discovered models are appended; registry models take precedence on id collisions.
   const registryIds = new Set(base.map((m) => `${m.provider}:${m.id}`));
-  const merged = [...base, ...discoveredModels.filter((m) => !registryIds.has(`${m.provider}:${m.id}`))];
-
-  return merged;
+  return [...base, ...discoveredModels.filter((m) => !registryIds.has(`${m.provider}:${m.id}`))];
 }
 
-export async function readModelState(settingsFile: string) {
+export interface ModelState {
+  currentModel: string;
+  currentVisionModel: string;
+  currentThinkingLevel: string;
+  currentServiceTier: string;
+  models: readonly ModelDefinition[];
+}
+
+export function prewarmModelDefinitions() {
+  void refreshModelDefinitionsInBackground();
+}
+
+export async function listModelDefinitions(): Promise<readonly ModelDefinition[]> {
+  const now = Date.now();
+  if (modelDefinitionsCache && modelDefinitionsCache.expiresAt > now) {
+    return modelDefinitionsCache.models;
+  }
+
+  if (modelDefinitionsCache && modelDefinitionsCache.models.length > 0) {
+    void refreshModelDefinitionsInBackground();
+    return modelDefinitionsCache.models;
+  }
+
+  if (modelDefinitionsInFlight) {
+    return modelDefinitionsInFlight;
+  }
+
+  refreshModelDefinitionsInBackground();
+  return modelDefinitionsCache?.models ?? [];
+}
+
+export async function readModelState(settingsFile: string): Promise<ModelState> {
   const models = await listModelDefinitions();
   const saved = normalizeSavedModelPreferences(settingsFile, models);
   const modelIds = new Set(models.map((model) => model.id));

@@ -237,7 +237,7 @@ interface RawCompaction {
   parentId: string | null;
   timestamp: string | number;
   summary: string;
-  firstKeptEntryId: string;
+  firstKeptEntryId?: string;
   tokensBefore: number;
   details?: unknown;
 }
@@ -1591,6 +1591,49 @@ function readSessionEntryPreview(filePath: string, entryId: string): string | nu
   } catch {
     return null;
   }
+}
+
+interface AppendConversationCompactionSummaryInput {
+  sessionFile: string;
+  summary: string;
+  tokensBefore: number;
+  firstKeptEntryId?: string;
+  details?: unknown;
+}
+
+export function appendConversationCompactionSummary(input: AppendConversationCompactionSummaryInput): void {
+  const sessionFile = input.sessionFile.trim();
+  if (!sessionFile) {
+    return;
+  }
+
+  const summary = input.summary.trim();
+  if (!summary) {
+    return;
+  }
+
+  const parentId = readCurrentSessionLeafId(sessionFile);
+  const firstKeptEntryId =
+    typeof input.firstKeptEntryId === 'string' && input.firstKeptEntryId.trim()
+      ? input.firstKeptEntryId.trim()
+      : parentId?.trim() || undefined;
+  const tokensBefore = Number.isFinite(input.tokensBefore) ? Math.trunc(input.tokensBefore) : 0;
+
+  appendFileSync(
+    sessionFile,
+    serializeSessionJsonLine({
+      type: 'compaction',
+      id: randomUUID(),
+      parentId,
+      timestamp: new Date().toISOString(),
+      summary,
+      ...(firstKeptEntryId ? { firstKeptEntryId } : {}),
+      tokensBefore: Math.max(0, tokensBefore),
+      ...(input.details !== undefined ? { details: input.details } : {}),
+    }),
+    'utf-8',
+  );
+  clearSessionCaches();
 }
 
 /**

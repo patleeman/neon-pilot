@@ -18,6 +18,10 @@ vi.mock('./providerAuth.js', () => ({
   cancelProviderOAuthLogin: vi.fn(),
 }));
 
+vi.mock('./modelRegistry.js', () => ({
+  createModelRegistryForAuthFile: vi.fn(),
+}));
+
 vi.mock('../middleware/index.js', () => ({
   refreshAllLiveSessionModelRegistries: vi.fn(),
   reloadAllLiveSessionAuth: vi.fn(),
@@ -26,6 +30,7 @@ vi.mock('../middleware/index.js', () => ({
 import * as middleware from '../middleware/index.js';
 import * as modelProviders from './modelProviders.js';
 import * as providerAuth from './providerAuth.js';
+import * as modelRegistry from './modelRegistry.js';
 import {
   cancelProviderOAuthLoginCapability,
   deleteModelProviderCapability,
@@ -64,14 +69,54 @@ describe('readModelProvidersCapability', () => {
 });
 
 describe('saveModelProviderCapability', () => {
+  it('does not auto-populate when no API key is provided', () => {
+    const state = { providers: { openai: { models: [] } } } as never;
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue(state);
+
+    const context = createContext();
+    void saveModelProviderCapability(context, { provider: ' openai ' });
+
+    expect(modelRegistry.createModelRegistryForAuthFile).not.toHaveBeenCalled();
+    expect(modelProviders.upsertModelProviderModel).not.toHaveBeenCalled();
+  });
+
   it('saves a provider and refreshes registries', () => {
-    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { openai: {} } } as never);
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { openai: { models: [] } } } as never);
     const context = createContext();
     const result = saveModelProviderCapability(context, { provider: ' openai ' });
     expect(modelProviders.upsertModelProvider).toHaveBeenCalledWith('test-profile', 'openai', expect.any(Object));
     expect(middleware.refreshAllLiveSessionModelRegistries).toHaveBeenCalled();
     expect(context.materializeWebRuntimeConfig as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('test-profile');
-    expect(result).toEqual({ providers: { openai: {} } });
+    expect(result).toEqual({ providers: { openai: { models: [] } } });
+  });
+
+  it('auto-populates model rows for providers with registered defaults when API key is provided', () => {
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { 'opencode-go': { models: [] } } } as never);
+    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({ providers: { 'opencode-go': { models: ['model-a'] } } } as never);
+    vi.mocked(modelRegistry.createModelRegistryForAuthFile).mockReturnValue({
+      getAll: () => [
+        {
+          provider: 'opencode-go',
+          id: 'model-a',
+          reasoning: false,
+        },
+      ],
+    } as never);
+
+    const context = createContext();
+    const result = saveModelProviderCapability(context, { provider: ' opencode-go ', apiKey: 'abc' });
+
+    expect(modelProviders.upsertModelProvider).toHaveBeenCalledWith('test-profile', 'opencode-go', expect.any(Object));
+    expect(modelRegistry.createModelRegistryForAuthFile).toHaveBeenCalledWith('/tmp/test-auth.json');
+    expect(modelProviders.upsertModelProviderModel).toHaveBeenCalledWith(
+      'test-profile',
+      'opencode-go',
+      'model-a',
+      expect.objectContaining({
+        name: 'model-a',
+      }),
+    );
+    expect(result).toEqual({ providers: { 'opencode-go': { models: ['model-a'] } });
   });
 
   it('throws on empty provider', () => {
@@ -137,11 +182,54 @@ describe('readProviderAuthCapability', () => {
 describe('setProviderApiKeyCapability', () => {
   it('sets an api key and reloads auth', () => {
     vi.mocked(providerAuth.setProviderApiKey).mockReturnValue({ providers: { openai: {} } } as never);
+    vi.mocked(modelProviders.readModelProvidersState).mockReturnValue({ providers: [] } as never);
+    vi.mocked(modelRegistry.createModelRegistryForAuthFile).mockReturnValue({
+      getAll: () => [],
+    } as never);
+
     const context = createContext();
     const result = setProviderApiKeyCapability(context, ' openai ', ' sk-123 ');
     expect(providerAuth.setProviderApiKey).toHaveBeenCalledWith('/tmp/test-auth.json', 'openai', 'sk-123', '/tmp/test-state');
+    expect(modelProviders.readModelProvidersState).toHaveBeenCalledWith('test-profile');
+    expect(modelRegistry.createModelRegistryForAuthFile).toHaveBeenCalledWith('/tmp/test-auth.json');
     expect(middleware.reloadAllLiveSessionAuth).toHaveBeenCalled();
     expect(result).toEqual({ providers: { openai: {} } });
+  });
+
+  it('auto-populates provider model rows when an API key is added for a known provider', () => {
+    vi.mocked(providerAuth.setProviderApiKey).mockReturnValue({ providers: { 'opencode-go': {} } } as never);
+    vi.mocked(modelProviders.readModelProvidersState).mockReturnValue({ providers: [] } as never);
+    vi.mocked(modelRegistry.createModelRegistryForAuthFile).mockReturnValue({
+      getAll: () => [
+        {
+          provider: 'opencode-go',
+          id: 'model-a',
+          reasoning: false,
+        },
+      ],
+    } as never);
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { 'opencode-go': { models: [] } } } as never);
+    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({ providers: { 'opencode-go': { models: ['model-a'] } } } as never);
+
+    const context = createContext();
+    const result = setProviderApiKeyCapability(context, ' opencode-go ', ' sk-123 ');
+
+    expect(providerAuth.setProviderApiKey).toHaveBeenCalledWith('/tmp/test-auth.json', 'opencode-go', 'sk-123', '/tmp/test-state');
+    expect(modelProviders.readModelProvidersState).toHaveBeenCalledWith('test-profile');
+    expect(modelRegistry.createModelRegistryForAuthFile).toHaveBeenCalledWith('/tmp/test-auth.json');
+    expect(modelProviders.upsertModelProvider).toHaveBeenCalledWith('test-profile', 'opencode-go', {});
+    expect(modelProviders.upsertModelProviderModel).toHaveBeenCalledWith(
+      'test-profile',
+      'opencode-go',
+      'model-a',
+      expect.objectContaining({
+        name: 'model-a',
+      }),
+    );
+    expect(middleware.refreshAllLiveSessionModelRegistries).toHaveBeenCalled();
+    expect(context.materializeWebRuntimeConfig as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('test-profile');
+    expect(middleware.reloadAllLiveSessionAuth).toHaveBeenCalled();
+    expect(result).toEqual({ providers: { 'opencode-go': {} } });
   });
 
   it('throws on empty provider', () => {

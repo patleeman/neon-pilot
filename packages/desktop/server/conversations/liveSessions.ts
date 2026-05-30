@@ -17,7 +17,11 @@ import {
 } from './conversationAutoMode.js';
 import { type ConversationModelPreferenceInput, type ConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { reserveConversationSession } from './conversationReservation.js';
-import { appendConversationWorkspaceMetadata, readConversationSessionMetaByFilePath } from './conversationTranscriptOps.js';
+import {
+  appendConversationCompactionSummary,
+  appendConversationWorkspaceMetadata,
+  readConversationSessionMetaByFilePath,
+} from './conversationTranscriptOps.js';
 import { executeLiveSessionBash } from './liveSessionBash.js';
 import { finalizeLiveSessionBashExecution } from './liveSessionBashFinalization.js';
 import { branchLiveSession, forkLiveSession } from './liveSessionBranching.js';
@@ -405,6 +409,20 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
           })(),
           ensureStaleTurnState,
         }),
+      appendCompactionSummary: ({ entry, summary, tokensBefore, firstKeptEntryId, details }) => {
+        const sessionFile = resolveLiveSessionFile(entry.session, { ensurePersisted: true });
+        if (!sessionFile) {
+          return;
+        }
+
+        appendConversationCompactionSummary({
+          sessionFile,
+          summary,
+          tokensBefore,
+          ...(firstKeptEntryId ? { firstKeptEntryId } : {}),
+          ...(details !== undefined ? { details } : {}),
+        });
+      },
       broadcast,
       tryImportReadyParallelJobs,
     }),

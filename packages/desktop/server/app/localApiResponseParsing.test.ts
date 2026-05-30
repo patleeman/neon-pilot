@@ -32,6 +32,9 @@ describe('localApiResponseParsing', () => {
     expect(readLocalApiError({ statusCode: 404, headers: { 'content-type': 'application/json' }, body: encoder.encode('{bad') })).toBe(
       '{bad',
     );
+    expect(readLocalApiError({ statusCode: 500, headers: { 'content-type': 'application/json' }, body: encoder.encode('null') })).toBe(
+      'null',
+    );
     expect(readLocalApiError({ statusCode: 404, headers: {}, body: encoder.encode('') })).toBe('404 Not Found');
   });
 });

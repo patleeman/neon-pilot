@@ -25,6 +25,7 @@ export type AppEventTopic =
   | 'attachments'
   | 'extensions'
   | 'tasks'
+  | 'models'
   | 'runs'
   | 'executions'
   | 'automation'
@@ -87,6 +88,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'attachments',
   'extensions',
   'tasks',
+  'models',
   'runs',
   'executions',
   'automation',
@@ -338,6 +340,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     executions: [],
     extensions: [],
     automation: [],
+    models: [],
     daemon: [
       { path: getDaemonConfigFilePath(), kind: 'file' },
       { path: daemonPaths.socketPath, kind: 'file' },

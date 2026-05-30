@@ -11,7 +11,7 @@ vi.mock('./modelDiscovery.js', () => ({ runModelDiscovery }));
 vi.mock('./modelPreferences.js', () => ({ normalizeSavedModelPreferences }));
 vi.mock('./modelServiceTiers.js', () => ({ getSupportedServiceTiersForModel, modelSupportsServiceTier }));
 
-const { listModelDefinitions, readModelState } = await import('./modelState.js');
+const { invalidateModelDefinitionsCache, listModelDefinitions, readModelState } = await import('./modelState.js');
 
 describe('modelState', () => {
   beforeEach(() => {
@@ -22,6 +22,7 @@ describe('modelState', () => {
       .mockReturnValue({ currentModel: '', currentVisionModel: '', currentThinkingLevel: 'medium', currentServiceTier: '' });
     getSupportedServiceTiersForModel.mockReset().mockReturnValue(['auto']);
     modelSupportsServiceTier.mockReset().mockReturnValue(false);
+    invalidateModelDefinitionsCache();
   });
 
   it('falls back to built-in model definitions when the live registry fails', async () => {

@@ -143,7 +143,7 @@ The Providers section lists all configured API providers:
 | Google         | API key          | Configured / Not configured |
 | GitHub Copilot | OAuth            | Configured / Not configured |
 
-Add a new provider by selecting the type and entering credentials. Remove or edit existing providers.
+Add a new provider by selecting a known provider and adding credentials. Built-in providers (for example `anthropic`, `openai`, `opencode-go`) will auto-load known model rows after the key is saved; use custom model rows only for overrides and extras.
 
 ## Model Configuration
 

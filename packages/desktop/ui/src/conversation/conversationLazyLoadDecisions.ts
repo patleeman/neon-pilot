@@ -10,7 +10,7 @@ export function shouldLoadConversationModelsAfterMetadataReady(input: {
   hasPendingInitialPrompt: boolean;
   hasPendingInitialPromptInFlight: boolean;
 }): boolean {
-  return input.metadataReady && shouldLoadConversationModels(input);
+  return shouldLoadConversationModels(input);
 }
 
 export function shouldFetchConversationAttachmentsNow(input: {

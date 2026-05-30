@@ -427,9 +427,22 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
     ...syntheticLive,
     ...jsonl.map((session) => {
       const liveEntry = liveById.get(session.id);
+      const liveSnapshot = liveEntry
+        ? {
+            id: liveEntry.id,
+            cwd: liveEntry.cwd,
+            file: liveEntry.sessionFile,
+            title: liveEntry.title,
+            isStreaming: liveEntry.isStreaming,
+            hasStaleTurnState: liveEntry.hasStaleTurnState,
+            lastDurableRunState: liveEntry.lastDurableRunState,
+            isRunning: liveEntry.running,
+          }
+        : null;
       return {
         ...session,
-        title: liveEntry?.title || session.title,
+        ...(liveSnapshot ?? {}),
+        title: liveSnapshot?.title || session.title,
         isRunning: isLiveEntryRunning(liveEntry),
         isLive: Boolean(liveEntry),
       };

@@ -29,7 +29,11 @@ function applyNeonPilotModelMetadataOverrides(model: RegistryModel): RegistryMod
   return model;
 }
 
-function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry {
+function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: AuthStorage): ModelRegistry {
+  if (typeof authStorage.setFallbackResolver === 'function') {
+    authStorage.setFallbackResolver((provider) => resolveProviderApiKey(provider));
+  }
+
   const originalGetAll = registry.getAll.bind(registry);
   const originalGetAvailable = registry.getAvailable.bind(registry);
   const originalFind = registry.find.bind(registry);
@@ -52,9 +56,13 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry
 }
 
 export function createRuntimeModelRegistry(authStorage: AuthStorage): ModelRegistry {
-  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')));
+  return applyNeonPilotRegistryOverrides(
+    ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')),
+    authStorage,
+  );
 }
 
 export function createModelRegistryForAuthFile(authFile: string): ModelRegistry {
-  return applyNeonPilotRegistryOverrides(ModelRegistry.create(AuthStorage.create(authFile), join(dirname(authFile), 'models.json')));
+  const authStorage = AuthStorage.create(authFile);
+  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(dirname(authFile), 'models.json')), authStorage);
 }

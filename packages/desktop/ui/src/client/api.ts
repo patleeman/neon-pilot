@@ -74,9 +74,10 @@ export interface ExtensionRegistryApiState {
   settings: Record<string, unknown>;
 }
 
-// ── Retry helpers for transient network errors (e.g. server restarts) ────────
+// ── Retry helpers for transient failures ────────────────────────────────────
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
+const RETRYABLE_STATUS_CODES = [502, 503, 504];
 
 function isTransientNetworkError(error: unknown): boolean {
   if (error instanceof TypeError && /failed to fetch|network|ECONNREFUSED|ECONNRESET/i.test(error.message)) {
@@ -97,8 +98,8 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      // Retry transient server errors (5xx) like transient network failures
-      if (!res.ok && res.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
+      // Retry only clearly transient server states.
+      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && attempt < RETRY_DELAYS_MS.length) {
         lastError = new Error(`Server error ${res.status} for ${input}`);
         await sleep(RETRY_DELAYS_MS[attempt] as number);
         continue;
@@ -201,9 +202,12 @@ async function readJsonResponse<T>(res: Response, path: string): Promise<T> {
 async function readApiError(res: Response, path?: string): Promise<string> {
   const text = await res.text();
   try {
-    const data = JSON.parse(text) as { error?: string };
-    if (typeof data.error === 'string' && data.error.trim().length > 0) {
-      return data.error;
+    const data = JSON.parse(text) as unknown;
+    if (typeof data === 'object' && data !== null && 'error' in data) {
+      const message = (data as { error?: unknown }).error;
+      if (typeof message === 'string' && message.trim().length > 0) {
+        return message;
+      }
     }
   } catch {
     // Ignore non-JSON error bodies.

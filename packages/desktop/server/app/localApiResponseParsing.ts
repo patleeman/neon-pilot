@@ -33,9 +33,12 @@ export function readLocalApiError(response: LocalApiResponseLike): string {
 
   if (contentType.toLowerCase().includes('application/json')) {
     try {
-      const payload = JSON.parse(bodyText) as { error?: string };
-      if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-        return payload.error;
+      const payload = JSON.parse(bodyText) as unknown;
+      if (typeof payload === 'object' && payload !== null && 'error' in payload) {
+        const message = (payload as { error?: unknown }).error;
+        if (typeof message === 'string' && message.trim().length > 0) {
+          return message;
+        }
       }
     } catch {
       // Ignore malformed local JSON error bodies.

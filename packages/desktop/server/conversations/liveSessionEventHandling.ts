@@ -17,6 +17,10 @@ import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
 const toolStartTimes = new WeakMap<AgentSession, Map<string, number>>();
 const toolStartInputs = new WeakMap<AgentSession, Map<string, unknown>>();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function getToolStartTimes(session: AgentSession): Map<string, number> {
   let map = toolStartTimes.get(session);
   if (!map) {
@@ -162,6 +166,49 @@ export interface LiveSessionEventCallbacks<TEntry extends LiveSessionEventHost> 
   syncRunningState: (sessionId: string) => void;
   broadcast: (entry: TEntry, event: SseEvent) => void;
   tryImportReadyParallelJobs: (entry: TEntry) => Promise<void>;
+  appendCompactionSummary?: (input: {
+    entry: TEntry;
+    summary: string;
+    tokensBefore: number;
+    firstKeptEntryId?: string;
+    details?: unknown;
+  }) => void;
+}
+
+function extractCompactionFirstKeptEntryId(result: unknown): string | undefined {
+  if (!isRecord(result)) {
+    return undefined;
+  }
+
+  const candidate = result.firstKeptEntryId;
+  return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
+}
+
+function extractCompactionSummaryDetails(result: unknown): unknown {
+  if (!isRecord(result)) {
+    return undefined;
+  }
+
+  const details = result.details;
+  return isRecord(details) ? details : undefined;
+}
+
+function hasMatchingCompactionSummary(sessionMessages: unknown[], summary: string): boolean {
+  if (!summary) {
+    return false;
+  }
+
+  return sessionMessages.some((message) => {
+    if (!isRecord(message)) {
+      return false;
+    }
+
+    if (message.role !== 'compactionSummary' || typeof message.summary !== 'string') {
+      return false;
+    }
+
+    return message.summary.trim() === summary;
+  });
 }
 
 export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
@@ -469,6 +516,21 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
           reason: compactionReason,
           willRetry: event.willRetry,
         });
+        const summary = typeof event.result.summary === 'string' ? event.result.summary.trim() : '';
+
+        if (compactionReason === 'overflow' && summary) {
+          const messages = Array.isArray(entry.session.state?.messages) ? entry.session.state.messages : [];
+          if (!hasMatchingCompactionSummary(messages, summary)) {
+            callbacks.appendCompactionSummary?.({
+              entry,
+              summary,
+              tokensBefore: event.result.tokensBefore ?? 0,
+              firstKeptEntryId: extractCompactionFirstKeptEntryId(event.result),
+              details: extractCompactionSummaryDetails(event.result),
+            });
+          }
+        }
+
         callbacks.broadcastSnapshot(entry);
         callbacks.clearContextUsageTimer(entry);
         callbacks.broadcastContextUsage(entry, true);

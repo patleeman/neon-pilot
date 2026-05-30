@@ -763,6 +763,45 @@ describe('conversationService', () => {
     );
   });
 
+  it('strips live session internals from conversation session snapshots', () => {
+    listSessionsMock.mockReturnValue([
+      {
+        id: 'live-with-internals',
+        file: '/sessions/live-with-internals.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/live',
+        cwdSlug: '-repo-live',
+        model: 'gpt-5',
+        title: 'Catalog title',
+        messageCount: 4,
+      },
+    ]);
+    const liveSessionManager: { sessionManager: Record<string, unknown> } = {
+      sessionManager: { getEntries: () => ({}) },
+    };
+    (liveSessionManager.sessionManager as Record<string, unknown>).self = liveSessionManager;
+    liveSessionRegistry.set('live-with-internals', liveSessionManager);
+
+    getLocalLiveSessionsMock.mockReturnValue([
+      {
+        id: 'live-with-internals',
+        cwd: '/repo/live',
+        sessionFile: '/sessions/live-with-internals.jsonl',
+        isStreaming: true,
+      },
+    ]);
+
+    const snapshot = listConversationSessionsSnapshot();
+    const liveSnapshot = snapshot.find((session) => session.id === 'live-with-internals');
+    expect(liveSnapshot).toMatchObject({
+      id: 'live-with-internals',
+      title: 'Catalog title',
+      isLive: true,
+      isRunning: true,
+    });
+    expect(liveSnapshot).not.toHaveProperty('session');
+  });
+
   it('reads route session detail and model preference state', async () => {
     readSessionBlocksWithTelemetryMock.mockReturnValueOnce({
       detail: { id: 'detail-1' },

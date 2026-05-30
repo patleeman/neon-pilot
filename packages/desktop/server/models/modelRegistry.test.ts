@@ -51,6 +51,27 @@ describe('model registry helpers', () => {
     expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/runtime/neon-pilot-runtime/models.json');
   });
 
+  it('registers provider secret lookup as an auth fallback for runtime registries', () => {
+    const authStorage = { kind: 'auth-storage', setFallbackResolver: vi.fn() };
+    const registry = {
+      getAll: vi.fn(() => []),
+      getAvailable: vi.fn(() => []),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+    };
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    resolveProviderApiKeyMock.mockReturnValue('secure-key');
+    modelRegistryCreateMock.mockReturnValue(registry);
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    expect(authStorage.setFallbackResolver).toHaveBeenCalledTimes(1);
+    expect(created).toBe(registry);
+
+    const resolver = authStorage.setFallbackResolver.mock.calls[0]?.[0] as (provider: string) => string | undefined;
+    expect(resolver('opencode-go')).toBe('secure-key');
+  });
+
   it('creates a registry beside the provided auth file', () => {
     const authFile = '/tmp/profile/auth.json';
     const authStorage = { kind: 'auth-storage' };
