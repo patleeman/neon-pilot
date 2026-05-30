@@ -55,7 +55,12 @@ export async function dispatchDesktopLocalApiRequest(input) {
       body: Buffer.from(JSON.stringify({
         ok: true,
         daemonHealthy: true,
-        apiReady: fullModule !== null,
+        // Always report ready — the bootstrap handles dispatch immediately.
+        // The full module lazy-loads on the first real API call; until then
+        // the request simply awaits the background import. This lets the
+        // frontend render the UI instantly instead of showing 'Connecting…'
+        // for the ~9s it takes to parse the 8.7MB module cold.
+        apiReady: true,
       }), 'utf-8'),
     };
   }
