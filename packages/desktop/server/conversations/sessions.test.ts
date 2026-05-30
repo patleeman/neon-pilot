@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   appendChildConversationTopologyEntry,
+  appendConversationCompactionSummary,
   appendConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata,
   appendConversationWorkspaceMetadata,
@@ -3053,6 +3054,79 @@ describe('sessions', () => {
         text: 'Continue after compaction',
       },
     ]);
+  });
+
+  it('persists overflow compaction summaries to transcript files', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const filePath = writeSessionFile({
+      sessionsDir,
+      sessionId: 'session-overflow-append',
+      assistantTexts: ['Start'],
+    });
+
+    appendConversationCompactionSummary({
+      sessionFile: filePath,
+      summary: 'Recovered from overflow with summary',
+      tokensBefore: 120000,
+      firstKeptEntryId: 'session-overflow-append-user-1',
+      details: { nativeCompaction: { version: 2, provider: 'openai' } },
+    });
+
+    const lines = readFileSync(filePath, 'utf-8').trim().split('\n');
+    const persisted = JSON.parse(lines.at(-1) as string) as {
+      type: string;
+      summary: string;
+      firstKeptEntryId: string;
+      tokensBefore: number;
+      details?: { nativeCompaction?: { version: number; provider: string } };
+    };
+
+    expect(persisted).toMatchObject({
+      type: 'compaction',
+      summary: 'Recovered from overflow with summary',
+      firstKeptEntryId: 'session-overflow-append-user-1',
+      tokensBefore: 120000,
+      details: { nativeCompaction: { version: 2, provider: 'openai' } },
+    });
+
+    const detail = readSessionBlocks('session-overflow-append');
+    expect(detail?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'summary',
+          kind: 'compaction',
+          title: 'Compaction summary',
+          text: 'Recovered from overflow with summary',
+        }),
+      ]),
+    );
+  });
+
+  it('falls back to the current leaf id when firstKeptEntryId is omitted', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const filePath = writeSessionFile({
+      sessionsDir,
+      sessionId: 'session-overflow-append-fallback',
+      assistantTexts: ['Start'],
+    });
+
+    appendConversationCompactionSummary({
+      sessionFile: filePath,
+      summary: 'Recovered from overflow',
+      tokensBefore: 120000,
+    });
+
+    const lines = readFileSync(filePath, 'utf-8').trim().split('\n');
+    const persisted = JSON.parse(lines.at(-1) as string) as {
+      type: string;
+      firstKeptEntryId?: string;
+    };
+
+    expect(persisted.firstKeptEntryId).toBe('session-overflow-append-fallback-assistant-1');
   });
 
   it('removes deleted session files from the cache and persistent index', async () => {

@@ -226,6 +226,48 @@ describe('applyDesktopConversationStreamEvent', () => {
     expect(repeatedAgentStart).toBe(stream);
     expect(idleToolEnd).toBe(stream);
   });
+
+  it('appends an error block for failed compaction events', () => {
+    const stream = {
+      blocks: [{ type: 'text' as const, id: 'text-1', text: 'Existing text', ts: '2026-05-24T00:00:00.000Z' }],
+      blockOffset: 0,
+      totalBlocks: 1,
+      hasSnapshot: true,
+      isStreaming: false,
+      isCompacting: true,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    const next = applyDesktopConversationStreamEvent(stream, {
+      type: 'compaction_end',
+      mode: 'auto',
+      reason: 'overflow',
+      aborted: false,
+      willRetry: false,
+      errorMessage: 'Overflow compaction failed',
+    });
+
+    expect(next.isCompacting).toBe(false);
+    expect(next.error).toBe('Overflow compaction failed');
+    expect(next.blocks).toEqual([
+      { type: 'text', id: 'text-1', text: 'Existing text', ts: '2026-05-24T00:00:00.000Z' },
+      expect.objectContaining({
+        type: 'error',
+        message: 'Overflow compaction failed',
+        ts: expect.any(String),
+      }),
+    ]);
+  });
 });
 
 describe('applyDesktopConversationStreamEvents', () => {
