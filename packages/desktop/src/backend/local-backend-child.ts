@@ -244,10 +244,10 @@ async function main(): Promise<void> {
   await startDaemon();
 
   // ── Load the API module ────────────────────────────────────────────
-  // loadRawLocalApiModule() imports localApi.js which is the full server
-  // handler module (~8.7MB). The await blocks until parsing completes
-  // (~9s cold). Only then do we start the HTTP server and signal ready,
-  // so the window opens to an already-warm backend.
+  // loadRawLocalApiModule() imports localApi.js, the full local API handler
+  // module. Keep this readiness signal scoped to the backend process; the
+  // desktop shell warms the backend in the background and does not block its
+  // first paint on this import.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
   try {

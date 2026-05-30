@@ -17,6 +17,7 @@ import { installDesktopApplicationMenu, setDesktopApplicationMenuKeyboardShortcu
 import { confirmDesktopQuit } from './quit.js';
 import { applyDesktopRuntimeEnvironmentOverrides } from './runtime-env.js';
 import { claimDesktopSingleInstance } from './single-instance.js';
+import { startDesktopBackendWarmup } from './startup-backend-warmup.js';
 import { loadDesktopConfig, readDesktopAppPreferences, updateDesktopAppPreferences } from './state/desktop-config.js';
 import { DesktopTrayController } from './tray.js';
 import { DesktopUpdateManager } from './updates/update-manager.js';
@@ -421,16 +422,15 @@ async function bootstrapDesktopApp(): Promise<void> {
   logStartupMilestone('environment-ready');
   hostManager = new HostManager();
 
-  // Start the backend child process and wait for FULL readiness.
-  // The child process now delays its 'ready' signal until both the
-  // bootstrap (9KB) AND the full module (8.7MB) have finished loading.
-  // This ensures the renderer's first API call never blocks on module
-  // parse — the window opens to an already-warm backend.
-  const backendReady = await ensureDesktopBackendAvailable();
-  logStartupMilestone(backendReady ? 'backend-warmed' : 'backend-warmup-unavailable');
-  if (backendReady) {
-    installWorkbenchBrowserToolHost();
-  }
+  startDesktopBackendWarmup({
+    ensureBackend: ensureDesktopBackendAvailable,
+    onReady: () => {
+      logStartupMilestone('backend-warmed');
+      installWorkbenchBrowserToolHost();
+    },
+    onUnavailable: () => logStartupMilestone('backend-warmup-unavailable'),
+    onError: logBootstrapError,
+  });
 
   void import('../server/daemon/companion/runtime.js')
     .then((module) => {
