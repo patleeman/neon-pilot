@@ -230,7 +230,9 @@ async function readGitStatus(ctx: ExtensionBackendContext, root: string, branch:
   let behindCount = 0;
   const remoteRef = `refs/remotes/origin/${branch}`;
   if (await refExists(ctx, root, 'HEAD')) {
-    await git(ctx, root, ['fetch', 'origin'], { allowFailure: true });
+    // Use cached remote refs only — skip `git fetch` so readState is fast
+    // and doesn't block on network I/O. The explicit sync action handles
+    // remote updates.
     if (await refExists(ctx, root, remoteRef)) {
       const counts = (
         await gitText(ctx, root, ['rev-list', '--left-right', '--count', `HEAD...${remoteRef}`], { allowFailure: true })
