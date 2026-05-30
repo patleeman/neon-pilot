@@ -137,7 +137,7 @@ import type { ProviderDesktopCapabilityContext } from '../models/providerDesktop
 // ── Parallel lazy loader for model/provider modules ──────────────────────
 // AI SDKs (openai, anthropic, etc.) are loaded via Promise.all() so they
 // are fetched/parsed concurrently rather than depth-first sequentially.
-let _modelsMod = null;
+let _modelsMod: Record<string, unknown> | null = null;
 const _modelsPromise = Promise.all([
   import('../models/modelPreferences.js'),
   import('../models/modelState.js'),
@@ -147,10 +147,10 @@ const _modelsPromise = Promise.all([
   _modelsMod = { ...prefs, ...state, ...auth, ...caps };
 });
 
-async function models() {
+async function models(): Promise<any> {
   if (_modelsMod) return _modelsMod;
   await _modelsPromise;
-  return _modelsMod;
+  return _modelsMod!;
 }
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
