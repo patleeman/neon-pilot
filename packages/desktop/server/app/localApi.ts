@@ -135,17 +135,23 @@ import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
 
 // ── Model/provider modules ─────────────────────────────────────────────
-// Statically imported so the full 8.7MB bundle is parsed ONCE before the
-// server starts. No lazy loading, no background promises, no race conditions.
-import * as _prefs from '../models/modelPreferences.js';
-import * as _state from '../models/modelState.js';
-import * as _auth from '../models/providerAuth.js';
-import * as _caps from '../models/providerDesktopCapability.js';
+// Keep the provider SDK/model table stack behind a typed loader so the local
+// API module can become ready before model-provider routes are touched.
+type ModelProviderModules = typeof import('../models/modelPreferences.js') &
+  typeof import('../models/modelState.js') &
+  typeof import('../models/providerAuth.js') &
+  typeof import('../models/providerDesktopCapability.js');
 
-const _modelsMod = { ..._prefs, ..._state, ..._auth, ..._caps };
+let modelProviderModulesPromise: Promise<ModelProviderModules> | null = null;
 
-function models() {
-  return _modelsMod;
+function models(): Promise<ModelProviderModules> {
+  modelProviderModulesPromise ??= Promise.all([
+    import('../models/modelPreferences.js'),
+    import('../models/modelState.js'),
+    import('../models/providerAuth.js'),
+    import('../models/providerDesktopCapability.js'),
+  ]).then(([prefs, state, auth, caps]) => ({ ...prefs, ...state, ...auth, ...caps }));
+  return modelProviderModulesPromise;
 }
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
@@ -220,10 +226,13 @@ import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
-// Fire-and-forget prewarm model definitions (reads settings files, no blocking).
-{
-  const m = models();
-  if (m.prewarmModelDefinitions) void m.prewarmModelDefinitions();
+function prewarmDesktopModelDefinitions(): void {
+  const modelDefinitionsPrewarmTimer = setTimeout(() => {
+    void models()
+      .then((m) => m.prewarmModelDefinitions?.())
+      .catch(() => {});
+  }, 0);
+  modelDefinitionsPrewarmTimer.unref?.();
 }
 
 type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse) => unknown;
@@ -566,6 +575,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   // SKILL.md/template files from disk) so the first createLiveSession
   // doesn't pay that cost even if the extension factory load is deferred.
   context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope()).catch(() => {});
+  prewarmDesktopModelDefinitions();
 
   // Extension factory loading is slow (~9s, dynamic imports of extension
   // backend modules). Don't block startup — run in background so the
