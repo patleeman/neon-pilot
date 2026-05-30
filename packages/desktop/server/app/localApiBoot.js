@@ -48,11 +48,11 @@ export async function dispatchDesktopLocalApiRequest(input) {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: new TextEncoder().encode(JSON.stringify({
+      body: Buffer.from(JSON.stringify({
         ok: true,
         daemonHealthy: true,
         apiReady: fullModule !== null,
-      })),
+      }), 'utf-8'),
     };
   }
   const mod = await ensureModule();
