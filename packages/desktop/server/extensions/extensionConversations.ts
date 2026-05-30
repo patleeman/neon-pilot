@@ -13,10 +13,14 @@ import {
   updateVisibleCustomMessage as updateVisibleLiveSessionCustomMessage,
 } from '../conversations/liveSessions.js';
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
+import { reserveConversationSession } from '../conversations/conversationReservation.js';
+import { appendStoredVisibleCustomMessage, renameStoredConversation, resolveConversationSessionFile } from '../conversations/conversationService.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
+
+const reservedConversationFiles = new Map<string, string>();
 
 export interface ExtensionConversationDetailOptions {
   tailBlocks?: number;
@@ -41,6 +45,8 @@ export interface ExtensionConversationRunTurnOptions extends ExtensionConversati
 export interface ExtensionConversationCreateOptions {
   /** Working directory for the conversation. */
   cwd?: string;
+  /** Set to false to create a persisted conversation shell without starting a live agent session. */
+  live?: boolean;
   /** Optional initial prompt text. */
   prompt?: string;
   /** Model override. */
@@ -294,6 +300,21 @@ export function createExtensionConversationsCapability(
       input?: ExtensionConversationCreateOptions & { title?: string; initialPrompt?: string },
     ): Promise<{ id: string; conversationId: string }> {
       const cwd = input?.cwd?.trim() || process.cwd();
+      if (input?.live === false) {
+        if (input.prompt?.trim() || input.initialPrompt?.trim()) {
+          throw new Error('Non-live conversation creation does not support initial prompts.');
+        }
+
+        const reserved = reserveConversationSession({ cwd, profile: serverContext?.getRuntimeScope?.() });
+        reservedConversationFiles.set(reserved.id, reserved.sessionFile);
+        if (input.title?.trim()) {
+          renameStoredConversation(reserved.id, input.title.trim());
+        }
+        invalidateAppTopics('sessions');
+        await publishExtensionHostEvent('conversationSessions', { type: 'session.created', conversationId: reserved.id, cwd });
+        return { id: reserved.id, conversationId: reserved.id };
+      }
+
       const options: Record<string, unknown> = {};
       if (input?.model) options.initialModel = input.model;
       if (input?.thinkingLevel) options.initialThinkingLevel = input.thinkingLevel;
@@ -538,6 +559,22 @@ export function createExtensionConversationsCapability(
       blockId?: string;
     }): Promise<{ blockId: string }> {
       const content = input.title ?? input.blockType;
+      if (!liveSessionRegistry.has(input.conversationId)) {
+        const sessionFile = resolveConversationSessionFile(input.conversationId) ?? reservedConversationFiles.get(input.conversationId);
+        if (!sessionFile) {
+          throw new Error(`Conversation "${input.conversationId}" was not found.`);
+        }
+        const blockId = appendStoredVisibleCustomMessage({
+          sessionFile,
+          customType: input.blockType,
+          content,
+          details: input.data,
+          blockId: input.blockId,
+        });
+        invalidateAppTopics('sessions');
+        return { blockId: blockId ?? input.blockId ?? `${input.blockType}:${Date.now()}` };
+      }
+
       const blockId = await appendVisibleLiveSessionCustomMessage(input.conversationId, input.blockType, content, input.data, {
         blockId: input.blockId,
       });

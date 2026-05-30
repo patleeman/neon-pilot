@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   cancelDurableRunFromDaemonMock,
@@ -138,6 +138,10 @@ describe('durableRuns', () => {
     );
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('lists durable runs via the daemon, reports inflight and hit telemetry, and decorates results', async () => {
     const deferred = createDeferred<{
       scannedAt: string;
@@ -210,6 +214,31 @@ describe('durableRuns', () => {
         runCount: 1,
       },
     });
+  });
+
+  it('falls back to scanned runs when the daemon ping exceeds the foreground budget', async () => {
+    const deferredPing = createDeferred<boolean>();
+    pingDaemonMock.mockReturnValue(deferredPing.promise);
+    scanDurableRunsForRecoveryMock.mockReturnValue([createRun('scan-after-slow-ping')]);
+    summarizeScannedDurableRunsMock.mockReturnValue({ totalRuns: 1 });
+
+    vi.useFakeTimers();
+    const request = listDurableRunsWithTelemetry();
+    await vi.advanceTimersByTimeAsync(251);
+
+    await expect(request).resolves.toMatchObject({
+      result: {
+        runs: [{ ...createRun('scan-after-slow-ping'), decorated: true }],
+        summary: { totalRuns: 1 },
+        runsRoot: '/daemon-root/runs',
+      },
+      telemetry: {
+        cache: 'miss',
+        source: 'scan',
+        runCount: 1,
+      },
+    });
+    expect(listDurableRunsFromDaemonMock).not.toHaveBeenCalled();
   });
 
   it('falls back to scanned runs when the daemon is unavailable or disabled and clears the cache after unexpected failures', async () => {

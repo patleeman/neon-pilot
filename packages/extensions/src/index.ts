@@ -962,6 +962,8 @@ export interface ExtensionSelectionState {
 export interface ExtensionConversationCreateInput {
   title?: string;
   cwd?: string;
+  /** Set to false to create a persisted conversation shell without starting a live agent session. */
+  live?: boolean;
   initialPrompt?: string;
   model?: string;
   /** When set, only these tool names are exposed to the created live session. */

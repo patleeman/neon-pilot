@@ -70,19 +70,31 @@ async function ensureOnce(input: EnsureInput | undefined, ctx: ExtensionBackendC
     };
   }
 
-  const created = (await ctx.conversations.create({ cwd: ctx.runtime.getRepoRoot() })) as { id: string };
-  await ctx.conversations.setTitle(created.id, 'Welcome to Neon Pilot');
-  await ctx.conversations.appendVisibleCustomMessage(created.id, 'onboarding_intro', onboardingMessage, { source: ctx.extensionId });
+  const created = (await ctx.conversations.create({
+    cwd: ctx.runtime.getRepoRoot(),
+    title: 'Welcome to Neon Pilot',
+    live: false,
+  })) as { id?: string; conversationId?: string };
+  const conversationId = created.conversationId ?? created.id;
+  if (!conversationId) {
+    throw new Error('Onboarding conversation was not created.');
+  }
+  await ctx.conversations.appendTranscriptBlock({
+    conversationId,
+    blockType: 'onboarding_intro',
+    title: onboardingMessage,
+    data: { source: ctx.extensionId },
+  });
 
   await ctx.storage.put(ONBOARDING_STATE_KEY, {
     completed: true,
-    conversationId: created.id,
+    conversationId,
     completedAt: new Date().toISOString(),
     openedInUi: frontendRequest,
   } satisfies OnboardingState);
   disableOnboarding(ctx);
 
-  return { created: true, conversationId: created.id, shouldOpen: frontendRequest };
+  return { created: true, conversationId, shouldOpen: frontendRequest };
 }
 
 export async function ensure(input: unknown, ctx: ExtensionBackendContext): Promise<EnsureResult> {

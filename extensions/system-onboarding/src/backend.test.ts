@@ -11,9 +11,10 @@ function createCtx(overrides: Record<string, unknown> = {}) {
     delete: vi.fn().mockResolvedValue({ ok: true, deleted: false }),
   };
   const conversations = {
-    create: vi.fn().mockResolvedValue({ id: 'conv-1' }),
+    create: vi.fn().mockResolvedValue({ id: 'conv-1', conversationId: 'conv-1' }),
     setTitle: vi.fn().mockResolvedValue(undefined),
     appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
+    appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
   };
   const runtime = {
     getRepoRoot: vi.fn(() => '/repo'),
@@ -50,6 +51,7 @@ describe('system-onboarding backend', () => {
       ),
       setTitle: vi.fn().mockResolvedValue(undefined),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
+      appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
     };
     const storage = {
       get: vi.fn().mockResolvedValue(null),
@@ -71,8 +73,14 @@ describe('system-onboarding backend', () => {
     expect(firstResult).toEqual({ created: true, conversationId: 'conv-1', shouldOpen: true });
     expect(secondResult).toEqual({ created: true, conversationId: 'conv-1', shouldOpen: true });
     expect(storage.put).toHaveBeenCalledTimes(1);
-    expect(conversations.setTitle).toHaveBeenCalledTimes(1);
-    expect(conversations.appendVisibleCustomMessage).toHaveBeenCalledTimes(1);
+    expect(conversations.create).toHaveBeenCalledWith({
+      cwd: '/repo',
+      title: 'Welcome to Neon Pilot',
+      live: false,
+    });
+    expect(conversations.setTitle).not.toHaveBeenCalled();
+    expect(conversations.appendVisibleCustomMessage).not.toHaveBeenCalled();
+    expect(conversations.appendTranscriptBlock).toHaveBeenCalledTimes(1);
     expect(mockSetExtensionEnabled).toHaveBeenCalledWith('system-onboarding', false);
   });
 
@@ -81,6 +89,7 @@ describe('system-onboarding backend', () => {
       create: vi.fn().mockResolvedValue({ id: 'conv-2' }),
       setTitle: vi.fn().mockResolvedValue(undefined),
       appendVisibleCustomMessage: vi.fn().mockResolvedValue(undefined),
+      appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'onboarding-block' }),
     };
     const storage = {
       get: vi.fn().mockResolvedValue({

@@ -75,6 +75,21 @@ function buildScannedDurableRunsResult(runsRoot: string): ListDurableRunsResult 
   };
 }
 
+async function buildDaemonDurableRunsResult(
+  runsRoot: string,
+): Promise<(ListDurableRunsResult & { runsRoot: string }) | null> {
+  if (!(await pingDaemon())) {
+    return null;
+  }
+
+  const result = await listDurableRunsFromDaemon();
+  return {
+    ...result,
+    runs: decorateRuns(result.runs),
+    runsRoot,
+  };
+}
+
 export function clearDurableRunsListCache(): void {
   durableRunsListCache = null;
 }
@@ -298,16 +313,13 @@ export async function listDurableRunsWithTelemetry(): Promise<{
     const runsRoot = resolveRunsRoot();
 
     try {
-      if (await pingDaemon()) {
+      const daemonRequest = buildDaemonDurableRunsResult(runsRoot);
+      daemonRequest.catch(() => undefined);
+      const daemonResult = await withDaemonListBudget(daemonRequest);
+
+      if (daemonResult) {
         source = 'daemon';
-        const daemonListPromise = listDurableRunsFromDaemon();
-        const result = await withDaemonListBudget(daemonListPromise);
-        daemonListPromise.catch(() => undefined);
-        return {
-          ...result,
-          runs: decorateRuns(result.runs),
-          runsRoot,
-        };
+        return daemonResult;
       }
     } catch (error) {
       if (!isDaemonUnavailable(error) && !(error instanceof DurableRunsDaemonBudgetExceeded)) {

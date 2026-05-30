@@ -121,6 +121,9 @@ const ctx = {
       return { ok: true };
     },
     async appendVisibleCustomMessage() {},
+    async appendTranscriptBlock() {
+      return { blockId: 'smoke-block' };
+    },
     async setActiveTools(_conversationId, toolNames) {
       activeTools = toolNames;
       return { conversationId: 'smoke-conversation', toolNames };

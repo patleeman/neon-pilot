@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const sessionsCapability = vi.hoisted(() => ({ readConversationSessionsCapability: vi.fn() }));
 const broadcasts = vi.hoisted(() => ({ broadcastTitle: vi.fn() }));
+const reservation = vi.hoisted(() => ({ reserveConversationSession: vi.fn() }));
+const conversationService = vi.hoisted(() => ({
+  appendStoredVisibleCustomMessage: vi.fn(),
+  renameStoredConversation: vi.fn(),
+  resolveConversationSessionFile: vi.fn(),
+}));
 const live = vi.hoisted(() => ({
   registry: new Map<string, unknown>(),
   abortSession: vi.fn(),
@@ -25,6 +31,8 @@ const subscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }))
 
 vi.mock('../conversations/conversationSessionCapability.js', () => sessionsCapability);
 vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
+vi.mock('../conversations/conversationReservation.js', () => reservation);
+vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../conversations/liveSessions.js', () => live);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
 vi.mock('../shared/appEvents.js', () => appEvents);
@@ -63,6 +71,9 @@ describe('extensionConversations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     live.registry.clear();
+    reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
+    conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
+    conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
   });
 
   it('lists conversations and returns live conversation details', async () => {
@@ -105,6 +116,40 @@ describe('extensionConversations', () => {
       cwd: '/repo',
     });
     expect(result).toEqual({ id: 'conv-1', conversationId: 'conv-1' });
+  });
+
+  it('creates non-live conversations without starting an agent session and can append persisted transcript blocks', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(capability.create({ cwd: '/repo', title: 'Welcome', live: false })).resolves.toEqual({
+      id: 'reserved-1',
+      conversationId: 'reserved-1',
+    });
+    conversationService.resolveConversationSessionFile.mockReturnValue(undefined);
+    await expect(
+      capability.appendTranscriptBlock({
+        conversationId: 'reserved-1',
+        blockType: 'welcome',
+        title: 'Hello',
+        data: { ok: true },
+      }),
+    ).resolves.toEqual({ blockId: 'block-1' });
+
+    expect(live.createSession).not.toHaveBeenCalled();
+    expect(reservation.reserveConversationSession).toHaveBeenCalledWith({ cwd: '/repo', profile: 'shared' });
+    expect(conversationService.renameStoredConversation).toHaveBeenCalledWith('reserved-1', 'Welcome');
+    expect(conversationService.appendStoredVisibleCustomMessage).toHaveBeenCalledWith({
+      sessionFile: '/sessions/reserved-1.jsonl',
+      customType: 'welcome',
+      content: 'Hello',
+      details: { ok: true },
+      blockId: undefined,
+    });
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.created',
+      conversationId: 'reserved-1',
+      cwd: '/repo',
+    });
   });
 
   it('sends prompts, follow-ups, and steering messages based on live streaming state', async () => {

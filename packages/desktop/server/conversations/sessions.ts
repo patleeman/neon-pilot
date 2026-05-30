@@ -1737,6 +1737,44 @@ export function appendConversationWorkspaceMetadata(input: {
   refreshCatalogEntryFromSessionFile(input.sessionFile);
 }
 
+export function appendStoredVisibleCustomMessage(input: {
+  sessionFile: string;
+  customType: string;
+  content: string;
+  details?: unknown;
+  blockId?: string;
+}): string | null {
+  const customType = input.customType.trim();
+  const content = input.content.trim();
+  if (!customType || !content) {
+    return null;
+  }
+
+  const blockId = input.blockId ?? `${customType}:${Date.now()}`;
+  appendFileSync(
+    input.sessionFile,
+    serializeSessionJsonLine(
+      buildCustomMessageSessionEntry({
+        id: randomUUID(),
+        parentId: readCurrentSessionLeafId(input.sessionFile),
+        timestamp: new Date().toISOString(),
+        customType,
+        content,
+        details: {
+          ...(input.details && typeof input.details === 'object' && !Array.isArray(input.details)
+            ? (input.details as Record<string, unknown>)
+            : { value: input.details }),
+          extensionBlockId: blockId,
+        },
+      }),
+    ),
+    'utf-8',
+  );
+  clearSessionCaches();
+  refreshCatalogEntryFromSessionFile(input.sessionFile);
+  return blockId;
+}
+
 function refreshCatalogEntryFromSessionFile(sessionFile: string): void {
   try {
     const meta = readSessionMetaByFile(sessionFile);

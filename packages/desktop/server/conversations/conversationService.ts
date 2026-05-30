@@ -41,6 +41,7 @@ import {
   appendConversationOffshootDetachedMetadata as appendSessionConversationOffshootDetachedMetadata,
   appendConversationOffshootMetadata as appendSessionConversationOffshootMetadata,
   appendConversationWorkspaceMetadata as appendSessionConversationWorkspaceMetadata,
+  appendStoredVisibleCustomMessage as appendSessionStoredVisibleCustomMessage,
   buildAppendOnlySessionDetailResponse as buildSessionAppendOnlySessionDetailResponse,
   listSessions,
   readKnownSessionIdByFilePath,
@@ -602,6 +603,10 @@ export function appendConversationOffshootDetachedMetadata(
 
 export function appendConversationWorkspaceMetadata(input: Parameters<typeof appendSessionConversationWorkspaceMetadata>[0]): void {
   appendSessionConversationWorkspaceMetadata(input);
+}
+
+export function appendStoredVisibleCustomMessage(input: Parameters<typeof appendSessionStoredVisibleCustomMessage>[0]): string | null {
+  return appendSessionStoredVisibleCustomMessage(input);
 }
 
 export function renameStoredConversation(conversationId: string, nextName: string): ReturnType<typeof renameStoredConversationSession> {
